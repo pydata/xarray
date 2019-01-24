@@ -1485,10 +1485,8 @@ class ZarrBase(CFEncodedBase):
                     self.save(original, store, mode='w-')
 
         # check that we can't use other persistence modes
-        # TODO: reconsider whether other persistence modes should be supported
-        with pytest.raises(ValueError):
-            with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
-                pass
+        with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
+            assert_identical(original, actual)
 
     def test_compressor_encoding(self):
         original = create_test_data()

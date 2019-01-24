@@ -890,7 +890,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None, compute=True, consolidated=False):
+            encoding=None, compute=True, consolidated=False, append_dim=None):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -909,7 +909,7 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
                                            synchronizer=synchronizer,
                                            group=group,
                                            consolidate_on_close=consolidated)
-
+    zstore.append_dim = append_dim
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)

@@ -8,7 +8,7 @@ from .. import Variable, coding, conventions
 from ..core import indexing
 from ..core.pycompat import OrderedDict, integer_types, iteritems
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
-from .common import AbstractWritableDataStore, BackendArray
+from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -313,39 +313,96 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return _encode_zarr_attr_value(a)
 
-    def prepare_variable(self, name, variable, check_encoding=False,
-                         unlimited_dims=None):
+    def store(self, variables, attributes, check_encoding_set=frozenset(),
+              writer=None, unlimited_dims=None):
+        """
+        Top level method for putting data on this store, this method:
+          - encodes variables/attributes
+          - sets dimensions
+          - sets variables
 
-        attrs = variable.attrs.copy()
-        dims = variable.dims
-        dtype = variable.dtype
-        shape = variable.shape
+        Parameters
+        ----------
+        variables : dict-like
+            Dictionary of key/value (variable name / xr.Variable) pairs
+        attributes : dict-like
+            Dictionary of key/value (attribute name / attribute) pairs
+        check_encoding_set : list-like
+            List of variables that should be checked for invalid encoding
+            values
+        writer : ArrayWriter
+        unlimited_dims : list-like
+            List of dimension names that should be treated as unlimited
+            dimensions.
+            dimension on which the zarray will be appended
+            only needed in append mode
+        """
 
-        fill_value = attrs.pop('_FillValue', None)
-        if variable.encoding == {'_FillValue': None} and fill_value is None:
-            variable.encoding = {}
+        variables, attributes = self.encode(variables, attributes)
 
-        encoding = _extract_zarr_variable_encoding(
-            variable, raise_on_invalid=check_encoding)
-
-        encoded_attrs = OrderedDict()
-        # the magic for storing the hidden dimension data
-        encoded_attrs[_DIMENSION_KEY] = dims
-        for k, v in iteritems(attrs):
-            encoded_attrs[k] = self.encode_attribute(v)
-
-        zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
-                                    fill_value=fill_value, **encoding)
-        zarr_array.attrs.put(encoded_attrs)
-
-        return zarr_array, variable.data
-
-    def store(self, variables, attributes, *args, **kwargs):
-        AbstractWritableDataStore.store(self, variables, attributes,
-                                        *args, **kwargs)
+        self.set_attributes(attributes)
+        self.set_dimensions(variables, unlimited_dims=unlimited_dims)
+        self.set_variables(variables, check_encoding_set, writer,
+                           unlimited_dims=unlimited_dims)
 
     def sync(self):
         pass
+
+    def set_variables(self, variables, check_encoding_set, writer,
+                      unlimited_dims=None, append_dim=None):
+        """
+        This provides a centralized method to set the variables on the data
+        store.
+
+        Parameters
+        ----------
+        variables : dict-like
+            Dictionary of key/value (variable name / xr.Variable) pairs
+        check_encoding_set : list-like
+            List of variables that should be checked for invalid encoding
+            values
+        writer :
+        unlimited_dims : list-like
+            List of dimension names that should be treated as unlimited
+            dimensions.
+        append_dim: str
+            dimension on which the zarray will be appended
+            only needed in append mode
+        """
+        for vn, v in iteritems(variables):
+            name = _encode_variable_name(vn)
+            check = vn in check_encoding_set
+            attrs = v.attrs.copy()
+            dims = v.dims
+            dtype = v.dtype
+            shape = v.shape
+
+            fill_value = attrs.pop('_FillValue', None)
+            if v.encoding == {'_FillValue': None} and fill_value is None:
+                v.encoding = {}
+            append = False
+            try:
+                zarr_array = self.ds[name]
+                append = True
+            except KeyError:
+                encoding = _extract_zarr_variable_encoding(
+                    v, raise_on_invalid=check)
+                encoded_attrs = OrderedDict()
+                # the magic for storing the hidden dimension data
+                encoded_attrs[_DIMENSION_KEY] = dims
+                for k2, v2 in iteritems(attrs):
+                    encoded_attrs[k2] = self.encode_attribute(v2)
+
+                zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
+                                            fill_value=fill_value, **encoding)
+                zarr_array.attrs.put(encoded_attrs)
+                zarr_array[...] = v.data
+            if append:
+                if self.append_dim is None:
+                    raise ValueError('The dimension which is appended has to be named.')
+                if self.append_dim not in dims:
+                    continue
+                zarr_array.append(v.data)
 
     def close(self):
         if self._consolidate_on_close:

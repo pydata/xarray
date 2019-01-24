@@ -1246,7 +1246,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                          compute=compute)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
-                encoding=None, compute=True, consolidated=False):
+                encoding=None, compute=True, consolidated=False, append_dim=None):
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1281,14 +1281,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         if encoding is None:
             encoding = {}
-        if mode not in ['w', 'w-']:
-            # TODO: figure out how to handle 'r+' and 'a'
+        if mode not in ['w', 'w-', 'a']:
+            # TODO: figure out how to handle 'r+'
             raise ValueError("The only supported options for mode are 'w' "
                              "and 'w-'.")
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
                        group=group, encoding=encoding, compute=compute,
-                       consolidated=consolidated)
+                       consolidated=consolidated, append_dim=append_dim)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
