@@ -8,7 +8,8 @@ from .. import Variable, coding, conventions
 from ..core import indexing
 from ..core.pycompat import OrderedDict, integer_types, iteritems
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
-from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
+from .common import AbstractWritableDataStore, BackendArray, \
+    _encode_variable_name
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -399,7 +400,8 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_array[...] = v.data
             if append:
                 if self.append_dim is None:
-                    raise ValueError('The dimension which is appended has to be named.')
+                    raise ValueError('The dimension on which the data is \
+                     appended has to be named.')
                 if self.append_dim not in dims:
                     continue
                 zarr_array.append(v.data)

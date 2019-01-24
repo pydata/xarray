@@ -1246,7 +1246,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                          compute=compute)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
-                encoding=None, compute=True, consolidated=False, append_dim=None):
+                encoding=None, compute=True, consolidated=False,
+                append_dim=None):
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1257,9 +1258,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         ----------
         store : MutableMapping or str, optional
             Store or path to directory in file system.
-        mode : {'w', 'w-'}
+        mode : {'w', 'w-', 'a'}
             Persistence mode: 'w' means create (overwrite if exists);
-            'w-' means create (fail if exists).
+            'w-' means create (fail if exists);
+            'a' means append (create if does not exist).
         synchronizer : object, optional
             Array synchronizer
         group : str, obtional
@@ -1274,6 +1276,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
+        append_dim: str
+            If mode='a' hand the dimension on which the data will be appended
 
         References
         ----------
