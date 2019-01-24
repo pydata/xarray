@@ -8,7 +8,7 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
-    _infer_line_data, _infer_xy_labels, _process_cbar_cmap_kwargs,
+    _infer_line_data, _infer_xy_labels, _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot, label_from_attrs)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -223,7 +223,7 @@ class FacetGrid(object):
         if kwargs.get('cbar_ax', None) is not None:
             raise ValueError('cbar_ax not supported by FacetGrid.')
 
-        cmap_params, cbar_kwargs = _process_cbar_cmap_kwargs(
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
             func, kwargs, self.data.values)
 
         self._cmap_extend = cmap_params.get('extend')

@@ -700,7 +700,7 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
 
 
-def _process_cbar_cmap_kwargs(func, kwargs, data):
+def _process_cmap_cbar_kwargs(func, kwargs, data):
     """
     Parameters
     ==========

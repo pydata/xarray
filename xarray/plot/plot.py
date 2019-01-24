@@ -19,7 +19,7 @@ from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_line_data,
     _infer_xy_labels, _interval_to_double_bound_points,
-    _interval_to_mid_points, _process_cbar_cmap_kwargs, _rescale_imshow_rgb,
+    _interval_to_mid_points, _process_cmap_cbar_kwargs, _rescale_imshow_rgb,
     _resolve_intervals_2dplot, _update_axes, _valid_other_type, get_axis,
     import_matplotlib_pyplot, label_from_attrs)
 
@@ -564,7 +564,7 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(xplt, yplt)
 
-        cmap_params, cbar_kwargs = _process_cbar_cmap_kwargs(
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
             plotfunc, locals(), zval.data)
 
         if 'contour' in plotfunc.__name__:
