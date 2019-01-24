@@ -291,7 +291,7 @@ class FacetGrid(object):
         kwargs['_meta_data'] = meta_data
 
         if hue and meta_data['hue_style'] == 'continuous':
-            cmap_params, cbar_kwargs = self._process_cmap(
+            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
                 func, kwargs, self.data[hue])
             kwargs['_meta_data']['cmap_params'] = cmap_params
             kwargs['_meta_data']['cbar_kwargs'] = cbar_kwargs
@@ -558,3 +558,6 @@ def _easy_facetgrid(data, plotfunc, kind, x=None, y=None, row=None,
 
     if kind == 'dataarray':
         return g.map_dataarray(plotfunc, x, y, **kwargs)
+
+    if kind == 'dataset':
+        return g.map_dataset(plotfunc, x, y, **kwargs)
