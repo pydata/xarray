@@ -40,7 +40,7 @@ from __future__ import absolute_import, division, print_function
 
 from ..coding.cftimeindex import CFTimeIndex
 from ..coding.cftime_offsets import (cftime_range, normalize_date,
-                                     Day, MonthEnd, YearEnd,
+                                     Day, MonthEnd, QuarterEnd, YearEnd,
                                      CFTIME_TICKS, to_offset)
 import datetime
 import numpy as np
@@ -52,14 +52,14 @@ class CFTimeGrouper(object):
     single method, the only one required for resampling in xarray.  It cannot
     be used in a call to groupby like a pandas.Grouper object can."""
 
-    def __init__(self, freq, closed, label, base, loffset):
+    def __init__(self, freq, closed=None, label=None, base=0, loffset=None):
         self.freq = to_offset(freq)
         self.closed = closed
         self.label = label
         self.base = base
         self.loffset = loffset
 
-        if isinstance(self.freq, (MonthEnd, YearEnd)):
+        if isinstance(self.freq, (MonthEnd, QuarterEnd, YearEnd)):
             if self.closed is None:
                 self.closed = 'right'
             if self.label is None:
@@ -201,7 +201,7 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
     This is also required for daily frequencies longer than one day and
     year-end frequencies.
     """
-    is_super_daily = (isinstance(offset, (MonthEnd, YearEnd)) or
+    is_super_daily = (isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)) or
                       (isinstance(offset, Day) and offset.n > 1))
     if is_super_daily:
         if closed == 'right':
