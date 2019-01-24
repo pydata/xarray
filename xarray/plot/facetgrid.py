@@ -8,7 +8,7 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
-    _infer_line_data, _infer_xy_labels, _process_cmap_cbar_kwargs,
+    _infer_xy_labels, _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot, label_from_attrs)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -254,6 +254,7 @@ class FacetGrid(object):
         return self
 
     def map_dataarray_line(self, func, x, y, **kwargs):
+        from .plot import _infer_line_data
 
         add_legend = kwargs.pop('add_legend', True)
         kwargs['add_legend'] = False
