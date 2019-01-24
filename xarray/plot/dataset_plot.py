@@ -7,8 +7,8 @@ import numpy as np
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _determine_cmap_params, _ensure_numeric, _valid_other_type,
-    get_axis, label_from_attrs)
+    _add_colorbar, _ensure_numeric, _process_cmap_cbar_kwargs,
+    _valid_other_type, get_axis, label_from_attrs)
 
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,
@@ -223,18 +223,8 @@ def _dsplot(plotfunc):
                 cbar_kwargs = _meta_data['cbar_kwargs']
                 cmap_params = _meta_data['cmap_params']
             else:
-                cmap_kwargs = {'plot_data': ds[hue],
-                               'vmin': vmin,
-                               'vmax': vmax,
-                               'cmap': colors if colors else cmap,
-                               'center': center,
-                               'robust': robust,
-                               'extend': extend,
-                               'levels': levels,
-                               'filled': None,
-                               'norm': norm}
-
-                cmap_params = _determine_cmap_params(**cmap_kwargs)
+                cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+                    plotfunc, locals(), ds[hue])
 
             # subset that can be passed to scatter, hist2d
             cmap_params_subset = dict(
