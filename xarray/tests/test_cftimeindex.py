@@ -383,7 +383,7 @@ def test_resample_error(da):
 
 SEL_STRING_OR_LIST_TESTS = {
     'string': '0001',
-    'string-slice': slice('0001-01-01', '0001-12-30'),
+    'string-slice': slice('0001-01-01', '0001-12-30'),  # type: ignore
     'bool-list': [True, True, False, False]
 }
 
@@ -798,6 +798,7 @@ def test_to_datetimeindex_feb_29(calendar):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.xfail(reason='https://github.com/pandas-dev/pandas/issues/24263')
 def test_multiindex():
     index = xr.cftime_range('2001-01-01', periods=100, calendar='360_day')
     mindex = pd.MultiIndex.from_arrays([index])

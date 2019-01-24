@@ -117,6 +117,20 @@ reduced : {da_or_ds}
     New {da_or_ds} object with `{name}` applied along its rolling dimnension.
 """
 
+_COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
+Coarsen this object by applying `{name}` along its dimensions.
+
+Parameters
+----------
+**kwargs : dict
+    Additional keyword arguments passed on to `{name}`.
+
+Returns
+-------
+reduced : DataArray or Dataset
+    New object with `{name}` applied along its coasen dimnensions.
+"""
+
 
 def fillna(data, other, join="left", dataset_join="left"):
     """Fill missing values in this object with data from the other object.
@@ -373,3 +387,15 @@ def inject_datasetrolling_methods(cls):
     func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
         name=func.__name__, da_or_ds='Dataset')
     setattr(cls, 'count', func)
+
+
+def inject_coarsen_methods(cls):
+    # standard numpy reduce methods
+    methods = [(name, getattr(duck_array_ops, name))
+               for name in NAN_REDUCE_METHODS]
+    for name, f in methods:
+        func = cls._reduce_method(f)
+        func.__name__ = name
+        func.__doc__ = _COARSEN_REDUCE_DOCSTRING_TEMPLATE.format(
+            name=func.__name__)
+        setattr(cls, name, func)

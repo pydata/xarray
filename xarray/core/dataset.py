@@ -4,6 +4,7 @@ import warnings
 from collections import Mapping, OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
+from typing import Any, Dict, List, Set, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -11,16 +12,17 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
-    pdcompat, resample, rolling, utils)
+    alignment, dtypes, duck_array_ops, formatting, groupby,
+    indexing, ops, pdcompat, resample, rolling, utils)
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
     ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
     _contains_datetime_like_objects)
 from .coordinates import (
-    DatasetCoordinates, Indexes, LevelCoordinatesSource,
+    DatasetCoordinates, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
+from .indexes import Indexes, default_indexes
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
     merge_variables)
@@ -120,14 +122,14 @@ def merge_indexes(
     Not public API. Used in Dataset and DataArray set_index
     methods.
     """
-    vars_to_replace = {}
-    vars_to_remove = []
+    vars_to_replace = {}  # Dict[Any, Variable]
+    vars_to_remove = []  # type: list
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, str):
             var_names = [var_names]
 
-        names, labels, levels = [], [], []
+        names, labels, levels = [], [], []  # type: (list, list, list)
         current_index_variable = variables.get(dim)
 
         for n in var_names:
@@ -191,7 +193,7 @@ def split_indexes(
     if isinstance(dims_or_levels, str):
         dims_or_levels = [dims_or_levels]
 
-    dim_levels = defaultdict(list)
+    dim_levels = defaultdict(list)  # type: Dict[Any, list]
     dims = []
     for k in dims_or_levels:
         if k in level_coords:
@@ -312,6 +314,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     """
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
+    _coarsen_cls = rolling.DatasetCoarsen
     _resample_cls = resample.DatasetResample
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
@@ -360,6 +363,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coords = {}
         if data_vars is not None or coords is not None:
             self._set_init_vars_and_dims(data_vars, coords, compat)
+
+        # TODO(shoyer): expose indexes as a public argument in __init__
+        self._indexes = None
+
         if attrs is not None:
             self.attrs = attrs
         self._encoding = None
@@ -638,7 +645,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
-                          file_obj=None, encoding=None):
+                          indexes=None, file_obj=None, encoding=None):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
@@ -646,6 +653,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._variables = variables
         obj._coord_names = coord_names
         obj._dims = dims
+        obj._indexes = indexes
         obj._attrs = attrs
         obj._file_obj = file_obj
         obj._encoding = encoding
@@ -660,7 +668,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
     def _replace_vars_and_dims(self, variables, coord_names=None, dims=None,
-                               attrs=__default_attrs, inplace=False):
+                               attrs=__default_attrs, indexes=None,
+                               inplace=False):
         """Fastpath constructor for internal use.
 
         Preserves coord names and attributes. If not provided explicitly,
@@ -689,13 +698,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 self._coord_names = coord_names
             if attrs is not self.__default_attrs:
                 self._attrs = attrs
+            self._indexes = indexes
             obj = self
         else:
             if coord_names is None:
                 coord_names = self._coord_names.copy()
             if attrs is self.__default_attrs:
                 attrs = self._attrs_copy()
-            obj = self._construct_direct(variables, coord_names, dims, attrs)
+            obj = self._construct_direct(
+                variables, coord_names, dims, attrs, indexes)
         return obj
 
     def _replace_indexes(self, indexes):
@@ -991,7 +1002,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self._coord_names.discard(key)
 
     # mutable objects should not be hashable
-    __hash__ = None
+    # https://github.com/python/mypy/issues/4266
+    __hash__ = None  # type: ignore
 
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
@@ -1060,9 +1072,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def indexes(self):
-        """OrderedDict of pandas.Index objects used for label based indexing
+        """Mapping of pandas.Index objects used for label based indexing
         """
-        return Indexes(self._variables, self._dims)
+        if self._indexes is None:
+            self._indexes = default_indexes(self._variables, self._dims)
+        return Indexes(self._indexes)
 
     @property
     def coords(self):
@@ -1667,7 +1681,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     if any(d in indexer_dims for d in v.dims)]
 
         coords = relevant_keys(self.coords)
-        indexers = [(k, np.asarray(v)) for k, v in indexers.items()]
+        indexers = [(k, np.asarray(v))  # type: ignore
+                    for k, v in indexers.items()]
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
         non_indexed_coords = set(self.coords) - set(coords)
@@ -1677,9 +1692,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         for k, v in indexers:
             if k not in self.dims:
                 raise ValueError("dimension %s does not exist" % k)
-            if v.dtype.kind != 'i':
+            if v.dtype.kind != 'i':  # type: ignore
                 raise TypeError('Indexers must be integers')
-            if v.ndim != 1:
+            if v.ndim != 1:  # type: ignore
                 raise ValueError('Indexers must be 1 dimensional')
 
         # all the indexers should have the same length
@@ -3202,7 +3217,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return df
 
-    def to_dict(self):
+    def to_dict(self, data=True):
         """
         Convert this dataset to a dictionary following xarray naming
         conventions.
@@ -3211,25 +3226,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Useful for coverting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
+        Parameters
+        ----------
+        data : bool, optional
+            Whether to include the actual data in the dictionary. When set to
+            False, returns just the schema.
+
         See also
         --------
         Dataset.from_dict
         """
         d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
              'dims': dict(self.dims), 'data_vars': {}}
-
         for k in self.coords:
-            data = ensure_us_time_resolution(self[k].values).tolist()
-            d['coords'].update({
-                k: {'data': data,
-                    'dims': self[k].dims,
-                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
+            d['coords'].update({k: self[k].variable.to_dict(data=data)})
         for k in self.data_vars:
-            data = ensure_us_time_resolution(self[k].values).tolist()
-            d['data_vars'].update({
-                k: {'data': data,
-                    'dims': self[k].dims,
-                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
+            d['data_vars'].update({k: self[k].variable.to_dict(data=data)})
         return d
 
     @classmethod

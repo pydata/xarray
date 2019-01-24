@@ -4,30 +4,12 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from . import dtypes
+from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import (
-    bn, has_bottleneck, inject_bottleneck_rolling_methods,
-    inject_datasetrolling_methods)
+    bn, has_bottleneck, inject_coarsen_methods,
+    inject_bottleneck_rolling_methods, inject_datasetrolling_methods)
 from .pycompat import dask_array_type
-
-
-def _get_new_dimname(dims, new_dim):
-    """ Get an new dimension name based on new_dim, that is not used in dims.
-    If the same name exists, we add an underscore(s) in the head.
-
-    Example1:
-        dims: ['a', 'b', 'c']
-        new_dim: ['_rolling']
-        -> ['_rolling']
-    Example2:
-        dims: ['a', 'b', 'c', '_rolling']
-        new_dim: ['_rolling']
-        -> ['__rolling']
-    """
-    while new_dim in dims:
-        new_dim = '_' + new_dim
-    return new_dim
 
 
 class Rolling(object):
@@ -230,7 +212,7 @@ class DataArrayRolling(Rolling):
         reduced : DataArray
             Array with summarized data.
         """
-        rolling_dim = _get_new_dimname(self.obj.dims, '_rolling_dim')
+        rolling_dim = utils.get_temp_dimname(self.obj.dims, '_rolling_dim')
         windows = self.construct(rolling_dim)
         result = windows.reduce(func, dim=rolling_dim, **kwargs)
 
@@ -241,7 +223,7 @@ class DataArrayRolling(Rolling):
     def _counts(self):
         """ Number of non-nan entries in each rolling window. """
 
-        rolling_dim = _get_new_dimname(self.obj.dims, '_rolling_dim')
+        rolling_dim = utils.get_temp_dimname(self.obj.dims, '_rolling_dim')
         # We use False as the fill_value instead of np.nan, since boolean
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
@@ -453,5 +435,121 @@ class DatasetRolling(Rolling):
             **{self.dim: slice(None, None, stride)})
 
 
+class Coarsen(object):
+    """A object that implements the coarsen.
+
+    See Also
+    --------
+    Dataset.coarsen
+    DataArray.coarsen
+    """
+
+    _attributes = ['windows', 'side', 'trim_excess']
+
+    def __init__(self, obj, windows, boundary, side, coord_func):
+        """
+        Moving window object.
+
+        Parameters
+        ----------
+        obj : Dataset or DataArray
+            Object to window.
+        windows : A mapping from a dimension name to window size
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
+        boundary : 'exact' | 'trim' | 'pad'
+            If 'exact', a ValueError will be raised if dimension size is not a
+            multiple of window size. If 'trim', the excess indexes are trimed.
+            If 'pad', NA will be padded.
+        side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
+        coord_func: mapping from coordinate name to func.
+
+        Returns
+        -------
+        coarsen
+        """
+        self.obj = obj
+        self.windows = windows
+        self.side = side
+        self.boundary = boundary
+
+        if not utils.is_dict_like(coord_func):
+            coord_func = {d: coord_func for d in self.obj.dims}
+        for c in self.obj.coords:
+            if c not in coord_func:
+                coord_func[c] = duck_array_ops.mean
+        self.coord_func = coord_func
+
+    def __repr__(self):
+        """provide a nice str repr of our coarsen object"""
+
+        attrs = ["{k}->{v}".format(k=k, v=getattr(self, k))
+                 for k in self._attributes
+                 if getattr(self, k, None) is not None]
+        return "{klass} [{attrs}]".format(klass=self.__class__.__name__,
+                                          attrs=','.join(attrs))
+
+
+class DataArrayCoarsen(Coarsen):
+    @classmethod
+    def _reduce_method(cls, func):
+        """
+        Return a wrapped function for injecting numpy methods.
+        see ops.inject_coarsen_methods
+        """
+        def wrapped_func(self, **kwargs):
+            from .dataarray import DataArray
+
+            reduced = self.obj.variable.coarsen(
+                self.windows, func, self.boundary, self.side)
+            coords = {}
+            for c, v in self.obj.coords.items():
+                if c == self.obj.name:
+                    coords[c] = reduced
+                else:
+                    if any(d in self.windows for d in v.dims):
+                        coords[c] = v.variable.coarsen(
+                            self.windows, self.coord_func[c],
+                            self.boundary, self.side)
+                    else:
+                        coords[c] = v
+            return DataArray(reduced, dims=self.obj.dims, coords=coords)
+
+        return wrapped_func
+
+
+class DatasetCoarsen(Coarsen):
+    @classmethod
+    def _reduce_method(cls, func):
+        """
+        Return a wrapped function for injecting numpy methods.
+        see ops.inject_coarsen_methods
+        """
+        def wrapped_func(self, **kwargs):
+            from .dataset import Dataset
+
+            reduced = OrderedDict()
+            for key, da in self.obj.data_vars.items():
+                reduced[key] = da.variable.coarsen(
+                    self.windows, func, self.boundary, self.side)
+
+            coords = {}
+            for c, v in self.obj.coords.items():
+                if any(d in self.windows for d in v.dims):
+                    coords[c] = v.variable.coarsen(
+                        self.windows, self.coord_func[c],
+                        self.boundary, self.side)
+                else:
+                    coords[c] = v.variable
+            return Dataset(reduced, coords=coords)
+
+        return wrapped_func
+
+
 inject_bottleneck_rolling_methods(DataArrayRolling)
 inject_datasetrolling_methods(DatasetRolling)
+inject_coarsen_methods(DataArrayCoarsen)
+inject_coarsen_methods(DatasetCoarsen)

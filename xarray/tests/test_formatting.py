@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+from textwrap import dedent
+
 import numpy as np
 import pandas as pd
 
+import xarray as xr
 from xarray.core import formatting
 
 from . import raises_regex
@@ -185,6 +188,120 @@ class TestFormatting(object):
         assert long.endswith('...')
         assert '\n' not in newlines
         assert '\t' not in tabs
+
+    def test_diff_array_repr(self):
+        da_a = xr.DataArray(
+            np.array([[1, 2, 3], [4, 5, 6]], dtype='int64'),
+            dims=('x', 'y'),
+            coords={'x': np.array(['a', 'b'], dtype='U1'),
+                    'y': np.array([1, 2, 3], dtype='int64')},
+            attrs={'units': 'm', 'description': 'desc'})
+
+        da_b = xr.DataArray(
+            np.array([1, 2], dtype='int64'),
+            dims='x',
+            coords={'x': np.array(['a', 'c'], dtype='U1'),
+                    'label': ('x', np.array([1, 2], dtype='int64'))},
+            attrs={'units': 'kg'})
+
+        expected = dedent("""\
+        Left and right DataArray objects are not identical
+        Differing dimensions:
+            (x: 2, y: 3) != (x: 2)
+        Differing values:
+        L
+            array([[1, 2, 3],
+                   [4, 5, 6]], dtype=int64)
+        R
+            array([1, 2], dtype=int64)
+        Differing coordinates:
+        L * x        (x) <U1 'a' 'b'
+        R * x        (x) <U1 'a' 'c'
+        Coordinates only on the left object:
+          * y        (y) int64 1 2 3
+        Coordinates only on the right object:
+            label    (x) int64 1 2
+        Differing attributes:
+        L   units: m
+        R   units: kg
+        Attributes only on the left object:
+            description: desc""")
+
+        actual = formatting.diff_array_repr(da_a, da_b, 'identical')
+        try:
+            assert actual == expected
+        except AssertionError:
+            # depending on platform, dtype may not be shown in numpy array repr
+            assert actual == expected.replace(", dtype=int64", "")
+
+        va = xr.Variable('x', np.array([1, 2, 3], dtype='int64'),
+                         {'title': 'test Variable'})
+        vb = xr.Variable(('x', 'y'),
+                         np.array([[1, 2, 3], [4, 5, 6]], dtype='int64'))
+
+        expected = dedent("""\
+        Left and right Variable objects are not equal
+        Differing dimensions:
+            (x: 3) != (x: 2, y: 3)
+        Differing values:
+        L
+            array([1, 2, 3], dtype=int64)
+        R
+            array([[1, 2, 3],
+                   [4, 5, 6]], dtype=int64)""")
+
+        actual = formatting.diff_array_repr(va, vb, 'equals')
+        try:
+            assert actual == expected
+        except AssertionError:
+            assert actual == expected.replace(", dtype=int64", "")
+
+    def test_diff_dataset_repr(self):
+        ds_a = xr.Dataset(
+            data_vars={
+                'var1': (('x', 'y'),
+                         np.array([[1, 2, 3], [4, 5, 6]], dtype='int64')),
+                'var2': ('x', np.array([3, 4], dtype='int64'))
+            },
+            coords={'x': np.array(['a', 'b'], dtype='U1'),
+                    'y': np.array([1, 2, 3], dtype='int64')},
+            attrs={'units': 'm', 'description': 'desc'}
+        )
+
+        ds_b = xr.Dataset(
+            data_vars={'var1': ('x', np.array([1, 2], dtype='int64'))},
+            coords={
+                'x': ('x', np.array(['a', 'c'], dtype='U1'), {'source': 0}),
+                'label': ('x', np.array([1, 2], dtype='int64'))
+            },
+            attrs={'units': 'kg'}
+        )
+
+        expected = dedent("""\
+        Left and right Dataset objects are not identical
+        Differing dimensions:
+            (x: 2, y: 3) != (x: 2)
+        Differing coordinates:
+        L * x        (x) <U1 'a' 'b'
+        R * x        (x) <U1 'a' 'c'
+            source: 0
+        Coordinates only on the left object:
+          * y        (y) int64 1 2 3
+        Coordinates only on the right object:
+            label    (x) int64 1 2
+        Differing data variables:
+        L   var1     (x, y) int64 1 2 3 4 5 6
+        R   var1     (x) int64 1 2
+        Data variables only on the left object:
+            var2     (x) int64 3 4
+        Differing attributes:
+        L   units: m
+        R   units: kg
+        Attributes only on the left object:
+            description: desc""")
+
+        actual = formatting.diff_dataset_repr(ds_a, ds_b, 'identical')
+        assert actual == expected
 
 
 def test_set_numpy_options():

@@ -249,6 +249,26 @@ def assert_dask_array(da, dask):
         assert isinstance(da.data, dask_array_type)
 
 
+@pytest.mark.parametrize('dask', [False, True])
+def test_datetime_reduce(dask):
+    time = np.array(pd.date_range('15/12/1999', periods=11))
+    time[8: 11] = np.nan
+    da = DataArray(
+        np.linspace(0, 365, num=11), dims='time', coords={'time': time})
+
+    if dask and has_dask:
+        chunks = {'time': 5}
+        da = da.chunk(chunks)
+
+    actual = da['time'].mean()
+    assert not pd.isnull(actual)
+    actual = da['time'].mean(skipna=False)
+    assert pd.isnull(actual)
+
+    # test for a 0d array
+    assert da['time'][0].mean() == da['time'][:1].mean()
+
+
 @pytest.mark.parametrize('dim_num', [1, 2])
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])

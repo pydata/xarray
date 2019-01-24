@@ -137,8 +137,8 @@ class VariableSubclassobjects(object):
         # check value is equal for both ndarray and Variable
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', "In the future, 'NAT == x'")
-            assert variable.values[0] == expected_value0
-            assert variable[0].values == expected_value0
+            np.testing.assert_equal(variable.values[0], expected_value0)
+            np.testing.assert_equal(variable[0].values, expected_value0)
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
@@ -1681,6 +1681,58 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable(['x', 'y'], [[2, 3], [3, 4], [4, 5]])
         assert_identical(v, expected)
 
+    def test_coarsen(self):
+        v = self.cls(['x'], [0, 1, 2, 3, 4])
+        actual = v.coarsen({'x': 2}, boundary='pad', func='mean')
+        expected = self.cls(['x'], [0.5, 2.5, 4])
+        assert_identical(actual, expected)
+
+        actual = v.coarsen({'x': 2}, func='mean', boundary='pad',
+                           side='right')
+        expected = self.cls(['x'], [0, 1.5, 3.5])
+        assert_identical(actual, expected)
+
+        actual = v.coarsen({'x': 2}, func=np.mean, side='right',
+                           boundary='trim')
+        expected = self.cls(['x'], [1.5, 3.5])
+        assert_identical(actual, expected)
+
+        # working test
+        v = self.cls(['x', 'y', 'z'],
+                     np.arange(40 * 30 * 2).reshape(40, 30, 2))
+        for windows, func, side, boundary in [
+                ({'x': 2}, np.mean, 'left', 'trim'),
+                ({'x': 2}, np.median, {'x': 'left'}, 'pad'),
+                ({'x': 2, 'y': 3}, np.max, 'left', {'x': 'pad', 'y': 'trim'})]:
+            v.coarsen(windows, func, boundary, side)
+
+    def test_coarsen_2d(self):
+        # 2d-mean should be the same with the successive 1d-mean
+        v = self.cls(['x', 'y'], np.arange(6 * 12).reshape(6, 12))
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean')
+        expected = v.coarsen({'x': 3}, func='mean').coarsen(
+            {'y': 4}, func='mean')
+        assert_equal(actual, expected)
+
+        v = self.cls(['x', 'y'], np.arange(7 * 12).reshape(7, 12))
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
+        expected = v.coarsen({'x': 3}, func='mean', boundary='trim').coarsen(
+            {'y': 4}, func='mean', boundary='trim')
+        assert_equal(actual, expected)
+
+        # if there is nan, the two should be different
+        v = self.cls(['x', 'y'], 1.0 * np.arange(6 * 12).reshape(6, 12))
+        v[2, 4] = np.nan
+        v[3, 5] = np.nan
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
+        expected = v.coarsen({'x': 3}, func='sum', boundary='trim').coarsen(
+            {'y': 4}, func='sum', boundary='trim') / 12
+        assert not actual.equals(expected)
+        # adjusting the nan count
+        expected[0, 1] *= 12 / 11
+        expected[1, 1] *= 12 / 11
+        assert_allclose(actual, expected)
+
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
@@ -1834,6 +1886,10 @@ class TestIndexVariable(VariableSubclassobjects):
     @pytest.mark.xfail
     def test_rolling_window(self):
         super(TestIndexVariable, self).test_rolling_window()
+
+    @pytest.mark.xfail
+    def test_coarsen_2d(self):
+        super(TestIndexVariable, self).test_coarsen_2d()
 
 
 class TestAsCompatibleData(object):

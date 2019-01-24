@@ -12,10 +12,11 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
-    DataArrayCoordinates, Indexes, LevelCoordinatesSource,
+    DataArrayCoordinates, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
+from .indexes import default_indexes, Indexes
 from .options import OPTIONS
 from .utils import (
     _check_inplace, decode_numpy_dict_values, either_dict_or_kwargs,
@@ -158,12 +159,13 @@ class DataArray(AbstractArray, DataWithCoords):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
+    _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
-                 attrs=None, encoding=None, fastpath=False):
+                 attrs=None, encoding=None, indexes=None, fastpath=False):
         """
         Parameters
         ----------
@@ -234,6 +236,10 @@ class DataArray(AbstractArray, DataWithCoords):
         self._variable = variable
         self._coords = coords
         self._name = name
+
+        # TODO(shoyer): document this argument, once it becomes part of the
+        # public interface.
+        self._indexes = indexes
 
         self._file_obj = None
 
@@ -532,9 +538,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def indexes(self):
-        """OrderedDict of pandas.Index objects used for label based indexing
+        """Mapping of pandas.Index objects used for label based indexing
         """
-        return Indexes(self._coords, self.sizes)
+        if self._indexes is None:
+            self._indexes = default_indexes(self._coords, self.dims)
+        return Indexes(self._indexes)
 
     @property
     def coords(self):
@@ -761,7 +769,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return self.copy(deep=True)
 
     # mutable objects should not be hashable
-    __hash__ = None
+    # https://github.com/python/mypy/issues/4266
+    __hash__ = None  # type: ignore
 
     @property
     def chunks(self):
@@ -1749,7 +1758,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return dataset.to_netcdf(*args, **kwargs)
 
-    def to_dict(self):
+    def to_dict(self, data=True):
         """
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
@@ -1758,22 +1767,20 @@ class DataArray(AbstractArray, DataWithCoords):
         Useful for coverting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
+        Parameters
+        ----------
+        data : bool, optional
+            Whether to include the actual data in the dictionary. When set to
+            False, returns just the schema.
+
         See also
         --------
         DataArray.from_dict
         """
-        d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
-             'dims': self.dims}
-
+        d = self.variable.to_dict(data=data)
+        d.update({'coords': {}, 'name': self.name})
         for k in self.coords:
-            data = ensure_us_time_resolution(self[k].values).tolist()
-            d['coords'].update({
-                k: {'data': data,
-                    'dims': self[k].dims,
-                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
-
-        d.update({'data': ensure_us_time_resolution(self.values).tolist(),
-                  'name': self.name})
+            d['coords'][k] = self.coords[k].variable.to_dict(data=data)
         return d
 
     @classmethod

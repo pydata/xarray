@@ -1,11 +1,12 @@
 import warnings
 from collections import Iterable
 from functools import partial
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
 
-from . import rolling
+from . import utils
 from .common import _contains_datetime_like_objects
 from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type
@@ -15,8 +16,8 @@ from .variable import Variable, broadcast_variables
 
 class BaseInterpolator(object):
     '''gerneric interpolator class for normalizing interpolation methods'''
-    cons_kwargs = {}
-    call_kwargs = {}
+    cons_kwargs = {}  # type: Dict[str, Any]
+    call_kwargs = {}  # type: Dict[str, Any]
     f = None
     method = None
 
@@ -367,7 +368,7 @@ def _get_valid_fill_mask(arr, dim, limit):
     None'''
     kw = {dim: limit + 1}
     # we explicitly use construct method to avoid copy.
-    new_dim = rolling._get_new_dimname(arr.dims, '_window')
+    new_dim = utils.get_temp_dimname(arr.dims, '_window')
     return (arr.isnull().rolling(min_periods=1, **kw)
             .construct(new_dim, fill_value=False)
             .sum(new_dim, skipna=False)) <= limit

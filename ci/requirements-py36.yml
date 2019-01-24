@@ -14,21 +14,22 @@ dependencies:
   - pytest-cov
   - pytest-env
   - coveralls
-  - flake8
+  - pycodestyle
   - numpy
   - pandas
   - scipy
   - seaborn
   - toolz
-  - rasterio
+  # - rasterio  # xref #2683
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
   - eccodes
   - cdms2
-  - pynio
-  - iris>=1.10
+  # - pynio  # xref #2683
+  # - iris>=1.10    # xref #2683
   - pydap
   - lxml
   - pip:
     - cfgrib>=0.9.2
+    - mypy==0.650

@@ -2,6 +2,7 @@
 import numpy as np
 
 from xarray.core import duck_array_ops
+from xarray.core import formatting
 
 
 def _decode_string_data(data):
@@ -47,8 +48,10 @@ def assert_equal(a, b):
     import xarray as xr
     __tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)  # noqa
-    if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
-        assert a.equals(b), '{}\n{}'.format(a, b)
+    if isinstance(a, (xr.Variable, xr.DataArray)):
+        assert a.equals(b), formatting.diff_array_repr(a, b, 'equals')
+    elif isinstance(a, xr.Dataset):
+        assert a.equals(b), formatting.diff_dataset_repr(a, b, 'equals')
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
@@ -74,11 +77,13 @@ def assert_identical(a, b):
     import xarray as xr
     __tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)  # noqa
-    if isinstance(a, xr.DataArray):
+    if isinstance(a, xr.Variable):
+        assert a.identical(b), formatting.diff_array_repr(a, b, 'identical')
+    elif isinstance(a, xr.DataArray):
         assert a.name == b.name
-        assert_identical(a._to_temp_dataset(), b._to_temp_dataset())
+        assert a.identical(b), formatting.diff_array_repr(a, b, 'identical')
     elif isinstance(a, (xr.Dataset, xr.Variable)):
-        assert a.identical(b), '{}\n{}'.format(a, b)
+        assert a.identical(b), formatting.diff_dataset_repr(a, b, 'identical')
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))

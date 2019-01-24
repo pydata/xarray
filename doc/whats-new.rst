@@ -28,9 +28,21 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
+  By `Ryan Abernathey <https://github.com/rabernat>`_
+- :py:meth:`~xarray.DataArray.coarsen` and
+  :py:meth:`~xarray.Dataset.coarsen` are newly added.
+  See :ref:`comput.coarsen` for details.
+  (:issue:`2525`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:func:`xarray.testing.assert_equal` and
+  :py:func:`xarray.testing.assert_identical` now provide a more detailed
+  report showing what exactly differs between the two objects (dimensions /
+  coordinates / variables / attributes)  (:issue:`1507`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -39,7 +51,10 @@ Bug fixes
   as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
-  `Spencer Clark <https://github.com/spencerkclark>`_. 
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Saving files with times encoded with reference dates with timezones
+  (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
+  (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.11.2:
 
@@ -73,8 +88,8 @@ Breaking changes
 - Minimum rasterio version increased from 0.36 to 1.0 (for ``open_rasterio``)
 - Time bounds variables are now also decoded according to CF conventions
   (:issue:`2565`). The previous behavior was to decode them only if they
-  had specific time attributes, now these attributes are copied 
-  automatically from the corresponding time coordinate. This might 
+  had specific time attributes, now these attributes are copied
+  automatically from the corresponding time coordinate. This might
   brake downstream code that was relying on these variables to be
   not decoded.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
