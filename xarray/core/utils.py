@@ -6,8 +6,8 @@ import itertools
 import os.path
 import re
 import warnings
-from collections import (
-    Iterable, Mapping, MutableMapping, MutableSet, OrderedDict)
+from collections import OrderedDict
+from collections.abc import Iterable, Mapping, MutableMapping, MutableSet
 
 import numpy as np
 import pandas as pd

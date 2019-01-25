@@ -2,7 +2,8 @@ import logging
 import time
 import traceback
 import warnings
-from collections import Mapping, OrderedDict
+from collections import OrderedDict
+from collections.abc import Mapping
 
 import numpy as np
 

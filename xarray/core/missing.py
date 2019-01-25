@@ -1,5 +1,5 @@
 import warnings
-from collections import Iterable
+from collections.abc import Iterable
 from functools import partial
 from typing import Any, Dict
 
