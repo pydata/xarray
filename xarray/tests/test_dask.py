@@ -1,6 +1,6 @@
-from __future__ import absolute_import, division, print_function
-
 import pickle
+from collections import OrderedDict
+from contextlib import suppress
 from distutils.version import LooseVersion
 from textwrap import dedent
 
@@ -11,7 +11,6 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
-from xarray.core.pycompat import OrderedDict, suppress
 from xarray.tests import mock
 
 from . import (

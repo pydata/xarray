@@ -1,8 +1,6 @@
 import collections
 import threading
 
-from ..core.pycompat import move_to_end
-
 
 class LRUCache(collections.MutableMapping):
     """Thread-safe LRUCache based on an OrderedDict.
@@ -41,7 +39,7 @@ class LRUCache(collections.MutableMapping):
         # record recent use of the key by moving it to the front of the list
         with self._lock:
             value = self._cache[key]
-            move_to_end(self._cache, key)
+            self._cache.move_to_end(key)
             return value
 
     def _enforce_size_limit(self, capacity):

@@ -1,7 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 
 import numpy as np
 import pandas as pd
@@ -9,9 +7,7 @@ import pandas as pd
 from .coding import strings, times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
-from .core.pycompat import (
-    OrderedDict, basestring, bytes_type, dask_array_type, iteritems,
-    unicode_type)
+from .core.pycompat import dask_array_type
 from .core.variable import IndexVariable, Variable, as_variable
 
 
@@ -127,7 +123,7 @@ def _infer_dtype(array, name=None):
         return np.dtype(float)
 
     element = array[(0,) * array.ndim]
-    if isinstance(element, (bytes_type, unicode_type)):
+    if isinstance(element, (bytes, str)):
         return strings.create_vlen_dtype(type(element))
 
     dtype = np.array(element).dtype
@@ -372,7 +368,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
     coord_names = set()
 
-    if isinstance(drop_variables, basestring):
+    if isinstance(drop_variables, str):
         drop_variables = [drop_variables]
     elif drop_variables is None:
         drop_variables = []
@@ -383,7 +379,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         _update_bounds_attributes(variables)
 
     new_vars = OrderedDict()
-    for k, v in iteritems(variables):
+    for k, v in variables.items():
         if k in drop_variables:
             continue
         stack_char_dim = (concat_characters and v.dtype == 'S1' and
@@ -507,7 +503,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     non_dim_coord_names = set(non_dim_coord_names)
 
     for name in list(non_dim_coord_names):
-        if isinstance(name, basestring) and ' ' in name:
+        if isinstance(name, str) and ' ' in name:
             warnings.warn(
                 'coordinate {!r} has a space in its name, which means it '
                 'cannot be marked as a coordinate on disk and will be '
@@ -602,5 +598,5 @@ def cf_encoder(variables, attributes):
     See also: encode_cf_variable
     """
     new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
-                           for k, v in iteritems(variables))
+                           for k, v in variables.items())
     return new_vars, attributes

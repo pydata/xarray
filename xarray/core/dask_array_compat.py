@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from distutils.version import LooseVersion
 
 import dask.array as da
@@ -35,7 +33,7 @@ except ImportError:  # pragma: no cover
         return result
 
 
-if LooseVersion(dask_version) > LooseVersion('1.19.2'):
+if LooseVersion(dask_version) > LooseVersion('0.19.2'):
     gradient = da.gradient
 
 else:  # pragma: no cover

@@ -1,22 +1,16 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import operator
 from collections import defaultdict
+from collections.abc import Hashable
+from contextlib import suppress
 from datetime import timedelta
 
 import numpy as np
 import pandas as pd
 
 from . import duck_array_ops, nputils, utils
-from .pycompat import (
-    dask_array_type, integer_types, iteritems, range, suppress)
+from .pycompat import dask_array_type, integer_types
 from .utils import is_dict_like
-
-try:
-    from collections.abc import Hashable
-except ImportError:  # Py2
-    from collections import Hashable
 
 
 def expanded_indexer(key, ndim):
@@ -214,7 +208,7 @@ def get_dim_indexers(data_obj, indexers):
 
     level_indexers = defaultdict(dict)
     dim_indexers = {}
-    for key, label in iteritems(indexers):
+    for key, label in indexers.items():
         dim, = data_obj[key].dims
         if key != dim:
             # assume here multi-index level indexer
@@ -222,7 +216,7 @@ def get_dim_indexers(data_obj, indexers):
         else:
             dim_indexers[key] = label
 
-    for dim, level_labels in iteritems(level_indexers):
+    for dim, level_labels in level_indexers.items():
         if dim_indexers.get(dim, False):
             raise ValueError("cannot combine multi-index level indexers "
                              "with an indexer for dimension %s" % dim)
@@ -243,7 +237,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     new_indexes = {}
 
     dim_indexers = get_dim_indexers(data_obj, indexers)
-    for dim, label in iteritems(dim_indexers):
+    for dim, label in dim_indexers.items():
         try:
             index = data_obj.indexes[dim]
         except KeyError:

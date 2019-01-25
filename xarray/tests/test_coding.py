@@ -1,9 +1,10 @@
+from contextlib import suppress
+
 import numpy as np
 import pytest
 
 import xarray as xr
 from xarray.coding import variables
-from xarray.core.pycompat import suppress
 
 from . import assert_identical, requires_dask
 

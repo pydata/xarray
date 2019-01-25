@@ -1,5 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
+from collections import OrderedDict
+from contextlib import suppress
 from textwrap import dedent
 
 import numpy as np
@@ -8,7 +8,7 @@ import pandas as pd
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .options import _get_keep_attrs
-from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .pycompat import dask_array_type
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
@@ -75,7 +75,7 @@ class ImplementsDatasetReduce(object):
             and 'axis' arguments can be supplied."""
 
 
-class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
+class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable."""
 
     def __bool__(self):
@@ -128,7 +128,7 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dim, basestring):
+        if isinstance(dim, str):
             return self._get_axis_num(dim)
         else:
             return tuple(self._get_axis_num(d) for d in dim)
@@ -199,7 +199,7 @@ class AttrAccessMixin(object):
         extra_attrs = [item
                        for sublist in self._attr_sources
                        for item in sublist
-                       if isinstance(item, basestring)]
+                       if isinstance(item, str)]
         return sorted(set(dir(type(self)) + extra_attrs))
 
     def _ipython_key_completions_(self):
@@ -210,7 +210,7 @@ class AttrAccessMixin(object):
         item_lists = [item
                       for sublist in self._item_sources
                       for item in sublist
-                      if isinstance(item, basestring)]
+                      if isinstance(item, str)]
         return list(set(item_lists))
 
 
@@ -223,7 +223,7 @@ def get_squeeze_dims(xarray_obj, dim, axis=None):
     if dim is None and axis is None:
         dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
     else:
-        if isinstance(dim, basestring):
+        if isinstance(dim, str):
             dim = [dim]
         if isinstance(axis, int):
             axis = (axis, )

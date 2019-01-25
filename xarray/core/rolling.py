@@ -1,6 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
+from collections import OrderedDict
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -10,7 +9,7 @@ from .dask_array_ops import dask_rolling_wrapper
 from .ops import (
     bn, has_bottleneck, inject_coarsen_methods,
     inject_bottleneck_rolling_methods, inject_datasetrolling_methods)
-from .pycompat import OrderedDict, dask_array_type, zip
+from .pycompat import dask_array_type
 
 
 class Rolling(object):

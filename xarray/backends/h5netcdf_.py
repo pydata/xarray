@@ -1,12 +1,10 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
+from collections import OrderedDict
 
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
 from .common import WritableCFDataStore
 from .file_manager import CachingFileManager
@@ -32,7 +30,7 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
 
 
 def maybe_decode_bytes(txt):
-    if isinstance(txt, bytes_type):
+    if isinstance(txt, bytes):
         return txt.decode('utf-8')
     else:
         return txt
@@ -124,7 +122,7 @@ class H5NetCDFStore(WritableCFDataStore):
         encoding['original_shape'] = var.shape
 
         vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-        if vlen_dtype is unicode_type:
+        if vlen_dtype is str:
             encoding['dtype'] = str
         elif vlen_dtype is not None:  # pragma: no cover
             # xarray doesn't support writing arbitrary vlen dtypes yet.
@@ -136,7 +134,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in iteritems(self.ds.variables))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         return FrozenOrderedDict(_read_attributes(self.ds))
@@ -182,7 +180,7 @@ class H5NetCDFStore(WritableCFDataStore):
                 'NC_CHAR type.' % name)
 
         if dtype is str:
-            dtype = h5py.special_dtype(vlen=unicode_type)
+            dtype = h5py.special_dtype(vlen=str)
 
         encoding = _extract_h5nc_encoding(variable,
                                           raise_on_invalid=check_encoding)
@@ -221,7 +219,7 @@ class H5NetCDFStore(WritableCFDataStore):
         else:
             nc4_var = self.ds[name]
 
-        for k, v in iteritems(attrs):
+        for k, v in attrs.items():
             nc4_var.attrs[k] = v
 
         target = H5NetCDFArrayWrapper(name, self)
