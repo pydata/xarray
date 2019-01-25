@@ -1861,15 +1861,15 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2['hue'] = pd.timedelta_range('-1D', periods=4, freq='D')
         ds2.plot.scatter(x='A', y='B', hue='hue', hue_style=hue_style)
 
-    @pytest.mark.parametrize('hue_style, map_type',
-                             (['discrete', list],
-                              ['continuous', mpl.collections.PathCollection]))
-    def test_facetgrid_hue_style(self, hue_style, map_type):
-        g = self.ds.plot.scatter(x='A', y='B', row='row', col='col', hue='hue',
-                                 hue_style=hue_style)
-        # for 'discrete' a list is appended to _mappables
-        # for 'continuous', should be single PathCollection
-        assert type(g._mappables[-1]) == map_type
+    def test_facetgrid_hue_style(self):
+        # Can't move this to pytest.mark.parametrize because it can't find mpl?
+        for hue_style, map_type in zip(['discrete', 'continuous'],
+                                       [list, mpl.collections.PathCollection]):
+            g = self.ds.plot.scatter(x='A', y='B', row='row', col='col',
+                                     hue='hue', hue_style=hue_style)
+            # for 'discrete' a list is appended to _mappables
+            # for 'continuous', should be single PathCollection
+            assert isinstance(g._mappables[-1], map_type)
 
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()
