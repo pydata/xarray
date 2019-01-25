@@ -13,8 +13,6 @@ priority order:
 Once NumPy 1.10 comes out with support for overriding ufuncs, this module will
 hopefully no longer be necessary.
 """
-from __future__ import absolute_import, division, print_function
-
 import warnings as _warnings
 
 import numpy as _np
