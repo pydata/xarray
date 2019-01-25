@@ -1,8 +1,6 @@
 """Functions for converting to and from xarray objects
 """
-from __future__ import absolute_import, division, print_function
-
-from collections import Counter
+from collections import Counter, OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -12,7 +10,6 @@ from .conventions import decode_cf
 from .core import duck_array_ops
 from .core.dataarray import DataArray
 from .core.dtypes import get_fill_value
-from .core.pycompat import OrderedDict, range
 
 cdms2_ignored_attrs = {'name', 'tileIndex'}
 iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis',
