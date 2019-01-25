@@ -21,7 +21,7 @@ from .utils import (
     label_from_attrs)
 
 try:
-    from nc_time_axis import CalendarDateTime
+    import nc_time_axis
     nc_axis_available = True
 except ImportError:
     nc_axis_available = False
@@ -104,24 +104,24 @@ def _infer_line_data(darray, x, y, hue):
     return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
 
-def _convert_cftime_data(values):
-    converted = [CalendarDateTime(v, v.calendar) for v in values]
-    return converted
+# def _convert_cftime_data(values):
+#     converted = [CalendarDateTime(v, v.calendar) for v in values]
+#     return converted
 
 
-def _convert_all_cftime(da):
-    try:
-        from cftime import datetime as cftime_datetime
-    except ImportError:
-        raise ImportError('cftime package missing')
-    da = da.copy()
-    # find the dim that has a cftime datatype
-    dims = set(da.dims)
-    cftime_dims = [d for d in dims if isinstance(da[d].data.ravel()[0],
-                                                 cftime_datetime)]
-    for cd in cftime_dims:
-        da[cd].data = _convert_cftime_data(da[cd].data)
-    return da
+# def _convert_all_cftime(da):
+#     try:
+#         from cftime import datetime as cftime_datetime
+#     except ImportError:
+#         raise ImportError('cftime package missing')
+#     da = da.copy()
+#     # find the dim that has a cftime datatype
+#     dims = set(da.dims)
+#     cftime_dims = [d for d in dims if isinstance(da[d].data.ravel()[0],
+#                                                  cftime_datetime)]
+#     for cd in cftime_dims:
+#         da[cd].data = _convert_cftime_data(da[cd].data)
+#     return da
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -164,15 +164,12 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
 
     """
     darray = darray.squeeze()
-
-    # If I am not mistaken, this did check only if there are cftime.datetime
-    # objects in the actual data, not dims.
-    # Correction below
-
+    # Unsure about this. If I read correctly the commented line tests if
+    # cftime datetimes are in the data, not the dims. I assume we want to check
+    # the dims?
     if any([contains_cftime_datetimes(darray[dim]) for dim in darray.dims]):
-        if nc_axis_available:
-            darray = _convert_all_cftime(darray)
-        else:
+    # if contains_cftime_datetimes(darray):
+        if not nc_axis_available:
             raise ImportError(
                 'Built-in plotting of arrays of cftime.datetime objects or  '
                 'arrays indexed by cftime.datetime objects requires the '
