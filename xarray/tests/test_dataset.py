@@ -589,6 +589,11 @@ class TestDataset(object):
         expected = data.merge({'c': 11}).set_coords('c')
         assert_identical(expected, actual)
 
+    def test_update_index(self):
+        actual = Dataset(coords={'x': [1, 2, 3]})
+        actual['x'] = ['a', 'b', 'c']
+        assert actual.indexes['x'].equals(pd.Index(['a', 'b', 'c']))
+
     def test_coords_setitem_with_new_dimension(self):
         actual = Dataset()
         actual.coords['foo'] = ('x', [1, 2, 3])

@@ -237,6 +237,7 @@ class DataArrayCoordinates(AbstractCoordinates):
             raise ValueError('cannot add coordinates with new dimensions to '
                              'a DataArray')
         self._data._coords = coords
+        self._data._indexes = None
 
     @property
     def variables(self):

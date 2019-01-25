@@ -1222,6 +1222,11 @@ class TestDataArray(object):
                              dims='x')
         assert_identical(lhs, expected)
 
+    def test_set_coords_update_index(self):
+        actual = DataArray([1, 2, 3], [('x', [1, 2, 3])])
+        actual.coords['x'] = ['a', 'b', 'c']
+        assert actual.indexes['x'].equals(pd.Index(['a', 'b', 'c']))
+
     def test_coords_replacement_alignment(self):
         # regression test for GH725
         arr = DataArray([0, 1, 2], dims=['abc'])
