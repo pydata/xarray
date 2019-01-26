@@ -14,7 +14,7 @@ __ http://pandas.pydata.org/pandas-docs/stable/visualization.html
 __ http://stanford.edu/~mwaskom/software/seaborn/
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
@@ -93,7 +93,6 @@ DataFrames:
 
     s = ds['foo'].to_series()
     s
-
     # or equivalently, with Series.to_xarray()
     xr.DataArray.from_series(s)
 
@@ -173,11 +172,10 @@ So you can represent a Panel, in two ways:
 Let's take a look:
 
 .. ipython:: python
-   :okwarning:
+    :okwarning:
 
     panel = pd.Panel(np.random.rand(2, 3, 4), items=list('ab'), major_axis=list('mno'),
                      minor_axis=pd.date_range(start='2000', periods=4, name='date'))
-
     panel
 
 As a DataArray:

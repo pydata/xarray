@@ -15,7 +15,6 @@ core functionality.
     import numpy as np
     import pandas as pd
     import xarray as xr
-
     np.random.seed(123456)
 
 Creating datetime64 data
@@ -241,7 +240,6 @@ coordinate with dates from a no-leap calendar and a
 
    from itertools import product
    from cftime import DatetimeNoLeap
-   
    dates = [DatetimeNoLeap(year, month, 1) for year, month in
             product(range(1, 3), range(1, 13))]
    da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'], name='foo')
