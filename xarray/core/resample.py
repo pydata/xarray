@@ -73,23 +73,53 @@ class Resample(object):
         """
         return self._upsample('asfreq')
 
-    def pad(self):
+    def pad(self, tolerance=None):
         """Forward fill new values at up-sampled frequency.
+
+        Parameters
+        ----------
+        tolerance : optional
+            Maximum distance between original and new labels to limit
+            the up-sampling method.
+            Up-sampled data with indices that satisfy the equation
+            ``abs(index[indexer] - target) <= tolerance`` are filled by
+            new values. Data with indices that are outside the given
+            tolerance are filled with ``NaN``  s
         """
-        return self._upsample('pad')
+        return self._upsample('pad', tolerance=tolerance)
     ffill = pad
 
-    def backfill(self):
+    def backfill(self, tolerance=None):
         """Backward fill new values at up-sampled frequency.
+
+        Parameters
+        ----------
+        tolerance : optional
+            Maximum distance between original and new labels to limit
+            the up-sampling method.
+            Up-sampled data with indices that satisfy the equation
+            ``abs(index[indexer] - target) <= tolerance`` are filled by
+            new values. Data with indices that are outside the given
+            tolerance are filled with ``NaN`` s
         """
-        return self._upsample('backfill')
+        return self._upsample('backfill', tolerance=tolerance)
     bfill = backfill
 
-    def nearest(self):
+    def nearest(self, tolerance=None):
         """Take new values from nearest original coordinate to up-sampled
         frequency coordinates.
+
+        Parameters
+        ----------
+        tolerance : optional
+            Maximum distance between original and new labels to limit
+            the up-sampling method.
+            Up-sampled data with indices that satisfy the equation
+            ``abs(index[indexer] - target) <= tolerance`` are filled by
+            new values. Data with indices that are outside the given
+            tolerance are filled with ``NaN`` s
         """
-        return self._upsample('nearest')
+        return self._upsample('nearest', tolerance=tolerance)
 
     def interpolate(self, kind='linear'):
         """Interpolate up-sampled data using the original data
