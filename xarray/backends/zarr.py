@@ -1,12 +1,11 @@
-from __future__ import absolute_import, division, print_function
-
+from collections import OrderedDict
 from distutils.version import LooseVersion
 
 import numpy as np
 
 from .. import Variable, coding, conventions
 from ..core import indexing
-from ..core.pycompat import OrderedDict, integer_types, iteritems
+from ..core.pycompat import integer_types
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from .common import AbstractWritableDataStore, BackendArray, \
     _encode_variable_name
@@ -370,7 +369,7 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-        for vn, v in iteritems(variables):
+        for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
             attrs = v.attrs.copy()
@@ -391,7 +390,7 @@ class ZarrStore(AbstractWritableDataStore):
                 encoded_attrs = OrderedDict()
                 # the magic for storing the hidden dimension data
                 encoded_attrs[_DIMENSION_KEY] = dims
-                for k2, v2 in iteritems(attrs):
+                for k2, v2 in attrs.items():
                     encoded_attrs[k2] = self.encode_attribute(v2)
 
                 zarr_array = self.ds.create(name, shape=shape, dtype=dtype,

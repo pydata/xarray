@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function
-
 import sys
 import warnings
+from collections import OrderedDict
 from copy import copy, deepcopy
 from io import StringIO
 import pickle
@@ -18,8 +17,7 @@ from xarray import (
     backends, broadcast, open_dataset, set_options)
 from xarray.core import dtypes, indexing, npcompat, utils
 from xarray.core.common import full_like
-from xarray.core.pycompat import (
-    OrderedDict, integer_types, iteritems, unicode_type)
+from xarray.core.pycompat import integer_types
 
 from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
@@ -117,7 +115,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
                 InaccessibleArray(v.values))
             return Variable(v.dims, data, v.attrs)
         return dict((k, lazy_inaccessible(k, v)) for
-                    k, v in iteritems(self._variables))
+                    k, v in self._variables.items())
 
 
 class TestDataset(object):
@@ -215,7 +213,7 @@ class TestDataset(object):
 
     def test_unicode_data(self):
         # regression test for GH834
-        data = Dataset({u'foø': [u'ba®']}, attrs={u'å': u'∑'})
+        data = Dataset({'foø': ['ba®']}, attrs={'å': '∑'})
         repr(data)  # should not raise
 
         byteorder = '<' if sys.byteorder == 'little' else '>'
@@ -227,20 +225,20 @@ class TestDataset(object):
         Data variables:
             *empty*
         Attributes:
-            å:        ∑""" % (byteorder, u'ba®'))
-        actual = unicode_type(data)
+            å:        ∑""" % (byteorder, 'ba®'))
+        actual = str(data)
         assert expected == actual
 
     def test_info(self):
         ds = create_test_data(seed=123)
         ds = ds.drop('dim3')  # string type prints differently in PY2 vs PY3
-        ds.attrs['unicode_attr'] = u'ba®'
+        ds.attrs['unicode_attr'] = 'ba®'
         ds.attrs['string_attr'] = 'bar'
 
         buf = StringIO()
         ds.info(buf=buf)
 
-        expected = dedent(u'''\
+        expected = dedent('''\
         xarray.Dataset {
         dimensions:
         \tdim1 = 8 ;
@@ -310,7 +308,7 @@ class TestDataset(object):
             pass
 
         d = pd.Timestamp('2000-01-01T12')
-        args = [True, None, 3.4, np.nan, 'hello', u'uni', b'raw',
+        args = [True, None, 3.4, np.nan, 'hello', b'raw',
                 np.datetime64('2000-01-01'), d, d.to_pydatetime(),
                 Arbitrary()]
         for arg in args:
@@ -626,6 +624,11 @@ class TestDataset(object):
         expected = data.merge({'c': 11}).set_coords('c')
         assert_identical(expected, actual)
 
+    def test_update_index(self):
+        actual = Dataset(coords={'x': [1, 2, 3]})
+        actual['x'] = ['a', 'b', 'c']
+        assert actual.indexes['x'].equals(pd.Index(['a', 'b', 'c']))
+
     def test_coords_setitem_with_new_dimension(self):
         actual = Dataset()
         actual.coords['foo'] = ('x', [1, 2, 3])
@@ -873,7 +876,7 @@ class TestDataset(object):
             assert data[v].dims == ret[v].dims
             assert data[v].attrs == ret[v].attrs
             slice_list = [slice(None)] * data[v].values.ndim
-            for d, s in iteritems(slicers):
+            for d, s in slicers.items():
                 if d in data[v].dims:
                     inds = np.nonzero(np.array(data[v].dims) == d)[0]
                     for ind in inds:
@@ -1926,7 +1929,7 @@ class TestDataset(object):
     def test_copy_with_data(self):
         orig = create_test_data()
         new_data = {k: np.random.randn(*v.shape)
-                    for k, v in iteritems(orig.data_vars)}
+                    for k, v in orig.data_vars.items()}
         actual = orig.copy(data=new_data)
 
         expected = orig.copy()
@@ -1950,12 +1953,12 @@ class TestDataset(object):
         renamed = data.rename(newnames)
 
         variables = OrderedDict(data.variables)
-        for k, v in iteritems(newnames):
+        for k, v in newnames.items():
             variables[v] = variables.pop(k)
 
-        for k, v in iteritems(variables):
+        for k, v in variables.items():
             dims = list(v.dims)
-            for name, newname in iteritems(newnames):
+            for name, newname in newnames.items():
                 if name in dims:
                     dims[dims.index(name)] = newname
 
@@ -2594,7 +2597,7 @@ class TestDataset(object):
             def get_args(v):
                 return [set(args[0]) & set(v.dims)] if args else []
             expected = Dataset(dict((k, v.squeeze(*get_args(v)))
-                                    for k, v in iteritems(data.variables)))
+                                    for k, v in data.variables.items()))
             expected = expected.set_coords(data.coords)
             assert_identical(expected, data.squeeze(*args))
         # invalid squeeze
@@ -3487,7 +3490,7 @@ class TestDataset(object):
 
         actual = data.max()
         expected = Dataset(dict((k, v.max())
-                                for k, v in iteritems(data.data_vars)))
+                                for k, v in data.data_vars.items()))
         assert_equal(expected, actual)
 
         assert_equal(data.min(dim=['dim1']),
@@ -3591,7 +3594,7 @@ class TestDataset(object):
         actual = ds.min()
         assert_identical(expected, actual)
 
-        expected = Dataset({'x': u'a'})
+        expected = Dataset({'x': 'a'})
         ds = Dataset({'x': ('y', np.array(['a', 'b'], 'U1'))})
         actual = ds.min()
         assert_identical(expected, actual)
@@ -4455,9 +4458,9 @@ def test_dir_non_string(data_set):
 
 
 def test_dir_unicode(data_set):
-    data_set[u'unicode'] = 'uni'
+    data_set['unicode'] = 'uni'
     result = dir(data_set)
-    assert u'unicode' in result
+    assert 'unicode' in result
 
 
 @pytest.fixture(params=[1])

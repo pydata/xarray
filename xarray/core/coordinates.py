@@ -1,6 +1,4 @@
-from __future__ import absolute_import, division, print_function
-
-from collections import Mapping
+from collections import Mapping, OrderedDict
 from contextlib import contextmanager
 
 import pandas as pd
@@ -8,7 +6,6 @@ import pandas as pd
 from . import formatting, indexing
 from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
-from .pycompat import OrderedDict
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
 
@@ -17,7 +14,7 @@ from .variable import Variable
 _THIS_ARRAY = ReprObject('<this-array>')
 
 
-class AbstractCoordinates(Mapping, formatting.ReprMixin):
+class AbstractCoordinates(Mapping):
     def __getitem__(self, key):
         raise NotImplementedError
 
@@ -47,7 +44,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
     def __contains__(self, key):
         return key in self._names
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.coords_repr(self)
 
     @property
@@ -237,6 +234,7 @@ class DataArrayCoordinates(AbstractCoordinates):
             raise ValueError('cannot add coordinates with new dimensions to '
                              'a DataArray')
         self._data._coords = coords
+        self._data._indexes = None
 
     @property
     def variables(self):

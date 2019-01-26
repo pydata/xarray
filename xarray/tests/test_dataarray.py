@@ -1,7 +1,6 @@
-from __future__ import absolute_import, division, print_function
-
 import pickle
 import warnings
+from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
 
@@ -16,7 +15,6 @@ from xarray.coding.times import CFDatetimeCoder, _import_cftime
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import ALL_DIMS, full_like
-from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     LooseVersion, ReturnItem, assert_allclose, assert_array_equal,
     assert_equal, assert_identical, raises_regex, requires_bottleneck,
@@ -74,7 +72,7 @@ class TestDataArray(object):
         assert len(self.dv) == len(self.v)
         assert_equal(self.dv.variable, self.v)
         assert set(self.dv.coords) == set(self.ds.coords)
-        for k, v in iteritems(self.dv.coords):
+        for k, v in self.dv.coords.items():
             assert_array_equal(v, self.ds.coords[k])
         with pytest.raises(AttributeError):
             self.dv.dataset
@@ -1221,6 +1219,11 @@ class TestDataArray(object):
                                      'x': [0, 1, 2]},
                              dims='x')
         assert_identical(lhs, expected)
+
+    def test_set_coords_update_index(self):
+        actual = DataArray([1, 2, 3], [('x', [1, 2, 3])])
+        actual.coords['x'] = ['a', 'b', 'c']
+        assert actual.indexes['x'].equals(pd.Index(['a', 'b', 'c']))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725
