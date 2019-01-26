@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
 from itertools import product
 
@@ -33,7 +31,7 @@ _CF_DATETIME_NUM_DATES_UNITS = [
     # here we add a couple minor formatting errors to test
     # the robustness of the parsing algorithm.
     (12300 + np.arange(5), 'hour since 1680-01-01  00:00:00'),
-    (12300 + np.arange(5), u'Hour  since 1680-01-01 00:00:00'),
+    (12300 + np.arange(5), 'Hour  since 1680-01-01 00:00:00'),
     (12300 + np.arange(5), ' Hour  since  1680-01-01 00:00:00 '),
     (10, 'days since 2000-01-01'),
     ([10], 'daYs  since 2000-01-01'),

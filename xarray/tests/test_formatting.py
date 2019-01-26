@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function
-
 from textwrap import dedent
 
 import numpy as np
@@ -8,7 +6,6 @@ import pandas as pd
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.core.pycompat import PY3
 
 from . import raises_regex
 
@@ -83,8 +80,7 @@ class TestFormatting(object):
             (pd.Timedelta('3 hours'), '0 days 03:00:00'),
             (pd.Timedelta('NaT'), 'NaT'),
             ('foo', "'foo'"),
-            (u'foo', "'foo'" if PY3 else "u'foo'"),
-            (b'foo', "b'foo'" if PY3 else "'foo'"),
+            (b'foo', "b'foo'"),
             (1, '1'),
             (1.0, '1.0'),
         ]
@@ -165,10 +161,10 @@ class TestFormatting(object):
 
     def test_pretty_print(self):
         assert formatting.pretty_print('abcdefghij', 8) == 'abcde...'
-        assert formatting.pretty_print(u'ß', 1) == u'ß'
+        assert formatting.pretty_print('ß', 1) == 'ß'
 
     def test_maybe_truncate(self):
-        assert formatting.maybe_truncate(u'ß', 10) == u'ß'
+        assert formatting.maybe_truncate('ß', 10) == 'ß'
 
     def test_format_timestamp_out_of_bounds(self):
         from datetime import datetime
@@ -183,15 +179,15 @@ class TestFormatting(object):
         assert result == expected
 
     def test_attribute_repr(self):
-        short = formatting.summarize_attr(u'key', u'Short string')
-        long = formatting.summarize_attr(u'key', 100 * u'Very long string ')
-        newlines = formatting.summarize_attr(u'key', u'\n\n\n')
-        tabs = formatting.summarize_attr(u'key', u'\t\t\t')
+        short = formatting.summarize_attr('key', 'Short string')
+        long = formatting.summarize_attr('key', 100 * 'Very long string ')
+        newlines = formatting.summarize_attr('key', '\n\n\n')
+        tabs = formatting.summarize_attr('key', '\t\t\t')
         assert short == '    key: Short string'
         assert len(long) <= 80
-        assert long.endswith(u'...')
-        assert u'\n' not in newlines
-        assert u'\t' not in tabs
+        assert long.endswith('...')
+        assert '\n' not in newlines
+        assert '\t' not in tabs
 
     def test_diff_array_repr(self):
         da_a = xr.DataArray(

@@ -1,17 +1,15 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import operator
 import warnings
-from collections import defaultdict
-from typing import Any, Mapping, Optional, Tuple
+from collections import OrderedDict, defaultdict
+from contextlib import suppress
+from typing import Any, Mapping, Optional
 
 import numpy as np
 import pandas as pd
 
 from . import utils
 from .indexing import get_indexer_nd
-from .pycompat import OrderedDict, iteritems, suppress
 from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
 
@@ -118,7 +116,7 @@ def align(*objects, **kwargs):
     #   pandas). This is useful, e.g., for overwriting such duplicate indexes.
     joiner = _get_joiner(join)
     joined_indexes = {}
-    for dim, matching_indexes in iteritems(all_indexes):
+    for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
             index = utils.safe_cast_to_index(indexes[dim])
             if (any(not index.equals(other) for other in matching_indexes) or
@@ -326,7 +324,7 @@ def reindex_variables(
     # size of reindexed dimensions
     new_sizes = {}
 
-    for name, index in iteritems(indexes):
+    for name, index in indexes.items():
         if name in indexers:
             if not index.is_unique:
                 raise ValueError(
@@ -377,7 +375,7 @@ def reindex_variables(
             args = ()
         reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
 
-    for name, var in iteritems(variables):
+    for name, var in variables.items():
         if name not in indexers:
             key = tuple(slice(None)
                         if d in unchanged_dims

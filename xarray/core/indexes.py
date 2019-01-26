@@ -1,4 +1,3 @@
-from __future__ import absolute_import, division, print_function
 import collections.abc
 from collections import OrderedDict
 from typing import Any, Iterable, Mapping, Optional, Tuple, Union
@@ -9,7 +8,7 @@ from . import formatting
 from .variable import Variable
 
 
-class Indexes(collections.abc.Mapping, formatting.ReprMixin):
+class Indexes(collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArrary indexes."""
     def __init__(self, indexes):
         """Not for public consumption.
@@ -33,7 +32,7 @@ class Indexes(collections.abc.Mapping, formatting.ReprMixin):
     def __getitem__(self, key):
         return self._indexes[key]
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.indexes_repr(self)
 
 
