@@ -37,7 +37,7 @@ from . import (
     requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
     requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
     requires_zarr)
-from .test_dataset import create_test_data
+from .test_dataset import create_test_data, create_append_test_data
 
 try:
     import netCDF4 as nc4
@@ -1484,9 +1484,17 @@ class ZarrBase(CFEncodedBase):
                 with pytest.raises(ValueError):
                     self.save(original, store, mode='w-')
 
-        # check that we can't use other persistence modes
+        # check append mode for normal write
         with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
             assert_identical(original, actual)
+
+        # check append mode for append write
+        obj, obj2 = create_append_test_data()
+        with self.create_zarr_target() as store_target:
+            obj.to_zarr(store_target, mode='w')
+            obj2.to_zarr(store_target, mode='a', append_dim='dim1')
+            original = xr.concat([obj, obj2], dim='dim1')
+            assert_identical(original, xr.open_zarr(store_target))
 
     def test_compressor_encoding(self):
         original = create_test_data()

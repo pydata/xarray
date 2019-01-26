@@ -54,6 +54,43 @@ def create_test_data(seed=None):
     return obj
 
 
+def create_append_test_data(seed=None):
+    rs = np.random.RandomState(seed)
+    _vars = {'var1': ['dim1', 'dim2'],
+             'var2': ['dim1', 'dim2'],
+             'var3': ['dim3', 'dim1']}
+    _dims = {'dim1': 8, 'dim2': 9, 'dim3': 10}
+
+    obj = Dataset()
+    obj['time'] = ('time', pd.date_range('2000-01-01', periods=20))
+    obj['dim2'] = ('dim2', 0.5 * np.arange(_dims['dim2']))
+    obj['dim3'] = ('dim3', list('abcdefghij'))
+    for v, dims in sorted(_vars.items()):
+        data = rs.normal(size=tuple(_dims[d] for d in dims))
+        obj[v] = (dims, data, {'foo': 'variable'})
+    obj.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
+                                              dtype='int64'))
+    obj.encoding = {'foo': 'bar'}
+    assert all(objp.data.flags.writeable for objp in obj.variables.values())
+    _vars = {'var1': ['dim1', 'dim2'],
+             'var2': ['dim1', 'dim2'],
+             'var3': ['dim3', 'dim1']}
+    _dims = {'dim1': 8, 'dim2': 9, 'dim3': 10}
+
+    obj2 = Dataset()
+    obj2['time'] = ('time', pd.date_range('2000-01-01', periods=20))
+    obj2['dim2'] = ('dim2', 0.5 * np.arange(_dims['dim2']))
+    obj2['dim3'] = ('dim3', list('abcdefghij'))
+    for v, dims in sorted(_vars.items()):
+        data = rs.normal(size=tuple(_dims[d] for d in dims))
+        obj2[v] = (dims, data, {'foo': 'variable'})
+    obj2.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
+                                                dtype='int64'))
+    obj2.encoding = {'foo': 'bar'}
+    assert all(objp.data.flags.writeable for objp in obj2.variables.values())
+    return obj, obj2
+
+
 def create_test_multiindex():
     mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                         names=('level_1', 'level_2'))
