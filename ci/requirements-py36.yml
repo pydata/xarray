@@ -22,6 +22,11 @@ dependencies:
   - zarr
   - pseudonetcdf>=3.0.1
   - eccodes
+  - cdms2
+# - pynio  # xref #2683
+# - iris>=1.10  # xref #2683
+  - pydap
+  - lxml
   - pip:
     - coveralls
     - pytest-cov
