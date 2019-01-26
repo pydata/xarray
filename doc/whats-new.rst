@@ -15,7 +15,7 @@ What's New
 
 .. _whats-new.0.11.3:
 
-v0.11.3 (24 January 2019)
+v0.11.3 (26 January 2019)
 -------------------------
 
 Bug fixes
