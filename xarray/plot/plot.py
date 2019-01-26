@@ -10,9 +10,7 @@ import functools
 import numpy as np
 import pandas as pd
 
-from xarray.core.common import contains_cftime_datetimes
-
-from .facetgrid import _easy_facetgrid
+from .facetgrid import FacetGrid
 from .utils import (
     _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_xy_labels,
     _interval_to_double_bound_points, _interval_to_mid_points,
@@ -22,9 +20,9 @@ from .utils import (
 
 try:
     import nc_time_axis
-    nc_axis_available = True
+    nc_time_axis_available = True
 except ImportError:
-    nc_axis_available = False
+    nc_time_axis_available = False
 
 
 def _infer_line_data(darray, x, y, hue):
@@ -164,18 +162,6 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
 
     """
     darray = darray.squeeze()
-    # Unsure about this. If I read correctly the commented line tests if
-    # cftime datetimes are in the data, not the dims. I assume we want to check
-    # the dims?
-    if any([contains_cftime_datetimes(darray[dim]) for dim in darray.dims]):
-    # if contains_cftime_datetimes(darray):
-        if not nc_axis_available:
-            raise ImportError(
-                'Built-in plotting of arrays of cftime.datetime objects or  '
-                'arrays indexed by cftime.datetime objects requires the '
-                'optional `nc-time-axis` package '
-                '(https://github.com/SciTools/nc-time-axis).'
-            )
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)

@@ -1844,27 +1844,6 @@ def test_plot_seaborn_no_import_warning():
     assert len(record) == 0
 
 
-# @requires_cftime
-# def test_plot_cftime_coordinate_error():
-#     cftime = _import_cftime()
-#     time = cftime.num2date(np.arange(5), units='days since 0001-01-01',
-#                            calendar='noleap')
-#     data = DataArray(np.arange(5), coords=[time], dims=['time'])
-#     with raises_regex(TypeError,
-#                       'requires coordinates to be numeric or dates'):
-#         data.plot()
-
-
-# @requires_cftime
-# def test_plot_cftime_data_error():
-#     cftime = _import_cftime()
-#     data = cftime.num2date(np.arange(5), units='days since 0001-01-01',
-#                            calendar='noleap')
-#     data = DataArray(data, coords=[np.arange(5)], dims=['x'])
-#     with raises_regex(NotImplementedError, 'cftime.datetime'):
-#         data.plot()
-
-
 test_da_list = [DataArray(easy_array((10, ))),
                 DataArray(easy_array((10, 3))),
                 DataArray(easy_array((10, 3, 2)))]
