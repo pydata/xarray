@@ -122,21 +122,12 @@ class TestDataArray(object):
         """
         # GH837, GH861
         # checking array subraction when dims are the same
-        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+        p_data = np.array([('Abe', 180), ('Stacy', 150), ('Dick', 200)],
                           dtype=[('name', '|S256'), ('height', object)])
-
-        p_data_1 = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
-        p_data_2 = np.array([('John', 180), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
         weights_0 = DataArray([80, 56, 120], dims=['participant'],
                               coords={'participant': p_data})
-
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -4, -5], dims=['participant'],
@@ -145,31 +136,27 @@ class TestDataArray(object):
         assert_identical(actual, expected)
 
         # checking array subraction when dims are not the same
-        p_data_1 = np.array([('John', 180), ('Stacy', 151), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
+        p_data_alt = np.array([('Abe', 180), ('Stacy', 151), ('Dick', 200)],
+                              dtype=[('name', '|S256'), ('height', object)])
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data_alt})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -5], dims=['participant'],
-                             coords={'participant': p_data_2})
+                             coords={'participant': p_data[[0, 2]]})
 
         assert_identical(actual, expected)
 
         # checking array subraction when dims are not the same and one
         # is np.nan
-        p_data_1 = np.array([('John', 180), ('Stacy', np.nan), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
+        p_data_nan = np.array([('Abe', 180), ('Stacy', np.nan), ('Dick', 200)],
+                              dtype=[('name', '|S256'), ('height', object)])
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data_nan})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -5], dims=['participant'],
-                             coords={'participant': p_data_2})
+                             coords={'participant': p_data[[0, 2]]})
 
         assert_identical(actual, expected)
 
