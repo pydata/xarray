@@ -130,7 +130,7 @@ def merge_indexes(
         if isinstance(var_names, str):
             var_names = [var_names]
 
-        names, labels, levels = [], [], []  # type: (list, list, list)
+        names, codes, levels = [], [], []  # type: (list, list, list)
         current_index_variable = variables.get(dim)
 
         for n in var_names:
@@ -144,13 +144,18 @@ def merge_indexes(
         if current_index_variable is not None and append:
             current_index = current_index_variable.to_index()
             if isinstance(current_index, pd.MultiIndex):
+                try:
+                    current_codes = current_index.codes
+                except AttributeError:
+                    # fpr pandas<0.24
+                    current_codes = current_index.labels
                 names.extend(current_index.names)
-                labels.extend(current_index.labels)
+                codes.extend(current_codes)
                 levels.extend(current_index.levels)
             else:
                 names.append('%s_level_0' % dim)
                 cat = pd.Categorical(current_index.values, ordered=True)
-                labels.append(cat.codes)
+                codes.append(cat.codes)
                 levels.append(cat.categories)
 
         if not len(names) and len(var_names) == 1:
@@ -161,10 +166,10 @@ def merge_indexes(
                 names.append(n)
                 var = variables[n]
                 cat = pd.Categorical(var.values, ordered=True)
-                labels.append(cat.codes)
+                codes.append(cat.codes)
                 levels.append(cat.categories)
 
-            idx = pd.MultiIndex(labels=labels, levels=levels, names=names)
+            idx = pd.MultiIndex(levels, codes, names=names)
 
         vars_to_replace[dim] = IndexVariable(dim, idx)
         vars_to_remove.extend(var_names)

@@ -1,4 +1,5 @@
-from collections import Mapping, OrderedDict
+import collections.abc
+from collections import OrderedDict
 from contextlib import contextmanager
 
 import pandas as pd
@@ -14,7 +15,7 @@ from .variable import Variable
 _THIS_ARRAY = ReprObject('<this-array>')
 
 
-class AbstractCoordinates(Mapping):
+class AbstractCoordinates(collections.abc.Mapping):
     def __getitem__(self, key):
         raise NotImplementedError
 

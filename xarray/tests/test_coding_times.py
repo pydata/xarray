@@ -533,17 +533,22 @@ def test_infer_cftime_datetime_units(calendar, date_args, expected):
 
 @pytest.mark.parametrize(
     ['timedeltas', 'units', 'numbers'],
-    [('1D', 'days', np.int64(1)),
-     (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
-     ('1h', 'hours', np.int64(1)),
-     ('1ms', 'milliseconds', np.int64(1)),
-     ('1us', 'microseconds', np.int64(1)),
-     (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
-     (['30m', '60m'], 'hours', [0.5, 1.0]),
-     (np.timedelta64('NaT', 'ns'), 'days', np.nan),
-     (['NaT', 'NaT'], 'days', [np.nan, np.nan])])
+    [
+        ('1D', 'days', np.int64(1)),
+        (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
+        ('1h', 'hours', np.int64(1)),
+        ('1ms', 'milliseconds', np.int64(1)),
+        ('1us', 'microseconds', np.int64(1)),
+        (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
+        (['30m', '60m'], 'hours', [0.5, 1.0]),
+        ('NaT', 'days', np.nan),
+        (['NaT', 'NaT'], 'days', [np.nan, np.nan]),
+    ])
 def test_cf_timedelta(timedeltas, units, numbers):
-    timedeltas = pd.to_timedelta(timedeltas, box=False)
+    if timedeltas == 'NaT':
+        timedeltas = np.timedelta64('NaT', 'ns')
+    else:
+        timedeltas = pd.to_timedelta(timedeltas, box=False)
     numbers = np.array(numbers)
 
     expected = numbers
