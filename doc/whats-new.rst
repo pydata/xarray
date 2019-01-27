@@ -47,6 +47,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Silenced warnings that appear when using pandas 0.24.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 - Interpolating via resample now internally specifies ``bounds_error=False``
   as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
