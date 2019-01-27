@@ -122,6 +122,8 @@ class TestDataArray(object):
         """
         # GH837, GH861
         # checking array subraction when dims are the same
+        # note: names need to be in sorted order to align consistently with
+        # pandas < 0.24 and >= 0.24.
         p_data = np.array([('Abe', 180), ('Stacy', 150), ('Dick', 200)],
                           dtype=[('name', '|S256'), ('height', object)])
         weights_0 = DataArray([80, 56, 120], dims=['participant'],
