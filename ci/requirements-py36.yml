@@ -20,14 +20,14 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  - rasterio
+  # - rasterio  # xref #2683
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
   - eccodes
   - cdms2
-  - pynio
-  - iris>=1.10
+# - pynio  # xref #2683
+# - iris>=1.10  # xref #2683
   - pydap
   - lxml
   - pip:

@@ -13,9 +13,9 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.11.3:
+.. _whats-new.0.12.0:
 
-v0.11.3 (unreleased)
+v0.12.0 (unreleased)
 --------------------
 
 Breaking changes
@@ -28,6 +28,8 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`~xarray.DataArray.coarsen` and
   :py:meth:`~xarray.Dataset.coarsen` are newly added.
   See :ref:`comput.coarsen` for details.
@@ -40,18 +42,39 @@ Enhancements
   :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
   By `Jwen Fai Low <https://github.com/jwenfai>`_ and
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:func:`xarray.testing.assert_equal` and
+  :py:func:`xarray.testing.assert_identical` now provide a more detailed
+  report showing what exactly differs between the two objects (dimensions /
+  coordinates / variables / attributes)  (:issue:`1507`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Silenced warnings that appear when using pandas 0.24.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 - Interpolating via resample now internally specifies ``bounds_error=False``
   as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+
+.. _whats-new.0.11.3:
+
+v0.11.3 (26 January 2019)
+-------------------------
+
+Bug fixes
+~~~~~~~~~
+
 - Saving files with times encoded with reference dates with timezones
   (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
   (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed performance regression with ``open_mfdataset`` (:issue:`2662`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fixed supplying an explicit dimension in the ``concat_dim`` argument to
+  to ``open_mfdataset`` (:issue:`2647`).
+  By `Ben Root <https://github.com/WeatherGod>`_.
 
 .. _whats-new.0.11.2:
 
