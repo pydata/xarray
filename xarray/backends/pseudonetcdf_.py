@@ -1,10 +1,9 @@
-from __future__ import absolute_import, division, print_function
+from collections import OrderedDict
 
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.pycompat import OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager

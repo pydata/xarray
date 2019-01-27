@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import pytest
 
 import datetime
@@ -8,7 +6,7 @@ import pandas as pd
 import xarray as xr
 
 pytest.importorskip('cftime')
-pytest.importorskip('pandas', minversion='0.23.99')
+pytest.importorskip('pandas', minversion='0.24')
 
 
 @pytest.fixture(

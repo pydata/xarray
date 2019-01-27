@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
 
 DISPLAY_WIDTH = 'display_width'
@@ -66,8 +64,9 @@ def _get_keep_attrs(default):
     elif global_choice in [True, False]:
         return global_choice
     else:
-        raise ValueError("The global option keep_attrs must be one of"
-                         " True, False or 'default'.")
+        raise ValueError(
+            "The global option keep_attrs must be one of"
+            " True, False or 'default'.")
 
 
 class set_options(object):
