@@ -1,10 +1,9 @@
-from __future__ import absolute_import, division, print_function
-
 import os.path
 import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
+from pathlib import Path
 
 import numpy as np
 
@@ -13,7 +12,6 @@ from ..core import indexing
 from .. import auto_combine
 from ..core.combine import (_manual_combine, _CONCAT_DIM_DEFAULT,
                             _infer_concat_order_from_positions)
-from ..core.pycompat import basestring, path_type
 from ..core.utils import (close_on_error, is_grib_path, is_remote_uri)
 from .common import ArrayWriter
 from .locks import _get_scheduler
@@ -100,7 +98,7 @@ def _normalize_path(path):
 def _validate_dataset_names(dataset):
     """DataArray.name and Dataset keys must be a string or None"""
     def check_name(name):
-        if isinstance(name, basestring):
+        if isinstance(name, str):
             if not name:
                 raise ValueError('Invalid name for DataArray or Dataset key: '
                                  'string must be length 1 or greater for '
@@ -118,7 +116,7 @@ def _validate_attrs(dataset):
     a string, an ndarray or a list/tuple of numbers/strings.
     """
     def check_attr(name, value):
-        if isinstance(name, basestring):
+        if isinstance(name, str):
             if not name:
                 raise ValueError('Invalid name for attr: string must be '
                                  'length 1 or greater for serialization to '
@@ -127,7 +125,7 @@ def _validate_attrs(dataset):
             raise TypeError("Invalid name for attr: {} must be a string for "
                             "serialization to netCDF files".format(name))
 
-        if not isinstance(value, (basestring, Number, np.ndarray, np.number,
+        if not isinstance(value, (str, Number, np.ndarray, np.number,
                                   list, tuple)):
             raise TypeError('Invalid value for attr: {} must be a number, '
                             'a string, an ndarray or a list/tuple of '
@@ -280,7 +278,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             from dask.base import tokenize
             # if passed an actual file path, augment the token with
             # the file modification time
-            if (isinstance(filename_or_obj, basestring) and
+            if (isinstance(filename_or_obj, str) and
                     not is_remote_uri(filename_or_obj)):
                 mtime = os.path.getmtime(filename_or_obj)
             else:
@@ -296,13 +294,13 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
         return ds2
 
-    if isinstance(filename_or_obj, path_type):
+    if isinstance(filename_or_obj, Path):
         filename_or_obj = str(filename_or_obj)
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
         ds = maybe_decode_store(store)
-    elif isinstance(filename_or_obj, basestring):
+    elif isinstance(filename_or_obj, str):
 
         if (isinstance(filename_or_obj, bytes) and
                 filename_or_obj.startswith(b'\x89HDF')):
@@ -311,7 +309,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 filename_or_obj.startswith(b'CDF')):
             # netCDF3 file images are handled by scipy
             pass
-        elif isinstance(filename_or_obj, basestring):
+        elif isinstance(filename_or_obj, str):
             filename_or_obj = _normalize_path(filename_or_obj)
 
         if engine is None:
@@ -353,7 +351,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if 'source' not in ds.encoding:
-        if isinstance(filename_or_obj, basestring):
+        if isinstance(filename_or_obj, str):
             ds.encoding['source'] = filename_or_obj
 
     return ds
@@ -598,7 +596,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """  # noqa
-    if isinstance(paths, basestring):
+    if isinstance(paths, str):
         if is_remote_uri(paths):
             raise ValueError(
                 'cannot do wild-card matching for paths that are remote URLs: '
@@ -606,7 +604,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                 .format(paths))
         paths = sorted(glob(paths))
     else:
-        paths = [str(p) if isinstance(p, path_type) else p for p in paths]
+        paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
     if not paths:
         raise IOError('no files to open')
@@ -690,7 +688,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if isinstance(path_or_file, path_type):
+    if isinstance(path_or_file, Path):
         path_or_file = str(path_or_file)
 
     if encoding is None:
@@ -707,7 +705,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
             raise NotImplementedError(
                 'to_netcdf() with compute=False is not yet implemented when '
                 'returning bytes')
-    elif isinstance(path_or_file, basestring):
+    elif isinstance(path_or_file, str):
         if engine is None:
             engine = _get_default_engine(path_or_file)
         path_or_file = _normalize_path(path_or_file)
@@ -742,7 +740,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
-    if isinstance(unlimited_dims, basestring):
+    if isinstance(unlimited_dims, str):
         unlimited_dims = [unlimited_dims]
 
     writer = ArrayWriter()
@@ -905,7 +903,7 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     See `Dataset.to_zarr` for full API docs.
     """
-    if isinstance(store, path_type):
+    if isinstance(store, Path):
         store = str(store)
     if encoding is None:
         encoding = {}

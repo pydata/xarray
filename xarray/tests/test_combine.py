@@ -1,4 +1,5 @@
-from __future__ import absolute_import, division, print_function
+from collections import OrderedDict
+from copy import deepcopy
 
 from itertools import product
 from datetime import datetime
@@ -11,7 +12,6 @@ from xarray.core.combine import (
     _new_tile_id, _check_shape_tile_ids, _combine_all_along_first_dim,
     _combine_nd, _infer_concat_order_from_positions,
     _infer_tile_ids_from_nested_list, _infer_concat_order_from_coords,)
-from xarray.core.pycompat import OrderedDict
 
 from . import (assert_combined_tile_ids_equal, assert_identical, assert_equal,
                raises_regex)

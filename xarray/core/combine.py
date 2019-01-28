@@ -1,15 +1,15 @@
-from __future__ import absolute_import, division, print_function
-
 import itertools
-from collections import Counter
+import warnings
+from collections import Counter, OrderedDict
 
 import pandas as pd
 
 from .dataarray import DataArray
 from . import utils
 from .merge import merge
+from .variable import IndexVariable, Variable, as_variable
+from .variable import concat as concat_vars
 from .concat import _auto_concat
-from .pycompat import OrderedDict
 
 
 _CONCAT_DIM_DEFAULT = utils.ReprObject('<inferred>')

@@ -1,13 +1,11 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import itertools
 import warnings
+from inspect import getfullargspec
 
 import numpy as np
 
 from ..core.formatting import format_item
-from ..core.pycompat import getargspec
 from .utils import (
     _determine_cmap_params, _infer_xy_labels, import_matplotlib_pyplot,
     label_from_attrs)
@@ -240,7 +238,7 @@ class FacetGrid(object):
                        'filled': func.__name__ != 'contour',
                        }
 
-        cmap_args = getargspec(_determine_cmap_params).args
+        cmap_args = getfullargspec(_determine_cmap_params).args
         cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)

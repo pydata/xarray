@@ -7,7 +7,6 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
-from xarray.core.pycompat import iteritems
 
 from . import (
     InaccessibleArray, assert_array_equal,
@@ -33,7 +32,7 @@ class TestConcatDataset(object):
             # return a new dataset with all variable dimensions transposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
-                                for k, v in iteritems(dataset.data_vars)),
+                                for k, v in dataset.data_vars.items()),
                            dataset.coords, attrs=dataset.attrs)
 
         for dim in ['dim1', 'dim2']:
@@ -47,7 +46,7 @@ class TestConcatDataset(object):
             data, concat(datasets, data[dim], coords='minimal'))
 
         datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-        concat_over = [k for k, v in iteritems(data.coords)
+        concat_over = [k for k, v in data.coords.items()
                        if dim in v.dims and k != dim]
         actual = concat(datasets, data[dim], coords=concat_over)
         assert_identical(data, rectify_dim_order(actual))

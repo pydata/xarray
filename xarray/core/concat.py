@@ -1,13 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
+from collections import OrderedDict
 
 import pandas as pd
 
 
 from . import utils
 from .alignment import align
-from .pycompat import OrderedDict, basestring, iteritems
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 
@@ -127,7 +127,7 @@ def _calc_concat_dim_coord(dim):
     """
     from .dataarray import DataArray
 
-    if isinstance(dim, basestring):
+    if isinstance(dim, str):
         coord = None
     elif not isinstance(dim, (DataArray, Variable)):
         dim_name = getattr(dim, 'name', None)
@@ -160,7 +160,7 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                            if dim in v.dims)
 
     def process_subset_opt(opt, subset):
-        if isinstance(opt, basestring):
+        if isinstance(opt, str):
             if opt == 'different':
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
@@ -251,7 +251,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
         if (compat == 'identical' and
                 not utils.dict_equiv(ds.attrs, result_attrs)):
             raise ValueError('dataset global attributes not equal')
-        for k, v in iteritems(ds.variables):
+        for k, v in ds.variables.items():
             if k not in result_vars and k not in concat_over:
                 raise ValueError('encountered unexpected variable %r' % k)
             elif (k in result_coord_names) != (k in ds.coords):
