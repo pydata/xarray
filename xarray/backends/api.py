@@ -504,7 +504,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         list of files to open. Paths can be given as strings or as pathlib
         Paths. If concatenation along more than one dimension is desired, then
         ``paths`` must be a nested list-of-lists (see ``manual_combine`` for
-        details).
+        details). (A string glob will be expanded to a 1-dimensional list.)
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.
