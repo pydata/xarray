@@ -2507,7 +2507,7 @@ class TestDataArray(object):
 
         # Backward fill
         actual = array.resample(time='6H').bfill(tolerance='12H')
-        expected = DataArray([0., np.nan,  1.,  1.,  1.],
+        expected = DataArray([0., np.nan, 1., 1., 1.],
                              [('time', times_upsampled)])
         assert_identical(expected, actual)
 
