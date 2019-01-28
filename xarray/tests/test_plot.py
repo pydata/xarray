@@ -1862,7 +1862,8 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2.plot.scatter(x='A', y='B', hue='hue', hue_style=hue_style)
 
     def test_facetgrid_hue_style(self):
-        # Can't move this to pytest.mark.parametrize because it can't find mpl?
+        # Can't move this to pytest.mark.parametrize because py35-min
+        # doesn't have mpl.
         for hue_style, map_type in zip(['discrete', 'continuous'],
                                        [list, mpl.collections.PathCollection]):
             g = self.ds.plot.scatter(x='A', y='B', row='row', col='col',
