@@ -10,9 +10,8 @@ import numpy as np
 from .. import Dataset, DataArray, backends, conventions
 from ..core import indexing
 from .. import auto_combine
-from ..core.combine import (_manual_combine, _CONCAT_DIM_DEFAULT,
-                            _infer_concat_order_from_positions)
-from ..core.utils import (close_on_error, is_grib_path, is_remote_uri)
+from ..core.combine import _manual_combine, _infer_concat_order_from_positions
+from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
 from .locks import _get_scheduler
 
@@ -483,7 +482,7 @@ class _MultiFileCloser(object):
             f.close()
 
 
-def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
+def open_mfdataset(paths, chunks=None, concat_dim='__auto_combine__',
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
                    combine='auto', autoclose=None, parallel=False, **kwargs):
@@ -517,8 +516,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         need to provide this argument if any of the dimensions along which you
         want to concatenate is not a dimension in the original datasets, e.g.,
         if you want to stack a collection of 2D arrays along a third dimension.
-        By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dim=[..., None, ...]`` explicitly to
+        Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation along a particular dimension.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
@@ -613,11 +611,13 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     # If combine='manual' then this creates a flat list which is easier to
     # iterate over, while saving the originally-supplied structure as "ids"
     if combine is 'manual':
-        if concat_dim is not _CONCAT_DIM_DEFAULT:
+        if concat_dim is '__auto_combine__':
+            raise ValueError("Must supply concat_dim when using manual "
+                             "combine")
+        else:
             if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
                 concat_dim = [concat_dim]
-    combined_ids_paths, concat_dims = _infer_concat_order_from_positions(
-        paths, concat_dim)
+    combined_ids_paths = _infer_concat_order_from_positions(paths)
     ids, paths = (
         list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
@@ -650,7 +650,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         if combine is 'auto':
             # Will redo ordering from coordinates, ignoring how they were
             # ordered previously
-            if concat_dim is not _CONCAT_DIM_DEFAULT:
+            if concat_dim is not '__auto_combine__':
                 raise ValueError("Cannot specify dimensions to concatenate "
                                  "along when auto-combining")
 

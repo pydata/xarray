@@ -9,28 +9,12 @@ from . import utils
 from .merge import merge
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
-from .concat import _auto_concat
+from .concat import concat
 
 
-_CONCAT_DIM_DEFAULT = utils.ReprObject('<inferred>')
-
-
-def _infer_concat_order_from_positions(datasets, concat_dims):
-
+def _infer_concat_order_from_positions(datasets):
     combined_ids = OrderedDict(_infer_tile_ids_from_nested_list(datasets, ()))
-
-    tile_id, ds = list(combined_ids.items())[0]
-    n_dims = len(tile_id)
-
-    if concat_dims is _CONCAT_DIM_DEFAULT:
-        concat_dims = [_CONCAT_DIM_DEFAULT] * n_dims
-    else:
-        if len(concat_dims) != n_dims:
-            raise ValueError("concat_dims has length {} but the datasets "
-                             "passed are nested in a {}-dimensional structure"
-                             .format(str(len(concat_dims)), str(n_dims)))
-
-    return combined_ids, concat_dims
+    return combined_ids
 
 
 def _infer_tile_ids_from_nested_list(entry, current_pos):
@@ -46,7 +30,7 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
 
     Parameters
     ----------
-    entry : list[list[obj, obj, ...]]
+    entry : list[list[obj, obj, ...], ...]
         List of lists of arbitrary depth, containing objects in the order
         they are to be concatenated.
 
@@ -176,6 +160,14 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
     combined_ds : xarray.Dataset
     """
 
+    tile_id, ds = list(combined_ids.items())[0]
+
+    n_dims = len(tile_id)
+    if len(concat_dims) != n_dims:
+        raise ValueError("concat_dims has length {} but the datasets "
+                         "passed are nested in a {}-dimensional structure"
+                         .format(str(len(concat_dims)), str(n_dims)))
+
     # Each iteration of this loop reduces the length of the tile_ids tuples
     # by one. It always combines along the first dimension, removing the first
     # element of the tuple
@@ -207,19 +199,16 @@ def _combine_all_along_first_dim(combined_ids, dim, data_vars, coords, compat):
     return new_combined_ids
 
 
-def _combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
-                compat='no_conflicts', data_vars='all', coords='different'):
+def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
+                coords='different'):
     """
     Applies either concat or merge to 1D list of datasets depending on value
     of concat_dim
     """
 
-    # TODO this logic is taken from old 1D auto_combine - check if it's right
-    # Should it just use concat directly instead?
     if concat_dim is not None:
-        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        combined = _auto_concat(datasets, dim=dim, data_vars=data_vars,
-                                coords=coords)
+        combined = concat(datasets, dim=concat_dim, data_vars=data_vars,
+                          coords=coords)
     else:
         combined = merge(datasets, compat=compat)
 
@@ -238,8 +227,7 @@ def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids):
     if not ids:
         # Determine tile_IDs by structure of input in N-D
         # (i.e. ordering in list-of-lists)
-        combined_ids, concat_dims = _infer_concat_order_from_positions(
-            datasets, concat_dims)
+        combined_ids = _infer_concat_order_from_positions(datasets)
     else:
         # Already sorted so just use the ids already passed
         combined_ids = OrderedDict(zip(ids, datasets))
@@ -253,8 +241,8 @@ def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids):
     return combined
 
 
-def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
-                   compat='no_conflicts', data_vars='all', coords='different'):
+def manual_combine(datasets, concat_dim, compat='no_conflicts',
+                   data_vars='all', coords='different'):
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
@@ -279,12 +267,11 @@ def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
         Dataset objects to combine.
         If concatenation or merging along more than one dimension is desired,
         then datasets must be supplied in a nested list-of-lists.
-    concat_dim : str, or list of str, DataArray, Index or None, optional
+    concat_dim : str, or list of str, DataArray, Index or None
         Dimensions along which to concatenate variables, as used by
         :py:func:`xarray.concat`.
-        By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dim=[..., None, ...]`` explicitly to
-        disable concatenation and merge instead along a particular dimension.
+        Set ``concat_dim=[..., None, ...]`` explicitly to disable concatenation
+        and merge instead along a particular dimension.
         The position of ``None`` in the list specifies the dimension of the
         nested-list input along which to merge.
         Must be the same length as the depth of the list passed to
@@ -372,10 +359,8 @@ def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     merge
     auto_combine
     """
-
-    if concat_dim is not _CONCAT_DIM_DEFAULT:
-        if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
-            concat_dim = [concat_dim]
+    if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+        concat_dim = [concat_dim]
 
     # The IDs argument tells _manual_combine that datasets aren't yet sorted
     return _manual_combine(datasets, concat_dims=concat_dim, compat=compat,

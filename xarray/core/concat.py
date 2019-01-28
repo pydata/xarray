@@ -338,29 +338,3 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
     ds = _dataset_concat(datasets, dim, data_vars, coords, compat,
                          positions)
     return arrays[0]._from_temp_dataset(ds, name)
-
-
-def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
-    if len(datasets) == 1 and dim is None:
-        # There is nothing more to combine, so kick out early.
-        return datasets[0]
-    else:
-        if dim is None:
-            ds0 = datasets[0]
-            ds1 = datasets[1]
-            concat_dims = set(ds0.dims)
-            if ds0.dims != ds1.dims:
-                dim_tuples = set(ds0.dims.items()) - set(ds1.dims.items())
-                concat_dims = set(i for i, _ in dim_tuples)
-            if len(concat_dims) > 1:
-                concat_dims = set(d for d in concat_dims
-                                  if not ds0[d].equals(ds1[d]))
-            if len(concat_dims) > 1:
-                raise ValueError('too many different dimensions to '
-                                 'concatenate: %s' % concat_dims)
-            elif len(concat_dims) == 0:
-                raise ValueError('cannot infer dimension to concatenate: '
-                                 'supply the ``concat_dim`` argument '
-                                 'explicitly')
-            dim, = concat_dims
-        return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)

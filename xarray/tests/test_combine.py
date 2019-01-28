@@ -11,7 +11,7 @@ from xarray import DataArray, Dataset, concat, auto_combine, manual_combine
 from xarray.core.combine import (
     _new_tile_id, _check_shape_tile_ids, _combine_all_along_first_dim,
     _combine_nd, _infer_concat_order_from_positions,
-    _infer_tile_ids_from_nested_list, _infer_concat_order_from_coords,)
+    _infer_concat_order_from_coords)
 
 from . import (assert_combined_tile_ids_equal, assert_identical, assert_equal,
                raises_regex)
@@ -24,7 +24,7 @@ class TestTileIDsFromNestedList(object):
         input = [ds(0), ds(1)]
 
         expected = {(0,): ds(0), (1,): ds(1)}
-        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_2d(self):
@@ -34,7 +34,7 @@ class TestTileIDsFromNestedList(object):
         expected = {(0, 0): ds(0), (0, 1): ds(1),
                     (1, 0): ds(2), (1, 1): ds(3),
                     (2, 0): ds(4), (2, 1): ds(5)}
-        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_3d(self):
@@ -48,7 +48,7 @@ class TestTileIDsFromNestedList(object):
                     (1, 0, 0): ds(6), (1, 0, 1): ds(7),
                     (1, 1, 0): ds(8), (1, 1, 1): ds(9),
                     (1, 2, 0): ds(10), (1, 2, 1): ds(11)}
-        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_single_dataset(self):
@@ -56,7 +56,7 @@ class TestTileIDsFromNestedList(object):
         input = [ds]
 
         expected = {(0,): ds}
-        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_redundant_nesting(self):
@@ -64,14 +64,14 @@ class TestTileIDsFromNestedList(object):
         input = [[ds(0)], [ds(1)]]
 
         expected = {(0, 0): ds(0), (1, 0): ds(1)}
-        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_ignore_empty_list(self):
         ds = create_test_data(0)
         input = [ds, []]
         expected = {(0,): ds}
-        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_uneven_depth_input(self):
@@ -81,7 +81,7 @@ class TestTileIDsFromNestedList(object):
         input = [ds(0), [ds(1), ds(2)]]
 
         expected = {(0,): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
-        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_uneven_length_input(self):
@@ -91,7 +91,7 @@ class TestTileIDsFromNestedList(object):
         input = [[ds(0)], [ds(1), ds(2)]]
 
         expected = {(0, 0): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
-        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_infer_from_datasets(self):
@@ -99,13 +99,8 @@ class TestTileIDsFromNestedList(object):
         input = [ds(0), ds(1)]
 
         expected = {(0,): ds(0), (1,): ds(1)}
-        actual, concat_dims = _infer_concat_order_from_positions(input, [
-                                                                 'dim1'])
+        actual = _infer_concat_order_from_positions(input)
         assert_combined_tile_ids_equal(expected, actual)
-
-        input = [ds(0), ds(1)]
-        with pytest.raises(ValueError):
-            _infer_concat_order_from_positions(input, ['dim1', 'extra_dim'])
 
 
 class TestTileIDsFromCoords(object):
