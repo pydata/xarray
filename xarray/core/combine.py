@@ -323,7 +323,6 @@ def manual_combine(datasets, concat_dim, compat='no_conflicts',
       temperature       (x, y) float64 11.04 23.57 20.77 ...
       precipitation     (x, y) float64 5.904 2.453 3.404 ...
 
-
     ``manual_combine`` can also be used to explicitly merge datasets with
     different variables. For example if we have 4 datasets, which are divided
     along two times, and contain two different variables, we can pass ``None``
@@ -382,9 +381,8 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
     a combination of concat and merge.
 
     Will attempt to order the datasets such that the values in their dimension
-    coordinates are monotonically increasing along all dimensions. If it cannot
-    determine the order in which to concatenate the datasets, it will raise an
-    error.
+    coordinates are monotonic along all dimensions. If it cannot determine the
+    order in which to concatenate the datasets, it will raise a ValueError.
     Non-coordinate dimensions will be ignored, as will any coordinate
     dimensions which do not vary between each dataset.
 
@@ -396,7 +394,7 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
     and each combination of a distinct time period and set of data variables is
     saved as its own dataset. Also useful for if you have a simulation which is
     parallelized in multiple dimensions, but has global coordinates saved in
-    each file specifying it's position within the domain.
+    each file specifying the positions of points within the global domain.
 
     Parameters
     ----------
@@ -429,6 +427,37 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
     concat
     merge
     manual_combine
+
+    Examples
+    --------
+
+    Combining two datasets using their common dimension coordinates. Notice
+    they are concatenated based on the values in their dimension coordinates,
+    not on their position in the list passed to `auto_combine`.
+
+    >>> x1
+    <xarray.Dataset>
+    Dimensions:         (x: 3)
+    Coords:
+      position          (x) int64   0 1 2
+    Data variables:
+      temperature       (x) float64 11.04 23.57 20.77 ...
+
+    >>> x2
+    <xarray.Dataset>
+    Dimensions:         (x: 3)
+    Coords:
+      position          (x) int64   3 4 5
+    Data variables:
+      temperature       (x) float64 6.97 8.13 7.42 ...
+
+    >>> combined = xr.auto_combine([x2, x1])
+    <xarray.Dataset>
+    Dimensions:         (x: 6)
+    Coords:
+      position          (x) int64   0 1 2 3 4 5
+    Data variables:
+      temperature       (x) float64 11.04 23.57 20.77 ...
     """
 
     # Group by data vars
