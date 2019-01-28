@@ -439,25 +439,25 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
     <xarray.Dataset>
     Dimensions:         (x: 3)
     Coords:
-      * position          (x) int64   0 1 2
+      * position        (x) int64   0 1 2
     Data variables:
-        temperature       (x) float64 11.04 23.57 20.77 ...
+        temperature     (x) float64 11.04 23.57 20.77 ...
 
     >>> x2
     <xarray.Dataset>
     Dimensions:         (x: 3)
     Coords:
-      * position          (x) int64   3 4 5
+      * position        (x) int64   3 4 5
     Data variables:
-        temperature       (x) float64 6.97 8.13 7.42 ...
+        temperature     (x) float64 6.97 8.13 7.42 ...
 
     >>> combined = xr.auto_combine([x2, x1])
     <xarray.Dataset>
     Dimensions:         (x: 6)
     Coords:
-      * position          (x) int64   0 1 2 3 4 5
+      * position        (x) int64   0 1 2 3 4 5
     Data variables:
-        temperature       (x) float64 11.04 23.57 20.77 ...
+        temperature     (x) float64 11.04 23.57 20.77 ...
     """
 
     # Group by data vars
