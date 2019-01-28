@@ -218,11 +218,6 @@ def _combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     # Should it just use concat directly instead?
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-
-
-        print(dim)
-        print(datasets)
-
         combined = _auto_concat(datasets, dim=dim, data_vars=data_vars,
                                 coords=coords)
     else:
@@ -290,6 +285,8 @@ def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation and merge instead along a particular dimension.
+        The position of ``None`` in the list specifies the dimension of the
+        nested-list input along which to merge.
         Must be the same length as the depth of the list passed to
         ``datasets``.
     compat : {'identical', 'equals', 'broadcast_equals',
@@ -317,34 +314,57 @@ def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     Examples
     --------
 
-    Collecting output from a parallel simulation:
-
-    Collecting data from a simulation which decomposes its domain into 4 parts,
-    2 each along both the x and y axes, requires organising the datasets into a
-    nested list, e.g.
+    A common task is collecting data from a parallelized simulation in which
+    each processor wrote out to a separate file. A domain which was decomposed
+    into 4 parts, 2 each along both the x and y axes, requires organising the
+    datasets into a doubly-nested list, e.g:
 
     >>> x1y1
     <xarray.Dataset>
     Dimensions:         (x: 2, y: 2)
-    Coordinates:
-      lon               (x, y) float64 -99.83 -99.32 -99.79 -99.23
-      lat               (x, y) float64 42.25 42.21 42.63 42.59
     Dimensions without coordinates: x, y
     Data variables:
       temperature       (x, y) float64 11.04 23.57 20.77 ...
       precipitation     (x, y) float64 5.904 2.453 3.404 ...
 
     >>> ds_grid = [[x1y1, x1y2], [x2y1, x2y2]]
-    >>> combined = xr.auto_combine(ds_grid, concat_dims=['x', 'y'])
+    >>> combined = xr.manual_combine(ds_grid, concat_dim=['x', 'y'])
     <xarray.Dataset>
     Dimensions:         (x: 4, y: 4)
-    Coordinates:
-      lon               (x, y) float64 -99.83 -99.32 -99.79 -99.23
-      lat               (x, y) float64 42.25 42.21 42.63 42.59
     Dimensions without coordinates: x, y
     Data variables:
       temperature       (x, y) float64 11.04 23.57 20.77 ...
       precipitation     (x, y) float64 5.904 2.453 3.404 ...
+
+
+    ``manual_combine`` can also be used to explicitly merge datasets with
+    different variables. For example if we have 4 datasets, which are divided
+    along two times, and contain two different variables, we can pass ``None``
+    to ``concat_dim`` to specify the dimension of the nested list over which
+    we wish to use ``merge`` instead of ``concat``:
+
+    >>> t1temp
+    <xarray.Dataset>
+    Dimensions:         (t: 5)
+    Dimensions without coordinates: t
+    Data variables:
+      temperature       (t) float64 11.04 23.57 20.77 ...
+
+    >>> t1precip
+    <xarray.Dataset>
+    Dimensions:         (t: 5)
+    Dimensions without coordinates: t
+    Data variables:
+      precipitation     (t) float64 5.904 2.453 3.404 ...
+
+    >>> ds_grid = [[t1temp, t1precip], [t2temp, t2precip]]
+    >>> combined = xr.manual_combine(ds_grid, concat_dim=['t', None])
+    <xarray.Dataset>
+    Dimensions:         (t: 10)
+    Dimensions without coordinates: t
+    Data variables:
+      temperature       (t) float64 11.04 23.57 20.77 ...
+      precipitation     (t) float64 5.904 2.453 3.404 ...
 
     See also
     --------
