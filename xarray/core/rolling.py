@@ -1,6 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
+from collections import OrderedDict
 from distutils.version import LooseVersion
 
 import numpy as np

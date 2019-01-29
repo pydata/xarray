@@ -1,7 +1,6 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import warnings
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -19,7 +18,6 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
     _check_inplace, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
@@ -37,7 +35,7 @@ def _infer_coords_and_dims(shape, coords, dims):
                          'which does not match the %s dimensions of the '
                          'data' % (len(coords), len(shape)))
 
-    if isinstance(dims, basestring):
+    if isinstance(dims, str):
         dims = (dims,)
 
     if dims is None:
@@ -57,7 +55,7 @@ def _infer_coords_and_dims(shape, coords, dims):
         dims = tuple(dims)
     else:
         for d in dims:
-            if not isinstance(d, basestring):
+            if not isinstance(d, str):
                 raise TypeError('dimension %s is not a string' % d)
 
     new_coords = OrderedDict()
@@ -475,14 +473,14 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._replace_maybe_drop_dims(var, name=key)
 
     def __getitem__(self, key):
-        if isinstance(key, basestring):
+        if isinstance(key, str):
             return self._getitem_coord(key)
         else:
             # xarray-style array indexing
             return self.isel(indexers=self._item_key_to_dict(key))
 
     def __setitem__(self, key, value):
-        if isinstance(key, basestring):
+        if isinstance(key, str):
             self.coords[key] = value
         else:
             # Coordinates in key, value and self[key] should be consistent.
@@ -1313,9 +1311,9 @@ class DataArray(AbstractArray, DataWithCoords):
           * y        (y) int64 0 1 2
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
-        MultiIndex(levels=[[u'a', u'b'], [0, 1, 2]],
+        MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                    labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
-                   names=[u'x', u'y'])
+                   names=['x', 'y'])
 
         See also
         --------
@@ -1356,9 +1354,9 @@ class DataArray(AbstractArray, DataWithCoords):
           * y        (y) int64 0 1 2
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
-        MultiIndex(levels=[[u'a', u'b'], [0, 1, 2]],
+        MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                    labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
-                   names=[u'x', u'y'])
+                   names=['x', 'y'])
         >>> roundtripped = stacked.unstack()
         >>> arr.identical(roundtripped)
         True
@@ -2041,7 +2039,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         """
         one_dims = []
-        for dim, coord in iteritems(self.coords):
+        for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append('{dim} = {v}'.format(
                     dim=dim, v=format_item(coord.values)))
