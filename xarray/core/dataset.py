@@ -355,7 +355,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             warnings.warn(
                 'The `compat` argument to Dataset is deprecated. '
                 'Instead, use `merge` to control how variables are combined',
-                FutureWarning)
+                FutureWarning, stacklevel=2)
         else:
             compat = 'broadcast_equals'
         self._variables = OrderedDict()
