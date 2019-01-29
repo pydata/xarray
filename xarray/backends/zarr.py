@@ -403,6 +403,7 @@ class ZarrStore(AbstractWritableDataStore):
                      appended has to be named.')
                 if self.append_dim not in dims:
                     continue
+                print(name, v.data.shape)
                 axis = dims.index(self.append_dim)
                 zarr_array.append(v.data, axis=axis)
 
