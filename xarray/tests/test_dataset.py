@@ -83,7 +83,7 @@ def create_append_test_data(seed=None):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj2[v] = (dims, data, {'foo': 'variable'})
     obj2.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
-                                                dtype='int64'))
+                                               dtype='int64'))
     obj2.encoding = {'foo': 'bar'}
     assert all(objp.data.flags.writeable for objp in obj2.variables.values())
     return obj, obj2
