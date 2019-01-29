@@ -54,6 +54,8 @@ Bug fixes
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Line plots with the `x` argument set to a coord now plot the correct data.
+  (:issue:`27251). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 .. _whats-new.0.11.3:
 
@@ -67,7 +69,7 @@ Bug fixes
   (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
   (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Fixed performance regression with ``open_mfdataset`` (:issue:`2662`).
-  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+
 - Fixed supplying an explicit dimension in the ``concat_dim`` argument to
   to ``open_mfdataset`` (:issue:`2647`).
   By `Ben Root <https://github.com/WeatherGod>`_.
