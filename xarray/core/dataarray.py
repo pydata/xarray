@@ -18,7 +18,6 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .pycompat import range, zip
 from .utils import _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
