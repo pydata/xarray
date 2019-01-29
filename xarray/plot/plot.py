@@ -212,7 +212,7 @@ def _infer_line_data(darray, x, y, hue):
             xplt = darray
             yplt = darray[y]
 
-        else: # Both x & y are None
+        else:  # Both x & y are None
             dim = darray.dims[0]
             xplt = darray[dim]
             yplt = darray
