@@ -78,9 +78,8 @@ grid, we can take advantage of xarray's ability to apply
     ax = plt.axes(projection=ccrs.PlateCarree());
     ds.Tair[0].plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree(),
                                x='xc', y='yc', add_colorbar=False);
-    ax.coastlines();
     @savefig xarray_multidimensional_coords_12_0.png width=100%
-    plt.tight_layout();
+    ax.coastlines();
 
 Multidimensional Groupby
 ------------------------
