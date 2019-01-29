@@ -259,23 +259,8 @@ class GroupBy(SupportsArithmetic):
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
             s = pd.Series(np.arange(index.size), index)
-            from .resample_cftime import CFTimeGrouper
-            if isinstance(grouper, CFTimeGrouper):
-                first_items = grouper.first_items(index)
-            else:
-                first_items = s.groupby(grouper).first()
-                _apply_loffset(grouper, first_items)
-            full_index = first_items.index
-            if first_items.isnull().any():
-                if isinstance(grouper, CFTimeGrouper):
-                    index_dict = dict(zip(np.arange(first_items.size),
-                                          first_items.index.values))
-                    first_items.index = np.arange(first_items.size)
-                    first_items = first_items.dropna()
-                    first_items.index = [index_dict[i] for i in
-                                         first_items.index.values]
-                else:
-                    first_items = first_items.dropna()
+            full_index, first_items = self._get_index_and_items(
+                index, s, grouper)
             sbins = first_items.values.astype(np.int64)
             group_indices = ([slice(i, j)
                               for i, j in zip(sbins[:-1], sbins[1:])] +
@@ -321,6 +306,26 @@ class GroupBy(SupportsArithmetic):
 
     def __iter__(self):
         return zip(self._unique_coord.values, self._iter_grouped())
+
+    def _get_index_and_items(self, index, s, grouper):
+        from .resample_cftime import CFTimeGrouper
+        if isinstance(grouper, CFTimeGrouper):
+            first_items = grouper.first_items(index)
+            full_index = first_items.index
+            if first_items.isnull().any():
+                index_dict = dict(zip(np.arange(first_items.size),
+                                      first_items.index.values))
+                first_items.index = np.arange(first_items.size)
+                first_items = first_items.dropna()
+                first_items.index = [index_dict[i] for i in
+                                     first_items.index.values]
+        else:
+            first_items = s.groupby(grouper).first()
+            _apply_loffset(grouper, first_items)
+            full_index = first_items.index
+            if first_items.isnull().any():
+                first_items = first_items.dropna()
+        return full_index, first_items
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
