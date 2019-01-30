@@ -1446,11 +1446,11 @@ class ZarrBase(CFEncodedBase):
 
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
-    
+
     def test_warning_on_bad_chunks(self):
         original = create_test_data().chunk({'dim1': 4, 'dim2': 3, 'dim3': 5})
 
-        bad_chunks = (2, {'dim2':(3, 3, 2, 1)})
+        bad_chunks = (2, {'dim2': (3, 3, 2, 1)})
         for chunks in bad_chunks:
             kwargs = {'chunks': chunks}
             with pytest.warns(UserWarning):
@@ -1468,8 +1468,6 @@ class ZarrBase(CFEncodedBase):
                         # only index variables should be in memory
                         assert v._in_memory == (k in actual.dims)
             assert len(record) == 0
-
-
 
     def test_deprecate_auto_chunk(self):
         original = create_test_data().chunk()
@@ -1490,7 +1488,6 @@ class ZarrBase(CFEncodedBase):
                     assert v._in_memory == (k in actual.dims)
                     # there should be no chunks
                     assert v.chunks is None
-
 
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225
