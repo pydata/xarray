@@ -383,11 +383,12 @@ def open_zarr(store, group=None, synchronizer=None, chunks='auto',
         Array synchronizer provided to zarr
     group : str, obtional
         Group path. (a.k.a. `path` in zarr terminology.)
-    chunks : int or dict or {None, 'auto'}, optional
+    chunks : int or dict or tuple or {None, 'auto'}, optional
         Chunk sizes along each dimension, e.g., ``5`` or
         ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created
         based on the variable's zarr chunks. If `chunks=None`, zarr array
-        data will lazily convert to numpy arrays upon access.
+        data will lazily convert to numpy arrays upon access. This accepts 
+        all the chunk specifications as Dask does.
     overwrite_encoded_chunks: bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)
@@ -486,25 +487,47 @@ def open_zarr(store, group=None, synchronizer=None, chunks='auto',
     # adapted from Dataset.Chunk()
     if isinstance(chunks, int):
         chunks = dict.fromkeys(ds.dims, chunks)
+    
+    if isinstance(chunks, tuple) and len(chunks) == len(ds.dims):
+        chunks = dict(zip(ds.dims, chunks))
 
-    def selkeys(dict_, keys):
-        if dict_ is None:
-            return None
-        return dict((d, dict_[d]) for d in keys if d in dict_)
+    def get_chunk(name, var, chunks):
+        chunk_spec = dict(zip(var.dims, var.encoding.get('chunks')))
+
+        # Coordinate labels aren't chunked
+        if var.ndim == 1 and var.dims[0] == name:
+            return chunk_spec
+
+        if chunks == 'auto':
+            return chunk_spec
+
+        for dim in var.dims:
+            if dim in chunks:
+                spec = chunks[dim]
+                if isinstance(spec, int):
+                    spec = (spec,)
+                if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
+                    if any(s % chunk_spec[dim] for s in spec):
+                        print('ok any', spec, chunk_spec[dim], dim)
+                        warnings.warn("Specified Dask chunks %r would "
+                        "separate Zarr chunk shape %r for dimension %r. "
+                        "This significantly degrades performance. "
+                        "Consider rechunking after loading." 
+                        % (chunks[dim], chunk_spec[dim], dim))
+                chunk_spec[dim] = chunks[dim]
+        return chunk_spec
+
 
     def maybe_chunk(name, var, chunks):
         from dask.base import tokenize
 
-        if chunks == 'auto':
-            chunks = var.encoding.get('chunks')
-        else:
-            chunks = selkeys(chunks, var.dims)
+        chunk_spec = get_chunk(name, var, chunks)
 
-        if (var.ndim > 0) and (chunks is not None):
+        if (var.ndim > 0) and (chunk_spec is not None):
             # does this cause any data to be read?
             token2 = tokenize(name, var._data)
             name2 = 'zarr-%s' % token2
-            var = var.chunk(chunks, name=name2, lock=None)
+            var = var.chunk(chunk_spec, name=name2, lock=None)
             if overwrite_encoded_chunks and var.chunks is not None:
                 var.encoding['chunks'] = tuple(x[0] for x in var.chunks)
             return var

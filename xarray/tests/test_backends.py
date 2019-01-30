@@ -1446,6 +1446,30 @@ class ZarrBase(CFEncodedBase):
 
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
+    
+    def test_warning_on_bad_chunks(self):
+        original = create_test_data().chunk({'dim1': 4, 'dim2': 3, 'dim3': 5})
+
+        bad_chunks = (2, {'dim2':(3, 3, 2, 1)})
+        for chunks in bad_chunks:
+            kwargs = {'chunks': chunks}
+            with pytest.warns(UserWarning):
+                with self.roundtrip(original, open_kwargs=kwargs) as actual:
+                    for k, v in actual.variables.items():
+                        # only index variables should be in memory
+                        assert v._in_memory == (k in actual.dims)
+
+        good_chunks = ({'dim2': 3}, {'dim3': 10})
+        for chunks in good_chunks:
+            kwargs = {'chunks': chunks}
+            with pytest.warns(None) as record:
+                with self.roundtrip(original, open_kwargs=kwargs) as actual:
+                    for k, v in actual.variables.items():
+                        # only index variables should be in memory
+                        assert v._in_memory == (k in actual.dims)
+            assert len(record) == 0
+
+
 
     def test_deprecate_auto_chunk(self):
         original = create_test_data().chunk()
