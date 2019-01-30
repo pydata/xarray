@@ -11,12 +11,12 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
     return 1 / (1 + com)
 
 
-def rolling_exp_nanmean(array, *, axis, window):
+def move_exp_nanmean(array, *, axis, window):
     import numbagg
     if axis == ():
         return array.astype(np.float)
     else:
-        return numbagg.moving.rolling_exp_nanmean(
+        return numbagg.moving.move_exp_nanmean(
             array, axis=axis, window=window)
 
 
@@ -67,4 +67,4 @@ class RollingExp(object):
         """
 
         return self.obj.reduce(
-            rolling_exp_nanmean, dim=self.dim, window=self.alpha)
+            move_exp_nanmean, dim=self.dim, window=self.alpha)
