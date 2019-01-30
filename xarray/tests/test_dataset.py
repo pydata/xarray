@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import pickle
 import sys
 import warnings
 from collections import OrderedDict
