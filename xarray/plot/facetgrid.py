@@ -7,8 +7,8 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
-    _determine_cmap_params, _infer_xy_labels, import_matplotlib_pyplot,
-    label_from_attrs)
+    _infer_xy_labels, _process_cmap_cbar_kwargs,
+    import_matplotlib_pyplot, label_from_attrs)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -219,32 +219,13 @@ class FacetGrid(object):
 
         """
 
-        cmapkw = kwargs.get('cmap')
-        colorskw = kwargs.get('colors')
-        cbar_kwargs = kwargs.pop('cbar_kwargs', {})
-        cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
-
         if kwargs.get('cbar_ax', None) is not None:
             raise ValueError('cbar_ax not supported by FacetGrid.')
 
-        # colors is mutually exclusive with cmap
-        if cmapkw and colorskw:
-            raise ValueError("Can't specify both cmap and colors.")
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            func, kwargs, self.data.values)
 
-        # These should be consistent with xarray.plot._plot2d
-        cmap_kwargs = {'plot_data': self.data.values,
-                       # MPL default
-                       'levels': 7 if 'contour' in func.__name__ else None,
-                       'filled': func.__name__ != 'contour',
-                       }
-
-        cmap_args = getfullargspec(_determine_cmap_params).args
-        cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
-
-        cmap_params = _determine_cmap_params(**cmap_kwargs)
-
-        if colorskw is not None:
-            cmap_params['cmap'] = None
+        self._cmap_extend = cmap_params.get('extend')
 
         # Order is important
         func_kwargs = kwargs.copy()
@@ -260,7 +241,7 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x, y, ax=ax, **func_kwargs)
+                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
                 self._mappables.append(mappable)
 
         self._cmap_extend = cmap_params.get('extend')
@@ -271,36 +252,24 @@ class FacetGrid(object):
 
         return self
 
-    def map_dataarray_line(self, x=None, y=None, hue=None, **kwargs):
-        """
-        Apply a line plot to a 2d facet subset of the data.
-
-        Parameters
-        ----------
-        x, y, hue: string
-            dimension names for the axes and hues of each facet
-
-        Returns
-        -------
-        self : FacetGrid object
-
-        """
-        from .plot import line, _infer_line_data
+    def map_dataarray_line(self, func, x, y, **kwargs):
+        from .plot import _infer_line_data
 
         add_legend = kwargs.pop('add_legend', True)
         kwargs['add_legend'] = False
+        func_kwargs = kwargs.copy()
+        func_kwargs['_labels'] = False
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = line(subset, x=x, y=y, hue=hue,
-                                ax=ax, _labels=False,
-                                **kwargs)
+                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
                 self._mappables.append(mappable)
+
         _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
             darray=self.data.loc[self.name_dicts.flat[0]],
-            x=x, y=y, hue=hue)
+            x=x, y=y, hue=func_kwargs['hue'])
 
         self._hue_var = hueplt
         self._hue_label = huelabel
@@ -520,3 +489,33 @@ class FacetGrid(object):
         self._finalize_grid(*args[:2])
 
         return self
+
+
+def _easy_facetgrid(data, plotfunc, kind, x=None, y=None, row=None,
+                    col=None, col_wrap=None, sharex=True, sharey=True,
+                    aspect=None, size=None, subplot_kws=None, **kwargs):
+    """
+    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
+
+    kwargs are the arguments to 2d plotting method
+    """
+    ax = kwargs.pop('ax', None)
+    figsize = kwargs.pop('figsize', None)
+    if ax is not None:
+        raise ValueError("Can't use axes when making faceted plots.")
+    if aspect is None:
+        aspect = 1
+    if size is None:
+        size = 3
+    elif figsize is not None:
+        raise ValueError('cannot provide both `figsize` and `size` arguments')
+
+    g = FacetGrid(data=data, col=col, row=row, col_wrap=col_wrap,
+                  sharex=sharex, sharey=sharey, figsize=figsize,
+                  aspect=aspect, size=size, subplot_kws=subplot_kws)
+
+    if kind == 'line':
+        return g.map_dataarray_line(plotfunc, x, y, **kwargs)
+
+    if kind == 'dataarray':
+        return g.map_dataarray(plotfunc, x, y, **kwargs)
