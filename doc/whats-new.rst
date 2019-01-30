@@ -57,6 +57,10 @@ Bug fixes
 - Line plots with the `x` argument set to a coord now plot the correct data.
 - Line plots with the `x` argument set to a non-dimensional coord now plot the correct data for 1D DataArrays.
   (:issue:`27251). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Subtracting a scalar ``cftime.datetime`` object from a
+  :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
+  instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.11.3:
 
