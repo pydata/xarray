@@ -203,8 +203,8 @@ and supports all of its schemes. All of these resampling operations work on both
 Dataset and DataArray objects with an arbitrary number of dimensions.
 
 In order to limit the scope of the methods ``ffill``, ``bfill``, ``pad`` and
-``nearest`` the ``tolerance`` argument can be set. Data that has indices
-outside of the given ``tolerance`` are set to ``NaN``.
+``nearest`` the ``tolerance`` argument can be set in coordinate units.
+Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
 .. ipython:: python
 
