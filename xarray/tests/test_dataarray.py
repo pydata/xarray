@@ -2511,15 +2511,9 @@ class TestDataArray(object):
                              [('time', times_upsampled)])
         assert_identical(expected, actual)
 
-        # Pad
-        actual = array.resample(time='6H').pad(tolerance='12H')
-        expected = DataArray([0., 0., 0., np.nan, 1.],
-                             [('time', times_upsampled)])
-        assert_identical(expected, actual)
-
         # Nearest
-        actual = array.resample(time='6H').nearest(tolerance='12H')
-        expected = DataArray([0, 0, 1, 1, 1],
+        actual = array.resample(time='6H').nearest(tolerance='6H')
+        expected = DataArray([0, 0, np.nan, 1, 1],
                              [('time', times_upsampled)])
         assert_identical(expected, actual)
 
