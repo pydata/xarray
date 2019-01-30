@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division, print_function
-
+from collections import OrderedDict
 from copy import deepcopy
 from itertools import product
 
@@ -12,7 +11,6 @@ from xarray.core.combine import (
     _auto_combine, _auto_combine_1d, _auto_combine_all_along_first_dim,
     _check_shape_tile_ids, _combine_nd, _infer_concat_order_from_positions,
     _infer_tile_ids_from_nested_list, _new_tile_id)
-from xarray.core.pycompat import OrderedDict, iteritems
 
 from . import (
     InaccessibleArray, assert_array_equal, assert_combined_tile_ids_equal,
@@ -38,7 +36,7 @@ class TestConcatDataset(object):
             # return a new dataset with all variable dimensions transposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
-                                for k, v in iteritems(dataset.data_vars)),
+                                for k, v in dataset.data_vars.items()),
                            dataset.coords, attrs=dataset.attrs)
 
         for dim in ['dim1', 'dim2']:
@@ -52,7 +50,7 @@ class TestConcatDataset(object):
             data, concat(datasets, data[dim], coords='minimal'))
 
         datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-        concat_over = [k for k, v in iteritems(data.coords)
+        concat_over = [k for k, v in data.coords.items()
                        if dim in v.dims and k != dim]
         actual = concat(datasets, data[dim], coords=concat_over)
         assert_identical(data, rectify_dim_order(actual))
@@ -650,7 +648,7 @@ class TestAutoCombineND(object):
         expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
                             'bar': ('x', [10, 20, 30, 40])})
 
-        actual = auto_combine(objs, concat_dim=['x', None])
+        actual = auto_combine(objs, concat_dim=['x', None], compat='equals')
         assert_identical(expected, actual)
 
         actual = auto_combine(objs)
@@ -661,7 +659,19 @@ class TestAutoCombineND(object):
                  Dataset({'foo': ('x', [2, 3])})],
                 [Dataset({'bar': ('x', [10, 20])}),
                  Dataset({'bar': ('x', [30, 40])})]]
-        actual = auto_combine(objs, concat_dim=[None, 'x'])
+        actual = auto_combine(objs, concat_dim=[None, 'x'], compat='equals')
+        assert_identical(expected, actual)
+
+    def test_internal_ordering(self):
+        # This gives a MergeError if _auto_combine_1d is not sorting by
+        # data_vars correctly, see GH #2662
+        objs = [Dataset({'foo': ('x', [0, 1])}),
+                Dataset({'bar': ('x', [10, 20])}),
+                Dataset({'foo': ('x', [2, 3])}),
+                Dataset({'bar': ('x', [30, 40])})]
+        actual = auto_combine(objs, concat_dim='x', compat='equals')
+        expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
+                            'bar': ('x', [10, 20, 30, 40])})
         assert_identical(expected, actual)
 
     def test_combine_concat_over_redundant_nesting(self):

@@ -1,10 +1,8 @@
-from __future__ import absolute_import, division, print_function
-
 import copy
+from collections import OrderedDict
 
 import numpy as np
 
-from ..core.pycompat import OrderedDict
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore
 

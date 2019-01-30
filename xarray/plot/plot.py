@@ -5,8 +5,6 @@ Use this module directly:
 Or use the methods on a DataArray:
     DataArray.plot._____
 """
-from __future__ import absolute_import, division, print_function
-
 import functools
 import warnings
 from datetime import datetime
@@ -15,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core.common import contains_cftime_datetimes
-from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
 from .utils import (
@@ -203,18 +200,22 @@ def _infer_line_data(darray, x, y, hue):
                          'for line plots.')
 
     if ndims == 1:
-        dim, = darray.dims  # get the only dimension name
         huename = None
         hueplt = None
         huelabel = ''
 
-        if (x is None and y is None) or x == dim:
-            xplt = darray[dim]
+        if x is not None:
+            xplt = darray[x]
             yplt = darray
 
-        else:
-            yplt = darray[dim]
+        elif y is not None:
             xplt = darray
+            yplt = darray[y]
+
+        else:  # Both x & y are None
+            dim = darray.dims[0]
+            xplt = darray[dim]
+            yplt = darray
 
     else:
         if x is None and y is None and hue is None:
@@ -834,14 +835,14 @@ def _plot2d(plotfunc):
             kwargs['levels'] = cmap_params['levels']
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
-            if isinstance(colors, basestring):
+            if isinstance(colors, str):
                 cmap_params['cmap'] = None
                 kwargs['colors'] = colors
 
         if 'pcolormesh' == plotfunc.__name__:
             kwargs['infer_intervals'] = infer_intervals
 
-        if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
+        if 'imshow' == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
             raise ValueError("plt.imshow's `aspect` kwarg is not available "
                              "in xarray")

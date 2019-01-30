@@ -1,15 +1,12 @@
-from __future__ import absolute_import, division, print_function
-
 import itertools
 import warnings
-from collections import Counter
+from collections import Counter, OrderedDict
 
 import pandas as pd
 
 from . import utils
 from .alignment import align
 from .merge import merge
-from .pycompat import OrderedDict, basestring, iteritems
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 
@@ -129,7 +126,7 @@ def _calc_concat_dim_coord(dim):
     """
     from .dataarray import DataArray
 
-    if isinstance(dim, basestring):
+    if isinstance(dim, str):
         coord = None
     elif not isinstance(dim, (DataArray, Variable)):
         dim_name = getattr(dim, 'name', None)
@@ -162,7 +159,7 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                            if dim in v.dims)
 
     def process_subset_opt(opt, subset):
-        if isinstance(opt, basestring):
+        if isinstance(opt, str):
             if opt == 'different':
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
@@ -253,7 +250,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
         if (compat == 'identical' and
                 not utils.dict_equiv(ds.attrs, result_attrs)):
             raise ValueError('dataset global attributes not equal')
-        for k, v in iteritems(ds.variables):
+        for k, v in ds.variables.items():
             if k not in result_vars and k not in concat_over:
                 raise ValueError('encountered unexpected variable %r' % k)
             elif (k in result_coord_names) != (k in ds.coords):
@@ -493,16 +490,21 @@ def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
     return new_combined_ids
 
 
+def vars_as_keys(ds):
+    return tuple(sorted(ds))
+
+
 def _auto_combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
                      compat='no_conflicts',
                      data_vars='all', coords='different'):
     # This is just the old auto_combine function (which only worked along 1D)
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        grouped = itertools.groupby(datasets, key=lambda ds: tuple(sorted(ds)))
+        sorted_datasets = sorted(datasets, key=vars_as_keys)
+        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
         concatenated = [_auto_concat(list(ds_group), dim=dim,
                                      data_vars=data_vars, coords=coords)
-                        for id, ds_group in grouped]
+                        for id, ds_group in grouped_by_vars]
     else:
         concatenated = datasets
     merged = merge(concatenated, compat=compat)

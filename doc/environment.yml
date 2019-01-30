@@ -2,22 +2,25 @@ name: xarray-docs
 channels:
   - conda-forge
 dependencies:
-  - python=3.6
-  - numpy=1.14.5
+  - python=3.7
+  - numpy=1.16.0
   - pandas=0.23.3
-  - scipy=1.1.0
-  - matplotlib=2.2.2
+  - scipy=1.2.0
+  - matplotlib=3.0.2
   - seaborn=0.9.0
-  - dask=0.18.2
-  - ipython=6.4.0
-  - netCDF4=1.4.0
-  - cartopy=0.16.0
-  - rasterio=1.0.1
+  - dask=1.1.0
+  - ipython=7.2.0
+  - netCDF4=1.4.2
+  - cartopy=0.17.0
+  - rasterio=1.0.13
   - zarr=2.2.0
-  - iris=2.1.0
-  - flake8=3.5.0
+  - iris=2.2.0
+  - flake8=3.6.0
   - cftime=1.0.3.4
-  - bottleneck=1.2
-  - sphinx=1.7.6
+  - bottleneck=1.2.1
+  - sphinx=1.8.2
   - numpydoc=0.8.0
   - sphinx-gallery=0.2.0
+  - pillow=5.4.1
+  - sphinx_rtd_theme=0.4.2
+  - mock=2.0.0
