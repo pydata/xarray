@@ -8,7 +8,7 @@ import pandas as pd
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .options import _get_keep_attrs
-from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
