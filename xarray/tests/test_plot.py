@@ -1,11 +1,10 @@
-from __future__ import absolute_import, division, print_function
-
 import inspect
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import pytest
+from numpy.testing import assert_array_equal
 
 import xarray as xr
 import xarray.plot as xplt
@@ -141,6 +140,20 @@ class TestPlot(PlotTestCase):
 
         with raises_regex(ValueError, 'None'):
             da.plot(x='z', y='f')
+
+    # Test for bug in GH issue #2725
+    def test_infer_line_data(self):
+        current = DataArray(name='I', data=np.array([5, 8]), dims=['t'],
+                            coords={'t': (['t'], np.array([0.1, 0.2])),
+                                    'V': (['t'], np.array([100, 200]))})
+
+        # Plot current against voltage
+        line = current.plot.line(x='V')[0]
+        assert_array_equal(line.get_xdata(), current.coords['V'].values)
+
+        # Plot current against time
+        line = current.plot.line()[0]
+        assert_array_equal(line.get_xdata(), current.coords['t'].values)
 
     def test_2d_line(self):
         with raises_regex(ValueError, 'hue'):
@@ -987,7 +1000,7 @@ class Common2dMixin(object):
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
         a.coords['c'] = [0, 1]
-        a.coords['d'] = u'foo'
+        a.coords['d'] = 'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
         assert 'c = 1, d = foo' == title or 'd = foo, c = 1' == title

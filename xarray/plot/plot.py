@@ -6,23 +6,97 @@ Or use the methods on a DataArray or Dataset:
     DataArray.plot._____
     Dataset.plot._____
 """
-from __future__ import absolute_import, division, print_function
-
 import functools
 
 import numpy as np
 import pandas as pd
 
 from xarray.core.common import contains_cftime_datetimes
-from xarray.core.pycompat import basestring
 
 from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_line_data,
-    _infer_xy_labels, _interval_to_double_bound_points,
-    _interval_to_mid_points, _process_cmap_cbar_kwargs, _rescale_imshow_rgb,
-    _resolve_intervals_2dplot, _update_axes, _valid_other_type, get_axis,
-    import_matplotlib_pyplot, label_from_attrs)
+    _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_xy_labels,
+    _interval_to_double_bound_points, _interval_to_mid_points,
+    _process_cmap_cbar_kwargs, _rescale_imshow_rgb, _resolve_intervals_2dplot,
+    _update_axes, _valid_other_type, get_axis, import_matplotlib_pyplot,
+    label_from_attrs)
+
+
+def _infer_line_data(darray, x, y, hue):
+    error_msg = ('must be either None or one of ({0:s})'
+                 .format(', '.join([repr(dd) for dd in darray.dims])))
+    ndims = len(darray.dims)
+
+    if x is not None and x not in darray.dims and x not in darray.coords:
+        raise ValueError('x ' + error_msg)
+
+    if y is not None and y not in darray.dims and y not in darray.coords:
+        raise ValueError('y ' + error_msg)
+
+    if x is not None and y is not None:
+        raise ValueError('You cannot specify both x and y kwargs'
+                         'for line plots.')
+
+    if ndims == 1:
+        huename = None
+        hueplt = None
+        huelabel = ''
+
+        if x is not None:
+            xplt = darray[x]
+            yplt = darray
+
+        elif y is not None:
+            xplt = darray
+            yplt = darray[y]
+
+        else:  # Both x & y are None
+            dim = darray.dims[0]
+            xplt = darray[dim]
+            yplt = darray
+
+    else:
+        if x is None and y is None and hue is None:
+            raise ValueError('For 2D inputs, please'
+                             'specify either hue, x or y.')
+
+        if y is None:
+            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+            xplt = darray[xname]
+            if xplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
+                    yplt = darray.transpose(otherdim, huename)
+                    xplt = xplt.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                yplt = darray.transpose(xname, huename)
+
+        else:
+            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
+            yplt = darray[yname]
+            if yplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    xplt = darray.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                xplt = darray.transpose(yname, huename)
+
+        huelabel = label_from_attrs(darray[huename])
+        hueplt = darray[huename]
+
+    xlabel = label_from_attrs(xplt)
+    ylabel = label_from_attrs(yplt)
+
+    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -576,14 +650,14 @@ def _plot2d(plotfunc):
             kwargs['levels'] = cmap_params['levels']
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
-            if isinstance(colors, basestring):
+            if isinstance(colors, str):
                 cmap_params['cmap'] = None
                 kwargs['colors'] = colors
 
         if 'pcolormesh' == plotfunc.__name__:
             kwargs['infer_intervals'] = infer_intervals
 
-        if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
+        if 'imshow' == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
             raise ValueError("plt.imshow's `aspect` kwarg is not available "
                              "in xarray")

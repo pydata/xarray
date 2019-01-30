@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import itertools
 import textwrap
 import warnings
@@ -8,8 +6,9 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from inspect import getfullargspec
+
 from ..core.options import OPTIONS
-from ..core.pycompat import basestring, getargspec
 from ..core.utils import is_scalar
 
 ROBUST_PERCENTILE = 2.0
@@ -105,7 +104,7 @@ def _color_palette(cmap, n_colors):
         # we have a list of colors
         cmap = ListedColormap(cmap, N=n_colors)
         pal = cmap(colors_i)
-    elif isinstance(cmap, basestring):
+    elif isinstance(cmap, str):
         # we have some sort of named palette
         try:
             # is this a matplotlib cmap?
@@ -755,7 +754,7 @@ def _process_cmap_cbar_kwargs(func, kwargs, data):
                    'cmap': colors if colors else cmap,
                    'filled': func.__name__ != 'contour'}
 
-    cmap_args = getargspec(_determine_cmap_params).args
+    cmap_args = getfullargspec(_determine_cmap_params).args
     cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
     cmap_params = _determine_cmap_params(**cmap_kwargs)
 

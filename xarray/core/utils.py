@@ -1,20 +1,18 @@
 """Internal utilties; not for external use
 """
-from __future__ import absolute_import, division, print_function
-
 import contextlib
 import functools
 import itertools
 import os.path
 import re
 import warnings
-from collections import Iterable, Mapping, MutableMapping, MutableSet
+from collections import OrderedDict
+from collections.abc import Iterable, Mapping, MutableMapping, MutableSet
 
 import numpy as np
 import pandas as pd
 
-from .pycompat import (
-    OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
+from .pycompat import dask_array_type
 
 
 def _check_inplace(inplace, default=False):
@@ -37,7 +35,7 @@ def alias_warning(old_name, new_name, stacklevel=3):
 
 
 def alias(obj, old_name):
-    assert isinstance(old_name, basestring)
+    assert isinstance(old_name, str)
 
     @functools.wraps(obj)
     def wrapper(*args, **kwargs):
@@ -157,7 +155,7 @@ def update_safety_check(first_dict, second_dict, compat=equivalent):
         Binary operator to determine if two values are compatible. By default,
         checks for equivalence.
     """
-    for k, v in iteritems(second_dict):
+    for k, v in second_dict.items():
         if k in first_dict and not compat(v, first_dict[k]):
             raise ValueError('unsafe to merge dictionaries without '
                              'overriding values; conflicting key %r' % k)
@@ -212,7 +210,7 @@ def is_scalar(value):
     """
     return (
         getattr(value, 'ndim', None) == 0 or
-        isinstance(value, (basestring, bytes_type)) or not
+        isinstance(value, (str, bytes)) or not
         isinstance(value, (Iterable, ) + dask_array_type))
 
 
