@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-from collections import OrderedDict
-=======
-from __future__ import absolute_import, division, print_function
-
 import warnings
-
->>>>>>> added deprecation warning
+from collections import OrderedDict
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -362,8 +356,8 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(store, group=None, synchronizer=None, chunks='auto',
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
-              drop_variables=None, consolidated=False, auto_chunk=True, 
-              overwrite_encoded_chunks=False):
+              drop_variables=None, consolidated=False,
+              overwrite_encoded_chunks=False, **kwargs):
     """Load and decode a dataset from a Zarr store.
 
     .. note:: Experimental
@@ -387,7 +381,7 @@ def open_zarr(store, group=None, synchronizer=None, chunks='auto',
         Chunk sizes along each dimension, e.g., ``5`` or
         ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created
         based on the variable's zarr chunks. If `chunks=None`, zarr array
-        data will lazily convert to numpy arrays upon access. This accepts 
+        data will lazily convert to numpy arrays upon access. This accepts
         all the chunk specifications as Dask does.
     overwrite_encoded_chunks: bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
@@ -487,7 +481,7 @@ def open_zarr(store, group=None, synchronizer=None, chunks='auto',
     # adapted from Dataset.Chunk()
     if isinstance(chunks, int):
         chunks = dict.fromkeys(ds.dims, chunks)
-    
+
     if isinstance(chunks, tuple) and len(chunks) == len(ds.dims):
         chunks = dict(zip(ds.dims, chunks))
 
@@ -508,15 +502,13 @@ def open_zarr(store, group=None, synchronizer=None, chunks='auto',
                     spec = (spec,)
                 if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
                     if any(s % chunk_spec[dim] for s in spec):
-                        print('ok any', spec, chunk_spec[dim], dim)
                         warnings.warn("Specified Dask chunks %r would "
-                        "separate Zarr chunk shape %r for dimension %r. "
-                        "This significantly degrades performance. "
-                        "Consider rechunking after loading." 
-                        % (chunks[dim], chunk_spec[dim], dim))
+                            "separate Zarr chunk shape %r for dimension %r. "
+                            "This significantly degrades performance. "
+                            "Consider rechunking after loading."
+                            % (chunks[dim], chunk_spec[dim], dim))
                 chunk_spec[dim] = chunks[dim]
         return chunk_spec
-
 
     def maybe_chunk(name, var, chunks):
         from dask.base import tokenize
