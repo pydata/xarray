@@ -230,11 +230,10 @@ def _infer_line_data(darray, x, y, hue, animate_over):
         huelabel = ''
 
         if animate_over is not None:
-            animation_axis = darray.dims.index(animate_over)
             # Set animation dimension to be along last axis of data
-            # TODO this won't work on a tuple
-            otherdims = darray.dims - animate_over
-            darray = darray.transpose(otherdims, animate_over)
+            dims = list(darray.dims)
+            dims.remove(animate_over)
+            darray = darray.transpose(*dims, animate_over)
 
         if x is not None:
             xplt = darray[x]
@@ -424,10 +423,9 @@ def line(darray, *args, **kwargs):
         primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
     else:
         # TODO some better way of handling the optional imports
-        from animatplot.blocks import Line
-        line_block = Line(xplt_val, yplt_val, ax=ax, t_axis=-1, **kwargs)
-
         from animatplot.timeline import Timeline
+        from animatplot.blocks import Line
+
         if animate_over in darray.coords:
             t_array = darray.coords[animate_over].values
         else:  # animating over a dimension without coords
@@ -439,6 +437,14 @@ def line(darray, *args, **kwargs):
             units = ''
         timeline = Timeline(t_array, units=units, fps=fps)
 
+        if ylim is None:
+            ylim = [np.min(yplt_val), np.max(yplt_val)]
+
+        # animatplot assumes that the x positions might vary over time too
+        xplt_val = np.repeat(xplt_val[..., np.newaxis],
+                             repeats=len(timeline), axis=-1)
+        line_block = Line(x=xplt_val, y=yplt_val, ax=ax, t_axis=-1, **kwargs)
+
     if _labels:
         if xlabel is not None:
             ax.set_xlabel(xlabel)
@@ -449,10 +455,9 @@ def line(darray, *args, **kwargs):
         if animate_over is None:
             ax.set_title(darray._title_for_slice())
         else:
-            # TODO not sure this will work for dim rather than coord
             # Would be nicer if we had something like in GH issue #266
-            frame_titles = [darray.isel(animate_over=i)._title_for_slice()
-                            for i in range(darray.dims[animate_over])]
+            frame_titles = [darray[{animate_over: i}]._title_for_slice()
+                            for i in range(len(timeline))]
             from animatplot.blocks import Title
             title_block = Title(frame_titles, ax=ax)
 
@@ -483,7 +488,9 @@ def line(darray, *args, **kwargs):
     else:
         from animatplot.animation import Animation
         anim = Animation([line_block, title_block], timeline=timeline)
-        anim.controls(timeline_slider_args={'text': animate_over, 'ax': ax})
+        # TODO I think ax should be passed to timeline_slider args
+        # but that just plots a single huge timeline and no line plot?!
+        anim.controls(timeline_slider_args={'text': animate_over})
         return anim
 
 
