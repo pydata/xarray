@@ -200,18 +200,22 @@ def _infer_line_data(darray, x, y, hue):
                          'for line plots.')
 
     if ndims == 1:
-        dim, = darray.dims  # get the only dimension name
         huename = None
         hueplt = None
         huelabel = ''
 
-        if (x is None and y is None) or x == dim:
-            xplt = darray[dim]
+        if x is not None:
+            xplt = darray[x]
             yplt = darray
 
-        else:
-            yplt = darray[dim]
+        elif y is not None:
             xplt = darray
+            yplt = darray[y]
+
+        else:  # Both x & y are None
+            dim = darray.dims[0]
+            xplt = darray[dim]
+            yplt = darray
 
     else:
         if x is None and y is None and hue is None:
