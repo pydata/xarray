@@ -60,6 +60,8 @@ Bug fixes
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Line plots with the `x` argument set to a non-dimensional coord now plot the correct data for 1D DataArrays.
+  (:issue:`27251). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 .. _whats-new.0.11.3:
 
