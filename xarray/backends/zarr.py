@@ -503,10 +503,11 @@ def open_zarr(store, group=None, synchronizer=None, chunks='auto',
                 if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
                     if any(s % chunk_spec[dim] for s in spec):
                         warnings.warn("Specified Dask chunks %r would "
-                            "separate Zarr chunk shape %r for dimension %r. "
-                            "This significantly degrades performance. "
-                            "Consider rechunking after loading."
-                            % (chunks[dim], chunk_spec[dim], dim))
+                                      "separate Zarr chunk shape %r for "
+                                      "dimension %r. This significantly "
+                                      "degrades performance. Consider "
+                                      "rechunking after loading instead."
+                                      % (chunks[dim], chunk_spec[dim], dim))
                 chunk_spec[dim] = chunks[dim]
         return chunk_spec
 
