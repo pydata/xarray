@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+import pickle
 import sys
 import warnings
 from collections import OrderedDict
 from copy import copy, deepcopy
 from io import StringIO
-import pickle
 from textwrap import dedent
 
 import numpy as np
