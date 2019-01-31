@@ -196,10 +196,19 @@ resampling group:
 
    ds.resample(time='6H').reduce(np.mean)
 
-For upsampling, xarray provides four methods: ``asfreq``, ``ffill``, ``bfill``,
-and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d`` and
-supports all of its schemes. All of these resampling operations work on both
+For upsampling, xarray provides six methods: ``asfreq``, ``ffill``, ``bfill``, ``pad``,
+``nearest`` and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d``
+and supports all of its schemes. All of these resampling operations work on both
 Dataset and DataArray objects with an arbitrary number of dimensions.
+
+In order to limit the scope of the methods ``ffill``, ``bfill``, ``pad`` and
+``nearest`` the ``tolerance`` argument can be set in coordinate units.
+Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
+
+.. ipython:: python
+
+    ds.resample(time='1H').nearest(tolerance='1H')
+
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.

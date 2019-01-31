@@ -43,6 +43,9 @@ Enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
+  ``nearest``. (:issue:`2695`)
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
 
 Bug fixes
 ~~~~~~~~~
