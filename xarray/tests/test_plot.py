@@ -4,7 +4,6 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
 
 import xarray as xr
 import xarray.plot as xplt
@@ -453,41 +452,6 @@ class TestPlot1D(PlotTestCase):
         self.darray.plot.line()
         title = plt.gca().get_title()
         assert 'd = 10' == title
-
-
-class TestAnimateLine:
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        d = np.array([[0.0, 1.1, 0.0, 2],
-                      [0.1, 1.3, 0.2, 2.1],
-                      [0.1, 1.4, 0.3, 2.2],
-                      [0.2, 1.3, 0.2, 2.3],
-                      [0.1, 1.2, 0.2, 2.2]])
-        self.darray = DataArray(d, name='height',
-                                coords={'time': 10*np.arange(d.shape[0]),
-                                        'position': 0.1*np.arange(d.shape[1])},
-                                dims=('time', 'position'),
-                                attrs={'units': 'm'})
-        self.darray.time.attrs['units'] = 's'
-        self.darray.position.attrs['units'] = 'cm'
-
-    @pytest.mark.slow
-    def test_animate_single_line(self):
-        from animatplot.animation import Animation
-        print(self.darray)
-        a = self.darray.plot.line(animate_over='time')
-        assert isinstance(a, Animation)
-
-        from animatplot import blocks
-        line_block, title_block = a.blocks
-        assert isinstance(line_block, blocks.Line)
-        assert isinstance(title_block, blocks.Title)
-
-        assert len(line_block) == 5
-        assert len(line_block) == len(title_block)
-
-        # TODO check many more things here
-        # (also better testing in animatplot needed)
 
 
 class TestPlotStep(PlotTestCase):

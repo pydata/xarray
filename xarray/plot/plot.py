@@ -18,7 +18,8 @@ from .utils import (
     _interval_to_double_bound_points, _interval_to_mid_points,
     _process_cmap_cbar_kwargs, _rescale_imshow_rgb, _resolve_intervals_2dplot,
     _update_axes, _valid_other_type, get_axis, import_matplotlib_pyplot,
-    label_from_attrs)
+    label_from_attrs, _rotate_date_xlabels, _check_animate_over,
+    _transpose_before_animation)
 
 
 def _infer_line_data(darray, x, y, hue, animate_over):
@@ -42,12 +43,6 @@ def _infer_line_data(darray, x, y, hue, animate_over):
         huename = None
         hueplt = None
         huelabel = ''
-
-        if animate_over is not None:
-            # Set animation dimension to be along last axis of data
-            dims = list(darray.dims)
-            dims.remove(animate_over)
-            darray = darray.transpose(*dims, animate_over)
 
         if x is not None:
             xplt = darray[x]
@@ -91,7 +86,6 @@ def _infer_line_data(darray, x, y, hue, animate_over):
             yplt = darray[yname]
             if yplt.ndim > 1:
                 if huename in darray.dims:
-                    # TODO bug in xarray? pycharm says otherdim is undefined here?
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     xplt = darray.transpose(otherdim, huename)
                 else:
@@ -140,7 +134,8 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     animate_over: str, optional
         Dimension or coord in the DataArray over which to animate. If this
         argument is supplied then ``animatplot`` will be used to animate the
-        corresponding plot.
+        corresponding plot. The DataArray must have 1 more dimension than
+        specified in the table above.
     ax : matplotlib axes, optional
         If None, uses the current axis. Not applicable when using facets.
     rtol : number, optional
@@ -165,42 +160,33 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
             'to a plottable type and plot your data directly with matplotlib.')
 
     if animate_over is not None:
-        if animate_over not in darray.dims and animate_over not in darray.coords:
-            raise ValueError("Can only animate over a dimension or coordinate "
-                             "present in the DataArray")
-        if animate_over in darray.coords:
-            animate_dim = darray[animate_over].dims
-            if not len(animate_dim) == 1:
-                raise ValueError("Cannot animate over a multidimensional "
-                                 "coordinate")
-        else:
-            animate_dim = animate_over
+        animate_dim = _check_animate_over(darray, animate_over)
         kwargs['animate_over'] = animate_over
     else:
         animate_dim = None
 
-    plot_dims = set(darray.dims)
+    dims = set(darray.dims)
     if animate_over is not None:
-        plot_dims= plot_dims - set(animate_dim)
+        plot_dims = dims - set([animate_dim])
     plot_dims.discard(row)
     plot_dims.discard(col)
     plot_dims.discard(hue)
 
-    ndims = len(plot_dims)
+    nplotdims = len(plot_dims)
 
     error_msg = ('Only 1d and 2d plots are supported for facets in xarray. '
                  'See the package `Seaborn` for more options.')
 
-    if ndims in [1, 2]:
+    if nplotdims in [1, 2]:
         if row or col:
             kwargs['row'] = row
             kwargs['col'] = col
             kwargs['col_wrap'] = col_wrap
             kwargs['subplot_kws'] = subplot_kws
-        if ndims == 1:
+        if nplotdims == 1:
             plotfunc = line
             kwargs['hue'] = hue
-        elif ndims == 2:
+        elif nplotdims == 2:
             if hue:
                 plotfunc = line
                 kwargs['hue'] = hue
@@ -213,8 +199,12 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
 
     kwargs['ax'] = ax
 
-    if animate_over is not None and plotfunc is not line:
-        raise NotImplementedError
+    if animate_over is not None:
+        if plotfunc is line:
+            from .animate import animate_line
+            plotfunc = animate_line
+        else:
+            raise NotImplementedError
 
     return plotfunc(darray, **kwargs)
 
@@ -231,7 +221,7 @@ def line(darray, *args, **kwargs):
     ----------
     darray : DataArray
         Must be 1 dimensional, unless ``animate_over`` is specified, in which
-        it must be 2 dimensional.
+        case it must be 2 dimensional.
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
@@ -249,8 +239,8 @@ def line(darray, *args, **kwargs):
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
     animate_over: str, optional
         Dimension or coord in the DataArray over which to animate. If this
-        argument is supplied then ``animatplot`` will be used to animate the
-        corresponding plot.
+        argument is supplied then this function will redirect to
+        ``xarray.animate.animate_line``.
     x, y : string, optional
         Dimensions or coordinates for x, y axis.
         Only one of these may be specified.
@@ -274,6 +264,10 @@ def line(darray, *args, **kwargs):
     """
 
     animate_over = kwargs.pop('animate_over', None)
+    if animate_over is not None:
+        darray, animate_dim = _transpose_before_animation(darray, animate_over)
+        from .animate import animate_line
+        return animate_line(darray, animate_over=animate_over, *args, **kwargs)
 
     # Handle facetgrids first
     row = kwargs.pop('row', None)
@@ -286,10 +280,7 @@ def line(darray, *args, **kwargs):
         allargs.pop('darray')
         return _easy_facetgrid(darray, line, kind='line', **allargs)
 
-    if animate_over is not None:
-        ndims = len(darray[animate_over].dims)
-    else:
-        ndims = len(darray.dims)
+    ndims = len(darray.dims)
     if ndims > 2:
         raise ValueError('Line plots are for 1- or 2-dimensional DataArrays. '
                          'Passed DataArray has {ndims} '
@@ -318,7 +309,7 @@ def line(darray, *args, **kwargs):
 
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
-        _infer_line_data(darray, x, y, hue, animate_over)
+        _infer_line_data(darray, x, y, hue, animate_over=None)
 
     # Remove pd.Intervals if contained in xplt.values.
     if _valid_other_type(xplt.values, [pd.Interval]):
@@ -343,31 +334,7 @@ def line(darray, *args, **kwargs):
 
     _ensure_plottable(xplt_val, yplt_val)
 
-    if animate_over is None:
-        primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
-    else:
-        # TODO some better way of handling the optional imports
-        from animatplot.timeline import Timeline
-        from animatplot.blocks import Line
-
-        if animate_over in darray.coords:
-            t_array = darray.coords[animate_over].values
-        else:  # animating over a dimension without coords
-            t_array = np.arange(darray.dims[animate_over])
-        fps = kwargs.pop('fps', 10)
-        if darray.coords[animate_over].attrs.get('units'):
-            units = ' [{}]'.format(darray.coords[animate_over].attrs['units'])
-        else:
-            units = ''
-        timeline = Timeline(t_array, units=units, fps=fps)
-
-        if ylim is None:
-            ylim = [np.min(yplt_val), np.max(yplt_val)]
-
-        # animatplot assumes that the x positions might vary over time too
-        xplt_val = np.repeat(xplt_val[..., np.newaxis],
-                             repeats=len(timeline), axis=-1)
-        line_block = Line(x=xplt_val, y=yplt_val, ax=ax, t_axis=-1, **kwargs)
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
     if _labels:
         if xlabel is not None:
@@ -376,46 +343,19 @@ def line(darray, *args, **kwargs):
         if ylabel is not None:
             ax.set_ylabel(ylabel)
 
-        if animate_over is None:
-            ax.set_title(darray._title_for_slice())
-        else:
-            # Would be nicer if we had something like in GH issue #266
-            frame_titles = [darray[{animate_over: i}]._title_for_slice()
-                            for i in range(len(timeline))]
-            from animatplot.blocks import Title
-            title_block = Title(frame_titles, ax=ax)
+        ax.set_title(darray._title_for_slice())
 
     if ndims == 2 and add_legend:
-        if animate_over is not None:
-            # TODO how might this work for multiple lines?
-            line_handles = line_block.line
-        else:
-            line_handles = primitive
-        ax.legend(handles=line_handles,
+        ax.legend(handles=primitive,
                   labels=list(hueplt.values),
                   title=huelabel)
 
-    # Rotate dates on xlabels
-    # Do this without calling autofmt_xdate so that x-axes ticks
-    # on other subplots (if any) are not deleted.
-    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-    if np.issubdtype(xplt.dtype, np.datetime64):
-        for xlabels in ax.get_xticklabels():
-            xlabels.set_rotation(30)
-            xlabels.set_ha('right')
+    _rotate_date_xlabels(xplt, ax)
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale,
                  xticks, yticks, xlim, ylim)
 
-    if animate_over is None:
-        return primitive
-    else:
-        from animatplot.animation import Animation
-        anim = Animation([line_block, title_block], timeline=timeline)
-        # TODO I think ax should be passed to timeline_slider args
-        # but that just plots a single huge timeline and no line plot?!
-        anim.controls(timeline_slider_args={'text': animate_over})
-        return anim
+    return primitive
 
 
 def step(darray, *args, **kwargs):

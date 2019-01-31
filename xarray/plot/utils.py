@@ -390,6 +390,17 @@ def label_from_attrs(da, extra=''):
     return '\n'.join(textwrap.wrap(name + extra + units, 30))
 
 
+def _rotate_date_xlabels(xdata, ax):
+    # Rotate dates on xlabels
+    # Do this without calling autofmt_xdate so that x-axes ticks
+    # on other subplots (if any) are not deleted.
+    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
+    if np.issubdtype(xdata.dtype, np.datetime64):
+        for xlabels in ax.get_xticklabels():
+            xlabels.set_rotation(30)
+            xlabels.set_ha('right')
+
+
 def _interval_to_mid_points(array):
     """
     Helper function which returns an array
@@ -679,3 +690,27 @@ def _process_cmap_cbar_kwargs(func, kwargs, data):
     cmap_params = _determine_cmap_params(**cmap_kwargs)
 
     return cmap_params, cbar_kwargs
+
+
+def _check_animate_over(darray, animate_over):
+    if animate_over is None:
+        raise ValueError
+
+    if animate_over not in darray.coords and animate_over not in darray.dims:
+        raise ValueError("Can only animate over a dimension or coordinate "
+                         "present in the DataArray")
+
+    anim_coord = darray[animate_over].variable
+    if anim_coord.ndim != 1:
+        raise ValueError('Coordinate {} must be 1 dimensional but is {}'
+                         ' dimensional'.format(anim_coord, anim_coord.ndim))
+    anim_dim = anim_coord.dims[0]
+    return anim_dim
+
+
+# TODO _transpose_before_animation should be a decorator applied to animate_line etc?
+def _transpose_before_animation(darray, animate_over):
+    # Set animation dimension to be along last axis of data
+    dims = list(darray.dims)
+    dims.remove(animate_over)
+    return darray.transpose(*dims, animate_over)
