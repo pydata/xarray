@@ -10,6 +10,8 @@ argument to a normal plotting function:
     DataArray.plot._____(animate_over='__')
 """
 
+import datetime
+
 import numpy as np
 import pandas as pd
 
@@ -153,13 +155,20 @@ def animate_line(darray, animate_over=None, **kwargs):
     anim = Animation([line_block, title_block], timeline=timeline)
     # TODO I think ax should be passed to timeline_slider args
     # but that just plots a single huge timeline and no line plot?!
-    anim.controls(timeline_slider_args={'text': animate_over})
+    anim.controls(timeline_slider_args={'text': animate_over, 'valfmt': '%s'})
     return anim
 
 
 def _create_timeline(darray, animate_over, fps):
+
     if animate_over in darray.coords:
         t_array = darray.coords[animate_over].values
+
+        # Format datetimes in a nicer way
+        if isinstance(t_array[0], datetime.date) \
+                or np.issubdtype(t_array.dtype, np.datetime64):
+            t_array = [pd.to_datetime(date) for date in t_array]
+
     else:  # animating over a dimension without coords
         t_array = np.arange(darray.sizes[animate_over])
 

@@ -39,9 +39,14 @@ class TestTimeline:
         npt.assert_equal(timeline.t, np.array([0, 1]))
         assert timeline.fps == 5
 
-    @pytest.mark.xfail
     def test_datetimeline(self):
-        assert False
+        dates = np.array(['2000-01-01', '2000-01-02', '2000-01-03'],
+                         dtype=np.datetime64)
+        da = DataArray([1, 2, 3],
+                       coords={'date': ('time', dates)}, dims='time')
+        timeline = _create_timeline(da, animate_over='date', fps=5)
+
+        assert str(timeline.t[0]) == '2000-01-01 00:00:00'
 
 
 @requires_animatplot
