@@ -47,6 +47,13 @@ Enhancements
   ``nearest``. (:issue:`2695`)
   By `Hauke Schulz <https://github.com/observingClouds>`_.
 
+- :py:meth:`~xarray.DataArray.integrate` and
+  :py:meth:`~xarray.Dataset.integrate` are newly added.
+  See :ref:`_compute.using_coordinates` for the detail.
+  (:issue:`1332`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
 Bug fixes
 ~~~~~~~~~
 
@@ -115,6 +122,7 @@ Breaking changes
   (:issue:`2565`). The previous behavior was to decode them only if they
   had specific time attributes, now these attributes are copied
   automatically from the corresponding time coordinate. This might
+  break downstream code that was relying on these variables to be
   brake downstream code that was relying on these variables to be
   not decoded.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
