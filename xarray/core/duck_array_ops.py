@@ -99,6 +99,18 @@ def gradient(x, coord, axis, edge_order):
     return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
 
 
+def trapz(y, x, axis):
+    if axis < 0:
+        axis = y.ndim + axis
+    x_sl1 = (slice(1, None), ) + (None, ) * (y.ndim - axis - 1)
+    x_sl2 = (slice(None, -1), ) + (None, ) * (y.ndim - axis - 1)
+    slice1 = (slice(None),) * axis + (slice(1, None), )
+    slice2 = (slice(None),) * axis + (slice(None, -1), )
+    dx = (x[x_sl1] - x[x_sl2])
+    integrand = dx * 0.5 * (y[tuple(slice1)] + y[tuple(slice2)])
+    return sum(integrand, axis=axis, skipna=False)
+
+
 masked_invalid = _dask_or_eager_func(
     'masked_invalid', eager_module=np.ma,
     dask_module=getattr(dask_array, 'ma', None))
