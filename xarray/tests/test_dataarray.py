@@ -258,7 +258,7 @@ class TestDataArray(object):
         expected = Dataset({None: (['x', 'y'], data, {'bar': 2})})[None]
         assert_identical(expected, actual)
 
-        actual = DataArray(data, dims=['x', 'y'], encoding={'bar': 2})
+        actual = DataArray(data, dims=['x', 'y'])
         expected = Dataset({None: (['x', 'y'], data, {}, {'bar': 2})})[None]
         assert_identical(expected, actual)
 
@@ -296,7 +296,7 @@ class TestDataArray(object):
         expected = DataArray(data,
                              coords={'x': ['a', 'b'], 'y': [-1, -2]},
                              dims=['x', 'y'], name='foobar',
-                             attrs={'bar': 2}, encoding={'foo': 3})
+                             attrs={'bar': 2})
         actual = DataArray(expected)
         assert_identical(expected, actual)
 
@@ -2482,6 +2482,30 @@ class TestDataArray(object):
         expected = DataArray(expected_data,
                              {'time': expected_times, 'x': xs, 'y': ys},
                              ('x', 'y', 'time'))
+        assert_identical(expected, actual)
+
+    def test_upsample_tolerance(self):
+        # Test tolerance keyword for upsample methods bfill, pad, nearest
+        times = pd.date_range('2000-01-01', freq='1D', periods=2)
+        times_upsampled = pd.date_range('2000-01-01', freq='6H', periods=5)
+        array = DataArray(np.arange(2), [('time', times)])
+
+        # Forward fill
+        actual = array.resample(time='6H').ffill(tolerance='12H')
+        expected = DataArray([0., 0., 0., np.nan, 1.],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
+        # Backward fill
+        actual = array.resample(time='6H').bfill(tolerance='12H')
+        expected = DataArray([0., np.nan, 1., 1., 1.],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
+        # Nearest
+        actual = array.resample(time='6H').nearest(tolerance='6H')
+        expected = DataArray([0, 0, np.nan, 1, 1],
+                             [('time', times_upsampled)])
         assert_identical(expected, actual)
 
     @requires_scipy

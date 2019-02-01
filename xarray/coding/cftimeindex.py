@@ -408,12 +408,16 @@ class CFTimeIndex(pd.Index):
         return CFTimeIndex(other + np.array(self))
 
     def __sub__(self, other):
-        if isinstance(other, CFTimeIndex):
+        import cftime
+        if isinstance(other, (CFTimeIndex, cftime.datetime)):
             return pd.TimedeltaIndex(np.array(self) - np.array(other))
         elif isinstance(other, pd.TimedeltaIndex):
             return CFTimeIndex(np.array(self) - other.to_pytimedelta())
         else:
             return CFTimeIndex(np.array(self) - other)
+
+    def __rsub__(self, other):
+        return pd.TimedeltaIndex(other - np.array(self))
 
     def _add_delta(self, deltas):
         # To support TimedeltaIndex + CFTimeIndex with older versions of

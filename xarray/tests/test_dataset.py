@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+import pickle
 import sys
 import warnings
 from collections import OrderedDict
 from copy import copy, deepcopy
 from io import StringIO
-import pickle
 from textwrap import dedent
 
 import numpy as np
@@ -354,12 +354,8 @@ class TestDataset(object):
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
                             ('y', ('z', [1, 1, 1]))])
-        with pytest.raises(MergeError):
-            Dataset(data, compat='equals')
         expected = Dataset({'x': 0}, {'y': ('z', [1, 1, 1])})
         actual = Dataset(data)
-        assert_identical(expected, actual)
-        actual = Dataset(data, compat='broadcast_equals')
         assert_identical(expected, actual)
 
         data = OrderedDict([('y', ('z', [1, 1, 1])),
@@ -4716,3 +4712,82 @@ def test_differentiate_cftime(dask):
     # Test the differentiation of datetimes themselves
     actual = da['time'].differentiate('time', edge_order=1, datetime_unit='D')
     assert_allclose(actual, xr.ones_like(da['time']).astype(float))
+
+
+@pytest.mark.parametrize('dask', [True, False])
+def test_integrate(dask):
+    rs = np.random.RandomState(42)
+    coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
+
+    da = xr.DataArray(rs.randn(8, 6), dims=['x', 'y'],
+                      coords={'x': coord, 'x2': (('x', ), rs.randn(8)),
+                              'z': 3, 'x2d': (('x', 'y'), rs.randn(8, 6))})
+    if dask and has_dask:
+        da = da.chunk({'x': 4})
+
+    ds = xr.Dataset({'var': da})
+
+    # along x
+    actual = da.integrate('x')
+    # coordinate that contains x should be dropped.
+    expected_x = xr.DataArray(
+        np.trapz(da, da['x'], axis=0), dims=['y'],
+        coords={k: v for k, v in da.coords.items() if 'x' not in v.dims})
+    assert_allclose(expected_x, actual.compute())
+    assert_equal(ds['var'].integrate('x'), ds.integrate('x')['var'])
+
+    # make sure result is also a dask array (if the source is dask array)
+    assert isinstance(actual.data, type(da.data))
+
+    # along y
+    actual = da.integrate('y')
+    expected_y = xr.DataArray(
+        np.trapz(da, da['y'], axis=1), dims=['x'],
+        coords={k: v for k, v in da.coords.items() if 'y' not in v.dims})
+    assert_allclose(expected_y, actual.compute())
+    assert_equal(actual, ds.integrate('y')['var'])
+    assert_equal(ds['var'].integrate('y'), ds.integrate('y')['var'])
+
+    # along x and y
+    actual = da.integrate(('y', 'x'))
+    assert actual.ndim == 0
+
+    with pytest.raises(ValueError):
+        da.integrate('x2d')
+
+
+@pytest.mark.parametrize('dask', [True, False])
+@pytest.mark.parametrize('which_datetime', ['np', 'cftime'])
+def test_trapz_datetime(dask, which_datetime):
+    rs = np.random.RandomState(42)
+    if which_datetime == 'np':
+        coord = np.array(
+            ['2004-07-13', '2006-01-13', '2010-08-13', '2010-09-13',
+             '2010-10-11', '2010-12-13', '2011-02-13', '2012-08-13'],
+            dtype='datetime64')
+    else:
+        if not has_cftime:
+            pytest.skip('Test requires cftime.')
+        coord = xr.cftime_range('2000', periods=8, freq='2D')
+
+    da = xr.DataArray(
+        rs.randn(8, 6),
+        coords={'time': coord, 'z': 3, 't2d': (('time', 'y'), rs.randn(8, 6))},
+        dims=['time', 'y'])
+
+    if dask and has_dask:
+        da = da.chunk({'time': 4})
+
+    actual = da.integrate('time', datetime_unit='D')
+    expected_data = np.trapz(
+        da, utils.datetime_to_numeric(da['time'], datetime_unit='D'), axis=0)
+    expected = xr.DataArray(
+        expected_data, dims=['y'],
+        coords={k: v for k, v in da.coords.items() if 'time' not in v.dims})
+    assert_allclose(expected, actual.compute())
+
+    # make sure result is also a dask array (if the source is dask array)
+    assert isinstance(actual.data, type(da.data))
+
+    actual2 = da.integrate('time', datetime_unit='h')
+    assert_allclose(actual, actual2 / 24.0)
