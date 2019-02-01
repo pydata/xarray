@@ -335,7 +335,7 @@ class CFTimeIndex(pd.Index):
     # e.g. series[1:5].
     def get_value(self, series, key):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_value"""
-        if np.asarray(key).dtype is np.dtype(bool):
+        if np.asarray(key).dtype == np.dtype(bool):
             return series.iloc[key]
         elif isinstance(key, slice):
             return series.iloc[self.slice_indexer(
