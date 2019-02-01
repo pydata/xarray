@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+import pickle
 import sys
 import warnings
 from collections import OrderedDict
 from copy import copy, deepcopy
 from io import StringIO
-import pickle
 from textwrap import dedent
 
 import numpy as np
@@ -354,12 +354,8 @@ class TestDataset(object):
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
                             ('y', ('z', [1, 1, 1]))])
-        with pytest.raises(MergeError):
-            Dataset(data, compat='equals')
         expected = Dataset({'x': 0}, {'y': ('z', [1, 1, 1])})
         actual = Dataset(data)
-        assert_identical(expected, actual)
-        actual = Dataset(data, compat='broadcast_equals')
         assert_identical(expected, actual)
 
         data = OrderedDict([('y', ('z', [1, 1, 1])),

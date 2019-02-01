@@ -24,6 +24,10 @@ Breaking changes
 - Remove support for Python 2. This is the first version of xarray that is
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- The `compat` argument to `Dataset` and the `encoding` argument to 
+  `DataArray` are deprecated and will be removed in a future release.
+  (:issue:`1188`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Enhancements
 ~~~~~~~~~~~~
