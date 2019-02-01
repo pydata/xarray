@@ -13,16 +13,16 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, dtypes, duck_array_ops, formatting, groupby,
-    indexing, ops, pdcompat, resample, rolling, utils)
+    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
+    pdcompat, resample, rolling, utils)
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
     ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
     _contains_datetime_like_objects)
 from .coordinates import (
-    DatasetCoordinates, LevelCoordinatesSource,
-    assert_coordinate_consistent, remap_label_indexers)
+    DatasetCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
+    remap_label_indexers)
 from .indexes import Indexes, default_indexes
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
@@ -31,8 +31,8 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, datetime_to_numeric,
-    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
-    hashable, maybe_wrap_array)
+    decode_numpy_dict_values, either_dict_or_kwargs, hashable,
+    maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -324,7 +324,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _resample_cls = resample.DatasetResample
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
-                 compat='broadcast_equals'):
+                 compat=None):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
@@ -348,16 +348,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             name.
         attrs : dict-like, optional
             Global attributes to save on this dataset.
-        compat : {'broadcast_equals', 'equals', 'identical'}, optional
-            String indicating how to compare variables of the same name for
-            potential conflicts when initializing this dataset:
-
-            - 'broadcast_equals': all values must be equal when variables are
-              broadcast against each other to ensure common dimensions.
-            - 'equals': all values and dimensions must be the same.
-            - 'identical': all values, dimensions and attributes must be the
-              same.
+        compat : deprecated
         """
+
+        if compat is not None:
+            warnings.warn(
+                'The `compat` argument to Dataset is deprecated and will be '
+                'removed in 0.13.'
+                'Instead, use `merge` to control how variables are combined',
+                FutureWarning, stacklevel=2)
+        else:
+            compat = 'broadcast_equals'
         self._variables = OrderedDict()
         self._coord_names = set()
         self._dims = {}
