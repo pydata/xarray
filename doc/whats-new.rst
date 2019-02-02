@@ -43,7 +43,7 @@ Enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-- CFTimeIndex now supports QuarterBegin and QuarterEnd offsets.
+- CFTimeIndex now supports QuarterBegin and QuarterEnd offsets. (:issue:`2663`)
   By `Jwen Fai Low <https://github.com/jwenfai>`_
 
 Bug fixes
