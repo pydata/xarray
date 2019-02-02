@@ -50,13 +50,14 @@ Enhancements
 - Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
   ``nearest``. (:issue:`2695`)
   By `Hauke Schulz <https://github.com/observingClouds>`_.
-
 - :py:meth:`~xarray.DataArray.integrate` and
   :py:meth:`~xarray.Dataset.integrate` are newly added.
   See :ref:`_compute.using_coordinates` for the detail.
   (:issue:`1332`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
+- :py:meth:`pandas.Series.dropna` is now supported for a
+  :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
+  (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
