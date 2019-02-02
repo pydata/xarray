@@ -24,6 +24,10 @@ Breaking changes
 - Remove support for Python 2. This is the first version of xarray that is
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- The `compat` argument to `Dataset` and the `encoding` argument to 
+  `DataArray` are deprecated and will be removed in a future release.
+  (:issue:`1188`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -52,6 +56,17 @@ Enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
+  ``nearest``. (:issue:`2695`)
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
+- :py:meth:`~xarray.DataArray.integrate` and
+  :py:meth:`~xarray.Dataset.integrate` are newly added.
+  See :ref:`_compute.using_coordinates` for the detail.
+  (:issue:`1332`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`pandas.Series.dropna` is now supported for a
+  :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
+  (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -63,6 +78,12 @@ Bug fixes
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Line plots with the `x` argument set to a non-dimensional coord now plot the correct data for 1D DataArrays.
+  (:issue:`27251). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Subtracting a scalar ``cftime.datetime`` object from a
+  :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
+  instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.11.3:
 
@@ -115,6 +136,7 @@ Breaking changes
   (:issue:`2565`). The previous behavior was to decode them only if they
   had specific time attributes, now these attributes are copied
   automatically from the corresponding time coordinate. This might
+  break downstream code that was relying on these variables to be
   brake downstream code that was relying on these variables to be
   not decoded.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
