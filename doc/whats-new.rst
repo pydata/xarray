@@ -51,11 +51,6 @@ Enhancements
   :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
   By `Jwen Fai Low <https://github.com/jwenfai>`_ and
   `Spencer Clark <https://github.com/spencerkclark>`_.
-- :py:func:`xarray.testing.assert_equal` and
-  :py:func:`xarray.testing.assert_identical` now provide a more detailed
-  report showing what exactly differs between the two objects (dimensions /
-  coordinates / variables / attributes)  (:issue:`1507`).
-  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
   ``nearest``. (:issue:`2695`)
   By `Hauke Schulz <https://github.com/observingClouds>`_.
