@@ -335,11 +335,13 @@ class CFTimeIndex(pd.Index):
     # e.g. series[1:5].
     def get_value(self, series, key):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_value"""
-        if not isinstance(key, slice):
-            return series.iloc[self.get_loc(key)]
-        else:
+        if np.asarray(key).dtype == np.dtype(bool):
+            return series.iloc[key]
+        elif isinstance(key, slice):
             return series.iloc[self.slice_indexer(
                 key.start, key.stop, key.step)]
+        else:
+            return series.iloc[self.get_loc(key)]
 
     def __contains__(self, key):
         """Adapted from
