@@ -311,12 +311,10 @@ class GroupBy(SupportsArithmetic):
         s = pd.Series(np.arange(index.size), index)
         if isinstance(grouper, CFTimeGrouper):
             first_items = grouper.first_items(index)
-            full_index = first_items.index
         else:
             first_items = s.groupby(grouper).first()
             _apply_loffset(grouper, first_items)
-            full_index = first_items.index
-
+        full_index = first_items.index
         if first_items.isnull().any():
             first_items = first_items.dropna()
         return full_index, first_items
