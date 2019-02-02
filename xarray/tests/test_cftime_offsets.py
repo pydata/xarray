@@ -65,8 +65,8 @@ def test_cftime_offset_constructor_invalid_n(offset, invalid_n):
      (YearEnd(), 12),
      (YearBegin(month=5), 5),
      (YearEnd(month=5), 5),
-     (QuarterBegin(), 1),
-     (QuarterEnd(), 12),
+     (QuarterBegin(), 3),
+     (QuarterEnd(), 3),
      (QuarterBegin(month=5), 5),
      (QuarterEnd(month=5), 5)],
     ids=_id_func
@@ -102,7 +102,7 @@ def test_year_offset_constructor_invalid_month(
     [(BaseCFTimeOffset(), None),
      (MonthBegin(), 'MS'),
      (YearBegin(), 'AS-JAN'),
-     (QuarterBegin(), 'QS-JAN')],
+     (QuarterBegin(), 'QS-MAR')],
     ids=_id_func
 )
 def test_rule_code(offset, expected):
@@ -113,7 +113,7 @@ def test_rule_code(offset, expected):
     ('offset', 'expected'),
     [(BaseCFTimeOffset(), '<BaseCFTimeOffset: n=1>'),
      (YearBegin(), '<YearBegin: n=1, month=1>'),
-     (QuarterBegin(), '<QuarterBegin: n=1, month=1>')],
+     (QuarterBegin(), '<QuarterBegin: n=1, month=3>')],
     ids=_id_func
 )
 def test_str_and_repr(offset, expected):
@@ -204,11 +204,20 @@ def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
     if multiple and month_int:
         expected = offset_type(n=multiple, month=month_int)
     elif multiple:
-        expected = offset_type(n=multiple)
+        if month_int:
+            expected = offset_type(n=multiple)
+        else:
+            if offset_type == QuarterBegin:
+                expected = offset_type(n=multiple, month=1)
+            elif offset_type == QuarterEnd:
+                expected = offset_type(n=multiple, month=12)
     elif month_int:
         expected = offset_type(month=month_int)
     else:
-        expected = offset_type()
+        if offset_type == QuarterBegin:
+            expected = offset_type(month=1)
+        elif offset_type == QuarterEnd:
+            expected = offset_type(month=12)
     assert result == expected
 
 
@@ -596,14 +605,14 @@ def test_add_year_end_onOffset(
 
 @pytest.mark.parametrize(
     ('initial_date_args', 'offset', 'expected_date_args'),
-    [((1, 1, 1), QuarterBegin(), (1, 4, 1)),
-     ((1, 1, 1), QuarterBegin(n=2), (1, 7, 1)),
+    [((1, 1, 1), QuarterBegin(), (1, 3, 1)),
+     ((1, 1, 1), QuarterBegin(n=2), (1, 6, 1)),
      ((1, 1, 1), QuarterBegin(month=2), (1, 2, 1)),
-     ((1, 1, 7), QuarterBegin(n=2), (1, 7, 1)),
-     ((2, 2, 1), QuarterBegin(n=-1), (2, 1, 1)),
-     ((1, 1, 2), QuarterBegin(n=-1), (1, 1, 1)),
-     ((1, 1, 1, 5, 5, 5, 5), QuarterBegin(), (1, 4, 1, 5, 5, 5, 5)),
-     ((2, 1, 1, 5, 5, 5, 5), QuarterBegin(n=-1), (1, 10, 1, 5, 5, 5, 5))],
+     ((1, 1, 7), QuarterBegin(n=2), (1, 6, 1)),
+     ((2, 2, 1), QuarterBegin(n=-1), (1, 12, 1)),
+     ((1, 3, 2), QuarterBegin(n=-1), (1, 3, 1)),
+     ((1, 1, 1, 5, 5, 5, 5), QuarterBegin(), (1, 3, 1, 5, 5, 5, 5)),
+     ((2, 1, 1, 5, 5, 5, 5), QuarterBegin(n=-1), (1, 12, 1, 5, 5, 5, 5))],
     ids=_id_func
 )
 def test_add_quarter_begin(calendar, initial_date_args, offset,
@@ -684,9 +693,9 @@ def test_add_quarter_end_onOffset(
      ((1, 1, 1, 1), MonthBegin(), True),
      ((1, 1, 5), MonthBegin(), False),
      ((1, 1, 5), MonthEnd(), False),
-     ((1, 1, 1), QuarterBegin(), True),
-     ((1, 1, 1, 1), QuarterBegin(), True),
-     ((1, 1, 5), QuarterBegin(), False),
+     ((1, 3, 1), QuarterBegin(), True),
+     ((1, 3, 1, 1), QuarterBegin(), True),
+     ((1, 3, 5), QuarterBegin(), False),
      ((1, 12, 1), QuarterEnd(), False),
      ((1, 1, 1), YearBegin(), True),
      ((1, 1, 1, 1), YearBegin(), True),
@@ -707,7 +716,7 @@ def test_onOffset(calendar, date_args, offset, expected):
 
 
 @pytest.mark.parametrize(
-    ('year_quarter_month_args', 'sub_day_args', 'offset'),
+    ('year_month_args', 'sub_day_args', 'offset'),
     [((1, 1), (), MonthEnd()),
      ((1, 1), (1,), MonthEnd()),
      ((1, 12), (), QuarterEnd()),
@@ -717,11 +726,11 @@ def test_onOffset(calendar, date_args, offset, expected):
     ids=_id_func
 )
 def test_onOffset_month_or_quarter_or_year_end(
-        calendar, year_quarter_month_args, sub_day_args, offset):
+        calendar, year_month_args, sub_day_args, offset):
     date_type = get_date_type(calendar)
-    reference_args = year_quarter_month_args + (1,)
+    reference_args = year_month_args + (1,)
     reference = date_type(*reference_args)
-    date_args = (year_quarter_month_args + (_days_in_month(reference),) +
+    date_args = (year_month_args + (_days_in_month(reference),) +
                  sub_day_args)
     date = date_type(*date_args)
     result = offset.onOffset(date)
@@ -738,9 +747,9 @@ def test_onOffset_month_or_quarter_or_year_end(
      (YearEnd(n=2), (1, 3, 1), (1, 12)),
      (YearEnd(n=2, month=2), (1, 3, 1), (2, 2)),
      (YearEnd(n=2, month=4), (1, 4, 30), (1, 4)),
-     (QuarterBegin(), (1, 3, 2), (1, 4)),
-     (QuarterBegin(), (1, 4, 1), (1, 4)),
-     (QuarterBegin(n=2), (1, 4, 1), (1, 4)),
+     (QuarterBegin(), (1, 3, 2), (1, 6)),
+     (QuarterBegin(), (1, 4, 1), (1, 6)),
+     (QuarterBegin(n=2), (1, 4, 1), (1, 6)),
      (QuarterBegin(n=2, month=2), (1, 4, 1), (1, 5)),
      (QuarterEnd(), (1, 3, 1), (1, 3)),
      (QuarterEnd(n=2), (1, 3, 1), (1, 3)),
@@ -787,9 +796,9 @@ def test_rollforward(calendar, offset, initial_date_args,
      (YearEnd(n=2), (2, 3, 1), (1, 12)),
      (YearEnd(n=2, month=2), (2, 3, 1), (2, 2)),
      (YearEnd(month=4), (1, 4, 30), (1, 4)),
-     (QuarterBegin(), (1, 3, 2), (1, 1)),
-     (QuarterBegin(), (1, 4, 1), (1, 4)),
-     (QuarterBegin(n=2), (1, 4, 1), (1, 4)),
+     (QuarterBegin(), (1, 3, 2), (1, 3)),
+     (QuarterBegin(), (1, 4, 1), (1, 3)),
+     (QuarterBegin(n=2), (1, 4, 1), (1, 3)),
      (QuarterBegin(n=2, month=2), (1, 4, 1), (1, 2)),
      (QuarterEnd(), (2, 3, 1), (1, 12)),
      (QuarterEnd(n=2), (2, 3, 1), (1, 12)),
@@ -851,7 +860,9 @@ _CFTIME_RANGE_TESTS = [
     ('0010', None, 4, YearBegin(n=-2), None, False,
      [(10, 1, 1), (8, 1, 1), (6, 1, 1), (4, 1, 1)]),
     ('0001-01-01', '0001-01-04', 4, None, None, False,
-     [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)])
+     [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)]),
+    ('0001-06-01', None, 4, '3QS-JUN', None, False,
+     [(1, 6, 1), (2, 3, 1), (2, 12, 1), (3, 9, 1)])
 ]
 
 

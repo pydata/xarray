@@ -166,13 +166,13 @@ def _is_normalized(datetime):
 
 
 def _get_day_of_month(other, day_option):
-    """Find the day in `other`'s month that satisfies a DateOffset's onOffset
-    policy, as described by the `day_opt` argument.
+    """Find the day in `other`'s month that satisfies a BaseCFTimeOffset's
+    onOffset policy, as described by the `day_option` argument.
 
     Parameters
     ----------
     other : cftime.datetime
-    day_option : 'start', 'end', or int
+    day_option : 'start', 'end'
         'start': returns 1
         'end': returns last day of the month
         int: returns the day in the month indicated by `other`, or the last of
@@ -189,11 +189,8 @@ def _get_day_of_month(other, day_option):
     elif day_option == 'end':
         days_in_month = _days_in_month(other)
         return days_in_month
-    elif isinstance(day_option, np.integer):
-        days_in_month = _days_in_month(other)
-        return min(day_option, days_in_month)
     elif day_option is None:
-        # Note: unlike `_shift_month`, get_day_of_month does not
+        # Note: unlike `_shift_month`, _get_day_of_month does not
         # allow day_option = None
         raise NotImplementedError
     else:
@@ -268,7 +265,7 @@ def roll_qtrday(other, n, month, day_option, modby=3):
     other : cftime.datetime
     n : number of periods to increment, before adjusting for rolling
     month : int reference month giving the first month of the year
-    day_option : 'start', 'end', 'business_start', 'business_end', or int
+    day_option : 'start', 'end'
         The convention to use in finding the day in a given month against
         which to compare for rollforward/rollbackward decisions.
     modby : int 3 for quarters, 12 for years
@@ -298,6 +295,22 @@ def roll_qtrday(other, n, month, day_option, modby=3):
             # make sure to roll forward, so negate
             n += 1
     return n
+
+
+def _validate_month(month, default_month):
+    if month is None:
+        result_month = default_month
+    else:
+        result_month = month
+    if not isinstance(result_month, int):
+        raise TypeError("'self.month' must be an integer value between 1 "
+                        "and 12.  Instead, it was set to a value of "
+                        "{!r}".format(result_month))
+    elif not (1 <= result_month <= 12):
+        raise ValueError("'self.month' must be an integer value between 1 "
+                         "and 12.  Instead, it was set to a value of "
+                         "{!r}".format(result_month))
+    return result_month
 
 
 class MonthBegin(BaseCFTimeOffset):
@@ -351,18 +364,7 @@ class QuarterOffset(BaseCFTimeOffset):
     def __init__(self, n=1, normalize=False, month=None):
         BaseCFTimeOffset.__init__(self, n)
         self.normalize = normalize
-        if month is None:
-            self.month = self._default_month
-        else:
-            self.month = month
-        if not isinstance(self.month, int):
-            raise TypeError("'self.month' must be an integer value between 1 "
-                            "and 12.  Instead, it was set to a value of "
-                            "{!r}".format(self.month))
-        elif not (1 <= self.month <= 12):
-            raise ValueError("'self.month' must be an integer value between 1 "
-                             "and 12.  Instead, it was set to a value of "
-                             "{!r}".format(self.month))
+        self.month = _validate_month(month, self._default_month)
 
     def __apply__(self, other):
         # months_since: find the calendar quarter containing other.month,
@@ -414,7 +416,7 @@ class QuarterBegin(QuarterOffset):
     month = 3 corresponds to dates like 3/31/2007, 6/30/2007, ...
     """
     # In pandas, _from_name_startingMonth = 1 used when freq='QS'
-    _default_month = 1
+    _default_month = 3
     _freq = 'QS'
     _day_option = 'start'
 
@@ -438,7 +440,7 @@ class QuarterEnd(QuarterOffset):
     """
     # In pandas, QuarterOffset._from_name suffix == 'DEC'
     # See _lite_rule_alias in pandas._libs.tslibs.frequencies
-    _default_month = 12
+    _default_month = 3
     _freq = 'Q'
     _day_option = 'end'
 
@@ -464,26 +466,10 @@ class YearOffset(BaseCFTimeOffset):
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
-        if month is None:
-            self.month = self._default_month
-        else:
-            self.month = month
-        if not isinstance(self.month, int):
-            raise TypeError("'self.month' must be an integer value between 1 "
-                            "and 12.  Instead, it was set to a value of "
-                            "{!r}".format(self.month))
-        elif not (1 <= self.month <= 12):
-            raise ValueError("'self.month' must be an integer value between 1 "
-                             "and 12.  Instead, it was set to a value of "
-                             "{!r}".format(self.month))
+        self.month = _validate_month(month, self._default_month)
 
     def __apply__(self, other):
-        if self._day_option == 'start':
-            reference_day = 1
-        elif self._day_option == 'end':
-            reference_day = _days_in_month(other)
-        else:
-            raise ValueError(self._day_option)
+        reference_day = _get_day_of_month(other, self._day_option)
         years = _adjust_n_years(other, self.n, self.month, reference_day)
         months = years * 12 + (self.month - other.month)
         return _shift_month(other, months, self._day_option)
@@ -592,8 +578,8 @@ _FREQUENCIES = {
     'AS': YearBegin,
     'Y': YearEnd,
     'YS': YearBegin,
-    'Q': QuarterEnd,
-    'QS': QuarterBegin,
+    'Q': partial(QuarterEnd, month=12),
+    'QS': partial(QuarterBegin, month=1),
     'M': MonthEnd,
     'MS': MonthBegin,
     'D': Day,
@@ -894,25 +880,25 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     +----------+--------------------------------------------------------------------+
     | Q(S)-FEB | Quarter frequency, anchored at the end (or beginning) of February  |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-MAR | Quarter frequency, anchored at the end (or beginning) of January   |
+    | Q(S)-MAR | Quarter frequency, anchored at the end (or beginning) of March     |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-APR | Quarter frequency, anchored at the end (or beginning) of February  |
+    | Q(S)-APR | Quarter frequency, anchored at the end (or beginning) of April     |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-MAY | Quarter frequency, anchored at the end (or beginning) of January   |
+    | Q(S)-MAY | Quarter frequency, anchored at the end (or beginning) of May       |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-JUN | Quarter frequency, anchored at the end (or beginning) of February  |
+    | Q(S)-JUN | Quarter frequency, anchored at the end (or beginning) of June      |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-JUL | Quarter frequency, anchored at the end (or beginning) of January   |
+    | Q(S)-JUL | Quarter frequency, anchored at the end (or beginning) of July      |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-AUG | Quarter frequency, anchored at the end (or beginning) of February  |
+    | Q(S)-AUG | Quarter frequency, anchored at the end (or beginning) of August    |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-SEP | Quarter frequency, anchored at the end (or beginning) of January   |
+    | Q(S)-SEP | Quarter frequency, anchored at the end (or beginning) of September |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-OCT | Quarter frequency, anchored at the end (or beginning) of February  |
+    | Q(S)-OCT | Quarter frequency, anchored at the end (or beginning) of October   |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-NOV | Quarter frequency, anchored at the end (or beginning) of January   |
+    | Q(S)-NOV | Quarter frequency, anchored at the end (or beginning) of November  |
     +----------+--------------------------------------------------------------------+
-    | Q(S)-DEC | Quarter frequency, anchored at the end (or beginning) of February  |
+    | Q(S)-DEC | Quarter frequency, anchored at the end (or beginning) of December  |
     +----------+--------------------------------------------------------------------+
 
 
