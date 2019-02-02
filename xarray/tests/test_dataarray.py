@@ -2872,6 +2872,15 @@ class TestDataArray(object):
             expected_da,
             DataArray.from_series(actual).drop(['x', 'y']))
 
+    def test_to_and_from_empty_series(self):
+        # GH697
+        expected = pd.Series([])
+        da = DataArray.from_series(expected)
+        assert len(da) == 0
+        actual = da.to_series()
+        assert len(actual) == 0
+        assert expected.equals(actual)
+
     def test_series_categorical_index(self):
         # regression test for GH700
         if not hasattr(pd, 'CategoricalIndex'):
