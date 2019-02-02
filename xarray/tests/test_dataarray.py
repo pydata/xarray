@@ -2824,7 +2824,7 @@ class TestDataArray(object):
         assert_identical(
             expected_da,
             DataArray.from_series(actual).drop(['x', 'y']))
-    
+
     def test_to_and_from_empty_series(self):
         # GH697
         expected = pd.Series([])

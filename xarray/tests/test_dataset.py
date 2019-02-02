@@ -2986,7 +2986,7 @@ class TestDataset(object):
 
     def test_to_and_from_empty_dataframe(self):
         # GH697
-        expected = pd.DataFrame({'foo' : []})
+        expected = pd.DataFrame({'foo': []})
         ds = Dataset.from_dataframe(expected)
         assert len(ds['foo']) == 0
         actual = ds.to_dataframe()
