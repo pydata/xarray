@@ -131,9 +131,7 @@ def animate_line(darray, animate_over=None, **kwargs):
         ylim = [np.min(yplt_val), np.max(yplt_val)]
 
     # animatplot assumes that the x positions might vary over time too
-    xplt_val = np.repeat(xplt_val[..., np.newaxis],
-                         repeats=len(timeline), axis=-1)
-    line_block = Line(x=xplt_val, y=yplt_val, ax=ax, t_axis=-1, **kwargs)
+    line_block = Line(xplt_val, yplt_val, ax=ax, t_axis=-1, **kwargs)
 
     if _labels:
         if xlabel is not None:
