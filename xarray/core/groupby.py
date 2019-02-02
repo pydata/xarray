@@ -312,19 +312,13 @@ class GroupBy(SupportsArithmetic):
         if isinstance(grouper, CFTimeGrouper):
             first_items = grouper.first_items(index)
             full_index = first_items.index
-            if first_items.isnull().any():
-                index_dict = dict(zip(np.arange(first_items.size),
-                                      first_items.index.values))
-                first_items.index = np.arange(first_items.size)
-                first_items = first_items.dropna()
-                first_items.index = [index_dict[i] for i in
-                                     first_items.index.values]
         else:
             first_items = s.groupby(grouper).first()
             _apply_loffset(grouper, first_items)
             full_index = first_items.index
-            if first_items.isnull().any():
-                first_items = first_items.dropna()
+
+        if first_items.isnull().any():
+            first_items = first_items.dropna()
         return full_index, first_items
 
     def _iter_grouped(self):
