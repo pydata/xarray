@@ -2299,15 +2299,6 @@ class TestDataArray(object):
         actual = da.resample(time='D').apply(func, args=(1.,), arg3=1.)
         assert_identical(actual, expected)
 
-    @requires_cftime
-    def test_resample_cftimeindex(self):
-        cftime = _import_cftime()
-        times = cftime.num2date(np.arange(12), units='hours since 0001-01-01',
-                                calendar='noleap')
-        array = DataArray(np.arange(12), [('time', times)])
-
-        array.resample(time='6H').mean()
-
     def test_resample_first(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
