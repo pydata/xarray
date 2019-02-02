@@ -2984,6 +2984,15 @@ class TestDataset(object):
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_to_and_from_empty_dataframe(self):
+        # GH697
+        expected = pd.DataFrame({'foo' : []})
+        ds = Dataset.from_dataframe(expected)
+        assert len(ds['foo']) == 0
+        actual = ds.to_dataframe()
+        assert len(actual) == 0
+        assert expected.equals(actual)
+
     def test_from_dataframe_non_unique_columns(self):
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))
