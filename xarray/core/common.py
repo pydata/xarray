@@ -756,23 +756,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim_coord = self[dim]
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
-            raise NotImplementedError(
-                'Resample is currently not supported along a dimension '
-                'indexed by a CFTimeIndex.  For certain kinds of downsampling '
-                'it may be possible to work around this by converting your '
-                'time index to a DatetimeIndex using '
-                'CFTimeIndex.to_datetimeindex.  Use caution when doing this '
-                'however, because switching to a DatetimeIndex from a '
-                'CFTimeIndex with a non-standard calendar entails a change '
-                'in the calendar type, which could lead to subtle and silent '
-                'errors.'
-            )
-
+            from .resample_cftime import CFTimeGrouper
+            grouper = CFTimeGrouper(freq, closed, label, base, loffset)
+        else:
+            # TODO: to_offset() call required for pandas==0.19.2
+            grouper = pd.Grouper(freq=freq, closed=closed, label=label,
+                                 base=base,
+                                 loffset=pd.tseries.frequencies.to_offset(
+                                     loffset))
         group = DataArray(dim_coord, coords=dim_coord.coords,
                           dims=dim_coord.dims, name=RESAMPLE_DIM)
-        # TODO: to_offset() call required for pandas==0.19.2
-        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base,
-                             loffset=pd.tseries.frequencies.to_offset(loffset))
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)
