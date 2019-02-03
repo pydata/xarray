@@ -12,15 +12,13 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
-    DataArrayCoordinates, LevelCoordinatesSource,
-    assert_coordinate_consistent, remap_label_indexers)
+    DataArrayCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
+    remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
-from .indexes import default_indexes, Indexes
+from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .utils import (
-    _check_inplace, decode_numpy_dict_values, either_dict_or_kwargs,
-    ensure_us_time_resolution)
+from .utils import _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -192,13 +190,16 @@ class DataArray(AbstractArray, DataWithCoords):
         attrs : dict_like or None, optional
             Attributes to assign to the new instance. By default, an empty
             attribute dictionary is initialized.
-        encoding : dict_like or None, optional
-            Dictionary specifying how to encode this array's data into a
-            serialized format like netCDF4. Currently used keys (for netCDF)
-            include '_FillValue', 'scale_factor', 'add_offset', 'dtype',
-            'units' and 'calendar' (the later two only for datetime arrays).
-            Unrecognized keys are ignored.
+        encoding : deprecated
         """
+
+        if encoding is not None:
+            warnings.warn(
+                'The `encoding` argument to `DataArray` is deprecated, and . '
+                'will be removed in 0.13. '
+                'Instead, specify the encoding when writing to disk or '
+                'set the `encoding` attribute directly.',
+                FutureWarning, stacklevel=2)
         if fastpath:
             variable = data
             assert dims is None
@@ -2423,6 +2424,53 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         ds = self._to_temp_dataset().differentiate(
             coord, edge_order, datetime_unit)
+        return self._from_temp_dataset(ds)
+
+    def integrate(self, dim, datetime_unit=None):
+        """ integrate the array with the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        dim: str, or a sequence of str
+            Coordinate(s) used for the integration.
+        datetime_unit
+            Can be specify the unit if datetime coordinate is used. One of
+            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
+             'as'}
+
+        Returns
+        -------
+        integrated: DataArray
+
+        See also
+        --------
+        numpy.trapz: corresponding numpy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
+        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.integrate('x')
+        <xarray.DataArray (y: 3)>
+        array([5.4, 6.6, 7.8])
+        Dimensions without coordinates: y
+        """
+        ds = self._to_temp_dataset().integrate(dim, datetime_unit)
         return self._from_temp_dataset(ds)
 
 

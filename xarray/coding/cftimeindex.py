@@ -335,11 +335,13 @@ class CFTimeIndex(pd.Index):
     # e.g. series[1:5].
     def get_value(self, series, key):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_value"""
-        if not isinstance(key, slice):
-            return series.iloc[self.get_loc(key)]
-        else:
+        if np.asarray(key).dtype == np.dtype(bool):
+            return series.iloc[key]
+        elif isinstance(key, slice):
             return series.iloc[self.slice_indexer(
                 key.start, key.stop, key.step)]
+        else:
+            return series.iloc[self.get_loc(key)]
 
     def __contains__(self, key):
         """Adapted from
@@ -408,12 +410,16 @@ class CFTimeIndex(pd.Index):
         return CFTimeIndex(other + np.array(self))
 
     def __sub__(self, other):
-        if isinstance(other, CFTimeIndex):
+        import cftime
+        if isinstance(other, (CFTimeIndex, cftime.datetime)):
             return pd.TimedeltaIndex(np.array(self) - np.array(other))
         elif isinstance(other, pd.TimedeltaIndex):
             return CFTimeIndex(np.array(self) - other.to_pytimedelta())
         else:
             return CFTimeIndex(np.array(self) - other)
+
+    def __rsub__(self, other):
+        return pd.TimedeltaIndex(other - np.array(self))
 
     def _add_delta(self, deltas):
         # To support TimedeltaIndex + CFTimeIndex with older versions of
