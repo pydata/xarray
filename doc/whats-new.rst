@@ -64,6 +64,8 @@ Enhancements
 - :py:meth:`pandas.Series.dropna` is now supported for a
   :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
   (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` now supports QuarterBegin and QuarterEnd offsets (:issue:`2663`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_
 
 Bug fixes
 ~~~~~~~~~
