@@ -158,13 +158,6 @@ class BaseCFTimeOffset(object):
         return _get_day_of_month(other, self._day_option)
 
 
-def _is_normalized(datetime):
-    if (datetime.hour != 0 or datetime.minute != 0 or datetime.second != 0 or
-            datetime.microsecond != 0):
-        return False
-    return True
-
-
 def _get_day_of_month(other, day_option):
     """Find the day in `other`'s month that satisfies a BaseCFTimeOffset's
     onOffset policy, as described by the `day_option` argument.
@@ -361,9 +354,8 @@ class QuarterOffset(BaseCFTimeOffset):
     _freq = None  # type: ClassVar[str]
     _default_month = None  # type: ClassVar[int]
 
-    def __init__(self, n=1, normalize=False, month=None):
+    def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
-        self.normalize = normalize
         self.month = _validate_month(month, self._default_month)
 
     def __apply__(self, other):
@@ -381,8 +373,6 @@ class QuarterOffset(BaseCFTimeOffset):
     def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
-        if self.normalize and not _is_normalized(date):
-            return False
         mod_month = (date.month - self.month) % 3
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
