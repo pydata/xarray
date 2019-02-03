@@ -122,21 +122,14 @@ class TestDataArray(object):
         """
         # GH837, GH861
         # checking array subraction when dims are the same
-        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+        # note: names need to be in sorted order to align consistently with
+        # pandas < 0.24 and >= 0.24.
+        p_data = np.array([('Abe', 180), ('Stacy', 150), ('Dick', 200)],
                           dtype=[('name', '|S256'), ('height', object)])
-
-        p_data_1 = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
-        p_data_2 = np.array([('John', 180), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
         weights_0 = DataArray([80, 56, 120], dims=['participant'],
                               coords={'participant': p_data})
-
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -4, -5], dims=['participant'],
@@ -145,31 +138,27 @@ class TestDataArray(object):
         assert_identical(actual, expected)
 
         # checking array subraction when dims are not the same
-        p_data_1 = np.array([('John', 180), ('Stacy', 151), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
+        p_data_alt = np.array([('Abe', 180), ('Stacy', 151), ('Dick', 200)],
+                              dtype=[('name', '|S256'), ('height', object)])
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data_alt})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -5], dims=['participant'],
-                             coords={'participant': p_data_2})
+                             coords={'participant': p_data[[0, 2]]})
 
         assert_identical(actual, expected)
 
         # checking array subraction when dims are not the same and one
         # is np.nan
-        p_data_1 = np.array([('John', 180), ('Stacy', np.nan), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
+        p_data_nan = np.array([('Abe', 180), ('Stacy', np.nan), ('Dick', 200)],
+                              dtype=[('name', '|S256'), ('height', object)])
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data_nan})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -5], dims=['participant'],
-                             coords={'participant': p_data_2})
+                             coords={'participant': p_data[[0, 2]]})
 
         assert_identical(actual, expected)
 
@@ -269,7 +258,7 @@ class TestDataArray(object):
         expected = Dataset({None: (['x', 'y'], data, {'bar': 2})})[None]
         assert_identical(expected, actual)
 
-        actual = DataArray(data, dims=['x', 'y'], encoding={'bar': 2})
+        actual = DataArray(data, dims=['x', 'y'])
         expected = Dataset({None: (['x', 'y'], data, {}, {'bar': 2})})[None]
         assert_identical(expected, actual)
 
@@ -307,7 +296,7 @@ class TestDataArray(object):
         expected = DataArray(data,
                              coords={'x': ['a', 'b'], 'y': [-1, -2]},
                              dims=['x', 'y'], name='foobar',
-                             attrs={'bar': 2}, encoding={'foo': 3})
+                             attrs={'bar': 2})
         actual = DataArray(expected)
         assert_identical(expected, actual)
 
@@ -2312,16 +2301,6 @@ class TestDataArray(object):
         actual = da.resample(time='D').apply(func, args=(1.,), arg3=1.)
         assert_identical(actual, expected)
 
-    @requires_cftime
-    def test_resample_cftimeindex(self):
-        cftime = _import_cftime()
-        times = cftime.num2date(np.arange(12), units='hours since 0001-01-01',
-                                calendar='noleap')
-        array = DataArray(np.arange(12), [('time', times)])
-
-        with raises_regex(NotImplementedError, 'to_datetimeindex'):
-            array.resample(time='6H').mean()
-
     def test_resample_first(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
@@ -2496,6 +2475,30 @@ class TestDataArray(object):
         expected = DataArray(expected_data,
                              {'time': expected_times, 'x': xs, 'y': ys},
                              ('x', 'y', 'time'))
+        assert_identical(expected, actual)
+
+    def test_upsample_tolerance(self):
+        # Test tolerance keyword for upsample methods bfill, pad, nearest
+        times = pd.date_range('2000-01-01', freq='1D', periods=2)
+        times_upsampled = pd.date_range('2000-01-01', freq='6H', periods=5)
+        array = DataArray(np.arange(2), [('time', times)])
+
+        # Forward fill
+        actual = array.resample(time='6H').ffill(tolerance='12H')
+        expected = DataArray([0., 0., 0., np.nan, 1.],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
+        # Backward fill
+        actual = array.resample(time='6H').bfill(tolerance='12H')
+        expected = DataArray([0., np.nan, 1., 1., 1.],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
+        # Nearest
+        actual = array.resample(time='6H').nearest(tolerance='6H')
+        expected = DataArray([0, 0, np.nan, 1, 1],
+                             [('time', times_upsampled)])
         assert_identical(expected, actual)
 
     @requires_scipy
@@ -2860,6 +2863,15 @@ class TestDataArray(object):
         assert_identical(
             expected_da,
             DataArray.from_series(actual).drop(['x', 'y']))
+
+    def test_to_and_from_empty_series(self):
+        # GH697
+        expected = pd.Series([])
+        da = DataArray.from_series(expected)
+        assert len(da) == 0
+        actual = da.to_series()
+        assert len(actual) == 0
+        assert expected.equals(actual)
 
     def test_series_categorical_index(self):
         # regression test for GH700

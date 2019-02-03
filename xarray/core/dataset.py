@@ -17,16 +17,17 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, dtypes, duck_array_ops, formatting, groupby,
-    indexing, ops, pdcompat, resample, rolling, utils)
+    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
+    pdcompat, resample, rolling, utils)
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
     ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
     _contains_datetime_like_objects)
 from .coordinates import (
-    DatasetCoordinates, LevelCoordinatesSource,
-    assert_coordinate_consistent, remap_label_indexers)
+    DatasetCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
+    remap_label_indexers,
+)
 from .indexes import Indexes, default_indexes, isel_variable_and_index
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
@@ -35,8 +36,8 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, datetime_to_numeric,
-    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
-    hashable, maybe_wrap_array)
+    decode_numpy_dict_values, either_dict_or_kwargs, hashable,
+    maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -137,7 +138,7 @@ def merge_indexes(
         if isinstance(var_names, str):
             var_names = [var_names]
 
-        names, labels, levels = [], [], []  # type: (list, list, list)
+        names, codes, levels = [], [], []  # type: (list, list, list)
         current_index_variable = variables.get(dim)
 
         for n in var_names:
@@ -151,13 +152,18 @@ def merge_indexes(
         if current_index_variable is not None and append:
             current_index = current_index_variable.to_index()
             if isinstance(current_index, pd.MultiIndex):
+                try:
+                    current_codes = current_index.codes
+                except AttributeError:
+                    # fpr pandas<0.24
+                    current_codes = current_index.labels
                 names.extend(current_index.names)
-                labels.extend(current_index.labels)
+                codes.extend(current_codes)
                 levels.extend(current_index.levels)
             else:
                 names.append('%s_level_0' % dim)
                 cat = pd.Categorical(current_index.values, ordered=True)
-                labels.append(cat.codes)
+                codes.append(cat.codes)
                 levels.append(cat.categories)
 
         if not len(names) and len(var_names) == 1:
@@ -168,10 +174,10 @@ def merge_indexes(
                 names.append(n)
                 var = variables[n]
                 cat = pd.Categorical(var.values, ordered=True)
-                labels.append(cat.codes)
+                codes.append(cat.codes)
                 levels.append(cat.categories)
 
-            idx = pd.MultiIndex(labels=labels, levels=levels, names=names)
+            idx = pd.MultiIndex(levels, codes, names=names)
 
         vars_to_replace[dim] = IndexVariable(dim, idx)
         vars_to_remove.extend(var_names)
@@ -329,7 +335,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _resample_cls = resample.DatasetResample
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
-                 compat='broadcast_equals'):
+                 compat=None):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
@@ -353,16 +359,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             name.
         attrs : dict-like, optional
             Global attributes to save on this dataset.
-        compat : {'broadcast_equals', 'equals', 'identical'}, optional
-            String indicating how to compare variables of the same name for
-            potential conflicts when initializing this dataset:
-
-            - 'broadcast_equals': all values must be equal when variables are
-              broadcast against each other to ensure common dimensions.
-            - 'equals': all values and dimensions must be the same.
-            - 'identical': all values, dimensions and attributes must be the
-              same.
+        compat : deprecated
         """
+        if compat is not None:
+            warnings.warn(
+                'The `compat` argument to Dataset is deprecated and will be '
+                'removed in 0.13.'
+                'Instead, use `merge` to control how variables are combined',
+                FutureWarning, stacklevel=2)
+        else:
+            compat = 'broadcast_equals'
+
         self._variables = OrderedDict()  # type: OrderedDict[Any, Variable]
         self._coord_names = set()
         self._dims = {}  # type: Dict[Any, int]
@@ -4003,6 +4010,78 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             else:
                 variables[k] = v
         return self._replace_vars_and_dims(variables)
+
+    def integrate(self, coord, datetime_unit=None):
+        """ integrate the array with the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        dim: str, or a sequence of str
+            Coordinate(s) used for the integration.
+        datetime_unit
+            Can be specify the unit if datetime coordinate is used. One of
+            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
+             'as'}
+
+        Returns
+        -------
+        integrated: Dataset
+
+        See also
+        --------
+        DataArray.integrate
+        numpy.trapz: corresponding numpy function
+        """
+        if not isinstance(coord, (list, tuple)):
+            coord = (coord, )
+        result = self
+        for c in coord:
+            result = result._integrate_one(c, datetime_unit=datetime_unit)
+        return result
+
+    def _integrate_one(self, coord, datetime_unit=None):
+        from .variable import Variable
+
+        if coord not in self.variables and coord not in self.dims:
+            raise ValueError('Coordinate {} does not exist.'.format(dim))
+
+        coord_var = self[coord].variable
+        if coord_var.ndim != 1:
+            raise ValueError('Coordinate {} must be 1 dimensional but is {}'
+                             ' dimensional'.format(coord, coord_var.ndim))
+
+        dim = coord_var.dims[0]
+        if _contains_datetime_like_objects(coord_var):
+            if coord_var.dtype.kind in 'mM' and datetime_unit is None:
+                datetime_unit, _ = np.datetime_data(coord_var.dtype)
+            elif datetime_unit is None:
+                datetime_unit = 's'  # Default to seconds for cftime objects
+            coord_var = datetime_to_numeric(
+                coord_var, datetime_unit=datetime_unit)
+
+        variables = OrderedDict()
+        coord_names = set()
+        for k, v in self.variables.items():
+            if k in self.coords:
+                if dim not in v.dims:
+                    variables[k] = v
+                    coord_names.add(k)
+            else:
+                if k in self.data_vars and dim in v.dims:
+                    if _contains_datetime_like_objects(v):
+                        v = datetime_to_numeric(v, datetime_unit=datetime_unit)
+                    integ = duck_array_ops.trapz(
+                        v.data, coord_var.data, axis=v.get_axis_num(dim))
+                    v_dims = list(v.dims)
+                    v_dims.remove(dim)
+                    variables[k] = Variable(v_dims, integ)
+                else:
+                    variables[k] = v
+        return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     @property
     def real(self):

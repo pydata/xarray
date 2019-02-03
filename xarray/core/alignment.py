@@ -509,7 +509,7 @@ def broadcast(*args, **kwargs):
         coords = OrderedDict(array.coords)
         coords.update(common_coords)
         return DataArray(data, coords, data.dims, name=array.name,
-                         attrs=array.attrs, encoding=array.encoding)
+                         attrs=array.attrs)
 
     def _broadcast_dataset(ds):
         data_vars = OrderedDict(

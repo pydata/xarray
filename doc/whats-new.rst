@@ -13,9 +13,9 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.11.3:
+.. _whats-new.0.12.0:
 
-v0.11.3 (unreleased)
+v0.12.0 (unreleased)
 --------------------
 
 Breaking changes
@@ -24,6 +24,10 @@ Breaking changes
 - Remove support for Python 2. This is the first version of xarray that is
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- The `compat` argument to `Dataset` and the `encoding` argument to 
+  `DataArray` are deprecated and will be removed in a future release.
+  (:issue:`1188`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -43,18 +47,55 @@ Enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Resampling of standard and non-standard calendars indexed by
+  :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
+  ``nearest``. (:issue:`2695`)
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
+- :py:meth:`~xarray.DataArray.integrate` and
+  :py:meth:`~xarray.Dataset.integrate` are newly added.
+  See :ref:`_compute.using_coordinates` for the detail.
+  (:issue:`1332`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`pandas.Series.dropna` is now supported for a
+  :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
+  (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Silenced warnings that appear when using pandas 0.24.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 - Interpolating via resample now internally specifies ``bounds_error=False``
   as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Line plots with the `x` argument set to a non-dimensional coord now plot the correct data for 1D DataArrays.
+  (:issue:`27251). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Subtracting a scalar ``cftime.datetime`` object from a
+  :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
+  instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
+.. _whats-new.0.11.3:
+
+v0.11.3 (26 January 2019)
+-------------------------
+
+Bug fixes
+~~~~~~~~~
+
 - Saving files with times encoded with reference dates with timezones
   (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
   (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed performance regression with ``open_mfdataset`` (:issue:`2662`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fixed supplying an explicit dimension in the ``concat_dim`` argument to
+  to ``open_mfdataset`` (:issue:`2647`).
+  By `Ben Root <https://github.com/WeatherGod>`_.
 
 .. _whats-new.0.11.2:
 
@@ -90,6 +131,7 @@ Breaking changes
   (:issue:`2565`). The previous behavior was to decode them only if they
   had specific time attributes, now these attributes are copied
   automatically from the corresponding time coordinate. This might
+  break downstream code that was relying on these variables to be
   brake downstream code that was relying on these variables to be
   not decoded.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
