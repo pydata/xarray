@@ -1,12 +1,10 @@
 import functools
 
-import numpy as np
-
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _ensure_numeric, _process_cmap_cbar_kwargs,
-    _valid_other_type, get_axis, label_from_attrs)
+    _add_colorbar, _ensure_numeric, _process_cmap_cbar_kwargs, get_axis,
+    label_from_attrs)
 
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,

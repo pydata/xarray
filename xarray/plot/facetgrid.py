@@ -7,8 +7,8 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
-    _infer_xy_labels, _process_cmap_cbar_kwargs,
-    import_matplotlib_pyplot, label_from_attrs)
+    _infer_xy_labels, _process_cmap_cbar_kwargs, import_matplotlib_pyplot,
+    label_from_attrs)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
