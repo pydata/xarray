@@ -240,6 +240,8 @@ function or method name to ``coord_func`` option,
   da.coarsen(time=7, x=2, coord_func={'time': 'min'}).mean()
 
 
+.. _compute.using_coordinates:
+
 Computation using Coordinates
 =============================
 
@@ -261,9 +263,17 @@ This method can be used also for multidimensional arrays,
                      coords={'x': [0.1, 0.11, 0.2, 0.3]})
     a.differentiate('x')
 
+:py:meth:`~xarray.DataArray.integrate` computes integration based on
+trapezoidal rule using their coordinates,
+
+.. ipython:: python
+
+    a.integrate('x')
+
 .. note::
-    This method is limited to simple cartesian geometry. Differentiation along
-    multidimensional coordinate is not supported.
+    These methods are limited to simple cartesian geometry. Differentiation
+    and integration along multidimensional coordinate are not supported.
+
 
 .. _compute.broadcasting:
 

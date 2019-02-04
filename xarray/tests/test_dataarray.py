@@ -258,7 +258,7 @@ class TestDataArray(object):
         expected = Dataset({None: (['x', 'y'], data, {'bar': 2})})[None]
         assert_identical(expected, actual)
 
-        actual = DataArray(data, dims=['x', 'y'], encoding={'bar': 2})
+        actual = DataArray(data, dims=['x', 'y'])
         expected = Dataset({None: (['x', 'y'], data, {}, {'bar': 2})})[None]
         assert_identical(expected, actual)
 
@@ -296,7 +296,7 @@ class TestDataArray(object):
         expected = DataArray(data,
                              coords={'x': ['a', 'b'], 'y': [-1, -2]},
                              dims=['x', 'y'], name='foobar',
-                             attrs={'bar': 2}, encoding={'foo': 3})
+                             attrs={'bar': 2})
         actual = DataArray(expected)
         assert_identical(expected, actual)
 
@@ -2299,16 +2299,6 @@ class TestDataArray(object):
         actual = da.resample(time='D').apply(func, args=(1.,), arg3=1.)
         assert_identical(actual, expected)
 
-    @requires_cftime
-    def test_resample_cftimeindex(self):
-        cftime = _import_cftime()
-        times = cftime.num2date(np.arange(12), units='hours since 0001-01-01',
-                                calendar='noleap')
-        array = DataArray(np.arange(12), [('time', times)])
-
-        with raises_regex(NotImplementedError, 'to_datetimeindex'):
-            array.resample(time='6H').mean()
-
     def test_resample_first(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
@@ -2483,6 +2473,30 @@ class TestDataArray(object):
         expected = DataArray(expected_data,
                              {'time': expected_times, 'x': xs, 'y': ys},
                              ('x', 'y', 'time'))
+        assert_identical(expected, actual)
+
+    def test_upsample_tolerance(self):
+        # Test tolerance keyword for upsample methods bfill, pad, nearest
+        times = pd.date_range('2000-01-01', freq='1D', periods=2)
+        times_upsampled = pd.date_range('2000-01-01', freq='6H', periods=5)
+        array = DataArray(np.arange(2), [('time', times)])
+
+        # Forward fill
+        actual = array.resample(time='6H').ffill(tolerance='12H')
+        expected = DataArray([0., 0., 0., np.nan, 1.],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
+        # Backward fill
+        actual = array.resample(time='6H').bfill(tolerance='12H')
+        expected = DataArray([0., np.nan, 1., 1., 1.],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
+        # Nearest
+        actual = array.resample(time='6H').nearest(tolerance='6H')
+        expected = DataArray([0, 0, np.nan, 1, 1],
+                             [('time', times_upsampled)])
         assert_identical(expected, actual)
 
     @requires_scipy
@@ -2847,6 +2861,15 @@ class TestDataArray(object):
         assert_identical(
             expected_da,
             DataArray.from_series(actual).drop(['x', 'y']))
+
+    def test_to_and_from_empty_series(self):
+        # GH697
+        expected = pd.Series([])
+        da = DataArray.from_series(expected)
+        assert len(da) == 0
+        actual = da.to_series()
+        assert len(actual) == 0
+        assert expected.equals(actual)
 
     def test_series_categorical_index(self):
         # regression test for GH700

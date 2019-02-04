@@ -196,10 +196,19 @@ resampling group:
 
    ds.resample(time='6H').reduce(np.mean)
 
-For upsampling, xarray provides four methods: ``asfreq``, ``ffill``, ``bfill``,
-and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d`` and
-supports all of its schemes. All of these resampling operations work on both
+For upsampling, xarray provides six methods: ``asfreq``, ``ffill``, ``bfill``, ``pad``,
+``nearest`` and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d``
+and supports all of its schemes. All of these resampling operations work on both
 Dataset and DataArray objects with an arbitrary number of dimensions.
+
+In order to limit the scope of the methods ``ffill``, ``bfill``, ``pad`` and
+``nearest`` the ``tolerance`` argument can be set in coordinate units.
+Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
+
+.. ipython:: python
+
+    ds.resample(time='1H').nearest(tolerance='1H')
+
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.
@@ -300,12 +309,18 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
    da.differentiate('time')
 
-- And serialization:
+- Serialization:
 
 .. ipython:: python
 
    da.to_netcdf('example-no-leap.nc')
    xr.open_dataset('example-no-leap.nc')
+
+- And resampling along the time dimension for data indexed by a :py:class:`~xarray.CFTimeIndex`:
+
+.. ipython:: python
+
+    da.resample(time='81T', closed='right', label='right', base=3).mean()
 
 .. note::
    
@@ -314,17 +329,14 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    still some remaining important features that have yet to be implemented,
    for example:
 
-   - Resampling along the time dimension for data indexed by a
-     :py:class:`~xarray.CFTimeIndex` (:issue:`2191`, :issue:`2458`)
    - Built-in plotting of data with :py:class:`cftime.datetime` coordinate axes
      (:issue:`2164`).   
 
    For some use-cases it may still be useful to convert from
    a :py:class:`~xarray.CFTimeIndex` to a :py:class:`pandas.DatetimeIndex`,
-   despite the difference in calendar types (e.g. to allow the use of some
-   forms of resample with non-standard calendars).  The recommended way of
-   doing this is to use the built-in
-   :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` method:
+   despite the difference in calendar types. The recommended way of doing this
+   is to use the built-in :py:meth:`~xarray.CFTimeIndex.to_datetimeindex`
+   method:
 
    .. ipython:: python
       :okwarning:
@@ -334,8 +346,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
        da
        datetimeindex = da.indexes['time'].to_datetimeindex()
        da['time'] = datetimeindex
-       da.resample(time='Y').mean('time')
-   
+
    However in this case one should use caution to only perform operations which
    do not depend on differences between dates (e.g. differentiation,
    interpolation, or upsampling with resample), as these could introduce subtle
