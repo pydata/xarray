@@ -289,13 +289,13 @@ class FacetGrid(object):
 
         meta_data = _infer_meta_data(self.data, x, y, hue, hue_style,
                                      add_legend, add_colorbar)
-        kwargs['_meta_data'] = meta_data
+        kwargs['meta_data'] = meta_data
 
         if hue and meta_data['hue_style'] == 'continuous':
             cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
                 func, kwargs, self.data[hue])
-            kwargs['_meta_data']['cmap_params'] = cmap_params
-            kwargs['_meta_data']['cbar_kwargs'] = cbar_kwargs
+            kwargs['meta_data']['cmap_params'] = cmap_params
+            kwargs['meta_data']['cbar_kwargs'] = cbar_kwargs
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value

@@ -189,7 +189,7 @@ def _dsplot(plotfunc):
 
         _is_facetgrid = kwargs.pop('_is_facetgrid', False)
         if _is_facetgrid:  # facetgrid call
-            meta_data = kwargs.pop('_meta_data')
+            meta_data = kwargs.pop('meta_data')
         else:
             meta_data = _infer_meta_data(ds, x, y, hue, hue_style,
                                          add_colorbar, add_legend)
