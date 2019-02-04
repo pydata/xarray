@@ -189,8 +189,9 @@ def _dsplot(plotfunc):
                     robust=None, colors=None, extend=None, cmap=None,
                     **kwargs):
 
-        if kwargs.get('_meta_data', None):  # facetgrid call
-            meta_data = kwargs['_meta_data']
+        _is_facetgrid = kwargs.pop('_is_facetgrid', False)
+        if _is_facetgrid:  # facetgrid call
+            meta_data = kwargs.pop('_meta_data')
         else:
             meta_data = _infer_meta_data(ds, x, y, hue, hue_style,
                                          add_colorbar, add_legend)
@@ -212,14 +213,11 @@ def _dsplot(plotfunc):
 
         figsize = kwargs.pop('figsize', None)
         ax = get_axis(figsize, size, aspect, ax)
-        # TODO dcherian: _meta_data should not be needed
-        # I'm trying to avoid calling _determine_cmap_params multiple times
-        _meta_data = kwargs.pop('_meta_data', None)
 
         if hue_style == 'continuous' and hue is not None:
-            if _meta_data:
-                cbar_kwargs = _meta_data['cbar_kwargs']
-                cmap_params = _meta_data['cmap_params']
+            if _is_facetgrid:
+                cbar_kwargs = meta_data['cbar_kwargs']
+                cmap_params = meta_data['cmap_params']
             else:
                 cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
                     plotfunc, locals(), ds[hue])
@@ -235,7 +233,7 @@ def _dsplot(plotfunc):
         primitive = plotfunc(ds=ds, x=x, y=y, hue=hue, hue_style=hue_style,
                              ax=ax, cmap_params=cmap_params_subset, **kwargs)
 
-        if _meta_data:  # if this was called from Facetgrid.map_dataset,
+        if _is_facetgrid:  # if this was called from Facetgrid.map_dataset,
             return primitive        # finish here. Else, make labels
 
         if meta_data.get('xlabel', None):

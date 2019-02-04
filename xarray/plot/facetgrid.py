@@ -285,6 +285,7 @@ class FacetGrid(object):
 
         kwargs['add_legend'] = False
         kwargs['add_colorbar'] = False
+        kwargs['_is_facetgrid'] = True
 
         meta_data = _infer_meta_data(self.data, x, y, hue, hue_style,
                                      add_legend, add_colorbar)
