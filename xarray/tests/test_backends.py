@@ -1194,6 +1194,17 @@ class NetCDF4Base(CFEncodedBase):
                 with open_dataset(tmp_file, **kwargs) as actual:
                     assert_identical(expected, actual)
 
+    def test_encoding_unlimited_dims(self):
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims=['y'])) as actual:
+            assert actual.encoding['unlimited_dims'] == set('y')
+            assert_equal(ds, actual)
+        ds.encoding = {'unlimited_dims': ['y']}
+        with self.roundtrip(ds) as actual:
+            assert actual.encoding['unlimited_dims'] == set('y')
+            assert_equal(ds, actual)
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
@@ -1278,10 +1289,11 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
+        open_kwargs['chunks'] = open_kwargs.get('chunks', 1)
         with TestNetCDF4Data.roundtrip(
                 self, data, save_kwargs, open_kwargs,
                 allow_cleanup_failure) as ds:
-            yield ds.chunk()
+            yield ds
 
     def test_unsorted_index_raises(self):
         # Skip when using dask because dask rewrites indexers to getitem,
@@ -1308,7 +1320,6 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
         with self.roundtrip(ds) as actual:
             assert actual['x'].encoding['chunksizes'] == (50, 100)
             assert actual['y'].encoding['chunksizes'] == (100, 50)
-
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
@@ -1924,19 +1935,15 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
+        open_kwargs['chunks'] = open_kwargs.get('chunks', 1)
         with TestH5NetCDFData.roundtrip(
                 self, data, save_kwargs, open_kwargs,
                 allow_cleanup_failure) as ds:
-            yield ds.chunk()
+            yield ds
 
     def test_dataset_caching(self):
         # caching behavior differs for dask
         pass
-
-    @pytest.mark.xfail(reason="Failing to round trip unlimited dims")
-    def test_encoding_unlimited_dims(self):
-        # TODO: this should pass
-        super(TestH5NetCDFViaDaskData, self).test_encoding_unlimited_dims()
 
     def test_write_inconsistent_chunks(self):
         # Construct two variables with the same dimensions, but different

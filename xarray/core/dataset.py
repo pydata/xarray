@@ -675,8 +675,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
     def _replace_vars_and_dims(self, variables, coord_names=None, dims=None,
-                               attrs=__default_attrs, indexes=None,
-                               inplace=False):
+                               attrs=__default_attrs, encoding=None,
+                               indexes=None, inplace=False):
         """Fastpath constructor for internal use.
 
         Preserves coord names and attributes. If not provided explicitly,
@@ -691,6 +691,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables : OrderedDict
         coord_names : set or None, optional
         attrs : OrderedDict or None, optional
+        encoding : OrderedDict or None, optional
 
         Returns
         -------
@@ -705,6 +706,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 self._coord_names = coord_names
             if attrs is not self.__default_attrs:
                 self._attrs = attrs
+            if encoding is not None:
+                self._encoding = encoding
             self._indexes = indexes
             obj = self
         else:
@@ -712,8 +715,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 coord_names = self._coord_names.copy()
             if attrs is self.__default_attrs:
                 attrs = self._attrs_copy()
-            obj = self._construct_direct(
-                variables, coord_names, dims, attrs, indexes)
+            obj = self._construct_direct(variables, coord_names=coord_names,
+                                         dims=dims, attrs=attrs,
+                                         indexes=indexes, encoding=encoding)
         return obj
 
     def _replace_indexes(self, indexes):
@@ -1410,7 +1414,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         variables = OrderedDict([(k, maybe_chunk(k, v, chunks))
                                  for k, v in self.variables.items()])
-        return self._replace_vars_and_dims(variables)
+        return self._replace_vars_and_dims(variables, attrs=self.attrs,
+                                           encoding=self.encoding)
 
     def _validate_indexers(self, indexers):
         """ Here we make sure
