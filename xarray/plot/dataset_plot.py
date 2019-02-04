@@ -27,9 +27,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,
                          'instead.'.format(', '.join(dims_coords)), hue)
 
     if hue:
-        hue_is_numeric = (_ensure_numeric(ds[hue].values)
-                          or _valid_other_type(ds[hue], [np.datetime64,
-                                                         np.timedelta64]))
+        hue_is_numeric = _ensure_numeric(ds[hue].values)
 
         if hue_style is None:
             hue_style = 'continuous' if hue_is_numeric else 'discrete'
