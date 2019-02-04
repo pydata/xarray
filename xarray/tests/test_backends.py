@@ -1321,6 +1321,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
             assert actual['x'].encoding['chunksizes'] == (50, 100)
             assert actual['y'].encoding['chunksizes'] == (100, 50)
 
+
 @requires_zarr
 class ZarrBase(CFEncodedBase):
 
