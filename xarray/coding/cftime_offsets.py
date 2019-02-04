@@ -168,8 +168,6 @@ def _get_day_of_month(other, day_option):
     day_option : 'start', 'end'
         'start': returns 1
         'end': returns last day of the month
-        int: returns the day in the month indicated by `other`, or the last of
-            day the month if the value exceeds in that month's number of days.
 
     Returns
     -------

@@ -47,7 +47,7 @@ def da(index):
     '3AS-MAR', '4A-MAY'])
 @pytest.mark.parametrize('closed', [None, 'right'])
 @pytest.mark.parametrize('label', [None, 'right'])
-@pytest.mark.parametrize('base', [12, 31])
+@pytest.mark.parametrize('base', [24, 31])
 def test_resampler(freq, closed, label, base,
                    datetime_index, cftime_index):
     # Fairly extensive testing for standard/proleptic Gregorian calendar
