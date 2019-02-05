@@ -18,8 +18,8 @@ from xarray.plot.utils import (
 from . import (
     assert_array_equal, assert_equal, raises_regex, requires_cftime,
     requires_matplotlib, requires_matplotlib2, requires_seaborn,
-    requires_nc_time_axis,
-    )
+    requires_nc_time_axis
+              )
 from . import has_nc_time_axis
 
 # import mpl and change the backend before other mpl imports
