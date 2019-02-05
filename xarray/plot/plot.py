@@ -10,7 +10,7 @@ import functools
 import numpy as np
 import pandas as pd
 
-from .facetgrid import FacetGrid
+from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_xy_labels,
     _interval_to_double_bound_points, _interval_to_mid_points,
@@ -100,26 +100,6 @@ def _infer_line_data(darray, x, y, hue):
     ylabel = label_from_attrs(yplt)
 
     return xplt, yplt, hueplt, xlabel, ylabel, huelabel
-
-
-# def _convert_cftime_data(values):
-#     converted = [CalendarDateTime(v, v.calendar) for v in values]
-#     return converted
-
-
-# def _convert_all_cftime(da):
-#     try:
-#         from cftime import datetime as cftime_datetime
-#     except ImportError:
-#         raise ImportError('cftime package missing')
-#     da = da.copy()
-#     # find the dim that has a cftime datatype
-#     dims = set(da.dims)
-#     cftime_dims = [d for d in dims if isinstance(da[d].data.ravel()[0],
-#                                                  cftime_datetime)]
-#     for cd in cftime_dims:
-#         da[cd].data = _convert_cftime_data(da[cd].data)
-#     return da
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,

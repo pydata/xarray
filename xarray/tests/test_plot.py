@@ -17,7 +17,9 @@ from xarray.plot.utils import (
 
 from . import (
     assert_array_equal, assert_equal, raises_regex, requires_cftime,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn)
+    requires_matplotlib, requires_matplotlib2, requires_seaborn,
+    requires_nc_time_axis,
+    )
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -1824,6 +1826,31 @@ class TestDatetimePlot(PlotTestCase):
         self.darray = darray
 
     def test_datetime_line_plot(self):
+        # test if line plot raises no Exception
+        self.darray.plot.line()
+
+
+@requires_nc_time_axis
+@requires_cftime
+class TestCFDatetimePlot(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        '''
+        Create a DataArray with a time-axis that contains cftime.datetime64
+        objects.
+        '''
+        month = np.arange(1, 13, 1)
+        data = np.sin(2 * np.pi * month / 12.0)
+
+        darray = DataArray(data, dims=['time'])
+        darray.coords['time'] = xr.cftime_range(start='2017',
+                                                periods=12,
+                                                freq='1M',
+                                                calendar='noleap')
+
+        self.darray = darray
+
+    def test_cfdatetime_line_plot(self):
         # test if line plot raises no Exception
         self.darray.plot.line()
 
