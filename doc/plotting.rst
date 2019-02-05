@@ -663,6 +663,9 @@ Faceting is also possible
     ds.plot.scatter(x='A', y='B', col='x', row='z', hue='w', hue_style='discrete')
 
 
+For more advanced scatter plots, we recommend converting the relevant data variables to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
+
+
 .. _plot-maps:
 
 Maps
