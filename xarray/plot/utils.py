@@ -10,6 +10,16 @@ from inspect import getfullargspec
 
 from ..core.options import OPTIONS
 from ..core.utils import is_scalar
+from distutils.version import LooseVersion
+
+try:
+    import nc_time_axis
+    if LooseVersion(nc_time_axis.__version__) < LooseVersion('1.2.0'):
+        nc_time_axis_available = False
+    else:
+        nc_time_axis_available = True
+except ImportError:
+    nc_time_axis_available = False
 
 ROBUST_PERCENTILE = 2.0
 
@@ -489,10 +499,11 @@ def _ensure_plottable(*args):
             raise ImportError('Plotting of arrays of cftime.datetime '
                               'objects or arrays indexed by '
                               'cftime.datetime objects requires the '
-                              'optional `nc-time-axis` package.')
+                              'optional `nc-time-axis` (v1.2.0 or later) '
+                              'package.')
 
 
-def _ensure_numeric(arr):
+def _numeric(arr):
     numpy_types = [np.floating, np.integer]
     return _valid_numpy_subdtype(arr, numpy_types)
 

@@ -18,12 +18,6 @@ from .utils import (
     _update_axes, _valid_other_type, get_axis, import_matplotlib_pyplot,
     label_from_attrs)
 
-try:
-    import nc_time_axis
-    nc_time_axis_available = True
-except ImportError:
-    nc_time_axis_available = False
-
 
 def _infer_line_data(darray, x, y, hue):
     error_msg = ('must be either None or one of ({0:s})'

@@ -97,6 +97,7 @@ def show_versions(as_json=False):
         ("Nio", lambda mod: mod.__version__),
         ("zarr", lambda mod: mod.__version__),
         ("cftime", lambda mod: mod.__version__),
+        ("nc_time_axis", lambda mod: mod.__version__),
         ("PseudonetCDF", lambda mod: mod.__version__),
         ("rasterio", lambda mod: mod.__version__),
         ("cfgrib", lambda mod: mod.__version__),
