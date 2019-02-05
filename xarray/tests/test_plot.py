@@ -1865,7 +1865,7 @@ class TestCFDatetimePcolormesh(PlotTestCase):
         objects.
         '''
         month = np.arange(1, 13, 1)
-        data = np.rand.random(4, 12)
+        data = np.random.rand(4, 12)
 
         darray = DataArray(data, dims=['x', 'time'])
         darray.coords['time'] = xr.cftime_range(start='2017',
@@ -1890,7 +1890,7 @@ class TestCFDateContour(PlotTestCase):
         objects.
         '''
         month = np.arange(1, 13, 1)
-        data = np.rand.random(4, 12)
+        data = np.random.rand(4, 12)
 
         darray = DataArray(data, dims=['x', 'time'])
         darray.coords['time'] = xr.cftime_range(start='2017',
