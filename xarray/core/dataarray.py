@@ -632,7 +632,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        **kwargs : dict
+        \*\*kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
         See Also
@@ -657,7 +657,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        **kwargs : dict
+        \*\*kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
         See Also
@@ -676,7 +676,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        **kwargs : dict
+        \*\*kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
 
         See Also
@@ -997,7 +997,7 @@ class DataArray(AbstractArray, DataWithCoords):
             values.
         kwargs: dictionary
             Additional keyword passed to scipy's interpolator.
-        **coords_kwarg : {dim: coordinate, ...}, optional
+        \*\*coords_kwarg : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
@@ -1579,7 +1579,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         func : function
             Function which can be called in the form
-            `f(x, axis=axis, **kwargs)` to return the result of reducing an
+            `f(x, axis=axis, \*\*kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.
@@ -1592,7 +1592,7 @@ class DataArray(AbstractArray, DataWithCoords):
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-        **kwargs : dict
+        \*\*kwargs : dict
             Additional keyword arguments passed on to `func`.
 
         Returns
@@ -2320,7 +2320,7 @@ class DataArray(AbstractArray, DataWithCoords):
             is a scalar. If multiple percentiles are given, first axis of
             the result corresponds to the quantile and a quantile dimension
             is added to the return array. The other dimensions are the
-             dimensions that remain after the reduction of the array.
+            dimensions that remain after the reduction of the array.
 
         See Also
         --------
@@ -2427,7 +2427,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def integrate(self, dim, datetime_unit=None):
-        """ integrate the array with the trapezoidal rule.
+        """ Integrate the array with the trapezoidal rule.
 
         .. note::
             This feature is limited to simple cartesian geometry, i.e. coord

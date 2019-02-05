@@ -35,7 +35,7 @@ _DEFAULT_EXCLUDE = frozenset()  # type: frozenset
 
 
 def align(*objects, **kwargs):
-    """align(*objects, join='inner', copy=True, indexes=None,
+    """align(\*objects, join='inner', copy=True, indexes=None,
              exclude=frozenset())
 
     Given any number of Dataset and/or DataArray objects, returns new
@@ -48,7 +48,7 @@ def align(*objects, **kwargs):
 
     Parameters
     ----------
-    *objects : Dataset or DataArray
+    \*objects : Dataset or DataArray
         Objects to align.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining the indexes of the passed objects along each
@@ -73,7 +73,7 @@ def align(*objects, **kwargs):
 
     Returns
     -------
-    aligned : same as *objects
+    aligned : same as \*objects
         Tuple of objects with aligned coordinates.
 
     Raises
@@ -413,7 +413,7 @@ def broadcast(*args, **kwargs):
 
     Parameters
     ----------
-    *args : DataArray or Dataset objects
+    \*args : DataArray or Dataset objects
         Arrays to broadcast against each other.
     exclude : sequence of str, optional
         Dimensions that must not be broadcasted

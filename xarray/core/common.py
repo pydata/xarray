@@ -352,7 +352,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def assign_attrs(self, *args, **kwargs):
         """Assign new attrs to this object.
 
-        Returns a new object equivalent to self.attrs.update(*args, **kwargs).
+        Returns a new object equivalent to self.attrs.update(\*args, \*\*kwargs).
 
         Parameters
         ----------
@@ -374,7 +374,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def pipe(self, func, *args, **kwargs):
         """
-        Apply func(self, *args, **kwargs)
+        Apply func(self, \*args, \*\*kwargs)
 
         This method replicates the pandas method of the same name.
 
