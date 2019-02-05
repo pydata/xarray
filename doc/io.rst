@@ -1,11 +1,11 @@
 .. _io:
 
-Serialization and IO
-====================
+Reading and writing files
+=========================
 
 xarray supports direct serialization and IO to several file formats, from
 simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
-format.
+format (recommended).
 
 .. ipython:: python
    :suppress:
