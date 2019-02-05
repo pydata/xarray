@@ -538,12 +538,12 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
-         * 'broadcast_equals': all values must be equal when variables are
+         - 'broadcast_equals': all values must be equal when variables are
            broadcast against each other to ensure common dimensions.
-         * 'equals': all values and dimensions must be the same.
-         * 'identical': all values, dimensions and attributes must be the
+         - 'equals': all values and dimensions must be the same.
+         - 'identical': all values, dimensions and attributes must be the
            same.
-         * 'no_conflicts': only values which are not null in both datasets
+         - 'no_conflicts': only values which are not null in both datasets
            must be equal. The returned dataset then contains the combination
            of all non-null values.
     preprocess : callable, optional
@@ -563,34 +563,34 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         These data variables will be concatenated together:
 
-         * 'minimal': Only data variables in which the dimension already
+         - 'minimal': Only data variables in which the dimension already
            appears are included.
-         * 'different': Data variables which are not equal (ignoring
+         - 'different': Data variables which are not equal (ignoring
            attributes) across all datasets are also concatenated (as well as
            all for which dimension already appears). Beware: this option may
            load the data payload of data variables into memory if they are not
            already loaded.
-         * 'all': All data variables will be concatenated.
-         * list of str: The listed data variables will be concatenated, in
+         - 'all': All data variables will be concatenated.
+         - list of str: The listed data variables will be concatenated, in
            addition to the 'minimal' data variables.
     coords : {'minimal', 'different', 'all' o list of str}, optional
         These coordinate variables will be concatenated together:
 
-         * 'minimal': Only coordinates in which the dimension already appears
+         - 'minimal': Only coordinates in which the dimension already appears
            are included.
-         * 'different': Coordinates which are not equal (ignoring attributes)
+         - 'different': Coordinates which are not equal (ignoring attributes)
            across all datasets are also concatenated (as well as all for which
            dimension already appears). Beware: this option may load the data
            payload of coordinate variables into memory if they are not already
            loaded.
-         * 'all': All coordinate variables will be concatenated, except
+         - 'all': All coordinate variables will be concatenated, except
            those corresponding to other dimensions.
-         * list of str: The listed coordinate variables will be concatenated,
+         - list of str: The listed coordinate variables will be concatenated,
            in addition the 'minimal' coordinates.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
-    **kwargs : optional
+    \*\*kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
     Returns
@@ -835,14 +835,14 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
         File format for the resulting netCDF file:
 
-        * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
+        - NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
           features.
-        * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
+        - NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
           netCDF 3 compatible API features.
-        * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
+        - NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
           which fully supports 2+ GB files, but is only compatible with
           clients linked against netCDF version 3.6.0 or later.
-        * NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
+        - NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
           handle 2+ GB files very well.
 
         All formats are supported by the netCDF4-python library.
