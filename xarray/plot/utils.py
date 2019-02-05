@@ -476,13 +476,13 @@ def _ensure_plottable(*args):
         cftime_datetime = [cftime.datetime]
     except ImportError:
         cftime_datetime = []
-        other_types = other_types + cftime_datetime
+    other_types = other_types + cftime_datetime
     for x in args:
         if not (_valid_numpy_subdtype(np.array(x), numpy_types)
                 or _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates of type np.datetime64, '
-                            'datetime.datetime, or cftime.datetime or '
+                            'datetime.datetime, cftime.datetime or '
                             'pd.Interval.')
         if (_valid_other_type(np.array(x), cftime_datetime)
                 and not nc_time_axis_available):

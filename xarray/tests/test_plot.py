@@ -1839,7 +1839,6 @@ class TestCFDatetimePlot(PlotTestCase):
         Create a DataArray with a time-axis that contains cftime.datetime64
         objects.
         '''
-        month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
 
         darray = DataArray(data, dims=['time'])
@@ -1853,6 +1852,52 @@ class TestCFDatetimePlot(PlotTestCase):
     def test_cfdatetime_line_plot(self):
         # test if line plot raises no Exception
         self.darray.plot.line()
+
+    @requires_nc_time_axis
+    @requires_cftime
+    class TestCFDatetimePcolormesh(PlotTestCase):
+        @pytest.fixture(autouse=True)
+        def setUp(self):
+            '''
+            Create a DataArray with a time-axis that contains cftime.datetime64
+            objects.
+            '''
+            data = np.rand.random(4, 12)
+
+            darray = DataArray(data, dims=['x', 'time'])
+            darray.coords['time'] = xr.cftime_range(start='2017',
+                                                    periods=12,
+                                                    freq='1M',
+                                                    calendar='noleap')
+
+            self.darray = darray
+
+        def test_cfdatetime_line_plot(self):
+            # test if line plot raises no Exception
+            self.darray.plot.pcolormesh()
+
+    @requires_nc_time_axis
+    @requires_cftime
+    class TestCFDatetimeContour(PlotTestCase):
+        @pytest.fixture(autouse=True)
+        def setUp(self):
+            '''
+            Create a DataArray with a time-axis that contains cftime.datetime64
+            objects.
+            '''
+            data = np.rand.random(4, 12)
+
+            darray = DataArray(data, dims=['x', 'time'])
+            darray.coords['time'] = xr.cftime_range(start='2017',
+                                                    periods=12,
+                                                    freq='1M',
+                                                    calendar='noleap')
+
+            self.darray = darray
+
+        def test_cfdatetime_line_plot(self):
+            # test if line plot raises no Exception
+            self.darray.plot.contour()
 
 
 @requires_seaborn
