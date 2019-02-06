@@ -33,7 +33,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 - Internal plotting now supports `cftime.datetime` objects as time series.
-  (:issue:``2164``)
+  (:issue:`2164`)
   By `Spencer Clark <https://github.com/spencerkclark>` and
   `Julius Busecke <https://github.com/jbusecke>`_.
 - Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
