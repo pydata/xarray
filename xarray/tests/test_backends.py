@@ -1916,46 +1916,6 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding['compression_opts'] is None
 
 
-@requires_h5netcdf
-@requires_dask
-@pytest.mark.filterwarnings('ignore:deallocating CachingFileManager')
-class TestH5NetCDFViaDaskData(TestH5NetCDFData):
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with TestH5NetCDFData.roundtrip(
-                self, data, save_kwargs, open_kwargs,
-                allow_cleanup_failure) as ds:
-            yield ds.chunk()
-
-    def test_dataset_caching(self):
-        # caching behavior differs for dask
-        pass
-
-    @pytest.mark.xfail(reason="Failing to round trip unlimited dims")
-    def test_encoding_unlimited_dims(self):
-        # TODO: this should pass
-        super(TestH5NetCDFViaDaskData, self).test_encoding_unlimited_dims()
-
-    def test_write_inconsistent_chunks(self):
-        # Construct two variables with the same dimensions, but different
-        # chunk sizes.
-        x = da.zeros((100, 100), dtype='f4', chunks=(50, 100))
-        x = DataArray(data=x, dims=('lat', 'lon'), name='x')
-        x.encoding['chunksizes'] = (50, 100)
-        x.encoding['original_shape'] = (100, 100)
-        y = da.ones((100, 100), dtype='f4', chunks=(100, 50))
-        y = DataArray(data=y, dims=('lat', 'lon'), name='y')
-        y.encoding['chunksizes'] = (100, 50)
-        y.encoding['original_shape'] = (100, 100)
-        # Put them both into the same dataset
-        ds = Dataset({'x': x, 'y': y})
-        with self.roundtrip(ds) as actual:
-            assert actual['x'].encoding['chunksizes'] == (50, 100)
-            assert actual['y'].encoding['chunksizes'] == (100, 50)
-
-
 @pytest.fixture(params=['scipy', 'netcdf4', 'h5netcdf', 'pynio'])
 def readengine(request):
     return request.param
