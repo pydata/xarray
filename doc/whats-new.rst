@@ -32,7 +32,7 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
-- Internal plotting now supports `cftime.datetime` objects as time series.
+- Internal plotting now supports ``cftime.datetime`` objects as time series.
   (:issue:`2164`)
   By `Spencer Clark <https://github.com/spencerkclark>` and
   `Julius Busecke <https://github.com/jbusecke>`_.
