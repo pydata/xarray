@@ -1,10 +1,14 @@
-from collections.abc import Mapping
+import collections.abc
 from collections import OrderedDict
+from typing import Any, Iterable, Mapping, Optional, Tuple, Union
+
+import pandas as pd
 
 from . import formatting
+from .variable import Variable
 
 
-class Indexes(Mapping):
+class Indexes(collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArrary indexes."""
     def __init__(self, indexes):
         """Not for public consumption.
@@ -32,7 +36,10 @@ class Indexes(Mapping):
         return formatting.indexes_repr(self)
 
 
-def default_indexes(coords, dims):
+def default_indexes(
+    coords: Mapping[Any, Variable],
+    dims: Iterable,
+) -> 'OrderedDict[Any, pd.Index]':
     """Default indexes for a Dataset/DataArray.
 
     Parameters
@@ -44,8 +51,38 @@ def default_indexes(coords, dims):
 
     Returns
     -------
-    Mapping[Any, pandas.Index] mapping indexing keys (levels/dimension names)
-    to indexes used for indexing along that dimension.
+    Mapping from indexing keys (levels/dimension names) to indexes used for
+    indexing along that dimension.
     """
     return OrderedDict((key, coords[key].to_index())
                        for key in dims if key in coords)
+
+
+def isel_variable_and_index(
+    variable: Variable,
+    index: pd.Index,
+    indexers: Mapping[Any, Union[slice, Variable]],
+) -> Tuple[Variable, Optional[pd.Index]]:
+    """Index a Variable and pandas.Index together."""
+    if not indexers:
+        # nothing to index
+        return variable.copy(deep=False), index
+
+    if len(variable.dims) > 1:
+        raise NotImplementedError(
+            'indexing multi-dimensional variable with indexes is not '
+            'supported yet')
+
+    new_variable = variable.isel(indexers)
+
+    if new_variable.ndim != 1:
+        # can't preserve a index if result is not 0D
+        return new_variable, None
+
+    # we need to compute the new index
+    (dim,) = variable.dims
+    indexer = indexers[dim]
+    if isinstance(indexer, Variable):
+        indexer = indexer.data
+    new_index = index[indexer]
+    return new_variable, new_index
