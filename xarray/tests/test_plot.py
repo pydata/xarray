@@ -1839,69 +1839,65 @@ class TestCFDatetimePlot(PlotTestCase):
         Create a DataArray with a time-axis that contains cftime.datetime
         objects.
         '''
+        # case for 1d array
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
+        time = xr.cftime_range(start='2017',
+                               periods=12,
+                               freq='1M',
+                               calendar='noleap')
         darray = DataArray(data, dims=['time'])
-        darray.coords['time'] = xr.cftime_range(start='2017',
-                                                periods=12,
-                                                freq='1M',
-                                                calendar='noleap')
+        darray.coords['time'] = time
 
         self.darray = darray
+
+        # case for 2d arrays
+        data_2d = np.random.rand(4, 12)
+        darray_2d = DataArray(data_2d, dims=['x', 'time'])
+        darray_2d.coords['time'] = time
+
+        self.darray_2d = darray_2d
 
     def test_cfdatetime_line_plot(self):
         # test if line plot raises no Exception
         self.darray.plot.line()
 
-
-@requires_nc_time_axis
-@requires_cftime
-class TestCFDatetimePcolormesh(PlotTestCase):
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        '''
-        Create a DataArray with a time-axis that contains cftime.datetime
-        objects.
-        '''
-        month = np.arange(1, 13, 1)
-        data = np.random.rand(4, 12)
-
-        darray = DataArray(data, dims=['x', 'time'])
-        darray.coords['time'] = xr.cftime_range(start='2017',
-                                                periods=12,
-                                                freq='1M',
-                                                calendar='noleap')
-
-        self.darray = darray
-
-    def test_cfdatetime_line_plot(self):
+    def test_cfdatetime_pcolormesh_plot(self):
         # test if line plot raises no Exception
-        self.darray.plot.pcolormesh()
+        self.darray_2d.plot.pcolormesh()
 
-
-@requires_nc_time_axis
-@requires_cftime
-class TestCFDateContour(PlotTestCase):
-    @pytest.fixture(autouse=True)
-    def setUp(self):
-        '''
-        Create a DataArray with a time-axis that contains cftime.datetime
-        objects.
-        '''
-        month = np.arange(1, 13, 1)
-        data = np.random.rand(4, 12)
-
-        darray = DataArray(data, dims=['x', 'time'])
-        darray.coords['time'] = xr.cftime_range(start='2017',
-                                                periods=12,
-                                                freq='1M',
-                                                calendar='noleap')
-
-        self.darray = darray
-
-    def test_cfdatetime_line_plot(self):
+    def test_cfdatetime_contour_plot(self):
         # test if line plot raises no Exception
-        self.darray.plot.contour()
+        self.darray_2d.plot.contour()
+
+
+# @requires_nc_time_axis
+# @requires_cftime
+# class TestCFDatetimePcolormesh(PlotTestCase):
+#     @pytest.fixture(autouse=True)
+#     def setUp(self):
+#         '''
+#         Create a DataArray with a time-axis that contains cftime.datetime
+#         objects.
+#         '''
+#         month = np.arange(1, 13, 1)
+#         data = np.random.rand(4, 12)
+#
+#         darray = DataArray(data, dims=['x', 'time'])
+#         darray.coords['time'] = xr.cftime_range(start='2017',
+#                                                 periods=12,
+#                                                 freq='1M',
+#                                                 calendar='noleap')
+#
+#         self.darray = darray
+#
+#     def test_cfdatetime_pcolormesh_plot(self):
+#         # test if line plot raises no Exception
+#         self.darray.plot.pcolormesh()
+#
+#     def test_cfdatetime_contour_plot(self):
+#         # test if line plot raises no Exception
+#         self.darray.plot.contour()
 
 
 @requires_cftime

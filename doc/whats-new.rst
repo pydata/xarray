@@ -34,8 +34,8 @@ Enhancements
 
 - Internal plotting now supports ``cftime.datetime`` objects as time series.
   (:issue:`2164`)
-  By `Spencer Clark <https://github.com/spencerkclark>` and
-  `Julius Busecke <https://github.com/jbusecke>`_.
+  By `Julius Busecke <https://github.com/jbusecke>` and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
   By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`~xarray.DataArray.coarsen` and
