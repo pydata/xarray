@@ -2546,6 +2546,12 @@ class TestPyNio(ScipyWriteBase):
         with open_dataset(path, engine='pynio', **kwargs) as ds:
             yield ds
 
+    def test_kwargs(self):
+        kwargs = {'format': 'grib'}
+        path = os.path.join(os.path.dirname(__file__), 'data', 'example')
+        with backends.NioDataStore(path, **kwargs) as store:
+            assert store._manager._kwargs['format'] == 'grib'
+
     def save(self, dataset, path, **kwargs):
         return dataset.to_netcdf(path, engine='scipy', **kwargs)
 

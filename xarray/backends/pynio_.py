@@ -45,13 +45,13 @@ class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO
     """
 
-    def __init__(self, filename, mode='r', lock=None):
+    def __init__(self, filename, mode='r', lock=None, **kwargs):
         import Nio
         if lock is None:
             lock = PYNIO_LOCK
         self.lock = ensure_lock(lock)
         self._manager = CachingFileManager(
-            Nio.open_file, filename, lock=lock, mode=mode)
+            Nio.open_file, filename, lock=lock, mode=mode, kwargs=kwargs)
         # xarray provides its own support for FillValue,
         # so turn off PyNIO's support for the same.
         self.ds.set_option('MaskedArrayMode', 'MaskedNever')

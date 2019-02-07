@@ -79,6 +79,9 @@ Bug fixes
   :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
   instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- backend_kwargs are no longer ignored when using open_dataset with pynio engine
+  (:issue:'2380')
+  By 'Jonathan Joyce <https://github.com/jonmjoyce>'_.
 - Fix ``open_rasterio`` creating a WKT CRS instead of PROJ.4 with
   ``rasterio`` 1.0.14+ (:issue:`2715`).
   By `David Hoese <https://github.com/djhoese`_.
