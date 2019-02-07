@@ -24,6 +24,10 @@ Breaking changes
 - Remove support for Python 2. This is the first version of xarray that is
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- The `compat` argument to `Dataset` and the `encoding` argument to 
+  `DataArray` are deprecated and will be removed in a future release.
+  (:issue:`1188`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -43,16 +47,21 @@ Enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Resampling of standard and non-standard calendars indexed by
+  :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
   ``nearest``. (:issue:`2695`)
   By `Hauke Schulz <https://github.com/observingClouds>`_.
-
 - :py:meth:`~xarray.DataArray.integrate` and
   :py:meth:`~xarray.Dataset.integrate` are newly added.
   See :ref:`_compute.using_coordinates` for the detail.
   (:issue:`1332`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
+- :py:meth:`pandas.Series.dropna` is now supported for a
+  :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
+  (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -73,6 +82,9 @@ Bug fixes
 - backend_kwargs are no longer ignored when using open_dataset with pynio engine
   (:issue:'2380')
   By 'Jonathan Joyce <https://github.com/jonmjoyce>'_.
+- Fix ``open_rasterio`` creating a WKT CRS instead of PROJ.4 with
+  ``rasterio`` 1.0.14+ (:issue:`2715`).
+  By `David Hoese <https://github.com/djhoese`_.
 
 .. _whats-new.0.11.3:
 

@@ -12,15 +12,13 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
-    DataArrayCoordinates, LevelCoordinatesSource,
-    assert_coordinate_consistent, remap_label_indexers)
+    DataArrayCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
+    remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
-from .indexes import default_indexes, Indexes
+from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .utils import (
-    _check_inplace, decode_numpy_dict_values, either_dict_or_kwargs,
-    ensure_us_time_resolution)
+from .utils import _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -192,13 +190,16 @@ class DataArray(AbstractArray, DataWithCoords):
         attrs : dict_like or None, optional
             Attributes to assign to the new instance. By default, an empty
             attribute dictionary is initialized.
-        encoding : dict_like or None, optional
-            Dictionary specifying how to encode this array's data into a
-            serialized format like netCDF4. Currently used keys (for netCDF)
-            include '_FillValue', 'scale_factor', 'add_offset', 'dtype',
-            'units' and 'calendar' (the later two only for datetime arrays).
-            Unrecognized keys are ignored.
+        encoding : deprecated
         """
+
+        if encoding is not None:
+            warnings.warn(
+                'The `encoding` argument to `DataArray` is deprecated, and . '
+                'will be removed in 0.13. '
+                'Instead, specify the encoding when writing to disk or '
+                'set the `encoding` attribute directly.',
+                FutureWarning, stacklevel=2)
         if fastpath:
             variable = data
             assert dims is None

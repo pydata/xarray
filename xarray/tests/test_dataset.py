@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+import pickle
 import sys
 import warnings
 from collections import OrderedDict
 from copy import copy, deepcopy
 from io import StringIO
-import pickle
 from textwrap import dedent
 
 import numpy as np
@@ -354,12 +354,8 @@ class TestDataset(object):
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
                             ('y', ('z', [1, 1, 1]))])
-        with pytest.raises(MergeError):
-            Dataset(data, compat='equals')
         expected = Dataset({'x': 0}, {'y': ('z', [1, 1, 1])})
         actual = Dataset(data)
-        assert_identical(expected, actual)
-        actual = Dataset(data, compat='broadcast_equals')
         assert_identical(expected, actual)
 
         data = OrderedDict([('y', ('z', [1, 1, 1])),
@@ -1420,7 +1416,7 @@ class TestDataset(object):
         assert_identical(actual['b'].drop('y'), idx_y['b'])
 
         with pytest.raises(KeyError):
-            data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
+            data.sel(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
     def test_sel_method(self):
         data = create_test_data()
@@ -2983,6 +2979,15 @@ class TestDataset(object):
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=['x', 'y'])
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
+
+    def test_to_and_from_empty_dataframe(self):
+        # GH697
+        expected = pd.DataFrame({'foo': []})
+        ds = Dataset.from_dataframe(expected)
+        assert len(ds['foo']) == 0
+        actual = ds.to_dataframe()
+        assert len(actual) == 0
+        assert expected.equals(actual)
 
     def test_from_dataframe_non_unique_columns(self):
         # regression test for GH449
