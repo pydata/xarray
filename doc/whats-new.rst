@@ -28,6 +28,8 @@ Breaking changes
   `DataArray` are deprecated and will be removed in a future release.
   (:issue:`1188`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- `cyordereddict` is no longer used as an optional dependency (:issue:`2744`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~

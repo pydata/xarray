@@ -102,7 +102,6 @@ def show_versions(as_json=False):
         ("cfgrib", lambda mod: mod.__version__),
         ("iris", lambda mod: mod.__version__),
         ("bottleneck", lambda mod: mod.__version__),
-        ("cyordereddict", lambda mod: mod.__version__),
         ("dask", lambda mod: mod.__version__),
         ("distributed", lambda mod: mod.__version__),
         ("matplotlib", lambda mod: mod.__version__),
