@@ -24,7 +24,7 @@ Breaking changes
 - Remove support for Python 2. This is the first version of xarray that is
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- The `compat` argument to `Dataset` and the `encoding` argument to 
+- The `compat` argument to `Dataset` and the `encoding` argument to
   `DataArray` are deprecated and will be removed in a future release.
   (:issue:`1188`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -62,6 +62,10 @@ Enhancements
 - :py:meth:`pandas.Series.dropna` is now supported for a
   :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
   (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Ability to promote to float64 instead of float32 when dealing int type
+  variables with scale_factor added parameter force_promote_float64
+  to :py:meth:`~xarray.open_dataset` and :py:meth:`~xarray.open_dataarray`
+  that enables this behaviour. By `Daoud Jahdou <https://github.com/daoudjahdou>`_.
 
 Bug fixes
 ~~~~~~~~~

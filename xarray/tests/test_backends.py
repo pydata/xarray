@@ -1156,6 +1156,24 @@ class NetCDF4Base(CFEncodedBase):
                 expected = create_masked_and_scaled_data()
                 assert_identical(expected, ds)
 
+    def test_force_promote_float64_variable(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                nc.createDimension('t', 5)
+                nc.createVariable('x', 'int16', ('t',), fill_value=-1)
+                v = nc.variables['x']
+                v.scale_factor = 0.01
+                v[:] = np.array([-1123, -1123, 123, 1123, 2123])
+            # We read the newly created netcdf file
+            with nc4.Dataset(tmp_file, mode='r') as nc:
+                # we open the dataset with forced promotion to 64 bit
+                with open_dataset(tmp_file, force_promote_float64=True) as ds:
+                    # Both dataset values should be equal
+                    # And both of float64 array type
+                    dsv = ds['x'].values
+                    ncv = nc.variables['x'][:]
+                    np.testing.assert_array_almost_equal(dsv, ncv, 15)
+
     def test_0dimensional_variable(self):
         # This fix verifies our work-around to this netCDF4-python bug:
         # https://github.com/Unidata/netcdf4-python/pull/220

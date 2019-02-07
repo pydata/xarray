@@ -14,6 +14,7 @@ from ..core.combine import (
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
 from .locks import _get_scheduler
+from ..core import dtypes
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -161,6 +162,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=None, decode_times=True, autoclose=None,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None,
+                 force_promote_float64=False,
                  backend_kwargs=None):
     """Load and decode a dataset from a file or file-like object.
 
@@ -227,6 +229,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    force_promote_float64: bool
+        If True force int variables to be promoted to float64 instead of
+        float32
     backend_kwargs: dictionary, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
@@ -261,6 +266,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if cache is None:
         cache = chunks is None
+
+    dtypes.FORCE_PROMOTE_FLOAT64 = force_promote_float64
 
     if backend_kwargs is None:
         backend_kwargs = {}
@@ -360,7 +367,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                    mask_and_scale=None, decode_times=True, autoclose=None,
                    concat_characters=True, decode_coords=True, engine=None,
                    chunks=None, lock=None, cache=None, drop_variables=None,
-                   backend_kwargs=None):
+                   force_promote_float64=False, backend_kwargs=None):
     """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -424,6 +431,9 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    force_promote_float64: bool
+        If True force int variables to be promoted to float64 instead of
+        float32
     backend_kwargs: dictionary, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
@@ -450,6 +460,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                            decode_coords=decode_coords, engine=engine,
                            chunks=chunks, lock=lock, cache=cache,
                            drop_variables=drop_variables,
+                           force_promote_float64=force_promote_float64,
                            backend_kwargs=backend_kwargs)
 
     if len(dataset.data_vars) != 1:
