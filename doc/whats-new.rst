@@ -66,7 +66,8 @@ Enhancements
   variables with scale_factor.
   Added parameter force_promote_float64 (False by default)
   to :py:meth:`~xarray.open_dataset` and :py:meth:`~xarray.open_dataarray`
-  that enables this behaviour. By `Daoud Jahdou <https://github.com/daoudjahdou>`_.
+  that enables this behaviour.
+  By `Daoud Jahdou <https://github.com/daoudjahdou>`_.
 
 Bug fixes
 ~~~~~~~~~
