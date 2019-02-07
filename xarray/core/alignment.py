@@ -3,7 +3,7 @@ import operator
 import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import suppress
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -317,7 +317,7 @@ def reindex_variables(
 
     # build up indexers for assignment along each dimension
     int_indexers = {}
-    targets = OrderedDict()
+    targets = OrderedDict()  # type: OrderedDict[Any, pd.Index]
     masked_dims = set()
     unchanged_dims = set()
 
@@ -357,7 +357,7 @@ def reindex_variables(
                     'the new index %r' % (dim, existing_size, new_size))
 
     # create variables for the new dataset
-    reindexed = OrderedDict()
+    reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
 
     for dim, indexer in indexers.items():
         if isinstance(indexer, DataArray) and indexer.dims != (dim,):

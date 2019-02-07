@@ -224,7 +224,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
 
 
 def ordered_set_union(all_keys: List[Iterable]) -> Iterable:
-    result_dict = OrderedDict()
+    result_dict = OrderedDict()  # type: OrderedDict[Any, None]
     for keys in all_keys:
         for key in keys:
             result_dict[key] = None
@@ -284,11 +284,10 @@ def _as_variables_or_variable(arg):
 
 
 def _unpack_dict_tuples(
-        result_vars,  # type: Mapping[Any, Tuple[Variable]]
-        num_outputs,  # type: int
-):
-    # type: (...) -> Tuple[Dict[Any, Variable], ...]
-    out = tuple(OrderedDict() for _ in range(num_outputs))
+    result_vars: Mapping[Any, Tuple[Variable]],
+    num_outputs: int,
+) -> 'Tuple[OrderedDict[Any, Variable], ...]':
+    out = tuple(OrderedDict() for _ in range(num_outputs))  # type: ignore
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
@@ -444,7 +443,7 @@ def unified_dim_sizes(
     exclude_dims: AbstractSet = frozenset(),
 ) -> 'OrderedDict[Any, int]':
 
-    dim_sizes = OrderedDict()
+    dim_sizes = OrderedDict()  # type: OrderedDict[Any, int]
 
     for var in variables:
         if len(set(var.dims)) < len(var.dims):
