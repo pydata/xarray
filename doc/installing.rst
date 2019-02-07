@@ -63,6 +63,8 @@ For plotting
   :ref:`plot-maps`
 - `seaborn <https://stanford.edu/~mwaskom/software/seaborn/>`__: for better
   color palettes
+- `nc-time-axis <https://github.com/SciTools/nc-time-axis>`__: for plotting
+  cftime.datetime objects (1.2.0 or later)
 
 
 Instructions
