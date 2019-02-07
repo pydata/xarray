@@ -2033,6 +2033,27 @@ class TestDataset(object):
         with raises_regex(ValueError, 'already exists'):
             original.expand_dims(dim=['z'])
 
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3)),
+                            'z': ('a', np.random.randn(3))},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+        with raises_regex(TypeError, 'value of new dimension'):
+            original.expand_dims(OrderedDict((("d", 3.2),)))
+
+        # TODO: only the code under the if-statement is needed when python 3.5
+        #   is no longer supported.
+        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
+        if python36_plus:
+            with raises_regex(ValueError, 'both keyword and positional'):
+                original.expand_dims(OrderedDict((("d", 4),)), e=4)
+        else:
+            # In python 3.5, using dim_kwargs should raise a ValueError.
+            with raises_regex(ValueError, "dim_kwargs isn't"):
+                original.expand_dims(OrderedDict((("d", 4),)), e=4)
+
     def test_expand_dims(self):
         original = Dataset({'x': ('a', np.random.randn(3)),
                             'y': (['b', 'a'], np.random.randn(4, 3))},
@@ -2065,6 +2086,53 @@ class TestDataset(object):
         # make sure squeeze restores the original data set.
         roundtripped = actual.squeeze('z')
         assert_identical(original, roundtripped)
+
+        # Test expanding one dimension to have size > 1 that doesn't have
+        # coordinates, and also expanding another dimension to have size > 1
+        # that DOES have coordinates.
+        actual = original.expand_dims(
+            OrderedDict((("d", 4), ("e", ["l", "m", "n"]))))
+
+        expected = Dataset(
+            {'x': xr.DataArray(original['x'].values * np.ones([4, 3, 3]),
+                               coords=dict(d=range(4),
+                                           e=['l', 'm', 'n'],
+                                           a=np.linspace(0, 1, 3)),
+                               dims=['d', 'e', 'a']).drop('d'),
+             'y': xr.DataArray(original['y'].values * np.ones([4, 3, 4, 3]),
+                               coords=dict(d=range(4),
+                                           e=['l', 'm', 'n'],
+                                           b=np.linspace(0, 1, 4),
+                                           a=np.linspace(0, 1, 3)),
+                               dims=['d', 'e', 'b', 'a']).drop('d')},
+            coords={'c': np.linspace(0, 1, 5)},
+            attrs={'key': 'entry'})
+        assert_identical(actual, expected)
+
+        # Test with kwargs instead of passing dict to dim arg.
+
+        # TODO: only the code under the if-statement is needed when python 3.5
+        #   is no longer supported.
+        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
+        if python36_plus:
+            other_way = original.expand_dims(e=["l", "m", "n"])
+            other_way_expected = Dataset(
+                {'x': xr.DataArray(original['x'].values * np.ones([3, 3]),
+                                   coords=dict(e=['l', 'm', 'n'],
+                                               a=np.linspace(0, 1, 3)),
+                                   dims=['e', 'a']),
+                 'y': xr.DataArray(original['y'].values * np.ones([3, 4, 3]),
+                                   coords=dict(e=['l', 'm', 'n'],
+                                               b=np.linspace(0, 1, 4),
+                                               a=np.linspace(0, 1, 3)),
+                                   dims=['e', 'b', 'a'])},
+                coords={'c': np.linspace(0, 1, 5)},
+                attrs={'key': 'entry'})
+            assert_identical(other_way_expected, other_way)
+        else:
+            # In python 3.5, using dim_kwargs should raise a ValueError.
+            with raises_regex(ValueError, "dim_kwargs isn't"):
+                original.expand_dims(e=["l", "m", "n"])
 
     def test_set_index(self):
         expected = create_test_multiindex()
