@@ -230,8 +230,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
     force_promote_float64: bool
-        If True force int variables to be promoted to float64 instead of
-        float32
+        If True force int variables with scale factorto be promoted to
+        float64 instead of float32
     backend_kwargs: dictionary, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
@@ -432,8 +432,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
     force_promote_float64: bool
-        If True force int variables to be promoted to float64 instead of
-        float32
+        If True force int variables with scale factor to be promoted to
+        float64 instead of float32
     backend_kwargs: dictionary, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or

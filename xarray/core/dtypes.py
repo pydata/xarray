@@ -30,8 +30,8 @@ class AlwaysLessThan(object):
 INF = AlwaysGreaterThan()
 NINF = AlwaysLessThan()
 
-# Constant that indicates that we
-# must switch to float64 instead of
+# Constant that indicates if we
+# want to promote to float64 instead of
 # float32 even if dtype.itemsize <= 2
 FORCE_PROMOTE_FLOAT64 = False
 
