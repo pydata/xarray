@@ -1744,7 +1744,6 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
         with raises_regex(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2050')
     def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
@@ -1813,7 +1812,6 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected) as actual:
                 assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/535')
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into

@@ -302,7 +302,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
 
-mean.numeric_only = True
+mean.numeric_only = True  # type: ignore
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):
