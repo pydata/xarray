@@ -859,7 +859,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         result = ops.where_method(self, cond, other)
         if isinstance(self, DataArray):
             result.name = self.name
-            
+
         return result
 
     def close(self):
