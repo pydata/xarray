@@ -171,8 +171,12 @@ class DatasetIOBase(object):
         raise NotImplementedError
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
@@ -180,8 +184,12 @@ class DatasetIOBase(object):
                 yield ds
 
     @contextlib.contextmanager
-    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip_append(self, data, save_kwargs=None, open_kwargs=None,
                          allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as path:
             for i, key in enumerate(data.variables):
@@ -1287,9 +1295,13 @@ class TestNetCDF4Data(NetCDF4Base):
 @pytest.mark.filterwarnings('ignore:deallocating CachingFileManager')
 class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
-        open_kwargs['chunks'] = open_kwargs.get('chunks', 1)
+        if open_kwargs is None:
+            open_kwargs = {}
+        if save_kwargs is None:
+            save_kwargs = {}
+        open_kwargs.setdefault('chunks', -1)
         with TestNetCDF4Data.roundtrip(
                 self, data, save_kwargs, open_kwargs,
                 allow_cleanup_failure) as ds:
@@ -1341,15 +1353,19 @@ class ZarrBase(CFEncodedBase):
             yield ds
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with self.create_zarr_target() as store_target:
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
     @contextlib.contextmanager
-    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip_append(self, data, save_kwargs=None, open_kwargs=None,
                          allow_cleanup_failure=False):
         pytest.skip("zarr backend does not support appending")
 
@@ -1630,8 +1646,12 @@ class TestScipyFileObject(ScipyWriteBase):
         yield backends.ScipyDataStore(fobj, 'w')
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with create_tmp_file() as tmp_file:
             with open(tmp_file, 'wb') as f:
                 self.save(data, f, **save_kwargs)
@@ -1932,9 +1952,13 @@ class TestH5NetCDFData(NetCDF4Base):
 class TestH5NetCDFViaDaskData(TestH5NetCDFData):
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
-        open_kwargs['chunks'] = open_kwargs.get('chunks', 1)
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
+        open_kwargs.setdefault('chunks', -1)
         with TestH5NetCDFData.roundtrip(
                 self, data, save_kwargs, open_kwargs,
                 allow_cleanup_failure) as ds:
@@ -2146,7 +2170,7 @@ class TestDask(DatasetIOBase):
         yield Dataset()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
         yield data.chunk()
 
@@ -2639,8 +2663,12 @@ class TestPseudoNetCDFFormat(object):
         return open_dataset(path, engine='pseudonetcdf', **kwargs)
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
@@ -2847,10 +2875,14 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                        transform_args=[5000, 80000, 1000, 2000.],
                        crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
                             'proj': 'utm', 'zone': 18},
-                       open_kwargs={}):
+                       open_kwargs=None):
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
+
+    if open_kwargs is None:
+        open_kwargs = {}
+
     with create_tmp_file(suffix='.tif',
                          allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         # allow 2d or 3d shapes
