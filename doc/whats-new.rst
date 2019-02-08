@@ -24,7 +24,7 @@ Breaking changes
 - Remove support for Python 2. This is the first version of xarray that is
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- The `compat` argument to `Dataset` and the `encoding` argument to 
+- The `compat` argument to `Dataset` and the `encoding` argument to
   `DataArray` are deprecated and will be removed in a future release.
   (:issue:`1188`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -34,6 +34,10 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Internal plotting now supports ``cftime.datetime`` objects as time series.
+  (:issue:`2164`)
+  By `Julius Busecke <https://github.com/jbusecke>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
   By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`~xarray.DataArray.coarsen` and
