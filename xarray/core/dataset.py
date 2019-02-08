@@ -192,11 +192,11 @@ def merge_indexes(
 
 
 def split_indexes(
-        dims_or_levels,  # type: Union[Any, List[Any]]
-        variables,  # type: Dict[Any, Variable]
-        coord_names,  # type: Set
-        level_coords,  # type: Dict[Any, Any]
-        drop=False,  # type: bool
+    dims_or_levels,  # type: Union[Any, List[Any]]
+    variables,  # type: OrderedDict[Any, Variable]
+    coord_names,  # type: Set
+    level_coords,  # type: Dict[Any, Any]
+    drop=False,  # type: bool
 ):
     # type: (...) -> Tuple[OrderedDict[Any, Variable], Set]
     """Extract (multi-)indexes (levels) as variables.
@@ -216,7 +216,7 @@ def split_indexes(
             dims.append(k)
 
     vars_to_replace = {}
-    vars_to_create = OrderedDict()
+    vars_to_create = OrderedDict()  # type: OrderedDict[Any, Variable]
     vars_to_remove = []
 
     for d in dims:
@@ -696,11 +696,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dims = dict(calculate_dimensions(variables))
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
-    def _replace(
+    # TODO(shoyer): renable type checking on this signature when pytype has a
+    # good way to handle defaulting arguments to a sentinel value:
+    # https://github.com/python/mypy/issues/1803
+    def _replace(  # type: ignore
         self: T,
         variables: 'OrderedDict[Any, Variable]' = None,
         coord_names: set = None,
-        dims: 'OrderedDict[Any, int]' = None,
+        dims: Dict[Any, int] = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Any, pd.Index]]' = __default,
         encoding: Optional[dict] = __default,
@@ -745,7 +748,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 variables, coord_names, dims, attrs, indexes, encoding)
         return obj
 
-    def _replace_with_new_dims(
+    def _replace_with_new_dims(  # type: ignore
         self: T,
         variables: 'OrderedDict[Any, Variable]' = None,
         coord_names: set = None,
@@ -758,7 +761,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(
             variables, coord_names, dims, attrs, indexes, inplace=inplace)
 
-    def _replace_vars_and_dims(
+    def _replace_vars_and_dims(  # type: ignore
         self: T,
         variables: 'OrderedDict[Any, Variable]' = None,
         coord_names: set = None,
@@ -931,7 +934,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
         """
-        variables = OrderedDict()
+        variables = OrderedDict()  # type: OrderedDict[Any, Variable]
         coord_names = set()
 
         for name in names:
@@ -976,7 +979,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         needed_dims = set(variable.dims)
 
-        coords = OrderedDict()
+        coords = OrderedDict()  # type: OrderedDict[Any, Variable]
         for k in self.coords:
             if set(self.variables[k].dims) <= needed_dims:
                 coords[k] = self.variables[k]
@@ -1823,12 +1826,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             # dim is a string
             dim_name = dim
-            dim_coord = None
+            dim_coord = None  # type: ignore
 
         reordered = self.transpose(
             *(list(indexer_dims) + list(non_indexed_dims)))
 
-        variables = OrderedDict()
+        variables = OrderedDict()  # type: ignore
 
         for name, var in reordered.variables.items():
             if name in indexers_dict or any(

@@ -22,13 +22,14 @@ _VALID_COMPAT = Frozen({'identical': 0,
                         'no_conflicts': 4})
 
 
-def broadcast_dimension_size(variables):
-    # type: (List[Variable],) -> Variable
+def broadcast_dimension_size(
+    variables: List[Variable],
+) -> 'OrderedDict[Any, int]':
     """Extract dimension sizes from a dictionary of variables.
 
     Raises ValueError if any dimensions have different sizes.
     """
-    dims = OrderedDict()
+    dims = OrderedDict()  # type: OrderedDict[Any, int]
     for var in variables:
         for dim, size in zip(var.dims, var.shape):
             if dim in dims and size != dims[dim]:
@@ -149,7 +150,7 @@ def merge_variables(
 
     # n.b. it's important to fill up merged in the original order in which
     # variables appear
-    merged = OrderedDict()
+    merged = OrderedDict()  # type: OrderedDict[Any, Variable]
 
     for name, var_list in lookup.items():
         if name in priority_vars:
@@ -177,7 +178,7 @@ def merge_variables(
 
 def expand_variable_dicts(
     list_of_variable_dicts: 'List[Union[Dataset, OrderedDict]]',
-) -> 'List[OrderedDict[Any, Variable]]':
+) -> 'List[Mapping[Any, Variable]]':
     """Given a list of dicts with xarray object values, expand the values.
 
     Parameters
