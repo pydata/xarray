@@ -168,6 +168,9 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     dims = set(darray.dims)
     if animate_over is not None:
         plot_dims = dims - set([animate_dim])
+    else:
+        plot_dims = dims
+
     plot_dims.discard(row)
     plot_dims.discard(col)
     plot_dims.discard(hue)
