@@ -23,6 +23,11 @@ Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
 Matplotlib must be installed before xarray can plot.
 
+To use xarray's plotting capabilities with time coordinates containing
+``cftime.datetime`` objects
+`nc-time-axis <https://github.com/SciTools/nc-time-axis>`_ v1.2.0 or later
+needs to be installed.
+
 For more extensive plotting applications consider the following projects:
 
 - `Seaborn <http://seaborn.pydata.org/>`_: "provides
@@ -226,7 +231,7 @@ Step plots
 ~~~~~~~~~~
 
 As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
-made using 1D data. 
+made using 1D data.
 
 .. ipython:: python
 
@@ -248,7 +253,7 @@ when plotting data grouped with :py:func:`xarray.Dataset.groupby_bins`.
     plt.ylim(-20,30)
     @savefig plotting_example_step_groupby.png width=4in
     plt.title('Zonal mean temperature')
-    
+
 In this case, the actual boundaries of the bins are used and the ``where`` argument
 is ignored.
 

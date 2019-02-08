@@ -10,8 +10,6 @@ import functools
 import numpy as np
 import pandas as pd
 
-from xarray.core.common import contains_cftime_datetimes
-
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_xy_labels,
@@ -138,15 +136,6 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
 
     """
     darray = darray.squeeze()
-
-    if contains_cftime_datetimes(darray):
-        raise NotImplementedError(
-            'Built-in plotting of arrays of cftime.datetime objects or arrays '
-            'indexed by cftime.datetime objects is currently not implemented '
-            'within xarray. A possible workaround is to use the '
-            'nc-time-axis package '
-            '(https://github.com/SciTools/nc-time-axis) to convert the dates '
-            'to a plottable type and plot your data directly with matplotlib.')
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)
