@@ -7,8 +7,8 @@ import operator
 from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 from typing import (
-    AbstractSet, Any, Callable, Collection, Iterable, List, Mapping, Optional,
-    Sequence, Tuple, TYPE_CHECKING, Union,
+    AbstractSet, Any, Callable, Iterable, List, Mapping, Optional, Sequence,
+    Tuple, TYPE_CHECKING, Union,
 )
 
 import numpy as np
@@ -191,7 +191,7 @@ def build_output_coords(
 
 
 def apply_dataarray_vfunc(
-    func, *args, signature, join='inner', exclude_dims=frozenset(),
+    func, *args, signature, join='inner', exclude_dims=frozenset()
 ):
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
@@ -294,10 +294,10 @@ def _unpack_dict_tuples(
 
 
 def apply_dict_of_variables_vfunc(
-    func, *args, signature, join='inner', fill_value=None,
+    func, *args, signature, join='inner', fill_value=None
 ):
-    """Apply a variable level function over dicts of DataArray, DataArray, Variable
-    and ndarray objects.
+    """Apply a variable level function over dicts of DataArray, DataArray,
+    Variable and ndarray objects.
     """
     args = [_as_variables_or_variable(arg) for arg in args]
     names = join_dict_keys(args, how=join)
@@ -335,7 +335,7 @@ def apply_dataset_vfunc(
     dataset_join='exact',
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
-    keep_attrs=False,
+    keep_attrs=False
 ):
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
@@ -435,7 +435,7 @@ def apply_groupby_func(func, *args):
 
 def unified_dim_sizes(
     variables: Iterable[Variable],
-    exclude_dims: AbstractSet = frozenset(),
+    exclude_dims: AbstractSet = frozenset()
 ) -> 'OrderedDict[Any, int]':
 
     dim_sizes = OrderedDict()  # type: OrderedDict[Any, int]
@@ -515,7 +515,7 @@ def apply_variable_ufunc(
     dask='forbidden',
     output_dtypes=None,
     output_sizes=None,
-    keep_attrs=False,
+    keep_attrs=False
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects.
     """
@@ -676,7 +676,7 @@ def apply_ufunc(
     *args: Any,
     input_core_dims: Optional[Sequence[Sequence]] = None,
     output_core_dims: Optional[Sequence[Sequence]] = ((),),
-    exclude_dims: Collection = frozenset(),
+    exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
     join: str = 'exact',
     dataset_join: str = 'exact',
@@ -685,7 +685,7 @@ def apply_ufunc(
     kwargs: Mapping = None,
     dask: str = 'forbidden',
     output_dtypes: Optional[Sequence] = None,
-    output_sizes: Optional[Mapping[Any, int]] = None,
+    output_sizes: Optional[Mapping[Any, int]] = None
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
