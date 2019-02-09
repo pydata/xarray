@@ -856,11 +856,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self = self.isel(**indexers)
             cond = cond.isel(**indexers)
 
-        result = ops.where_method(self, cond, other)
-        if isinstance(self, DataArray):
-            result.name = self.name
-
-        return result
+        return ops.where_method(self, cond, other)
 
     def close(self):
         """Close any files linked to this object

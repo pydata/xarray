@@ -199,6 +199,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
+    keep_attrs = kwargs.pop('keep_attrs', True)
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -207,7 +208,10 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
         args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
                           raise_on_invalid=False)
 
-    name = result_name(args)
+    if keep_attrs and hasattr(args[0], 'name'):
+        name = args[0].name
+    else:
+        name = result_name(args)
     result_coords = build_output_coords(args, signature, exclude_dims)
 
     data_vars = [getattr(a, 'variable', a) for a in args]
@@ -986,7 +990,8 @@ def apply_ufunc(func, *args, **kwargs):
         return apply_dataarray_ufunc(variables_ufunc, *args,
                                      signature=signature,
                                      join=join,
-                                     exclude_dims=exclude_dims)
+                                     exclude_dims=exclude_dims,
+                                     keep_attrs=keep_attrs)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:
