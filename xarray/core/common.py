@@ -1,5 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
+from collections import OrderedDict
+from contextlib import suppress
 from textwrap import dedent
 
 import numpy as np
@@ -8,7 +8,7 @@ import pandas as pd
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .options import _get_keep_attrs
-from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .pycompat import dask_array_type
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
@@ -75,7 +75,7 @@ class ImplementsDatasetReduce(object):
             and 'axis' arguments can be supplied."""
 
 
-class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
+class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable."""
 
     def __bool__(self):
@@ -128,7 +128,7 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dim, basestring):
+        if isinstance(dim, str):
             return self._get_axis_num(dim)
         else:
             return tuple(self._get_axis_num(d) for d in dim)
@@ -199,7 +199,7 @@ class AttrAccessMixin(object):
         extra_attrs = [item
                        for sublist in self._attr_sources
                        for item in sublist
-                       if isinstance(item, basestring)]
+                       if isinstance(item, str)]
         return sorted(set(dir(type(self)) + extra_attrs))
 
     def _ipython_key_completions_(self):
@@ -210,7 +210,7 @@ class AttrAccessMixin(object):
         item_lists = [item
                       for sublist in self._item_sources
                       for item in sublist
-                      if isinstance(item, basestring)]
+                      if isinstance(item, str)]
         return list(set(item_lists))
 
 
@@ -223,7 +223,7 @@ def get_squeeze_dims(xarray_obj, dim, axis=None):
     if dim is None and axis is None:
         dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
     else:
-        if isinstance(dim, basestring):
+        if isinstance(dim, str):
             dim = [dim]
         if isinstance(axis, int):
             axis = (axis, )
@@ -714,6 +714,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
 
+        Limit scope of upsampling method
+        >>> da.resample(time='1D').nearest(tolerance='1D')
+        <xarray.DataArray (time: 337)>
+        array([ 0.,  0., nan, ..., nan, 11., 11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+
         References
         ----------
 
@@ -749,23 +756,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim_coord = self[dim]
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
-            raise NotImplementedError(
-                'Resample is currently not supported along a dimension '
-                'indexed by a CFTimeIndex.  For certain kinds of downsampling '
-                'it may be possible to work around this by converting your '
-                'time index to a DatetimeIndex using '
-                'CFTimeIndex.to_datetimeindex.  Use caution when doing this '
-                'however, because switching to a DatetimeIndex from a '
-                'CFTimeIndex with a non-standard calendar entails a change '
-                'in the calendar type, which could lead to subtle and silent '
-                'errors.'
-            )
-
+            from .resample_cftime import CFTimeGrouper
+            grouper = CFTimeGrouper(freq, closed, label, base, loffset)
+        else:
+            # TODO: to_offset() call required for pandas==0.19.2
+            grouper = pd.Grouper(freq=freq, closed=closed, label=label,
+                                 base=base,
+                                 loffset=pd.tseries.frequencies.to_offset(
+                                     loffset))
         group = DataArray(dim_coord, coords=dim_coord.coords,
                           dims=dim_coord.dims, name=RESAMPLE_DIM)
-        # TODO: to_offset() call required for pandas==0.19.2
-        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base,
-                             loffset=pd.tseries.frequencies.to_offset(loffset))
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)

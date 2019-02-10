@@ -1,7 +1,6 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import warnings
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -13,16 +12,13 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
-    DataArrayCoordinates, LevelCoordinatesSource,
-    assert_coordinate_consistent, remap_label_indexers)
+    DataArrayCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
+    remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
-from .indexes import default_indexes, Indexes
+from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .pycompat import OrderedDict, basestring, iteritems, range, zip
-from .utils import (
-    _check_inplace, decode_numpy_dict_values, either_dict_or_kwargs,
-    ensure_us_time_resolution)
+from .utils import _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -37,7 +33,7 @@ def _infer_coords_and_dims(shape, coords, dims):
                          'which does not match the %s dimensions of the '
                          'data' % (len(coords), len(shape)))
 
-    if isinstance(dims, basestring):
+    if isinstance(dims, str):
         dims = (dims,)
 
     if dims is None:
@@ -57,7 +53,7 @@ def _infer_coords_and_dims(shape, coords, dims):
         dims = tuple(dims)
     else:
         for d in dims:
-            if not isinstance(d, basestring):
+            if not isinstance(d, str):
                 raise TypeError('dimension %s is not a string' % d)
 
     new_coords = OrderedDict()
@@ -194,13 +190,16 @@ class DataArray(AbstractArray, DataWithCoords):
         attrs : dict_like or None, optional
             Attributes to assign to the new instance. By default, an empty
             attribute dictionary is initialized.
-        encoding : dict_like or None, optional
-            Dictionary specifying how to encode this array's data into a
-            serialized format like netCDF4. Currently used keys (for netCDF)
-            include '_FillValue', 'scale_factor', 'add_offset', 'dtype',
-            'units' and 'calendar' (the later two only for datetime arrays).
-            Unrecognized keys are ignored.
+        encoding : deprecated
         """
+
+        if encoding is not None:
+            warnings.warn(
+                'The `encoding` argument to `DataArray` is deprecated, and . '
+                'will be removed in 0.13. '
+                'Instead, specify the encoding when writing to disk or '
+                'set the `encoding` attribute directly.',
+                FutureWarning, stacklevel=2)
         if fastpath:
             variable = data
             assert dims is None
@@ -475,14 +474,14 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._replace_maybe_drop_dims(var, name=key)
 
     def __getitem__(self, key):
-        if isinstance(key, basestring):
+        if isinstance(key, str):
             return self._getitem_coord(key)
         else:
             # xarray-style array indexing
             return self.isel(indexers=self._item_key_to_dict(key))
 
     def __setitem__(self, key, value):
-        if isinstance(key, basestring):
+        if isinstance(key, str):
             self.coords[key] = value
         else:
             # Coordinates in key, value and self[key] should be consistent.
@@ -1313,9 +1312,9 @@ class DataArray(AbstractArray, DataWithCoords):
           * y        (y) int64 0 1 2
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
-        MultiIndex(levels=[[u'a', u'b'], [0, 1, 2]],
+        MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                    labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
-                   names=[u'x', u'y'])
+                   names=['x', 'y'])
 
         See also
         --------
@@ -1356,9 +1355,9 @@ class DataArray(AbstractArray, DataWithCoords):
           * y        (y) int64 0 1 2
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
-        MultiIndex(levels=[[u'a', u'b'], [0, 1, 2]],
+        MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                    labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
-                   names=[u'x', u'y'])
+                   names=['x', 'y'])
         >>> roundtripped = stacked.unstack()
         >>> arr.identical(roundtripped)
         True
@@ -1760,7 +1759,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return dataset.to_netcdf(*args, **kwargs)
 
-    def to_dict(self):
+    def to_dict(self, data=True):
         """
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
@@ -1769,22 +1768,20 @@ class DataArray(AbstractArray, DataWithCoords):
         Useful for coverting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
+        Parameters
+        ----------
+        data : bool, optional
+            Whether to include the actual data in the dictionary. When set to
+            False, returns just the schema.
+
         See also
         --------
         DataArray.from_dict
         """
-        d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
-             'dims': self.dims}
-
+        d = self.variable.to_dict(data=data)
+        d.update({'coords': {}, 'name': self.name})
         for k in self.coords:
-            data = ensure_us_time_resolution(self[k].values).tolist()
-            d['coords'].update({
-                k: {'data': data,
-                    'dims': self[k].dims,
-                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
-
-        d.update({'data': ensure_us_time_resolution(self.values).tolist(),
-                  'name': self.name})
+            d['coords'][k] = self.coords[k].variable.to_dict(data=data)
         return d
 
     @classmethod
@@ -2043,7 +2040,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         """
         one_dims = []
-        for dim, coord in iteritems(self.coords):
+        for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append('{dim} = {v}'.format(
                     dim=dim, v=format_item(coord.values)))
@@ -2427,6 +2424,53 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         ds = self._to_temp_dataset().differentiate(
             coord, edge_order, datetime_unit)
+        return self._from_temp_dataset(ds)
+
+    def integrate(self, dim, datetime_unit=None):
+        """ integrate the array with the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        dim: str, or a sequence of str
+            Coordinate(s) used for the integration.
+        datetime_unit
+            Can be specify the unit if datetime coordinate is used. One of
+            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
+             'as'}
+
+        Returns
+        -------
+        integrated: DataArray
+
+        See also
+        --------
+        numpy.trapz: corresponding numpy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
+        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.integrate('x')
+        <xarray.DataArray (y: 3)>
+        array([5.4, 6.6, 7.8])
+        Dimensions without coordinates: y
+        """
+        ds = self._to_temp_dataset().integrate(dim, datetime_unit)
         return self._from_temp_dataset(ds)
 
 

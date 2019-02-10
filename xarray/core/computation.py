@@ -1,12 +1,10 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
-from __future__ import absolute_import, division, print_function
-
 import functools
 import itertools
 import operator
-from collections import Counter
+from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 from typing import (
     AbstractSet, Any, Dict, Iterable, List, Mapping, Union, Tuple,
@@ -18,7 +16,7 @@ import numpy as np
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, basestring, dask_array_type
+from .pycompat import dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
 if TYPE_CHECKING:
@@ -226,7 +224,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
 
 
 def ordered_set_union(all_keys: List[Iterable]) -> Iterable:
-    result_dict = OrderedDict()
+    result_dict = OrderedDict()  # type: OrderedDict[Any, None]
     for keys in all_keys:
         for key in keys:
             result_dict[key] = None
@@ -286,11 +284,10 @@ def _as_variables_or_variable(arg):
 
 
 def _unpack_dict_tuples(
-        result_vars,  # type: Mapping[Any, Tuple[Variable]]
-        num_outputs,  # type: int
-):
-    # type: (...) -> Tuple[Dict[Any, Variable], ...]
-    out = tuple(OrderedDict() for _ in range(num_outputs))
+    result_vars: Mapping[Any, Tuple[Variable]],
+    num_outputs: int,
+) -> 'Tuple[OrderedDict[Any, Variable], ...]':
+    out = tuple(OrderedDict() for _ in range(num_outputs))  # type: ignore
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
@@ -446,7 +443,7 @@ def unified_dim_sizes(
     exclude_dims: AbstractSet = frozenset(),
 ) -> 'OrderedDict[Any, int]':
 
-    dim_sizes = OrderedDict()
+    dim_sizes = OrderedDict()  # type: OrderedDict[Any, int]
 
     for var in variables:
         if len(set(var.dims)) < len(var.dims):
@@ -1043,7 +1040,7 @@ def dot(*arrays, **kwargs):
     if len(arrays) == 0:
         raise TypeError('At least one array should be given.')
 
-    if isinstance(dims, basestring):
+    if isinstance(dims, str):
         dims = (dims, )
 
     common_dims = set.intersection(*[set(arr.dims) for arr in arrays])

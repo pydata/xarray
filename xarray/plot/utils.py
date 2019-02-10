@@ -1,15 +1,25 @@
-from __future__ import absolute_import, division, print_function
-
 import itertools
 import textwrap
 import warnings
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
+from inspect import getfullargspec
+
 from ..core.options import OPTIONS
-from ..core.pycompat import basestring
 from ..core.utils import is_scalar
+from distutils.version import LooseVersion
+
+try:
+    import nc_time_axis
+    if LooseVersion(nc_time_axis.__version__) < LooseVersion('1.2.0'):
+        nc_time_axis_available = False
+    else:
+        nc_time_axis_available = True
+except ImportError:
+    nc_time_axis_available = False
 
 ROBUST_PERCENTILE = 2.0
 
@@ -104,7 +114,7 @@ def _color_palette(cmap, n_colors):
         # we have a list of colors
         cmap = ListedColormap(cmap, N=n_colors)
         pal = cmap(colors_i)
-    elif isinstance(cmap, basestring):
+    elif isinstance(cmap, str):
         # we have some sort of named palette
         try:
             # is this a matplotlib cmap?
@@ -450,3 +460,245 @@ def _valid_other_type(x, types):
     Do all elements of x have a type from types?
     """
     return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
+
+
+def _valid_numpy_subdtype(x, numpy_types):
+    """
+    Is any dtype from numpy_types superior to the dtype of x?
+    """
+    # If any of the types given in numpy_types is understood as numpy.generic,
+    # all possible x will be considered valid.  This is probably unwanted.
+    for t in numpy_types:
+        assert not np.issubdtype(np.generic, t)
+
+    return any(np.issubdtype(x.dtype, t) for t in numpy_types)
+
+
+def _ensure_plottable(*args):
+    """
+    Raise exception if there is anything in args that can't be plotted on an
+    axis by matplotlib.
+    """
+    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    other_types = [datetime]
+    try:
+        import cftime
+        cftime_datetime = [cftime.datetime]
+    except ImportError:
+        cftime_datetime = []
+    other_types = other_types + cftime_datetime
+    for x in args:
+        if not (_valid_numpy_subdtype(np.array(x), numpy_types)
+                or _valid_other_type(np.array(x), other_types)):
+            raise TypeError('Plotting requires coordinates to be numeric '
+                            'or dates of type np.datetime64, '
+                            'datetime.datetime, cftime.datetime or '
+                            'pd.Interval.')
+        if (_valid_other_type(np.array(x), cftime_datetime)
+                and not nc_time_axis_available):
+            raise ImportError('Plotting of arrays of cftime.datetime '
+                              'objects or arrays indexed by '
+                              'cftime.datetime objects requires the '
+                              'optional `nc-time-axis` (v1.2.0 or later) '
+                              'package.')
+
+
+def _numeric(arr):
+    numpy_types = [np.floating, np.integer]
+    return _valid_numpy_subdtype(arr, numpy_types)
+
+
+def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
+    plt = import_matplotlib_pyplot()
+    cbar_kwargs.setdefault('extend', cmap_params['extend'])
+    if cbar_ax is None:
+        cbar_kwargs.setdefault('ax', ax)
+    else:
+        cbar_kwargs.setdefault('cax', cbar_ax)
+
+    cbar = plt.colorbar(primitive, **cbar_kwargs)
+
+    return cbar
+
+
+def _rescale_imshow_rgb(darray, vmin, vmax, robust):
+    assert robust or vmin is not None or vmax is not None
+    # TODO: remove when min numpy version is bumped to 1.13
+    # There's a cyclic dependency via DataArray, so we can't import from
+    # xarray.ufuncs in global scope.
+    from xarray.ufuncs import maximum, minimum
+
+    # Calculate vmin and vmax automatically for `robust=True`
+    if robust:
+        if vmax is None:
+            vmax = np.nanpercentile(darray, 100 - ROBUST_PERCENTILE)
+        if vmin is None:
+            vmin = np.nanpercentile(darray, ROBUST_PERCENTILE)
+    # If not robust and one bound is None, calculate the default other bound
+    # and check that an interval between them exists.
+    elif vmax is None:
+        vmax = 255 if np.issubdtype(darray.dtype, np.integer) else 1
+        if vmax < vmin:
+            raise ValueError(
+                'vmin=%r is less than the default vmax (%r) - you must supply '
+                'a vmax > vmin in this case.' % (vmin, vmax))
+    elif vmin is None:
+        vmin = 0
+        if vmin > vmax:
+            raise ValueError(
+                'vmax=%r is less than the default vmin (0) - you must supply '
+                'a vmin < vmax in this case.' % vmax)
+    # Scale interval [vmin .. vmax] to [0 .. 1], with darray as 64-bit float
+    # to avoid precision loss, integer over/underflow, etc with extreme inputs.
+    # After scaling, downcast to 32-bit float.  This substantially reduces
+    # memory usage after we hand `darray` off to matplotlib.
+    darray = ((darray.astype('f8') - vmin) / (vmax - vmin)).astype('f4')
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'xarray.ufuncs',
+                                PendingDeprecationWarning)
+        return minimum(maximum(darray, 0), 1)
+
+
+def _update_axes(ax, xincrease, yincrease,
+                 xscale=None, yscale=None,
+                 xticks=None, yticks=None,
+                 xlim=None, ylim=None):
+    """
+    Update axes with provided parameters
+    """
+    if xincrease is None:
+        pass
+    elif xincrease and ax.xaxis_inverted():
+        ax.invert_xaxis()
+    elif not xincrease and not ax.xaxis_inverted():
+        ax.invert_xaxis()
+
+    if yincrease is None:
+        pass
+    elif yincrease and ax.yaxis_inverted():
+        ax.invert_yaxis()
+    elif not yincrease and not ax.yaxis_inverted():
+        ax.invert_yaxis()
+
+    # The default xscale, yscale needs to be None.
+    # If we set a scale it resets the axes formatters,
+    # This means that set_xscale('linear') on a datetime axis
+    # will remove the date labels. So only set the scale when explicitly
+    # asked to. https://github.com/matplotlib/matplotlib/issues/8740
+    if xscale is not None:
+        ax.set_xscale(xscale)
+    if yscale is not None:
+        ax.set_yscale(yscale)
+
+    if xticks is not None:
+        ax.set_xticks(xticks)
+    if yticks is not None:
+        ax.set_yticks(yticks)
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+
+def _is_monotonic(coord, axis=0):
+    """
+    >>> _is_monotonic(np.array([0, 1, 2]))
+    True
+    >>> _is_monotonic(np.array([2, 1, 0]))
+    True
+    >>> _is_monotonic(np.array([0, 2, 1]))
+    False
+    """
+    if coord.shape[axis] < 3:
+        return True
+    else:
+        n = coord.shape[axis]
+        delta_pos = (coord.take(np.arange(1, n), axis=axis) >=
+                     coord.take(np.arange(0, n - 1), axis=axis))
+        delta_neg = (coord.take(np.arange(1, n), axis=axis) <=
+                     coord.take(np.arange(0, n - 1), axis=axis))
+        return np.all(delta_pos) or np.all(delta_neg)
+
+
+def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
+    """
+    >>> _infer_interval_breaks(np.arange(5))
+    array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
+    >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
+    array([[-0.5,  0.5,  1.5],
+           [ 2.5,  3.5,  4.5]])
+    """
+    coord = np.asarray(coord)
+
+    if check_monotonic and not _is_monotonic(coord, axis=axis):
+        raise ValueError("The input coordinate is not sorted in increasing "
+                         "order along axis %d. This can lead to unexpected "
+                         "results. Consider calling the `sortby` method on "
+                         "the input DataArray. To plot data with categorical "
+                         "axes, consider using the `heatmap` function from "
+                         "the `seaborn` statistical plotting library." % axis)
+
+    deltas = 0.5 * np.diff(coord, axis=axis)
+    if deltas.size == 0:
+        deltas = np.array(0.0)
+    first = np.take(coord, [0], axis=axis) - np.take(deltas, [0], axis=axis)
+    last = np.take(coord, [-1], axis=axis) + np.take(deltas, [-1], axis=axis)
+    trim_last = tuple(slice(None, -1) if n == axis else slice(None)
+                      for n in range(coord.ndim))
+    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
+
+
+def _process_cmap_cbar_kwargs(func, kwargs, data):
+    """
+    Parameters
+    ==========
+    func : plotting function
+    kwargs : dict,
+        Dictionary with arguments that need to be parsed
+    data : ndarray,
+        Data values
+
+    Returns
+    =======
+    cmap_params
+
+    cbar_kwargs
+    """
+
+    cmap = kwargs.pop('cmap', None)
+    colors = kwargs.pop('colors', None)
+
+    cbar_kwargs = kwargs.pop('cbar_kwargs', {})
+    cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
+
+    levels = kwargs.pop('levels', None)
+    if 'contour' in func.__name__ and levels is None:
+        levels = 7  # this is the matplotlib default
+
+    # colors is mutually exclusive with cmap
+    if cmap and colors:
+        raise ValueError("Can't specify both cmap and colors.")
+
+    # colors is only valid when levels is supplied or the plot is of type
+    # contour or contourf
+    if colors and (('contour' not in func.__name__) and (not levels)):
+        raise ValueError("Can only specify colors with contour or levels")
+
+    # we should not be getting a list of colors in cmap anymore
+    # is there a better way to do this test?
+    if isinstance(cmap, (list, tuple)):
+        warnings.warn("Specifying a list of colors in cmap is deprecated. "
+                      "Use colors keyword instead.",
+                      DeprecationWarning, stacklevel=3)
+
+    cmap_kwargs = {'plot_data': data,
+                   'levels': levels,
+                   'cmap': colors if colors else cmap,
+                   'filled': func.__name__ != 'contour'}
+
+    cmap_args = getfullargspec(_determine_cmap_params).args
+    cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
+    cmap_params = _determine_cmap_params(**cmap_kwargs)
+
+    return cmap_params, cbar_kwargs

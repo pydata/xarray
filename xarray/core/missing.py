@@ -1,7 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
-from collections import Iterable
+from collections.abc import Iterable
 from functools import partial
 from typing import Any, Dict
 
@@ -12,8 +10,7 @@ from . import utils
 from .common import _contains_datetime_like_objects
 from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type, datetime_to_numeric
-from .pycompat import iteritems
-from .utils import OrderedSet, is_scalar
+from .utils import OrderedSet, datetime_to_numeric, is_scalar
 from .variable import Variable, broadcast_variables
 
 
@@ -147,7 +144,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
 
     ds = type(self)(coords=self.coords, attrs=self.attrs)
 
-    for name, var in iteritems(self.data_vars):
+    for name, var in self.data_vars.items():
         if dim in var.dims:
             ds[name] = func(var, dim=dim, **kwargs)
         else:

@@ -1,11 +1,9 @@
-from __future__ import absolute_import, division, print_function
-
 import os
+from contextlib import suppress
 
 import pytest
 
 from xarray import DataArray, tutorial
-from xarray.core.pycompat import suppress
 
 from . import assert_identical, network
 

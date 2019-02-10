@@ -3,8 +3,6 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
-from __future__ import absolute_import, division, print_function
-
 import contextlib
 from functools import partial
 import inspect
@@ -99,6 +97,18 @@ def gradient(x, coord, axis, edge_order):
         return dask_array_compat.gradient(
             x, coord, axis=axis, edge_order=edge_order)
     return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
+
+
+def trapz(y, x, axis):
+    if axis < 0:
+        axis = y.ndim + axis
+    x_sl1 = (slice(1, None), ) + (None, ) * (y.ndim - axis - 1)
+    x_sl2 = (slice(None, -1), ) + (None, ) * (y.ndim - axis - 1)
+    slice1 = (slice(None),) * axis + (slice(1, None), )
+    slice2 = (slice(None),) * axis + (slice(None, -1), )
+    dx = (x[x_sl1] - x[x_sl2])
+    integrand = dx * 0.5 * (y[tuple(slice1)] + y[tuple(slice2)])
+    return sum(integrand, axis=axis, skipna=False)
 
 
 masked_invalid = _dask_or_eager_func(
@@ -329,7 +339,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
 
-mean.numeric_only = True
+mean.numeric_only = True  # type: ignore
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):

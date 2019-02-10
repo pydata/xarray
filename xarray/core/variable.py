@@ -1,10 +1,8 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import itertools
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from datetime import timedelta
-from typing import Tuple, Type
+from typing import Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -17,9 +15,9 @@ from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
 from .options import _get_keep_attrs
-from .pycompat import (
-    OrderedDict, basestring, dask_array_type, integer_types, zip)
-from .utils import OrderedSet, either_dict_or_kwargs
+from .pycompat import dask_array_type, integer_types
+from .utils import (OrderedSet, either_dict_or_kwargs,
+                    decode_numpy_dict_values, ensure_us_time_resolution)
 
 try:
     import dask.array as da
@@ -40,7 +38,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None):
+def as_variable(obj, name=None) -> 'Union[Variable, IndexVariable]':
     """Convert an object into a Variable.
 
     Parameters
@@ -410,6 +408,16 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
 
+    def to_dict(self, data=True):
+        """Dictionary representation of variable."""
+        item = {'dims': self.dims,
+                'attrs': decode_numpy_dict_values(self.attrs)}
+        if data:
+            item['data'] = ensure_us_time_resolution(self.values).tolist()
+        else:
+            item.update({'dtype': str(self.dtype), 'shape': self.shape})
+        return item
+
     @property
     def dims(self):
         """Tuple of dimension names with which this variable is associated.
@@ -421,7 +429,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         self._dims = self._parse_dimensions(value)
 
     def _parse_dimensions(self, dims):
-        if isinstance(dims, basestring):
+        if isinstance(dims, str):
             dims = (dims,)
         dims = tuple(dims)
         if len(dims) != self.ndim:
@@ -1166,7 +1174,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         -------
         Variable
         """
-        if isinstance(dims, basestring):
+        if isinstance(dims, str):
             dims = [dims]
 
         if shape is None and utils.is_dict_like(dims):
@@ -1402,7 +1410,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
-        if not isinstance(dim, basestring):
+        if not isinstance(dim, str):
             dim, = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
@@ -1653,7 +1661,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             return self.copy()
 
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
-        if isinstance(func, basestring):
+        if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
@@ -1842,7 +1850,7 @@ class IndexVariable(Variable):
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
-        if not isinstance(dim, basestring):
+        if not isinstance(dim, str):
             dim, = dim.dims
 
         variables = list(variables)

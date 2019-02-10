@@ -19,7 +19,6 @@ matrix:
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - env: CONDA_ENV=py36-dask-dev
   - env: CONDA_ENV=py36-pandas-dev
-  - env: CONDA_ENV=py36-bottleneck-dev
   - env: CONDA_ENV=py36-rasterio
   - env: CONDA_ENV=py36-zarr-dev
   - env: CONDA_ENV=docs
@@ -31,7 +30,6 @@ matrix:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - env: CONDA_ENV=py36-pandas-dev
-  - env: CONDA_ENV=py36-bottleneck-dev
   - env: CONDA_ENV=py36-zarr-dev
 
 before_install:
@@ -60,8 +58,8 @@ script:
   - python --version
   - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
-      conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
-      sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;
+      cd doc;
+      sphinx-build -n -j auto -b html -d _build/doctrees . _build/html;
     elif [[ "$CONDA_ENV" == "lint" ]]; then
       pycodestyle xarray ;
     elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then

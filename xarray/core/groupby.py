@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import datetime
 import functools
 import warnings
@@ -12,7 +10,7 @@ from .arithmetic import SupportsArithmetic
 from .combine import concat
 from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .options import _get_keep_attrs
-from .pycompat import integer_types, range, zip
+from .pycompat import integer_types
 from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
 from .variable import IndexVariable, Variable, as_variable
 
@@ -260,12 +258,8 @@ class GroupBy(SupportsArithmetic):
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
-            s = pd.Series(np.arange(index.size), index)
-            first_items = s.groupby(grouper).first()
-            _apply_loffset(grouper, first_items)
-            full_index = first_items.index
-            if first_items.isnull().any():
-                first_items = first_items.dropna()
+            full_index, first_items = self._get_index_and_items(
+                index, grouper)
             sbins = first_items.values.astype(np.int64)
             group_indices = ([slice(i, j)
                               for i, j in zip(sbins[:-1], sbins[1:])] +
@@ -311,6 +305,19 @@ class GroupBy(SupportsArithmetic):
 
     def __iter__(self):
         return zip(self._unique_coord.values, self._iter_grouped())
+
+    def _get_index_and_items(self, index, grouper):
+        from .resample_cftime import CFTimeGrouper
+        s = pd.Series(np.arange(index.size), index)
+        if isinstance(grouper, CFTimeGrouper):
+            first_items = grouper.first_items(index)
+        else:
+            first_items = s.groupby(grouper).first()
+            _apply_loffset(grouper, first_items)
+        full_index = first_items.index
+        if first_items.isnull().any():
+            first_items = first_items.dropna()
+        return full_index, first_items
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""

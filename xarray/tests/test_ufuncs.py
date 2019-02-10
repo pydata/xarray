@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import pickle
 
 import numpy as np
@@ -208,6 +206,7 @@ def test_numpy_ufuncs(name, request):
         assert isinstance(y, xr.DataArray)
 
 
+@pytest.mark.filterwarnings("ignore:xarray.ufuncs")
 def test_xarray_ufuncs_pickle():
     a = 1.0
     cos_pickled = pickle.loads(pickle.dumps(xu.cos))

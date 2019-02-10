@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import contextlib
 import itertools
 import math
@@ -11,6 +9,7 @@ import sys
 import tempfile
 from typing import Optional
 import warnings
+from contextlib import ExitStack
 from io import BytesIO
 
 import numpy as np
@@ -26,8 +25,7 @@ from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
 from xarray.core.options import set_options
-from xarray.core.pycompat import (
-    ExitStack, basestring, dask_array_type, iteritems)
+from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
 
 from . import (
@@ -206,7 +204,7 @@ class DatasetIOBase(object):
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
         expected['bytes_var'] = ([], b'foobar')
-        expected['string_var'] = ([], u'foobar')
+        expected['string_var'] = ([], 'foobar')
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
@@ -338,8 +336,8 @@ class DatasetIOBase(object):
         floats_nans = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=object)
         bytes_ = np.array([b'ab', b'cdef', b'g'], dtype=object)
         bytes_nans = np.array([b'ab', b'cdef', np.nan], dtype=object)
-        strings = np.array([u'ab', u'cdef', u'g'], dtype=object)
-        strings_nans = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        strings = np.array(['ab', 'cdef', 'g'], dtype=object)
+        strings_nans = np.array(['ab', 'cdef', np.nan], dtype=object)
         all_nans = np.array([np.nan, np.nan], dtype=object)
         original = Dataset({'floats': ('a', floats),
                             'floats_nans': ('a', floats_nans),
@@ -361,7 +359,7 @@ class DatasetIOBase(object):
                 # explicitly set.
                 # https://github.com/pydata/xarray/issues/1647
                 expected['bytes_nans'][-1] = b''
-                expected['strings_nans'][-1] = u''
+                expected['strings_nans'][-1] = ''
                 assert_identical(expected, actual)
 
     def test_roundtrip_string_data(self):
@@ -370,7 +368,7 @@ class DatasetIOBase(object):
             assert_identical(expected, actual)
 
     def test_roundtrip_string_encoded_characters(self):
-        expected = Dataset({'x': ('t', [u'ab', u'cdef'])})
+        expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         expected['x'].encoding['dtype'] = 'S1'
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
@@ -641,7 +639,7 @@ class CFEncodedBase(DatasetIOBase):
             assert_identical(expected, actual)
 
     def test_roundtrip_string_with_fill_value_nchar(self):
-        values = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        values = np.array(['ab', 'cdef', np.nan], dtype=object)
         expected = Dataset({'x': ('t', values)})
 
         encoding = {'dtype': 'S1', '_FillValue': b'X'}
@@ -790,7 +788,7 @@ class CFEncodedBase(DatasetIOBase):
         # regression test for GH2149
         for strings in [
             [b'foo', b'bar', b'baz'],
-            [u'foo', u'bar', u'baz'],
+            ['foo', 'bar', 'baz'],
         ]:
             ds = Dataset({'x': strings})
             kwargs = dict(encoding={'x': {'dtype': 'S1'}})
@@ -982,29 +980,29 @@ class NetCDF4Base(CFEncodedBase):
     def test_encoding_kwarg_vlen_string(self):
         for input_strings in [
             [b'foo', b'bar', b'baz'],
-            [u'foo', u'bar', u'baz'],
+            ['foo', 'bar', 'baz'],
         ]:
             original = Dataset({'x': input_strings})
-            expected = Dataset({'x': [u'foo', u'bar', u'baz']})
+            expected = Dataset({'x': ['foo', 'bar', 'baz']})
             kwargs = dict(encoding={'x': {'dtype': str}})
             with self.roundtrip(original, save_kwargs=kwargs) as actual:
                 assert actual['x'].encoding['dtype'] is str
                 assert_identical(actual, expected)
 
     def test_roundtrip_string_with_fill_value_vlen(self):
-        values = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        values = np.array(['ab', 'cdef', np.nan], dtype=object)
         expected = Dataset({'x': ('t', values)})
 
         # netCDF4-based backends don't support an explicit fillvalue
         # for variable length strings yet.
         # https://github.com/Unidata/netcdf4-python/issues/730
         # https://github.com/shoyer/h5netcdf/issues/37
-        original = Dataset({'x': ('t', values, {}, {'_FillValue': u'XXX'})})
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': 'XXX'})})
         with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
 
-        original = Dataset({'x': ('t', values, {}, {'_FillValue': u''})})
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': ''})})
         with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
@@ -1054,7 +1052,7 @@ class NetCDF4Base(CFEncodedBase):
             with open_dataset(tmp_file) as actual:
                 assert_equal(actual['time'], expected['time'])
                 actual_encoding = dict((k, v) for k, v in
-                                       iteritems(actual['time'].encoding)
+                                       actual['time'].encoding.items()
                                        if k in expected['time'].encoding)
                 assert actual_encoding == \
                     expected['time'].encoding
@@ -1094,7 +1092,7 @@ class NetCDF4Base(CFEncodedBase):
                                       'shuffle': True,
                                       'original_shape': data.var2.shape})
         with self.roundtrip(data) as actual:
-            for k, v in iteritems(data['var2'].encoding):
+            for k, v in data['var2'].encoding.items():
                 assert v == actual['var2'].encoding[k]
 
         # regression test for #156
@@ -1688,7 +1686,7 @@ class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
                 yield store
 
     def test_encoding_kwarg_vlen_string(self):
-        original = Dataset({'x': [u'foo', u'bar', u'baz']})
+        original = Dataset({'x': ['foo', 'bar', 'baz']})
         kwargs = dict(encoding={'x': {'dtype': str}})
         with raises_regex(ValueError, 'encoding dtype=str for vlen'):
             with self.roundtrip(original, save_kwargs=kwargs):
@@ -1734,7 +1732,6 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
         with raises_regex(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2050')
     def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
@@ -1803,7 +1800,6 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected) as actual:
                 assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/535')
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into
@@ -2550,6 +2546,12 @@ class TestPyNio(ScipyWriteBase):
         with open_dataset(path, engine='pynio', **kwargs) as ds:
             yield ds
 
+    def test_kwargs(self):
+        kwargs = {'format': 'grib'}
+        path = os.path.join(os.path.dirname(__file__), 'data', 'example')
+        with backends.NioDataStore(path, **kwargs) as store:
+            assert store._manager._kwargs['format'] == 'grib'
+
     def save(self, dataset, path, **kwargs):
         return dataset.to_netcdf(path, engine='scipy', **kwargs)
 
@@ -2860,7 +2862,7 @@ class TestRasterio(object):
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert isinstance(rioda.attrs['crs'], basestring)
+                assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -2903,7 +2905,7 @@ class TestRasterio(object):
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert isinstance(rioda.attrs['crs'], basestring)
+                assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -3141,15 +3143,15 @@ class TestRasterio(object):
 
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert isinstance(rioda.attrs['crs'], basestring)
+                assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
                 assert len(rioda.attrs['transform']) == 6
                 # from ENVI tags
-                assert isinstance(rioda.attrs['description'], basestring)
-                assert isinstance(rioda.attrs['map_info'], basestring)
-                assert isinstance(rioda.attrs['samples'], basestring)
+                assert isinstance(rioda.attrs['description'], str)
+                assert isinstance(rioda.attrs['map_info'], str)
+                assert isinstance(rioda.attrs['samples'], str)
 
     def test_no_mftime(self):
         # rasterio can accept "filename" urguments that are actually urls,

@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function
+from collections import OrderedDict
 
 from typing import (
     Any, Dict, List, Mapping, Optional, Set, Tuple, TYPE_CHECKING, Union,
@@ -7,7 +7,6 @@ from typing import (
 import pandas as pd
 
 from .alignment import deep_align
-from .pycompat import OrderedDict, basestring
 from .utils import Frozen
 from .variable import (
     Variable, as_variable, assert_unique_multiindex_level_names)
@@ -23,13 +22,14 @@ _VALID_COMPAT = Frozen({'identical': 0,
                         'no_conflicts': 4})
 
 
-def broadcast_dimension_size(variables):
-    # type: (List[Variable],) -> Variable
+def broadcast_dimension_size(
+    variables: List[Variable],
+) -> 'OrderedDict[Any, int]':
     """Extract dimension sizes from a dictionary of variables.
 
     Raises ValueError if any dimensions have different sizes.
     """
-    dims = OrderedDict()
+    dims = OrderedDict()  # type: OrderedDict[Any, int]
     for var in variables:
         for dim, size in zip(var.dims, var.shape):
             if dim in dims and size != dims[dim]:
@@ -150,7 +150,7 @@ def merge_variables(
 
     # n.b. it's important to fill up merged in the original order in which
     # variables appear
-    merged = OrderedDict()
+    merged = OrderedDict()  # type: OrderedDict[Any, Variable]
 
     for name, var_list in lookup.items():
         if name in priority_vars:
@@ -176,8 +176,9 @@ def merge_variables(
     return merged
 
 
-def expand_variable_dicts(list_of_variable_dicts):
-    # type: (List[Union[Dataset, Dict]]) -> List[Dict[Any, Variable]]
+def expand_variable_dicts(
+    list_of_variable_dicts: 'List[Union[Dataset, OrderedDict]]',
+) -> 'List[Mapping[Any, Variable]]':
     """Given a list of dicts with xarray object values, expand the values.
 
     Parameters
@@ -202,22 +203,23 @@ def expand_variable_dicts(list_of_variable_dicts):
 
     for variables in list_of_variable_dicts:
         if isinstance(variables, Dataset):
-            sanitized_vars = variables.variables
-        else:
-            # append coords to var_dicts before appending sanitized_vars,
-            # because we want coords to appear first
-            sanitized_vars = OrderedDict()
+            var_dicts.append(variables.variables)
+            continue
 
-            for name, var in variables.items():
-                if isinstance(var, DataArray):
-                    # use private API for speed
-                    coords = var._coords.copy()
-                    # explicitly overwritten variables should take precedence
-                    coords.pop(name, None)
-                    var_dicts.append(coords)
+        # append coords to var_dicts before appending sanitized_vars,
+        # because we want coords to appear first
+        sanitized_vars = OrderedDict()  # type: OrderedDict[Any, Variable]
 
-                var = as_variable(var, name=name)
-                sanitized_vars[name] = var
+        for name, var in variables.items():
+            if isinstance(var, DataArray):
+                # use private API for speed
+                coords = var._coords.copy()
+                # explicitly overwritten variables should take precedence
+                coords.pop(name, None)
+                var_dicts.append(coords)
+
+            var = as_variable(var, name=name)
+            sanitized_vars[name] = var
 
         var_dicts.append(sanitized_vars)
 
@@ -527,7 +529,9 @@ def merge(objects, compat='no_conflicts', join='outer'):
         for obj in objects]
 
     variables, coord_names, dims = merge_core(dict_like_objects, compat, join)
-    merged = Dataset._construct_direct(variables, coord_names, dims)
+    # TODO: don't always recompute indexes
+    merged = Dataset._construct_direct(
+        variables, coord_names, dims, indexes=None)
 
     return merged
 
@@ -539,7 +543,7 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
     # method due for backwards compatibility
     # TODO: consider deprecating it?
 
-    if isinstance(overwrite_vars, basestring):
+    if isinstance(overwrite_vars, str):
         overwrite_vars = set([overwrite_vars])
     overwrite_vars = set(overwrite_vars)
 

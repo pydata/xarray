@@ -39,8 +39,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-
 import re
 import warnings
 from datetime import timedelta
@@ -49,7 +47,6 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
-from xarray.core import pycompat
 from xarray.core.utils import is_scalar
 
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
@@ -314,7 +311,7 @@ class CFTimeIndex(pd.Index):
 
     def get_loc(self, key, method=None, tolerance=None):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
-        if isinstance(key, pycompat.basestring):
+        if isinstance(key, str):
             return self._get_string_slice(key)
         else:
             return pd.Index.get_loc(self, key, method=method,
@@ -323,7 +320,7 @@ class CFTimeIndex(pd.Index):
     def _maybe_cast_slice_bound(self, label, side, kind):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound"""
-        if isinstance(label, pycompat.basestring):
+        if isinstance(label, str):
             parsed, resolution = _parse_iso8601_with_reso(self.date_type,
                                                           label)
             start, end = _parsed_string_to_bounds(self.date_type, resolution,
@@ -338,11 +335,13 @@ class CFTimeIndex(pd.Index):
     # e.g. series[1:5].
     def get_value(self, series, key):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_value"""
-        if not isinstance(key, slice):
-            return series.iloc[self.get_loc(key)]
-        else:
+        if np.asarray(key).dtype == np.dtype(bool):
+            return series.iloc[key]
+        elif isinstance(key, slice):
             return series.iloc[self.slice_indexer(
                 key.start, key.stop, key.step)]
+        else:
+            return series.iloc[self.get_loc(key)]
 
     def __contains__(self, key):
         """Adapted from
@@ -393,7 +392,7 @@ class CFTimeIndex(pd.Index):
             raise TypeError("'n' must be an int, got {}.".format(n))
         if isinstance(freq, timedelta):
             return self + n * freq
-        elif isinstance(freq, pycompat.basestring):
+        elif isinstance(freq, str):
             return self + n * to_offset(freq)
         else:
             raise TypeError(
@@ -411,12 +410,16 @@ class CFTimeIndex(pd.Index):
         return CFTimeIndex(other + np.array(self))
 
     def __sub__(self, other):
-        if isinstance(other, CFTimeIndex):
+        import cftime
+        if isinstance(other, (CFTimeIndex, cftime.datetime)):
             return pd.TimedeltaIndex(np.array(self) - np.array(other))
         elif isinstance(other, pd.TimedeltaIndex):
             return CFTimeIndex(np.array(self) - other.to_pytimedelta())
         else:
             return CFTimeIndex(np.array(self) - other)
+
+    def __rsub__(self, other):
+        return pd.TimedeltaIndex(other - np.array(self))
 
     def _add_delta(self, deltas):
         # To support TimedeltaIndex + CFTimeIndex with older versions of

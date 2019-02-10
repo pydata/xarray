@@ -2,6 +2,7 @@ import os
 import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
+
 import numpy as np
 
 from .. import DataArray
@@ -281,7 +282,10 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         # CRS is a dict-like object specific to rasterio
         # If CRS is not None, we convert it back to a PROJ4 string using
         # rasterio itself
-        attrs['crs'] = riods.crs.to_string()
+        try:
+            attrs['crs'] = riods.crs.to_proj4()
+        except AttributeError:
+            attrs['crs'] = riods.crs.to_string()
     if hasattr(riods, 'res'):
         # (width, height) tuple of pixels in units of CRS
         attrs['res'] = riods.res

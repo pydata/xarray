@@ -47,7 +47,6 @@ from typing import ClassVar, Optional
 
 import numpy as np
 
-from ..core.pycompat import basestring
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
 
@@ -359,29 +358,41 @@ class YearEnd(YearOffset):
 class Day(BaseCFTimeOffset):
     _freq = 'D'
 
+    def as_timedelta(self):
+        return timedelta(days=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(days=self.n)
+        return other + self.as_timedelta()
 
 
 class Hour(BaseCFTimeOffset):
     _freq = 'H'
 
+    def as_timedelta(self):
+        return timedelta(hours=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(hours=self.n)
+        return other + self.as_timedelta()
 
 
 class Minute(BaseCFTimeOffset):
     _freq = 'T'
 
+    def as_timedelta(self):
+        return timedelta(minutes=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(minutes=self.n)
+        return other + self.as_timedelta()
 
 
 class Second(BaseCFTimeOffset):
     _freq = 'S'
 
+    def as_timedelta(self):
+        return timedelta(seconds=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(seconds=self.n)
+        return other + self.as_timedelta()
 
 
 _FREQUENCIES = {
@@ -428,6 +439,11 @@ _PATTERN = r'^((?P<multiple>\d+)|())(?P<freq>({0}))$'.format(
     _FREQUENCY_CONDITION)
 
 
+# pandas defines these offsets as "Tick" objects, which for instance have
+# distinct behavior from monthly or longer frequencies in resample.
+CFTIME_TICKS = (Day, Hour, Minute, Second)
+
+
 def to_offset(freq):
     """Convert a frequency string to the appropriate subclass of
     BaseCFTimeOffset."""
@@ -452,7 +468,7 @@ def to_offset(freq):
 def to_cftime_datetime(date_str_or_date, calendar=None):
     import cftime
 
-    if isinstance(date_str_or_date, basestring):
+    if isinstance(date_str_or_date, str):
         if calendar is None:
             raise ValueError(
                 'If converting a string to a cftime.datetime object, '
