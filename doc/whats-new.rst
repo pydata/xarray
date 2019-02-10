@@ -68,7 +68,15 @@ Enhancements
 - :py:meth:`pandas.Series.dropna` is now supported for a
   :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
   (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
-
+- :py:meth:`~xarray.open_dataset` now accepts a ``use_cftime`` argument, which
+  can be used to require that ``cftime.datetime`` objects are always used, or
+  never used when decoding dates.  This can be used to ensure consistent date
+  types are returned when using :py:meth:`~xarray.open_mfdataset`
+  (:issue:`1263`) and/or to silence serialization warnings raised if dates from
+  a standard calendar are found to be outside the
+  :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_. 
+  
 Bug fixes
 ~~~~~~~~~
 
