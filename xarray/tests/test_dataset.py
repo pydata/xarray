@@ -4789,7 +4789,8 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate('time', datetime_unit='D')
     expected_data = np.trapz(
-        da, duck_array_ops.datetime_to_numeric(da['time'], datetime_unit='D'), axis=0)
+        da, duck_array_ops.datetime_to_numeric(da['time'], datetime_unit='D'),
+        axis=0)
     expected = xr.DataArray(
         expected_data, dims=['y'],
         coords={k: v for k, v in da.coords.items() if 'time' not in v.dims})

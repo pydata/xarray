@@ -37,8 +37,8 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace,
-    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution, hashable,
-    maybe_wrap_array)
+    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
+    hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 if TYPE_CHECKING:
     from .dataarray import DataArray
