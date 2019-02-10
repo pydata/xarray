@@ -573,7 +573,6 @@ def test_cftime_to_non_cftime_error():
         da.interp(time=0.5)
 
 
-@requires_cftime
 @requires_scipy
 def test_datetime_interp_noerror():
     # GH:2667
@@ -584,4 +583,4 @@ def test_datetime_interp_noerror():
     xi = xr.DataArray(
         np.linspace(1, 3, 50), dims=['time'],
         coords={'time': pd.date_range('01-01-2001', periods=50, freq='H')})
-    a.interp(x=xi, time=xi.time)  # should no error
+    a.interp(x=xi, time=xi.time)  # should not raise an error
