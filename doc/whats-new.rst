@@ -24,7 +24,7 @@ Breaking changes
 - Remove support for Python 2. This is the first version of xarray that is
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- The `compat` argument to `Dataset` and the `encoding` argument to 
+- The `compat` argument to `Dataset` and the `encoding` argument to
   `DataArray` are deprecated and will be removed in a future release.
   (:issue:`1188`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -82,7 +82,9 @@ Bug fixes
 - Fix ``open_rasterio`` creating a WKT CRS instead of PROJ.4 with
   ``rasterio`` 1.0.14+ (:issue:`2715`).
   By `David Hoese <https://github.com/djhoese`_.
-
+- Masking data arrays with :py:meth:`xarray.DataArray.where` now returns an
+  array with the name of the original masked array (:issue:`2748` and :issue:`2457`).
+  By `Yohai Bar-Sinai <https://github.com/yohai>`_.
 .. _whats-new.0.11.3:
 
 v0.11.3 (26 January 2019)
