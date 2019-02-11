@@ -183,7 +183,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                 if calendar in _STANDARD_CALENDARS:
                     warnings.warn(
                         'Unable to decode time axis into full '
-                        'numpy.datetime64 objects, continuing using dummy '
+                        'numpy.datetime64 objects, continuing using '
                         'cftime.datetime objects instead, reason: dates out '
                         'of range', SerializationWarning, stacklevel=3)
             else:

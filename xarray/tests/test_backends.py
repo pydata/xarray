@@ -3467,6 +3467,7 @@ def test_source_encoding_always_present():
             assert ds.encoding['source'] == tmp
 
 
+@requires_scipy_or_netCDF4
 @pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
 def test_use_cftime_standard_calendar_default_in_range(calendar):
     x = [0, 1]
@@ -3497,6 +3498,7 @@ def test_use_cftime_standard_calendar_default_in_range(calendar):
 
 
 @requires_cftime
+@requires_scipy_or_netCDF4
 @pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
 @pytest.mark.parametrize('units_year', [1500, 2500])
 def test_use_cftime_standard_calendar_default_out_of_range(
@@ -3530,6 +3532,7 @@ def test_use_cftime_standard_calendar_default_out_of_range(
 
 
 @requires_cftime
+@requires_scipy_or_netCDF4
 @pytest.mark.parametrize('calendar', _ALL_CALENDARS)
 @pytest.mark.parametrize('units_year', [1500, 2000, 2500])
 def test_use_cftime_true(
@@ -3563,6 +3566,7 @@ def test_use_cftime_true(
             assert not record
 
 
+@requires_scipy_or_netCDF4
 @pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
 def test_use_cftime_false_standard_calendar_in_range(calendar):
     x = [0, 1]
@@ -3592,6 +3596,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
             assert not record
 
 
+@requires_scipy_or_netCDF4
 @pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
 @pytest.mark.parametrize('units_year', [1500, 2500])
 def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
@@ -3610,6 +3615,7 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
             open_dataset(tmp_file, use_cftime=False)
 
 
+@requires_scipy_or_netCDF4
 @pytest.mark.parametrize('calendar', _NON_STANDARD_CALENDARS)
 @pytest.mark.parametrize('units_year', [1500, 2000, 2500])
 def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
