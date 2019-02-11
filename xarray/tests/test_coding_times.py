@@ -811,17 +811,13 @@ def test_use_cftime_default_standard_calendar_out_of_range(
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = f'days since {units_year}-01-01'
+    units = 'days since {}-01-01'.format(units_year)
     expected = num2date(numerical_dates, units, calendar,
                         only_use_cftime_datetimes=True)
 
     with pytest.warns(SerializationWarning):
         result = decode_cf_datetime(numerical_dates, units, calendar)
-        abs_diff = abs(result - expected)
-        # once we no longer support versions of netCDF4 older than 1.1.5,
-        # we could do this check with near microsecond accuracy:
-        # https://github.com/Unidata/netcdf4-python/issues/355
-        assert (abs_diff <= np.timedelta64(1, 's')).all()
+        np.testing.assert_array_equal(result, expected)
 
 
 @requires_cftime
@@ -831,17 +827,13 @@ def test_use_cftime_default_non_standard_calendar(calendar, units_year):
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = f'days since {units_year}-01-01'
+    units = 'days since {}-01-01'.format(units_year)
     expected = num2date(numerical_dates, units, calendar,
                         only_use_cftime_datetimes=True)
 
     with pytest.warns(None) as record:
         result = decode_cf_datetime(numerical_dates, units, calendar)
-        abs_diff = abs(result - expected)
-        # once we no longer support versions of netCDF4 older than 1.1.5,
-        # we could do this check with near microsecond accuracy:
-        # https://github.com/Unidata/netcdf4-python/issues/355
-        assert (abs_diff <= np.timedelta64(1, 's')).all()
+        np.testing.assert_array_equal(result, expected)
         assert not record
 
 
@@ -852,18 +844,14 @@ def test_use_cftime_true(calendar, units_year):
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = f'days since {units_year}-01-01'
+    units = 'days since {}-01-01'.format(units_year)
     expected = num2date(numerical_dates, units, calendar,
                         only_use_cftime_datetimes=True)
 
     with pytest.warns(None) as record:
         result = decode_cf_datetime(numerical_dates, units, calendar,
                                     use_cftime=True)
-        abs_diff = abs(result - expected)
-        # once we no longer support versions of netCDF4 older than 1.1.5,
-        # we could do this check with near microsecond accuracy:
-        # https://github.com/Unidata/netcdf4-python/issues/355
-        assert (abs_diff <= np.timedelta64(1, 's')).all()
+        np.testing.assert_array_equal(result, expected)
         assert not record
 
 
@@ -884,7 +872,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 @pytest.mark.parametrize('units_year', [1500, 2500])
 def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
     numerical_dates = [0, 1]
-    units = f'days since {units_year}-01-01'
+    units = 'days since {}-01-01'.format(units_year)
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
 
@@ -893,6 +881,6 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
 @pytest.mark.parametrize('units_year', [1500, 2000, 2500])
 def test_use_cftime_false_non_standard_calendar(calendar, units_year):
     numerical_dates = [0, 1]
-    units = f'days since {units_year}-01-01'
+    units = 'days since {}-01-01'.format(units_year)
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)

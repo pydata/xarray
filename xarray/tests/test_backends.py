@@ -3471,8 +3471,8 @@ def test_source_encoding_always_present():
 def test_use_cftime_standard_calendar_default_in_range(calendar):
     x = [0, 1]
     time = [0, 720]
-    units_date = f'2000-01-01'
-    units = f'days since {units_date}'
+    units_date = '2000-01-01'
+    units = 'days since 2000-01-01'
     original = DataArray(x, [('time', time)], name='x')
     original = original.to_dataset()
     for v in ['x', 'time']:
@@ -3506,8 +3506,7 @@ def test_use_cftime_standard_calendar_default_out_of_range(
 
     x = [0, 1]
     time = [0, 720]
-    units_date = f'{units_year}-01-01'
-    units = f'days since {units_date}'
+    units = 'days since {}-01-01'.format(units_year)
     original = DataArray(x, [('time', time)], name='x')
     original = original.to_dataset()
     for v in ['x', 'time']:
@@ -3540,8 +3539,7 @@ def test_use_cftime_true(
 
     x = [0, 1]
     time = [0, 720]
-    units_date = f'{units_year}-01-01'
-    units = f'days since {units_date}'
+    units = 'days since {}-01-01'.format(units_year)
     original = DataArray(x, [('time', time)], name='x')
     original = original.to_dataset()
     for v in ['x', 'time']:
@@ -3569,8 +3567,8 @@ def test_use_cftime_true(
 def test_use_cftime_false_standard_calendar_in_range(calendar):
     x = [0, 1]
     time = [0, 720]
-    units_date = f'2000-01-01'
-    units = f'days since {units_date}'
+    units_date = '2000-01-01'
+    units = 'days since 2000-01-01'
     original = DataArray(x, [('time', time)], name='x')
     original = original.to_dataset()
     for v in ['x', 'time']:
@@ -3599,8 +3597,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
     x = [0, 1]
     time = [0, 720]
-    units_date = f'{units_year}-01-01'
-    units = f'days since {units_date}'
+    units = 'days since {}-01-01'.format(units_year)
     original = DataArray(x, [('time', time)], name='x')
     original = original.to_dataset()
     for v in ['x', 'time']:
@@ -3618,8 +3615,7 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
 def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
     x = [0, 1]
     time = [0, 720]
-    units_date = f'{units_year}-01-01'
-    units = f'days since {units_date}'
+    units = 'days since {}'.format(units_year)
     original = DataArray(x, [('time', time)], name='x')
     original = original.to_dataset()
     for v in ['x', 'time']:
