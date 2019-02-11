@@ -28,6 +28,7 @@ from .coordinates import (
     DatasetCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
     remap_label_indexers,
 )
+from .duck_array_ops import datetime_to_numeric
 from .indexes import Indexes, default_indexes, isel_variable_and_index
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
@@ -35,9 +36,9 @@ from .merge import (
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import (
-    Frozen, SortedKeysDict, _check_inplace, datetime_to_numeric,
-    decode_numpy_dict_values, either_dict_or_kwargs, hashable,
-    maybe_wrap_array)
+    Frozen, SortedKeysDict, _check_inplace,
+    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
+    hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -3997,15 +3998,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 datetime_unit, _ = np.datetime_data(coord_var.dtype)
             elif datetime_unit is None:
                 datetime_unit = 's'  # Default to seconds for cftime objects
-            coord_var = datetime_to_numeric(
-                coord_var, datetime_unit=datetime_unit)
+            coord_var = coord_var._to_numeric(datetime_unit=datetime_unit)
 
         variables = OrderedDict()
         for k, v in self.variables.items():
             if (k in self.data_vars and dim in v.dims and
                     k not in self.coords):
                 if _contains_datetime_like_objects(v):
-                    v = datetime_to_numeric(v, datetime_unit=datetime_unit)
+                    v = v._to_numeric(datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
                     v.data, coord_var, edge_order=edge_order,
                     axis=v.get_axis_num(dim))

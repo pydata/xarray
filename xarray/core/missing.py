@@ -9,8 +9,8 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects
 from .computation import apply_ufunc
-from .duck_array_ops import dask_array_type
-from .utils import OrderedSet, datetime_to_numeric, is_scalar
+from .duck_array_ops import dask_array_type, datetime_to_numeric
+from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
 
@@ -411,10 +411,9 @@ def _floatize_x(x, new_x):
             # We assume that the most of the bits are used to represent the
             # offset (min(x)) and the variation (x - min(x)) can be
             # represented by float.
-            xmin = x[i].min()
-            x[i] = datetime_to_numeric(x[i], offset=xmin, dtype=np.float64)
-            new_x[i] = datetime_to_numeric(
-                new_x[i], offset=xmin, dtype=np.float64)
+            xmin = x[i].values.min()
+            x[i] = x[i]._to_numeric(offset=xmin, dtype=np.float64)
+            new_x[i] = new_x[i]._to_numeric(offset=xmin, dtype=np.float64)
     return x, new_x
 
 
