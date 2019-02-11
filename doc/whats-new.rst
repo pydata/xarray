@@ -91,7 +91,9 @@ Bug fixes
 - Fix ``open_rasterio`` creating a WKT CRS instead of PROJ.4 with
   ``rasterio`` 1.0.14+ (:issue:`2715`).
   By `David Hoese <https://github.com/djhoese`_.
-
+- Masking data arrays with :py:meth:`xarray.DataArray.where` now returns an
+  array with the name of the original masked array (:issue:`2748` and :issue:`2457`).
+  By `Yohai Bar-Sinai <https://github.com/yohai>`_.
 .. _whats-new.0.11.3:
 
 v0.11.3 (26 January 2019)

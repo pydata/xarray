@@ -3694,6 +3694,15 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
+def test_name_in_masking():
+    name = 'RingoStarr'
+    da = xr.DataArray(range(10), coords=[('x', range(10))], name=name)
+    assert da.where(da > 5).name == name
+    assert da.where((da > 5).rename('YokoOno')).name == name
+    assert da.where(da > 5, drop=True).name == name
+    assert da.where((da > 5).rename('YokoOno'), drop=True).name == name
+
+
 class TestIrisConversion(object):
     @requires_iris
     def test_to_and_from_iris(self):
