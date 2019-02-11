@@ -189,8 +189,10 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
     return data
 
 
-def _choose_float_dtype(dtype, has_offset):
+def _choose_float_dtype(dtype, has_offset, force_promote_float64=False):
     """Return a float dtype that can losslessly represent `dtype` values."""
+    if force_promote_float64:
+        return np.float64
     # Keep float32 as-is.  Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
     if dtype.itemsize <= 4 and np.issubdtype(dtype, np.floating):
@@ -228,13 +230,18 @@ class CFScaleOffsetCoder(VariableCoder):
 
         return Variable(dims, data, attrs, encoding)
 
-    def decode(self, variable, name=None):
+    def decode(self, variable, force_promote_float64=False, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         if 'scale_factor' in attrs or 'add_offset' in attrs:
             scale_factor = pop_to(attrs, encoding, 'scale_factor', name=name)
             add_offset = pop_to(attrs, encoding, 'add_offset', name=name)
-            dtype = _choose_float_dtype(data.dtype, 'add_offset' in attrs)
+            # Avoiding line too long warning in
+            # _choose_float_dtype
+            force_promote = force_promote_float64
+            dtype = _choose_float_dtype(data.dtype, 'add_offset' in attrs,
+                                        force_promote_float64=force_promote)
+
             transform = partial(_scale_offset_decoding,
                                 scale_factor=scale_factor,
                                 add_offset=add_offset,

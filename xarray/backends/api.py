@@ -276,7 +276,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
-            drop_variables=drop_variables)
+            drop_variables=drop_variables,
+            force_promote_float64=force_promote_float64)
 
         _protect_dataset_variables_inplace(ds, cache)
 

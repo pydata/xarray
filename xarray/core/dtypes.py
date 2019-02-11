@@ -30,12 +30,6 @@ class AlwaysLessThan(object):
 INF = AlwaysGreaterThan()
 NINF = AlwaysLessThan()
 
-# Constant that indicates if we
-# want to promote to float64 instead of
-# float32 even if dtype.itemsize <= 2
-FORCE_PROMOTE_FLOAT64 = False
-
-
 # Pairs of types that, if both found, should be promoted to object dtype
 # instead of following NumPy's own type-promotion rules. These type promotion
 # rules match pandas instead. For reference, see the NumPy type hierarchy:
@@ -68,7 +62,7 @@ def maybe_promote(dtype):
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64('NaT')
     elif np.issubdtype(dtype, np.integer):
-        if dtype.itemsize <= 2 and not FORCE_PROMOTE_FLOAT64:
+        if dtype.itemsize <= 2:
             dtype = np.float32
         else:
             dtype = np.float64
