@@ -191,7 +191,12 @@ def build_output_coords(
 
 
 def apply_dataarray_vfunc(
-    func, *args, signature, join='inner', exclude_dims=frozenset()
+    func,
+    *args,
+    signature,
+    join='inner',
+    exclude_dims=frozenset(),
+    keep_attrs=False
 ):
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
@@ -202,7 +207,10 @@ def apply_dataarray_vfunc(
         args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
                           raise_on_invalid=False)
 
-    name = result_name(args)
+    if keep_attrs and hasattr(args[0], 'name'):
+        name = args[0].name
+    else:
+        name = result_name(args)
     result_coords = build_output_coords(args, signature, exclude_dims)
 
     data_vars = [getattr(a, 'variable', a) for a in args]
@@ -956,7 +964,8 @@ def apply_ufunc(
         return apply_dataarray_vfunc(variables_vfunc, *args,
                                      signature=signature,
                                      join=join,
-                                     exclude_dims=exclude_dims)
+                                     exclude_dims=exclude_dims,
+                                     keep_attrs=keep_attrs)
     elif any(isinstance(a, Variable) for a in args):
         return variables_vfunc(*args)
     else:

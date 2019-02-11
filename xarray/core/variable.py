@@ -1782,6 +1782,14 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             return self
         return func
 
+    def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
+        """ A (private) method to convert datetime array to numeric dtype
+        See duck_array_ops.datetime_to_numeric
+        """
+        numeric_array = duck_array_ops.datetime_to_numeric(
+            self.data, offset, datetime_unit, dtype)
+        return type(self)(self.dims, numeric_array, self._attrs)
+
 
 ops.inject_all_ops_and_reduce_methods(Variable)
 
