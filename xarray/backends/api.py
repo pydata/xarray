@@ -14,7 +14,6 @@ from ..core.combine import (
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
 from .locks import _get_scheduler
-from ..core import dtypes
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -266,8 +265,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if cache is None:
         cache = chunks is None
-
-    dtypes.FORCE_PROMOTE_FLOAT64 = force_promote_float64
 
     if backend_kwargs is None:
         backend_kwargs = {}
