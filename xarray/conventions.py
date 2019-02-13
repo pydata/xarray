@@ -271,12 +271,15 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         array. Passed as an argument because we need to look at the full
         dataset to figure out if this is appropriate.
     use_cftime: bool, optional
-        If None (default), attempt to decode times to ``np.datetime64[ns]``
-        objects; if this is not possible, decode times to ``cftime.datetime``
-        objects. If True, always decode times to ``cftime.datetime`` objects,
-        regardless of whether or not they can be represented using
-        ``np.datetime64[ns]`` objects.  If False, always decode times to
-        ``np.datetime64[ns]`` objects; if this is not possible raise an error.
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
@@ -441,12 +444,15 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
     use_cftime: bool, optional
-        If None (default), attempt to decode times to ``np.datetime64[ns]``
-        objects; if this is not possible, decode times to ``cftime.datetime``
-        objects. If True, always decode times to ``cftime.datetime`` objects,
-        regardless of whether or not they can be represented using
-        ``np.datetime64[ns]`` objects.  If False, always decode times to
-        ``np.datetime64[ns]`` objects; if this is not possible raise an error.
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
