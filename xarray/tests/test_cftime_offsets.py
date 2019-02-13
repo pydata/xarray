@@ -814,3 +814,9 @@ def test_dayofyear_after_cftime_range(freq):
     result = cftime_range('2000-02-01', periods=3, freq=freq).dayofyear
     expected = pd.date_range('2000-02-01', periods=3, freq=freq).dayofyear
     np.testing.assert_array_equal(result, expected)
+
+
+def test_cftime_range_standard_calendar_refers_to_gregorian():
+    from cftime import DatetimeGregorian
+    result, = cftime_range('2000', periods=1)
+    assert isinstance(result, DatetimeGregorian)

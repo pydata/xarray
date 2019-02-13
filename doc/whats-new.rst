@@ -94,6 +94,12 @@ Bug fixes
 - Masking data arrays with :py:meth:`xarray.DataArray.where` now returns an
   array with the name of the original masked array (:issue:`2748` and :issue:`2457`).
   By `Yohai Bar-Sinai <https://github.com/yohai>`_.
+- Per `CF conventions
+  <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
+  specifying ``'standard'`` as the calendar type in
+  :py:meth:`~xarray.cftime_range` now correctly refers to the ``'gregorian'``
+  calendar instead of the ``'proleptic_gregorian'`` calendar (:issue:`2761`).
+
 .. _whats-new.0.11.3:
 
 v0.11.3 (26 January 2019)
