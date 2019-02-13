@@ -25,6 +25,7 @@ Top-level functions
    zeros_like
    ones_like
    dot
+   pinv
 
 Dataset
 =======
