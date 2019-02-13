@@ -1361,8 +1361,11 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         if dim is not None:
             axis = self.get_axis_num(dim)
-        data = func(self.data if allow_lazy else self.values,
-                    axis=axis, **kwargs)
+        if axis is not None:
+            data = func(self.data if allow_lazy else self.values,
+                        axis=axis, **kwargs)
+        else:
+            data = func(self.data if allow_lazy else self.values, **kwargs)
 
         if getattr(data, 'shape', ()) == self.shape:
             dims = self.dims
