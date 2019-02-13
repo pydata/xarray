@@ -1114,3 +1114,38 @@ def where(cond, x, y):
                        join='exact',
                        dataset_join='exact',
                        dask='allowed')
+
+
+def pinv(array, dims=None, **kwargs):
+    """Computes vectorized Moore-Penrose pseudo-inverse
+
+    Parameters
+    ----------
+    array: DataArray
+        Matrices from which we compute generalized inverses.
+    dims: pair of strings, optional
+        (row, column) dimensions of matrix to invert.
+        If not specified, computes over last 2 dimensions
+    **kwargs: dict
+        Additional keyword arguments passed to numpy.linalg.pinv
+
+    Returns
+    -------
+    pinv: DataArray
+
+    Examples
+    --------
+
+    >>> da = xr.DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5),
+    >>>                   dims=['a', 'b', 'c'])
+    >>> xr.pinv(da).dims
+    ('a', 'c', 'b')
+    """
+    if dims is None:
+        dims = array.dims[-2:]
+
+    return apply_ufunc(
+        np.linalg.pinv,
+        array,
+        input_core_dims=[dims],
+        output_core_dims=[dims[::-1]])
