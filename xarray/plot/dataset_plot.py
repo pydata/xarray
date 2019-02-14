@@ -273,6 +273,12 @@ def _dsplot(plotfunc):
 @_dsplot
 def scatter(ds, x, y, ax, **kwargs):
     """ Scatter Dataset data variables against each other. """
+
+    if 'add_colorbar' in kwargs or 'add_legend' in kwargs:
+        raise ValueError('Dataset.plot.scatter does not accept '
+                         + '\'add_colorbar\' or \'add_legend\'. '
+                         + 'Use \'add_guide\' instead.')
+
     cmap_params = kwargs.pop('cmap_params')
     hue = kwargs.pop('hue')
     hue_style = kwargs.pop('hue_style')
