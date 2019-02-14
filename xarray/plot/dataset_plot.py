@@ -3,7 +3,7 @@ import functools
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _ensure_numeric, _process_cmap_cbar_kwargs, get_axis,
+    _add_colorbar, _is_numeric, _process_cmap_cbar_kwargs, get_axis,
     label_from_attrs)
 
 
@@ -24,7 +24,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
                          'instead.'.format(', '.join(dims_coords)), hue)
 
     if hue:
-        hue_is_numeric = _ensure_numeric(ds[hue].values)
+        hue_is_numeric = _is_numeric(ds[hue].values)
 
         if hue_style is None:
             hue_style = 'continuous' if hue_is_numeric else 'discrete'
