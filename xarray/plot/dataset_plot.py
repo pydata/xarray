@@ -291,16 +291,3 @@ def scatter(ds, x, y, ax, **kwargs):
                                **cmap_params, **kwargs)
 
     return primitive
-
-
-@_dsplot
-def hist(ds, x, y, ax, **kwargs):
-
-    cmap_params = kwargs.pop('cmap_params')
-
-    xplt, yplt = broadcast(ds[x], ds[y])
-    _, _, _, primitive = ax.hist2d(ds[x].values.ravel(),
-                                   ds[y].values.ravel(),
-                                   **cmap_params, **kwargs)
-
-    return primitive
