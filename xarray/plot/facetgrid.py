@@ -280,15 +280,14 @@ class FacetGrid(object):
         return self
 
     def map_dataset(self, func, x=None, y=None, hue=None, hue_style=None,
-                    add_colorbar=None, add_legend=None, **kwargs):
+                    add_guide=None, **kwargs):
         from .dataset_plot import _infer_meta_data
 
-        kwargs['add_legend'] = False
-        kwargs['add_colorbar'] = False
+        kwargs['add_guide'] = False
         kwargs['_is_facetgrid'] = True
 
         meta_data = _infer_meta_data(self.data, x, y, hue, hue_style,
-                                     add_legend, add_colorbar)
+                                     add_guide)
         kwargs['meta_data'] = meta_data
 
         if hue and meta_data['hue_style'] == 'continuous':
@@ -312,10 +311,10 @@ class FacetGrid(object):
 
         if hue:
             self._hue_label = meta_data.pop('hue_label', None)
-            if add_legend:
+            if meta_data['add_legend']:
                 self._hue_var = meta_data['hue_values']
                 self.add_legend()
-            elif add_colorbar:
+            elif meta_data['add_colorbar']:
                 self.add_colorbar(label=self._hue_label, **cbar_kwargs)
 
         return self

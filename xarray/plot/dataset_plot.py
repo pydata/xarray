@@ -7,8 +7,7 @@ from .utils import (
     label_from_attrs)
 
 
-def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,
-                     add_legend):
+def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
     dvars = set(ds.data_vars.keys())
     error_msg = (' must be either one of ({0:s})'
                  .format(', '.join(dvars)))
@@ -34,17 +33,13 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,
             raise ValueError('Cannot create a colorbar for a non numeric'
                              ' coordinate: ' + hue)
 
-        if add_colorbar is None:
+        if add_guide is None:
             add_colorbar = True if hue_style == 'continuous' else False
-
-        if add_legend is None:
             add_legend = True if hue_style == 'discrete' else False
 
     else:
-        if add_legend is True:
-            raise ValueError('Cannot set add_legend when hue is None.')
-        if add_colorbar is True:
-            raise ValueError('Cannot set add_colorbar when hue is None.')
+        if add_guide is True:
+            raise ValueError('Cannot set add_guide when hue is None.')
         add_legend = False
         add_colorbar = False
 
@@ -109,12 +104,12 @@ def _dsplot(plotfunc):
     hue: str, optional
         Variable by which to color scattered points
     hue_style: str, optional
-        Hue style.
-            - "discrete" builds a legend. This is the default for non-numeric
-               `hue` variables.
-            - "continuous" builds a colorbar
-    add_legend, add_colorbar: bool, optional
-        Turn the legend or colorbar on/off.
+        Hue style. Can be either 'discrete' or 'continuous'.
+    add_guide: bool, optional
+        Add a guide that depends on hue_style
+            - for "discrete", build a legend.
+              This is the default for non-numeric `hue` variables.
+            - for "continuous",  build a colorbar
     row : string, optional
         If passed, make row faceted plots on this dimension name
     col : string, optional
@@ -179,8 +174,8 @@ def _dsplot(plotfunc):
     def newplotfunc(ds, x=None, y=None, hue=None, hue_style=None,
                     col=None, row=None, ax=None, figsize=None, size=None,
                     col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    subplot_kws=None, add_colorbar=None, cbar_kwargs=None,
-                    add_legend=None, cbar_ax=None, vmin=None, vmax=None,
+                    subplot_kws=None, add_guide=None, cbar_kwargs=None,
+                    cbar_ax=None, vmin=None, vmax=None,
                     norm=None, infer_intervals=None, center=None, levels=None,
                     robust=None, colors=None, extend=None, cmap=None,
                     **kwargs):
@@ -189,12 +184,9 @@ def _dsplot(plotfunc):
         if _is_facetgrid:  # facetgrid call
             meta_data = kwargs.pop('meta_data')
         else:
-            meta_data = _infer_meta_data(ds, x, y, hue, hue_style,
-                                         add_colorbar, add_legend)
+            meta_data = _infer_meta_data(ds, x, y, hue, hue_style, add_guide)
 
         hue_style = meta_data['hue_style']
-        add_legend = meta_data['add_legend']
-        add_colorbar = meta_data['add_colorbar']
 
         # handle facetgrids first
         if col or row:
@@ -237,11 +229,11 @@ def _dsplot(plotfunc):
         if meta_data.get('ylabel', None):
             ax.set_ylabel(meta_data.get('ylabel'))
 
-        if add_legend:
+        if meta_data['add_legend']:
             ax.legend(handles=primitive,
                       labels=list(meta_data['hue_values'].values),
                       title=meta_data.get('hue_label', None))
-        if add_colorbar:
+        if meta_data['add_colorbar']:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
             if 'label' not in cbar_kwargs:
                 cbar_kwargs['label'] = meta_data.get('hue_label', None)
@@ -254,9 +246,8 @@ def _dsplot(plotfunc):
                    hue_style=None, col=None, row=None, ax=None,
                    figsize=None,
                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                   size=None, subplot_kws=None, add_colorbar=None,
-                   cbar_kwargs=None,
-                   add_legend=None, cbar_ax=None, vmin=None, vmax=None,
+                   size=None, subplot_kws=None, add_guide=None,
+                   cbar_kwargs=None, cbar_ax=None, vmin=None, vmax=None,
                    norm=None, infer_intervals=None, center=None, levels=None,
                    robust=None, colors=None, extend=None, cmap=None,
                    **kwargs):

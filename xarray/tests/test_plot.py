@@ -1852,18 +1852,17 @@ class TestDatasetScatterPlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x='A', y='B', row='row', size=3, figsize=4)
 
-    @pytest.mark.parametrize('x, y, hue_style, add_legend, add_colorbar', [
-        ('A', 'B', 'something', True, False),
-        ('A', 'B', 'discrete', True, False),
-        ('A', 'B', None, True, False),
         ('A', 'B', None, False, True),
-        ('A', 'The Spanish Inquisition', None, None, None),
-        ('The Spanish Inquisition', 'B', None, None, None)])
-    def test_bad_args(self, x, y, hue_style, add_legend, add_colorbar):
+    @pytest.mark.parametrize('x, y, hue_style, add_guide', [
+        ('A', 'B', 'something', True),
+        ('A', 'B', 'discrete', True),
+        ('A', 'B', None, True),
+        ('A', 'The Spanish Inquisition', None, None),
+        ('The Spanish Inquisition', 'B', None, True)])
+    def test_bad_args(self, x, y, hue_style, add_guide):
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x, y, hue_style=hue_style,
-                                 add_legend=add_legend,
-                                 add_colorbar=add_colorbar)
+                                 add_guide=add_guide)
 
     @pytest.mark.xfail(reason=['datetime, timedelta64 hue variable'
                                ' not supported yet.'])
