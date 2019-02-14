@@ -571,3 +571,16 @@ def test_cftime_to_non_cftime_error():
 
     with pytest.raises(TypeError):
         da.interp(time=0.5)
+
+
+@requires_scipy
+def test_datetime_interp_noerror():
+    # GH:2667
+    a = xr.DataArray(
+        np.arange(21).reshape(3, 7), dims=['x', 'time'],
+        coords={'x': [1, 2, 3],
+                'time': pd.date_range('01-01-2001', periods=7, freq='D')})
+    xi = xr.DataArray(
+        np.linspace(1, 3, 50), dims=['time'],
+        coords={'time': pd.date_range('01-01-2001', periods=50, freq='H')})
+    a.interp(x=xi, time=xi.time)  # should not raise an error

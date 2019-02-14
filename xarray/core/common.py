@@ -713,7 +713,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         array([ 0.      ,  0.032258,  0.064516, ..., 10.935484, 10.967742, 11.      ])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
-        
+
         Limit scope of upsampling method
         >>> da.resample(time='1D').nearest(tolerance='1D')
         <xarray.DataArray (time: 337)>

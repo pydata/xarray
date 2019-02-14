@@ -20,16 +20,16 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  # - rasterio  # xref #2683
+  - rasterio
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
   - eccodes
   - cdms2
-# - pynio  # xref #2683
-# - iris>=1.10  # xref #2683
+  - pynio
+  - iris>=1.10
   - pydap
   - lxml
   - pip:
     - cfgrib>=0.9.2
-    - mypy==0.650
+    - mypy==0.660
