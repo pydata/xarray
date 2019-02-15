@@ -281,13 +281,15 @@ class FacetGrid(object):
 
     def map_dataset(self, func, x=None, y=None, hue=None, hue_style=None,
                     add_guide=None, **kwargs):
-        from .dataset_plot import _infer_meta_data
+        from .dataset_plot import _infer_meta_data, _parse_size
 
         kwargs['add_guide'] = False
         kwargs['_is_facetgrid'] = True
 
-        if kwargs.get('scatter_size'):
-            raise NotImplementedError('Cannot facet with scatter_size specified.')
+        if kwargs.get('scatter_size', None):
+            kwargs['size_mapping'] = _parse_size(
+                self.data[kwargs['scatter_size']],
+                kwargs.pop('size_norm', None))
 
         meta_data = _infer_meta_data(self.data, x, y, hue, hue_style,
                                      add_guide)

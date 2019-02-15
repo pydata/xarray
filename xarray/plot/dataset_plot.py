@@ -68,7 +68,8 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
             'hue_values': hue_values}
 
 
-def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm):
+def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm,
+                        size_mapping=None):
 
     broadcast_keys = ['x', 'y']
     to_broadcast = [ds[x], ds[y]]
@@ -92,7 +93,8 @@ def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm):
     if scatter_size:
         size = broadcasted['size']
 
-        size_mapping = _parse_size(size, size_norm)
+        if size_mapping is None:
+            size_mapping = _parse_size(size, size_norm)
 
         if _is_numeric(size):
             # TODO : is there a better vectorized way of doing
@@ -359,9 +361,11 @@ def scatter(ds, x, y, ax, **kwargs):
     hue_style = kwargs.pop('hue_style')
     scatter_size = kwargs.pop('scatter_size', None)
     size_norm = kwargs.pop('size_norm', None)
+    size_mapping = kwargs.pop('size_mapping', None)  # set by facetgrid
 
     # need to infer size_mapping with full dataset
-    data = _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm)
+    data = _infer_scatter_data(ds, x, y, hue,
+                               scatter_size, size_norm, size_mapping)
 
     if hue_style == 'discrete':
         primitive = []
