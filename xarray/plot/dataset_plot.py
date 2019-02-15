@@ -81,26 +81,29 @@ def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm):
 
     broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
 
-    data = {'x': broadcasted['x'].values.flatten(),
-            'y': broadcasted['y'].values.flatten(),
-            'color': None,
+    data = {'x': broadcasted['x'],
+            'y': broadcasted['y'],
+            'hue': None,
             'sizes': None}
 
     if hue:
-        data['color'] = broadcasted['hue'].values.flatten()
+        data['hue'] = broadcasted['hue']
 
     if scatter_size:
-        ss = broadcasted['size'].values.flatten()
+        size = broadcasted['size']
 
-        size_mapping = _parse_size(ss, size_norm)
+        size_mapping = _parse_size(size, size_norm)
 
-        if _is_numeric(ss):
-            # TODO : is there a better way of doing this?
+        if _is_numeric(size):
+            # TODO : is there a better vectorized way of doing
+            # data['sizes'] = np.array([size_mapping.get(s0) for s0 in ss])
             map_keys = np.array(list(size_mapping.keys()))
             map_vals = np.array(list(size_mapping.values()))
-            data['sizes'] = map_vals[np.digitize(ss, map_keys) - 1]
+            data['sizes'] = size.copy(
+                data=map_vals[np.digitize(size, map_keys) - 1])
         else:
-            data['sizes'] = np.array([size_mapping.get(s0) for s0 in ss])
+            data['sizes'] = size.copy(
+                data=np.array([size_mapping.get(s0) for s0 in size]))
 
     return data
 
@@ -110,6 +113,8 @@ def _parse_size(data, norm):
 
     if data is None:
         return None
+
+    data = data.values.flatten()
 
     if not _is_numeric(data):
         levels = np.unique(data)
@@ -360,23 +365,25 @@ def scatter(ds, x, y, ax, **kwargs):
 
     if hue_style == 'discrete':
         primitive = []
-        for label in np.unique(data['color']):
-            # is there a clever way to avoid this?
-            # data = _infer_scatter_data(grp, x, y, None, scatter_size, size_norm)
-            mask = data['color'] == label
+        for label in np.unique(data['hue'].values):
+            mask = data['hue'] == label
             if data['sizes'] is not None:
-                kwargs.update(s=data['sizes'][mask])
+                kwargs.update(
+                    s=data['sizes'].where(mask, drop=True).values.flatten())
 
-            primitive.append(ax.scatter(data['x'][mask],
-                                        data['y'][mask],
-                                        label=label,
-                                        **kwargs))
+            primitive.append(
+                ax.scatter(data['x'].where(mask, drop=True).values.flatten(),
+                           data['y'].where(mask, drop=True).values.flatten(),
+                           label=label, **kwargs))
 
     elif hue is None or hue_style == 'continuous':
-        primitive = ax.scatter(data['x'],
-                               data['y'],
-                               c=data['color'],
-                               s=data['sizes'],
+        if data['sizes'] is not None:
+            kwargs.update(s=data['sizes'].values.ravel())
+        if data['hue'] is not None:
+            kwargs.update(c=data['hue'].values.ravel())
+
+        primitive = ax.scatter(data['x'].values.ravel(),
+                               data['y'].values.ravel(),
                                **cmap_params, **kwargs)
 
     return primitive
