@@ -292,7 +292,7 @@ class FacetGrid(object):
 
         if hue and meta_data['hue_style'] == 'continuous':
             cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                func, kwargs, self.data[hue])
+                func, kwargs, self.data[hue].values)
             kwargs['meta_data']['cmap_params'] = cmap_params
             kwargs['meta_data']['cbar_kwargs'] = cbar_kwargs
 
@@ -335,7 +335,7 @@ class FacetGrid(object):
     def add_legend(self, **kwargs):
         figlegend = self.fig.legend(
             handles=self._mappables[-1],
-            labels=list(self._hue_var.values),
+            labels=list(self._hue_var),
             title=self._hue_label,
             loc="center right", **kwargs)
 

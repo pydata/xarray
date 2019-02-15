@@ -8,20 +8,18 @@ from .utils import (
 
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
-    dvars = set(ds.data_vars.keys())
-    error_msg = (' must be either one of ({0:s})'
+    dvars = set(ds.variables.keys())
+    error_msg = (' must be one of ({0:s})'
                  .format(', '.join(dvars)))
 
     if x not in dvars:
-        raise ValueError(x + error_msg)
+        raise ValueError('x' + error_msg)
 
     if y not in dvars:
-        raise ValueError(y + error_msg)
+        raise ValueError('y' + error_msg)
 
-    dims_coords = set(list(ds.coords) + list(ds.dims))
-    if hue is not None and hue not in dims_coords:
-        raise ValueError('hue must be one of ({0:s}) but is {hue}'
-                         'instead.'.format(', '.join(dims_coords)), hue)
+    if hue is not None and hue not in dvars:
+        raise ValueError('hue' + error_msg)
 
     if hue:
         hue_is_numeric = _is_numeric(ds[hue].values)
@@ -47,14 +45,9 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
         raise ValueError('hue_style must be either None, \'discrete\' '
                          'or \'continuous\'.')
 
-    dims = ds[x].dims
-    if ds[y].dims != dims:
-        raise ValueError('{} and {} must have the same dimensions.'
-                         ''.format(x, y))
-
     if hue:
-        hue_label = label_from_attrs(ds.coords[hue])
-        hue_values = ds[x].coords[hue]
+        hue_label = label_from_attrs(ds[hue])
+        hue_values = ds[hue].values
     else:
         hue_label = None
         hue_values = None
@@ -70,12 +63,37 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
 
 def _infer_scatter_data(ds, x, y, hue):
 
-    data = {'x': ds[x].values.flatten(),
-            'y': ds[y].values.flatten(),
-            'color': None}
+    broadcast_keys = ['x', 'y']
+    to_broadcast = [ds[x], ds[y]]
     if hue:
-        data['color'] = (broadcast(ds.coords[hue], ds[x])[0]
-                         .values.flatten())
+        to_broadcast.append(ds[hue])
+        broadcast_keys.append('hue')
+    if scatter_size:
+        to_broadcast.append(ds[scatter_size])
+        broadcast_keys.append('size')
+
+    broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
+
+    data = {'x': broadcasted['x'].values.flatten(),
+            'y': broadcasted['y'].values.flatten(),
+            'color': None,
+            'sizes': None}
+
+    if hue:
+        data['color'] = broadcasted['hue'].values.flatten()
+
+    if scatter_size:
+        ss = (broadcast(ds[scatter_size], xx)[0]
+              .values.flatten())
+
+        size_mapping = _parse_size(ss, size_norm)
+
+        if _is_numeric(ss):
+            data['sizes'] = np.array(size_mapping.values())[
+                np.digitize(ss, np.array(size_mapping.keys()))]
+        else:
+            data['sizes'] = np.array([size_mapping.get(s0) for s0 in ss])
+
     return data
 
 
@@ -208,7 +226,7 @@ def _dsplot(plotfunc):
                 cmap_params = meta_data['cmap_params']
             else:
                 cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                    plotfunc, locals(), ds[hue])
+                    plotfunc, locals(), ds[hue].values)
 
             # subset that can be passed to scatter, hist2d
             cmap_params_subset = dict(
@@ -231,7 +249,7 @@ def _dsplot(plotfunc):
 
         if meta_data['add_legend']:
             ax.legend(handles=primitive,
-                      labels=list(meta_data['hue_values'].values),
+                      labels=list(meta_data['hue_values']),
                       title=meta_data.get('hue_label', None))
         if meta_data['add_colorbar']:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs

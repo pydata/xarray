@@ -1854,10 +1854,10 @@ class TestDatasetScatterPlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x='A', y='B', row='row', size=3, figsize=4)
 
-        ('A', 'B', None, False, True),
     @pytest.mark.parametrize('x, y, hue_style, add_guide', [
         ('A', 'B', 'something', True),
         ('A', 'B', 'discrete', True),
+        ('x', 'y', 'A', None),
         ('A', 'B', None, True),
         ('A', 'The Spanish Inquisition', None, None),
         ('The Spanish Inquisition', 'B', None, True)])
@@ -1888,6 +1888,12 @@ class TestDatasetScatterPlots(PlotTestCase):
             # for 'continuous', should be single PathCollection
             assert isinstance(g._mappables[-1], map_type)
 
+    @pytest.mark.parametrize('x, y, hue, scatter_size', [
+        ('A', 'B', 'x', 'col'),
+        ('x', 'row', 'A', 'B')])
+    def test_scatter(self, x, y, hue, scatter_size):
+        self.ds.plot.scatter(x, y, hue=hue, scatter_size=scatter_size)
+
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()
         ds2['hue'] = ['a', 'b', 'c', 'd']
@@ -1902,11 +1908,6 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x='A', y='B', hue='hue')
         assert len(sc.figure.axes) == 2
-
-    def test_not_same_dimensions(self):
-        self.ds['A'] = self.ds['A'].isel(x=0)
-        with pytest.raises(ValueError):
-            self.ds.plot.scatter(x='A', y='B')
 
 
 class TestDatetimePlot(PlotTestCase):
