@@ -645,6 +645,12 @@ You can force a legend instead of a colorbar by setting ``hue_style='discrete'``
     @savefig ds_discrete_legend_hue_scatter.png
     ds.plot.scatter(x='A', y='B', hue='w', hue_style='discrete')
 
+The ``scatter_size`` kwarg lets you vary the point's size by variable value. You can additionally pass ``size_norm`` to control how the variable's values are mapped to point sizes.
+
+.. ipython:: python
+
+    @savefig ds_hue_size_scatter.png
+    ds.plot.scatter(x='A', y='B', hue='z', hue_style='discrete', scatter_size='z')
 
 Faceting is also possible
 

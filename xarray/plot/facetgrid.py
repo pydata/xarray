@@ -286,6 +286,9 @@ class FacetGrid(object):
         kwargs['add_guide'] = False
         kwargs['_is_facetgrid'] = True
 
+        if kwargs.get('scatter_size'):
+            raise NotImplementedError('Cannot facet with scatter_size specified.')
+
         meta_data = _infer_meta_data(self.data, x, y, hue, hue_style,
                                      add_guide)
         kwargs['meta_data'] = meta_data

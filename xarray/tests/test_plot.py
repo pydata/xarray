@@ -1857,7 +1857,6 @@ class TestDatasetScatterPlots(PlotTestCase):
     @pytest.mark.parametrize('x, y, hue_style, add_guide', [
         ('A', 'B', 'something', True),
         ('A', 'B', 'discrete', True),
-        ('x', 'y', 'A', None),
         ('A', 'B', None, True),
         ('A', 'The Spanish Inquisition', None, None),
         ('The Spanish Inquisition', 'B', None, True)])

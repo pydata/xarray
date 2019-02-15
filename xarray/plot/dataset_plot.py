@@ -1,10 +1,17 @@
 import functools
 
+import matplotlib as mpl
+import numpy as np
+
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar, _is_numeric, _process_cmap_cbar_kwargs, get_axis,
     label_from_attrs)
+
+# copied from seaborn
+_SCATTER_SIZE_RANGE = (np.r_[.5, 2]
+                       * np.square(mpl.rcParams["lines.markersize"]))
 
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
@@ -61,7 +68,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
             'hue_values': hue_values}
 
 
-def _infer_scatter_data(ds, x, y, hue):
+def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm):
 
     broadcast_keys = ['x', 'y']
     to_broadcast = [ds[x], ds[y]]
@@ -83,18 +90,57 @@ def _infer_scatter_data(ds, x, y, hue):
         data['color'] = broadcasted['hue'].values.flatten()
 
     if scatter_size:
-        ss = (broadcast(ds[scatter_size], xx)[0]
-              .values.flatten())
+        ss = broadcasted['size'].values.flatten()
 
         size_mapping = _parse_size(ss, size_norm)
 
         if _is_numeric(ss):
-            data['sizes'] = np.array(size_mapping.values())[
-                np.digitize(ss, np.array(size_mapping.keys()))]
+            # TODO : is there a better way of doing this?
+            map_keys = np.array(list(size_mapping.keys()))
+            map_vals = np.array(list(size_mapping.values()))
+            data['sizes'] = map_vals[np.digitize(ss, map_keys) - 1]
         else:
             data['sizes'] = np.array([size_mapping.get(s0) for s0 in ss])
 
     return data
+
+
+# copied from seaborn
+def _parse_size(data, norm):
+
+    if data is None:
+        return None
+
+    if not _is_numeric(data):
+        levels = np.unique(data)
+        numbers = np.arange(1, 1+len(levels))[::-1]
+    else:
+        levels = numbers = np.sort(np.unique(data))
+
+    min_width, max_width = _SCATTER_SIZE_RANGE
+    # width_range = min_width, max_width
+
+    if norm is None:
+        norm = mpl.colors.Normalize()
+    elif isinstance(norm, tuple):
+        norm = mpl.colors.Normalize(*norm)
+    elif not isinstance(norm, mpl.colors.Normalize):
+        err = ("``size_norm`` must be None, tuple, "
+               "or Normalize object.")
+        raise ValueError(err)
+
+    norm.clip = True
+    if not norm.scaled():
+        norm(np.asarray(numbers))
+    # limits = norm.vmin, norm.vmax
+
+    scl = norm(numbers)
+    widths = np.asarray(min_width + scl * (max_width - min_width))
+    if scl.mask.any():
+        widths[scl.mask] = 0
+    sizes = dict(zip(levels, widths))
+
+    return sizes
 
 
 class _Dataset_PlotMethods(object):
@@ -123,6 +169,10 @@ def _dsplot(plotfunc):
         Variable by which to color scattered points
     hue_style: str, optional
         Hue style. Can be either 'discrete' or 'continuous'.
+    scatter_size: str, optional (scatter only)
+        Variably by which to vary size of scattered points
+    size_norm: optional
+        Either None or Norm instance to normalize the 'scatter_size' variable.
     add_guide: bool, optional
         Add a guide that depends on hue_style
             - for "discrete", build a legend.
@@ -215,7 +265,7 @@ def _dsplot(plotfunc):
             for arg in ['meta_data', 'kwargs', 'ds']:
                 del allargs[arg]
 
-            return _easy_facetgrid(kind='dataset', **allargs)
+            return _easy_facetgrid(kind='dataset', **allargs, **kwargs)
 
         figsize = kwargs.pop('figsize', None)
         ax = get_axis(figsize, size, aspect, ax)
@@ -290,7 +340,9 @@ def _dsplot(plotfunc):
 
 @_dsplot
 def scatter(ds, x, y, ax, **kwargs):
-    """ Scatter Dataset data variables against each other. """
+    """
+    Scatter Dataset data variables against each other.
+    """
 
     if 'add_colorbar' in kwargs or 'add_legend' in kwargs:
         raise ValueError('Dataset.plot.scatter does not accept '
@@ -300,18 +352,31 @@ def scatter(ds, x, y, ax, **kwargs):
     cmap_params = kwargs.pop('cmap_params')
     hue = kwargs.pop('hue')
     hue_style = kwargs.pop('hue_style')
+    scatter_size = kwargs.pop('scatter_size', None)
+    size_norm = kwargs.pop('size_norm', None)
+
+    # need to infer size_mapping with full dataset
+    data = _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm)
 
     if hue_style == 'discrete':
         primitive = []
-        for label, grp in ds.groupby(ds[hue]):
-            data = _infer_scatter_data(grp, x, y, hue=None)
-            primitive.append(ax.scatter(data['x'], data['y'], label=label,
+        for label in np.unique(data['color']):
+            # is there a clever way to avoid this?
+            # data = _infer_scatter_data(grp, x, y, None, scatter_size, size_norm)
+            mask = data['color'] == label
+            if data['sizes'] is not None:
+                kwargs.update(s=data['sizes'][mask])
+
+            primitive.append(ax.scatter(data['x'][mask],
+                                        data['y'][mask],
+                                        label=label,
                                         **kwargs))
 
     elif hue is None or hue_style == 'continuous':
-        data = _infer_scatter_data(ds, x, y, hue)
-
-        primitive = ax.scatter(data['x'], data['y'], c=data['color'],
+        primitive = ax.scatter(data['x'],
+                               data['y'],
+                               c=data['color'],
+                               s=data['sizes'],
                                **cmap_params, **kwargs)
 
     return primitive
