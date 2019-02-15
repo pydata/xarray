@@ -617,22 +617,8 @@ Consider this dataset
 
 .. ipython:: python
 
-   A = xr.DataArray(np.zeros([3, 11, 4, 4]), dims=[ 'x', 'y', 'z', 'w'],
-	            coords=[np.arange(3), np.linspace(0,1,11), np.arange(4),
-		            0.1*np.random.randn(4)])
-   # fake some data
-   B = 0.1*A.x**2 + A.y**2.5 + 0.1*A.z*A.w
-   A = -0.1*A.x + A.y/(5+A.z) + A.w
-
-   ds = xr.Dataset({'A':A, 'B':B})
-   ds['w'] = ['one', 'two', 'three', 'five']
-
-   # add some attributes to showcase automatic labelling
-   ds.x.attrs['units'] = 'xunits'
-   ds.y.attrs['units'] = 'yunits'
-   ds.z.attrs['units'] = 'zunits'
-   ds.A.attrs['units'] = 'Aunits'
-   ds.B.attrs['units'] = 'Bunits'
+   ds = xr.tutorial.scatter_example_dataset()
+   ds
 
 
 Suppose we want to scatter ``A`` against ``B``
