@@ -523,7 +523,8 @@ def test_cftime_type_error():
 def test_cftime_list_of_strings():
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range('2000', periods=24, freq='D')
+    times = xr.cftime_range('2000', periods=24, freq='D',
+                            calendar='proleptic_gregorian')
     da = xr.DataArray(np.arange(24), coords=[times], dims='time')
 
     times_new = ['2000-01-01T12:00', '2000-01-02T12:00', '2000-01-03T12:00']
@@ -542,7 +543,8 @@ def test_cftime_list_of_strings():
 def test_cftime_single_string():
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range('2000', periods=24, freq='D')
+    times = xr.cftime_range('2000', periods=24, freq='D',
+                            calendar='proleptic_gregorian')
     da = xr.DataArray(np.arange(24), coords=[times], dims='time')
 
     times_new = '2000-01-01T12:00'
