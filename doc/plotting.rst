@@ -638,6 +638,7 @@ The ``hue`` kwarg lets you vary the color by variable value
 When ``hue`` is specified, a colorbar is added for numeric ``hue`` DataArrays by
 default and a legend is added for non-numeric ``hue`` DataArrays (as above).
 You can force a legend instead of a colorbar by setting ``hue_style='discrete'``.
+Additionally, the boolean kwarg ``add_guide`` can be used to prevent the display of a legend or colorbar (as appropriate).
 
 .. ipython:: python
 
