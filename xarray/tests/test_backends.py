@@ -1140,14 +1140,15 @@ class NetCDF4Base(CFEncodedBase):
                 v = nc.variables['x']
                 v.set_auto_maskandscale(False)
                 v.add_offset = 10
-                v.scale_factor = 0.1
+                v.scale_factor = np.float32(0.1)
                 v[:] = np.array([-1, -1, 0, 1, 2])
 
             # first make sure netCDF4 reads the masked and scaled data
             # correctly
             with nc4.Dataset(tmp_file, mode='r') as nc:
                 expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
-                                       mask=[True, True, False, False, False])
+                                       mask=[True, True, False, False, False],
+                                       dtype=np.float32)
                 actual = nc.variables['x'][:]
                 assert_array_equal(expected, actual)
 
@@ -1156,18 +1157,19 @@ class NetCDF4Base(CFEncodedBase):
                 expected = create_masked_and_scaled_data()
                 assert_identical(expected, ds)
 
-    def test_force_promote_float64_variable(self):
+    def test_mask_and_scale_with_float64_scale_factor(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode='w') as nc:
                 nc.createDimension('t', 5)
                 nc.createVariable('x', 'int16', ('t',), fill_value=-1)
                 v = nc.variables['x']
                 v.scale_factor = 0.01
+                v.add_offset = 10
                 v[:] = np.array([-1123, -1123, 123, 1123, 2123])
             # We read the newly created netcdf file
             with nc4.Dataset(tmp_file, mode='r') as nc:
                 # we open the dataset with forced promotion to 64 bit
-                with open_dataset(tmp_file, force_promote_float64=True) as ds:
+                with open_dataset(tmp_file) as ds:
                     # Both dataset values should be equal
                     # And both of float64 array type
                     dsv = ds['x'].values

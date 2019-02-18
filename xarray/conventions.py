@@ -240,7 +240,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
 
 def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
                        decode_times=True, decode_endianness=True,
-                       stack_char_dim=True, force_promote_float64=False):
+                       stack_char_dim=True):
     """
     Decodes a variable which may hold CF encoded information.
 
@@ -270,9 +270,6 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         Whether to stack characters into bytes along the last dimension of this
         array. Passed as an argument because we need to look at the full
         dataset to figure out if this is appropriate.
-    force_promote_float64: bool
-        If True force int variables with scale factor to be promoted to
-        float64 instead of float32
     Returns
     -------
     out : Variable
@@ -288,13 +285,9 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
 
     if mask_and_scale:
         for coder in [variables.UnsignedIntegerCoder(),
-                      variables.CFMaskCoder()]:
+                      variables.CFMaskCoder(),
+                      variables.CFScaleOffsetCoder()]:
             var = coder.decode(var, name=name)
-
-        coder = variables.CFScaleOffsetCoder()
-        var = coder.decode(var,
-                           name=name,
-                           force_promote_float64=force_promote_float64)
 
     if decode_times:
         for coder in [times.CFTimedeltaCoder(),
@@ -352,8 +345,7 @@ def _update_bounds_attributes(variables):
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
-                        decode_coords=True, drop_variables=None,
-                        force_promote_float64=False):
+                        decode_coords=True, drop_variables=None):
     """
     Decode several CF encoded variables.
 
@@ -394,8 +386,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         new_vars[k] = decode_cf_variable(
             k, v, concat_characters=concat_characters,
             mask_and_scale=mask_and_scale, decode_times=decode_times,
-            stack_char_dim=stack_char_dim,
-            force_promote_float64=force_promote_float64)
+            stack_char_dim=stack_char_dim)
         if decode_coords:
             var_attrs = new_vars[k].attrs
             if 'coordinates' in var_attrs:
@@ -414,8 +405,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def decode_cf(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True, decode_coords=True, drop_variables=None,
-              force_promote_float64=False):
+              decode_times=True, decode_coords=True, drop_variables=None):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -439,9 +429,6 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    force_promote_float64: bool
-        If True force int variables with scale factor to be promoted to
-        float64 instead of float32
     Returns
     -------
     decoded : Dataset
@@ -465,8 +452,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
 
     vars, attrs, coord_names = decode_cf_variables(
         vars, attrs, concat_characters, mask_and_scale, decode_times,
-        decode_coords, drop_variables=drop_variables,
-        force_promote_float64=force_promote_float64)
+        decode_coords, drop_variables=drop_variables)
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
     ds._file_obj = file_obj

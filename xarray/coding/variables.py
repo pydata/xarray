@@ -189,10 +189,36 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
     return data
 
 
-def _choose_float_dtype(dtype, has_offset, force_promote_float64=False):
+def _choose_float_dtype(dtype, scale_factor, add_offset):
     """Return a float dtype that can losslessly represent `dtype` values."""
-    if force_promote_float64:
-        return np.float64
+    # Implementing cf-convention
+    # http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch08.html:
+    # Detail:
+    # If the scale_factor and add_offset attributes are of the same
+    # data type as the
+    # associated variable, the unpacked data is assumed to be of the same
+    # data type as the packed data. However, if the scale_factor
+    # and add_offset attributes are of a different data type
+    # from the variable (containing the packed data)
+    # then the unpacked data should match
+    # the type of these attributes, which must both be of type float or both
+    # be of type double. An additional restriction in this case is that
+    # the variable containing the packed data must
+    # be of type byte, short or int.
+    # It is not advised to unpack an int into a float as there
+    # is a potential precision loss.
+
+    # We first return scale_factor type
+    # as multiplying takes priority over
+    # adding values
+    if dtype is not type(scale_factor) and \
+            isinstance(scale_factor, np.generic):
+        return np.dtype(scale_factor)
+
+    if dtype is not type(add_offset) and \
+            isinstance(add_offset, np.generic):
+        return np.dtype(add_offset)
+
     # Keep float32 as-is.  Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
     if dtype.itemsize <= 4 and np.issubdtype(dtype, np.floating):
@@ -203,7 +229,7 @@ def _choose_float_dtype(dtype, has_offset, force_promote_float64=False):
         # but a large integer offset could lead to loss of precision.
         # Sensitivity analysis can be tricky, so we just use a float64
         # if there's any offset at all - better unoptimised than wrong!
-        if not has_offset:
+        if not add_offset:
             return np.float32
     # For all other types and circumstances, we just use float64.
     # (safe because eg. complex numbers are not supported in NetCDF)
@@ -221,7 +247,9 @@ class CFScaleOffsetCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         if 'scale_factor' in encoding or 'add_offset' in encoding:
-            dtype = _choose_float_dtype(data.dtype, 'add_offset' in encoding)
+            scale_factor = pop_to(attrs, encoding, 'scale_factor', name=name)
+            add_offset = pop_to(attrs, encoding, 'add_offset', name=name)
+            dtype = _choose_float_dtype(data.dtype, scale_factor, add_offset)
             data = data.astype(dtype=dtype, copy=True)
             if 'add_offset' in encoding:
                 data -= pop_to(encoding, attrs, 'add_offset', name=name)
@@ -230,17 +258,13 @@ class CFScaleOffsetCoder(VariableCoder):
 
         return Variable(dims, data, attrs, encoding)
 
-    def decode(self, variable, force_promote_float64=False, name=None):
+    def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         if 'scale_factor' in attrs or 'add_offset' in attrs:
             scale_factor = pop_to(attrs, encoding, 'scale_factor', name=name)
             add_offset = pop_to(attrs, encoding, 'add_offset', name=name)
-            # Avoiding line too long warning in
-            # _choose_float_dtype
-            force_promote = force_promote_float64
-            dtype = _choose_float_dtype(data.dtype, 'add_offset' in attrs,
-                                        force_promote_float64=force_promote)
+            dtype = _choose_float_dtype(data.dtype, scale_factor, add_offset)
 
             transform = partial(_scale_offset_decoding,
                                 scale_factor=scale_factor,

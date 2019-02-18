@@ -62,11 +62,8 @@ Enhancements
 - :py:meth:`pandas.Series.dropna` is now supported for a
   :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
   (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
-- Ability to promote to float64 instead of float32 when dealing with int type
-  variables with scale_factor.
-  Added parameter force_promote_float64 (False by default)
-  to :py:meth:`~xarray.open_dataset` and :py:meth:`~xarray.open_dataarray`
-  that enables this behaviour.
+- Variables are now unpacked with scale_factor and offset dtypes if present in datasets.
+  According `to cf convetion <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch08.html>`_.
   By `Daoud Jahdou <https://github.com/daoudjahdou>`_.
 
 Bug fixes
