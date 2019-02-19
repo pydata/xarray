@@ -98,7 +98,19 @@ Bug fixes
   By 'Jonathan Joyce <https://github.com/jonmjoyce>'_.
 - Fix ``open_rasterio`` creating a WKT CRS instead of PROJ.4 with
   ``rasterio`` 1.0.14+ (:issue:`2715`).
-  By `David Hoese <https://github.com/djhoese`_.
+  By `David Hoese <https://github.com/djhoese>`_.
+- Masking data arrays with :py:meth:`xarray.DataArray.where` now returns an
+  array with the name of the original masked array (:issue:`2748` and :issue:`2457`).
+  By `Yohai Bar-Sinai <https://github.com/yohai>`_.
+- Fixed error when trying to reduce a DataArray using a function which does not
+  require an axis argument. (:issue:`2768`)
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+
+- Per `CF conventions
+  <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
+  specifying ``'standard'`` as the calendar type in
+  :py:meth:`~xarray.cftime_range` now correctly refers to the ``'gregorian'``
+  calendar instead of the ``'proleptic_gregorian'`` calendar (:issue:`2761`).
 
 .. _whats-new.0.11.3:
 
