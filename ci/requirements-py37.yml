@@ -1,13 +1,33 @@
 name: test_env
 channels:
-  - defaults
+  - conda-forge
 dependencies:
   - python=3.7
+  - cftime
+  - nc-time-axis
+  - dask
+  - distributed
+  - h5py
+  - h5netcdf
+  - matplotlib
+  - netcdf4
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - coveralls
+  - pycodestyle
+  - numpy
+  - pandas
+  - scipy
+  - seaborn
+  - toolz
+  - rasterio
+  - bottleneck
+  - zarr
+  - pseudonetcdf>=3.0.1
+  - lxml
+  - eccodes
+  - pydap
   - pip:
-    - pytest
-    - flake8
-    - mock
-    - numpy
-    - pandas
-    - coveralls
-    - pytest-cov
+    - cfgrib>=0.9.2
+    - mypy==0.650

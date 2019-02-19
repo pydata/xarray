@@ -1,12 +1,10 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
+from collections import OrderedDict
 
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
 from .common import WritableCFDataStore
 from .file_manager import CachingFileManager
@@ -26,13 +24,13 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
         key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
-        array = self.get_array()
         with self.datastore.lock:
+            array = self.get_array(needs_lock=False)
             return array[key]
 
 
 def maybe_decode_bytes(txt):
-    if isinstance(txt, bytes_type):
+    if isinstance(txt, bytes):
         return txt.decode('utf-8')
     else:
         return txt
@@ -124,7 +122,7 @@ class H5NetCDFStore(WritableCFDataStore):
         encoding['original_shape'] = var.shape
 
         vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-        if vlen_dtype is unicode_type:
+        if vlen_dtype is str:
             encoding['dtype'] = str
         elif vlen_dtype is not None:  # pragma: no cover
             # xarray doesn't support writing arbitrary vlen dtypes yet.
@@ -136,7 +134,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in iteritems(self.ds.variables))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         return FrozenOrderedDict(_read_attributes(self.ds))
@@ -182,7 +180,7 @@ class H5NetCDFStore(WritableCFDataStore):
                 'NC_CHAR type.' % name)
 
         if dtype is str:
-            dtype = h5py.special_dtype(vlen=unicode_type)
+            dtype = h5py.special_dtype(vlen=str)
 
         encoding = _extract_h5nc_encoding(variable,
                                           raise_on_invalid=check_encoding)
@@ -208,10 +206,12 @@ class H5NetCDFStore(WritableCFDataStore):
 
         encoding['chunks'] = encoding.pop('chunksizes', None)
 
-        for key in ['compression', 'compression_opts', 'shuffle',
-                    'chunks', 'fletcher32']:
-            if key in encoding:
-                kwargs[key] = encoding[key]
+        # Do not apply compression, filters or chunking to scalars.
+        if variable.shape:
+            for key in ['compression', 'compression_opts', 'shuffle',
+                        'chunks', 'fletcher32']:
+                if key in encoding:
+                    kwargs[key] = encoding[key]
         if name not in self.ds:
             nc4_var = self.ds.create_variable(
                 name, dtype=dtype, dimensions=variable.dims,
@@ -219,7 +219,7 @@ class H5NetCDFStore(WritableCFDataStore):
         else:
             nc4_var = self.ds[name]
 
-        for k, v in iteritems(attrs):
+        for k, v in attrs.items():
             nc4_var.attrs[k] = v
 
         target = H5NetCDFArrayWrapper(name, self)
@@ -228,9 +228,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def sync(self):
         self.ds.sync()
-        # if self.autoclose:
-        #     self.close()
-        # super(H5NetCDFStore, self).sync(compute=compute)
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)

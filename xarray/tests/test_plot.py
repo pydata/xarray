@@ -1,11 +1,10 @@
-from __future__ import absolute_import, division, print_function
-
 import inspect
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import pytest
+from numpy.testing import assert_array_equal
 
 import xarray as xr
 import xarray.plot as xplt
@@ -18,7 +17,9 @@ from xarray.plot.utils import (
 
 from . import (
     assert_array_equal, assert_equal, raises_regex, requires_cftime,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn)
+    requires_matplotlib, requires_matplotlib2, requires_seaborn,
+    requires_nc_time_axis)
+from . import has_nc_time_axis
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -141,6 +142,20 @@ class TestPlot(PlotTestCase):
 
         with raises_regex(ValueError, 'None'):
             da.plot(x='z', y='f')
+
+    # Test for bug in GH issue #2725
+    def test_infer_line_data(self):
+        current = DataArray(name='I', data=np.array([5, 8]), dims=['t'],
+                            coords={'t': (['t'], np.array([0.1, 0.2])),
+                                    'V': (['t'], np.array([100, 200]))})
+
+        # Plot current against voltage
+        line = current.plot.line(x='V')[0]
+        assert_array_equal(line.get_xdata(), current.coords['V'].values)
+
+        # Plot current against time
+        line = current.plot.line()[0]
+        assert_array_equal(line.get_xdata(), current.coords['t'].values)
 
     def test_2d_line(self):
         with raises_regex(ValueError, 'hue'):
@@ -797,7 +812,7 @@ class Common2dMixin(object):
         x, y = np.meshgrid(da.x.values, da.y.values)
         ds['x2d'] = DataArray(x, dims=['y', 'x'])
         ds['y2d'] = DataArray(y, dims=['y', 'x'])
-        ds.set_coords(['x2d', 'y2d'], inplace=True)
+        ds = ds.set_coords(['x2d', 'y2d'])
         # set darray and plot method
         self.darray = ds.testvar
 
@@ -987,7 +1002,7 @@ class Common2dMixin(object):
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
         a.coords['c'] = [0, 1]
-        a.coords['d'] = u'foo'
+        a.coords['d'] = 'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
         assert 'c = 1, d = foo' == title or 'd = foo, c = 1' == title
@@ -1161,8 +1176,8 @@ class Common2dMixin(object):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
         with pytest.raises(ValueError):
-            g = self.plotfunc(d, x='x', y='y', col='columns', row='rows',
-                              cbar_ax=1)
+            self.plotfunc(d, x='x', y='y', col='columns', row='rows',
+                          cbar_ax=1)
 
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):
@@ -1815,6 +1830,61 @@ class TestDatetimePlot(PlotTestCase):
         self.darray.plot.line()
 
 
+@requires_nc_time_axis
+@requires_cftime
+class TestCFDatetimePlot(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        '''
+        Create a DataArray with a time-axis that contains cftime.datetime
+        objects.
+        '''
+        # case for 1d array
+        data = np.random.rand(4, 12)
+        time = xr.cftime_range(start='2017',
+                               periods=12,
+                               freq='1M',
+                               calendar='noleap')
+        darray = DataArray(data, dims=['x', 'time'])
+        darray.coords['time'] = time
+
+        self.darray = darray
+
+    def test_cfdatetime_line_plot(self):
+        self.darray.isel(x=0).plot.line()
+
+    def test_cfdatetime_pcolormesh_plot(self):
+        self.darray.plot.pcolormesh()
+
+    def test_cfdatetime_contour_plot(self):
+        self.darray.plot.contour()
+
+
+@requires_cftime
+@pytest.mark.skipif(has_nc_time_axis, reason='nc_time_axis is installed')
+class TestNcAxisNotInstalled(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        '''
+        Create a DataArray with a time-axis that contains cftime.datetime
+        objects.
+        '''
+        month = np.arange(1, 13, 1)
+        data = np.sin(2 * np.pi * month / 12.0)
+        darray = DataArray(data, dims=['time'])
+        darray.coords['time'] = xr.cftime_range(start='2017',
+                                                periods=12,
+                                                freq='1M',
+                                                calendar='noleap')
+
+        self.darray = darray
+
+    def test_ncaxis_notinstalled_line_plot(self):
+        with raises_regex(ImportError,
+                          'optional `nc-time-axis`'):
+            self.darray.plot.line()
+
+
 @requires_seaborn
 def test_import_seaborn_no_warning():
     # GH1633
@@ -1829,27 +1899,6 @@ def test_plot_seaborn_no_import_warning():
     with pytest.warns(None) as record:
         _color_palette('Blues', 4)
     assert len(record) == 0
-
-
-@requires_cftime
-def test_plot_cftime_coordinate_error():
-    cftime = _import_cftime()
-    time = cftime.num2date(np.arange(5), units='days since 0001-01-01',
-                           calendar='noleap')
-    data = DataArray(np.arange(5), coords=[time], dims=['time'])
-    with raises_regex(TypeError,
-                      'requires coordinates to be numeric or dates'):
-        data.plot()
-
-
-@requires_cftime
-def test_plot_cftime_data_error():
-    cftime = _import_cftime()
-    data = cftime.num2date(np.arange(5), units='days since 0001-01-01',
-                           calendar='noleap')
-    data = DataArray(data, coords=[np.arange(5)], dims=['x'])
-    with raises_regex(NotImplementedError, 'cftime.datetime'):
-        data.plot()
 
 
 test_da_list = [DataArray(easy_array((10, ))),

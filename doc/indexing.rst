@@ -371,7 +371,7 @@ Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
     ind = xr.DataArray([['a', 'b'], ['b', 'a']], dims=['a', 'b'])
     da.loc[:, ind]  # same as da.sel(y=ind)
 
-These methods may and also be applied to ``Dataset`` objects
+These methods may also be applied to ``Dataset`` objects
 
 .. ipython:: python
 
@@ -411,7 +411,7 @@ can use indexing with ``.loc`` :
 
 .. ipython:: python
 
-    ds = xr.tutorial.load_dataset('air_temperature')
+    ds = xr.tutorial.open_dataset('air_temperature')
 
     #add an empty 2D dataarray
     ds['empty']= xr.full_like(ds.air.mean('time'),fill_value=0)

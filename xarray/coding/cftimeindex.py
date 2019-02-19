@@ -39,16 +39,17 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-
 import re
+import warnings
 from datetime import timedelta
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 
-from xarray.core import pycompat
 from xarray.core.utils import is_scalar
+
+from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
 def named(name, pattern):
@@ -65,13 +66,13 @@ def trailing_optional(xs):
     return xs[0] + optional(trailing_optional(xs[1:]))
 
 
-def build_pattern(date_sep='\-', datetime_sep='T', time_sep='\:'):
-    pieces = [(None, 'year', '\d{4}'),
-              (date_sep, 'month', '\d{2}'),
-              (date_sep, 'day', '\d{2}'),
-              (datetime_sep, 'hour', '\d{2}'),
-              (time_sep, 'minute', '\d{2}'),
-              (time_sep, 'second', '\d{2}')]
+def build_pattern(date_sep=r'\-', datetime_sep=r'T', time_sep=r'\:'):
+    pieces = [(None, 'year', r'\d{4}'),
+              (date_sep, 'month', r'\d{2}'),
+              (date_sep, 'day', r'\d{2}'),
+              (datetime_sep, 'hour', r'\d{2}'),
+              (time_sep, 'minute', r'\d{2}'),
+              (time_sep, 'second', r'\d{2}')]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
         pattern_list.append((sep if sep else '') + named(name, sub_pattern))
@@ -105,6 +106,11 @@ def _parse_iso8601_with_reso(date_type, timestr):
             replace[attr] = int(value)
             resolution = attr
 
+    # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
+    # the returned date object in versions of cftime between 1.0.2 and
+    # 1.0.3.4.  It can be removed for versions of cftime greater than
+    # 1.0.3.4.
+    replace['dayofwk'] = -1
     return default.replace(**replace), resolution
 
 
@@ -147,10 +153,21 @@ def get_date_field(datetimes, field):
     return np.array([getattr(date, field) for date in datetimes])
 
 
-def _field_accessor(name, docstring=None):
+def _field_accessor(name, docstring=None, min_cftime_version='0.0'):
     """Adapted from pandas.tseries.index._field_accessor"""
-    def f(self):
-        return get_date_field(self._data, name)
+
+    def f(self, min_cftime_version=min_cftime_version):
+        import cftime
+
+        version = cftime.__version__
+
+        if LooseVersion(version) >= LooseVersion(min_cftime_version):
+            return get_date_field(self._data, name)
+        else:
+            raise ImportError('The {!r} accessor requires a minimum '
+                              'version of cftime of {}. Found an '
+                              'installed version of {}.'.format(
+                                  name, min_cftime_version, version))
 
     f.__name__ = name
     f.__doc__ = docstring
@@ -204,6 +221,11 @@ class CFTimeIndex(pd.Index):
     second = _field_accessor('second', 'The seconds of the datetime')
     microsecond = _field_accessor('microsecond',
                                   'The microseconds of the datetime')
+    dayofyear = _field_accessor('dayofyr',
+                                'The ordinal day of year of the datetime',
+                                '1.0.2.1')
+    dayofweek = _field_accessor('dayofwk', 'The day of week of the datetime',
+                                '1.0.2.1')
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):
@@ -260,19 +282,36 @@ class CFTimeIndex(pd.Index):
         """
         start, end = _parsed_string_to_bounds(self.date_type, resolution,
                                               parsed)
-        lhs_mask = (self._data >= start)
-        rhs_mask = (self._data <= end)
-        return (lhs_mask & rhs_mask).nonzero()[0]
+
+        times = self._data
+
+        if self.is_monotonic:
+            if (len(times) and ((start < times[0] and end < times[0]) or
+                                (start > times[-1] and end > times[-1]))):
+                # we are out of range
+                raise KeyError
+
+            # a monotonic (sorted) series can be sliced
+            left = times.searchsorted(start, side='left')
+            right = times.searchsorted(end, side='right')
+            return slice(left, right)
+
+        lhs_mask = times >= start
+        rhs_mask = times <= end
+        return np.flatnonzero(lhs_mask & rhs_mask)
 
     def _get_string_slice(self, key):
         """Adapted from pandas.tseries.index.DatetimeIndex._get_string_slice"""
         parsed, resolution = _parse_iso8601_with_reso(self.date_type, key)
-        loc = self._partial_date_slice(resolution, parsed)
+        try:
+            loc = self._partial_date_slice(resolution, parsed)
+        except KeyError:
+            raise KeyError(key)
         return loc
 
     def get_loc(self, key, method=None, tolerance=None):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
-        if isinstance(key, pycompat.basestring):
+        if isinstance(key, str):
             return self._get_string_slice(key)
         else:
             return pd.Index.get_loc(self, key, method=method,
@@ -281,7 +320,7 @@ class CFTimeIndex(pd.Index):
     def _maybe_cast_slice_bound(self, label, side, kind):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound"""
-        if isinstance(label, pycompat.basestring):
+        if isinstance(label, str):
             parsed, resolution = _parse_iso8601_with_reso(self.date_type,
                                                           label)
             start, end = _parsed_string_to_bounds(self.date_type, resolution,
@@ -296,11 +335,13 @@ class CFTimeIndex(pd.Index):
     # e.g. series[1:5].
     def get_value(self, series, key):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_value"""
-        if not isinstance(key, slice):
-            return series.iloc[self.get_loc(key)]
-        else:
+        if np.asarray(key).dtype == np.dtype(bool):
+            return series.iloc[key]
+        elif isinstance(key, slice):
             return series.iloc[self.slice_indexer(
                 key.start, key.stop, key.step)]
+        else:
+            return series.iloc[self.get_loc(key)]
 
     def __contains__(self, key):
         """Adapted from
@@ -351,7 +392,7 @@ class CFTimeIndex(pd.Index):
             raise TypeError("'n' must be an int, got {}.".format(n))
         if isinstance(freq, timedelta):
             return self + n * freq
-        elif isinstance(freq, pycompat.basestring):
+        elif isinstance(freq, str):
             return self + n * to_offset(freq)
         else:
             raise TypeError(
@@ -369,17 +410,71 @@ class CFTimeIndex(pd.Index):
         return CFTimeIndex(other + np.array(self))
 
     def __sub__(self, other):
-        if isinstance(other, CFTimeIndex):
+        import cftime
+        if isinstance(other, (CFTimeIndex, cftime.datetime)):
             return pd.TimedeltaIndex(np.array(self) - np.array(other))
         elif isinstance(other, pd.TimedeltaIndex):
             return CFTimeIndex(np.array(self) - other.to_pytimedelta())
         else:
             return CFTimeIndex(np.array(self) - other)
 
+    def __rsub__(self, other):
+        return pd.TimedeltaIndex(other - np.array(self))
+
     def _add_delta(self, deltas):
         # To support TimedeltaIndex + CFTimeIndex with older versions of
         # pandas.  No longer used as of pandas 0.23.
         return self + deltas
+
+    def to_datetimeindex(self, unsafe=False):
+        """If possible, convert this index to a pandas.DatetimeIndex.
+
+        Parameters
+        ----------
+        unsafe : bool
+            Flag to turn off warning when converting from a CFTimeIndex with
+            a non-standard calendar to a DatetimeIndex (default ``False``).
+
+        Returns
+        -------
+        pandas.DatetimeIndex
+
+        Raises
+        ------
+        ValueError
+            If the CFTimeIndex contains dates that are not possible in the
+            standard calendar or outside the pandas.Timestamp-valid range.
+
+        Warns
+        -----
+        RuntimeWarning
+            If converting from a non-standard calendar to a DatetimeIndex.
+
+        Warnings
+        --------
+        Note that for non-standard calendars, this will change the calendar
+        type of the index.  In that case the result of this method should be
+        used with caution.
+
+        Examples
+        --------
+        >>> import xarray as xr
+        >>> times = xr.cftime_range('2000', periods=2, calendar='gregorian')
+        >>> times
+        CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00], dtype='object')
+        >>> times.to_datetimeindex()
+        DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
+        """  # noqa: E501
+        nptimes = cftime_to_nptime(self)
+        calendar = infer_calendar_name(self)
+        if calendar not in _STANDARD_CALENDARS and not unsafe:
+            warnings.warn(
+                'Converting a CFTimeIndex with dates from a non-standard '
+                'calendar, {!r}, to a pandas.DatetimeIndex, which uses dates '
+                'from the standard calendar.  This may lead to subtle errors '
+                'in operations that depend on the length of time between '
+                'dates.'.format(calendar), RuntimeWarning, stacklevel=2)
+        return pd.DatetimeIndex(nptimes)
 
 
 def _parse_iso8601_without_reso(date_type, datetime_str):

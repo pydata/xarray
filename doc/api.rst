@@ -147,10 +147,12 @@ Computation
    Dataset.groupby
    Dataset.groupby_bins
    Dataset.rolling
+   Dataset.coarsen
    Dataset.resample
    Dataset.diff
    Dataset.quantile
    Dataset.differentiate
+   Dataset.integrate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -312,6 +314,7 @@ Computation
    DataArray.groupby
    DataArray.groupby_bins
    DataArray.rolling
+   DataArray.coarsen
    DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
@@ -319,6 +322,7 @@ Computation
    DataArray.dot
    DataArray.quantile
    DataArray.differentiate
+   DataArray.integrate
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -377,7 +381,7 @@ Universal functions
 .. warning::
 
    With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obliviates the need
+   supported directly on all xarray and dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
    unless compatibility with versions of NumPy prior to v1.13 is required.
 

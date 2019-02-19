@@ -3,12 +3,10 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
-from __future__ import absolute_import, division, print_function
-
 import contextlib
+from functools import partial
 import inspect
 import warnings
-from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -21,8 +19,8 @@ try:
     import dask.array as dask_array
     from . import dask_array_compat
 except ImportError:
-    dask_array = None
-    dask_array_compat = None
+    dask_array = None  # type: ignore
+    dask_array_compat = None  # type: ignore
 
 
 def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
@@ -43,10 +41,10 @@ def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
                                          (e, requires_dask))
             else:
                 wrapped = getattr(eager_module, name)
-            return wrapped(*args, ** kwargs)
+            return wrapped(*args, **kwargs)
     else:
-        def f(data, *args, **kwargs):
-            return getattr(eager_module, name)(data, *args, **kwargs)
+        def f(*args, **kwargs):
+            return getattr(eager_module, name)(*args, **kwargs)
     return f
 
 
@@ -99,6 +97,18 @@ def gradient(x, coord, axis, edge_order):
         return dask_array_compat.gradient(
             x, coord, axis=axis, edge_order=edge_order)
     return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
+
+
+def trapz(y, x, axis):
+    if axis < 0:
+        axis = y.ndim + axis
+    x_sl1 = (slice(1, None), ) + (None, ) * (y.ndim - axis - 1)
+    x_sl2 = (slice(None, -1), ) + (None, ) * (y.ndim - axis - 1)
+    slice1 = (slice(None),) * axis + (slice(1, None), )
+    slice2 = (slice(None),) * axis + (slice(None, -1), )
+    dx = (x[x_sl1] - x[x_sl2])
+    integrand = dx * 0.5 * (y[tuple(slice1)] + y[tuple(slice2)])
+    return sum(integrand, axis=axis, skipna=False)
 
 
 masked_invalid = _dask_or_eager_func(
@@ -261,8 +271,6 @@ min = _create_nan_agg_method('min', coerce_strings=True)
 sum = _create_nan_agg_method('sum')
 sum.numeric_only = True
 sum.available_min_count = True
-mean = _create_nan_agg_method('mean')
-mean.numeric_only = True
 std = _create_nan_agg_method('std')
 std.numeric_only = True
 var = _create_nan_agg_method('var')
@@ -276,6 +284,62 @@ cumprod_1d = _create_nan_agg_method('cumprod')
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method('cumsum')
 cumsum_1d.numeric_only = True
+
+
+_mean = _create_nan_agg_method('mean')
+
+
+def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
+    """Convert an array containing datetime-like data to an array of floats.
+
+    Parameters
+    ----------
+    da : array
+        Input data
+    offset: Scalar with the same type of array or None
+        If None, subtract minimum values to reduce round off error
+    datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+        'us', 'ns', 'ps', 'fs', 'as'}
+    dtype: target dtype
+
+    Returns
+    -------
+    array
+    """
+    if offset is None:
+        offset = array.min()
+    array = array - offset
+
+    if not hasattr(array, 'dtype'):  # scalar is converted to 0d-array
+        array = np.array(array)
+
+    if array.dtype.kind in 'O':
+        # possibly convert object array containing datetime.timedelta
+        array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
+
+    if datetime_unit:
+        array = array / np.timedelta64(1, datetime_unit)
+
+    # convert np.NaT to np.nan
+    if array.dtype.kind in 'mM':
+        return np.where(isnull(array), np.nan, array.astype(dtype))
+    return array.astype(dtype)
+
+
+def mean(array, axis=None, skipna=None, **kwargs):
+    """ inhouse mean that can handle datatime dtype """
+    array = asarray(array)
+    if array.dtype.kind in 'Mm':
+        offset = min(array)
+        # xarray always uses datetime[ns] for datetime
+        dtype = 'timedelta64[ns]'
+        return _mean(datetime_to_numeric(array, offset), axis=axis,
+                     skipna=skipna, **kwargs).astype(dtype) + offset
+    else:
+        return _mean(array, axis=axis, skipna=skipna, **kwargs)
+
+
+mean.numeric_only = True  # type: ignore
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):

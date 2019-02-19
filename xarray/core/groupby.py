@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division, print_function
-
+import datetime
 import functools
 import warnings
 
@@ -10,14 +9,10 @@ from . import dtypes, duck_array_ops, nputils, ops, utils
 from .arithmetic import SupportsArithmetic
 from .combine import concat
 from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
-from .pycompat import integer_types, range, zip
+from .options import _get_keep_attrs
+from .pycompat import integer_types
 from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
 from .variable import IndexVariable, Variable, as_variable
-<<<<<<< HEAD
-from .options import _get_keep_attrs
-=======
-from .options import _set_keep_attrs
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
 
 
 def unique_value_groups(ar, sort=True):
@@ -158,6 +153,32 @@ def _unique_and_monotonic(group):
         return index.is_unique and index.is_monotonic
 
 
+def _apply_loffset(grouper, result):
+    """
+    (copied from pandas)
+    if loffset is set, offset the result index
+
+    This is NOT an idempotent routine, it will be applied
+    exactly once to the result.
+
+    Parameters
+    ----------
+    result : Series or DataFrame
+        the result of resample
+    """
+
+    needs_offset = (
+        isinstance(grouper.loffset, (pd.DateOffset, datetime.timedelta))
+        and isinstance(result.index, pd.DatetimeIndex)
+        and len(result.index) > 0
+    )
+
+    if needs_offset:
+        result.index = result.index + grouper.loffset
+
+    grouper.loffset = None
+
+
 class GroupBy(SupportsArithmetic):
     """A object that implements the split-apply-combine pattern.
 
@@ -237,11 +258,8 @@ class GroupBy(SupportsArithmetic):
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
-            s = pd.Series(np.arange(index.size), index)
-            first_items = s.groupby(grouper).first()
-            full_index = first_items.index
-            if first_items.isnull().any():
-                first_items = first_items.dropna()
+            full_index, first_items = self._get_index_and_items(
+                index, grouper)
             sbins = first_items.values.astype(np.int64)
             group_indices = ([slice(i, j)
                               for i, j in zip(sbins[:-1], sbins[1:])] +
@@ -287,6 +305,19 @@ class GroupBy(SupportsArithmetic):
 
     def __iter__(self):
         return zip(self._unique_coord.values, self._iter_grouped())
+
+    def _get_index_and_items(self, index, grouper):
+        from .resample_cftime import CFTimeGrouper
+        s = pd.Series(np.arange(index.size), index)
+        if isinstance(grouper, CFTimeGrouper):
+            first_items = grouper.first_items(index)
+        else:
+            first_items = s.groupby(grouper).first()
+            _apply_loffset(grouper, first_items)
+        full_index = first_items.index
+        if first_items.isnull().any():
+            first_items = first_items.dropna()
+        return full_index, first_items
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
@@ -414,20 +445,12 @@ class GroupBy(SupportsArithmetic):
         return self.reduce(op, self._group_dim, skipna=skipna,
                            keep_attrs=keep_attrs, allow_lazy=True)
 
-<<<<<<< HEAD
     def first(self, skipna=None, keep_attrs=None):
-=======
-    def first(self, skipna=None, keep_attrs=_set_keep_attrs(True)):
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Return the first element of each group along the group dimension
         """
         return self._first_or_last(duck_array_ops.first, skipna, keep_attrs)
 
-<<<<<<< HEAD
     def last(self, skipna=None, keep_attrs=None):
-=======
-    def last(self, skipna=None, keep_attrs=_set_keep_attrs(True)):
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Return the last element of each group along the group dimension
         """
         return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
@@ -487,7 +510,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order)
 
-    def apply(self, func, shortcut=False, **kwargs):
+    def apply(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -516,6 +539,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
+        args : tuple, optional
+            Positional arguments passed to `func`.
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
@@ -528,7 +553,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             grouped = self._iter_grouped_shortcut()
         else:
             grouped = self._iter_grouped()
-        applied = (maybe_wrap_array(arr, func(arr, **kwargs))
+        applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs))
                    for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
 
@@ -555,11 +580,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         return combined
 
     def reduce(self, func, dim=None, axis=None,
-<<<<<<< HEAD
                keep_attrs=None, shortcut=True, **kwargs):
-=======
-               keep_attrs=_set_keep_attrs(False), shortcut=True, **kwargs):
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -612,20 +633,12 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
             def wrapped_func(self, dim=DEFAULT_DIMS, axis=None, skipna=None,
-<<<<<<< HEAD
                              keep_attrs=None, **kwargs):
-=======
-                             keep_attrs=_set_keep_attrs(False), **kwargs):
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
                 return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
-            def wrapped_func(self, dim=DEFAULT_DIMS, axis=None,
-<<<<<<< HEAD
+            def wrapped_func(self, dim=DEFAULT_DIMS, axis=None,  # type: ignore
                              keep_attrs=None, **kwargs):
-=======
-                             keep_attrs=_set_keep_attrs(False), **kwargs):
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
                 return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
                                    allow_lazy=True, **kwargs)
         return wrapped_func
@@ -638,7 +651,7 @@ ops.inject_binary_ops(DataArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
-    def apply(self, func, **kwargs):
+    def apply(self, func, args=(), **kwargs):
         """Apply a function over each Dataset in the group and concatenate them
         together into a new Dataset.
 
@@ -657,6 +670,8 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         ----------
         func : function
             Callable to apply to each sub-dataset.
+        args : tuple, optional
+            Positional arguments to pass to `func`.
         **kwargs
             Used to call `func(ds, **kwargs)` for each sub-dataset `ar`.
 
@@ -666,7 +681,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             The result of splitting, applying and combining this dataset.
         """
         kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
-        applied = (func(ds, **kwargs) for ds in self._iter_grouped())
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         return self._combine(applied)
 
     def _combine(self, applied):
@@ -681,11 +696,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         combined = self._maybe_unstack(combined)
         return combined
 
-<<<<<<< HEAD
     def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
-=======
-    def reduce(self, func, dim=None, keep_attrs=_set_keep_attrs(False), **kwargs):
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -738,21 +749,13 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-<<<<<<< HEAD
             def wrapped_func(self, dim=DEFAULT_DIMS,
-=======
-            def wrapped_func(self, dim=DEFAULT_DIMS, keep_attrs=_set_keep_attrs(False),
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
                              skipna=None, **kwargs):
                 return self.reduce(func, dim,
                                    skipna=skipna, numeric_only=numeric_only,
                                    allow_lazy=True, **kwargs)
         else:
-<<<<<<< HEAD
-            def wrapped_func(self, dim=DEFAULT_DIMS,
-=======
-            def wrapped_func(self, dim=DEFAULT_DIMS, keep_attrs=_set_keep_attrs(False),
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
+            def wrapped_func(self, dim=DEFAULT_DIMS,  # type: ignore
                              **kwargs):
                 return self.reduce(func, dim,
                                    numeric_only=numeric_only, allow_lazy=True,

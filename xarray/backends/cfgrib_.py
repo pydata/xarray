@@ -1,12 +1,10 @@
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
-from .locks import ensure_lock, SerializableLock
+from .locks import SerializableLock, ensure_lock
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -39,14 +37,7 @@ class CfGribDataStore(AbstractDataStore):
         if lock is None:
             lock = ECCODES_LOCK
         self.lock = ensure_lock(lock)
-
-        # NOTE: filter_by_keys is a dict, but CachingFileManager only accepts
-        #   hashable types.
-        if 'filter_by_keys' in backend_kwargs:
-            filter_by_keys_items = backend_kwargs['filter_by_keys'].items()
-            backend_kwargs['filter_by_keys'] = tuple(filter_by_keys_items)
-
-        self.ds = cfgrib.open_file(filename, mode='r', **backend_kwargs)
+        self.ds = cfgrib.open_file(filename, **backend_kwargs)
 
     def open_store_variable(self, name, var):
         if isinstance(var.data, np.ndarray):

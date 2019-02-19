@@ -1,9 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
 from . import ops
 from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
-from .pycompat import OrderedDict, dask_array_type
-from .options import _set_keep_attrs
 
 RESAMPLE_DIM = '__resample_dim__'
 
@@ -75,23 +71,53 @@ class Resample(object):
         """
         return self._upsample('asfreq')
 
-    def pad(self):
+    def pad(self, tolerance=None):
         """Forward fill new values at up-sampled frequency.
+
+        Parameters
+        ----------
+        tolerance : optional
+            Maximum distance between original and new labels to limit
+            the up-sampling method.
+            Up-sampled data with indices that satisfy the equation
+            ``abs(index[indexer] - target) <= tolerance`` are filled by
+            new values. Data with indices that are outside the given
+            tolerance are filled with ``NaN``  s
         """
-        return self._upsample('pad')
+        return self._upsample('pad', tolerance=tolerance)
     ffill = pad
 
-    def backfill(self):
+    def backfill(self, tolerance=None):
         """Backward fill new values at up-sampled frequency.
+
+        Parameters
+        ----------
+        tolerance : optional
+            Maximum distance between original and new labels to limit
+            the up-sampling method.
+            Up-sampled data with indices that satisfy the equation
+            ``abs(index[indexer] - target) <= tolerance`` are filled by
+            new values. Data with indices that are outside the given
+            tolerance are filled with ``NaN`` s
         """
-        return self._upsample('backfill')
+        return self._upsample('backfill', tolerance=tolerance)
     bfill = backfill
 
-    def nearest(self):
+    def nearest(self, tolerance=None):
         """Take new values from nearest original coordinate to up-sampled
         frequency coordinates.
+
+        Parameters
+        ----------
+        tolerance : optional
+            Maximum distance between original and new labels to limit
+            the up-sampling method.
+            Up-sampled data with indices that satisfy the equation
+            ``abs(index[indexer] - target) <= tolerance`` are filled by
+            new values. Data with indices that are outside the given
+            tolerance are filled with ``NaN`` s
         """
-        return self._upsample('nearest')
+        return self._upsample('nearest', tolerance=tolerance)
 
     def interpolate(self, kind='linear'):
         """Interpolate up-sampled data using the original data
@@ -111,7 +137,16 @@ class Resample(object):
         return self._interpolate(kind=kind)
 
     def _interpolate(self, kind='linear'):
-        raise NotImplementedError
+        """Apply scipy.interpolate.interp1d along resampling dimension."""
+        # drop any existing non-dimension coordinates along the resampling
+        # dimension
+        dummy = self._obj.copy()
+        for k, v in self._obj.coords.items():
+            if k != self._dim and self._dim in v.dims:
+                dummy = dummy.drop(k)
+        return dummy.interp(assume_sorted=True, method=kind,
+                            kwargs={'bounds_error': False},
+                            **{self._dim: self._full_index})
 
 
 class DataArrayResample(DataArrayGroupBy, Resample):
@@ -130,7 +165,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                              "('{}')! ".format(self._resample_dim, self._dim))
         super(DataArrayResample, self).__init__(*args, **kwargs)
 
-    def apply(self, func, shortcut=False, **kwargs):
+    def apply(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -159,6 +194,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
+        args : tuple, optional
+            Positional arguments passed on to `func`.
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
@@ -168,7 +205,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             The result of splitting, applying and combining this array.
         """
         combined = super(DataArrayResample, self).apply(
-            func, shortcut=shortcut, **kwargs)
+            func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
@@ -180,46 +217,6 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             combined = combined.rename({self._resample_dim: self._dim})
 
         return combined
-
-    def _interpolate(self, kind='linear'):
-        """Apply scipy.interpolate.interp1d along resampling dimension."""
-        from .dataarray import DataArray
-        from scipy.interpolate import interp1d
-
-        if isinstance(self._obj.data, dask_array_type):
-            raise TypeError(
-                "Up-sampling via interpolation was attempted on the the "
-                "variable '{}', but it is a dask array; dask arrays are not "
-                "yet supported in resample.interpolate(). Load into "
-                "memory with Dataset.load() before resampling."
-                .format(self._obj.data.name)
-            )
-
-        x = self._obj[self._dim].astype('float')
-        y = self._obj.data
-
-        axis = self._obj.get_axis_num(self._dim)
-
-        f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
-                     assume_sorted=True)
-        new_x = self._full_index.values.astype('float')
-
-        # construct new up-sampled DataArray
-        dummy = self._obj.copy()
-        dims = dummy.dims
-
-        # drop any existing non-dimension coordinates along the resampling
-        # dimension
-        coords = OrderedDict()
-        for k, v in dummy.coords.items():
-            # is the resampling dimension
-            if k == self._dim:
-                coords[self._dim] = self._full_index
-            # else, check if resampling dim is in coordinate dimensions
-            elif self._dim not in v.dims:
-                coords[k] = v
-        return DataArray(f(new_x), coords, dims, name=dummy.name,
-                         attrs=dummy.attrs)
 
 
 ops.inject_reduce_methods(DataArrayResample)
@@ -241,7 +238,7 @@ class DatasetResample(DatasetGroupBy, Resample):
                              "('{}')! ".format(self._resample_dim, self._dim))
         super(DatasetResample, self).__init__(*args, **kwargs)
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, args=(), **kwargs):
         """Apply a function over each Dataset in the groups generated for
         resampling  and concatenate them together into a new Dataset.
 
@@ -260,6 +257,8 @@ class DatasetResample(DatasetGroupBy, Resample):
         ----------
         func : function
             Callable to apply to each sub-dataset.
+        args : tuple, optional
+            Positional arguments passed on to `func`.
         **kwargs
             Used to call `func(ds, **kwargs)` for each sub-dataset `ar`.
 
@@ -269,16 +268,12 @@ class DatasetResample(DatasetGroupBy, Resample):
             The result of splitting, applying and combining this dataset.
         """
         kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
-        applied = (func(ds, **kwargs) for ds in self._iter_grouped())
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
         return combined.rename({self._resample_dim: self._dim})
 
-<<<<<<< HEAD
     def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
-=======
-    def reduce(self, func, dim=None, keep_attrs=_set_keep_attrs(False), **kwargs):
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
 
@@ -308,50 +303,6 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         return super(DatasetResample, self).reduce(
             func, dim, keep_attrs, **kwargs)
-
-    def _interpolate(self, kind='linear'):
-        """Apply scipy.interpolate.interp1d along resampling dimension."""
-        from .dataset import Dataset
-        from .variable import Variable
-        from scipy.interpolate import interp1d
-
-        old_times = self._obj[self._dim].astype(float)
-        new_times = self._full_index.values.astype(float)
-
-        data_vars = OrderedDict()
-        coords = OrderedDict()
-
-        # Apply the interpolation to each DataArray in our original Dataset
-        for name, variable in self._obj.variables.items():
-            if name in self._obj.coords:
-                if name == self._dim:
-                    coords[self._dim] = self._full_index
-                elif self._dim not in variable.dims:
-                    coords[name] = variable
-            else:
-                if isinstance(variable.data, dask_array_type):
-                    raise TypeError(
-                        "Up-sampling via interpolation was attempted on the "
-                        "variable '{}', but it is a dask array; dask arrays "
-                        "are not yet supprted in resample.interpolate(). Load "
-                        "into memory with Dataset.load() before resampling."
-                        .format(name)
-                    )
-
-                axis = variable.get_axis_num(self._dim)
-
-                # We've previously checked for monotonicity along the
-                # re-sampling dimension (in __init__ via the GroupBy
-                # constructor), so we can avoid sorting the data again by
-                # passing 'assume_sorted=True'
-                f = interp1d(old_times, variable.data, kind=kind,
-                             axis=axis, bounds_error=True,
-                             assume_sorted=True)
-                interpolated = Variable(variable.dims, f(new_times))
-
-                data_vars[name] = interpolated
-
-        return Dataset(data_vars, coords)
 
 
 ops.inject_reduce_methods(DatasetResample)

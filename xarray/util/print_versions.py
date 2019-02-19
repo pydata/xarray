@@ -2,7 +2,6 @@
 
 
 see pandas/pandas/util/_print_versions.py'''
-from __future__ import absolute_import
 
 import codecs
 import importlib
@@ -44,7 +43,7 @@ def get_sys_info():
         (sysname, nodename, release,
          version, machine, processor) = platform.uname()
         blob.extend([
-            ("python", "%d.%d.%d.%s.%s" % sys.version_info[:]),
+            ("python", sys.version),
             ("python-bits", struct.calcsize("P") * 8),
             ("OS", "%s" % (sysname)),
             ("OS-release", "%s" % (release)),
@@ -63,8 +62,26 @@ def get_sys_info():
     return blob
 
 
+def netcdf_and_hdf5_versions():
+    libhdf5_version = None
+    libnetcdf_version = None
+    try:
+        import netCDF4
+        libhdf5_version = netCDF4.__hdf5libversion__
+        libnetcdf_version = netCDF4.__netcdf4libversion__
+    except ImportError:
+        try:
+            import h5py
+            libhdf5_version = h5py.__hdf5libversion__
+        except ImportError:
+            pass
+    return [('libhdf5', libhdf5_version), ('libnetcdf', libnetcdf_version)]
+
+
 def show_versions(as_json=False):
     sys_info = get_sys_info()
+
+    sys_info.extend(netcdf_and_hdf5_versions())
 
     deps = [
         # (MODULE_NAME, f(mod) -> mod version)
@@ -74,17 +91,18 @@ def show_versions(as_json=False):
         ("scipy", lambda mod: mod.__version__),
         # xarray optionals
         ("netCDF4", lambda mod: mod.__version__),
-        # ("pydap", lambda mod: mod.version.version),
+        ("pydap", lambda mod: mod.__version__),
         ("h5netcdf", lambda mod: mod.__version__),
         ("h5py", lambda mod: mod.__version__),
         ("Nio", lambda mod: mod.__version__),
         ("zarr", lambda mod: mod.__version__),
         ("cftime", lambda mod: mod.__version__),
+        ("nc_time_axis", lambda mod: mod.__version__),
         ("PseudonetCDF", lambda mod: mod.__version__),
         ("rasterio", lambda mod: mod.__version__),
+        ("cfgrib", lambda mod: mod.__version__),
         ("iris", lambda mod: mod.__version__),
         ("bottleneck", lambda mod: mod.__version__),
-        ("cyordereddict", lambda mod: mod.__version__),
         ("dask", lambda mod: mod.__version__),
         ("distributed", lambda mod: mod.__version__),
         ("matplotlib", lambda mod: mod.__version__),
@@ -107,10 +125,14 @@ def show_versions(as_json=False):
                 mod = sys.modules[modname]
             else:
                 mod = importlib.import_module(modname)
-            ver = ver_f(mod)
-            deps_blob.append((modname, ver))
         except Exception:
             deps_blob.append((modname, None))
+        else:
+            try:
+                ver = ver_f(mod)
+                deps_blob.append((modname, ver))
+            except Exception:
+                deps_blob.append((modname, 'installed'))
 
     if (as_json):
         try:

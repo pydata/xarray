@@ -1,8 +1,8 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import operator
 import warnings
+from collections import OrderedDict
+from contextlib import suppress
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -10,13 +10,12 @@ import numpy as np
 from .. import Variable, coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
     BackendArray, WritableCFDataStore, find_root, robust_getitem)
-from .locks import (NETCDFC_LOCK, HDF5_LOCK,
-                    combine_locks, ensure_lock, get_write_lock)
 from .file_manager import CachingFileManager, DummyFileManager
+from .locks import (
+    HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock)
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
@@ -48,13 +47,14 @@ class BaseNetCDF4Array(BackendArray):
 
     def __setitem__(self, key, value):
         with self.datastore.lock:
-            data = self.get_array()
+            data = self.get_array(needs_lock=False)
             data[key] = value
             if self.datastore.autoclose:
                 self.datastore.close(needs_lock=False)
 
-    def get_array(self):
-        return self.datastore.ds.variables[self.variable_name]
+    def get_array(self, needs_lock=True):
+        ds = self.datastore._manager.acquire(needs_lock).value
+        return ds.variables[self.variable_name]
 
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
@@ -69,10 +69,9 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         else:
             getitem = operator.getitem
 
-        original_array = self.get_array()
-
         try:
             with self.datastore.lock:
+                original_array = self.get_array(needs_lock=False)
                 array = getitem(original_array, key)
         except IndexError:
             # Catch IndexError in netCDF4 and return a more informative
@@ -81,9 +80,6 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             msg = ('The indexing operation you are attempting to perform '
                    'is not valid on netCDF4.Variable object. Try loading '
                    'your data into memory first by calling .load().')
-            if not PY3:
-                import traceback
-                msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
             raise IndexError(msg)
         return array
 
@@ -141,7 +137,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
         return ds
     else:
         # make sure it's a string
-        if not isinstance(group, basestring):
+        if not isinstance(group, str):
             raise ValueError('group must be a string or None')
         # support path-like syntax
         path = group.strip('/').split('/')
@@ -221,8 +217,9 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
-            raise ValueError('unexpected encoding parameters for %r backend: '
-                             ' %r' % (backend, invalid))
+            raise ValueError(
+                'unexpected encoding parameters for %r backend: %r. Valid '
+                'encodings are: %r' % (backend, invalid, valid_encodings))
     else:
         for k in list(encoding):
             if k not in valid_encodings:
@@ -392,7 +389,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     def get_variables(self):
         dsvars = FrozenOrderedDict((k, self.open_store_variable(k, v))
                                    for k, v in
-                                   iteritems(self.ds.variables))
+                                   self.ds.variables.items())
         return dsvars
 
     def get_attrs(self):
@@ -402,7 +399,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def get_dimensions(self):
         dims = FrozenOrderedDict((k, len(v))
-                                 for k, v in iteritems(self.ds.dimensions))
+                                 for k, v in self.ds.dimensions.items())
         return dims
 
     def get_encoding(self):
@@ -467,7 +464,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                 fill_value=fill_value)
             _disable_auto_decode_variable(nc4_var)
 
-        for k, v in iteritems(attrs):
+        for k, v in attrs.items():
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
             _set_nc_attribute(nc4_var, k, v)

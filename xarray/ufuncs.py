@@ -13,8 +13,6 @@ priority order:
 Once NumPy 1.10 comes out with support for overriding ufuncs, this module will
 hopefully no longer be necessary.
 """
-from __future__ import absolute_import, division, print_function
-
 import warnings as _warnings
 
 import numpy as _np
@@ -44,10 +42,12 @@ class _UFuncDispatcher(object):
         self._name = name
 
     def __call__(self, *args, **kwargs):
-        _warnings.warn(
-            'xarray.ufuncs will be deprecated when xarray no longer supports '
-            'versions of numpy older than v1.13. Instead, use numpy ufuncs '
-            'directly.', PendingDeprecationWarning, stacklevel=2)
+        if self._name not in ['angle', 'iscomplex']:
+            _warnings.warn(
+                'xarray.ufuncs will be deprecated when xarray no longer '
+                'supports versions of numpy older than v1.17. Instead, use '
+                'numpy ufuncs directly.',
+                PendingDeprecationWarning, stacklevel=2)
 
         new_args = args
         f = _dask_or_eager_func(self._name, array_args=slice(len(args)))

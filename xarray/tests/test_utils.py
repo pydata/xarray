@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division, print_function
-
+from collections import OrderedDict
 from datetime import datetime
 
 import numpy as np
@@ -9,8 +8,6 @@ import pytest
 import xarray as xr
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
-from xarray.core.options import set_options
-from xarray.core.pycompat import OrderedDict
 from xarray.core.utils import either_dict_or_kwargs
 from xarray.testing import assert_identical
 
@@ -46,19 +43,17 @@ def test_safe_cast_to_index():
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
+def test_safe_cast_to_index_cftimeindex():
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         dates = [date_type(1, 1, day) for day in range(1, 20)]
 
-        if enable_cftimeindex and has_cftime:
+        if has_cftime:
             expected = CFTimeIndex(dates)
         else:
             expected = pd.Index(dates)
 
-        with set_options(enable_cftimeindex=enable_cftimeindex):
-            actual = utils.safe_cast_to_index(np.array(dates))
+        actual = utils.safe_cast_to_index(np.array(dates))
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
         assert isinstance(actual, type(expected))
@@ -66,13 +61,11 @@ def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
 
 # Test that datetime.datetime objects are never used in a CFTimeIndex
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
+def test_safe_cast_to_index_datetime_datetime():
     dates = [datetime(1, 1, day) for day in range(1, 20)]
 
     expected = pd.Index(dates)
-    with set_options(enable_cftimeindex=enable_cftimeindex):
-        actual = utils.safe_cast_to_index(np.array(dates))
+    actual = utils.safe_cast_to_index(np.array(dates))
     assert_array_equal(expected, actual)
     assert isinstance(actual, pd.Index)
 
@@ -81,7 +74,9 @@ def test_multiindex_from_product_levels():
     result = utils.multiindex_from_product_levels(
         [pd.Index(['b', 'a']), pd.Index([1, 3, 2])])
     np.testing.assert_array_equal(
-        result.labels, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
+        # compat for pandas < 0.24
+        result.codes if hasattr(result, 'codes') else result.labels,
+        [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
     np.testing.assert_array_equal(result.levels[1], [1, 3, 2])
 
@@ -93,7 +88,9 @@ def test_multiindex_from_product_levels_non_unique():
     result = utils.multiindex_from_product_levels(
         [pd.Index(['b', 'a']), pd.Index([1, 1, 2])])
     np.testing.assert_array_equal(
-        result.labels, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]])
+        # compat for pandas < 0.24
+        result.codes if hasattr(result, 'codes') else result.labels,
+        [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]])
     np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
     np.testing.assert_array_equal(result.levels[1], [1, 2])
 
@@ -282,42 +279,3 @@ def test_either_dict_or_kwargs():
 
     with pytest.raises(ValueError, match=r'foo'):
         result = either_dict_or_kwargs(dict(a=1), dict(a=1), 'foo')
-
-
-def test_datetime_to_numeric_datetime64():
-    times = pd.date_range('2000', periods=5, freq='7D')
-    da = xr.DataArray(times, coords=[times], dims=['time'])
-    result = utils.datetime_to_numeric(da, datetime_unit='h')
-    expected = 24 * xr.DataArray(np.arange(0, 35, 7), coords=da.coords)
-    assert_identical(result, expected)
-
-    offset = da.isel(time=1)
-    result = utils.datetime_to_numeric(da, offset=offset, datetime_unit='h')
-    expected = 24 * xr.DataArray(np.arange(-7, 28, 7), coords=da.coords)
-    assert_identical(result, expected)
-
-    dtype = np.float32
-    result = utils.datetime_to_numeric(da, datetime_unit='h', dtype=dtype)
-    expected = 24 * xr.DataArray(
-        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
-    assert_identical(result, expected)
-
-
-@requires_cftime
-def test_datetime_to_numeric_cftime():
-    times = xr.cftime_range('2000', periods=5, freq='7D')
-    da = xr.DataArray(times, coords=[times], dims=['time'])
-    result = utils.datetime_to_numeric(da, datetime_unit='h')
-    expected = 24 * xr.DataArray(np.arange(0, 35, 7), coords=da.coords)
-    assert_identical(result, expected)
-
-    offset = da.isel(time=1)
-    result = utils.datetime_to_numeric(da, offset=offset, datetime_unit='h')
-    expected = 24 * xr.DataArray(np.arange(-7, 28, 7), coords=da.coords)
-    assert_identical(result, expected)
-
-    dtype = np.float32
-    result = utils.datetime_to_numeric(da, datetime_unit='h', dtype=dtype)
-    expected = 24 * xr.DataArray(
-        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
-    assert_identical(result, expected)

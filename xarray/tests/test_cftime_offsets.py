@@ -1,6 +1,7 @@
 from itertools import product
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from xarray import CFTimeIndex
@@ -140,7 +141,7 @@ _ANNUAL_OFFSET_TYPES = {
 
 
 @pytest.mark.parametrize(('month_int', 'month_label'),
-                         list(_MONTH_ABBREVIATIONS.items()) + [('', '')])
+                         list(_MONTH_ABBREVIATIONS.items()) + [(0, '')])
 @pytest.mark.parametrize('multiple', [None, 2])
 @pytest.mark.parametrize('offset_str', ['AS', 'A'])
 def test_to_offset_annual(month_label, month_int, multiple, offset_str):
@@ -797,3 +798,25 @@ def test_calendar_year_length(
     result = cftime_range(start, end, freq='D', closed='left',
                           calendar=calendar)
     assert len(result) == expected_number_of_days
+
+
+@pytest.mark.parametrize('freq', ['A', 'M', 'D'])
+def test_dayofweek_after_cftime_range(freq):
+    pytest.importorskip('cftime', minversion='1.0.2.1')
+    result = cftime_range('2000-02-01', periods=3, freq=freq).dayofweek
+    expected = pd.date_range('2000-02-01', periods=3, freq=freq).dayofweek
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize('freq', ['A', 'M', 'D'])
+def test_dayofyear_after_cftime_range(freq):
+    pytest.importorskip('cftime', minversion='1.0.2.1')
+    result = cftime_range('2000-02-01', periods=3, freq=freq).dayofyear
+    expected = pd.date_range('2000-02-01', periods=3, freq=freq).dayofyear
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_cftime_range_standard_calendar_refers_to_gregorian():
+    from cftime import DatetimeGregorian
+    result, = cftime_range('2000', periods=1)
+    assert isinstance(result, DatetimeGregorian)

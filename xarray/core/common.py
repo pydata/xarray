@@ -1,7 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
-import warnings
-from distutils.version import LooseVersion
+from collections import OrderedDict
+from contextlib import suppress
 from textwrap import dedent
 
 import numpy as np
@@ -9,13 +7,9 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
-from .pycompat import OrderedDict, basestring, dask_array_type, suppress
-from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
-<<<<<<< HEAD
 from .options import _get_keep_attrs
-=======
-from .options import _set_keep_attrs
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
+from .pycompat import dask_array_type
+from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
@@ -26,23 +20,13 @@ class ImplementsArrayReduce(object):
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
             def wrapped_func(self, dim=None, axis=None, skipna=None,
-<<<<<<< HEAD
                              **kwargs):
                 return self.reduce(func, dim, axis,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
-            def wrapped_func(self, dim=None, axis=None,
+            def wrapped_func(self, dim=None, axis=None,  # type: ignore
                              **kwargs):
                 return self.reduce(func, dim, axis,
-=======
-                             keep_attrs=_set_keep_attrs(False), **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
-                                   skipna=skipna, allow_lazy=True, **kwargs)
-        else:
-            def wrapped_func(self, dim=None, axis=None,
-                             keep_attrs=_set_keep_attrs(False), **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
                                    allow_lazy=True, **kwargs)
         return wrapped_func
 
@@ -66,25 +50,14 @@ class ImplementsDatasetReduce(object):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-<<<<<<< HEAD
             def wrapped_func(self, dim=None, skipna=None,
-=======
-            def wrapped_func(self, dim=None,
-                             keep_attrs=_set_keep_attrs(False), skipna=None,
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
                              **kwargs):
                 return self.reduce(func, dim, skipna=skipna,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         else:
-<<<<<<< HEAD
-            def wrapped_func(self, dim=None, **kwargs):
+            def wrapped_func(self, dim=None, **kwargs):  # type: ignore
                 return self.reduce(func, dim,
-=======
-            def wrapped_func(self, dim=None,
-                             keep_attrs=_set_keep_attrs(False), **kwargs):
-                return self.reduce(func, dim, keep_attrs,
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         return wrapped_func
@@ -102,7 +75,7 @@ class ImplementsDatasetReduce(object):
             and 'axis' arguments can be supplied."""
 
 
-class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
+class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable."""
 
     def __bool__(self):
@@ -121,7 +94,7 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
         return complex(self.values)
 
     def __long__(self):
-        return long(self.values)  # flake8: noqa
+        return long(self.values)  # noqa
 
     def __array__(self, dtype=None):
         return np.asarray(self.values, dtype=dtype)
@@ -155,7 +128,7 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dim, basestring):
+        if isinstance(dim, str):
             return self._get_axis_num(dim)
         else:
             return tuple(self._get_axis_num(d) for d in dim)
@@ -226,18 +199,18 @@ class AttrAccessMixin(object):
         extra_attrs = [item
                        for sublist in self._attr_sources
                        for item in sublist
-                       if isinstance(item, basestring)]
+                       if isinstance(item, str)]
         return sorted(set(dir(type(self)) + extra_attrs))
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
-        """
+        """  # noqa
         item_lists = [item
                       for sublist in self._item_sources
                       for item in sublist
-                      if isinstance(item, basestring)]
+                      if isinstance(item, str)]
         return list(set(item_lists))
 
 
@@ -250,7 +223,7 @@ def get_squeeze_dims(xarray_obj, dim, axis=None):
     if dim is None and axis is None:
         dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
     else:
-        if isinstance(dim, basestring):
+        if isinstance(dim, str):
             dim = [dim]
         if isinstance(axis, int):
             axis = (axis, )
@@ -451,7 +424,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if isinstance(func, tuple):
             func, target = func
             if target in kwargs:
-                msg = '%s is both the pipe target and a keyword argument' % target
+                msg = ('%s is both the pipe target and a keyword argument'
+                       % target)
                 raise ValueError(msg)
             kwargs[target] = self
             return func(*args, **kwargs)
@@ -501,7 +475,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
-        """
+        """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
@@ -550,7 +524,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         References
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
-        """
+        """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
                                  cut_kwargs={'right': right, 'labels': labels,
                                              'precision': precision,
@@ -573,7 +547,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Set the labels at the center of the window.
         **dim_kwargs : optional
             The keyword arguments form of ``dim``.
-            One of dim or dim_kwarg must be provided.
+            One of dim or dim_kwargs must be provided.
 
         Returns
         -------
@@ -611,18 +585,73 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
-        """
+        """  # noqa
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
-    def resample(self, freq=None, dim=None, how=None, skipna=None,
-<<<<<<< HEAD
-                 closed=None, label=None, base=0, keep_attrs=None, **indexer):
-=======
-                 closed=None, label=None, base=0,
-                 keep_attrs=_set_keep_attrs(False), **indexer):
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
+    def coarsen(self, dim=None, boundary='exact', side='left',
+                coord_func='mean', **dim_kwargs):
+        """
+        Coarsen object.
+
+        Parameters
+        ----------
+        dim: dict, optional
+            Mapping from the dimension name to the window size.
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
+        boundary : 'exact' | 'trim' | 'pad'
+            If 'exact', a ValueError will be raised if dimension size is not a
+            multiple of the window size. If 'trim', the excess entries are
+            dropped. If 'pad', NA will be padded.
+        side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
+        coord_func: function (name) that is applied to the coordintes,
+            or a mapping from coordinate name to function (name).
+
+        Returns
+        -------
+        Coarsen object (core.rolling.DataArrayCoarsen for DataArray,
+        core.rolling.DatasetCoarsen for Dataset.)
+
+        Examples
+        --------
+        Coarsen the long time series by averaging over every four days.
+
+        >>> da = xr.DataArray(np.linspace(0, 364, num=364),
+        ...                   dims='time',
+        ...                   coords={'time': pd.date_range(
+        ...                       '15/12/1999', periods=364)})
+        >>> da
+        <xarray.DataArray (time: 364)>
+        array([  0.      ,   1.002755,   2.00551 , ..., 361.99449 , 362.997245,
+               364.      ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
+        >>>
+        >>> da.coarsen(time=3, boundary='trim').mean()
+        <xarray.DataArray (time: 121)>
+        array([  1.002755,   4.011019,   7.019284,  ...,  358.986226,
+               361.99449 ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-16 1999-12-19 ... 2000-12-10
+        >>>
+
+        See Also
+        --------
+        core.rolling.DataArrayCoarsen
+        core.rolling.DatasetCoarsen
+        """
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        return self._coarsen_cls(
+            self, dim, boundary=boundary, side=side,
+            coord_func=coord_func)
+
+    def resample(self, indexer=None, skipna=None, closed=None, label=None,
+                 base=0, keep_attrs=None, loffset=None, **indexer_kwargs):
         """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. If any intervals contain no
@@ -630,6 +659,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
+        indexer : {dim: freq}, optional
+            Mapping from the dimension name to resample frequency.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
@@ -640,13 +671,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
+        loffset : timedelta or str, optional
+            Offset used to adjust the resampled time labels. Some pandas date
+            offset strings are supported.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-        **indexer : {dim: freq}
-            Dictionary with a key indicating the dimension name to resample
-            over and a value corresponding to the resampling frequency.
+        **indexer_kwargs : {dim: freq}
+            The keyword arguments form of ``indexer``.
+            One of indexer or indexer_kwargs must be provided.
 
         Returns
         -------
@@ -680,83 +714,63 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
 
+        Limit scope of upsampling method
+        >>> da.resample(time='1D').nearest(tolerance='1D')
+        <xarray.DataArray (time: 337)>
+        array([ 0.,  0., nan, ..., nan, 11., 11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+
         References
         ----------
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
-        """
+        """  # noqa
         # TODO support non-string indexer after removing the old API.
 
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
+        from ..coding.cftimeindex import CFTimeIndex
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        if dim is not None:
-            if how is None:
-                how = 'mean'
-            return self._resample_immediately(freq, dim, how, skipna, closed,
-                                              label, base, keep_attrs)
+        # note: the second argument (now 'skipna') use to be 'dim'
+        if ((skipna is not None and not isinstance(skipna, bool))
+                or ('how' in indexer_kwargs and 'how' not in self.dims)
+                or ('dim' in indexer_kwargs and 'dim' not in self.dims)):
+            raise TypeError(
+                'resample() no longer supports the `how` or '
+                '`dim` arguments. Instead call methods on resample '
+                "objects, e.g., data.resample(time='1D').mean()")
 
-        if (how is not None) and indexer:
-            raise TypeError("If passing an 'indexer' then 'dim' "
-                            "and 'how' should not be used")
+        indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
 
-        # More than one indexer is ambiguous, but we do in fact need one if
-        # "dim" was not provided, until the old API is fully deprecated
         if len(indexer) != 1:
             raise ValueError(
                 "Resampling only supported along single dimensions."
             )
         dim, freq = indexer.popitem()
 
-        if isinstance(dim, basestring):
-            dim_name = dim
-            dim = self[dim]
+        dim_name = dim
+        dim_coord = self[dim]
+
+        if isinstance(self.indexes[dim_name], CFTimeIndex):
+            from .resample_cftime import CFTimeGrouper
+            grouper = CFTimeGrouper(freq, closed, label, base, loffset)
         else:
-            raise TypeError("Dimension name should be a string; "
-                            "was passed %r" % dim)
-        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
-        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
+            # TODO: to_offset() call required for pandas==0.19.2
+            grouper = pd.Grouper(freq=freq, closed=closed, label=label,
+                                 base=base,
+                                 loffset=pd.tseries.frequencies.to_offset(
+                                     loffset))
+        group = DataArray(dim_coord, coords=dim_coord.coords,
+                          dims=dim_coord.dims, name=RESAMPLE_DIM)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)
 
         return resampler
-
-    def _resample_immediately(self, freq, dim, how, skipna,
-                              closed, label, base, keep_attrs):
-        """Implement the original version of .resample() which immediately
-        executes the desired resampling operation. """
-        from .dataarray import DataArray
-        RESAMPLE_DIM = '__resample_dim__'
-
-        warnings.warn("\n.resample() has been modified to defer "
-                      "calculations. Instead of passing 'dim' and "
-                      "how=\"{how}\", instead consider using "
-                      ".resample({dim}=\"{freq}\").{how}('{dim}') ".format(
-                      dim=dim, freq=freq, how=how),
-                      FutureWarning, stacklevel=3)
-
-        if isinstance(dim, basestring):
-            dim = self[dim]
-        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
-        grouper = pd.Grouper(freq=freq, how=how, closed=closed, label=label,
-                             base=base)
-        gb = self._groupby_cls(self, group, grouper=grouper)
-        if isinstance(how, basestring):
-            f = getattr(gb, how)
-            if how in ['first', 'last']:
-                result = f(skipna=skipna, keep_attrs=keep_attrs)
-            elif how == 'count':
-                result = f(dim=dim.name, keep_attrs=keep_attrs)
-            else:
-                result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
-        else:
-            result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
-        result = result.rename({RESAMPLE_DIM: dim.name})
-        return result
 
     def where(self, cond, other=dtypes.NA, drop=False):
         """Filter elements from this object according to a condition.
@@ -852,7 +866,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self._file_obj = None
 
     def isin(self, test_elements):
-        """Tests each value in the array for whether it is in the supplied list.
+        """Tests each value in the array for whether it is in test elements.
 
         Parameters
         ----------

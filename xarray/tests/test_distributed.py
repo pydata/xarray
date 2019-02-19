@@ -1,21 +1,16 @@
 """ isort:skip_file """
-from __future__ import absolute_import, division, print_function
-import os
-import sys
 import pickle
-import tempfile
 
 import pytest
 
 dask = pytest.importorskip('dask', minversion='0.18')  # isort:skip
-distributed = pytest.importorskip('distributed', minversion='1.21')  # isort:skip
+distributed = pytest.importorskip(
+    'distributed', minversion='1.21')  # isort:skip
 
-from dask import array
 from dask.distributed import Client, Lock
 from distributed.utils_test import cluster, gen_cluster
-from distributed.utils_test import loop  # flake8: noqa
+from distributed.utils_test import loop  # noqa
 from distributed.client import futures_of
-import numpy as np
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
@@ -26,7 +21,7 @@ from xarray.tests.test_dataset import create_test_data
 
 from . import (
     assert_allclose, has_h5netcdf, has_netCDF4, requires_rasterio, has_scipy,
-    requires_zarr, requires_cfgrib, raises_regex)
+    requires_zarr, requires_cfgrib)
 
 # this is to stop isort throwing errors. May have been easier to just use
 # `isort:skip` in retrospect
@@ -62,7 +57,7 @@ ENGINES_AND_FORMATS = [
 ]
 
 
-@pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
+@pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)  # noqa
 def test_dask_distributed_netcdf_roundtrip(
         loop, tmp_netcdf_filename, engine, nc_format):
 
@@ -72,7 +67,7 @@ def test_dask_distributed_netcdf_roundtrip(
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
 
     with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop) as c:
+        with Client(s['address'], loop=loop):
 
             original = create_test_data().chunk(chunks)
 
@@ -92,7 +87,7 @@ def test_dask_distributed_netcdf_roundtrip(
                 assert_allclose(original, computed)
 
 
-@pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
+@pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)  # noqa
 def test_dask_distributed_read_netcdf_integration_test(
         loop, tmp_netcdf_filename, engine, nc_format):
 
@@ -102,7 +97,7 @@ def test_dask_distributed_read_netcdf_integration_test(
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
 
     with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop) as c:
+        with Client(s['address'], loop=loop):
 
             original = create_test_data()
             original.to_netcdf(tmp_netcdf_filename,
@@ -116,37 +111,47 @@ def test_dask_distributed_read_netcdf_integration_test(
                 assert_allclose(original, computed)
 
 
-
-@requires_zarr
-def test_dask_distributed_zarr_integration_test(loop):
+@requires_zarr  # noqar
+@pytest.mark.parametrize('consolidated', [True, False])
+@pytest.mark.parametrize('compute', [True, False])
+def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
+    if consolidated:
+        pytest.importorskip('zarr', minversion="2.2.1.dev2")
+        write_kwargs = dict(consolidated=True)
+        read_kwargs = dict(consolidated=True)
+    else:
+        write_kwargs = read_kwargs = {}
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 5}
     with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop) as c:
+        with Client(s['address'], loop=loop):
             original = create_test_data().chunk(chunks)
             with create_tmp_file(allow_cleanup_failure=ON_WINDOWS,
-                                 suffix='.zarr') as filename:
-                original.to_zarr(filename)
-                with xr.open_zarr(filename) as restored:
+                                 suffix='.zarrc') as filename:
+                maybe_futures = original.to_zarr(filename, compute=compute,
+                                                 **write_kwargs)
+                if not compute:
+                    maybe_futures.compute()
+                with xr.open_zarr(filename, **read_kwargs) as restored:
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
 
 
-@requires_rasterio
+@requires_rasterio  # noqa
 def test_dask_distributed_rasterio_integration_test(loop):
     with create_tmp_geotiff() as (tmp_file, expected):
         with cluster() as (s, [a, b]):
-            with Client(s['address'], loop=loop) as c:
+            with Client(s['address'], loop=loop):
                 da_tiff = xr.open_rasterio(tmp_file, chunks={'band': 1})
                 assert isinstance(da_tiff.data, da.Array)
                 actual = da_tiff.compute()
                 assert_allclose(actual, expected)
 
 
-@requires_cfgrib
+@requires_cfgrib  # noqa
 def test_dask_distributed_cfgrib_integration_test(loop):
     with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop) as c:
+        with Client(s['address'], loop=loop):
             with open_example_dataset('example.grib',
                                       engine='cfgrib',
                                       chunks={'time': 1}) as ds:

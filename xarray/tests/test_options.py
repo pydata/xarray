@@ -1,16 +1,10 @@
-from __future__ import absolute_import, division, print_function
-
 import pytest
 
 import xarray
-<<<<<<< HEAD
-from xarray.core.options import OPTIONS, _get_keep_attrs
-=======
-from xarray.core.options import OPTIONS, _set_keep_attrs
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
-from xarray.backends.file_manager import FILE_CACHE
-from xarray.tests.test_dataset import create_test_data
 from xarray import concat, merge
+from xarray.backends.file_manager import FILE_CACHE
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.tests.test_dataset import create_test_data
 
 
 def test_invalid_option_raises():
@@ -37,8 +31,9 @@ def test_arithmetic_join():
 def test_enable_cftimeindex():
     with pytest.raises(ValueError):
         xarray.set_options(enable_cftimeindex=None)
-    with xarray.set_options(enable_cftimeindex=True):
-        assert OPTIONS['enable_cftimeindex']
+    with pytest.warns(FutureWarning, match='no-op'):
+        with xarray.set_options(enable_cftimeindex=True):
+            assert OPTIONS['enable_cftimeindex']
 
 
 def test_file_cache_maxsize():
@@ -58,13 +53,8 @@ def test_keep_attrs():
     with xarray.set_options(keep_attrs=False):
         assert not OPTIONS['keep_attrs']
     with xarray.set_options(keep_attrs='default'):
-<<<<<<< HEAD
         assert _get_keep_attrs(default=True)
         assert not _get_keep_attrs(default=False)
-=======
-        assert _set_keep_attrs(func_default=True)
-        assert _set_keep_attrs(func_default=False) is False
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
 
 
 def test_nested_options():

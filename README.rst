@@ -9,35 +9,47 @@ xarray: N-D labeled arrays and datasets
    :target: https://coveralls.io/r/pydata/xarray
 .. image:: https://readthedocs.org/projects/xray/badge/?version=latest
    :target: http://xarray.pydata.org/
-.. image:: https://img.shields.io/pypi/v/xarray.svg
-   :target: https://pypi.python.org/pypi/xarray/
-.. image:: https://zenodo.org/badge/13221727.svg
-  :target: https://zenodo.org/badge/latestdoi/13221727
 .. image:: http://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
   :target: http://pandas.pydata.org/speed/xarray/
-.. image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A
-  :target: http://numfocus.org
+.. image:: https://img.shields.io/pypi/v/xarray.svg
+   :target: https://pypi.python.org/pypi/xarray/
 
-**xarray** (formerly **xray**) is an open source project and Python package that aims to bring the
-labeled data power of pandas_ to the physical sciences, by providing
-N-dimensional variants of the core pandas data structures.
+**xarray** (formerly **xray**) is an open source project and Python package
+that makes working with labelled multi-dimensional arrays simple,
+efficient, and fun!
 
-Our goal is to provide a pandas-like and pandas-compatible toolkit for
-analytics on multi-dimensional arrays, rather than the tabular data for which
-pandas excels. Our approach adopts the `Common Data Model`_ for self-
-describing scientific data in widespread use in the Earth sciences:
-``xarray.Dataset`` is an in-memory representation of a netCDF file.
+Xarray introduces labels in the form of dimensions, coordinates and
+attributes on top of raw NumPy_-like arrays, which allows for a more
+intuitive, more concise, and less error-prone developer experience.
+The package includes a large and growing library of domain-agnostic functions
+for advanced analytics and visualization with these data structures.
 
+Xarray was inspired by and borrows heavily from pandas_, the popular data
+analysis package focused on labelled tabular data.
+It is particularly tailored to working with netCDF_ files, which were the
+source of xarray's data model, and integrates tightly with dask_ for parallel
+computing.
+
+.. _NumPy: http://www.numpy.org
 .. _pandas: http://pandas.pydata.org
-.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
+.. _dask: http://dask.org
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
-.. _OPeNDAP: http://www.opendap.org/
 
 Why xarray?
 -----------
 
-Adding dimensions names and coordinate indexes to numpy's ndarray_ makes many
-powerful array operations possible:
+Multi-dimensional (a.k.a. N-dimensional, ND) arrays (sometimes called
+"tensors") are an essential part of computational science.
+They are encountered in a wide range of fields, including physics, astronomy,
+geoscience, bioinformatics, engineering, finance, and deep learning.
+In Python, NumPy_ provides the fundamental data structure and API for
+working with raw ND arrays.
+However, real-world datasets are usually more than just raw numbers;
+they have labels which encode information about how the array values map
+to locations in space, time, etc.
+
+Xarray doesn't just keep track of labels on arrays -- it uses them to provide a
+powerful and concise interface. For example:
 
 -  Apply operations over dimensions by name: ``x.sum('time')``.
 -  Select values by label instead of integer location:
@@ -51,42 +63,10 @@ powerful array operations possible:
 -  Keep track of arbitrary metadata in the form of a Python dictionary:
    ``x.attrs``.
 
-pandas_ provides many of these features, but it does not make use of dimension
-names, and its core data structures are fixed dimensional arrays.
-
-Why isn't pandas enough?
-------------------------
-
-pandas_ excels at working with tabular data. That suffices for many statistical
-analyses, but physical scientists rely on N-dimensional arrays -- which is
-where xarray comes in.
-
-xarray aims to provide a data analysis toolkit as powerful as pandas_ but
-designed for working with homogeneous N-dimensional arrays
-instead of tabular data. When possible, we copy the pandas API and rely on
-pandas's highly optimized internals (in particular, for fast indexing).
-
-Why netCDF?
------------
-
-Because xarray implements the same data model as the netCDF_ file format,
-xarray datasets have a natural and portable serialization format. But it is also
-easy to robustly convert an xarray ``DataArray`` to and from a numpy ``ndarray``
-or a pandas ``DataFrame`` or ``Series``, providing compatibility with the full
-`PyData ecosystem <http://pydata.org/>`__.
-
-Our target audience is anyone who needs N-dimensional labeled arrays, but we
-are particularly focused on the data analysis needs of physical scientists --
-especially geoscientists who already know and love netCDF_.
-
-.. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
-.. _pandas: http://pandas.pydata.org
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
-
 Documentation
 -------------
 
-The official documentation is hosted on ReadTheDocs at http://xarray.pydata.org/
+Learn more about xarray in its official documentation at http://xarray.pydata.org/
 
 Contributing
 ------------
@@ -134,7 +114,7 @@ __ http://climate.com/
 License
 -------
 
-Copyright 2014-2018, xarray Developers
+Copyright 2014-2019, xarray Developers
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -23,6 +23,11 @@ Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
 Matplotlib must be installed before xarray can plot.
 
+To use xarray's plotting capabilities with time coordinates containing
+``cftime.datetime`` objects
+`nc-time-axis <https://github.com/SciTools/nc-time-axis>`_ v1.2.0 or later
+needs to be installed.
+
 For more extensive plotting applications consider the following projects:
 
 - `Seaborn <http://seaborn.pydata.org/>`_: "provides
@@ -60,7 +65,7 @@ For these examples we'll use the North American air temperature dataset.
 
 .. ipython:: python
 
-    airtemps = xr.tutorial.load_dataset('air_temperature')
+    airtemps = xr.tutorial.open_dataset('air_temperature')
     airtemps
 
     # Convert to celsius
@@ -144,7 +149,7 @@ axes created by ``plt.subplots``.
     plt.tight_layout()
 
     @savefig plotting_example_existing_axes.png width=6in
-    plt.show()
+    plt.draw()
 
 On the right is a histogram created by :py:func:`xarray.plot.hist`.
 
@@ -226,7 +231,7 @@ Step plots
 ~~~~~~~~~~
 
 As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
-made using 1D data. 
+made using 1D data.
 
 .. ipython:: python
 
@@ -248,7 +253,7 @@ when plotting data grouped with :py:func:`xarray.Dataset.groupby_bins`.
     plt.ylim(-20,30)
     @savefig plotting_example_step_groupby.png width=4in
     plt.title('Zonal mean temperature')
-    
+
 In this case, the actual boundaries of the bins are used and the ``where`` argument
 is ignored.
 
@@ -343,7 +348,7 @@ matplotlib is available.
     plt.tight_layout()
 
     @savefig plotting_2d_call_matplotlib.png width=4in
-    plt.show()
+    plt.draw()
 
 .. note::
 
@@ -359,7 +364,7 @@ matplotlib is available.
         air2d.plot()
 
         @savefig plotting_2d_call_matplotlib2.png width=4in
-        plt.show()
+        plt.draw()
 
 Colormaps
 ~~~~~~~~~
@@ -444,9 +449,11 @@ if using ``imshow`` or ``pcolormesh`` (but not with ``contour`` or ``contourf``,
 since levels are chosen automatically).
 
 .. ipython:: python
+   :okwarning:
 
     @savefig plotting_seaborn_palette.png width=4in
     air2d.plot(levels=10, cmap='husl')
+    plt.draw()
 
 .. _plotting.faceting:
 
@@ -461,7 +468,7 @@ about three or four dimensional arrays? That's where facets become helpful.
 Consider the temperature data set. There are 4 observations per day for two
 years which makes for 2920 values along the time dimension.
 One way to visualize this data is to make a
-seperate plot for each time period.
+separate plot for each time period.
 
 The faceted dimension should not have too many values;
 faceting on the time dimension will produce 2920 plots. That's
@@ -520,6 +527,11 @@ Other features
 Faceted plotting supports other arguments common to xarray 2d plots.
 
 .. ipython:: python
+   :suppress:
+
+      plt.close('all')
+
+.. ipython:: python
 
     hasoutliers = t.isel(time=slice(0, 5)).copy()
     hasoutliers[0, 0, 0] = -100
@@ -528,7 +540,7 @@ Faceted plotting supports other arguments common to xarray 2d plots.
     @savefig plot_facet_robust.png
     g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
                                     robust=True, cmap='viridis',
-				     cbar_kwargs={'label': 'this has outliers'})
+				    cbar_kwargs={'label': 'this has outliers'})
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
@@ -568,7 +580,7 @@ they have been plotted.
     bottomright.annotate('bottom right', (240, 40))
 
     @savefig plot_facet_iterator.png
-    plt.show()
+    plt.draw()
 
 TODO: add an example of using the ``map`` method to plot dataset variables
 (e.g., with ``plt.quiver``).
@@ -585,7 +597,7 @@ This script will plot the air temperature on a map.
 .. ipython:: python
 
     import cartopy.crs as ccrs
-    air = xr.tutorial.load_dataset('air_temperature').air
+    air = xr.tutorial.open_dataset('air_temperature').air
     ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
     air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree());
     @savefig plotting_maps_cartopy.png width=100%
@@ -603,7 +615,7 @@ by faceting are accessible in the object returned by ``plot``:
         ax.coastlines()
         ax.gridlines()
     @savefig plotting_maps_cartopy_facetting.png width=100%
-    plt.show();
+    plt.draw();
 
 
 Details
@@ -634,7 +646,7 @@ These are provided for user convenience; they all call the same code.
     xplt.line(da, ax=axes[1, 1])
     plt.tight_layout()
     @savefig plotting_ways_to_use.png width=6in
-    plt.show()
+    plt.draw()
 
 Here the output is the same. Since the data is 1 dimensional the line plot
 was used.
