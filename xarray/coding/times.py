@@ -393,6 +393,8 @@ def encode_cf_timedelta(timedeltas, units=None):
 
 
 class CFDatetimeCoder(VariableCoder):
+    def __init__(self, use_cftime=None):
+        self.use_cftime = use_cftime
 
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
@@ -407,17 +409,17 @@ class CFDatetimeCoder(VariableCoder):
 
         return Variable(dims, data, attrs, encoding)
 
-    def decode(self, variable, name=None, use_cftime=None):
+    def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         if 'units' in attrs and 'since' in attrs['units']:
             units = pop_to(attrs, encoding, 'units')
             calendar = pop_to(attrs, encoding, 'calendar')
             dtype = _decode_cf_datetime_dtype(data, units, calendar,
-                                              use_cftime)
+                                              self.use_cftime)
             transform = partial(
                 decode_cf_datetime, units=units, calendar=calendar,
-                use_cftime=use_cftime)
+                use_cftime=self.use_cftime)
             data = lazy_elemwise_func(data, transform, dtype)
 
         return Variable(dims, data, attrs, encoding)

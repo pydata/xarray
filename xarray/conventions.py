@@ -301,10 +301,9 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
             var = coder.decode(var, name=name)
 
     if decode_times:
-        timedelta_coder = times.CFTimedeltaCoder()
-        datetime_coder = times.CFDatetimeCoder()
-        var = timedelta_coder.decode(var, name=name)
-        var = datetime_coder.decode(var, name=name, use_cftime=use_cftime)
+        for coder in [times.CFTimedeltaCoder(),
+                      times.CFDatetimeCoder(use_cftime=use_cftime)]:
+            var = coder.decode(var, name=name)
 
     dimensions, data, attributes, encoding = (
         variables.unpack_for_decoding(var))
