@@ -80,32 +80,7 @@ def _unpack_netcdf_time_units(units):
     return delta_units, ref_date
 
 
-def _decode_datetime_with_cftime(num_dates, units, calendar):
-    cftime = _import_cftime()
-
-    if cftime.__name__ == 'cftime':
-        dates = np.asarray(cftime.num2date(num_dates, units, calendar,
-                                           only_use_cftime_datetimes=True))
-    else:
-        # Must be using num2date from an old version of netCDF4 which
-        # does not have the only_use_cftime_datetimes option.
-        dates = np.asarray(cftime.num2date(num_dates, units, calendar))
-
-    if (dates[np.nanargmin(num_dates)].year < 1678 or
-            dates[np.nanargmax(num_dates)].year >= 2262):
-        if calendar in _STANDARD_CALENDARS:
-            warnings.warn(
-                'Unable to decode time axis into full '
-                'numpy.datetime64 objects, continuing using dummy '
-                'cftime.datetime objects instead, reason: dates out '
-                'of range', SerializationWarning, stacklevel=3)
-    else:
-        if calendar in _STANDARD_CALENDARS:
-            dates = cftime_to_nptime(dates)
-    return dates
-
-
-def _decode_cf_datetime_dtype(data, units, calendar):
+def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
     # Dataset.__repr__ when users try to view their lazily decoded array.
@@ -115,7 +90,8 @@ def _decode_cf_datetime_dtype(data, units, calendar):
                                     last_item(values) or [0]])
 
     try:
-        result = decode_cf_datetime(example_value, units, calendar)
+        result = decode_cf_datetime(example_value, units, calendar,
+                                    use_cftime)
     except Exception:
         calendar_msg = ('the default calendar' if calendar is None
                         else 'calendar %r' % calendar)
@@ -129,7 +105,52 @@ def _decode_cf_datetime_dtype(data, units, calendar):
     return dtype
 
 
-def decode_cf_datetime(num_dates, units, calendar=None):
+def _decode_datetime_with_cftime(num_dates, units, calendar):
+    cftime = _import_cftime()
+
+    if cftime.__name__ == 'cftime':
+        return np.asarray(cftime.num2date(num_dates, units, calendar,
+                                          only_use_cftime_datetimes=True))
+    else:
+        # Must be using num2date from an old version of netCDF4 which
+        # does not have the only_use_cftime_datetimes option.
+        return np.asarray(cftime.num2date(num_dates, units, calendar))
+
+
+def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
+    if calendar not in _STANDARD_CALENDARS:
+        raise OutOfBoundsDatetime(
+            'Cannot decode times from a non-standard calendar, {!r}, using '
+            'pandas.'.format(calendar))
+
+    delta, ref_date = _unpack_netcdf_time_units(units)
+    delta = _netcdf_to_numpy_timeunit(delta)
+    try:
+        ref_date = pd.Timestamp(ref_date)
+    except ValueError:
+        # ValueError is raised by pd.Timestamp for non-ISO timestamp
+        # strings, in which case we fall back to using cftime
+        raise OutOfBoundsDatetime
+
+    # fixes: https://github.com/pydata/pandas/issues/14068
+    # these lines check if the the lowest or the highest value in dates
+    # cause an OutOfBoundsDatetime (Overflow) error
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'invalid value encountered',
+                                RuntimeWarning)
+        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
+        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
+
+    # Cast input dates to integers of nanoseconds because `pd.to_datetime`
+    # works much faster when dealing with integers
+    # make _NS_PER_TIME_DELTA an array to ensure type upcasting
+    flat_num_dates_ns_int = (flat_num_dates.astype(np.float64) *
+                             _NS_PER_TIME_DELTA[delta]).astype(np.int64)
+
+    return (pd.to_timedelta(flat_num_dates_ns_int, 'ns') + ref_date).values
+
+
+def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
     """Given an array of numeric dates in netCDF format, convert it into a
     numpy array of date time objects.
 
@@ -149,41 +170,30 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     if calendar is None:
         calendar = 'standard'
 
-    delta, ref_date = _unpack_netcdf_time_units(units)
-
-    try:
-        if calendar not in _STANDARD_CALENDARS:
-            raise OutOfBoundsDatetime
-
-        delta = _netcdf_to_numpy_timeunit(delta)
+    if use_cftime is None:
         try:
-            ref_date = pd.Timestamp(ref_date)
-        except ValueError:
-            # ValueError is raised by pd.Timestamp for non-ISO timestamp
-            # strings, in which case we fall back to using cftime
-            raise OutOfBoundsDatetime
+            dates = _decode_datetime_with_pandas(flat_num_dates, units,
+                                                 calendar)
+        except (OutOfBoundsDatetime, OverflowError):
+            dates = _decode_datetime_with_cftime(
+                flat_num_dates.astype(np.float), units, calendar)
 
-        # fixes: https://github.com/pydata/pandas/issues/14068
-        # these lines check if the the lowest or the highest value in dates
-        # cause an OutOfBoundsDatetime (Overflow) error
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', 'invalid value encountered',
-                                    RuntimeWarning)
-            pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
-            pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
-
-        # Cast input dates to integers of nanoseconds because `pd.to_datetime`
-        # works much faster when dealing with integers
-        # make _NS_PER_TIME_DELTA an array to ensure type upcasting
-        flat_num_dates_ns_int = (flat_num_dates.astype(np.float64) *
-                                 _NS_PER_TIME_DELTA[delta]).astype(np.int64)
-
-        dates = (pd.to_timedelta(flat_num_dates_ns_int, 'ns') +
-                 ref_date).values
-
-    except (OutOfBoundsDatetime, OverflowError):
+            if (dates[np.nanargmin(num_dates)].year < 1678 or
+               dates[np.nanargmax(num_dates)].year >= 2262):
+                if calendar in _STANDARD_CALENDARS:
+                    warnings.warn(
+                        'Unable to decode time axis into full '
+                        'numpy.datetime64 objects, continuing using '
+                        'cftime.datetime objects instead, reason: dates out '
+                        'of range', SerializationWarning, stacklevel=3)
+            else:
+                if calendar in _STANDARD_CALENDARS:
+                    dates = cftime_to_nptime(dates)
+    elif use_cftime:
         dates = _decode_datetime_with_cftime(
             flat_num_dates.astype(np.float), units, calendar)
+    else:
+        dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
 
     return dates.reshape(num_dates.shape)
 
@@ -383,6 +393,8 @@ def encode_cf_timedelta(timedeltas, units=None):
 
 
 class CFDatetimeCoder(VariableCoder):
+    def __init__(self, use_cftime=None):
+        self.use_cftime = use_cftime
 
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
@@ -403,9 +415,11 @@ class CFDatetimeCoder(VariableCoder):
         if 'units' in attrs and 'since' in attrs['units']:
             units = pop_to(attrs, encoding, 'units')
             calendar = pop_to(attrs, encoding, 'calendar')
-            dtype = _decode_cf_datetime_dtype(data, units, calendar)
+            dtype = _decode_cf_datetime_dtype(data, units, calendar,
+                                              self.use_cftime)
             transform = partial(
-                decode_cf_datetime, units=units, calendar=calendar)
+                decode_cf_datetime, units=units, calendar=calendar,
+                use_cftime=self.use_cftime)
             data = lazy_elemwise_func(data, transform, dtype)
 
         return Variable(dims, data, attrs, encoding)
