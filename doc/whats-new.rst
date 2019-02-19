@@ -82,6 +82,10 @@ Bug fixes
 
 - Silenced warnings that appear when using pandas 0.24.
   By `Stephan Hoyer <https://github.com/shoyer>`_
+- Concatenating a sequence of :py:class:`~xarray.DataArray` with varying names
+  sets the name of the output array to ``None``, instead of the name of the
+  first input array.
+  (:issue:`2775`). By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 - Interpolating via resample now internally specifies ``bounds_error=False``
   as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
   from higher frequencies to lower frequencies.  Datapoints outside the bounds

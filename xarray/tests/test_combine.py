@@ -297,6 +297,16 @@ class TestConcatDataArray(object):
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ('z', 'x', 'y')
 
+    def test_concat_names(self):
+        ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 2))),
+                      'bar': (['x', 'y'], np.random.random((2, 2)))})
+        # Concat arrays with different names, new name is None
+        new = concat([ds.foo, ds.bar], dim='new')
+        assert new.name is None
+        # Concat arrays with same name, name is preserved
+        foobar = ds.foo.rename('bar')
+        assert concat([foobar, ds.bar], dim='new').name == 'bar'
+
 
 class TestAutoCombine(object):
 

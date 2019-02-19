@@ -6,6 +6,7 @@ import pandas as pd
 
 from . import utils
 from .alignment import align
+from .computation import result_name
 from .merge import merge
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
@@ -323,16 +324,10 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
         raise ValueError('data_vars is not a valid argument when '
                          'concatenating DataArray objects')
 
-    datasets = []
-    for n, arr in enumerate(arrays):
-        if n == 0:
-            name = arr.name
-        elif name != arr.name:
-            if compat == 'identical':
-                raise ValueError('array names not identical')
-            else:
-                arr = arr.rename(name)
-        datasets.append(arr._to_temp_dataset())
+    name = result_name(arrays)
+    if name is None and compat == 'identical':
+        raise ValueError('array names not identical')
+    datasets = [arr.rename(name)._to_temp_dataset() for arr in arrays]
 
     ds = _dataset_concat(datasets, dim, data_vars, coords, compat,
                          positions)
