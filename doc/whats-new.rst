@@ -94,6 +94,10 @@ Bug fixes
 - Masking data arrays with :py:meth:`xarray.DataArray.where` now returns an
   array with the name of the original masked array (:issue:`2748` and :issue:`2457`).
   By `Yohai Bar-Sinai <https://github.com/yohai>`_.
+- Fixed error when trying to reduce a DataArray using a function which does not
+  require an axis argument. (:issue:`2768`)
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+
 - Per `CF conventions
   <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
   specifying ``'standard'`` as the calendar type in
