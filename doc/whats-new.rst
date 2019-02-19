@@ -40,6 +40,9 @@ Enhancements
   `Spencer Clark <https://github.com/spencerkclark>`_.
 - Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
   By `Ryan Abernathey <https://github.com/rabernat>`_
+- Use new dimension name and unique array names to create a new coordinate
+  when concatenating arrays, if no coordinates are given.
+  (:issue:`2775`). By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 - :py:meth:`~xarray.DataArray.coarsen` and
   :py:meth:`~xarray.Dataset.coarsen` are newly added.
   See :ref:`comput.coarsen` for details.

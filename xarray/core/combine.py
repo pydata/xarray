@@ -325,9 +325,22 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
                          'concatenating DataArray objects')
 
     name = result_name(arrays)
-    if name is None and compat == 'identical':
-        raise ValueError('array names not identical')
+    names = [arr.name for arr in arrays]
+    if compat == 'identical' and len(set(names)) != 1:
+        raise ValueError(
+            "compat='identical', but array names {!r} are not identical"
+            .format(names if len(names) <= 10 else sorted(set(names)))
+        )
     datasets = [arr.rename(name)._to_temp_dataset() for arr in arrays]
+
+    if (
+        isinstance(dim, str)
+        and len(set(names) - {None}) == len(names)
+        and not any(dim in a.dims or dim in a.coords for a in arrays)
+    ):
+        # We're concatenating arrays with unique non-None names along
+        # a new dimension, so we use the existing names as coordinates.
+        dim = pd.Index(names, name=dim)
 
     ds = _dataset_concat(datasets, dim, data_vars, coords, compat,
                          positions)

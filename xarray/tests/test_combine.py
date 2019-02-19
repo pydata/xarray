@@ -248,7 +248,8 @@ class TestConcatDataArray(object):
 
         # from dataset array:
         expected = DataArray(np.array([foo.values, bar.values]),
-                             dims=['w', 'x', 'y'], coords={'x': [0, 1]})
+                             dims=['w', 'x', 'y'],
+                             coords={'x': [0, 1], 'w': ['foo', 'bar']})
         actual = concat([foo, bar], 'w')
         assert_equal(expected, actual)
         # from iteration:
@@ -297,15 +298,24 @@ class TestConcatDataArray(object):
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ('z', 'x', 'y')
 
-    def test_concat_names(self):
+    def test_concat_names_and_coords(self):
         ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 2))),
                       'bar': (['x', 'y'], np.random.random((2, 2)))})
         # Concat arrays with different names, new name is None
+        # and unique array names are used as coordinates
         new = concat([ds.foo, ds.bar], dim='new')
         assert new.name is None
+        assert (new.coords['new'] == ['foo', 'bar']).values.all()
+        # Get a useful error message for unexpectedly different names
+        with pytest.raises(ValueError) as err:
+            concat([ds.foo, ds.bar], dim='new', compat='identical')
+        assert err.value.args[0] == "compat='identical', " + \
+            "but array names ['foo', 'bar'] are not identical"
         # Concat arrays with same name, name is preserved
+        # and non-unique names are not used as coords
         foobar = ds.foo.rename('bar')
         assert concat([foobar, ds.bar], dim='new').name == 'bar'
+        assert 'new' not in concat([foobar, ds.bar], dim='new').coords
 
 
 class TestAutoCombine(object):
