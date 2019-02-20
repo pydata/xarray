@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import dask_array_ops, dtypes, npcompat, nputils, utils
+from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 
@@ -289,20 +289,57 @@ cumsum_1d.numeric_only = True
 _mean = _create_nan_agg_method('mean')
 
 
+def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
+    """Convert an array containing datetime-like data to an array of floats.
+
+    Parameters
+    ----------
+    da : array
+        Input data
+    offset: Scalar with the same type of array or None
+        If None, subtract minimum values to reduce round off error
+    datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+        'us', 'ns', 'ps', 'fs', 'as'}
+    dtype: target dtype
+
+    Returns
+    -------
+    array
+    """
+    if offset is None:
+        offset = array.min()
+    array = array - offset
+
+    if not hasattr(array, 'dtype'):  # scalar is converted to 0d-array
+        array = np.array(array)
+
+    if array.dtype.kind in 'O':
+        # possibly convert object array containing datetime.timedelta
+        array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
+
+    if datetime_unit:
+        array = array / np.timedelta64(1, datetime_unit)
+
+    # convert np.NaT to np.nan
+    if array.dtype.kind in 'mM':
+        return np.where(isnull(array), np.nan, array.astype(dtype))
+    return array.astype(dtype)
+
+
 def mean(array, axis=None, skipna=None, **kwargs):
     """ inhouse mean that can handle datatime dtype """
     array = asarray(array)
-    if array.dtype.kind == 'M':
+    if array.dtype.kind in 'Mm':
         offset = min(array)
         # xarray always uses datetime[ns] for datetime
         dtype = 'timedelta64[ns]'
-        return _mean(utils.datetime_to_numeric(array, offset), axis=axis,
+        return _mean(datetime_to_numeric(array, offset), axis=axis,
                      skipna=skipna, **kwargs).astype(dtype) + offset
     else:
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
 
-mean.numeric_only = True
+mean.numeric_only = True  # type: ignore
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):

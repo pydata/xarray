@@ -17,7 +17,9 @@ from xarray.plot.utils import (
 
 from . import (
     assert_array_equal, assert_equal, raises_regex, requires_cftime,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn)
+    requires_matplotlib, requires_matplotlib2, requires_seaborn,
+    requires_nc_time_axis)
+from . import has_nc_time_axis
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -1828,6 +1830,61 @@ class TestDatetimePlot(PlotTestCase):
         self.darray.plot.line()
 
 
+@requires_nc_time_axis
+@requires_cftime
+class TestCFDatetimePlot(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        '''
+        Create a DataArray with a time-axis that contains cftime.datetime
+        objects.
+        '''
+        # case for 1d array
+        data = np.random.rand(4, 12)
+        time = xr.cftime_range(start='2017',
+                               periods=12,
+                               freq='1M',
+                               calendar='noleap')
+        darray = DataArray(data, dims=['x', 'time'])
+        darray.coords['time'] = time
+
+        self.darray = darray
+
+    def test_cfdatetime_line_plot(self):
+        self.darray.isel(x=0).plot.line()
+
+    def test_cfdatetime_pcolormesh_plot(self):
+        self.darray.plot.pcolormesh()
+
+    def test_cfdatetime_contour_plot(self):
+        self.darray.plot.contour()
+
+
+@requires_cftime
+@pytest.mark.skipif(has_nc_time_axis, reason='nc_time_axis is installed')
+class TestNcAxisNotInstalled(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        '''
+        Create a DataArray with a time-axis that contains cftime.datetime
+        objects.
+        '''
+        month = np.arange(1, 13, 1)
+        data = np.sin(2 * np.pi * month / 12.0)
+        darray = DataArray(data, dims=['time'])
+        darray.coords['time'] = xr.cftime_range(start='2017',
+                                                periods=12,
+                                                freq='1M',
+                                                calendar='noleap')
+
+        self.darray = darray
+
+    def test_ncaxis_notinstalled_line_plot(self):
+        with raises_regex(ImportError,
+                          'optional `nc-time-axis`'):
+            self.darray.plot.line()
+
+
 @requires_seaborn
 def test_import_seaborn_no_warning():
     # GH1633
@@ -1842,27 +1899,6 @@ def test_plot_seaborn_no_import_warning():
     with pytest.warns(None) as record:
         _color_palette('Blues', 4)
     assert len(record) == 0
-
-
-@requires_cftime
-def test_plot_cftime_coordinate_error():
-    cftime = _import_cftime()
-    time = cftime.num2date(np.arange(5), units='days since 0001-01-01',
-                           calendar='noleap')
-    data = DataArray(np.arange(5), coords=[time], dims=['time'])
-    with raises_regex(TypeError,
-                      'requires coordinates to be numeric or dates'):
-        data.plot()
-
-
-@requires_cftime
-def test_plot_cftime_data_error():
-    cftime = _import_cftime()
-    data = cftime.num2date(np.arange(5), units='days since 0001-01-01',
-                           calendar='noleap')
-    data = DataArray(data, coords=[np.arange(5)], dims=['x'])
-    with raises_regex(NotImplementedError, 'cftime.datetime'):
-        data.plot()
 
 
 test_da_list = [DataArray(easy_array((10, ))),
