@@ -352,11 +352,15 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         with close_on_error(store):
             ds = maybe_decode_store(store)
     else:
-        if engine is not None and engine != 'scipy':
+        if engine == 'h5netcdf':
+            store = backends.H5NetCDFStore(
+                filename_or_obj, group=group, lock=lock, **backend_kwargs)
+        elif engine is not None and engine != 'scipy' and engine != 'h5netcdf':
             raise ValueError('can only read file-like objects with '
                              "default engine or engine='scipy'")
-        # assume filename_or_obj is a file-like object
-        store = backends.ScipyDataStore(filename_or_obj)
+        else:
+            # assume filename_or_obj is a file-like object
+            store = backends.ScipyDataStore(filename_or_obj)
         ds = maybe_decode_store(store)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
