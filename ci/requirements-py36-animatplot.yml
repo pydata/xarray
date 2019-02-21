@@ -1,0 +1,25 @@
+name: test_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.6
+  - animatplot
+  - cftime
+  - dask
+  - distributed
+  - h5py
+  - h5netcdf
+  - matplotlib
+  - netcdf4
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - coveralls
+  - pycodestyle
+  - numpy
+  - pandas
+  - scipy
+  - seaborn
+  - toolz
+  - bottleneck
+  - zarr

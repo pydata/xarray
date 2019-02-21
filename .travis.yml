@@ -17,6 +17,7 @@ matrix:
   - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
+  - env: CONDA_ENV=py36-animatplot
   - env: CONDA_ENV=py36-dask-dev
   - env: CONDA_ENV=py36-pandas-dev
   - env: CONDA_ENV=py36-bottleneck-dev
