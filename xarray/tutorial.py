@@ -92,7 +92,7 @@ def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
 def load_dataset(*args, **kwargs):
     """
     `load_dataset` will be removed in version 0.12. The current behavior of
-    this function can be achived by using `tutorial.open_dataset(...).load()`.
+    this function can be achieved by using `tutorial.open_dataset(...).load()`.
 
     See Also
     --------
@@ -100,7 +100,7 @@ def load_dataset(*args, **kwargs):
     """
     warnings.warn(
         "load_dataset` will be removed in xarray version 0.12. The current "
-        "behavior of this function can be achived by using "
+        "behavior of this function can be achieved by using "
         "`tutorial.open_dataset(...).load()`.",
         DeprecationWarning, stacklevel=2)
     return open_dataset(*args, **kwargs).load()
