@@ -222,7 +222,6 @@ def encode_cf_variable(var, needs_copy=True, name=None):
         A variable which has been encoded as described above.
     """
     ensure_not_multiindex(var, name=name)
-
     for coder in [times.CFDatetimeCoder(),
                   times.CFTimedeltaCoder(),
                   variables.CFScaleOffsetCoder(),

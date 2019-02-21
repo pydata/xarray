@@ -50,3 +50,42 @@ def test_scaling_converts_to_float32(dtype):
     roundtripped = coder.decode(encoded)
     assert_identical(original, roundtripped)
     assert roundtripped.dtype == np.float32
+
+
+@pytest.mark.parametrize('dtype', 'u1 u2 i1 i2 f2 f4'.split())
+@pytest.mark.parametrize('scale_factor', [10, 0.01,
+                                          np.float16(10),
+                                          np.float32(10),
+                                          np.float64(10),
+                                          np.int8(10),
+                                          np.int16(10), np.int32(10),
+                                          np.int64(10), np.uint8(10),
+                                          np.uint16(10), np.uint32(10),
+                                          np.uint64(10), np.uint64(10)])
+@pytest.mark.parametrize('add_offset', [10, 0.01,
+                                        np.float16(10),
+                                        np.float32(10),
+                                        np.float64(10),
+                                        np.int8(10),
+                                        np.int16(10), np.int32(10),
+                                        np.int64(10), np.uint8(10),
+                                        np.uint16(10), np.uint32(10),
+                                        np.uint64(10), np.uint64(10)])
+def test_scaling_according_to_cf_convention(dtype, scale_factor, add_offset):
+    original = xr.Variable(('x',), np.arange(10, dtype=dtype),
+                           encoding=dict(scale_factor=scale_factor,
+                           add_offset=add_offset))
+    coder = variables.CFScaleOffsetCoder()
+    encoded = coder.encode(original)
+    assert encoded.dtype.itemsize >= np.dtype(dtype).itemsize
+    assert encoded.dtype.itemsize >= 4 and np.issubdtype(encoded, np.floating)
+
+    roundtripped = coder.decode(encoded)
+
+    # We make sure that roundtripped is larger than
+    # the original
+    assert roundtripped.dtype.itemsize >= original.dtype.itemsize
+    assert (roundtripped.dtype is np.dtype(np.float64)
+            or roundtripped.dtype is np.dtype(np.float32))
+
+    np.testing.assert_array_almost_equal(roundtripped, original)

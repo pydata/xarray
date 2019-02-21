@@ -189,7 +189,7 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
     return data
 
 
-def _choose_float_dtype(dtype, scale_factor, add_offset):
+def _choose_float_dtype(dtype, scale_factor, add_offset, mode=None):
     """Return a float dtype that can losslessly represent `dtype` values."""
     # Implementing cf-convention
     # http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch08.html:
@@ -208,16 +208,17 @@ def _choose_float_dtype(dtype, scale_factor, add_offset):
     # It is not advised to unpack an int into a float as there
     # is a potential precision loss.
 
-    # We first return scale_factor type
-    # as multiplying takes priority over
-    # adding values
-    if dtype is not type(scale_factor) and \
-            isinstance(scale_factor, np.generic):
-        return np.dtype(scale_factor)
+    if mode is 'decoding':
+        types = [np.dtype(type(scale_factor)),
+                 np.dtype(type(add_offset)),
+                 np.dtype(dtype)]
+        # scaled_type should be the largest type we find
+        scaled_dtype = max(types)
 
-    if dtype is not type(add_offset) and \
-            isinstance(add_offset, np.generic):
-        return np.dtype(add_offset)
+        # We return it only if it's a float32 or a float64
+        if (scaled_dtype.itemsize >= 4
+                and np.issubdtype(scaled_dtype, np.floating)):
+            return scaled_dtype
 
     # Keep float32 as-is.  Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
@@ -245,16 +246,18 @@ class CFScaleOffsetCoder(VariableCoder):
 
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-
         if 'scale_factor' in encoding or 'add_offset' in encoding:
-            scale_factor = pop_to(attrs, encoding, 'scale_factor', name=name)
-            add_offset = pop_to(attrs, encoding, 'add_offset', name=name)
-            dtype = _choose_float_dtype(data.dtype, scale_factor, add_offset)
+            scale_factor = pop_to(encoding, attrs,
+                                  'scale_factor', name=name)
+            add_offset = pop_to(encoding, attrs,
+                                'add_offset', name=name)
+            dtype = _choose_float_dtype(data.dtype, scale_factor,
+                                        add_offset, mode='encoding')
             data = data.astype(dtype=dtype, copy=True)
-            if 'add_offset' in encoding:
-                data -= pop_to(encoding, attrs, 'add_offset', name=name)
-            if 'scale_factor' in encoding:
-                data /= pop_to(encoding, attrs, 'scale_factor', name=name)
+            if add_offset:
+                data -= add_offset
+            if scale_factor:
+                data /= scale_factor
 
         return Variable(dims, data, attrs, encoding)
 
@@ -264,8 +267,8 @@ class CFScaleOffsetCoder(VariableCoder):
         if 'scale_factor' in attrs or 'add_offset' in attrs:
             scale_factor = pop_to(attrs, encoding, 'scale_factor', name=name)
             add_offset = pop_to(attrs, encoding, 'add_offset', name=name)
-            dtype = _choose_float_dtype(data.dtype, scale_factor, add_offset)
-
+            dtype = _choose_float_dtype(data.dtype, scale_factor,
+                                        add_offset, mode='decoding')
             transform = partial(_scale_offset_decoding,
                                 scale_factor=scale_factor,
                                 add_offset=add_offset,

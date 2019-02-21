@@ -668,7 +668,9 @@ class CFEncodedBase(DatasetIOBase):
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert (decoded.variables[k].dtype
-                        == actual.variables[k].dtype)
+                        == actual.variables[k].dtype or
+                        (decoded.variables[k].dtype == np.float32 and
+                            actual.variables[k].dtype == np.float64))
             assert_allclose(decoded, actual, decode_bytes=False)
 
         with self.roundtrip(decoded,
@@ -694,7 +696,9 @@ class CFEncodedBase(DatasetIOBase):
         with self.roundtrip(encoded) as actual:
             for k in decoded.variables:
                 assert (decoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
+                        actual.variables[k].dtype or
+                        (decoded.variables[k].dtype == np.float32 and
+                            actual.variables[k].dtype == np.float64))
             assert_allclose(decoded, actual, decode_bytes=False)
 
     def test_coordinates_encoding(self):
@@ -1168,8 +1172,11 @@ class NetCDF4Base(CFEncodedBase):
                 v[:] = np.array([-1123, -1123, 123, 1123, 2123])
             # We read the newly created netcdf file
             with nc4.Dataset(tmp_file, mode='r') as nc:
-                # we open the dataset with forced promotion to 64 bit
+                # we open the dataset
+                from xarray.coding import variables
+                variables.MYCASE = False
                 with open_dataset(tmp_file) as ds:
+                    variables.MYCASE = False
                     # Both dataset values should be equal
                     # And both of float64 array type
                     dsv = ds['x'].values
