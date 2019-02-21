@@ -1190,10 +1190,7 @@ class NetCDF4Base(CFEncodedBase):
             # We read the newly created netcdf file
             with nc4.Dataset(tmp_file, mode='r') as nc:
                 # we open the dataset
-                from xarray.coding import variables
-                variables.MYCASE = False
                 with open_dataset(tmp_file) as ds:
-                    variables.MYCASE = False
                     # Both dataset values should be equal
                     # And both of float64 array type
                     dsv = ds['x'].values
