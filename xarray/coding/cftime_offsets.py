@@ -68,7 +68,7 @@ def get_date_type(calendar):
             'proleptic_gregorian': cftime.DatetimeProlepticGregorian,
             'julian': cftime.DatetimeJulian,
             'all_leap': cftime.DatetimeAllLeap,
-            'standard': cftime.DatetimeProlepticGregorian
+            'standard': cftime.DatetimeGregorian
         }
         return calendars[calendar]
 
@@ -679,9 +679,9 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     +--------------------------------+---------------------------------------+
     | Alias                          | Date type                             |
     +================================+=======================================+
-    | standard, proleptic_gregorian  | ``cftime.DatetimeProlepticGregorian`` |
+    | standard, gregorian            | ``cftime.DatetimeGregorian``          |
     +--------------------------------+---------------------------------------+
-    | gregorian                      | ``cftime.DatetimeGregorian``          |
+    | proleptic_gregorian            | ``cftime.DatetimeProlepticGregorian`` |
     +--------------------------------+---------------------------------------+
     | noleap, 365_day                | ``cftime.DatetimeNoLeap``             |
     +--------------------------------+---------------------------------------+

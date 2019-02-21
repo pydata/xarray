@@ -683,7 +683,9 @@ class TestDataArray(object):
         da.isel(time=(('points',), [1, 2]), x=(('points',), [2, 2]),
                 y=(('points',), [3, 4]))
         np.testing.assert_allclose(
-            da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
+            da.isel(time=(('p',), [1]),
+                    x=(('p',), [2]),
+                    y=(('p',), [4])).values.squeeze(),
             np_array[1, 4, 2].squeeze())
         da.isel(time=(('points', ), [1, 2]))
         y = [-1, 0]
@@ -3690,6 +3692,15 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
+
+
+def test_name_in_masking():
+    name = 'RingoStarr'
+    da = xr.DataArray(range(10), coords=[('x', range(10))], name=name)
+    assert da.where(da > 5).name == name
+    assert da.where((da > 5).rename('YokoOno')).name == name
+    assert da.where(da > 5, drop=True).name == name
+    assert da.where((da > 5).rename('YokoOno'), drop=True).name == name
 
 
 class TestIrisConversion(object):

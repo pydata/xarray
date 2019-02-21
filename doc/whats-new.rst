@@ -28,10 +28,16 @@ Breaking changes
   `DataArray` are deprecated and will be removed in a future release.
   (:issue:`1188`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- `cyordereddict` is no longer used as an optional dependency (:issue:`2744`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
 
+- Internal plotting now supports ``cftime.datetime`` objects as time series.
+  (:issue:`2164`)
+  By `Julius Busecke <https://github.com/jbusecke>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
   By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`~xarray.DataArray.coarsen` and
@@ -65,7 +71,15 @@ Enhancements
 - Variables are now unpacked with scale_factor and offset dtypes if present in datasets.
   According `to cf convetion <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch08.html>`_.
   By `Daoud Jahdou <https://github.com/daoudjahdou>`_.
-
+- :py:meth:`~xarray.open_dataset` now accepts a ``use_cftime`` argument, which
+  can be used to require that ``cftime.datetime`` objects are always used, or
+  never used when decoding dates encoded with a standard calendar.  This can be
+  used to ensure consistent date types are returned when using
+  :py:meth:`~xarray.open_mfdataset` (:issue:`1263`) and/or to silence
+  serialization warnings raised if dates from a standard calendar are found to
+  be outside the :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By
+  `Spencer Clark <https://github.com/spencerkclark>`_. 
+  
 Bug fixes
 ~~~~~~~~~
 
@@ -82,6 +96,24 @@ Bug fixes
   :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
   instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- backend_kwargs are no longer ignored when using open_dataset with pynio engine
+  (:issue:'2380')
+  By 'Jonathan Joyce <https://github.com/jonmjoyce>'_.
+- Fix ``open_rasterio`` creating a WKT CRS instead of PROJ.4 with
+  ``rasterio`` 1.0.14+ (:issue:`2715`).
+  By `David Hoese <https://github.com/djhoese>`_.
+- Masking data arrays with :py:meth:`xarray.DataArray.where` now returns an
+  array with the name of the original masked array (:issue:`2748` and :issue:`2457`).
+  By `Yohai Bar-Sinai <https://github.com/yohai>`_.
+- Fixed error when trying to reduce a DataArray using a function which does not
+  require an axis argument. (:issue:`2768`)
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+
+- Per `CF conventions
+  <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
+  specifying ``'standard'`` as the calendar type in
+  :py:meth:`~xarray.cftime_range` now correctly refers to the ``'gregorian'``
+  calendar instead of the ``'proleptic_gregorian'`` calendar (:issue:`2761`).
 
 .. _whats-new.0.11.3:
 
