@@ -68,7 +68,7 @@ def get_date_type(calendar):
             'proleptic_gregorian': cftime.DatetimeProlepticGregorian,
             'julian': cftime.DatetimeJulian,
             'all_leap': cftime.DatetimeAllLeap,
-            'standard': cftime.DatetimeProlepticGregorian
+            'standard': cftime.DatetimeGregorian
         }
         return calendars[calendar]
 
@@ -358,29 +358,41 @@ class YearEnd(YearOffset):
 class Day(BaseCFTimeOffset):
     _freq = 'D'
 
+    def as_timedelta(self):
+        return timedelta(days=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(days=self.n)
+        return other + self.as_timedelta()
 
 
 class Hour(BaseCFTimeOffset):
     _freq = 'H'
 
+    def as_timedelta(self):
+        return timedelta(hours=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(hours=self.n)
+        return other + self.as_timedelta()
 
 
 class Minute(BaseCFTimeOffset):
     _freq = 'T'
 
+    def as_timedelta(self):
+        return timedelta(minutes=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(minutes=self.n)
+        return other + self.as_timedelta()
 
 
 class Second(BaseCFTimeOffset):
     _freq = 'S'
 
+    def as_timedelta(self):
+        return timedelta(seconds=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(seconds=self.n)
+        return other + self.as_timedelta()
 
 
 _FREQUENCIES = {
@@ -425,6 +437,11 @@ _FREQUENCIES = {
 _FREQUENCY_CONDITION = '|'.join(_FREQUENCIES.keys())
 _PATTERN = r'^((?P<multiple>\d+)|())(?P<freq>({0}))$'.format(
     _FREQUENCY_CONDITION)
+
+
+# pandas defines these offsets as "Tick" objects, which for instance have
+# distinct behavior from monthly or longer frequencies in resample.
+CFTIME_TICKS = (Day, Hour, Minute, Second)
 
 
 def to_offset(freq):
@@ -662,9 +679,9 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     +--------------------------------+---------------------------------------+
     | Alias                          | Date type                             |
     +================================+=======================================+
-    | standard, proleptic_gregorian  | ``cftime.DatetimeProlepticGregorian`` |
+    | standard, gregorian            | ``cftime.DatetimeGregorian``          |
     +--------------------------------+---------------------------------------+
-    | gregorian                      | ``cftime.DatetimeGregorian``          |
+    | proleptic_gregorian            | ``cftime.DatetimeProlepticGregorian`` |
     +--------------------------------+---------------------------------------+
     | noleap, 365_day                | ``cftime.DatetimeNoLeap``             |
     +--------------------------------+---------------------------------------+

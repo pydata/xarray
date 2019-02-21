@@ -2,7 +2,7 @@ import functools
 import itertools
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
-from typing import Tuple, Type
+from typing import Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None):
+def as_variable(obj, name=None) -> 'Union[Variable, IndexVariable]':
     """Convert an object into a Variable.
 
     Parameters
@@ -1325,7 +1325,11 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return ops.where_method(self, cond, other)
 
     def reduce(self, func, dim=None, axis=None,
+<<<<<<< HEAD
                keep_attrs=None, allow_lazy=False, **kwargs):
+=======
+               keep_attrs=_set_keep_attrs(False), allow_lazy=False, **kwargs):
+>>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1361,8 +1365,11 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         if dim is not None:
             axis = self.get_axis_num(dim)
-        data = func(self.data if allow_lazy else self.values,
-                    axis=axis, **kwargs)
+        input_data = self.data if allow_lazy else self.values
+        if axis is not None:
+            data = func(input_data, axis=axis, **kwargs)
+        else:
+            data = func(input_data, **kwargs)
 
         if getattr(data, 'shape', ()) == self.shape:
             dims = self.dims
@@ -1781,6 +1788,14 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 self.values = f(self_data, other_data)
             return self
         return func
+
+    def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
+        """ A (private) method to convert datetime array to numeric dtype
+        See duck_array_ops.datetime_to_numeric
+        """
+        numeric_array = duck_array_ops.datetime_to_numeric(
+            self.data, offset, datetime_unit, dtype)
+        return type(self)(self.dims, numeric_array, self._attrs)
 
 
 ops.inject_all_ops_and_reduce_methods(Variable)
