@@ -20,9 +20,6 @@ from .utils import (_ensure_plottable, _interval_to_mid_points, _update_axes,
                     _valid_other_type, get_axis, _rotate_date_xlabels,
                     _check_animate_over, _transpose_before_animation)
 
-from animatplot.blocks import Line, Title
-from animatplot.animation import Animation, Timeline
-
 
 def animate_line(darray, animate_over=None, **kwargs):
     """
@@ -70,6 +67,9 @@ def animate_line(darray, animate_over=None, **kwargs):
         Additional arguments to animatplot.blocks.Line
 
     """
+
+    from animatplot.blocks import Line, Title
+    from animatplot.animation import Animation
 
     row = kwargs.pop('row', None)
     col = kwargs.pop('col', None)
@@ -158,6 +158,8 @@ def animate_line(darray, animate_over=None, **kwargs):
 
 
 def _create_timeline(darray, animate_over, fps):
+
+    from animatplot.animation import Timeline
 
     if animate_over in darray.coords:
         t_array = darray.coords[animate_over].values
