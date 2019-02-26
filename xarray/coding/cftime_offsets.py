@@ -396,9 +396,9 @@ class QuarterOffset(BaseCFTimeOffset):
 
 
 class QuarterBegin(QuarterOffset):
-    # When converting a string to an offset, pandas converts 
-    # 'QS' to a QuarterBegin offset starting in the month of 
-    # January.  When creating a QuarterBegin offset directly 
+    # When converting a string to an offset, pandas converts
+    # 'QS' to a QuarterBegin offset starting in the month of
+    # January.  When creating a QuarterBegin offset directly
     # from the constructor, however, the default month is March.
     # We follow that behavior here.
     _default_month = 3
@@ -421,9 +421,9 @@ class QuarterBegin(QuarterOffset):
 
 
 class QuarterEnd(QuarterOffset):
-    # When converting a string to an offset, pandas converts 
-    # 'Q' to a QuarterEnd offset starting in the month of 
-    # December.  When creating a QuarterEnd offset directly 
+    # When converting a string to an offset, pandas converts
+    # 'Q' to a QuarterEnd offset starting in the month of
+    # December.  When creating a QuarterEnd offset directly
     # from the constructor, however, the default month is March.
     # We follow that behavior here.
     _default_month = 3
