@@ -170,8 +170,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
-        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
-        with scipy.io.netcdf (only netCDF3 supported).
+        scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
+        objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -310,17 +310,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
         ds = maybe_decode_store(store)
-    elif isinstance(filename_or_obj, str):
 
-        if (isinstance(filename_or_obj, bytes) and
-                filename_or_obj.startswith(b'\x89HDF')):
-            raise ValueError('cannot read netCDF4/HDF5 file images')
-        elif (isinstance(filename_or_obj, bytes) and
-                filename_or_obj.startswith(b'CDF')):
-            # netCDF3 file images are handled by scipy
-            pass
-        elif isinstance(filename_or_obj, str):
-            filename_or_obj = _normalize_path(filename_or_obj)
+    elif isinstance(filename_or_obj, str):
+        filename_or_obj = _normalize_path(filename_or_obj)
 
         if engine is None:
             engine = _get_default_engine(filename_or_obj,
@@ -352,15 +344,23 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         with close_on_error(store):
             ds = maybe_decode_store(store)
     else:
-        if engine == 'h5netcdf':
-            store = backends.H5NetCDFStore(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs)
-        elif engine is not None and engine != 'scipy' and engine != 'h5netcdf':
-            raise ValueError('can only read file-like objects with '
-                             "default engine or engine='scipy'")
+        if engine is not None and engine != 'scipy' and engine != 'h5netcdf':
+            raise ValueError('can only read bytes or file-like objects with '
+                             "engine = None, 'scipy', or 'h5netcdf'")
         else:
-            # assume filename_or_obj is a file-like object
-            store = backends.ScipyDataStore(filename_or_obj)
+            if isinstance(filename_or_obj, bytes):
+                filename_or_obj = BytesIO(filename_or_obj)
+            # read first bytes of file-like object to determine engine
+            magic_number = filename_or_obj.read(8)
+            if magic_number.startswith(b'CDF'):
+                store = backends.ScipyDataStore(filename_or_obj,
+                                                **backend_kwargs)
+            elif magic_number.startswith(b'\211HDF\r\n\032\n'):
+                store = backends.H5NetCDFStore(filename_or_obj, group=group,
+                                               lock=lock, **backend_kwargs)
+            else:
+                raise ValueError("byte header doesn't match netCDF3 or "
+                                 "netCDF4/HDF5: {}".format(magic_number))
         ds = maybe_decode_store(store)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
@@ -387,8 +387,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         Strings and Paths are interpreted as a path to a netCDF file or an
         OpenDAP URL and opened with python-netCDF4, unless the filename ends
         with .gz, in which case the file is gunzipped and opened with
-        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
-        with scipy.io.netcdf (only netCDF3 supported).
+        scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
+        objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).

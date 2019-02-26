@@ -1955,6 +1955,38 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding['compression_opts'] is None
 
 
+# Requires h5py>2.9.0
+@requires_h5netcdf
+class TestH5NetCDFFileObject(TestH5NetCDFData):
+    engine = 'h5netcdf'
+
+    @network
+    def test_h5remote(self):
+        # alternative: http://era5-pds.s3.amazonaws.com/2008/01/main.nc
+        import requests
+        url = ('https://www.unidata.ucar.edu/'
+               'software/netcdf/examples/test_hgroups.nc')
+        print(url)
+        bytes = requests.get(url).content
+        with xr.open_dataset(bytes) as ds:
+            assert len(ds['UTC_time']) == 74
+            assert ds['UTC_time'].attrs['name'] == 'time'
+
+    def test_h5bytes(self):
+        import h5py
+        bio = BytesIO()
+        with h5py.File(bio) as ds:
+            v = np.array(2.0)
+            ds['scalar'] = v
+        bio.seek(0)
+        with xr.open_dataset(bio) as ds:
+            v = ds['scalar']
+            assert v == np.array(2.0)
+            assert v.dtype == 'float64'
+            assert v.ndim == 0
+            assert list(v.attrs) == []
+
+
 @requires_h5netcdf
 @requires_dask
 @pytest.mark.filterwarnings('ignore:deallocating CachingFileManager')
