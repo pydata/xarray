@@ -267,7 +267,7 @@ def roll_qtrday(other, n, month, day_option, modby=3):
 
     See Also
     --------
-    get_day_of_month : Find the day in a month provided an offset.
+    _get_day_of_month : Find the day in a month provided an offset.
     """
 
     months_since = other.month % modby - month % modby
@@ -396,14 +396,11 @@ class QuarterOffset(BaseCFTimeOffset):
 
 
 class QuarterBegin(QuarterOffset):
-    """Default month for QuarterBegin is December
-    DateOffset increments between Quarter dates.
-
-    month = 1 corresponds to dates like 1/31/2007, 4/30/2007, ...
-    month = 2 corresponds to dates like 2/28/2007, 5/31/2007, ...
-    month = 3 corresponds to dates like 3/31/2007, 6/30/2007, ...
-    """
-    # In pandas, _from_name_startingMonth = 1 used when freq='QS'
+    # When converting a string to an offset, pandas converts 
+    # 'QS' to a QuarterBegin offset starting in the month of 
+    # January.  When creating a QuarterBegin offset directly 
+    # from the constructor, however, the default month is March.
+    # We follow that behavior here.
     _default_month = 3
     _freq = 'QS'
     _day_option = 'start'
@@ -424,10 +421,11 @@ class QuarterBegin(QuarterOffset):
 
 
 class QuarterEnd(QuarterOffset):
-    """Default month for QuarterEnd is December
-    """
-    # In pandas, QuarterOffset._from_name suffix == 'DEC'
-    # See _lite_rule_alias in pandas._libs.tslibs.frequencies
+    # When converting a string to an offset, pandas converts 
+    # 'Q' to a QuarterEnd offset starting in the month of 
+    # December.  When creating a QuarterEnd offset directly 
+    # from the constructor, however, the default month is March.
+    # We follow that behavior here.
     _default_month = 3
     _freq = 'Q'
     _day_option = 'end'
