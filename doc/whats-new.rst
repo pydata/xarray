@@ -105,6 +105,11 @@ Bug fixes
 - Fixed error when trying to reduce a DataArray using a function which does not
   require an axis argument. (:issue:`2768`)
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Concatenating a sequence of :py:class:`~xarray.DataArray` with varying names
+  sets the name of the output array to ``None``, instead of the name of the
+  first input array. If the names are the same it sets the name to that,
+  instead to the name of the first DataArray in the list as it did before.
+  (:issue:`2775`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 - Per `CF conventions
   <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
