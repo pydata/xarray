@@ -68,6 +68,8 @@ Enhancements
 - :py:meth:`pandas.Series.dropna` is now supported for a
   :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
   (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` now supports QuarterBegin and QuarterEnd offsets (:issue:`2663`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_
 - :py:meth:`~xarray.open_dataset` now accepts a ``use_cftime`` argument, which
   can be used to require that ``cftime.datetime`` objects are always used, or
   never used when decoding dates encoded with a standard calendar.  This can be
@@ -76,7 +78,7 @@ Enhancements
   serialization warnings raised if dates from a standard calendar are found to
   be outside the :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_. 
-  
+
 Bug fixes
 ~~~~~~~~~
 
