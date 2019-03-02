@@ -482,7 +482,7 @@ class _MultiFileCloser(object):
             f.close()
 
 
-def open_mfdataset(paths, chunks=None, concat_dim='__auto_combine__',
+def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
                    combine='auto', autoclose=None, parallel=False, **kwargs):
@@ -648,15 +648,13 @@ def open_mfdataset(paths, chunks=None, concat_dim='__auto_combine__',
     # Combine all datasets, closing them in case of a ValueError
     try:
         if combine is 'auto':
-            # Will redo ordering from coordinates, ignoring how they were
-            # ordered previously
-            if concat_dim is not '__auto_combine__':
-                raise ValueError("Cannot specify dimensions to concatenate "
-                                 "along when auto-combining")
-
-            combined = auto_combine(datasets, compat=compat,
-                                    data_vars=data_vars, coords=coords)
-
+            # Use the old auto_combine for now
+            # After deprecation cycle from #2616 is complete this will redo
+            # ordering from coordinates, ignoring how they were ordered
+            # previously
+            combined = auto_combine(datasets, concat_dim=concat_dim,
+                                    compat=compat, data_vars=data_vars,
+                                    coords=coords)
         else:
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"

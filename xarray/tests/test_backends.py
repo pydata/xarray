@@ -1979,7 +1979,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
             subds.to_netcdf(tmpfiles[ii], engine=writeengine)
 
         # check that calculation on opened datasets works properly
-        with open_mfdataset(tmpfiles, combine='manual', concat_dim='x',
+        with open_mfdataset(tmpfiles, concat_dim='x',
                             engine=readengine, parallel=parallel,
                             chunks=chunks) as actual:
 
@@ -2156,13 +2156,12 @@ class TestDask(DatasetIOBase):
             with create_tmp_file() as tmp2:
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim='x') as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim='x') as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim='x', chunks={'x': 3}) as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim='x',
+                                    chunks={'x': 3}) as actual:
                     assert actual.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
         with raises_regex(IOError, 'no files to open'):
@@ -2211,8 +2210,7 @@ class TestDask(DatasetIOBase):
                 tmp2 = Path(tmp2)
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim='x') as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim='x') as actual:
                     assert_identical(original, actual)
 
     @requires_pathlib
@@ -2247,8 +2245,7 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
 
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim='x') as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim='x') as actual:
                     assert_identical(original, actual)
 
     def test_attrs_mfdataset(self):
@@ -2261,8 +2258,7 @@ class TestDask(DatasetIOBase):
                 ds2.attrs['test2'] = 'bar'
                 ds1.to_netcdf(tmp1)
                 ds2.to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim='x') as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim='x') as actual:
                     # presumes that attributes inherited from
                     # first dataset loaded
                     assert actual.test1 == ds1.test1
@@ -2281,11 +2277,6 @@ class TestDask(DatasetIOBase):
 
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(original, actual)
-
-                with raises_regex(ValueError, "Cannot specify dimensions to "
-                                              "concatenate along when "
-                                              "auto-combining"):
-                    open_mfdataset([tmp1, tmp2], concat_dim='x')
 
     def test_preprocess_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -2306,8 +2297,7 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
                 save_mfdataset(datasets, [tmp1, tmp2])
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim='x') as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim='x') as actual:
                     assert_identical(actual, original)
 
     def test_save_mfdataset_invalid(self):
@@ -2333,8 +2323,7 @@ class TestDask(DatasetIOBase):
                 tmp1 = Path(tmp1)
                 tmp2 = Path(tmp2)
                 save_mfdataset(datasets, [tmp1, tmp2])
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim='x') as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim='x') as actual:
                     assert_identical(actual, original)
 
     def test_open_and_do_math(self):
@@ -2351,8 +2340,7 @@ class TestDask(DatasetIOBase):
                 data = Dataset({'x': 0})
                 data.to_netcdf(tmp1)
                 Dataset({'x': np.nan}).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim=None) as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim=None) as actual:
                     assert_identical(data, actual)
 
     def test_open_dataset(self):
@@ -2379,8 +2367,7 @@ class TestDask(DatasetIOBase):
                            {'baz': [100]})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_mfdataset([tmp], combine='manual',
-                                concat_dim=[dim]) as actual:
+            with open_mfdataset([tmp], concat_dim=dim) as actual:
                 assert_identical(expected, actual)
 
     def test_open_multi_dataset(self):
@@ -2403,8 +2390,7 @@ class TestDask(DatasetIOBase):
                 create_tmp_file() as tmp2:
             original.to_netcdf(tmp1)
             original.to_netcdf(tmp2)
-            with open_mfdataset([tmp1, tmp2], combine='manual',
-                                concat_dim=dim) as actual:
+            with open_mfdataset([tmp1, tmp2], concat_dim=dim) as actual:
                 assert_identical(expected, actual)
 
     def test_dask_roundtrip(self):
@@ -2456,9 +2442,60 @@ class TestDask(DatasetIOBase):
                                              engine=self.engine, compute=False)
                 assert isinstance(delayed_obj, Delayed)
                 delayed_obj.compute()
-                with open_mfdataset([tmp1, tmp2], combine='manual',
-                                    concat_dim='x') as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim='x') as actual:
                     assert_identical(actual, original)
+
+
+class TestOpenMFDataSetDeprecation:
+    """
+    Set of tests to check that FutureWarnings are correctly raised until the
+    deprecation cycle is complete. #2616
+    """
+    def test_open_mfdataset_with_concat_dim(self):
+        ds1, ds2 = Dataset({'x': [0]}), Dataset({'x': [1]})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+
+                with pytest.warns(FutureWarning, match="`concat_dim`"):
+                    open_mfdataset([tmp1, tmp2], concat_dim='x')
+
+    def test_auto_combine_with_merge_and_concat(self):
+        ds1, ds2 = Dataset({'x': [0]}), Dataset({'x': [1]})
+        ds3 = Dataset({'z': ((), 99)})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                with create_tmp_file() as tmp3:
+                    ds1.to_netcdf(tmp1)
+                    ds2.to_netcdf(tmp2)
+                    ds3.to_netcdf(tmp3)
+
+                    with pytest.warns(FutureWarning,
+                                      match="require both concatenation"):
+                        open_mfdataset([tmp1, tmp2, tmp3])
+
+    def test_auto_combine_with_coords(self):
+        ds1 = Dataset({'foo': ('x', [0])}, coords={'x': ('x', [0])})
+        ds2 = Dataset({'foo': ('x', [1])}, coords={'x': ('x', [1])})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+
+                with pytest.warns(FutureWarning, match="supplied have global"):
+                    open_mfdataset([tmp1, tmp2])
+
+    def test_auto_combine_without_coords(self):
+        ds1, ds2 = Dataset({'foo': ('x', [0])}), Dataset({'foo': ('x', [1])})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+
+                with pytest.warns(FutureWarning,
+                                  match="supplied do not have global"):
+                    open_mfdataset([tmp1, tmp2])
 
 
 @requires_scipy_or_netCDF4

@@ -5,7 +5,6 @@ from collections import OrderedDict
 
 import pandas as pd
 
-
 from . import utils
 from .alignment import align
 from .variable import IndexVariable, Variable, as_variable

@@ -5,10 +5,7 @@ from collections import Counter, OrderedDict
 import pandas as pd
 
 from .dataarray import DataArray
-from . import utils
 from .merge import merge
-from .variable import IndexVariable, Variable, as_variable
-from .variable import concat as concat_vars
 from .concat import concat
 
 
@@ -370,8 +367,8 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-def auto_combine(datasets, compat='no_conflicts', data_vars='all',
-                 coords='different'):
+def _auto_combine(datasets, compat='no_conflicts', data_vars='all',
+                  coords='different'):
     """
     Attempt to auto-magically combine the given datasets into one by using
     dimension coordinates.
@@ -460,6 +457,9 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
         temperature     (x) float64 11.04 23.57 20.77 ...
     """
 
+    # TODO to complete deprecation cycle in #2616 this should become the new
+    # auto_combine function (with this docstring)
+
     # Group by data vars
     sorted_datasets = sorted(datasets, key=vars_as_keys)
     grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
@@ -482,3 +482,202 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
         concatenated_grouped_by_data_vars.append(concatenated)
 
     return merge(concatenated_grouped_by_data_vars, compat=compat)
+
+
+# Everything beyond here is only needed for backwards compatibility, see #2616
+
+
+_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+
+
+def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
+                 data_vars='all', coords='different'):
+    """
+    Attempt to auto-magically combine the given datasets into one.
+
+    This method attempts to combine a list of datasets into a single entity by
+    inspecting metadata and using a combination of concat and merge.
+    It does not concatenate along more than one dimension or sort data under
+    any circumstances. It does align coordinates, but different variables on
+    datasets can cause it to fail under some scenarios. In complex cases, you
+    may need to clean up your data and use ``concat``/``merge`` explicitly.
+    ``auto_combine`` works well if you have N years of data and M data
+    variables, and each combination of a distinct time period and set of data
+    variables is saved its own dataset.
+
+    Parameters
+    ----------
+    datasets : sequence of xarray.Dataset
+        Dataset objects to merge.
+    concat_dim : str or DataArray or Index, optional
+        Dimension along which to concatenate variables, as used by
+        :py:func:`xarray.concat`. You only need to provide this argument if
+        the dimension along which you want to concatenate is not a dimension
+        in the original datasets, e.g., if you want to stack a collection of
+        2D arrays along a third dimension.
+        By default, xarray attempts to infer this argument by examining
+        component files. Set ``concat_dim=None`` explicitly to disable
+        concatenation.
+    compat : {'identical', 'equals', 'broadcast_equals',
+             'no_conflicts'}, optional
+        String indicating how to compare variables of the same name for
+        potential conflicts:
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
+    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+        Details are in the documentation of concat
+    coords : {'minimal', 'different', 'all' o list of str}, optional
+        Details are in the documentation of concat
+
+    Returns
+    -------
+    combined : xarray.Dataset
+
+    See also
+    --------
+    concat
+    Dataset.merge
+    """
+
+    if concat_dim is '_not_supplied':
+        concat_dim = _CONCAT_DIM_DEFAULT
+    else:
+        message = """In xarray version 0.13 `auto_combine` and `open_mfdataset`
+                  will no longer accept a `concat_dim` argument. To get 
+                  equivalent behaviour from now on please use the new 
+                  `manual_combine` function instead (or the 
+                  `combine='manual'` option to open_mfdataset)."""
+        warnings.warn(message, FutureWarning)
+
+    if _dimension_coords_exist(datasets):
+        message = """The datasets supplied have global dimension coordinates. 
+                  From xarray version 0.13 the behaviour of `auto_combine`
+                  and `open_mfdataset` will
+                  change to use the values in these coordinates to order the 
+                  datasets before concatenation. in future, to continue 
+                  concatenating based on the order the datasets are supplied 
+                  in, please use the new `manual_combine` function (or the 
+                  `combine='manual'` option to open_mfdataset)."""
+        warnings.warn(message, FutureWarning)
+    else:
+        message = """The datasets supplied do not have global dimension 
+                  coordinates. From xarray version 0.13 the behaviour of 
+                  `auto_combine` and `open_mfdataset` will change to use the 
+                  values in these 
+                  coordinates to order the datasets before concatenation. 
+                  Datasets without global dimension coordinates will cease to 
+                  be valid arguments to `auto_combine`. In future, to continue 
+                  concatenating without supplying dimension coordinates, please
+                  use the new `manual_combine` function (or the 
+                  `combine='manual'` option to open_mfdataset)."""
+        warnings.warn(message, FutureWarning)
+
+    if _requires_concat_and_merge(datasets):
+        manual_dims = [concat_dim].append(None)
+        message = """The datasets supplied require both concatenation and
+                  merging. From xarray version 0.13 this will operation will
+                  require using the new `manual_combine` function (or the 
+                  `combine='manual'` option to open_mfdataset). You will
+                  need to create a nested list structure such that you can
+                  combine along the dimensions {}.""".format(manual_dims)
+        warnings.warn(message, FutureWarning)
+
+    return _old_auto_combine(datasets, concat_dim=concat_dim,
+                             compat=compat, data_vars=data_vars,
+                             coords=coords)
+
+
+def _dimension_coords_exist(datasets):
+    """
+    Check if the datasets have consistent global dimension coordinates
+    which would in future be used by `auto_combine` for concatenation ordering.
+    """
+
+    # Group by data vars
+    sorted_datasets = sorted(datasets, key=vars_as_keys)
+    grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+
+    # Perform the multidimensional combine on each group of data variables
+    # before merging back together
+    concatenated_grouped_by_data_vars = []
+    try:
+        for vars, datasets_with_same_vars in grouped_by_vars:
+           _infer_concat_order_from_coords(list(datasets_with_same_vars))
+        return True
+    except ValueError as err:
+        no_dimension_coords_errs = ["Every dimension needs a coordinate",
+                                    "neither monotonically increasing nor",
+                                    "Cannot handle size zero",
+                                    "Could not find any dimension coordinates"]
+        if any(message in str(err) for message in no_dimension_coords_errs):
+            # The ValueError just means that the datasets don't have
+            # global dimension coordinates
+            return False
+        else:
+            # There is a different problem
+            raise err
+
+
+def _requires_concat_and_merge(datasets):
+    """
+    Check if the datasets require the use of both xarray.concat and
+    xarray.merge, which in future might require the user to use
+    `manual_combine` instead.
+    """
+    # Group by data vars
+    sorted_datasets = sorted(datasets, key=vars_as_keys)
+    grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+
+    if len(list(grouped_by_vars)) > 1:
+        return True
+    else:
+        return False
+
+
+def _old_auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
+                      compat='no_conflicts',
+                      data_vars='all', coords='different'):
+    from toolz import itertoolz
+    if concat_dim is not None:
+        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
+        grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
+                                    datasets).values()
+        concatenated = [_auto_concat(ds, dim=dim,
+                                     data_vars=data_vars, coords=coords)
+                        for ds in grouped]
+    else:
+        concatenated = datasets
+    merged = merge(concatenated, compat=compat)
+    return merged
+
+
+def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
+    if len(datasets) == 1 and dim is None:
+        # There is nothing more to combine, so kick out early.
+        return datasets[0]
+    else:
+        if dim is None:
+            ds0 = datasets[0]
+            ds1 = datasets[1]
+            concat_dims = set(ds0.dims)
+            if ds0.dims != ds1.dims:
+                dim_tuples = set(ds0.dims.items()) - set(ds1.dims.items())
+                concat_dims = set(i for i, _ in dim_tuples)
+            if len(concat_dims) > 1:
+                concat_dims = set(d for d in concat_dims
+                                  if not ds0[d].equals(ds1[d]))
+            if len(concat_dims) > 1:
+                raise ValueError('too many different dimensions to '
+                                 'concatenate: %s' % concat_dims)
+            elif len(concat_dims) == 0:
+                raise ValueError('cannot infer dimension to concatenate: '
+                                 'supply the ``concat_dim`` argument '
+                                 'explicitly')
+            dim, = concat_dims
+        return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)
