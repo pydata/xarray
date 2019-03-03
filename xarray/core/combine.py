@@ -643,14 +643,15 @@ def _requires_concat_and_merge(datasets):
 def _old_auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
                       compat='no_conflicts',
                       data_vars='all', coords='different'):
-    from toolz import itertoolz
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
-                                    datasets).values()
-        concatenated = [_auto_concat(ds, dim=dim,
+
+        sorted_datasets = sorted(datasets, key=vars_as_keys)
+        grouped = itertools.groupby(sorted_datasets, key=vars_as_keys)
+
+        concatenated = [_auto_concat(list(datasets), dim=dim,
                                      data_vars=data_vars, coords=coords)
-                        for ds in grouped]
+                        for vars, datasets in grouped]
     else:
         concatenated = datasets
     merged = merge(concatenated, compat=compat)
