@@ -1,6 +1,5 @@
 import functools
 
-import matplotlib as mpl
 import numpy as np
 
 from ..core.alignment import broadcast
@@ -10,8 +9,7 @@ from .utils import (
     label_from_attrs)
 
 # copied from seaborn
-_SCATTER_SIZE_RANGE = (np.r_[.5, 2]
-                       * np.square(mpl.rcParams["lines.markersize"]))
+_SCATTER_SIZE_RANGE = np.array([18.0, 72.0])
 
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
@@ -112,6 +110,8 @@ def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm,
 
 # copied from seaborn
 def _parse_size(data, norm):
+
+    import matplotlib as mpl
 
     if data is None:
         return None
