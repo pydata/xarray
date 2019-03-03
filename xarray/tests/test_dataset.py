@@ -1863,6 +1863,26 @@ class TestDataset(object):
                 ValueError, 'does not have coordinate labels'):
             data.drop(1, 'y')
 
+    def test_drop_dims(self):
+        data = xr.Dataset({'A': (['x', 'y'], np.random.randn(2, 3)),
+                           'B': ('x', np.random.randn(2)),
+                           'x': ['a', 'b'], 'z': np.pi})
+
+        actual = data.drop_dims('x')
+        expected = data.drop(['A', 'B', 'x'])
+        assert_identical(expected, actual)
+
+        actual = data.drop_dims('y')
+        expected = data.drop('A')
+        assert_identical(expected, actual)
+
+        actual = data.drop_dims(['x', 'y'])
+        expected = data.drop(['A', 'B', 'x'])
+        assert_identical(expected, actual)
+
+        with pytest.raises((ValueError, KeyError)):
+            data.drop_dims('z')  # not a dimension
+
     def test_copy(self):
         data = create_test_data()
 

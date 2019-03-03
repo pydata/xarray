@@ -78,6 +78,9 @@ Enhancements
   serialization warnings raised if dates from a standard calendar are found to
   be outside the :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_. 
+  
+- Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
+  By `Kevin Squire <https://github.com/kmsquire>`_.
 
 Bug fixes
 ~~~~~~~~~
