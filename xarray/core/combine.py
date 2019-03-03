@@ -549,40 +549,39 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         concat_dim = _CONCAT_DIM_DEFAULT
     else:
         message = """In xarray version 0.13 `auto_combine` and `open_mfdataset`
-                  will no longer accept a `concat_dim` argument. To get 
-                  equivalent behaviour from now on please use the new 
-                  `manual_combine` function instead (or the 
+                  will no longer accept a `concat_dim` argument. To get
+                  equivalent behaviour from now on please use the new
+                  `manual_combine` function instead (or the
                   `combine='manual'` option to open_mfdataset)."""
         warnings.warn(message, FutureWarning)
 
     if _dimension_coords_exist(datasets):
-        message = """The datasets supplied have global dimension coordinates. 
+        message = """The datasets supplied have global dimension coordinates.
                   From xarray version 0.13 the behaviour of `auto_combine`
-                  and `open_mfdataset` will
-                  change to use the values in these coordinates to order the 
-                  datasets before concatenation. in future, to continue 
-                  concatenating based on the order the datasets are supplied 
-                  in, please use the new `manual_combine` function (or the 
-                  `combine='manual'` option to open_mfdataset)."""
+                  and `open_mfdataset` will change to use the values in these
+                  coordinates to order the datasets before concatenation. in
+                  future, to continue concatenating based on the order the
+                  datasets are supplied in, please use the new `manual_combine`
+                  function (or the `combine='manual'` option to
+                  open_mfdataset)."""
         warnings.warn(message, FutureWarning)
     else:
-        message = """The datasets supplied do not have global dimension 
-                  coordinates. From xarray version 0.13 the behaviour of 
-                  `auto_combine` and `open_mfdataset` will change to use the 
-                  values in these 
-                  coordinates to order the datasets before concatenation. 
-                  Datasets without global dimension coordinates will cease to 
-                  be valid arguments to `auto_combine`. In future, to continue 
-                  concatenating without supplying dimension coordinates, please
-                  use the new `manual_combine` function (or the 
-                  `combine='manual'` option to open_mfdataset)."""
+        message = """The datasets supplied do not have global dimension
+                  coordinates. From xarray version 0.13 the behaviour of
+                  `auto_combine` and `open_mfdataset` will change to use the
+                  values in these coordinates to order the datasets before
+                  concatenation. Datasets without global dimension coordinates
+                  will cease to be valid arguments to `auto_combine`. In
+                  future, to continue concatenating without supplying dimension
+                  coordinates, please use the new `manual_combine` function (or
+                  the `combine='manual'` option to open_mfdataset)."""
         warnings.warn(message, FutureWarning)
 
     if _requires_concat_and_merge(datasets):
         manual_dims = [concat_dim].append(None)
         message = """The datasets supplied require both concatenation and
                   merging. From xarray version 0.13 this will operation will
-                  require using the new `manual_combine` function (or the 
+                  require using the new `manual_combine` function (or the
                   `combine='manual'` option to open_mfdataset). You will
                   need to create a nested list structure such that you can
                   combine along the dimensions {}.""".format(manual_dims)
@@ -608,7 +607,7 @@ def _dimension_coords_exist(datasets):
     concatenated_grouped_by_data_vars = []
     try:
         for vars, datasets_with_same_vars in grouped_by_vars:
-           _infer_concat_order_from_coords(list(datasets_with_same_vars))
+            _infer_concat_order_from_coords(list(datasets_with_same_vars))
         return True
     except ValueError as err:
         no_dimension_coords_errs = ["Every dimension needs a coordinate",
