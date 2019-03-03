@@ -2524,6 +2524,7 @@ class TestDask(DatasetIOBase):
                     assert_identical(actual, original)
 
 
+@requires_scipy_or_netCDF4
 class TestOpenMFDataSetDeprecation:
     """
     Set of tests to check that FutureWarnings are correctly raised until the
