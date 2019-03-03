@@ -206,6 +206,7 @@ def test_numpy_ufuncs(name, request):
         assert isinstance(y, xr.DataArray)
 
 
+@pytest.mark.filterwarnings("ignore:xarray.ufuncs")
 def test_xarray_ufuncs_pickle():
     a = 1.0
     cos_pickled = pickle.loads(pickle.dumps(xu.cos))

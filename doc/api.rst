@@ -154,6 +154,7 @@ Computation
    Dataset.diff
    Dataset.quantile
    Dataset.differentiate
+   Dataset.integrate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -323,6 +324,7 @@ Computation
    DataArray.dot
    DataArray.quantile
    DataArray.differentiate
+   DataArray.integrate
 
 **Aggregation**:
 :py:attr:`~DataArray.all`

@@ -603,40 +603,6 @@ class HiddenKeyDict(MutableMapping):
         return len(self._data) - num_hidden
 
 
-def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
-    """Convert an array containing datetime-like data to an array of floats.
-
-    Parameters
-    ----------
-    da : array
-        Input data
-    offset: Scalar with the same type of array or None
-        If None, subtract minimum values to reduce round off error
-    datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
-        'us', 'ns', 'ps', 'fs', 'as'}
-    dtype: target dtype
-
-    Returns
-    -------
-    array
-    """
-    from . import duck_array_ops
-
-    if offset is None:
-        offset = array.min()
-    array = array - offset
-
-    if datetime_unit:
-        array = array / np.timedelta64(1, datetime_unit)
-    # convert np.NaT to np.nan
-    if array.dtype.kind in 'mM':
-        if hasattr(array, 'isnull'):
-            return np.where(array.isnull(), np.nan, array.astype(dtype))
-        return np.where(duck_array_ops.isnull(array), np.nan,
-                        array.astype(dtype))
-    return array
-
-
 def get_temp_dimname(dims, new_dim):
     """ Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
