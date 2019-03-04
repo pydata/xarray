@@ -285,6 +285,15 @@ class TestConcatDataArray(object):
         assert concat([foo, foo], dim="x").encoding == foo.encoding
         assert concat([ds, ds], dim="x").encoding == ds.encoding
 
+    @pytest.mark.parametrize("colors, expected_name",
+                             [(['blue', 'green', 'red'], None),
+                              (['red', 'red', 'red'], 'red')])
+    def test_concat_determine_name(self, colors, expected_name):
+        das = [DataArray(np.random.random((2, 2)), dims=['x', 'y'], name=k)
+               for k in colors]
+        result = concat(das, dim="band")
+        assert result.name is expected_name
+
     @requires_dask
     def test_concat_lazy(self):
         import dask.array as da

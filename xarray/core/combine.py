@@ -9,6 +9,7 @@ from .alignment import align
 from .merge import merge
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
+from .computation import result_name
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -336,7 +337,10 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
 
     ds = _dataset_concat(datasets, dim, data_vars, coords, compat,
                          positions)
-    return arrays[0]._from_temp_dataset(ds, name)
+    result = arrays[0]._from_temp_dataset(ds, name)
+
+    result.name = result_name(arrays)
+    return result
 
 
 def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
