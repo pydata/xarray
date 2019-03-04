@@ -111,13 +111,14 @@ def load_dataset(*args, **kwargs):
 
 
 def scatter_example_dataset():
-    A = DataArray(np.zeros([3, 11, 4, 4]), dims=['x', 'y', 'z', 'w'],
+    A = DataArray(np.zeros([3, 11, 4, 4]),
+                  dims=['x', 'y', 'z', 'w'],
                   coords=[np.arange(3),
                           np.linspace(0, 1, 11),
                           np.arange(4),
-                          0.1*np.random.randn(4)])
-    B = 0.1*A.x**2+A.y**2.5+0.1*A.z*A.w
-    A = -0.1*A.x+A.y/(5+A.z)+A.w
+                          0.1 * np.random.randn(4)])
+    B = 0.1 * A.x**2 + A.y**2.5 + 0.1 * A.z * A.w
+    A = -0.1 * A.x + A.y / (5 + A.z) + A.w
     ds = Dataset({'A': A, 'B': B})
     ds['w'] = ['one', 'two', 'three', 'five']
 

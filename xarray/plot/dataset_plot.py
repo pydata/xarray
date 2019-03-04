@@ -120,7 +120,7 @@ def _parse_size(data, norm):
 
     if not _is_numeric(data):
         levels = np.unique(data)
-        numbers = np.arange(1, 1+len(levels))[::-1]
+        numbers = np.arange(1, 1 + len(levels))[::-1]
     else:
         levels = numbers = np.sort(np.unique(data))
 
