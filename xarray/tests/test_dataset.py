@@ -3152,7 +3152,7 @@ class TestDataset(object):
         ds = Dataset(OrderedDict([('a', ('t', x, attrs)),
                                   ('b', ('t', y, attrs)),
                                   ('t', ('t', t))]))
-        expected_attrs = {'created': np.asscalar(attrs['created']),
+        expected_attrs = {'created': attrs['created'].item(),
                           'coords': attrs['coords'].tolist(),
                           'maintainer': 'bar'}
         actual = ds.to_dict()

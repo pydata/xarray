@@ -2963,7 +2963,7 @@ class TestDataArray(object):
                  'maintainer': 'bar'}
         da = DataArray(x, {'t': t, 'lat': lat}, dims=['t', 'lat'],
                        attrs=attrs)
-        expected_attrs = {'created': np.asscalar(attrs['created']),
+        expected_attrs = {'created': attrs['created'].item(),
                           'coords': attrs['coords'].tolist(),
                           'maintainer': 'bar'}
         actual = da.to_dict()
