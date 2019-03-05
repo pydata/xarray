@@ -344,7 +344,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         with close_on_error(store):
             ds = maybe_decode_store(store)
     else:
-        if engine is not None and engine != 'scipy' and engine != 'h5netcdf':
+        if engine not in [None, 'scipy', 'h5netcdf']:
             raise ValueError('can only read bytes or file-like objects with '
                              "engine = None, 'scipy', or 'h5netcdf'")
         else:
@@ -352,6 +352,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 filename_or_obj = BytesIO(filename_or_obj)
             # read first bytes of file-like object to determine engine
             magic_number = filename_or_obj.read(8)
+            filename_or_obj.seek(0)
             if magic_number.startswith(b'CDF'):
                 store = backends.ScipyDataStore(filename_or_obj,
                                                 **backend_kwargs)
