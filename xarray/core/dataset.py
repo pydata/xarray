@@ -2797,6 +2797,37 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
 
+    def drop_dims(self, drop_dims):
+        """Drop dimensions and associated variables from this dataset.
+
+        Parameters
+        ----------
+        drop_dims : str or list
+            Dimension or dimensions to drop.
+
+        Returns
+        -------
+        obj : Dataset
+            The dataset without the given dimensions (or any variables
+            containing those dimensions)
+        """
+        if utils.is_scalar(drop_dims):
+            drop_dims = [drop_dims]
+
+        missing_dimensions = [d for d in drop_dims if d not in self.dims]
+        if missing_dimensions:
+            raise ValueError('Dataset does not contain the dimensions: %s'
+                             % missing_dimensions)
+
+        drop_vars = set(k for k, v in self._variables.items()
+                        for d in v.dims if d in drop_dims)
+
+        variables = OrderedDict((k, v) for k, v in self._variables.items()
+                                if k not in drop_vars)
+        coord_names = set(k for k in self._coord_names if k in variables)
+
+        return self._replace_with_new_dims(variables, coord_names)
+
     def transpose(self, *dims):
         """Return a new Dataset object with all array dimensions transposed.
 

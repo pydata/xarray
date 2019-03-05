@@ -68,6 +68,8 @@ Enhancements
 - :py:meth:`pandas.Series.dropna` is now supported for a
   :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
   (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` now supports QuarterBegin and QuarterEnd offsets (:issue:`2663`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_
 - :py:meth:`~xarray.open_dataset` now accepts a ``use_cftime`` argument, which
   can be used to require that ``cftime.datetime`` objects are always used, or
   never used when decoding dates encoded with a standard calendar.  This can be
@@ -77,6 +79,9 @@ Enhancements
   be outside the :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_. 
   
+- Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
+  By `Kevin Squire <https://github.com/kmsquire>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -105,6 +110,11 @@ Bug fixes
 - Fixed error when trying to reduce a DataArray using a function which does not
   require an axis argument. (:issue:`2768`)
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Concatenating a sequence of :py:class:`~xarray.DataArray` with varying names
+  sets the name of the output array to ``None``, instead of the name of the
+  first input array. If the names are the same it sets the name to that,
+  instead to the name of the first DataArray in the list as it did before.
+  (:issue:`2775`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 - Per `CF conventions
   <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
