@@ -1887,11 +1887,11 @@ class TestDatasetScatterPlots(PlotTestCase):
             # for 'continuous', should be single PathCollection
             assert isinstance(g._mappables[-1], map_type)
 
-    @pytest.mark.parametrize('x, y, hue, scatter_size', [
+    @pytest.mark.parametrize('x, y, hue, markersize', [
         ('A', 'B', 'x', 'col'),
         ('x', 'row', 'A', 'B')])
-    def test_scatter(self, x, y, hue, scatter_size):
-        self.ds.plot.scatter(x, y, hue=hue, scatter_size=scatter_size)
+    def test_scatter(self, x, y, hue, markersize):
+        self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
 
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()

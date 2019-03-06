@@ -10,7 +10,7 @@ from .utils import (
     label_from_attrs)
 
 # copied from seaborn
-_SCATTER_SIZE_RANGE = np.array([18.0, 72.0])
+_MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
@@ -67,7 +67,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
             'hue_values': hue_values}
 
 
-def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm,
+def _infer_scatter_data(ds, x, y, hue, markersize, size_norm,
                         size_mapping=None):
 
     broadcast_keys = ['x', 'y']
@@ -75,8 +75,8 @@ def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm,
     if hue:
         to_broadcast.append(ds[hue])
         broadcast_keys.append('hue')
-    if scatter_size:
-        to_broadcast.append(ds[scatter_size])
+    if markersize:
+        to_broadcast.append(ds[markersize])
         broadcast_keys.append('size')
 
     broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
@@ -89,7 +89,7 @@ def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm,
     if hue:
         data['hue'] = broadcasted['hue']
 
-    if scatter_size:
+    if markersize:
         size = broadcasted['size']
 
         if size_mapping is None:
@@ -118,7 +118,7 @@ def _parse_size(data, norm):
     else:
         levels = numbers = np.sort(np.unique(data))
 
-    min_width, max_width = _SCATTER_SIZE_RANGE
+    min_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:
@@ -170,10 +170,10 @@ def _dsplot(plotfunc):
         Variable by which to color scattered points
     hue_style: str, optional
         Hue style. Can be either 'discrete' or 'continuous'.
-    scatter_size: str, optional (scatter only)
+    markersize: str, optional (scatter only)
         Variably by which to vary size of scattered points
     size_norm: optional
-        Either None or Norm instance to normalize the 'scatter_size' variable.
+        Either None or Norm instance to normalize the 'markersize' variable.
     add_guide: bool, optional
         Add a guide that depends on hue_style
             - for "discrete", build a legend.
@@ -353,13 +353,13 @@ def scatter(ds, x, y, ax, **kwargs):
     cmap_params = kwargs.pop('cmap_params')
     hue = kwargs.pop('hue')
     hue_style = kwargs.pop('hue_style')
-    scatter_size = kwargs.pop('scatter_size', None)
+    markersize = kwargs.pop('markersize', None)
     size_norm = kwargs.pop('size_norm', None)
     size_mapping = kwargs.pop('size_mapping', None)  # set by facetgrid
 
     # need to infer size_mapping with full dataset
     data = _infer_scatter_data(ds, x, y, hue,
-                               scatter_size, size_norm, size_mapping)
+                               markersize, size_norm, size_mapping)
 
     if hue_style == 'discrete':
         primitive = []
