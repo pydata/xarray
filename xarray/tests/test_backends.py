@@ -35,7 +35,7 @@ from . import (
     requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
     requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
     requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
-    requires_zarr)
+    requires_zarr, requires_h5fileobj)
 from .test_coding_times import (_STANDARD_CALENDARS, _NON_STANDARD_CALENDARS,
                                 _ALL_CALENDARS)
 from .test_dataset import create_test_data
@@ -1955,9 +1955,9 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding['compression_opts'] is None
 
 
-# Requires h5py>2.9.0
-@requires_h5netcdf
+@requires_h5fileobj
 class TestH5NetCDFFileObject(TestH5NetCDFData):
+    h5py = pytest.importorskip('h5py', minversion='2.9.0')
     engine = 'h5netcdf'
 
     @network
@@ -1972,19 +1972,20 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             assert len(ds['UTC_time']) == 74
             assert ds['UTC_time'].attrs['name'] == 'time'
 
-    def test_h5bytes(self):
-        import h5py
-        bio = BytesIO()
-        with h5py.File(bio) as ds:
-            v = np.array(2.0)
-            ds['scalar'] = v
-        bio.seek(0)
-        with xr.open_dataset(bio) as ds:
-            v = ds['scalar']
-            assert v == np.array(2.0)
-            assert v.dtype == 'float64'
-            assert v.ndim == 0
-            assert list(v.attrs) == []
+    def test_h5binary(self):
+        expected = create_test_data().drop('dim3')
+        expected.attrs['foo'] = 'bar'
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine='h5netcdf')
+
+            with open(tmp_file, 'rb') as f:
+                with open_dataset(f, engine='h5netcdf') as actual:
+                    assert_identical(expected, actual)
+
+                f.seek(0)
+                with BytesIO(f.read()) as bio:
+                    with open_dataset(bio, engine='h5netcdf') as actual:
+                        assert_identical(expected, actual)
 
 
 @requires_h5netcdf

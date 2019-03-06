@@ -360,8 +360,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 store = backends.H5NetCDFStore(filename_or_obj, group=group,
                                                lock=lock, **backend_kwargs)
             else:
-                raise ValueError("byte header doesn't match netCDF3 or "
-                                 "netCDF4/HDF5: {}".format(magic_number))
+                print(magic_number)
+                raise ValueError("file-like object is not a netCDF file: {}"
+                                 .format(filename_or_obj))
         ds = maybe_decode_store(store)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
