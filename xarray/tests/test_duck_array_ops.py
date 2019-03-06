@@ -270,6 +270,31 @@ def test_datetime_reduce(dask):
     assert da['time'][0].mean() == da['time'][:1].mean()
 
 
+@requires_cftime
+def test_cftime_datetime_mean():
+    times = cftime_range('2000', periods=4)
+    da = DataArray(times, dims=['time'])
+
+    assert da.isel(time=0).mean() == da.isel(time=0)
+
+    expected = DataArray(times.date_type(2000, 1, 2, 12))
+    result = da.mean()
+    assert_equal(result, expected)
+
+    da_2d = DataArray(times.values.reshape(2, 2))
+    result = da_2d.mean()
+    assert_equal(result, expected)
+
+
+@requires_cftime
+@requires_dask
+def test_cftime_datetime_mean_dask_error():
+    times = cftime_range('2000', periods=4)
+    da = DataArray(times, dims=['time']).chunk()
+    with pytest.raises(NotImplementedError):
+        da.mean()
+
+
 @pytest.mark.parametrize('dim_num', [1, 2])
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])
