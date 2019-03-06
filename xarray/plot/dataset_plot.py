@@ -1,6 +1,7 @@
 import functools
 
 import numpy as np
+import pandas as pd
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
@@ -94,16 +95,9 @@ def _infer_scatter_data(ds, x, y, hue, scatter_size, size_norm,
         if size_mapping is None:
             size_mapping = _parse_size(size, size_norm)
 
-        if _is_numeric(size):
-            # TODO : is there a better vectorized way of doing
-            # data['sizes'] = np.array([size_mapping.get(s0) for s0 in ss])
-            map_keys = np.array(list(size_mapping.keys()))
-            map_vals = np.array(list(size_mapping.values()))
-            data['sizes'] = size.copy(
-                data=map_vals[np.digitize(size, map_keys) - 1])
-        else:
-            data['sizes'] = size.copy(
-                data=np.array([size_mapping.get(s0) for s0 in size]))
+        data['sizes'] = size.copy(
+            data=np.reshape(size_mapping.loc[size.values.ravel()].values,
+                            size.shape))
 
     return data
 
@@ -147,7 +141,7 @@ def _parse_size(data, norm):
         widths[scl.mask] = 0
     sizes = dict(zip(levels, widths))
 
-    return sizes
+    return pd.Series(sizes)
 
 
 class _Dataset_PlotMethods(object):
@@ -352,9 +346,9 @@ def scatter(ds, x, y, ax, **kwargs):
     """
 
     if 'add_colorbar' in kwargs or 'add_legend' in kwargs:
-        raise ValueError('Dataset.plot.scatter does not accept '
-                         + '\'add_colorbar\' or \'add_legend\'. '
-                         + 'Use \'add_guide\' instead.')
+        raise ValueError("Dataset.plot.scatter does not accept "
+                         "'add_colorbar' or 'add_legend'. "
+                         "Use 'add_guide' instead.")
 
     cmap_params = kwargs.pop('cmap_params')
     hue = kwargs.pop('hue')
