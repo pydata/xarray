@@ -82,7 +82,7 @@ has_h5netcdf07, requires_h5netcdf07 = _importorskip('h5netcdf',
 has_h5py29, requires_h5py29 = _importorskip('h5py', minversion='2.9.0')
 has_h5fileobj = has_h5netcdf07 and has_h5py29
 requires_h5fileobj = pytest.mark.skipif(
-                not has_h5fileobj, reason='requires h5py>2.9.0 & h5netcdf>0.7')
+    not has_h5fileobj, reason='requires h5py>2.9.0 & h5netcdf>0.7')
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
