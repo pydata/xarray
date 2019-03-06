@@ -23,7 +23,7 @@ from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_dask, requires_scipy,
-    source_ndarray)
+    source_ndarray, requires_cftime)
 
 try:
     import dask.array as da
@@ -4528,6 +4528,15 @@ def test_coarsen_coords(ds, dask):
         np.linspace(0, 365, num=364), dims='time',
         coords={'time': pd.date_range('15/12/1999', periods=364)})
     actual = da.coarsen(time=2).mean()
+
+
+@requires_cftime
+def test_coarsen_coords_cftime():
+    times = xr.cftime_range('2000', periods=6)
+    da = xr.DataArray(range(6), [('time', times)])
+    actual = da.coarsen(time=3).mean()
+    expected_times = xr.cftime_range('2000-01-02', freq='3D', periods=2)
+    np.testing.assert_array_equal(actual.time, expected_times)
 
 
 def test_rolling_properties(ds):
