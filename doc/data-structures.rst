@@ -549,14 +549,6 @@ binary operations that act on xarray objects. In the future, we hope to write
 more helper functions so that you can easily make your functions act like
 xarray's built-in arithmetic.
 
-CF-compliant coordinate variables
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-`MetPy`_ adds a	``metpy`` accessor that allows accessing coordinates with appropriate CF metadata using generic names ``x``, ``y``, ``vertical`` and ``time``. See `their documentation`_ for more information.
-
-.. _`MetPy`: https://unidata.github.io/MetPy/dev/index.html
-.. _`their documentation`:	https://unidata.github.io/MetPy/dev/tutorials/xarray_tutorial.html#coordinates
-
 Indexes
 ~~~~~~~
 

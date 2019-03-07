@@ -52,6 +52,7 @@ Documentation
 * :doc:`reshaping`
 * :doc:`combining`
 * :doc:`time-series`
+* :doc:`weather-climate`
 * :doc:`pandas`
 * :doc:`io`
 * :doc:`dask`
@@ -70,6 +71,7 @@ Documentation
    reshaping
    combining
    time-series
+   weather-climate
    pandas
    io
    dask
