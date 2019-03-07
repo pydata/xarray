@@ -1269,14 +1269,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                   'NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
-            - NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
+            * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
               features.
-            - NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
+            * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
               netCDF 3 compatible API features.
-            - NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
+            * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
               which fully supports 2+ GB files, but is only compatible with
               clients linked against netCDF version 3.6.0 or later.
-            - NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
+            * NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
               handle 2+ GB files very well.
 
             All formats are supported by the netCDF4-python library.
