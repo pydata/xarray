@@ -122,7 +122,7 @@ combinations_for_float32 = [
 @pytest.mark.parametrize('dtype', 'f2 f4'.split())
 @pytest.mark.parametrize('scale_factor', all_possible_types)
 @pytest.mark.parametrize('add_offset', all_possible_types)
-def test_scaling_case_1_float_var(dtype, scale_factor, add_offset):
+def test_cfscaleoffset_case_1_float_var(dtype, scale_factor, add_offset):
     original = xr.Variable(('x',), np.arange(10, dtype=dtype),
                            encoding=dict(scale_factor=scale_factor,
                            add_offset=add_offset))
@@ -144,7 +144,7 @@ def test_scaling_case_1_float_var(dtype, scale_factor, add_offset):
 @pytest.mark.parametrize('dtype', 'u1 u2 i1 i2'.split())
 @pytest.mark.parametrize('scale_factor', all_possible_types)
 @pytest.mark.parametrize('add_offset', all_possible_types)
-def test_scaling_cf_convention_case_1_int_var(dtype, scale_factor, add_offset):
+def test_cfscaleoffset_case_1_int_var(dtype, scale_factor, add_offset):
     original = xr.Variable(('x',), np.arange(10, dtype=dtype),
                            encoding=dict(scale_factor=scale_factor,
                            add_offset=add_offset))
@@ -176,7 +176,7 @@ types_for_float32 = [np.uint8(8),
 
 @pytest.mark.parametrize('dtype', 'u1 u2 i1 i2 f2 f4'.split())
 @pytest.mark.parametrize('scale_factor', all_possible_types)
-def test_scaling_case_2(dtype, scale_factor):
+def test_cfscaleoffset_case_2(dtype, scale_factor):
 
     original = xr.Variable(('x',), np.arange(10, dtype=dtype),
                            encoding=dict(scale_factor=scale_factor))
