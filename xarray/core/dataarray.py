@@ -1385,8 +1385,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Notes
         -----
-        Although this operation returns a view of this array's data, it is
-        not lazy -- the data will be fully loaded.
+        This operation returns a view of this array's data. It is
+        lazy for dask-backed DataArrays but not for numpy-backed DataArrays
+        -- the data will be fully loaded.
 
         See Also
         --------
