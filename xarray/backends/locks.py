@@ -1,5 +1,6 @@
 import multiprocessing
 import threading
+from typing import Any, MutableMapping
 import weakref
 
 try:
@@ -8,6 +9,11 @@ except ImportError:
     # no need to worry about serializing the lock
     SerializableLock = threading.Lock
 
+try:
+    from dask.distributed import Lock as DistributedLock
+except ImportError:
+    DistributedLock = None
+
 
 # Locks used by multiple backends.
 # Neither HDF5 nor the netCDF-C library are thread-safe.
@@ -15,7 +21,7 @@ HDF5_LOCK = SerializableLock()
 NETCDFC_LOCK = SerializableLock()
 
 
-_FILE_LOCKS = weakref.WeakValueDictionary()
+_FILE_LOCKS = weakref.WeakValueDictionary()  # type: MutableMapping[Any, threading.Lock]  # noqa
 
 
 def _get_threaded_lock(key):
@@ -33,16 +39,11 @@ def _get_multiprocessing_lock(key):
     return multiprocessing.Lock()
 
 
-def _get_distributed_lock(key):
-    from dask.distributed import Lock
-    return Lock(key)
-
-
 _LOCK_MAKERS = {
     None: _get_threaded_lock,
     'threaded': _get_threaded_lock,
     'multiprocessing': _get_multiprocessing_lock,
-    'distributed': _get_distributed_lock,
+    'distributed': DistributedLock,
 }
 
 
@@ -113,6 +114,27 @@ def get_write_lock(key):
     return lock_maker(key)
 
 
+def acquire(lock, blocking=True):
+    """Acquire a lock, possibly in a non-blocking fashion.
+
+    Includes backwards compatibility hacks for old versions of Python, dask
+    and dask-distributed.
+    """
+    if blocking:
+        # no arguments needed
+        return lock.acquire()
+    elif DistributedLock is not None and isinstance(lock, DistributedLock):
+        # distributed.Lock doesn't support the blocking argument yet:
+        # https://github.com/dask/distributed/pull/2412
+        return lock.acquire(timeout=0)
+    else:
+        # "blocking" keyword argument not supported for:
+        # - threading.Lock on Python 2.
+        # - dask.SerializableLock with dask v1.0.0 or earlier.
+        # - multiprocessing.Lock calls the argument "block" instead.
+        return lock.acquire(blocking)
+
+
 class CombinedLock(object):
     """A combination of multiple locks.
 
@@ -123,12 +145,12 @@ class CombinedLock(object):
     def __init__(self, locks):
         self.locks = tuple(set(locks))  # remove duplicates
 
-    def acquire(self, *args):
-        return all(lock.acquire(*args) for lock in self.locks)
+    def acquire(self, blocking=True):
+        return all(acquire(lock, blocking=blocking) for lock in self.locks)
 
-    def release(self, *args):
+    def release(self):
         for lock in self.locks:
-            lock.release(*args)
+            lock.release()
 
     def __enter__(self):
         for lock in self.locks:
@@ -138,7 +160,6 @@ class CombinedLock(object):
         for lock in self.locks:
             lock.__exit__(*args)
 
-    @property
     def locked(self):
         return any(lock.locked for lock in self.locks)
 
@@ -149,10 +170,10 @@ class CombinedLock(object):
 class DummyLock(object):
     """DummyLock provides the lock API without any actual locking."""
 
-    def acquire(self, *args):
+    def acquire(self, blocking=True):
         pass
 
-    def release(self, *args):
+    def release(self):
         pass
 
     def __enter__(self):
@@ -161,7 +182,6 @@ class DummyLock(object):
     def __exit__(self, *args):
         pass
 
-    @property
     def locked(self):
         return False
 

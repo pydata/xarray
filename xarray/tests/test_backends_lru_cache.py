@@ -1,8 +1,4 @@
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # noqa: F401
-
+from unittest import mock
 import pytest
 
 from xarray.backends.lru_cache import LRUCache

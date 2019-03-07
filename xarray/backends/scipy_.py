@@ -1,6 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
+from collections import OrderedDict
 from distutils.version import LooseVersion
 from io import BytesIO
 
@@ -8,11 +7,10 @@ import numpy as np
 
 from .. import Variable
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.pycompat import OrderedDict, basestring, iteritems
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import BackendArray, WritableCFDataStore
-from .locks import get_write_lock
 from .file_manager import CachingFileManager, DummyFileManager
+from .locks import ensure_lock, get_write_lock
 from .netcdf3 import (
     encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
 
@@ -27,7 +25,7 @@ def _decode_attrs(d):
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
     return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
-                       for (k, v) in iteritems(d))
+                       for (k, v) in d.items())
 
 
 class ScipyArrayWrapper(BackendArray):
@@ -35,16 +33,17 @@ class ScipyArrayWrapper(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
-        array = self.get_array()
+        array = self.get_variable().data
         self.shape = array.shape
         self.dtype = np.dtype(array.dtype.kind +
                               str(array.dtype.itemsize))
 
-    def get_array(self):
-        return self.datastore.ds.variables[self.variable_name].data
+    def get_variable(self, needs_lock=True):
+        ds = self.datastore._manager.acquire(needs_lock)
+        return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        data = NumpyIndexingAdapter(self.get_array())[key]
+        data = NumpyIndexingAdapter(self.get_variable().data)[key]
         # Copy data if the source file is mmapped. This makes things consistent
         # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
@@ -52,15 +51,16 @@ class ScipyArrayWrapper(BackendArray):
         return np.array(data, dtype=self.dtype, copy=copy)
 
     def __setitem__(self, key, value):
-        data = self.datastore.ds.variables[self.variable_name]
-        try:
-            data[key] = value
-        except TypeError:
-            if key is Ellipsis:
-                # workaround for GH: scipy/scipy#6880
-                data[:] = value
-            else:
-                raise
+        with self.datastore.lock:
+            data = self.get_variable(needs_lock=False)
+            try:
+                data[key] = value
+            except TypeError:
+                if key is Ellipsis:
+                    # workaround for GH: scipy/scipy#6880
+                    data[:] = value
+                else:
+                    raise
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
@@ -68,7 +68,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
     import gzip
 
     # if the string ends with .gz, then gunzip and open as netcdf file
-    if isinstance(filename, basestring) and filename.endswith('.gz'):
+    if isinstance(filename, str) and filename.endswith('.gz'):
         try:
             return scipy.io.netcdf_file(gzip.open(filename), mode=mode,
                                         mmap=mmap, version=version)
@@ -137,10 +137,12 @@ class ScipyDataStore(WritableCFDataStore):
                              % format)
 
         if (lock is None and mode != 'r' and
-                isinstance(filename_or_obj, basestring)):
+                isinstance(filename_or_obj, str)):
             lock = get_write_lock(filename_or_obj)
 
-        if isinstance(filename_or_obj, basestring):
+        self.lock = ensure_lock(lock)
+
+        if isinstance(filename_or_obj, str):
             manager = CachingFileManager(
                 _open_scipy_netcdf, filename_or_obj, mode=mode, lock=lock,
                 kwargs=dict(mmap=mmap, version=version))
@@ -161,7 +163,7 @@ class ScipyDataStore(WritableCFDataStore):
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in iteritems(self.ds.variables))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         return Frozen(_decode_attrs(self.ds._attributes))
@@ -209,7 +211,7 @@ class ScipyDataStore(WritableCFDataStore):
         if name not in self.ds.variables:
             self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
-        for k, v in iteritems(variable.attrs):
+        for k, v in variable.attrs.items():
             self._validate_attr_key(k)
             setattr(scipy_var, k, v)
 

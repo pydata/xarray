@@ -1,13 +1,14 @@
 from itertools import product
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from xarray import CFTimeIndex
 from xarray.coding.cftime_offsets import (
-    _MONTH_ABBREVIATIONS, BaseCFTimeOffset, Day, Hour, Minute, MonthBegin,
-    MonthEnd, Second, YearBegin, YearEnd, _days_in_month, cftime_range,
-    get_date_type, to_cftime_datetime, to_offset)
+    _MONTH_ABBREVIATIONS, BaseCFTimeOffset, Day, Hour, Minute, Second,
+    MonthBegin, MonthEnd, YearBegin, YearEnd, QuarterBegin, QuarterEnd,
+    _days_in_month, cftime_range, get_date_type, to_cftime_datetime, to_offset)
 
 cftime = pytest.importorskip('cftime')
 
@@ -31,9 +32,13 @@ def calendar(request):
     [(BaseCFTimeOffset(), 1),
      (YearBegin(), 1),
      (YearEnd(), 1),
+     (QuarterBegin(), 1),
+     (QuarterEnd(), 1),
      (BaseCFTimeOffset(n=2), 2),
      (YearBegin(n=2), 2),
-     (YearEnd(n=2), 2)],
+     (YearEnd(n=2), 2),
+     (QuarterBegin(n=2), 2),
+     (QuarterEnd(n=2), 2)],
     ids=_id_func
 )
 def test_cftime_offset_constructor_valid_n(offset, expected_n):
@@ -44,7 +49,9 @@ def test_cftime_offset_constructor_valid_n(offset, expected_n):
     ('offset', 'invalid_n'),
     [(BaseCFTimeOffset, 1.5),
      (YearBegin, 1.5),
-     (YearEnd, 1.5)],
+     (YearEnd, 1.5),
+     (QuarterBegin, 1.5),
+     (QuarterEnd, 1.5)],
     ids=_id_func
 )
 def test_cftime_offset_constructor_invalid_n(offset, invalid_n):
@@ -57,7 +64,11 @@ def test_cftime_offset_constructor_invalid_n(offset, invalid_n):
     [(YearBegin(), 1),
      (YearEnd(), 12),
      (YearBegin(month=5), 5),
-     (YearEnd(month=5), 5)],
+     (YearEnd(month=5), 5),
+     (QuarterBegin(), 3),
+     (QuarterEnd(), 3),
+     (QuarterBegin(month=5), 5),
+     (QuarterEnd(month=5), 5)],
     ids=_id_func
 )
 def test_year_offset_constructor_valid_month(offset, expected_month):
@@ -71,7 +82,13 @@ def test_year_offset_constructor_valid_month(offset, expected_month):
      (YearBegin, 13, ValueError,),
      (YearEnd, 13, ValueError),
      (YearBegin, 1.5, TypeError),
-     (YearEnd, 1.5, TypeError)],
+     (YearEnd, 1.5, TypeError),
+     (QuarterBegin, 0, ValueError),
+     (QuarterEnd, 0, ValueError),
+     (QuarterBegin, 1.5, TypeError),
+     (QuarterEnd, 1.5, TypeError),
+     (QuarterBegin, 13, ValueError),
+     (QuarterEnd, 13, ValueError)],
     ids=_id_func
 )
 def test_year_offset_constructor_invalid_month(
@@ -84,7 +101,8 @@ def test_year_offset_constructor_invalid_month(
     ('offset', 'expected'),
     [(BaseCFTimeOffset(), None),
      (MonthBegin(), 'MS'),
-     (YearBegin(), 'AS-JAN')],
+     (YearBegin(), 'AS-JAN'),
+     (QuarterBegin(), 'QS-MAR')],
     ids=_id_func
 )
 def test_rule_code(offset, expected):
@@ -94,7 +112,8 @@ def test_rule_code(offset, expected):
 @pytest.mark.parametrize(
     ('offset', 'expected'),
     [(BaseCFTimeOffset(), '<BaseCFTimeOffset: n=1>'),
-     (YearBegin(), '<YearBegin: n=1, month=1>')],
+     (YearBegin(), '<YearBegin: n=1, month=1>'),
+     (QuarterBegin(), '<QuarterBegin: n=1, month=3>')],
     ids=_id_func
 )
 def test_str_and_repr(offset, expected):
@@ -104,7 +123,7 @@ def test_str_and_repr(offset, expected):
 
 @pytest.mark.parametrize(
     'offset',
-    [BaseCFTimeOffset(), MonthBegin(), YearBegin()],
+    [BaseCFTimeOffset(), MonthBegin(), QuarterBegin(), YearBegin()],
     ids=_id_func
 )
 def test_to_offset_offset_input(offset):
@@ -140,7 +159,7 @@ _ANNUAL_OFFSET_TYPES = {
 
 
 @pytest.mark.parametrize(('month_int', 'month_label'),
-                         list(_MONTH_ABBREVIATIONS.items()) + [('', '')])
+                         list(_MONTH_ABBREVIATIONS.items()) + [(0, '')])
 @pytest.mark.parametrize('multiple', [None, 2])
 @pytest.mark.parametrize('offset_str', ['AS', 'A'])
 def test_to_offset_annual(month_label, month_int, multiple, offset_str):
@@ -163,7 +182,47 @@ def test_to_offset_annual(month_label, month_int, multiple, offset_str):
     assert result == expected
 
 
-@pytest.mark.parametrize('freq', ['Z', '7min2', 'AM', 'M-', 'AS-', '1H1min'])
+_QUARTER_OFFSET_TYPES = {
+    'Q': QuarterEnd,
+    'QS': QuarterBegin
+}
+
+
+@pytest.mark.parametrize(('month_int', 'month_label'),
+                         list(_MONTH_ABBREVIATIONS.items()) + [(0, '')])
+@pytest.mark.parametrize('multiple', [None, 2])
+@pytest.mark.parametrize('offset_str', ['QS', 'Q'])
+def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
+    freq = offset_str
+    offset_type = _QUARTER_OFFSET_TYPES[offset_str]
+    if month_label:
+        freq = '-'.join([freq, month_label])
+    if multiple:
+        freq = '{}'.format(multiple) + freq
+    result = to_offset(freq)
+
+    if multiple and month_int:
+        expected = offset_type(n=multiple, month=month_int)
+    elif multiple:
+        if month_int:
+            expected = offset_type(n=multiple)
+        else:
+            if offset_type == QuarterBegin:
+                expected = offset_type(n=multiple, month=1)
+            elif offset_type == QuarterEnd:
+                expected = offset_type(n=multiple, month=12)
+    elif month_int:
+        expected = offset_type(month=month_int)
+    else:
+        if offset_type == QuarterBegin:
+            expected = offset_type(month=1)
+        elif offset_type == QuarterEnd:
+            expected = offset_type(month=12)
+    assert result == expected
+
+
+@pytest.mark.parametrize('freq', ['Z', '7min2', 'AM', 'M-', 'AS-', 'QS-',
+                                  '1H1min'])
 def test_invalid_to_offset_str(freq):
     with pytest.raises(ValueError):
         to_offset(freq)
@@ -196,13 +255,16 @@ def test_to_cftime_datetime_error_type_error():
 
 _EQ_TESTS_A = [
     BaseCFTimeOffset(), YearBegin(), YearEnd(), YearBegin(month=2),
-    YearEnd(month=2), MonthBegin(), MonthEnd(), Day(), Hour(), Minute(),
+    YearEnd(month=2), QuarterBegin(), QuarterEnd(), QuarterBegin(month=2),
+    QuarterEnd(month=2), MonthBegin(), MonthEnd(), Day(), Hour(), Minute(),
     Second()
 ]
 _EQ_TESTS_B = [
     BaseCFTimeOffset(n=2), YearBegin(n=2), YearEnd(n=2),
-    YearBegin(n=2, month=2), YearEnd(n=2, month=2), MonthBegin(n=2),
-    MonthEnd(n=2), Day(n=2), Hour(n=2), Minute(n=2), Second(n=2)
+    YearBegin(n=2, month=2), YearEnd(n=2, month=2), QuarterBegin(n=2),
+    QuarterEnd(n=2), QuarterBegin(n=2, month=2), QuarterEnd(n=2, month=2),
+    MonthBegin(n=2), MonthEnd(n=2), Day(n=2), Hour(n=2), Minute(n=2),
+    Second(n=2)
 ]
 
 
@@ -215,8 +277,10 @@ def test_neq(a, b):
 
 _EQ_TESTS_B_COPY = [
     BaseCFTimeOffset(n=2), YearBegin(n=2), YearEnd(n=2),
-    YearBegin(n=2, month=2), YearEnd(n=2, month=2), MonthBegin(n=2),
-    MonthEnd(n=2), Day(n=2), Hour(n=2), Minute(n=2), Second(n=2)
+    YearBegin(n=2, month=2), YearEnd(n=2, month=2), QuarterBegin(n=2),
+    QuarterEnd(n=2), QuarterBegin(n=2, month=2), QuarterEnd(n=2, month=2),
+    MonthBegin(n=2), MonthEnd(n=2), Day(n=2), Hour(n=2), Minute(n=2),
+    Second(n=2)
 ]
 
 
@@ -231,6 +295,8 @@ _MUL_TESTS = [
     (BaseCFTimeOffset(), BaseCFTimeOffset(n=3)),
     (YearEnd(), YearEnd(n=3)),
     (YearBegin(), YearBegin(n=3)),
+    (QuarterEnd(), QuarterEnd(n=3)),
+    (QuarterBegin(), QuarterBegin(n=3)),
     (MonthEnd(), MonthEnd(n=3)),
     (MonthBegin(), MonthBegin(n=3)),
     (Day(), Day(n=3)),
@@ -255,6 +321,8 @@ def test_rmul(offset, expected):
     [(BaseCFTimeOffset(), BaseCFTimeOffset(n=-1)),
      (YearEnd(), YearEnd(n=-1)),
      (YearBegin(), YearBegin(n=-1)),
+     (QuarterEnd(), QuarterEnd(n=-1)),
+     (QuarterBegin(), QuarterBegin(n=-1)),
      (MonthEnd(), MonthEnd(n=-1)),
      (MonthBegin(), MonthBegin(n=-1)),
      (Day(), Day(n=-1)),
@@ -535,6 +603,89 @@ def test_add_year_end_onOffset(
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    ('initial_date_args', 'offset', 'expected_date_args'),
+    [((1, 1, 1), QuarterBegin(), (1, 3, 1)),
+     ((1, 1, 1), QuarterBegin(n=2), (1, 6, 1)),
+     ((1, 1, 1), QuarterBegin(month=2), (1, 2, 1)),
+     ((1, 1, 7), QuarterBegin(n=2), (1, 6, 1)),
+     ((2, 2, 1), QuarterBegin(n=-1), (1, 12, 1)),
+     ((1, 3, 2), QuarterBegin(n=-1), (1, 3, 1)),
+     ((1, 1, 1, 5, 5, 5, 5), QuarterBegin(), (1, 3, 1, 5, 5, 5, 5)),
+     ((2, 1, 1, 5, 5, 5, 5), QuarterBegin(n=-1), (1, 12, 1, 5, 5, 5, 5))],
+    ids=_id_func
+)
+def test_add_quarter_begin(calendar, initial_date_args, offset,
+                           expected_date_args):
+    date_type = get_date_type(calendar)
+    initial = date_type(*initial_date_args)
+    result = initial + offset
+    expected = date_type(*expected_date_args)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ('initial_date_args', 'offset', 'expected_year_month',
+     'expected_sub_day'),
+    [((1, 1, 1), QuarterEnd(), (1, 3), ()),
+     ((1, 1, 1), QuarterEnd(n=2), (1, 6), ()),
+     ((1, 1, 1), QuarterEnd(month=1), (1, 1), ()),
+     ((2, 3, 1), QuarterEnd(n=-1), (1, 12), ()),
+     ((1, 3, 1), QuarterEnd(n=-1, month=2), (1, 2), ()),
+     ((1, 1, 1, 5, 5, 5, 5), QuarterEnd(), (1, 3), (5, 5, 5, 5)),
+     ((1, 1, 1, 5, 5, 5, 5), QuarterEnd(n=2), (1, 6), (5, 5, 5, 5))],
+    ids=_id_func
+)
+def test_add_quarter_end(
+    calendar, initial_date_args, offset, expected_year_month,
+    expected_sub_day
+):
+    date_type = get_date_type(calendar)
+    initial = date_type(*initial_date_args)
+    result = initial + offset
+    reference_args = expected_year_month + (1,)
+    reference = date_type(*reference_args)
+
+    # Here the days at the end of each month varies based on the calendar used
+    expected_date_args = (expected_year_month +
+                          (_days_in_month(reference),) + expected_sub_day)
+    expected = date_type(*expected_date_args)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ('initial_year_month', 'initial_sub_day', 'offset', 'expected_year_month',
+     'expected_sub_day'),
+    [((1, 12), (), QuarterEnd(), (2, 3), ()),
+     ((1, 12), (), QuarterEnd(n=2), (2, 6), ()),
+     ((1, 12), (), QuarterEnd(n=-1), (1, 9), ()),
+     ((1, 12), (), QuarterEnd(n=-2), (1, 6), ()),
+     ((1, 1), (), QuarterEnd(month=2), (1, 2), ()),
+     ((1, 12), (5, 5, 5, 5), QuarterEnd(), (2, 3), (5, 5, 5, 5)),
+     ((1, 12), (5, 5, 5, 5), QuarterEnd(n=-1), (1, 9), (5, 5, 5, 5))],
+    ids=_id_func
+)
+def test_add_quarter_end_onOffset(
+    calendar, initial_year_month, initial_sub_day, offset, expected_year_month,
+    expected_sub_day
+):
+    date_type = get_date_type(calendar)
+    reference_args = initial_year_month + (1,)
+    reference = date_type(*reference_args)
+    initial_date_args = (initial_year_month + (_days_in_month(reference),) +
+                         initial_sub_day)
+    initial = date_type(*initial_date_args)
+    result = initial + offset
+    reference_args = expected_year_month + (1,)
+    reference = date_type(*reference_args)
+
+    # Here the days at the end of each month varies based on the calendar used
+    expected_date_args = (expected_year_month +
+                          (_days_in_month(reference),) + expected_sub_day)
+    expected = date_type(*expected_date_args)
+    assert result == expected
+
+
 # Note for all sub-monthly offsets, pandas always returns True for onOffset
 @pytest.mark.parametrize(
     ('date_args', 'offset', 'expected'),
@@ -542,6 +693,10 @@ def test_add_year_end_onOffset(
      ((1, 1, 1, 1), MonthBegin(), True),
      ((1, 1, 5), MonthBegin(), False),
      ((1, 1, 5), MonthEnd(), False),
+     ((1, 3, 1), QuarterBegin(), True),
+     ((1, 3, 1, 1), QuarterBegin(), True),
+     ((1, 3, 5), QuarterBegin(), False),
+     ((1, 12, 1), QuarterEnd(), False),
      ((1, 1, 1), YearBegin(), True),
      ((1, 1, 1, 1), YearBegin(), True),
      ((1, 1, 5), YearBegin(), False),
@@ -564,16 +719,19 @@ def test_onOffset(calendar, date_args, offset, expected):
     ('year_month_args', 'sub_day_args', 'offset'),
     [((1, 1), (), MonthEnd()),
      ((1, 1), (1,), MonthEnd()),
+     ((1, 12), (), QuarterEnd()),
+     ((1, 1), (), QuarterEnd(month=1)),
      ((1, 12), (), YearEnd()),
      ((1, 1), (), YearEnd(month=1))],
     ids=_id_func
 )
-def test_onOffset_month_or_year_end(
+def test_onOffset_month_or_quarter_or_year_end(
         calendar, year_month_args, sub_day_args, offset):
     date_type = get_date_type(calendar)
     reference_args = year_month_args + (1,)
     reference = date_type(*reference_args)
-    date_args = year_month_args + (_days_in_month(reference),) + sub_day_args
+    date_args = (year_month_args + (_days_in_month(reference),) +
+                 sub_day_args)
     date = date_type(*date_args)
     result = offset.onOffset(date)
     assert result
@@ -589,6 +747,14 @@ def test_onOffset_month_or_year_end(
      (YearEnd(n=2), (1, 3, 1), (1, 12)),
      (YearEnd(n=2, month=2), (1, 3, 1), (2, 2)),
      (YearEnd(n=2, month=4), (1, 4, 30), (1, 4)),
+     (QuarterBegin(), (1, 3, 2), (1, 6)),
+     (QuarterBegin(), (1, 4, 1), (1, 6)),
+     (QuarterBegin(n=2), (1, 4, 1), (1, 6)),
+     (QuarterBegin(n=2, month=2), (1, 4, 1), (1, 5)),
+     (QuarterEnd(), (1, 3, 1), (1, 3)),
+     (QuarterEnd(n=2), (1, 3, 1), (1, 3)),
+     (QuarterEnd(n=2, month=2), (1, 3, 1), (1, 5)),
+     (QuarterEnd(n=2, month=4), (1, 4, 30), (1, 4)),
      (MonthBegin(), (1, 3, 2), (1, 4)),
      (MonthBegin(), (1, 3, 1), (1, 3)),
      (MonthBegin(n=2), (1, 3, 2), (1, 4)),
@@ -605,9 +771,9 @@ def test_rollforward(calendar, offset, initial_date_args,
                      partial_expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
-    if isinstance(offset, (MonthBegin, YearBegin)):
+    if isinstance(offset, (MonthBegin, QuarterBegin, YearBegin)):
         expected_date_args = partial_expected_date_args + (1,)
-    elif isinstance(offset, (MonthEnd, YearEnd)):
+    elif isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)):
         reference_args = partial_expected_date_args + (1,)
         reference = date_type(*reference_args)
         expected_date_args = (partial_expected_date_args +
@@ -630,6 +796,14 @@ def test_rollforward(calendar, offset, initial_date_args,
      (YearEnd(n=2), (2, 3, 1), (1, 12)),
      (YearEnd(n=2, month=2), (2, 3, 1), (2, 2)),
      (YearEnd(month=4), (1, 4, 30), (1, 4)),
+     (QuarterBegin(), (1, 3, 2), (1, 3)),
+     (QuarterBegin(), (1, 4, 1), (1, 3)),
+     (QuarterBegin(n=2), (1, 4, 1), (1, 3)),
+     (QuarterBegin(n=2, month=2), (1, 4, 1), (1, 2)),
+     (QuarterEnd(), (2, 3, 1), (1, 12)),
+     (QuarterEnd(n=2), (2, 3, 1), (1, 12)),
+     (QuarterEnd(n=2, month=2), (2, 3, 1), (2, 2)),
+     (QuarterEnd(n=2, month=4), (1, 4, 30), (1, 4)),
      (MonthBegin(), (1, 3, 2), (1, 3)),
      (MonthBegin(n=2), (1, 3, 2), (1, 3)),
      (MonthBegin(), (1, 3, 1), (1, 3)),
@@ -646,9 +820,9 @@ def test_rollback(calendar, offset, initial_date_args,
                   partial_expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
-    if isinstance(offset, (MonthBegin, YearBegin)):
+    if isinstance(offset, (MonthBegin, QuarterBegin, YearBegin)):
         expected_date_args = partial_expected_date_args + (1,)
-    elif isinstance(offset, (MonthEnd, YearEnd)):
+    elif isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)):
         reference_args = partial_expected_date_args + (1,)
         reference = date_type(*reference_args)
         expected_date_args = (partial_expected_date_args +
@@ -686,7 +860,9 @@ _CFTIME_RANGE_TESTS = [
     ('0010', None, 4, YearBegin(n=-2), None, False,
      [(10, 1, 1), (8, 1, 1), (6, 1, 1), (4, 1, 1)]),
     ('0001-01-01', '0001-01-04', 4, None, None, False,
-     [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)])
+     [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)]),
+    ('0001-06-01', None, 4, '3QS-JUN', None, False,
+     [(1, 6, 1), (2, 3, 1), (2, 12, 1), (3, 9, 1)])
 ]
 
 
@@ -797,3 +973,25 @@ def test_calendar_year_length(
     result = cftime_range(start, end, freq='D', closed='left',
                           calendar=calendar)
     assert len(result) == expected_number_of_days
+
+
+@pytest.mark.parametrize('freq', ['A', 'M', 'D'])
+def test_dayofweek_after_cftime_range(freq):
+    pytest.importorskip('cftime', minversion='1.0.2.1')
+    result = cftime_range('2000-02-01', periods=3, freq=freq).dayofweek
+    expected = pd.date_range('2000-02-01', periods=3, freq=freq).dayofweek
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize('freq', ['A', 'M', 'D'])
+def test_dayofyear_after_cftime_range(freq):
+    pytest.importorskip('cftime', minversion='1.0.2.1')
+    result = cftime_range('2000-02-01', periods=3, freq=freq).dayofyear
+    expected = pd.date_range('2000-02-01', periods=3, freq=freq).dayofyear
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_cftime_range_standard_calendar_refers_to_gregorian():
+    from cftime import DatetimeGregorian
+    result, = cftime_range('2000', periods=1)
+    assert isinstance(result, DatetimeGregorian)

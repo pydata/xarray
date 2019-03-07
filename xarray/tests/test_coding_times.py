@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
 from itertools import product
 
@@ -8,13 +6,22 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Variable, coding, decode_cf
-from xarray.coding.times import (_import_cftime, cftime_to_nptime,
-                                 decode_cf_datetime, encode_cf_datetime)
+from xarray.coding.times import (
+    _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime)
+from xarray.coding.variables import SerializationWarning
+from xarray.conventions import _update_bounds_attributes
 from xarray.core.common import contains_cftime_datetimes
+from xarray.testing import assert_equal
 
 from . import (
     assert_array_equal, has_cftime, has_cftime_or_netCDF4, has_dask,
-    requires_cftime_or_netCDF4)
+    requires_cftime_or_netCDF4, requires_cftime)
+
+try:
+    from pandas.errors import OutOfBoundsDatetime
+except ImportError:
+    # pandas < 0.20
+    from pandas.tslib import OutOfBoundsDatetime
 
 _NON_STANDARD_CALENDARS_SET = {'noleap', '365_day', '360_day',
                                'julian', 'all_leap', '366_day'}
@@ -31,7 +38,7 @@ _CF_DATETIME_NUM_DATES_UNITS = [
     # here we add a couple minor formatting errors to test
     # the robustness of the parsing algorithm.
     (12300 + np.arange(5), 'hour since 1680-01-01  00:00:00'),
-    (12300 + np.arange(5), u'Hour  since 1680-01-01 00:00:00'),
+    (12300 + np.arange(5), 'Hour  since 1680-01-01 00:00:00'),
     (12300 + np.arange(5), ' Hour  since  1680-01-01 00:00:00 '),
     (10, 'days since 2000-01-01'),
     ([10], 'daYs  since 2000-01-01'),
@@ -533,17 +540,22 @@ def test_infer_cftime_datetime_units(calendar, date_args, expected):
 
 @pytest.mark.parametrize(
     ['timedeltas', 'units', 'numbers'],
-    [('1D', 'days', np.int64(1)),
-     (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
-     ('1h', 'hours', np.int64(1)),
-     ('1ms', 'milliseconds', np.int64(1)),
-     ('1us', 'microseconds', np.int64(1)),
-     (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
-     (['30m', '60m'], 'hours', [0.5, 1.0]),
-     (np.timedelta64('NaT', 'ns'), 'days', np.nan),
-     (['NaT', 'NaT'], 'days', [np.nan, np.nan])])
+    [
+        ('1D', 'days', np.int64(1)),
+        (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
+        ('1h', 'hours', np.int64(1)),
+        ('1ms', 'milliseconds', np.int64(1)),
+        ('1us', 'microseconds', np.int64(1)),
+        (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
+        (['30m', '60m'], 'hours', [0.5, 1.0]),
+        ('NaT', 'days', np.nan),
+        (['NaT', 'NaT'], 'days', [np.nan, np.nan]),
+    ])
 def test_cf_timedelta(timedeltas, units, numbers):
-    timedeltas = pd.to_timedelta(timedeltas, box=False)
+    if timedeltas == 'NaT':
+        timedeltas = np.timedelta64('NaT', 'ns')
+    else:
+        timedeltas = pd.to_timedelta(timedeltas, box=False)
     numbers = np.array(numbers)
 
     expected = numbers
@@ -624,6 +636,41 @@ def test_decode_cf(calendar):
             assert ds.test.dtype == np.dtype('M8[ns]')
 
 
+def test_decode_cf_time_bounds():
+
+    da = DataArray(np.arange(6, dtype='int64').reshape((3, 2)),
+                   coords={'time': [1, 2, 3]},
+                   dims=('time', 'nbnd'), name='time_bnds')
+
+    attrs = {'units': 'days since 2001-01',
+             'calendar': 'standard',
+             'bounds': 'time_bnds'}
+
+    ds = da.to_dataset()
+    ds['time'].attrs.update(attrs)
+    _update_bounds_attributes(ds.variables)
+    assert ds.variables['time_bnds'].attrs == {'units': 'days since 2001-01',
+                                               'calendar': 'standard'}
+    dsc = decode_cf(ds)
+    assert dsc.time_bnds.dtype == np.dtype('M8[ns]')
+    dsc = decode_cf(ds, decode_times=False)
+    assert dsc.time_bnds.dtype == np.dtype('int64')
+
+    # Do not overwrite existing attrs
+    ds = da.to_dataset()
+    ds['time'].attrs.update(attrs)
+    bnd_attr = {'units': 'hours since 2001-01', 'calendar': 'noleap'}
+    ds['time_bnds'].attrs.update(bnd_attr)
+    _update_bounds_attributes(ds.variables)
+    assert ds.variables['time_bnds'].attrs == bnd_attr
+
+    # If bounds variable not available do not complain
+    ds = da.to_dataset()
+    ds['time'].attrs.update(attrs)
+    ds['time'].attrs['bounds'] = 'fake_var'
+    _update_bounds_attributes(ds.variables)
+
+
 @pytest.fixture(params=_ALL_CALENDARS)
 def calendar(request):
     return request.param
@@ -701,3 +748,139 @@ def test_encode_cf_datetime_overflow(shape):
     num, _, _ = encode_cf_datetime(dates, units, calendar)
     roundtrip = decode_cf_datetime(num, units, calendar)
     np.testing.assert_array_equal(dates, roundtrip)
+
+
+def test_encode_cf_datetime_pandas_min():
+    # Test that encode_cf_datetime does not fail for versions
+    # of pandas < 0.21.1 (GH 2623).
+    dates = pd.date_range('2000', periods=3)
+    num, units, calendar = encode_cf_datetime(dates)
+    expected_num = np.array([0., 1., 2.])
+    expected_units = 'days since 2000-01-01 00:00:00'
+    expected_calendar = 'proleptic_gregorian'
+    np.testing.assert_array_equal(num, expected_num)
+    assert units == expected_units
+    assert calendar == expected_calendar
+
+
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+def test_time_units_with_timezone_roundtrip(calendar):
+    # Regression test for GH 2649
+    expected_units = 'days since 2000-01-01T00:00:00-05:00'
+    expected_num_dates = np.array([1, 2, 3])
+    dates = decode_cf_datetime(expected_num_dates, expected_units, calendar)
+
+    # Check that dates were decoded to UTC; here the hours should all
+    # equal 5.
+    result_hours = DataArray(dates).dt.hour
+    expected_hours = DataArray([5, 5, 5])
+    assert_equal(result_hours, expected_hours)
+
+    # Check that the encoded values are accurately roundtripped.
+    result_num_dates, result_units, result_calendar = encode_cf_datetime(
+        dates, expected_units, calendar)
+
+    if calendar in _STANDARD_CALENDARS:
+        np.testing.assert_array_equal(result_num_dates, expected_num_dates)
+    else:
+        # cftime datetime arithmetic is not quite exact.
+        np.testing.assert_allclose(result_num_dates, expected_num_dates)
+
+    assert result_units == expected_units
+    assert result_calendar == calendar
+
+
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+def test_use_cftime_default_standard_calendar_in_range(calendar):
+    numerical_dates = [0, 1]
+    units = 'days since 2000-01-01'
+    expected = pd.date_range('2000', periods=2)
+
+    with pytest.warns(None) as record:
+        result = decode_cf_datetime(numerical_dates, units, calendar)
+        np.testing.assert_array_equal(result, expected)
+        assert not record
+
+
+@requires_cftime
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2500])
+def test_use_cftime_default_standard_calendar_out_of_range(
+        calendar,
+        units_year):
+    from cftime import num2date
+
+    numerical_dates = [0, 1]
+    units = 'days since {}-01-01'.format(units_year)
+    expected = num2date(numerical_dates, units, calendar,
+                        only_use_cftime_datetimes=True)
+
+    with pytest.warns(SerializationWarning):
+        result = decode_cf_datetime(numerical_dates, units, calendar)
+        np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime
+@pytest.mark.parametrize('calendar', _NON_STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2000, 2500])
+def test_use_cftime_default_non_standard_calendar(calendar, units_year):
+    from cftime import num2date
+
+    numerical_dates = [0, 1]
+    units = 'days since {}-01-01'.format(units_year)
+    expected = num2date(numerical_dates, units, calendar,
+                        only_use_cftime_datetimes=True)
+
+    with pytest.warns(None) as record:
+        result = decode_cf_datetime(numerical_dates, units, calendar)
+        np.testing.assert_array_equal(result, expected)
+        assert not record
+
+
+@requires_cftime
+@pytest.mark.parametrize('calendar', _ALL_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2000, 2500])
+def test_use_cftime_true(calendar, units_year):
+    from cftime import num2date
+
+    numerical_dates = [0, 1]
+    units = 'days since {}-01-01'.format(units_year)
+    expected = num2date(numerical_dates, units, calendar,
+                        only_use_cftime_datetimes=True)
+
+    with pytest.warns(None) as record:
+        result = decode_cf_datetime(numerical_dates, units, calendar,
+                                    use_cftime=True)
+        np.testing.assert_array_equal(result, expected)
+        assert not record
+
+
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+def test_use_cftime_false_standard_calendar_in_range(calendar):
+    numerical_dates = [0, 1]
+    units = 'days since 2000-01-01'
+    expected = pd.date_range('2000', periods=2)
+
+    with pytest.warns(None) as record:
+        result = decode_cf_datetime(numerical_dates, units, calendar,
+                                    use_cftime=False)
+        np.testing.assert_array_equal(result, expected)
+        assert not record
+
+
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2500])
+def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
+    numerical_dates = [0, 1]
+    units = 'days since {}-01-01'.format(units_year)
+    with pytest.raises(OutOfBoundsDatetime):
+        decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
+
+
+@pytest.mark.parametrize('calendar', _NON_STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2000, 2500])
+def test_use_cftime_false_non_standard_calendar(calendar, units_year):
+    numerical_dates = [0, 1]
+    units = 'days since {}-01-01'.format(units_year)
+    with pytest.raises(OutOfBoundsDatetime):
+        decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)

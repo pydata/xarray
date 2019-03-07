@@ -1,12 +1,10 @@
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
-from .locks import ensure_lock, SerializableLock
+from .locks import SerializableLock, ensure_lock
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:

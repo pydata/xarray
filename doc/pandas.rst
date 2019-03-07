@@ -14,7 +14,7 @@ __ http://pandas.pydata.org/pandas-docs/stable/visualization.html
 __ http://stanford.edu/~mwaskom/software/seaborn/
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
@@ -93,7 +93,6 @@ DataFrames:
 
     s = ds['foo'].to_series()
     s
-
     # or equivalently, with Series.to_xarray()
     xr.DataArray.from_series(s)
 
@@ -152,7 +151,7 @@ However, you will need to set dimension names explicitly, either with the
 Transitioning from pandas.Panel to xarray
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:py:class:`~pandas.Panel`, pandas's data structure for 3D arrays, has always
+:py:class:`~pandas.Panel`, pandas' data structure for 3D arrays, has always
 been a second class data structure compared to the Series and DataFrame. To
 allow pandas developers to focus more on its core functionality built around
 the DataFrame, pandas plans to eventually deprecate Panel.
@@ -173,10 +172,10 @@ So you can represent a Panel, in two ways:
 Let's take a look:
 
 .. ipython:: python
+    :okwarning:
 
     panel = pd.Panel(np.random.rand(2, 3, 4), items=list('ab'), major_axis=list('mno'),
                      minor_axis=pd.date_range(start='2000', periods=4, name='date'))
-
     panel
 
 As a DataArray:

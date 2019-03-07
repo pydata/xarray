@@ -1,6 +1,5 @@
 """Coders for individual Variable objects."""
-from __future__ import absolute_import, division, print_function
-
+from typing import Any
 import warnings
 from functools import partial
 
@@ -126,11 +125,12 @@ def pop_to(source, dest, key, name=None):
     return value
 
 
-def _apply_mask(data,  # type: np.ndarray
-                encoded_fill_values,  # type: list
-                decoded_fill_value,  # type: Any
-                dtype,  # type: Any
-                ):  # type: np.ndarray
+def _apply_mask(
+    data: np.ndarray,
+    encoded_fill_values: list,
+    decoded_fill_value: Any,
+    dtype: Any,
+) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
     data = np.asarray(data, dtype=dtype)
     condition = False
@@ -249,7 +249,11 @@ class UnsignedIntegerCoder(VariableCoder):
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-        if encoding.get('_Unsigned', False):
+        # from netCDF best practices
+        # https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
+        #     "_Unsigned = "true" to indicate that
+        #      integer data should be treated as unsigned"
+        if encoding.get('_Unsigned', 'false') == 'true':
             pop_to(encoding, attrs, '_Unsigned')
             signed_dtype = np.dtype('i%s' % data.dtype.itemsize)
             if '_FillValue' in attrs:
@@ -266,7 +270,7 @@ class UnsignedIntegerCoder(VariableCoder):
             unsigned = pop_to(attrs, encoding, '_Unsigned')
 
             if data.dtype.kind == 'i':
-                if unsigned:
+                if unsigned == 'true':
                     unsigned_dtype = np.dtype('u%s' % data.dtype.itemsize)
                     transform = partial(np.asarray, dtype=unsigned_dtype)
                     data = lazy_elemwise_func(data, transform, unsigned_dtype)
