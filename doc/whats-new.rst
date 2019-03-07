@@ -45,6 +45,10 @@ Enhancements
   See :ref:`comput.coarsen` for details.
   (:issue:`2525`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Taking the mean of arrays of :py:class:`cftime.datetime` objects, and
+  by extension, use of :py:meth:`~xarray.DataArray.coarsen` with
+  :py:class:`cftime.datetime` coordinates is now possible. By `Spencer Clark
+  <https://github.com/spencerkclark>`_. 
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -71,6 +75,8 @@ Enhancements
 - Variables are now unpacked with scale_factor and offset dtypes if present in datasets.
   According `to cf convetion <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch08.html>`_.
   By `Daoud Jahdou <https://github.com/daoudjahdou>`_.
+- :py:meth:`~xarray.cftime_range` now supports QuarterBegin and QuarterEnd offsets (:issue:`2663`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_
 - :py:meth:`~xarray.open_dataset` now accepts a ``use_cftime`` argument, which
   can be used to require that ``cftime.datetime`` objects are always used, or
   never used when decoding dates encoded with a standard calendar.  This can be
@@ -80,6 +86,9 @@ Enhancements
   be outside the :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_. 
   
+- Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
+  By `Kevin Squire <https://github.com/kmsquire>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -108,6 +117,11 @@ Bug fixes
 - Fixed error when trying to reduce a DataArray using a function which does not
   require an axis argument. (:issue:`2768`)
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Concatenating a sequence of :py:class:`~xarray.DataArray` with varying names
+  sets the name of the output array to ``None``, instead of the name of the
+  first input array. If the names are the same it sets the name to that,
+  instead to the name of the first DataArray in the list as it did before.
+  (:issue:`2775`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 - Per `CF conventions
   <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,

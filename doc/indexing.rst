@@ -229,8 +229,8 @@ arrays). However, you can do normal indexing with dimension names:
 Using indexing to *assign* values to a subset of dataset (e.g.,
 ``ds[dict(space=0)] = 1``) is not yet supported.
 
-Dropping labels
----------------
+Dropping labels and dimensions
+------------------------------
 
 The :py:meth:`~xarray.Dataset.drop` method returns a new object with the listed
 index labels along a dimension dropped:
@@ -240,6 +240,13 @@ index labels along a dimension dropped:
     ds.drop(['IN', 'IL'], dim='space')
 
 ``drop`` is both a ``Dataset`` and ``DataArray`` method.
+
+Use :py:meth:`~xarray.Dataset.drop_dims` to drop a full dimension from a Dataset.
+Any variables with these dimensions are also dropped:
+
+.. ipython:: python
+
+    ds.drop_dims('time')
 
 
 .. _masking with where:
