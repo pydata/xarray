@@ -685,8 +685,8 @@ class CFEncodedBase(DatasetIOBase):
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert (decoded.variables[k].dtype
-                        == actual.variables[k].dtype or
-                        (decoded.variables[k].dtype == np.float32 and
+                        == actual.variables[k].dtype
+                        or (decoded.variables[k].dtype == np.float32 and
                             actual.variables[k].dtype == np.float64))
             assert_allclose(decoded, actual, decode_bytes=False)
 
@@ -1160,7 +1160,7 @@ class NetCDF4Base(CFEncodedBase):
                 nc.createVariable('x', 'int16', ('t',), fill_value=-1)
                 v = nc.variables['x']
                 v.set_auto_maskandscale(False)
-                v.add_offset = 10
+                v.add_offset = np.float32(10)
                 v.scale_factor = np.float32(0.1)
                 v[:] = np.array([-1, -1, 0, 1, 2])
 
