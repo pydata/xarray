@@ -494,7 +494,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        \*\*kwargs : dict
+        **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
         See Also
@@ -626,7 +626,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        \*\*kwargs : dict
+        **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
         See Also
@@ -663,7 +663,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        \*\*kwargs : dict
+        **kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
 
         See Also
@@ -3047,7 +3047,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         func : function
             Function which can be called in the form
-            `f(x, axis=axis, \*\*kwargs)` to return the result of reducing an
+            `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
@@ -3058,7 +3058,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             object will be returned without attributes.
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
-        \*\*kwargs : dict
+        **kwargs : dict
             Additional keyword arguments passed on to ``func``.
 
         Returns
@@ -3118,7 +3118,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         func : function
-            Function which can be called in the form `func(x, \*args, \*\*kwargs)`
+            Function which can be called in the form `func(x, *args, **kwargs)`
             to transform each DataArray `x` in this dataset into another
             DataArray.
         keep_attrs : bool, optional
@@ -3127,7 +3127,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             be returned without attributes.
         args : tuple, optional
             Positional arguments passed on to `func`.
-        \*\*kwargs : dict
+        **kwargs : dict
             Keyword arguments passed on to `func`.
 
         Returns
@@ -4110,7 +4110,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        \*\*kwargs : key=value
+        **kwargs : key=value
             key : str
                 Attribute name.
             value : callable or obj
