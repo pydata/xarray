@@ -75,6 +75,34 @@ def _get_default_engine_netcdf():
     return engine
 
 
+def _get_engine_from_magic_number(filename_or_obj):
+    # check byte header to determine file type
+    if isinstance(filename_or_obj, bytes):
+        magic_number = filename_or_obj[:8]
+    else:
+        if filename_or_obj.tell() != 0:
+            raise ValueError("file-like object read/write pointer not at zero "
+                             "please close and reopen, or use a context "
+                             "manager")
+        magic_number = filename_or_obj.read(8)
+        filename_or_obj.seek(0)
+
+    if magic_number.startswith(b'CDF'):
+        engine = 'scipy'
+    elif magic_number.startswith(b'\211HDF\r\n\032\n'):
+        engine = 'h5netcdf'
+        if isinstance(filename_or_obj, bytes):
+            raise ValueError("can't open netCDF4/HDF5 as bytes "
+                             "try passing a path or file-like object")
+    else:
+        if isinstance(filename_or_obj, bytes) and len(filename_or_obj) > 80:
+            filename_or_obj = filename_or_obj[:80] + b'...'
+        raise ValueError('{} is not a valid netCDF file '
+                         'did you mean to pass a string for a path instead?'
+                         .format(filename_or_obj))
+    return engine
+
+
 def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):
         engine = _get_default_engine_remote_uri()
@@ -251,6 +279,13 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     --------
     open_mfdataset
     """
+    engines = [None, 'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio',
+               'cfgrib', 'pseudonetcdf']
+    if engine not in engines:
+        raise ValueError('unrecognized engine for open_dataset: {}\n'
+                         'must be one of: {}'
+                         .format(engine, engines))
+
     if autoclose is not None:
         warnings.warn(
             'The autoclose argument is no longer used by '
@@ -309,7 +344,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
-        ds = maybe_decode_store(store)
 
     elif isinstance(filename_or_obj, str):
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -337,32 +371,19 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         elif engine == 'cfgrib':
             store = backends.CfGribDataStore(
                 filename_or_obj, lock=lock, **backend_kwargs)
-        else:
-            raise ValueError('unrecognized engine for open_dataset: %r'
-                             % engine)
 
-        with close_on_error(store):
-            ds = maybe_decode_store(store)
     else:
         if engine not in [None, 'scipy', 'h5netcdf']:
-            raise ValueError('can only read bytes or file-like objects with '
-                             "engine = None, 'scipy', or 'h5netcdf'")
-        else:
-            if isinstance(filename_or_obj, bytes):
-                filename_or_obj = BytesIO(filename_or_obj)
-            # read first bytes of file-like object to determine engine
-            magic_number = filename_or_obj.read(8)
-            filename_or_obj.seek(0)
-            if magic_number.startswith(b'CDF'):
-                store = backends.ScipyDataStore(filename_or_obj,
-                                                **backend_kwargs)
-            elif magic_number.startswith(b'\211HDF\r\n\032\n'):
-                store = backends.H5NetCDFStore(filename_or_obj, group=group,
-                                               lock=lock, **backend_kwargs)
-            else:
-                print(magic_number)
-                raise ValueError("file-like object is not a netCDF file: {}"
-                                 .format(filename_or_obj))
+            raise ValueError("can only read bytes or file-like objects "
+                             "with engine='scipy' or 'h5netcdf'")
+        engine = _get_engine_from_magic_number(filename_or_obj)
+        if engine == 'scipy':
+            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
+        elif engine == 'h5netcdf':
+            store = backends.H5NetCDFStore(filename_or_obj, group=group,
+                                           lock=lock, **backend_kwargs)
+
+    with close_on_error(store):
         ds = maybe_decode_store(store)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)

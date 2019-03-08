@@ -1770,7 +1770,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
                 open_dataset(tmp_file, engine='foobar')
 
         netcdf_bytes = data.to_netcdf()
-        with raises_regex(ValueError, 'can only read'):
+        with raises_regex(ValueError, 'unrecognized engine'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
     def test_cross_engine_read_write_netcdf3(self):
@@ -1957,22 +1957,35 @@ class TestH5NetCDFData(NetCDF4Base):
 
 @requires_h5fileobj
 class TestH5NetCDFFileObject(TestH5NetCDFData):
-    h5py = pytest.importorskip('h5py', minversion='2.9.0')
     engine = 'h5netcdf'
 
-    @network
-    def test_h5remote(self):
-        # alternative: http://era5-pds.s3.amazonaws.com/2008/01/main.nc
-        import requests
-        url = ('https://www.unidata.ucar.edu/'
-               'software/netcdf/examples/test_hgroups.nc')
-        print(url)
-        bytes = requests.get(url).content
-        with xr.open_dataset(bytes) as ds:
-            assert len(ds['UTC_time']) == 74
-            assert ds['UTC_time'].attrs['name'] == 'time'
+    def test_open_badbytes(self):
+        with raises_regex(ValueError, "HDF5 as bytes"):
+            with open_dataset(b'\211HDF\r\n\032\n', engine='h5netcdf'):
+                pass
+        with raises_regex(ValueError, "not a valid netCDF"):
+            with open_dataset(b'garbage'):
+                pass
+        with raises_regex(ValueError, "can only read bytes"):
+            with open_dataset(b'garbage', engine='netcdf4'):
+                pass
+        with raises_regex(ValueError, "not a valid netCDF"):
+            with open_dataset(BytesIO(b'garbage'), engine='h5netcdf'):
+                pass
 
-    def test_h5binary(self):
+    def test_open_twice(self):
+        expected = create_test_data()
+        expected.attrs['foo'] = 'bar'
+        with raises_regex(ValueError, 'read/write pointer not at zero'):
+            with create_tmp_file() as tmp_file:
+                expected.to_netcdf(tmp_file, engine='h5netcdf')
+                f = open(tmp_file, 'rb')
+                with open_dataset(f, engine='h5netcdf'):
+                    with open_dataset(f, engine='h5netcdf'):
+                        pass
+
+    def test_open_fileobj(self):
+        # open in-memory datasets instead of local file paths
         expected = create_test_data().drop('dim3')
         expected.attrs['foo'] = 'bar'
         with create_tmp_file() as tmp_file:
