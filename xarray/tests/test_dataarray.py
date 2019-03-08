@@ -1737,9 +1737,6 @@ class TestDataArray(object):
         with pytest.raises(ValueError):
             da.transpose('x', 'y')
 
-        with pytest.raises(ValueError):
-            da.transpose(invalid_kwarg=None)
-
         with pytest.warns(FutureWarning):
             da.transpose()
 
@@ -2196,6 +2193,23 @@ class TestDataArray(object):
                                   ('b', ('x', 'b'))]:
             result = array.groupby(by).apply(lambda x: x.squeeze())
             assert result.dims == expected_dims
+
+    def test_groupby_restore_coord_dims(self):
+        array = DataArray(np.random.randn(5, 3),
+                          coords={'a': ('x', range(5)), 'b': ('y', range(3)),
+                                  'c': (('x', 'y'), np.random.randn(5, 3))},
+                          dims=['x', 'y'])
+
+        for by, expected_dims in [('x', ('x', 'y')),
+                                  ('y', ('x', 'y')),
+                                  ('a', ('a', 'y')),
+                                  ('b', ('x', 'b'))]:
+            result = array.groupby(by).apply(
+                lambda x: x.squeeze(), restore_coord_dims=True)['c']
+            assert result.dims == expected_dims
+
+        with pytest.warns(FutureWarning):
+            array.groupby('x').apply(lambda x: x.squeeze())
 
     def test_groupby_first_and_last(self):
         array = DataArray([1, 2, 3, 4, 5], dims='x')

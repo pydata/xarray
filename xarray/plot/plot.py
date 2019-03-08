@@ -64,8 +64,10 @@ def _infer_line_data(darray, x, y, hue):
                 if huename in darray.dims:
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     otherdim = darray.dims[otherindex]
-                    yplt = darray.transpose(otherdim, huename)
-                    xplt = xplt.transpose(otherdim, huename)
+                    yplt = darray.transpose(
+                        otherdim, huename, transpose_coords=False)
+                    xplt = xplt.transpose(
+                        otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError('For 2D inputs, hue must be a dimension'
                                      + ' i.e. one of ' + repr(darray.dims))
@@ -79,7 +81,9 @@ def _infer_line_data(darray, x, y, hue):
             if yplt.ndim > 1:
                 if huename in darray.dims:
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    xplt = darray.transpose(otherdim, huename)
+                    otherdim = darray.dims[otherindex]
+                    xplt = darray.transpose(
+                        otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError('For 2D inputs, hue must be a dimension'
                                      + ' i.e. one of ' + repr(darray.dims))
@@ -616,7 +620,7 @@ def _plot2d(plotfunc):
             if dims != darray.dims:
                 darray = darray.transpose(*dims, transpose_coords=True)
         elif darray[xlab].dims[-1] == darray.dims[0]:
-            darray = darray.transpose()
+            darray = darray.transpose(transpose_coords=True)
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)

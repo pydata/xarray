@@ -165,7 +165,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                              "('{}')! ".format(self._resample_dim, self._dim))
         super(DataArrayResample, self).__init__(*args, **kwargs)
 
-    def apply(self, func, shortcut=False, args=(), **kwargs):
+    def apply(self, func, shortcut=False, restore_coord_dims=None,
+              args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -194,6 +195,9 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
         args : tuple, optional
             Positional arguments passed on to `func`.
         **kwargs
@@ -205,7 +209,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             The result of splitting, applying and combining this array.
         """
         combined = super(DataArrayResample, self).apply(
-            func, shortcut=shortcut, args=args, **kwargs)
+            func, shortcut=shortcut, restore_coord_dims=restore_coord_dims,
+            args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy

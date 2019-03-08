@@ -81,10 +81,16 @@ Enhancements
   :py:meth:`~xarray.open_mfdataset` (:issue:`1263`) and/or to silence
   serialization warnings raised if dates from a standard calendar are found to
   be outside the :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By
-  `Spencer Clark <https://github.com/spencerkclark>`_. 
-  
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
   By `Kevin Squire <https://github.com/kmsquire>`_.
+- :py:meth:`DataArray.transpose` now accepts a keyword argument
+  ``transpose_coords`` which enables transposition of coordinates in the
+  same way as :py:meth:`Dataset.transpose`. :py:meth:`DataArrayGroupBy.apply`
+  and :py:meth:`DataArrayResample.apply` now accept a keyword argument
+  ``restore_coord_dims`` which restores the order of the dimension of
+  multi-dimensional coordinates (:issue:`1856`).
+  By `Peter Hausamann <http://github.com/phausamann>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -185,10 +191,6 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:meth:`DataArray.transpose` now accepts a keyword argument
-  ``transpose_coords`` which enables transposition of coordinates in the
-  same way as :py:meth:`Dataset.transpose`.
-  By `Peter Hausamann <http://github.com/phausamann>`_.
 - Ability to read and write consolidated metadata in zarr stores (:issue:`2558`).
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 - :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like

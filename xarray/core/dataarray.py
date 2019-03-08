@@ -1369,7 +1369,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def transpose(self, *dims, **kwargs):
+    def transpose(self, *dims, transpose_coords=None):
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1401,14 +1401,10 @@ class DataArray(AbstractArray, DataWithCoords):
                                  'permuted array dimensions (%s)'
                                  % (dims, tuple(self.dims)))
 
-        transpose_coords = kwargs.pop('transpose_coords', None)
-        if kwargs:
-            raise ValueError(
-                'Invalid keyword arguments: %s' % tuple(k for k in kwargs))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords = {}
-            for name, coord in iteritems(self.coords):
+            for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
             return self._replace(variable, coords)
