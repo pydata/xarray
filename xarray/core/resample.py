@@ -209,8 +209,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             The result of splitting, applying and combining this array.
         """
         combined = super(DataArrayResample, self).apply(
-            func, shortcut=shortcut, restore_coord_dims=restore_coord_dims,
-            args=args, **kwargs)
+            func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy

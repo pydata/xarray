@@ -2204,8 +2204,8 @@ class TestDataArray(object):
                                   ('y', ('x', 'y')),
                                   ('a', ('a', 'y')),
                                   ('b', ('x', 'b'))]:
-            result = array.groupby(by).apply(
-                lambda x: x.squeeze(), restore_coord_dims=True)['c']
+            result = array.groupby(by, restore_coord_dims=True).apply(
+                lambda x: x.squeeze())['c']
             assert result.dims == expected_dims
 
         with pytest.warns(FutureWarning):
@@ -2398,15 +2398,18 @@ class TestDataArray(object):
         array = ds['data']
 
         # Re-sample
-        actual = array.resample(time="12H").mean('time')
+        actual = array.resample(
+            time="12H", restore_coord_dims=True).mean('time')
         assert 'tc' not in actual.coords
 
         # Up-sample - filling
-        actual = array.resample(time="1H").ffill()
+        actual = array.resample(
+            time="1H", restore_coord_dims=True).ffill()
         assert 'tc' not in actual.coords
 
         # Up-sample - interpolation
-        actual = array.resample(time="1H").interpolate('linear')
+        actual = array.resample(
+            time="1H", restore_coord_dims=True).interpolate('linear')
         assert 'tc' not in actual.coords
 
     def test_resample_keep_attrs(self):

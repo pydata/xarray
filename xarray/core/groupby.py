@@ -197,7 +197,7 @@ class GroupBy(SupportsArithmetic):
     """
 
     def __init__(self, obj, group, squeeze=False, grouper=None, bins=None,
-                 cut_kwargs={}):
+                 restore_coord_dims=None, cut_kwargs={}):
         """Create a GroupBy object
 
         Parameters
@@ -215,6 +215,9 @@ class GroupBy(SupportsArithmetic):
         bins : array-like, optional
             If `bins` is specified, the groups will be discretized into the
             specified bins by `pandas.cut`.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
         cut_kwargs : dict, optional
             Extra keyword arguments to pass to `pandas.cut`
 
@@ -279,6 +282,16 @@ class GroupBy(SupportsArithmetic):
                 safe_cast_to_index(group), sort=(bins is None))
             unique_coord = IndexVariable(group.name, unique_values)
 
+        if isinstance(obj, DataArray) \
+                and restore_coord_dims is None \
+                and any(obj[c].ndim > 1 for c in obj.coords):
+            warnings.warn('This DataArray contains multi-dimensional '
+                          'coordinates. In the future, the dimension order '
+                          'of these coordinates will be restored as well '
+                          'unless you specify restore_coord_dims=False.',
+                          FutureWarning, stacklevel=2)
+            restore_coord_dims = False
+
         # specification for the groupby operation
         self._obj = obj
         self._group = group
@@ -288,6 +301,7 @@ class GroupBy(SupportsArithmetic):
         self._stacked_dim = stacked_dim
         self._inserted_dims = inserted_dims
         self._full_index = full_index
+        self._restore_coord_dims = restore_coord_dims
 
         # cached attributes
         self._groups = None
@@ -497,7 +511,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         result = self._obj._replace_maybe_drop_dims(reordered)
         return result
 
-    def _restore_dim_order(self, stacked, transpose_coords):
+    def _restore_dim_order(self, stacked):
         def lookup_order(dimension):
             if dimension == self._group.name:
                 dimension, = self._group.dims
@@ -508,10 +522,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             return axis
 
         new_order = sorted(stacked.dims, key=lookup_order)
-        return stacked.transpose(*new_order, transpose_coords=transpose_coords)
+        return stacked.transpose(
+            *new_order, transpose_coords=self._restore_coord_dims)
 
-    def apply(self, func, shortcut=False, restore_coord_dims=None,
-              args=(), **kwargs):
+    def apply(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -540,9 +554,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-        restore_coord_dims : bool, optional
-            If True, also restore the dimension order of multi-dimensional
-            coordinates.
         args : tuple, optional
             Positional arguments passed to `func`.
         **kwargs
@@ -559,15 +570,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             grouped = self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs))
                    for arr in grouped)
-        if restore_coord_dims is None \
-                and any(self._obj[c].ndim > 1 for c in self._obj.coords):
-            warnings.warn('This DataArrayGroupBy contains multi-dimensional '
-                          'coordinates. In the future, the dimension order '
-                          'of these coordinates will be restored as well '
-                          'unless you specify restore_coord_dims=False.',
-                          FutureWarning, stacklevel=2)
-            restore_coord_dims = False
-        return self._combine(applied, restore_coord_dims, shortcut=shortcut)
+        return self._combine(applied, shortcut=shortcut)
 
     def _combine(self, applied, restore_coord_dims=False, shortcut=False):
         """Recombine the applied objects like the original."""
@@ -581,7 +584,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         if isinstance(combined, type(self._obj)):
             # only restore dimension order for arrays
-            combined = self._restore_dim_order(combined, restore_coord_dims)
+            combined = self._restore_dim_order(combined)
         if coord is not None:
             if shortcut:
                 combined._coords[coord.name] = as_variable(coord)

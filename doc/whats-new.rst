@@ -86,10 +86,10 @@ Enhancements
   By `Kevin Squire <https://github.com/kmsquire>`_.
 - :py:meth:`DataArray.transpose` now accepts a keyword argument
   ``transpose_coords`` which enables transposition of coordinates in the
-  same way as :py:meth:`Dataset.transpose`. :py:meth:`DataArrayGroupBy.apply`
-  and :py:meth:`DataArrayResample.apply` now accept a keyword argument
-  ``restore_coord_dims`` which restores the order of the dimension of
-  multi-dimensional coordinates (:issue:`1856`).
+  same way as :py:meth:`Dataset.transpose`. :py:meth:`DataArray.groupby`
+  :py:meth:`DataArray.groupby_bins`, and :py:meth:`DataArray.resample` now
+  accept a keyword argument ``restore_coord_dims`` which restores the order
+  of the dimensions of multi-dimensional coordinates (:issue:`1856`).
   By `Peter Hausamann <http://github.com/phausamann>`_.
 
 Bug fixes

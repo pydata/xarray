@@ -432,7 +432,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze=True):
+    def groupby(self, group, squeeze=True, restore_coord_dims=None):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -444,6 +444,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
 
         Returns
         -------
@@ -476,10 +479,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
         """  # noqa
-        return self._groupby_cls(self, group, squeeze=squeeze)
+        return self._groupby_cls(self, group, squeeze=squeeze,
+                                 restore_coord_dims=restore_coord_dims)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
-                     include_lowest=False, squeeze=True):
+                     include_lowest=False, squeeze=True,
+                     restore_coord_dims=None):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -512,6 +517,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
 
         Returns
         -------
@@ -526,9 +534,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                 restore_coord_dims=restore_coord_dims,
                                  cut_kwargs={'right': right, 'labels': labels,
                                              'precision': precision,
-                                             'include_lowest': include_lowest})
+                                             'include_lowest':
+                                                 include_lowest})
 
     def rolling(self, dim=None, min_periods=None, center=False, **dim_kwargs):
         """
@@ -651,7 +661,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             coord_func=coord_func)
 
     def resample(self, indexer=None, skipna=None, closed=None, label=None,
-                 base=0, keep_attrs=None, loffset=None, **indexer_kwargs):
+                 base=0, keep_attrs=None, loffset=None,
+                 restore_coord_dims=None, **indexer_kwargs):
         """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. If any intervals contain no
@@ -678,6 +689,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
         **indexer_kwargs : {dim: freq}
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
@@ -768,7 +782,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                           dims=dim_coord.dims, name=RESAMPLE_DIM)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
-                                       resample_dim=RESAMPLE_DIM)
+                                       resample_dim=RESAMPLE_DIM,
+                                       restore_coord_dims=restore_coord_dims)
 
         return resampler
 
