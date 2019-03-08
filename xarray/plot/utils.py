@@ -715,15 +715,15 @@ def _process_cmap_cbar_kwargs(func, kwargs, data):
     return cmap_params, cbar_kwargs
 
 
-def _check_animate_over(darray, animate_over):
-    if animate_over is None:
+def _check_animate(darray, animate):
+    if animate is None:
         raise ValueError
 
-    if animate_over not in darray.coords and animate_over not in darray.dims:
+    if animate not in darray.coords and animate not in darray.dims:
         raise ValueError("Can only animate over a dimension or coordinate "
                          "present in the DataArray")
 
-    anim_coord = darray[animate_over].variable
+    anim_coord = darray[animate].variable
     if anim_coord.ndim != 1:
         raise ValueError('Coordinate {} must be 1 dimensional but is {}'
                          ' dimensional'.format(anim_coord, anim_coord.ndim))
@@ -731,9 +731,10 @@ def _check_animate_over(darray, animate_over):
     return anim_dim
 
 
-# TODO _transpose_before_animation should be a decorator applied to animate_line etc?
-def _transpose_before_animation(darray, animate_over):
+# TODO _transpose_before_animation should be a decorator applied to
+# animate_line etc?
+def _transpose_before_animation(darray, animate):
     # Set animation dimension to be along last axis of data
     dims = list(darray.dims)
-    dims.remove(animate_over)
-    return darray.transpose(*dims, animate_over)
+    dims.remove(animate)
+    return darray.transpose(*dims, animate)

@@ -267,10 +267,10 @@ class FacetGrid(object):
                 mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
                 self._mappables.append(mappable)
 
-                animate_over = kwargs.pop('animate_over', None)
+                animate = kwargs.pop('animate', None)
         _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
             darray=self.data.loc[self.name_dicts.flat[0]],
-            x=x, y=y, hue=func_kwargs['hue'], animate_over=animate_over)
+            x=x, y=y, hue=func_kwargs['hue'], animate=animate)
 
         self._hue_var = hueplt
         self._hue_label = huelabel

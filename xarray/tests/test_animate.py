@@ -21,7 +21,7 @@ class TestTimeline:
                        coords={'duration': ('time', [0.1, 0.2, 0.3])},
                        dims='time')
         da.coords['duration'].attrs['units'] = 's'
-        timeline = _create_timeline(da, animate_over='duration', fps=5)
+        timeline = _create_timeline(da, animate='duration', fps=5)
 
         assert isinstance(timeline, amp.animation.Timeline)
         assert len(timeline) == len(da.coords['duration'])
@@ -31,7 +31,7 @@ class TestTimeline:
 
     def test_dim_timeline(self):
         da = DataArray([10, 20], dims='Time')
-        timeline = _create_timeline(da, animate_over='Time', fps=5)
+        timeline = _create_timeline(da, animate='Time', fps=5)
 
         assert isinstance(timeline, amp.animation.Timeline)
         assert len(timeline) == da.sizes['Time']
@@ -44,7 +44,7 @@ class TestTimeline:
                          dtype=np.datetime64)
         da = DataArray([1, 2, 3],
                        coords={'date': ('time', dates)}, dims='time')
-        timeline = _create_timeline(da, animate_over='date', fps=5)
+        timeline = _create_timeline(da, animate='date', fps=5)
 
         assert str(timeline.t[0]) == '2000-01-01 00:00:00'
 
@@ -58,9 +58,10 @@ class TestAnimateLine:
                       [0.1, 1.4, 0.3, 2.2],
                       [0.2, 1.3, 0.2, 2.3],
                       [0.1, 1.2, 0.2, 2.2]])
+        coords = {'time': 10 * np.arange(d.shape[0]),
+                  'position': 0.1 * np.arange(d.shape[1])}
         self.darray = DataArray(d, name='height',
-                                coords={'time': 10*np.arange(d.shape[0]),
-                                        'position': 0.1*np.arange(d.shape[1])},
+                                coords=coords,
                                 dims=('time', 'position'),
                                 attrs={'units': 'm'})
         self.darray.time.attrs['units'] = 's'
@@ -68,7 +69,7 @@ class TestAnimateLine:
 
     @pytest.mark.slow
     def test_animate_single_line(self):
-        anim = self.darray.plot(animate_over='time')
+        anim = self.darray.plot(animate='time')
         assert isinstance(anim, amp.animation.Animation)
 
         line_block, title_block = anim.blocks

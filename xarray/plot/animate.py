@@ -5,9 +5,9 @@ Use this module directly:
 Or use the methods on a DataArray:
     DataArray.plot.animate_____
 
-Or supply an ``animate_over`` keyword
+Or supply an ``animate`` keyword
 argument to a normal plotting function:
-    DataArray.plot._____(animate_over='__')
+    DataArray.plot._____(animate='__')
 """
 
 import datetime
@@ -18,10 +18,10 @@ import pandas as pd
 from .plot import _infer_line_data
 from .utils import (_ensure_plottable, _interval_to_mid_points, _update_axes,
                     _valid_other_type, get_axis, _rotate_date_xlabels,
-                    _check_animate_over, _transpose_before_animation)
+                    _check_animate, _transpose_before_animation)
 
 
-def animate_line(darray, animate_over=None, **kwargs):
+def animate_line(darray, animate=None, **kwargs):
     """
     Line plot of DataArray index against values
 
@@ -31,7 +31,7 @@ def animate_line(darray, animate_over=None, **kwargs):
     ----------
     darray : DataArray
         Must be 2 dimensional.
-    animate_over: str
+    animate: str
         Dimension or coord in the DataArray over which to animate.
         ``animatplot.blocks.Line`` will be used to animate the plot over this
         dimension.
@@ -80,10 +80,10 @@ def animate_line(darray, animate_over=None, **kwargs):
     if hue:
         raise NotImplementedError
 
-    _check_animate_over(darray, animate_over)
-    darray = _transpose_before_animation(darray, animate_over)
+    _check_animate(darray, animate)
+    darray = _transpose_before_animation(darray, animate)
 
-    ndims = len(darray[animate_over].dims)
+    ndims = len(darray[animate].dims)
     if ndims > 1:
         raise NotImplementedError
 
@@ -107,7 +107,7 @@ def animate_line(darray, animate_over=None, **kwargs):
 
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
-        _infer_line_data(darray, x, y, hue, animate_over)
+        _infer_line_data(darray, x, y, hue, animate)
 
     # Remove pd.Intervals if contained in xplt.values.
     if _valid_other_type(xplt.values, [pd.Interval]):
@@ -125,7 +125,7 @@ def animate_line(darray, animate_over=None, **kwargs):
     _ensure_plottable(xplt_val, yplt_val)
 
     fps = kwargs.pop('fps', 10)
-    timeline = _create_timeline(darray, animate_over, fps)
+    timeline = _create_timeline(darray, animate, fps)
 
     if ylim is None:
         ylim = [np.min(yplt_val), np.max(yplt_val)]
@@ -141,7 +141,7 @@ def animate_line(darray, animate_over=None, **kwargs):
             ax.set_ylabel(ylabel)
 
         # Would be nicer if we had something like in GH issue #266
-        frame_titles = [darray[{animate_over: i}]._title_for_slice()
+        frame_titles = [darray[{animate: i}]._title_for_slice()
                         for i in range(len(timeline))]
         title_block = Title(frame_titles, ax=ax)
 
@@ -153,16 +153,16 @@ def animate_line(darray, animate_over=None, **kwargs):
     anim = Animation([line_block, title_block], timeline=timeline)
     # TODO I think ax should be passed to timeline_slider args
     # but that just plots a single huge timeline and no line plot?!
-    anim.controls(timeline_slider_args={'text': animate_over, 'valfmt': '%s'})
+    anim.controls(timeline_slider_args={'text': animate, 'valfmt': '%s'})
     return anim
 
 
-def _create_timeline(darray, animate_over, fps):
+def _create_timeline(darray, animate, fps):
 
     from animatplot.animation import Timeline
 
-    if animate_over in darray.coords:
-        t_array = darray.coords[animate_over].values
+    if animate in darray.coords:
+        t_array = darray.coords[animate].values
 
         # Format datetimes in a nicer way
         if isinstance(t_array[0], datetime.date) \
@@ -170,10 +170,10 @@ def _create_timeline(darray, animate_over, fps):
             t_array = [pd.to_datetime(date) for date in t_array]
 
     else:  # animating over a dimension without coords
-        t_array = np.arange(darray.sizes[animate_over])
+        t_array = np.arange(darray.sizes[animate])
 
-    if darray.coords[animate_over].attrs.get('units'):
-        units = ' [{}]'.format(darray.coords[animate_over].attrs['units'])
+    if darray.coords[animate].attrs.get('units'):
+        units = ' [{}]'.format(darray.coords[animate].attrs['units'])
     else:
         units = ''
     return Timeline(t_array, units=units, fps=fps)
