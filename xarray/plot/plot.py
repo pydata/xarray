@@ -5,102 +5,95 @@ Use this module directly:
 Or use the methods on a DataArray:
     DataArray.plot._____
 """
-from __future__ import absolute_import, division, print_function
-
 import functools
-import warnings
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
-from xarray.core.alignment import align
-from xarray.core.common import contains_cftime_datetimes
-from xarray.core.pycompat import basestring
-
-from .facetgrid import FacetGrid
+from .facetgrid import _easy_facetgrid
 from .utils import (
-    ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels,
+    _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_xy_labels,
     _interval_to_double_bound_points, _interval_to_mid_points,
-    _resolve_intervals_2dplot, _valid_other_type, get_axis,
-    import_matplotlib_pyplot, label_from_attrs)
+    _process_cmap_cbar_kwargs, _rescale_imshow_rgb, _resolve_intervals_2dplot,
+    _update_axes, _valid_other_type, get_axis, import_matplotlib_pyplot,
+    label_from_attrs)
 
 
-def _valid_numpy_subdtype(x, numpy_types):
-    """
-    Is any dtype from numpy_types superior to the dtype of x?
-    """
-    # If any of the types given in numpy_types is understood as numpy.generic,
-    # all possible x will be considered valid.  This is probably unwanted.
-    for t in numpy_types:
-        assert not np.issubdtype(np.generic, t)
+def _infer_line_data(darray, x, y, hue):
+    error_msg = ('must be either None or one of ({0:s})'
+                 .format(', '.join([repr(dd) for dd in darray.dims])))
+    ndims = len(darray.dims)
 
-    return any(np.issubdtype(x.dtype, t) for t in numpy_types)
+    if x is not None and x not in darray.dims and x not in darray.coords:
+        raise ValueError('x ' + error_msg)
 
+    if y is not None and y not in darray.dims and y not in darray.coords:
+        raise ValueError('y ' + error_msg)
 
-def _ensure_plottable(*args):
-    """
-    Raise exception if there is anything in args that can't be plotted on an
-    axis by matplotlib.
-    """
-    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
-    other_types = [datetime]
+    if x is not None and y is not None:
+        raise ValueError('You cannot specify both x and y kwargs'
+                         'for line plots.')
 
-    for x in args:
-        if not (_valid_numpy_subdtype(np.array(x), numpy_types)
-                or _valid_other_type(np.array(x), other_types)):
-            raise TypeError('Plotting requires coordinates to be numeric '
-                            'or dates of type np.datetime64 or '
-                            'datetime.datetime or pd.Interval.')
+    if ndims == 1:
+        huename = None
+        hueplt = None
+        huelabel = ''
 
+        if x is not None:
+            xplt = darray[x]
+            yplt = darray
 
-def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, **kwargs):
-    """
-    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
+        elif y is not None:
+            xplt = darray
+            yplt = darray[y]
 
-    kwargs are the arguments to 2d plotting method
-    """
-    ax = kwargs.pop('ax', None)
-    figsize = kwargs.pop('figsize', None)
-    if ax is not None:
-        raise ValueError("Can't use axes when making faceted plots.")
-    if aspect is None:
-        aspect = 1
-    if size is None:
-        size = 3
-    elif figsize is not None:
-        raise ValueError('cannot provide both `figsize` and `size` arguments')
+        else:  # Both x & y are None
+            dim = darray.dims[0]
+            xplt = darray[dim]
+            yplt = darray
 
-    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  sharex=sharex, sharey=sharey, figsize=figsize,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
-    return g.map_dataarray(plotfunc, x, y, **kwargs)
+    else:
+        if x is None and y is None and hue is None:
+            raise ValueError('For 2D inputs, please'
+                             'specify either hue, x or y.')
 
+        if y is None:
+            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+            xplt = darray[xname]
+            if xplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
+                    yplt = darray.transpose(otherdim, huename)
+                    xplt = xplt.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
 
-def _line_facetgrid(darray, row=None, col=None, hue=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, **kwargs):
-    """
-    Convenience method to call xarray.plot.FacetGrid for line plots
-    kwargs are the arguments to pyplot.plot()
-    """
-    ax = kwargs.pop('ax', None)
-    figsize = kwargs.pop('figsize', None)
-    if ax is not None:
-        raise ValueError("Can't use axes when making faceted plots.")
-    if aspect is None:
-        aspect = 1
-    if size is None:
-        size = 3
-    elif figsize is not None:
-        raise ValueError('cannot provide both `figsize` and `size` arguments')
+            else:
+                yplt = darray.transpose(xname, huename)
 
-    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  sharex=sharex, sharey=sharey, figsize=figsize,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
-    return g.map_dataarray_line(hue=hue, **kwargs)
+        else:
+            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
+            yplt = darray[yname]
+            if yplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    xplt = darray.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                xplt = darray.transpose(yname, huename)
+
+        huelabel = label_from_attrs(darray[huename])
+        hueplt = darray[huename]
+
+    xlabel = label_from_attrs(xplt)
+    ylabel = label_from_attrs(yplt)
+
+    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -144,15 +137,6 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     """
     darray = darray.squeeze()
 
-    if contains_cftime_datetimes(darray):
-        raise NotImplementedError(
-            'Built-in plotting of arrays of cftime.datetime objects or arrays '
-            'indexed by cftime.datetime objects is currently not implemented '
-            'within xarray. A possible workaround is to use the '
-            'nc-time-axis package '
-            '(https://github.com/SciTools/nc-time-axis) to convert the dates '
-            'to a plottable type and plot your data directly with matplotlib.')
-
     plot_dims = set(darray.dims)
     plot_dims.discard(row)
     plot_dims.discard(col)
@@ -186,83 +170,6 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     kwargs['ax'] = ax
 
     return plotfunc(darray, **kwargs)
-
-
-def _infer_line_data(darray, x, y, hue):
-    error_msg = ('must be either None or one of ({0:s})'
-                 .format(', '.join([repr(dd) for dd in darray.dims])))
-    ndims = len(darray.dims)
-
-    if x is not None and x not in darray.dims and x not in darray.coords:
-        raise ValueError('x ' + error_msg)
-
-    if y is not None and y not in darray.dims and y not in darray.coords:
-        raise ValueError('y ' + error_msg)
-
-    if x is not None and y is not None:
-        raise ValueError('You cannot specify both x and y kwargs'
-                         'for line plots.')
-
-    if ndims == 1:
-        dim, = darray.dims  # get the only dimension name
-        huename = None
-        hueplt = None
-        huelabel = ''
-
-        if (x is None and y is None) or x == dim:
-            xplt = darray[dim]
-            yplt = darray
-
-        else:
-            yplt = darray[dim]
-            xplt = darray
-
-    else:
-        if x is None and y is None and hue is None:
-            raise ValueError('For 2D inputs, please'
-                             'specify either hue, x or y.')
-
-        if y is None:
-            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            xplt = darray[xname]
-            if xplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    yplt = darray.transpose(
-                        otherdim, huename, transpose_coords=True)
-                    xplt = xplt.transpose(
-                        otherdim, huename, transpose_coords=True)
-                else:
-                    raise ValueError('For 2D inputs, hue must be a dimension'
-                                     + ' i.e. one of ' + repr(darray.dims))
-
-            else:
-                yplt = darray.transpose(xname, huename)
-
-        else:
-            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            yplt = darray[yname]
-            if yplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    xplt = darray.transpose(
-                        otherdim, huename, transpose_coords=True)
-                else:
-                    raise ValueError('For 2D inputs, hue must be a dimension'
-                                     + ' i.e. one of ' + repr(darray.dims))
-
-            else:
-                xplt = darray.transpose(yname, huename, transpose_coords=True)
-
-        huelabel = label_from_attrs(darray[huename])
-        hueplt = darray[huename]
-
-
-    xlabel = label_from_attrs(xplt)
-    ylabel = label_from_attrs(yplt)
-
-    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
 
 # This function signature should not change so that it can use
@@ -320,7 +227,8 @@ def line(darray, *args, **kwargs):
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
-        return _line_facetgrid(**allargs)
+        allargs.pop('darray')
+        return _easy_facetgrid(darray, line, kind='line', **allargs)
 
     ndims = len(darray.dims)
     if ndims > 2:
@@ -500,48 +408,6 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     return primitive
 
 
-def _update_axes(ax, xincrease, yincrease,
-                 xscale=None, yscale=None,
-                 xticks=None, yticks=None,
-                 xlim=None, ylim=None):
-    """
-    Update axes with provided parameters
-    """
-    if xincrease is None:
-        pass
-    elif xincrease and ax.xaxis_inverted():
-        ax.invert_xaxis()
-    elif not xincrease and not ax.xaxis_inverted():
-        ax.invert_xaxis()
-
-    if yincrease is None:
-        pass
-    elif yincrease and ax.yaxis_inverted():
-        ax.invert_yaxis()
-    elif not yincrease and not ax.yaxis_inverted():
-        ax.invert_yaxis()
-
-    # The default xscale, yscale needs to be None.
-    # If we set a scale it resets the axes formatters,
-    # This means that set_xscale('linear') on a datetime axis
-    # will remove the date labels. So only set the scale when explicitly
-    # asked to. https://github.com/matplotlib/matplotlib/issues/8740
-    if xscale is not None:
-        ax.set_xscale(xscale)
-    if yscale is not None:
-        ax.set_yscale(yscale)
-
-    if xticks is not None:
-        ax.set_xticks(xticks)
-    if yticks is not None:
-        ax.set_yticks(yticks)
-
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
-
-
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
 class _PlotMethods(object):
@@ -567,44 +433,6 @@ class _PlotMethods(object):
     @functools.wraps(step)
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
-
-
-def _rescale_imshow_rgb(darray, vmin, vmax, robust):
-    assert robust or vmin is not None or vmax is not None
-    # TODO: remove when min numpy version is bumped to 1.13
-    # There's a cyclic dependency via DataArray, so we can't import from
-    # xarray.ufuncs in global scope.
-    from xarray.ufuncs import maximum, minimum
-
-    # Calculate vmin and vmax automatically for `robust=True`
-    if robust:
-        if vmax is None:
-            vmax = np.nanpercentile(darray, 100 - ROBUST_PERCENTILE)
-        if vmin is None:
-            vmin = np.nanpercentile(darray, ROBUST_PERCENTILE)
-    # If not robust and one bound is None, calculate the default other bound
-    # and check that an interval between them exists.
-    elif vmax is None:
-        vmax = 255 if np.issubdtype(darray.dtype, np.integer) else 1
-        if vmax < vmin:
-            raise ValueError(
-                'vmin=%r is less than the default vmax (%r) - you must supply '
-                'a vmax > vmin in this case.' % (vmin, vmax))
-    elif vmin is None:
-        vmin = 0
-        if vmin > vmax:
-            raise ValueError(
-                'vmax=%r is less than the default vmin (0) - you must supply '
-                'a vmin < vmax in this case.' % vmax)
-    # Scale interval [vmin .. vmax] to [0 .. 1], with darray as 64-bit float
-    # to avoid precision loss, integer over/underflow, etc with extreme inputs.
-    # After scaling, downcast to 32-bit float.  This substantially reduces
-    # memory usage after we hand `darray` off to matplotlib.
-    darray = ((darray.astype('f8') - vmin) / (vmax - vmin)).astype('f4')
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', 'xarray.ufuncs',
-                                PendingDeprecationWarning)
-        return minimum(maximum(darray, 0), 1)
 
 
 def _plot2d(plotfunc):
@@ -749,37 +577,22 @@ def _plot2d(plotfunc):
             allargs = locals().copy()
             allargs.pop('imshow_rgb')
             allargs.update(allargs.pop('kwargs'))
-
+            allargs.pop('darray')
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
-
-            return _easy_facetgrid(**allargs)
+            return _easy_facetgrid(darray, kind='dataarray', **allargs)
 
         plt = import_matplotlib_pyplot()
 
-        # colors is mutually exclusive with cmap
-        if cmap and colors:
-            raise ValueError("Can't specify both cmap and colors.")
-        # colors is only valid when levels is supplied or the plot is of type
-        # contour or contourf
-        if colors and (('contour' not in plotfunc.__name__) and (not levels)):
-            raise ValueError("Can only specify colors with contour or levels")
-        # we should not be getting a list of colors in cmap anymore
-        # is there a better way to do this test?
-        if isinstance(cmap, (list, tuple)):
-            warnings.warn("Specifying a list of colors in cmap is deprecated. "
-                          "Use colors keyword instead.",
-                          DeprecationWarning, stacklevel=3)
-
         rgb = kwargs.pop('rgb', None)
-        xlab, ylab = _infer_xy_labels(
-            darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb)
-
         if rgb is not None and plotfunc.__name__ != 'imshow':
             raise ValueError('The "rgb" keyword is only valid for imshow()')
         elif rgb is not None and not imshow_rgb:
             raise ValueError('The "rgb" keyword is only valid for imshow()'
                              'with a three-dimensional array (per facet)')
+
+        xlab, ylab = _infer_xy_labels(
+            darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -814,22 +627,8 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(xplt, yplt)
 
-        if 'contour' in plotfunc.__name__ and levels is None:
-            levels = 7  # this is the matplotlib default
-
-        cmap_kwargs = {'plot_data': zval.data,
-                       'vmin': vmin,
-                       'vmax': vmax,
-                       'cmap': colors if colors else cmap,
-                       'center': center,
-                       'robust': robust,
-                       'extend': extend,
-                       'levels': levels,
-                       'filled': plotfunc.__name__ != 'contour',
-                       'norm': norm,
-                       }
-
-        cmap_params = _determine_cmap_params(**cmap_kwargs)
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            plotfunc, locals(), zval.data)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
@@ -839,14 +638,14 @@ def _plot2d(plotfunc):
             kwargs['levels'] = cmap_params['levels']
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
-            if isinstance(colors, basestring):
+            if isinstance(colors, str):
                 cmap_params['cmap'] = None
                 kwargs['colors'] = colors
 
         if 'pcolormesh' == plotfunc.__name__:
             kwargs['infer_intervals'] = infer_intervals
 
-        if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
+        if 'imshow' == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
             raise ValueError("plt.imshow's `aspect` kwarg is not available "
                              "in xarray")
@@ -865,16 +664,12 @@ def _plot2d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
-            cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
-            cbar_kwargs.setdefault('extend', cmap_params['extend'])
-            if cbar_ax is None:
-                cbar_kwargs.setdefault('ax', ax)
-            else:
-                cbar_kwargs.setdefault('cax', cbar_ax)
-            cbar = plt.colorbar(primitive, **cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(label_from_attrs(darray))
-        elif cbar_ax is not None or cbar_kwargs is not None:
+                cbar_kwargs['label'] = label_from_attrs(darray)
+            cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
+                                 cmap_params)
+
+        elif (cbar_ax is not None or cbar_kwargs):
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")
@@ -1022,54 +817,6 @@ def contourf(x, y, z, ax, **kwargs):
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
-
-
-def _is_monotonic(coord, axis=0):
-    """
-    >>> _is_monotonic(np.array([0, 1, 2]))
-    True
-    >>> _is_monotonic(np.array([2, 1, 0]))
-    True
-    >>> _is_monotonic(np.array([0, 2, 1]))
-    False
-    """
-    if coord.shape[axis] < 3:
-        return True
-    else:
-        n = coord.shape[axis]
-        delta_pos = (coord.take(np.arange(1, n), axis=axis) >=
-                     coord.take(np.arange(0, n - 1), axis=axis))
-        delta_neg = (coord.take(np.arange(1, n), axis=axis) <=
-                     coord.take(np.arange(0, n - 1), axis=axis))
-        return np.all(delta_pos) or np.all(delta_neg)
-
-
-def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
-    """
-    >>> _infer_interval_breaks(np.arange(5))
-    array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
-    >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
-    array([[-0.5,  0.5,  1.5],
-           [ 2.5,  3.5,  4.5]])
-    """
-    coord = np.asarray(coord)
-
-    if check_monotonic and not _is_monotonic(coord, axis=axis):
-        raise ValueError("The input coordinate is not sorted in increasing "
-                         "order along axis %d. This can lead to unexpected "
-                         "results. Consider calling the `sortby` method on "
-                         "the input DataArray. To plot data with categorical "
-                         "axes, consider using the `heatmap` function from "
-                         "the `seaborn` statistical plotting library." % axis)
-
-    deltas = 0.5 * np.diff(coord, axis=axis)
-    if deltas.size == 0:
-        deltas = np.array(0.0)
-    first = np.take(coord, [0], axis=axis) - np.take(deltas, [0], axis=axis)
-    last = np.take(coord, [-1], axis=axis) + np.take(deltas, [-1], axis=axis)
-    trim_last = tuple(slice(None, -1) if n == axis else slice(None)
-                      for n in range(coord.ndim))
-    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
 
 
 @_plot2d

@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 
 from .. import Variable
@@ -8,8 +6,7 @@ from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import (
-    HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, SerializableLock)
-
+    HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock)
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -26,18 +23,21 @@ class NioArrayWrapper(BackendArray):
         self.shape = array.shape
         self.dtype = np.dtype(array.typecode())
 
-    def get_array(self):
-        return self.datastore.ds.variables[self.variable_name]
+    def get_array(self, needs_lock=True):
+        ds = self.datastore._manager.acquire(needs_lock)
+        return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
     def _getitem(self, key):
-        array = self.get_array()
         with self.datastore.lock:
+            array = self.get_array(needs_lock=False)
+
             if key == () and self.ndim == 0:
                 return array.get_value()
+
             return array[key]
 
 
@@ -45,13 +45,13 @@ class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO
     """
 
-    def __init__(self, filename, mode='r', lock=None):
+    def __init__(self, filename, mode='r', lock=None, **kwargs):
         import Nio
         if lock is None:
             lock = PYNIO_LOCK
         self.lock = ensure_lock(lock)
         self._manager = CachingFileManager(
-            Nio.open_file, filename, lock=lock, mode=mode)
+            Nio.open_file, filename, lock=lock, mode=mode, kwargs=kwargs)
         # xarray provides its own support for FillValue,
         # so turn off PyNIO's support for the same.
         self.ds.set_option('MaskedArrayMode', 'MaskedNever')

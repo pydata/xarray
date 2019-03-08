@@ -1,6 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
-from collections import Mapping
+import collections.abc
+from collections import OrderedDict
 from contextlib import contextmanager
 
 import pandas as pd
@@ -8,7 +7,6 @@ import pandas as pd
 from . import formatting, indexing
 from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
-from .pycompat import OrderedDict
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
 
@@ -17,7 +15,7 @@ from .variable import Variable
 _THIS_ARRAY = ReprObject('<this-array>')
 
 
-class AbstractCoordinates(Mapping, formatting.ReprMixin):
+class AbstractCoordinates(collections.abc.Mapping):
     def __getitem__(self, key):
         raise NotImplementedError
 
@@ -47,7 +45,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
     def __contains__(self, key):
         return key in self._names
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.coords_repr(self)
 
     @property
@@ -196,6 +194,7 @@ class DatasetCoordinates(AbstractCoordinates):
         self._data._variables = variables
         self._data._coord_names.update(new_coord_names)
         self._data._dims = dict(dims)
+        self._data._indexes = None
 
     def __delitem__(self, key):
         if key in self:
@@ -236,6 +235,7 @@ class DataArrayCoordinates(AbstractCoordinates):
             raise ValueError('cannot add coordinates with new dimensions to '
                              'a DataArray')
         self._data._coords = coords
+        self._data._indexes = None
 
     @property
     def variables(self):
@@ -274,44 +274,6 @@ class LevelCoordinatesSource(object):
 
     def __iter__(self):
         return iter(self._data._level_coords)
-
-
-class Indexes(Mapping, formatting.ReprMixin):
-    """Ordered Mapping[str, pandas.Index] for xarray objects.
-    """
-
-    def __init__(self, variables, sizes):
-        """Not for public consumption.
-
-        Parameters
-        ----------
-        variables : OrderedDict[Any, Variable]
-            Reference to OrderedDict holding variable objects. Should be the
-            same dictionary used by the source object.
-        sizes : OrderedDict[Any, int]
-            Map from dimension names to sizes.
-        """
-        self._variables = variables
-        self._sizes = sizes
-
-    def __iter__(self):
-        for key in self._sizes:
-            if key in self._variables:
-                yield key
-
-    def __len__(self):
-        return sum(key in self._variables for key in self._sizes)
-
-    def __contains__(self, key):
-        return key in self._sizes and key in self._variables
-
-    def __getitem__(self, key):
-        if key not in self._sizes:
-            raise KeyError(key)
-        return self._variables[key].to_index()
-
-    def __unicode__(self):
-        return formatting.indexes_repr(self)
 
 
 def assert_coordinate_consistent(obj, coords):

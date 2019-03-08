@@ -1,21 +1,19 @@
-from __future__ import absolute_import, division, print_function
-
 import os.path
+import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
-import warnings
+from pathlib import Path
 
 import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import auto_combine
-from ..core.pycompat import basestring, path_type
-from ..core.utils import close_on_error, is_remote_uri, is_grib_path
+from ..core.combine import (
+    _CONCAT_DIM_DEFAULT, _auto_combine, _infer_concat_order_from_positions)
+from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
 from .locks import _get_scheduler
-
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -23,11 +21,11 @@ DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 def _get_default_engine_remote_uri():
     try:
-        import netCDF4
+        import netCDF4  # noqa
         engine = 'netcdf4'
     except ImportError:  # pragma: no cover
         try:
-            import pydap  # flake8: noqa
+            import pydap  # noqa
             engine = 'pydap'
         except ImportError:
             raise ValueError('netCDF4 or pydap is required for accessing '
@@ -38,12 +36,12 @@ def _get_default_engine_remote_uri():
 def _get_default_engine_grib():
     msgs = []
     try:
-        import Nio  # flake8: noqa
+        import Nio  # noqa
         msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
     except ImportError:  # pragma: no cover
         pass
     try:
-        import cfgrib  # flake8: noqa
+        import cfgrib  # noqa
         msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
     except ImportError:  # pragma: no cover
         pass
@@ -56,7 +54,7 @@ def _get_default_engine_grib():
 
 def _get_default_engine_gz():
     try:
-        import scipy  # flake8: noqa
+        import scipy  # noqa
         engine = 'scipy'
     except ImportError:  # pragma: no cover
         raise ValueError('scipy is required for accessing .gz files')
@@ -65,11 +63,11 @@ def _get_default_engine_gz():
 
 def _get_default_engine_netcdf():
     try:
-        import netCDF4  # flake8: noqa
+        import netCDF4  # noqa
         engine = 'netcdf4'
     except ImportError:  # pragma: no cover
         try:
-            import scipy.io.netcdf  # flake8: noqa
+            import scipy.io.netcdf  # noqa
             engine = 'scipy'
         except ImportError:
             raise ValueError('cannot read or write netCDF files without '
@@ -99,7 +97,7 @@ def _normalize_path(path):
 def _validate_dataset_names(dataset):
     """DataArray.name and Dataset keys must be a string or None"""
     def check_name(name):
-        if isinstance(name, basestring):
+        if isinstance(name, str):
             if not name:
                 raise ValueError('Invalid name for DataArray or Dataset key: '
                                  'string must be length 1 or greater for '
@@ -113,11 +111,11 @@ def _validate_dataset_names(dataset):
 
 
 def _validate_attrs(dataset):
-    """`attrs` must have a string key and a value which is either: a number
+    """`attrs` must have a string key and a value which is either: a number,
     a string, an ndarray or a list/tuple of numbers/strings.
     """
     def check_attr(name, value):
-        if isinstance(name, basestring):
+        if isinstance(name, str):
             if not name:
                 raise ValueError('Invalid name for attr: string must be '
                                  'length 1 or greater for serialization to '
@@ -126,10 +124,10 @@ def _validate_attrs(dataset):
             raise TypeError("Invalid name for attr: {} must be a string for "
                             "serialization to netCDF files".format(name))
 
-        if not isinstance(value, (basestring, Number, np.ndarray, np.number,
+        if not isinstance(value, (str, Number, np.ndarray, np.number,
                                   list, tuple)):
-            raise TypeError('Invalid value for attr: {} must be a number '
-                            'string, ndarray or a list/tuple of '
+            raise TypeError('Invalid value for attr: {} must be a number, '
+                            'a string, an ndarray or a list/tuple of '
                             'numbers/strings for serialization to netCDF '
                             'files'.format(value))
 
@@ -163,7 +161,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=None, decode_times=True, autoclose=None,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None,
-                 backend_kwargs=None):
+                 backend_kwargs=None, use_cftime=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -233,6 +231,16 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
@@ -271,7 +279,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
-            drop_variables=drop_variables)
+            drop_variables=drop_variables, use_cftime=use_cftime)
 
         _protect_dataset_variables_inplace(ds, cache)
 
@@ -279,14 +287,15 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             from dask.base import tokenize
             # if passed an actual file path, augment the token with
             # the file modification time
-            if (isinstance(filename_or_obj, basestring) and
+            if (isinstance(filename_or_obj, str) and
                     not is_remote_uri(filename_or_obj)):
                 mtime = os.path.getmtime(filename_or_obj)
             else:
                 mtime = None
             token = tokenize(filename_or_obj, mtime, group, decode_cf,
                              mask_and_scale, decode_times, concat_characters,
-                             decode_coords, engine, chunks, drop_variables)
+                             decode_coords, engine, chunks, drop_variables,
+                             use_cftime)
             name_prefix = 'open_dataset-%s' % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
             ds2._file_obj = ds._file_obj
@@ -295,12 +304,13 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
         return ds2
 
-    if isinstance(filename_or_obj, path_type):
+    if isinstance(filename_or_obj, Path):
         filename_or_obj = str(filename_or_obj)
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
-    elif isinstance(filename_or_obj, basestring):
+        ds = maybe_decode_store(store)
+    elif isinstance(filename_or_obj, str):
 
         if (isinstance(filename_or_obj, bytes) and
                 filename_or_obj.startswith(b'\x89HDF')):
@@ -309,7 +319,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 filename_or_obj.startswith(b'CDF')):
             # netCDF3 file images are handled by scipy
             pass
-        elif isinstance(filename_or_obj, basestring):
+        elif isinstance(filename_or_obj, str):
             filename_or_obj = _normalize_path(filename_or_obj)
 
         if engine is None:
@@ -340,22 +350,28 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                              % engine)
 
         with close_on_error(store):
-            return maybe_decode_store(store)
+            ds = maybe_decode_store(store)
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
                              "default engine or engine='scipy'")
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
+        ds = maybe_decode_store(store)
 
-    return maybe_decode_store(store)
+    # Ensure source filename always stored in dataset object (GH issue #2550)
+    if 'source' not in ds.encoding:
+        if isinstance(filename_or_obj, str):
+            ds.encoding['source'] = filename_or_obj
+
+    return ds
 
 
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                    mask_and_scale=None, decode_times=True, autoclose=None,
                    concat_characters=True, decode_coords=True, engine=None,
                    chunks=None, lock=None, cache=None, drop_variables=None,
-                   backend_kwargs=None):
+                   backend_kwargs=None, use_cftime=None):
     """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -423,6 +439,16 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Notes
     -----
@@ -445,7 +471,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                            decode_coords=decode_coords, engine=engine,
                            chunks=chunks, lock=lock, cache=cache,
                            drop_variables=drop_variables,
-                           backend_kwargs=backend_kwargs)
+                           backend_kwargs=backend_kwargs,
+                           use_cftime=use_cftime)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
@@ -475,9 +502,6 @@ class _MultiFileCloser(object):
     def close(self):
         for f in self.file_objs:
             f.close()
-
-
-_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
@@ -511,21 +535,21 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to disable
         concatenation.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
-
-        - 'broadcast_equals': all values must be equal when variables are
-          broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
-          same.
-        - 'no_conflicts': only values which are not null in both datasets
-          must be equal. The returned dataset then contains the combination
-          of all non-null values.
+         * 'broadcast_equals': all values must be equal when variables are
+           broadcast against each other to ensure common dimensions.
+         * 'equals': all values and dimensions must be the same.
+         * 'identical': all values, dimensions and attributes must be the
+           same.
+         * 'no_conflicts': only values which are not null in both datasets
+           must be equal. The returned dataset then contains the combination
+           of all non-null values.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
+        You can find the file-name from which each dataset was loaded in
+        ``ds.encoding['source']``.
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
         optional
         Engine to use when reading files. If not provided, the default engine
@@ -538,29 +562,31 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         active dask scheduler.
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         These data variables will be concatenated together:
-          * 'minimal': Only data variables in which the dimension already
-            appears are included.
-          * 'different': Data variables which are not equal (ignoring
-            attributes) across all datasets are also concatenated (as well as
-            all for which dimension already appears). Beware: this option may
-            load the data payload of data variables into memory if they are not
-            already loaded.
-          * 'all': All data variables will be concatenated.
-          * list of str: The listed data variables will be concatenated, in
-            addition to the 'minimal' data variables.
+
+         * 'minimal': Only data variables in which the dimension already
+           appears are included.
+         * 'different': Data variables which are not equal (ignoring
+           attributes) across all datasets are also concatenated (as well as
+           all for which dimension already appears). Beware: this option may
+           load the data payload of data variables into memory if they are not
+           already loaded.
+         * 'all': All data variables will be concatenated.
+         * list of str: The listed data variables will be concatenated, in
+           addition to the 'minimal' data variables.
     coords : {'minimal', 'different', 'all' o list of str}, optional
         These coordinate variables will be concatenated together:
-          * 'minimal': Only coordinates in which the dimension already appears
-            are included.
-          * 'different': Coordinates which are not equal (ignoring attributes)
-            across all datasets are also concatenated (as well as all for which
-            dimension already appears). Beware: this option may load the data
-            payload of coordinate variables into memory if they are not already
-            loaded.
-          * 'all': All coordinate variables will be concatenated, except
-            those corresponding to other dimensions.
-          * list of str: The listed coordinate variables will be concatenated,
-            in addition the 'minimal' coordinates.
+
+         * 'minimal': Only coordinates in which the dimension already appears
+           are included.
+         * 'different': Coordinates which are not equal (ignoring attributes)
+           across all datasets are also concatenated (as well as all for which
+           dimension already appears). Beware: this option may load the data
+           payload of coordinate variables into memory if they are not already
+           loaded.
+         * 'all': All coordinate variables will be concatenated, except
+           those corresponding to other dimensions.
+         * list of str: The listed coordinate variables will be concatenated,
+           in addition the 'minimal' coordinates.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
@@ -578,10 +604,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     References
     ----------
+
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
-    """
-    if isinstance(paths, basestring):
+    """  # noqa
+    if isinstance(paths, str):
         if is_remote_uri(paths):
             raise ValueError(
                 'cannot do wild-card matching for paths that are remote URLs: '
@@ -589,10 +616,29 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                 .format(paths))
         paths = sorted(glob(paths))
     else:
-        paths = [str(p) if isinstance(p, path_type) else p for p in paths]
+        paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
     if not paths:
         raise IOError('no files to open')
+
+    # Coerce 1D input into ND to maintain backwards-compatible API until API
+    # for N-D combine decided
+    # (see https://github.com/pydata/xarray/pull/2553/#issuecomment-445892746)
+    if concat_dim is None or concat_dim is _CONCAT_DIM_DEFAULT:
+        concat_dims = concat_dim
+    elif not isinstance(concat_dim, list):
+        concat_dims = [concat_dim]
+    else:
+        concat_dims = concat_dim
+    infer_order_from_coords = False
+
+    # If infer_order_from_coords=True then this is unnecessary, but quick.
+    # If infer_order_from_coords=False then this creates a flat list which is
+    # easier to iterate over, while saving the originally-supplied structure
+    combined_ids_paths, concat_dims = _infer_concat_order_from_positions(
+        paths, concat_dims)
+    ids, paths = (
+        list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
@@ -618,15 +664,18 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         # the underlying datasets will still be stored as dask arrays
         datasets, file_objs = dask.compute(datasets, file_objs)
 
-    # close datasets in case of a ValueError
+    # Close datasets in case of a ValueError
     try:
-        if concat_dim is _CONCAT_DIM_DEFAULT:
-            combined = auto_combine(datasets, compat=compat,
-                                    data_vars=data_vars, coords=coords)
-        else:
-            combined = auto_combine(datasets, concat_dim=concat_dim,
-                                    compat=compat,
-                                    data_vars=data_vars, coords=coords)
+        if infer_order_from_coords:
+            # Discard ordering because it should be redone from coordinates
+            ids = False
+
+        combined = _auto_combine(
+            datasets, concat_dims=concat_dims,
+            compat=compat,
+            data_vars=data_vars, coords=coords,
+            infer_order_from_coords=infer_order_from_coords,
+            ids=ids)
     except ValueError:
         for ds in datasets:
             ds.close()
@@ -652,7 +701,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if isinstance(path_or_file, path_type):
+    if isinstance(path_or_file, Path):
         path_or_file = str(path_or_file)
 
     if encoding is None:
@@ -669,7 +718,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
             raise NotImplementedError(
                 'to_netcdf() with compute=False is not yet implemented when '
                 'returning bytes')
-    elif isinstance(path_or_file, basestring):
+    elif isinstance(path_or_file, str):
         if engine is None:
             engine = _get_default_engine(path_or_file)
         path_or_file = _normalize_path(path_or_file)
@@ -704,7 +753,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
-    if isinstance(unlimited_dims, basestring):
+    if isinstance(unlimited_dims, str):
         unlimited_dims = [unlimited_dims]
 
     writer = ArrayWriter()
@@ -861,13 +910,13 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None, compute=True):
+            encoding=None, compute=True, consolidated=False):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
     See `Dataset.to_zarr` for full API docs.
     """
-    if isinstance(store, path_type):
+    if isinstance(store, Path):
         store = str(store)
     if encoding is None:
         encoding = {}
@@ -876,16 +925,20 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    store = backends.ZarrStore.open_group(store=store, mode=mode,
-                                          synchronizer=synchronizer,
-                                          group=group)
+    zstore = backends.ZarrStore.open_group(store=store, mode=mode,
+                                           synchronizer=synchronizer,
+                                           group=group,
+                                           consolidate_on_close=consolidated)
 
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
-    dump_to_store(dataset, store, writer, encoding=encoding)
+    dump_to_store(dataset, zstore, writer, encoding=encoding)
     writes = writer.sync(compute=compute)
 
-    if not compute:
+    if compute:
+        _finalize_store(writes, zstore)
+    else:
         import dask
-        return dask.delayed(_finalize_store)(writes, store)
-    return store
+        return dask.delayed(_finalize_store)(writes, zstore)
+
+    return zstore

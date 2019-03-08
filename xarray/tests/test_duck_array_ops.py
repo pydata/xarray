@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
 from distutils.version import LooseVersion
 from textwrap import dedent
@@ -9,16 +7,17 @@ import pandas as pd
 import pytest
 from numpy import array, nan
 
-from xarray import DataArray, Dataset, concat
+from xarray import DataArray, Dataset, concat, cftime_range
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv, concatenate, count, first, gradient, last, mean,
     rolling_window, stack, where)
 from xarray.core.pycompat import dask_array_type
-from xarray.testing import assert_allclose, assert_equal
+from xarray.testing import assert_allclose, assert_equal, assert_identical
 
 from . import (
-    assert_array_equal, has_dask, has_np113, raises_regex, requires_dask)
+    assert_array_equal, has_dask, has_np113, raises_regex, requires_cftime,
+    requires_dask)
 
 
 class TestOps(object):
@@ -249,6 +248,51 @@ def series_reduce(da, func, dim, **kwargs):
 def assert_dask_array(da, dask):
     if dask and da.ndim > 0:
         assert isinstance(da.data, dask_array_type)
+
+
+@pytest.mark.parametrize('dask', [False, True])
+def test_datetime_reduce(dask):
+    time = np.array(pd.date_range('15/12/1999', periods=11))
+    time[8: 11] = np.nan
+    da = DataArray(
+        np.linspace(0, 365, num=11), dims='time', coords={'time': time})
+
+    if dask and has_dask:
+        chunks = {'time': 5}
+        da = da.chunk(chunks)
+
+    actual = da['time'].mean()
+    assert not pd.isnull(actual)
+    actual = da['time'].mean(skipna=False)
+    assert pd.isnull(actual)
+
+    # test for a 0d array
+    assert da['time'][0].mean() == da['time'][:1].mean()
+
+
+@requires_cftime
+def test_cftime_datetime_mean():
+    times = cftime_range('2000', periods=4)
+    da = DataArray(times, dims=['time'])
+
+    assert da.isel(time=0).mean() == da.isel(time=0)
+
+    expected = DataArray(times.date_type(2000, 1, 2, 12))
+    result = da.mean()
+    assert_equal(result, expected)
+
+    da_2d = DataArray(times.values.reshape(2, 2))
+    result = da_2d.mean()
+    assert_equal(result, expected)
+
+
+@requires_cftime
+@requires_dask
+def test_cftime_datetime_mean_dask_error():
+    times = cftime_range('2000', periods=4)
+    da = DataArray(times, dims=['time']).chunk()
+    with pytest.raises(NotImplementedError):
+        da.mean()
 
 
 @pytest.mark.parametrize('dim_num', [1, 2])
@@ -551,3 +595,42 @@ def test_docs():
             indicated dimension(s) removed.
         """)
     assert actual == expected
+
+
+def test_datetime_to_numeric_datetime64():
+    times = pd.date_range('2000', periods=5, freq='7D').values
+    result = duck_array_ops.datetime_to_numeric(times, datetime_unit='h')
+    expected = 24 * np.arange(0, 35, 7)
+    np.testing.assert_array_equal(result, expected)
+
+    offset = times[1]
+    result = duck_array_ops.datetime_to_numeric(
+        times, offset=offset, datetime_unit='h')
+    expected = 24 * np.arange(-7, 28, 7)
+    np.testing.assert_array_equal(result, expected)
+
+    dtype = np.float32
+    result = duck_array_ops.datetime_to_numeric(
+        times, datetime_unit='h', dtype=dtype)
+    expected = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime
+def test_datetime_to_numeric_cftime():
+    times = cftime_range('2000', periods=5, freq='7D').values
+    result = duck_array_ops.datetime_to_numeric(times, datetime_unit='h')
+    expected = 24 * np.arange(0, 35, 7)
+    np.testing.assert_array_equal(result, expected)
+
+    offset = times[1]
+    result = duck_array_ops.datetime_to_numeric(
+        times, offset=offset, datetime_unit='h')
+    expected = 24 * np.arange(-7, 28, 7)
+    np.testing.assert_array_equal(result, expected)
+
+    dtype = np.float32
+    result = duck_array_ops.datetime_to_numeric(
+        times, datetime_unit='h', dtype=dtype)
+    expected = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected)

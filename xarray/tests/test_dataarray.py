@@ -1,7 +1,6 @@
-from __future__ import absolute_import, division, print_function
-
 import pickle
 import warnings
+from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
 
@@ -11,11 +10,11 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
+    DataArray, Dataset, IndexVariable, Variable, align, broadcast)
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
 from xarray.convert import from_cdms2
+from xarray.core import dtypes
 from xarray.core.common import ALL_DIMS, full_like
-from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     LooseVersion, ReturnItem, assert_allclose, assert_array_equal,
     assert_equal, assert_identical, raises_regex, requires_bottleneck,
@@ -73,7 +72,7 @@ class TestDataArray(object):
         assert len(self.dv) == len(self.v)
         assert_equal(self.dv.variable, self.v)
         assert set(self.dv.coords) == set(self.ds.coords)
-        for k, v in iteritems(self.dv.coords):
+        for k, v in self.dv.coords.items():
             assert_array_equal(v, self.ds.coords[k])
         with pytest.raises(AttributeError):
             self.dv.dataset
@@ -123,21 +122,14 @@ class TestDataArray(object):
         """
         # GH837, GH861
         # checking array subraction when dims are the same
-        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+        # note: names need to be in sorted order to align consistently with
+        # pandas < 0.24 and >= 0.24.
+        p_data = np.array([('Abe', 180), ('Stacy', 150), ('Dick', 200)],
                           dtype=[('name', '|S256'), ('height', object)])
-
-        p_data_1 = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
-        p_data_2 = np.array([('John', 180), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
         weights_0 = DataArray([80, 56, 120], dims=['participant'],
                               coords={'participant': p_data})
-
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -4, -5], dims=['participant'],
@@ -146,31 +138,27 @@ class TestDataArray(object):
         assert_identical(actual, expected)
 
         # checking array subraction when dims are not the same
-        p_data_1 = np.array([('John', 180), ('Stacy', 151), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
+        p_data_alt = np.array([('Abe', 180), ('Stacy', 151), ('Dick', 200)],
+                              dtype=[('name', '|S256'), ('height', object)])
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data_alt})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -5], dims=['participant'],
-                             coords={'participant': p_data_2})
+                             coords={'participant': p_data[[0, 2]]})
 
         assert_identical(actual, expected)
 
         # checking array subraction when dims are not the same and one
         # is np.nan
-        p_data_1 = np.array([('John', 180), ('Stacy', np.nan), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
+        p_data_nan = np.array([('Abe', 180), ('Stacy', np.nan), ('Dick', 200)],
+                              dtype=[('name', '|S256'), ('height', object)])
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
-                              coords={'participant': p_data_1})
-
+                              coords={'participant': p_data_nan})
         actual = weights_1 - weights_0
 
         expected = DataArray([1, -5], dims=['participant'],
-                             coords={'participant': p_data_2})
+                             coords={'participant': p_data[[0, 2]]})
 
         assert_identical(actual, expected)
 
@@ -270,7 +258,7 @@ class TestDataArray(object):
         expected = Dataset({None: (['x', 'y'], data, {'bar': 2})})[None]
         assert_identical(expected, actual)
 
-        actual = DataArray(data, dims=['x', 'y'], encoding={'bar': 2})
+        actual = DataArray(data, dims=['x', 'y'])
         expected = Dataset({None: (['x', 'y'], data, {}, {'bar': 2})})[None]
         assert_identical(expected, actual)
 
@@ -308,7 +296,7 @@ class TestDataArray(object):
         expected = DataArray(data,
                              coords={'x': ['a', 'b'], 'y': [-1, -2]},
                              dims=['x', 'y'], name='foobar',
-                             attrs={'bar': 2}, encoding={'foo': 3})
+                             attrs={'bar': 2})
         actual = DataArray(expected)
         assert_identical(expected, actual)
 
@@ -695,7 +683,9 @@ class TestDataArray(object):
         da.isel(time=(('points',), [1, 2]), x=(('points',), [2, 2]),
                 y=(('points',), [3, 4]))
         np.testing.assert_allclose(
-            da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
+            da.isel(time=(('p',), [1]),
+                    x=(('p',), [2]),
+                    y=(('p',), [4])).values.squeeze(),
             np_array[1, 4, 2].squeeze())
         da.isel(time=(('points', ), [1, 2]))
         y = [-1, 0]
@@ -1027,6 +1017,20 @@ class TestDataArray(object):
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
                          mdata.sel(one='a', two=1))
 
+    def test_selection_multiindex_remove_unused(self):
+        # GH2619. For MultiIndex, we need to call remove_unused.
+        ds = xr.DataArray(np.arange(40).reshape(8, 5), dims=['x', 'y'],
+                          coords={'x': np.arange(8), 'y': np.arange(5)})
+        ds = ds.stack(xy=['x', 'y'])
+        ds_isel = ds.isel(xy=ds['x'] < 4)
+        with pytest.raises(KeyError):
+            ds_isel.sel(x=5)
+
+        actual = ds_isel.unstack()
+        expected = ds.reset_index('xy').isel(xy=ds['x'] < 4)
+        expected = expected.set_index(xy=['x', 'y']).unstack()
+        assert_identical(expected, actual)
+
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims='x')
         expected = DataArray(range(5), dims='x', name='x')
@@ -1206,6 +1210,11 @@ class TestDataArray(object):
                                      'x': [0, 1, 2]},
                              dims='x')
         assert_identical(lhs, expected)
+
+    def test_set_coords_update_index(self):
+        actual = DataArray([1, 2, 3], [('x', [1, 2, 3])])
+        actual.coords['x'] = ['a', 'b', 'c']
+        assert actual.indexes['x'].equals(pd.Index(['a', 'b', 'c']))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725
@@ -2295,18 +2304,24 @@ class TestDataArray(object):
         actual = array.resample(time='24H').reduce(np.mean)
         assert_identical(expected, actual)
 
+        actual = array.resample(time='24H', loffset='-12H').mean()
+        expected = DataArray(array.to_series().resample('24H', loffset='-12H')
+                             .mean())
+        assert_identical(expected, actual)
+
         with raises_regex(ValueError, 'index must be monotonic'):
             array[[2, 0, 1]].resample(time='1D')
 
-    @requires_cftime
-    def test_resample_cftimeindex(self):
-        cftime = _import_cftime()
-        times = cftime.num2date(np.arange(12), units='hours since 0001-01-01',
-                                calendar='noleap')
-        array = DataArray(np.arange(12), [('time', times)])
+    def test_da_resample_func_args(self):
 
-        with raises_regex(NotImplementedError, 'to_datetimeindex'):
-            array.resample(time='6H').mean()
+        def func(arg1, arg2, arg3=0.):
+            return arg1.mean('time') + arg2 + arg3
+
+        times = pd.date_range('2000', periods=3, freq='D')
+        da = xr.DataArray([1., 1., 1.], coords=[times], dims=['time'])
+        expected = xr.DataArray([3., 3., 3.], coords=[times], dims=['time'])
+        actual = da.resample(time='D').apply(func, args=(1.,), arg3=1.)
+        assert_identical(actual, expected)
 
     def test_resample_first(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
@@ -2484,6 +2499,30 @@ class TestDataArray(object):
                              ('x', 'y', 'time'))
         assert_identical(expected, actual)
 
+    def test_upsample_tolerance(self):
+        # Test tolerance keyword for upsample methods bfill, pad, nearest
+        times = pd.date_range('2000-01-01', freq='1D', periods=2)
+        times_upsampled = pd.date_range('2000-01-01', freq='6H', periods=5)
+        array = DataArray(np.arange(2), [('time', times)])
+
+        # Forward fill
+        actual = array.resample(time='6H').ffill(tolerance='12H')
+        expected = DataArray([0., 0., 0., np.nan, 1.],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
+        # Backward fill
+        actual = array.resample(time='6H').bfill(tolerance='12H')
+        expected = DataArray([0., np.nan, 1., 1., 1.],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
+        # Nearest
+        actual = array.resample(time='6H').nearest(tolerance='6H')
+        expected = DataArray([0, 0, np.nan, 1, 1],
+                             [('time', times_upsampled)])
+        assert_identical(expected, actual)
+
     @requires_scipy
     def test_upsample_interpolate(self):
         from scipy.interpolate import interp1d
@@ -2516,6 +2555,16 @@ class TestDataArray(object):
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
+    def test_upsample_interpolate_bug_2197(self):
+        dates = pd.date_range('2007-02-01', '2007-03-01', freq='D')
+        da = xr.DataArray(np.arange(len(dates)), [('time', dates)])
+        result = da.resample(time='M').interpolate('linear')
+        expected_times = np.array([np.datetime64('2007-02-28'),
+                                   np.datetime64('2007-03-31')])
+        expected = xr.DataArray([27., np.nan], [('time', expected_times)])
+        assert_equal(result, expected)
+
+    @requires_scipy
     def test_upsample_interpolate_regression_1605(self):
         dates = pd.date_range('2016-01-01', '2016-03-31', freq='1D')
         expected = xr.DataArray(np.random.random((len(dates), 2, 3)),
@@ -2527,21 +2576,42 @@ class TestDataArray(object):
     @requires_dask
     @requires_scipy
     def test_upsample_interpolate_dask(self):
-        import dask.array as da
-
-        times = pd.date_range('2000-01-01', freq='6H', periods=5)
+        from scipy.interpolate import interp1d
         xs = np.arange(6)
         ys = np.arange(3)
+        times = pd.date_range('2000-01-01', freq='6H', periods=5)
 
         z = np.arange(5)**2
-        data = da.from_array(np.tile(z, (6, 3, 1)), (1, 3, 1))
+        data = np.tile(z, (6, 3, 1))
         array = DataArray(data,
                           {'time': times, 'x': xs, 'y': ys},
                           ('x', 'y', 'time'))
+        chunks = {'x': 2, 'y': 1}
 
-        with raises_regex(TypeError,
-                          "dask arrays are not yet supported"):
-            array.resample(time='1H').interpolate('linear')
+        expected_times = times.to_series().resample('1H').asfreq().index
+        # Split the times into equal sub-intervals to simulate the 6 hour
+        # to 1 hour up-sampling
+        new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
+        for kind in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
+                     'cubic']:
+            actual = array.chunk(chunks).resample(time='1H').interpolate(kind)
+            actual = actual.compute()
+            f = interp1d(np.arange(len(times)), data, kind=kind, axis=-1,
+                         bounds_error=True, assume_sorted=True)
+            expected_data = f(new_times_idx)
+            expected = DataArray(expected_data,
+                                 {'time': expected_times, 'x': xs, 'y': ys},
+                                 ('x', 'y', 'time'))
+            # Use AllClose because there are some small differences in how
+            # we upsample timeseries versus the integer indexing as I've
+            # done here due to floating point arithmetic
+            assert_allclose(expected, actual, rtol=1e-16)
+
+        # Check that an error is raised if an attempt is made to interpolate
+        # over a chunked dimension
+        with raises_regex(NotImplementedError,
+                          'Chunking along the dimension to be interpolated'):
+            array.chunk({'time': 1}).resample(time='1H').interpolate('linear')
 
     def test_align(self):
         array = DataArray(np.random.random((6, 8)),
@@ -2816,6 +2886,15 @@ class TestDataArray(object):
             expected_da,
             DataArray.from_series(actual).drop(['x', 'y']))
 
+    def test_to_and_from_empty_series(self):
+        # GH697
+        expected = pd.Series([])
+        da = DataArray.from_series(expected)
+        assert len(da) == 0
+        actual = da.to_series()
+        assert len(actual) == 0
+        assert expected.equals(actual)
+
     def test_series_categorical_index(self):
         # regression test for GH700
         if not hasattr(pd, 'CategoricalIndex'):
@@ -2869,6 +2948,15 @@ class TestDataArray(object):
                 ValueError, "cannot convert dict without the key 'data'"):
             DataArray.from_dict(d)
 
+        # check the data=False option
+        expected_no_data = expected.copy()
+        del expected_no_data['data']
+        del expected_no_data['coords']['x']['data']
+        expected_no_data['coords']['x'].update({'dtype': '<U1', 'shape': (2,)})
+        expected_no_data.update({'dtype': 'float64', 'shape': (2, 3)})
+        actual_no_data = array.to_dict(data=False)
+        assert expected_no_data == actual_no_data
+
     def test_to_and_from_dict_with_time_dim(self):
         x = np.random.randn(10, 3)
         t = pd.date_range('20130101', periods=10)
@@ -2897,7 +2985,7 @@ class TestDataArray(object):
                  'maintainer': 'bar'}
         da = DataArray(x, {'t': t, 'lat': lat}, dims=['t', 'lat'],
                        attrs=attrs)
-        expected_attrs = {'created': np.asscalar(attrs['created']),
+        expected_attrs = {'created': attrs['created'].item(),
                           'coords': attrs['coords'].tolist(),
                           'maintainer': 'bar'}
         actual = da.to_dict()
@@ -3120,12 +3208,19 @@ class TestDataArray(object):
         actual = lon.diff('lon')
         assert_equal(expected, actual)
 
-    @pytest.mark.parametrize('offset', [-5, -2, -1, 0, 1, 2, 5])
-    def test_shift(self, offset):
+    @pytest.mark.parametrize('offset', [-5, 0, 1, 2])
+    @pytest.mark.parametrize('fill_value, dtype',
+                             [(2, int), (dtypes.NA, float)])
+    def test_shift(self, offset, fill_value, dtype):
         arr = DataArray([1, 2, 3], dims='x')
-        actual = arr.shift(x=1)
-        expected = DataArray([np.nan, 1, 2], dims='x')
+        actual = arr.shift(x=1, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = DataArray([fill_value, 1, 2], dims='x')
         assert_identical(expected, actual)
+        assert actual.dtype == dtype
 
         arr = DataArray([1, 2, 3], [('x', ['a', 'b', 'c'])])
         expected = DataArray(arr.to_pandas().shift(offset))
@@ -3619,6 +3714,15 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
+
+
+def test_name_in_masking():
+    name = 'RingoStarr'
+    da = xr.DataArray(range(10), coords=[('x', range(10))], name=name)
+    assert da.where(da > 5).name == name
+    assert da.where((da > 5).rename('YokoOno')).name == name
+    assert da.where(da > 5, drop=True).name == name
+    assert da.where((da > 5).rename('YokoOno'), drop=True).name == name
 
 
 class TestIrisConversion(object):

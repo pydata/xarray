@@ -13,13 +13,149 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.12.0:
+
+v0.12.0 (unreleased)
+--------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Remove support for Python 2. This is the first version of xarray that is
+  Python 3 only. (:issue:`1876`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- The `compat` argument to `Dataset` and the `encoding` argument to
+  `DataArray` are deprecated and will be removed in a future release.
+  (:issue:`1188`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- `cyordereddict` is no longer used as an optional dependency (:issue:`2744`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+Enhancements
+~~~~~~~~~~~~
+
+- Internal plotting now supports ``cftime.datetime`` objects as time series.
+  (:issue:`2164`)
+  By `Julius Busecke <https://github.com/jbusecke>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
+  By `Ryan Abernathey <https://github.com/rabernat>`_
+- :py:meth:`~xarray.DataArray.coarsen` and
+  :py:meth:`~xarray.Dataset.coarsen` are newly added.
+  See :ref:`comput.coarsen` for details.
+  (:issue:`2525`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Taking the mean of arrays of :py:class:`cftime.datetime` objects, and
+  by extension, use of :py:meth:`~xarray.DataArray.coarsen` with
+  :py:class:`cftime.datetime` coordinates is now possible. By `Spencer Clark
+  <https://github.com/spencerkclark>`_. 
+- Upsampling an array via interpolation with resample is now dask-compatible,
+  as long as the array is not chunked along the resampling dimension.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:func:`xarray.testing.assert_equal` and
+  :py:func:`xarray.testing.assert_identical` now provide a more detailed
+  report showing what exactly differs between the two objects (dimensions /
+  coordinates / variables / attributes)  (:issue:`1507`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Resampling of standard and non-standard calendars indexed by
+  :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
+  ``nearest``. (:issue:`2695`)
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
+- :py:meth:`~xarray.DataArray.integrate` and
+  :py:meth:`~xarray.Dataset.integrate` are newly added.
+  See :ref:`_compute.using_coordinates` for the detail.
+  (:issue:`1332`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`pandas.Series.dropna` is now supported for a
+  :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
+  (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` now supports QuarterBegin and QuarterEnd offsets (:issue:`2663`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_
+- :py:meth:`~xarray.open_dataset` now accepts a ``use_cftime`` argument, which
+  can be used to require that ``cftime.datetime`` objects are always used, or
+  never used when decoding dates encoded with a standard calendar.  This can be
+  used to ensure consistent date types are returned when using
+  :py:meth:`~xarray.open_mfdataset` (:issue:`1263`) and/or to silence
+  serialization warnings raised if dates from a standard calendar are found to
+  be outside the :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By
+  `Spencer Clark <https://github.com/spencerkclark>`_. 
+  
+- Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
+  By `Kevin Squire <https://github.com/kmsquire>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Silenced warnings that appear when using pandas 0.24.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+- Interpolating via resample now internally specifies ``bounds_error=False``
+  as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
+  from higher frequencies to lower frequencies.  Datapoints outside the bounds
+  of the original time coordinate are now filled with NaN (:issue:`2197`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Line plots with the `x` argument set to a non-dimensional coord now plot the correct data for 1D DataArrays.
+  (:issue:`27251). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Subtracting a scalar ``cftime.datetime`` object from a
+  :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
+  instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- backend_kwargs are no longer ignored when using open_dataset with pynio engine
+  (:issue:'2380')
+  By 'Jonathan Joyce <https://github.com/jonmjoyce>'_.
+- Fix ``open_rasterio`` creating a WKT CRS instead of PROJ.4 with
+  ``rasterio`` 1.0.14+ (:issue:`2715`).
+  By `David Hoese <https://github.com/djhoese>`_.
+- Masking data arrays with :py:meth:`xarray.DataArray.where` now returns an
+  array with the name of the original masked array (:issue:`2748` and :issue:`2457`).
+  By `Yohai Bar-Sinai <https://github.com/yohai>`_.
+- Fixed error when trying to reduce a DataArray using a function which does not
+  require an axis argument. (:issue:`2768`)
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Concatenating a sequence of :py:class:`~xarray.DataArray` with varying names
+  sets the name of the output array to ``None``, instead of the name of the
+  first input array. If the names are the same it sets the name to that,
+  instead to the name of the first DataArray in the list as it did before.
+  (:issue:`2775`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+
+- Per `CF conventions
+  <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
+  specifying ``'standard'`` as the calendar type in
+  :py:meth:`~xarray.cftime_range` now correctly refers to the ``'gregorian'``
+  calendar instead of the ``'proleptic_gregorian'`` calendar (:issue:`2761`).
+
+.. _whats-new.0.11.3:
+
+v0.11.3 (26 January 2019)
+-------------------------
+
+Bug fixes
+~~~~~~~~~
+
+- Saving files with times encoded with reference dates with timezones
+  (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
+  (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed performance regression with ``open_mfdataset`` (:issue:`2662`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fixed supplying an explicit dimension in the ``concat_dim`` argument to
+  to ``open_mfdataset`` (:issue:`2647`).
+  By `Ben Root <https://github.com/WeatherGod>`_.
+
+.. _whats-new.0.11.2:
+
+v0.11.2 (2 January 2019)
+------------------------
+
+Removes inadvertently introduced setup dependency on pytest-runner
+(:issue:`2641`). Otherwise, this release is exactly equivalent to 0.11.1.
+
 .. warning::
 
-    Xarray plans to drop support for python 2.7 at the end of 2018. This
-    means that new releases of xarray published after this date will only be
-    installable on python 3+ environments, but older versions of xarray will
-    always be available to python 2.7 users. For more information see the
-    following references
+  This is the last xarray release that will support Python 2.7. Future releases
+  will be Python 3 only, but older versions of xarray will always be available
+  for Python 2.7 users. For the more details, see:
 
   - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
   - `Python 3 Statement <http://www.python3statement.org/>`__
@@ -27,11 +163,24 @@ What's New
 
 .. _whats-new.0.11.1:
 
-v0.11.1 (unreleased)
---------------------
+v0.11.1 (29 December 2018)
+--------------------------
+
+This minor release includes a number of enhancements and bug fixes, and two
+(slightly) breaking changes.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- Minimum rasterio version increased from 0.36 to 1.0 (for ``open_rasterio``)
+- Time bounds variables are now also decoded according to CF conventions
+  (:issue:`2565`). The previous behavior was to decode them only if they
+  had specific time attributes, now these attributes are copied
+  automatically from the corresponding time coordinate. This might
+  break downstream code that was relying on these variables to be
+  brake downstream code that was relying on these variables to be
+  not decoded.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -40,9 +189,60 @@ Enhancements
   ``transpose_coords`` which enables transposition of coordinates in the
   same way as :py:meth:`Dataset.transpose`.
   By `Peter Hausamann <http://github.com/phausamann>`_.
+- Ability to read and write consolidated metadata in zarr stores (:issue:`2558`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+- :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
+  :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+- Enable passing ``rasterio.io.DatasetReader`` or ``rasterio.vrt.WarpedVRT`` to
+  ``open_rasterio`` instead of file path string. Allows for in-memory
+  reprojection, see  (:issue:`2588`).
+  By `Scott Henderson <https://github.com/scottyhq>`_.
+- Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports
+  "dayofyear" and "dayofweek" accessors (:issue:`2597`).  Note this requires a
+  version of cftime greater than 1.0.2.  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- The option ``'warn_for_unclosed_files'`` (False by default) has been added to
+  allow users to enable a warning when files opened by xarray are deallocated
+  but were not explicitly closed. This is mostly useful for debugging; we
+  recommend enabling it in your test suites if you use xarray for IO.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+- Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
+  ``loffset`` kwarg just like Pandas.
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- Datasets are now guaranteed to have a ``'source'`` encoding, so the source
+  file name is always stored (:issue:`2550`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- The ``apply`` methods for ``DatasetGroupBy``, ``DataArrayGroupBy``,
+  ``DatasetResample`` and ``DataArrayResample`` now support passing positional
+  arguments to the applied function as a tuple to the ``args`` argument.
+  By `Matti Eskelinen <https://github.com/maaleske>`_.
+- 0d slices of ndarrays are now obtained directly through indexing, rather than
+  extracting and wrapping a scalar, avoiding unnecessary copying. By `Daniel
+  Wennberg <https://github.com/danielwe>`_.
+- Added support for ``fill_value`` with
+  :py:meth:`~xarray.DataArray.shift` and :py:meth:`~xarray.Dataset.shift`
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Bug fixes
 ~~~~~~~~~
+
+- Ensure files are automatically closed, if possible, when no longer referenced
+  by a Python variable (:issue:`2560`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+- Fixed possible race conditions when reading/writing to disk in parallel
+  (:issue:`2595`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+- Fix h5netcdf saving scalars with filters or chunks (:issue:`2563`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- Fix failure in time encoding when exporting to netCDF with versions of pandas
+  less than 0.21.1 (:issue:`2623`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix MultiIndex selection to update label and level (:issue:`2619`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.11.0:
 
@@ -57,15 +257,15 @@ Breaking changes
   - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
     Call :py:meth:`Dataset.transpose` directly instead.
   - Iterating over a ``Dataset`` now includes only data variables, not coordinates.
-    Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now  
+    Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now
     includes only data variables.
   - ``DataArray.__contains__`` (used by Python's ``in`` operator) now checks
-    array data, not coordinates. 
+    array data, not coordinates.
   - The old resample syntax from before xarray 0.10, e.g.,
     ``data.resample('1D', dim='time', how='mean')``, is no longer supported will
     raise an error in most cases. You need to use the new resample syntax
     instead, e.g., ``data.resample(time='1D').mean()`` or
-    ``data.resample({'time': '1D'}).mean()``. 
+    ``data.resample({'time': '1D'}).mean()``.
 
 
 - New deprecations (behavior will be changed in xarray 0.12):
@@ -102,13 +302,13 @@ Breaking changes
     than by default trying to coerce them into ``np.datetime64[ns]`` objects.
     A :py:class:`~xarray.CFTimeIndex` will be used for indexing along time
     coordinates in these cases.
-  - A new method :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` has been added 
+  - A new method :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` has been added
     to aid in converting from a  :py:class:`~xarray.CFTimeIndex` to a
     :py:class:`pandas.DatetimeIndex` for the remaining use-cases where
     using a :py:class:`~xarray.CFTimeIndex` is still a limitation (e.g. for
     resample or plotting).
   - Setting the ``enable_cftimeindex`` option is now a no-op and emits a
-    ``FutureWarning``. 
+    ``FutureWarning``.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -151,6 +351,8 @@ Enhancements
   to returning (and is now deprecated). This was changed in order to facilitate
   using tutorial datasets with dask.
   By `Joe Hamman <https://github.com/jhamman>`_.
+- ``DataArray`` can now use ``xr.set_option(keep_attrs=True)`` and retain attributes in binary operations,
+  such as (``+, -, * ,/``). Default behaviour is unchanged (*Attributes will be dismissed*). By `Michael Blaschek <https://github.com/MBlaschek>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -163,7 +365,7 @@ Bug fixes
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - We now properly handle arrays of ``datetime.datetime`` and ``datetime.timedelta``
   provided as coordinates. (:issue:`2512`)
-  By `Deepak Cherian <https://github.com/dcherian`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
   (:issue:`2445`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -195,7 +397,7 @@ Bug fixes
   the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 
-- Chunked datasets can now roundtrip to Zarr storage continually 
+- Chunked datasets can now roundtrip to Zarr storage continually
   with `to_zarr` and ``open_zarr`` (:issue:`2300`).
   By `Lily Wang <https://github.com/lilyminium>`_.
 
@@ -213,6 +415,9 @@ Announcements of note:
   for more details.
 - We have a new :doc:`roadmap` that outlines our future development plans.
 
+- `Dataset.apply` now properly documents the way `func` is called.
+  By `Matti Eskelinen <https://github.com/maaleske>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -220,6 +425,7 @@ Enhancements
   :py:meth:`~xarray.Dataset.differentiate` are newly added.
   (:issue:`1332`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Default colormap for sequential and divergent data can now be set via
   :py:func:`~xarray.set_options()`
   (:issue:`2394`)
@@ -2205,6 +2411,7 @@ Enhancements
   for shifting/rotating datasets or arrays along a dimension:
 
   .. ipython:: python
+     :okwarning:
 
       array = xray.DataArray([5, 6, 7, 8], dims='x')
       array.shift(x=2)
@@ -2712,6 +2919,7 @@ Enhancements
   need to supply the time dimension explicitly:
 
   .. ipython:: python
+     :verbatim:
 
       time = pd.date_range('2000-01-01', freq='6H', periods=10)
       array = xray.DataArray(np.arange(10), [('time', time)])
@@ -2721,6 +2929,7 @@ Enhancements
   options such as ``closed`` and ``label`` let you control labeling:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('1D', dim='time', how='sum', label='right')
 
@@ -2728,6 +2937,7 @@ Enhancements
   (upsampling), xray will insert missing values:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('3H', 'time')
 
@@ -2735,12 +2945,14 @@ Enhancements
   last examples from each group along the grouped axis:
 
   .. ipython:: python
+     :verbatim:
 
       array.groupby('time.day').first()
 
   These methods combine well with ``resample``:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('1D', dim='time', how='first')
 

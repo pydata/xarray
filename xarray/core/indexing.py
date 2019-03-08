@@ -1,16 +1,15 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import operator
-from collections import Hashable, defaultdict
+from collections import defaultdict
+from collections.abc import Hashable
+from contextlib import suppress
 from datetime import timedelta
 
 import numpy as np
 import pandas as pd
 
 from . import duck_array_ops, nputils, utils
-from .pycompat import (
-    dask_array_type, integer_types, iteritems, range, suppress)
+from .pycompat import dask_array_type, integer_types
 from .utils import is_dict_like
 
 
@@ -159,6 +158,10 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 tuple(label.values()), level=tuple(label.keys()))
 
+            # GH2619. Raise a KeyError if nothing is chosen
+            if indexer.dtype.kind == 'b' and indexer.sum() == 0:
+                raise KeyError('{} not found'.format(label))
+
     elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
         if _is_nested_tuple(label):
             indexer = index.get_locs(label)
@@ -168,7 +171,6 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 label, level=list(range(len(label)))
             )
-
     else:
         label = (label if getattr(label, 'ndim', 1) > 1  # vectorized-indexing
                  else _asarray_tuplesafe(label))
@@ -206,7 +208,7 @@ def get_dim_indexers(data_obj, indexers):
 
     level_indexers = defaultdict(dict)
     dim_indexers = {}
-    for key, label in iteritems(indexers):
+    for key, label in indexers.items():
         dim, = data_obj[key].dims
         if key != dim:
             # assume here multi-index level indexer
@@ -214,7 +216,7 @@ def get_dim_indexers(data_obj, indexers):
         else:
             dim_indexers[key] = label
 
-    for dim, level_labels in iteritems(level_indexers):
+    for dim, level_labels in level_indexers.items():
         if dim_indexers.get(dim, False):
             raise ValueError("cannot combine multi-index level indexers "
                              "with an indexer for dimension %s" % dim)
@@ -235,7 +237,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     new_indexes = {}
 
     dim_indexers = get_dim_indexers(data_obj, indexers)
-    for dim, label in iteritems(dim_indexers):
+    for dim, label in dim_indexers.items():
         try:
             index = data_obj.indexes[dim]
         except KeyError:
@@ -1142,15 +1144,6 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                             'Trying to wrap {}'.format(type(array)))
         self.array = array
 
-    def _ensure_ndarray(self, value):
-        # We always want the result of indexing to be a NumPy array. If it's
-        # not, then it really should be a 0d array. Doing the coercion here
-        # instead of inside variable.as_compatible_data makes it less error
-        # prone.
-        if not isinstance(value, np.ndarray):
-            value = utils.to_0d_array(value)
-        return value
-
     def _indexing_array_and_key(self, key):
         if isinstance(key, OuterIndexer):
             array = self.array
@@ -1160,7 +1153,10 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             key = key.tuple
         elif isinstance(key, BasicIndexer):
             array = self.array
-            key = key.tuple
+            # We want 0d slices rather than scalars. This is achieved by
+            # appending an ellipsis (see
+            # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes).  # noqa
+            key = key.tuple + (Ellipsis,)
         else:
             raise TypeError('unexpected key type: {}'.format(type(key)))
 
@@ -1171,7 +1167,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def __getitem__(self, key):
         array, key = self._indexing_array_and_key(key)
-        return self._ensure_ndarray(array[key])
+        return array[key]
 
     def __setitem__(self, key, value):
         array, key = self._indexing_array_and_key(key)

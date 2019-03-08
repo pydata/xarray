@@ -164,9 +164,8 @@ Note that rolling window aggregations are faster when bottleneck_ is installed.
 
 We can also manually iterate through ``Rolling`` objects:
 
-.. ipython:: python
+.. code:: python
 
-   @verbatim
    for label, arr_window in r:
       # arr_window is a view of x
 
@@ -200,6 +199,49 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
+.. _comput.coarsen:
+
+Coarsen large arrays
+====================
+
+``DataArray`` and ``Dataset`` objects include a
+:py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
+methods. This supports the block aggregation along multiple dimensions,
+
+.. ipython:: python
+
+  x = np.linspace(0, 10, 300)
+  t = pd.date_range('15/12/1999', periods=364)
+  da = xr.DataArray(np.sin(x) * np.cos(np.linspace(0, 1, 364)[:, np.newaxis]),
+                    dims=['time', 'x'], coords={'time': t, 'x': x})
+  da
+
+In order to take a block mean for every 7 days along ``time`` dimension and
+every 2 points along ``x`` dimension,
+
+.. ipython:: python
+
+  da.coarsen(time=7, x=2).mean()
+
+:py:meth:`~xarray.DataArray.coarsen` raises an ``ValueError`` if the data
+length is not a multiple of the corresponding window size.
+You can choose ``boundary='trim'`` or ``boundary='pad'`` options for trimming
+the excess entries or padding ``nan`` to insufficient entries,
+
+.. ipython:: python
+
+  da.coarsen(time=30, x=2, boundary='trim').mean()
+
+If you want to apply a specific function to coordinate, you can pass the
+function or method name to ``coord_func`` option,
+
+.. ipython:: python
+
+  da.coarsen(time=7, x=2, coord_func={'time': 'min'}).mean()
+
+
+.. _compute.using_coordinates:
+
 Computation using Coordinates
 =============================
 
@@ -221,9 +263,17 @@ This method can be used also for multidimensional arrays,
                      coords={'x': [0.1, 0.11, 0.2, 0.3]})
     a.differentiate('x')
 
+:py:meth:`~xarray.DataArray.integrate` computes integration based on
+trapezoidal rule using their coordinates,
+
+.. ipython:: python
+
+    a.integrate('x')
+
 .. note::
-    This method is limited to simple cartesian geometry. Differentiation along
-    multidimensional coordinate is not supported.
+    These methods are limited to simple cartesian geometry. Differentiation
+    and integration along multidimensional coordinate are not supported.
+
 
 .. _compute.broadcasting:
 
@@ -268,7 +318,7 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
-You can explicitly broadcast xaray data structures by using the
+You can explicitly broadcast xarray data structures by using the
 :py:func:`~xarray.broadcast` function:
 
 .. ipython:: python
@@ -298,9 +348,9 @@ operations. The default result of a binary operation is by the *intersection*
 If coordinate values for a dimension are missing on either argument, all
 matching dimensions must have the same size:
 
-.. ipython:: python
+.. ipython::
+    :verbatim:
 
-    @verbatim
     In [1]: arr + xr.DataArray([1, 2], dims='x')
     ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
 

@@ -1,15 +1,13 @@
-from __future__ import absolute_import, division, print_function
-
 import unicodedata
+from collections import OrderedDict
 
 import numpy as np
 
 from .. import Variable, coding
-from ..core.pycompat import OrderedDict, basestring, unicode_type
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string
-_specialchars = '_.@+- !"#$%&\()*,:;<=>?[]^`{|}~'
+_specialchars = '_.@+- !"#$%&\\()*,:;<=>?[]^`{|}~'
 
 # The following are reserved names in CDL and may not be used as names of
 # variables, dimension, attributes
@@ -50,7 +48,7 @@ def coerce_nc3_dtype(arr):
 def encode_nc3_attr_value(value):
     if isinstance(value, bytes):
         pass
-    elif isinstance(value, unicode_type):
+    elif isinstance(value, str):
         value = value.encode(STRING_ENCODING)
     else:
         value = coerce_nc3_dtype(np.atleast_1d(value))
@@ -99,9 +97,9 @@ def is_valid_nc3_name(s):
     names. Names that have trailing space characters are also not
     permitted.
     """
-    if not isinstance(s, basestring):
+    if not isinstance(s, str):
         return False
-    if not isinstance(s, unicode_type):
+    if not isinstance(s, str):
         s = s.decode('utf-8')
     num_bytes = len(s.encode('utf-8'))
     return ((unicodedata.normalize('NFC', s) == s) and

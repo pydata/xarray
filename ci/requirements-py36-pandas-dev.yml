@@ -12,11 +12,12 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
+  - pytest-cov
+  - pytest-env
+  - coveralls
   - flake8
   - numpy
   - scipy
   - toolz
   - pip:
-    - coveralls
-    - pytest-cov
     - git+https://github.com/pydata/pandas.git

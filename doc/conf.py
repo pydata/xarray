@@ -13,9 +13,10 @@
 # serve to show the default.
 from __future__ import absolute_import, division, print_function
 
+from contextlib import suppress
 import datetime
-import importlib
 import os
+import subprocess
 import sys
 
 import xarray
@@ -24,28 +25,32 @@ allowed_failures = set()
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
-for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
-             'cartopy netCDF4 rasterio zarr iris flake8 '
-             'sphinx_gallery cftime').split():
-    try:
-        module = importlib.import_module(name)
-        if name == 'matplotlib':
-            module.use('Agg')
-        fname = module.__file__.rstrip('__init__.py')
-        print("%s: %s, %s" % (name, module.__version__, fname))
-    except ImportError:
-        print("no %s" % name)
-        # neither rasterio nor cartopy should be hard requirements for
-        # the doc build.
-        if name == 'rasterio':
-            allowed_failures.update(['gallery/plot_rasterio_rgb.py',
-                                     'gallery/plot_rasterio.py'])
-        elif name == 'cartopy':
-            allowed_failures.update(['gallery/plot_cartopy_facetgrid.py',
-                                     'gallery/plot_rasterio_rgb.py',
-                                     'gallery/plot_rasterio.py'])
+
+if 'conda' in sys.executable:
+    print('conda environment:')
+    subprocess.run(['conda', 'list'])
+else:
+    print('pip environment:')
+    subprocess.run(['pip', 'list'])
 
 print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
+
+with suppress(ImportError):
+    import matplotlib
+    matplotlib.use('Agg')
+
+try:
+    import rasterio
+except ImportError:
+    allowed_failures.update(['gallery/plot_rasterio_rgb.py',
+                             'gallery/plot_rasterio.py'])
+
+try:
+    import cartopy
+except ImportError:
+    allowed_failures.update(['gallery/plot_cartopy_facetgrid.py',
+                             'gallery/plot_rasterio_rgb.py',
+                             'gallery/plot_rasterio.py'])
 
 # -- General configuration ------------------------------------------------
 

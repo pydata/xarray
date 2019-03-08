@@ -1,14 +1,13 @@
+import gc
 import pickle
 import threading
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # noqa: F401
+from unittest import mock
 
 import pytest
 
 from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
+from xarray.core.options import set_options
 
 
 @pytest.fixture(params=[1, 2, 3, None])
@@ -36,6 +35,103 @@ def test_file_manager_mock_write(file_cache):
     mock_file.write.assert_called_once_with('contents')
     mock_file.close.assert_called_once_with()
     lock.__enter__.assert_has_calls([mock.call(), mock.call()])
+
+
+@pytest.mark.parametrize('expected_warning', [None, RuntimeWarning])
+def test_file_manager_autoclose(expected_warning):
+    mock_file = mock.Mock()
+    opener = mock.Mock(return_value=mock_file)
+    cache = {}
+
+    manager = CachingFileManager(opener, 'filename', cache=cache)
+    manager.acquire()
+    assert cache
+
+    with set_options(warn_for_unclosed_files=expected_warning is not None):
+        with pytest.warns(expected_warning):
+            del manager
+            gc.collect()
+
+    assert not cache
+    mock_file.close.assert_called_once_with()
+
+
+def test_file_manager_autoclose_while_locked():
+    opener = mock.Mock()
+    lock = threading.Lock()
+    cache = {}
+
+    manager = CachingFileManager(opener, 'filename', lock=lock, cache=cache)
+    manager.acquire()
+    assert cache
+
+    lock.acquire()
+
+    with set_options(warn_for_unclosed_files=False):
+        del manager
+        gc.collect()
+
+    # can't clear the cache while locked, but also don't block in __del__
+    assert cache
+
+
+def test_file_manager_repr():
+    opener = mock.Mock()
+    manager = CachingFileManager(opener, 'my-file')
+    assert 'my-file' in repr(manager)
+
+
+def test_file_manager_refcounts():
+    mock_file = mock.Mock()
+    opener = mock.Mock(spec=open, return_value=mock_file)
+    cache = {}
+    ref_counts = {}
+
+    manager = CachingFileManager(
+        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    assert ref_counts[manager._key] == 1
+    manager.acquire()
+    assert cache
+
+    manager2 = CachingFileManager(
+        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    assert cache
+    assert manager._key == manager2._key
+    assert ref_counts[manager._key] == 2
+
+    with set_options(warn_for_unclosed_files=False):
+        del manager
+        gc.collect()
+
+    assert cache
+    assert ref_counts[manager2._key] == 1
+    mock_file.close.assert_not_called()
+
+    with set_options(warn_for_unclosed_files=False):
+        del manager2
+        gc.collect()
+
+    assert not ref_counts
+    assert not cache
+
+
+def test_file_manager_replace_object():
+    opener = mock.Mock()
+    cache = {}
+    ref_counts = {}
+
+    manager = CachingFileManager(
+        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    manager.acquire()
+    assert ref_counts[manager._key] == 1
+    assert cache
+
+    manager = CachingFileManager(
+        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    assert ref_counts[manager._key] == 1
+    assert cache
+
+    manager.close()
 
 
 def test_file_manager_write_consecutive(tmpdir, file_cache):

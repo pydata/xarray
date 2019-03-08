@@ -81,6 +81,16 @@ require external libraries and dicts can easily be pickled, or converted to
 json, or geojson. All the values are converted to lists, so dicts might
 be quite large.
 
+To export just the dataset schema, without the data itself, use the
+``data=False`` option:
+
+.. ipython:: python
+
+    ds.to_dict(data=False)
+
+This can be useful for generating indices of dataset contents to expose to
+search indices or other automated data discovery tools.
+
 .. _io.netcdf:
 
 netCDF
@@ -197,24 +207,30 @@ turn this decoding off manually.
 .. _CF conventions: http://cfconventions.org/
 
 You can view this encoding information (among others) in the
-:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` attribute:
+:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` and
+:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` attributes:
 
 .. ipython::
     :verbatim:
 
     In [1]: ds_disk['y'].encoding
     Out[1]:
-    {'calendar': u'proleptic_gregorian',
-     'chunksizes': None,
-     'complevel': 0,
-     'contiguous': True,
-     'dtype': dtype('float64'),
-     'fletcher32': False,
-     'least_significant_digit': None,
+    {'zlib': False,
      'shuffle': False,
+     'complevel': 0,
+     'fletcher32': False,
+     'contiguous': True,
+     'chunksizes': None,
      'source': 'saved_on_disk.nc',
-     'units': u'days since 2000-01-01 00:00:00',
-     'zlib': False}
+     'original_shape': (5,),
+     'dtype': dtype('int64'),
+     'units': 'days since 2000-01-01 00:00:00',
+     'calendar': 'proleptic_gregorian'}
+
+    In [9]: ds_disk.encoding
+    Out[9]:
+    {'unlimited_dims': set(),
+     'source': 'saved_on_disk.nc'}
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
@@ -635,6 +651,35 @@ For example:
     Not all native zarr compression and filtering options have been tested with
     xarray.
 
+Consolidated Metadata
+~~~~~~~~~~~~~~~~~~~~~
+
+Xarray needs to read all of the zarr metadata when it opens a dataset.
+In some storage mediums, such as with cloud object storage (e.g. amazon S3),
+this can introduce significant overhead, because two separate HTTP calls to the
+object store must be made for each variable in the dataset.
+With version 2.3, zarr will support a feature called *consolidated metadata*,
+which allows all metadata for the entire dataset to be stored with a single
+key (by default called ``.zmetadata``). This can drastically speed up
+opening the store. (For more information on this feature, consult the
+`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+
+If you have zarr version 2.3 or greater, xarray can write and read stores
+with consolidated metadata. To write consolidated metadata, pass the
+``consolidated=True`` option to the
+:py:attr:`Dataset.to_zarr <xarray.Dataset.to_zarr>` method::
+
+    ds.to_zarr('foo.zarr', consolidated=True)
+
+To read a consolidated store, pass the ``consolidated=True`` option to
+:py:func:`~xarray.open_zarr`::
+
+    ds = xr.open_zarr('foo.zarr', consolidated=True)
+
+Xarray can't perform consolidation on pre-existing zarr datasets. This should
+be done directly from zarr, as described in the
+`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.
+
 .. _io.cfgrib:
 
 GRIB format via cfgrib
@@ -678,7 +723,7 @@ Formats supported by PseudoNetCDF
 ---------------------------------
 
 xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
-formats supported by PseudoNetCDF_, if PseudoNetCDF is installed. 
+formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
 PseudoNetCDF can also provide Climate Forecasting Conventions to
 CMAQ files. In addition, PseudoNetCDF can automatically register custom
 readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can

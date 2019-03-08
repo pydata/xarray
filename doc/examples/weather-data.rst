@@ -123,6 +123,7 @@ The :py:func:`~xarray.Dataset.fillna` method on grouped objects lets you easily
 fill missing values by group:
 
 .. ipython:: python
+   :okwarning:
 
     # throw away the first half of every month
     some_missing = ds.tmin.sel(time=ds['time.day'] > 15).reindex_like(ds)

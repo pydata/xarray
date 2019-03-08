@@ -5,15 +5,12 @@ NumPy's __array_ufunc__ and mixin classes instead of the unintuitive "inject"
 functions.
 """
 
-from __future__ import absolute_import, division, print_function
-
 import operator
 
 import numpy as np
 
 from . import dtypes, duck_array_ops
 from .nputils import array_eq, array_ne
-from .pycompat import PY3
 
 try:
     import bottleneck as bn
@@ -28,8 +25,6 @@ UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
 CMP_BINARY_OPS = ['lt', 'le', 'ge', 'gt']
 NUM_BINARY_OPS = ['add', 'sub', 'mul', 'truediv', 'floordiv', 'mod',
                   'pow', 'and', 'xor', 'or']
-if not PY3:
-    NUM_BINARY_OPS.append('div')
 
 # methods which pass on the numpy return value unchanged
 # be careful not to list methods that we would want to wrap later
@@ -120,6 +115,20 @@ Returns
 -------
 reduced : {da_or_ds}
     New {da_or_ds} object with `{name}` applied along its rolling dimnension.
+"""
+
+_COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
+Coarsen this object by applying `{name}` along its dimensions.
+
+Parameters
+----------
+**kwargs : dict
+    Additional keyword arguments passed on to `{name}`.
+
+Returns
+-------
+reduced : DataArray or Dataset
+    New object with `{name}` applied along its coasen dimnensions.
 """
 
 
@@ -378,3 +387,15 @@ def inject_datasetrolling_methods(cls):
     func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
         name=func.__name__, da_or_ds='Dataset')
     setattr(cls, 'count', func)
+
+
+def inject_coarsen_methods(cls):
+    # standard numpy reduce methods
+    methods = [(name, getattr(duck_array_ops, name))
+               for name in NAN_REDUCE_METHODS]
+    for name, f in methods:
+        func = cls._reduce_method(f)
+        func.__name__ = name
+        func.__doc__ = _COARSEN_REDUCE_DOCSTRING_TEMPLATE.format(
+            name=func.__name__)
+        setattr(cls, name, func)
