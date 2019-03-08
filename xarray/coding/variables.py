@@ -210,16 +210,16 @@ def _choose_decoding_float_dtype(dtype, scale_factor, add_offset):
 
     if scale_factor or add_offset:
 
-        types = [np.dtype(type(scale_factor)),
+        types = (np.dtype(type(scale_factor)),
                  np.dtype(type(add_offset)),
-                 np.dtype(dtype)]
+                 np.dtype(dtype))
 
         if add_offset is None:
-            types = [np.dtype(type(scale_factor)),
-                     np.dtype(dtype)]
+            types = (np.dtype(type(scale_factor)),
+                     np.dtype(dtype))
 
         # scaled_type should be the largest type we find
-        scaled_dtype = dtypes.result_type(*tuple(types))
+        scaled_dtype = dtypes.result_type(*types)
 
         # We return it only if it's a float32 or a float64
         if (scaled_dtype.itemsize >= 4
