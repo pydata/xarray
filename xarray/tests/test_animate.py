@@ -11,7 +11,8 @@ try:
 except ImportError:
     pass
 
-from xarray.plot.animate import animate_line, _create_timeline
+from xarray.plot.animate import _create_timeline
+import xarray.plot.animate
 
 
 @requires_animatplot
@@ -67,7 +68,6 @@ class TestAnimateLine:
         self.darray.time.attrs['units'] = 's'
         self.darray.position.attrs['units'] = 'cm'
 
-    @pytest.mark.slow
     def test_animate_single_line(self):
         anim = self.darray.plot(animate='time')
         assert isinstance(anim, amp.animation.Animation)
@@ -81,3 +81,23 @@ class TestAnimateLine:
 
         # TODO check many more things here
         # (also better testing in animatplot needed)
+
+    def test_animate_as_function(self):
+        anim = xarray.plot.animate.line(self.darray, animate='time')
+        assert isinstance(anim, amp.animation.Animation)
+
+    def test_animate_as_argument(self):
+        anim = self.darray.plot(animate='time')
+        assert isinstance(anim, amp.animation.Animation)
+
+        anim = self.darray.plot.line(animate='time')
+        assert isinstance(anim, amp.animation.Animation)
+
+    # TODO make this test pass
+    @pytest.mark.xfail
+    def test_animate_as_module(self):
+        anim = self.darray.plot.animate(animate='time')
+        assert isinstance(anim, amp.animation.Animation)
+
+        anim = self.darray.plot.animate.line(animate='time')
+        assert isinstance(anim, amp.animation.Animation)

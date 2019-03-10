@@ -14,92 +14,12 @@ from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_xy_labels,
     _interval_to_double_bound_points, _interval_to_mid_points,
+    _infer_line_data,
     _process_cmap_cbar_kwargs, _rescale_imshow_rgb, _resolve_intervals_2dplot,
     _update_axes, _valid_other_type, get_axis, import_matplotlib_pyplot,
     label_from_attrs, _rotate_date_xlabels, _check_animate,
-    _transpose_before_animation)
-
-
-def _infer_line_data(darray, x, y, hue, animate):
-    error_msg = ('must be either None or one of ({0:s})'
-                 .format(', '.join([repr(dd) for dd in darray.dims])))
-    ndims = len(darray.dims)
-
-    if x is not None and x not in darray.dims and x not in darray.coords:
-        raise ValueError('x ' + error_msg)
-
-    if y is not None and y not in darray.dims and y not in darray.coords:
-        raise ValueError('y ' + error_msg)
-
-    if x is not None and y is not None:
-        raise ValueError('You cannot specify both x and y kwargs'
-                         'for line plots.')
-
-    # TODO there must be a neat one-line way of doing this check
-    animate_ndim = 1 if animate is not None else 0
-    if ndims - animate_ndim == 1:
-        huename = None
-        hueplt = None
-        huelabel = ''
-
-        if x is not None:
-            xplt = darray[x]
-            yplt = darray
-
-        elif y is not None:
-            xplt = darray
-            yplt = darray[y]
-
-        else:  # Both x & y are None
-            dim = darray.dims[0]
-            xplt = darray[dim]
-            yplt = darray
-
-    else:
-        if animate is not None:
-            raise NotImplementedError
-
-        if x is None and y is None and hue is None:
-            raise ValueError('For 2D inputs, please'
-                             'specify either hue, x or y.')
-
-        if y is None:
-            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            xplt = darray[xname]
-            if xplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    yplt = darray.transpose(otherdim, huename)
-                    xplt = xplt.transpose(otherdim, huename)
-                else:
-                    raise ValueError('For 2D inputs, hue must be a dimension'
-                                     + ' i.e. one of ' + repr(darray.dims))
-
-            else:
-                yplt = darray.transpose(xname, huename)
-
-        else:
-            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            yplt = darray[yname]
-            if yplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    xplt = darray.transpose(otherdim, huename)
-                else:
-                    raise ValueError('For 2D inputs, hue must be a dimension'
-                                     + ' i.e. one of ' + repr(darray.dims))
-
-            else:
-                xplt = darray.transpose(yname, huename)
-
-        huelabel = label_from_attrs(darray[huename])
-        hueplt = darray[huename]
-
-    xlabel = label_from_attrs(xplt)
-    ylabel = label_from_attrs(yplt)
-
-    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
+    _transpose_before_animation, _infer_plot_type)
+from .animate import _AnimateMethods
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -146,59 +66,9 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
         Additional keyword arguments to matplotlib
 
     """
-    darray = darray.squeeze()
-
-    if animate is not None:
-        animate_dim = _check_animate(darray, animate)
-        kwargs['animate'] = animate
-    else:
-        animate_dim = None
-
-    dims = set(darray.dims)
-    if animate is not None:
-        plot_dims = dims - set([animate_dim])
-    else:
-        plot_dims = dims
-
-    plot_dims.discard(row)
-    plot_dims.discard(col)
-    plot_dims.discard(hue)
-
-    nplotdims = len(plot_dims)
-
-    error_msg = ('Only 1d and 2d plots are supported for facets in xarray. '
-                 'See the package `Seaborn` for more options.')
-
-    if nplotdims in [1, 2]:
-        if row or col:
-            kwargs['row'] = row
-            kwargs['col'] = col
-            kwargs['col_wrap'] = col_wrap
-            kwargs['subplot_kws'] = subplot_kws
-        if nplotdims == 1:
-            plotfunc = line
-            kwargs['hue'] = hue
-        elif nplotdims == 2:
-            if hue:
-                plotfunc = line
-                kwargs['hue'] = hue
-            else:
-                plotfunc = pcolormesh
-    else:
-        if row or col or hue:
-            raise ValueError(error_msg)
-        plotfunc = hist
-
-    kwargs['ax'] = ax
-
-    if animate is not None:
-        if plotfunc is line:
-            from .animate import animate_line
-            plotfunc = animate_line
-        else:
-            raise NotImplementedError
-
-    return plotfunc(darray, **kwargs)
+    return _infer_plot_type(darray, row=row, col=col, col_wrap=col_wrap,
+                            ax=ax, hue=hue, rtol=rtol, animate=animate,
+                            subplot_kws=subplot_kws, **kwargs)
 
 
 # This function signature should not change so that it can use
@@ -257,9 +127,10 @@ def line(darray, *args, **kwargs):
 
     animate = kwargs.pop('animate', None)
     if animate is not None:
-        darray, animate_dim = _transpose_before_animation(darray, animate)
-        from .animate import animate_line
-        return animate_line(darray, animate=animate, *args, **kwargs)
+        animate_dim = _check_animate(darray, animate)
+        darray = _transpose_before_animation(darray, animate)
+        from .animate import line as animate_line
+        return animate_line(darray, animate=animate, **kwargs)
 
     # Handle facetgrids first
     row = kwargs.pop('row', None)
@@ -445,7 +316,7 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
-class _PlotMethods(object):
+class _PlotMethods:
     """
     Enables use of xarray.plot functions as attributes on a DataArray.
     For example, DataArray.plot.imshow
@@ -468,6 +339,12 @@ class _PlotMethods(object):
     @functools.wraps(step)
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
+
+    from .animate import animate
+
+    @functools.wraps(animate)
+    def animate(self, **kwargs):
+        return _AnimateMethods(self._da, **kwargs)
 
 
 def _plot2d(plotfunc):

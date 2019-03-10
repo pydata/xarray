@@ -273,6 +273,148 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                 levels=levels, norm=norm)
 
 
+def _infer_plot_type(darray, row=None, col=None, col_wrap=None, ax=None,
+                     hue=None, rtol=0.01, animate=None, subplot_kws=None,
+                     **kwargs):
+    from .plot import line, pcolormesh, hist
+
+    darray = darray.squeeze()
+
+    if animate is not None:
+        animate_dim = _check_animate(darray, animate)
+        kwargs['animate'] = animate
+    else:
+        animate_dim = None
+
+    dims = set(darray.dims)
+    if animate is not None:
+        plot_dims = dims - set([animate_dim])
+    else:
+        plot_dims = dims
+
+    plot_dims.discard(row)
+    plot_dims.discard(col)
+    plot_dims.discard(hue)
+
+    nplotdims = len(plot_dims)
+
+    error_msg = ('Only 1d and 2d plots are supported for facets in xarray. '
+                 'See the package `Seaborn` for more options.')
+
+    if nplotdims in [1, 2]:
+        if row or col:
+            kwargs['row'] = row
+            kwargs['col'] = col
+            kwargs['col_wrap'] = col_wrap
+            kwargs['subplot_kws'] = subplot_kws
+        if nplotdims == 1:
+            plotfunc = line
+            kwargs['hue'] = hue
+        elif nplotdims == 2:
+            if hue:
+                plotfunc = line
+                kwargs['hue'] = hue
+            else:
+                plotfunc = pcolormesh
+    else:
+        if row or col or hue:
+            raise ValueError(error_msg)
+        plotfunc = hist
+
+    kwargs['ax'] = ax
+
+    if animate is not None:
+        if plotfunc is line:
+            from .animate import line as animate_line
+            plotfunc = animate_line
+        else:
+            raise NotImplementedError
+
+    return plotfunc(darray, **kwargs)
+
+
+def _infer_line_data(darray, x, y, hue, animate):
+    error_msg = ('must be either None or one of ({0:s})'
+                 .format(', '.join([repr(dd) for dd in darray.dims])))
+    ndims = len(darray.dims)
+
+    if x is not None and x not in darray.dims and x not in darray.coords:
+        raise ValueError('x ' + error_msg)
+
+    if y is not None and y not in darray.dims and y not in darray.coords:
+        raise ValueError('y ' + error_msg)
+
+    if x is not None and y is not None:
+        raise ValueError('You cannot specify both x and y kwargs'
+                         'for line plots.')
+
+    # TODO there must be a neat one-line way of doing this check
+    animate_ndim = 1 if animate is not None else 0
+    if ndims - animate_ndim == 1:
+        huename = None
+        hueplt = None
+        huelabel = ''
+
+        if x is not None:
+            xplt = darray[x]
+            yplt = darray
+
+        elif y is not None:
+            xplt = darray
+            yplt = darray[y]
+
+        else:  # Both x & y are None
+            dim = darray.dims[0]
+            xplt = darray[dim]
+            yplt = darray
+
+    else:
+        if animate is not None:
+            raise NotImplementedError
+
+        if x is None and y is None and hue is None:
+            raise ValueError('For 2D inputs, please'
+                             'specify either hue, x or y.')
+
+        if y is None:
+            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+            xplt = darray[xname]
+            if xplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
+                    yplt = darray.transpose(otherdim, huename)
+                    xplt = xplt.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                yplt = darray.transpose(xname, huename)
+
+        else:
+            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
+            yplt = darray[yname]
+            if yplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    xplt = darray.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                xplt = darray.transpose(yname, huename)
+
+        huelabel = label_from_attrs(darray[huename])
+        hueplt = darray[huename]
+
+    xlabel = label_from_attrs(xplt)
+    ylabel = label_from_attrs(yplt)
+
+    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
+
+
 def _infer_xy_labels_3d(darray, x, y, rgb):
     """
     Determine x and y labels for showing RGB images.

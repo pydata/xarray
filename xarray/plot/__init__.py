@@ -3,8 +3,6 @@ from .plot import (plot, line, step, contourf, contour,
 
 from .facetgrid import FacetGrid
 
-from .animate import animate_line
-
 __all__ = [
     'plot',
     'line',

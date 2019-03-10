@@ -3,7 +3,7 @@ Use this module directly:
     import xarray.animate as xanim
 
 Or use the methods on a DataArray:
-    DataArray.plot.animate_____
+    DataArray.plot.animate._____
 
 Or supply an ``animate`` keyword
 argument to a normal plotting function:
@@ -11,17 +11,59 @@ argument to a normal plotting function:
 """
 
 import datetime
+import functools
 
 import numpy as np
 import pandas as pd
 
-from .plot import _infer_line_data
+from .utils import _infer_line_data, _infer_plot_type
 from .utils import (_ensure_plottable, _interval_to_mid_points, _update_axes,
                     _valid_other_type, get_axis, _rotate_date_xlabels,
                     _check_animate, _transpose_before_animation)
 
 
-def animate_line(darray, animate=None, **kwargs):
+def animate(darray, animate=None, **kwargs):
+    """
+    Default plot of DataArray using animatplot.
+
+    Calls xarray animated plotting function based on the dimensions of
+    darray.squeeze()
+
+    =============== ===========================
+    Dimensions      Plotting function
+    --------------- ---------------------------
+    2               :py:func:`xarray.plot.animate.line`
+    Anything else   Not yet implemented
+    =============== ===========================
+
+    Parameters
+    ----------
+    darray : DataArray
+    row : string, optional
+        If passed, make row faceted plots on this dimension name
+    col : string, optional
+        If passed, make column faceted plots on this dimension name
+    hue : string, optional
+        If passed, make faceted line plots with hue on this dimension name
+    col_wrap : integer, optional
+        Use together with ``col`` to wrap faceted plots
+    animate: str
+        Dimension or coord in the DataArray over which to animate.
+    ax : matplotlib axes, optional
+        If None, uses the current axis. Not applicable when using facets.
+    rtol : number, optional
+        Relative tolerance used to determine if the indexes
+        are uniformly spaced. Usually a small positive number.
+    subplot_kws : dict, optional
+        Dictionary of keyword arguments for matplotlib subplots. Only applies
+        to FacetGrid plotting.
+    **kwargs : optional
+        Additional keyword arguments to matplotlib
+    """
+    return _AnimateMethods(darray, animate=animate, **kwargs)
+
+
+def line(darray, animate=None, **kwargs):
     """
     Line plot of DataArray index against values
 
@@ -177,3 +219,21 @@ def _create_timeline(darray, animate, fps):
     else:
         units = ''
     return Timeline(t_array, units=units, fps=fps)
+
+
+class _AnimateMethods:
+    """
+    Enables use of xarray.plot.animate functions as attributes on a DataArray.
+    For example, DataArray.plot.animate.line
+    """
+
+    def __init__(self, darray, animate, **kwargs):
+        self._da = darray
+        self._animate = animate
+
+    def __call__(self, **kwargs):
+        return animate(self._da, self._animate, **kwargs)
+
+    @functools.wraps(line)
+    def line(self, animate, **kwargs):
+        return line(self._da, animate, **kwargs)
