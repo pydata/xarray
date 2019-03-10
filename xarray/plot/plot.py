@@ -157,6 +157,7 @@ def line(darray, *args, **kwargs):
     hue = kwargs.pop('hue', None)
     x = kwargs.pop('x', None)
     y = kwargs.pop('y', None)
+    linestyle = kwargs.get('linestyle', '')
     xincrease = kwargs.pop('xincrease', None)  # default needs to be None
     yincrease = kwargs.pop('yincrease', None)
     xscale = kwargs.pop('xscale', None)  # default needs to be None
@@ -171,29 +172,8 @@ def line(darray, *args, **kwargs):
         args = kwargs.pop('args', ())
 
     ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
-        _infer_line_data(darray, x, y, hue, animate=None)
-
-    # Remove pd.Intervals if contained in xplt.values.
-    if _valid_other_type(xplt.values, [pd.Interval]):
-        # Is it a step plot? (see matplotlib.Axes.step)
-        if kwargs.get('linestyle', '').startswith('steps-'):
-            xplt_val, yplt_val = _interval_to_double_bound_points(xplt.values,
-                                                                  yplt.values)
-            # Remove steps-* to be sure that matplotlib is not confused
-            kwargs['linestyle'] = (kwargs['linestyle']
-                                   .replace('steps-pre', '')
-                                   .replace('steps-post', '')
-                                   .replace('steps-mid', ''))
-            if kwargs['linestyle'] == '':
-                kwargs.pop('linestyle')
-        else:
-            xplt_val = _interval_to_mid_points(xplt.values)
-            yplt_val = yplt.values
-            xlabel += '_center'
-    else:
-        xplt_val = xplt.values
-        yplt_val = yplt.values
+    xplt_val, yplt_val, hueplt, xlabel, ylabel, huelabel = \
+        _infer_line_data(darray, x, y, hue, animate, linestyle)
 
     _ensure_plottable(xplt_val, yplt_val)
 
@@ -213,7 +193,7 @@ def line(darray, *args, **kwargs):
                   labels=list(hueplt.values),
                   title=huelabel)
 
-    _rotate_date_xlabels(xplt, ax)
+    _rotate_date_xlabels(xplt_val, ax)
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale,
                  xticks, yticks, xlim, ylim)

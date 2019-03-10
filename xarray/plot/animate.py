@@ -137,6 +137,7 @@ def line(darray, animate=None, **kwargs):
     hue = kwargs.pop('hue', None)
     x = kwargs.pop('x', None)
     y = kwargs.pop('y', None)
+    linestyle = kwargs.get('linestyle', '')
     xincrease = kwargs.pop('xincrease', None)  # default needs to be None
     yincrease = kwargs.pop('yincrease', None)
     xscale = kwargs.pop('xscale', None)  # default needs to be None
@@ -148,21 +149,8 @@ def line(darray, animate=None, **kwargs):
     _labels = kwargs.pop('_labels', True)
 
     ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
-        _infer_line_data(darray, x, y, hue, animate)
-
-    # Remove pd.Intervals if contained in xplt.values.
-    if _valid_other_type(xplt.values, [pd.Interval]):
-        # Is it a step plot? (see matplotlib.Axes.step)
-        if kwargs.get('linestyle', '').startswith('steps-'):
-            raise NotImplementedError
-        else:
-            xplt_val = _interval_to_mid_points(xplt.values)
-            yplt_val = yplt.values
-            xlabel += '_center'
-    else:
-        xplt_val = xplt.values
-        yplt_val = yplt.values
+    xplt_val, yplt_val, hueplt, xlabel, ylabel, huelabel = \
+        _infer_line_data(darray, x, y, hue, animate, linestyle)
 
     _ensure_plottable(xplt_val, yplt_val)
 
@@ -187,7 +175,7 @@ def line(darray, animate=None, **kwargs):
                         for i in range(len(timeline))]
         title_block = Title(frame_titles, ax=ax)
 
-    _rotate_date_xlabels(xplt, ax)
+    _rotate_date_xlabels(xplt_val, ax)
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale,
                  xticks, yticks, xlim, ylim)

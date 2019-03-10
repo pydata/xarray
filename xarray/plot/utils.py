@@ -333,7 +333,7 @@ def _infer_plot_type(darray, row=None, col=None, col_wrap=None, ax=None,
     return plotfunc(darray, **kwargs)
 
 
-def _infer_line_data(darray, x, y, hue, animate):
+def _infer_line_data(darray, x, y, hue, animate, linestyle):
     error_msg = ('must be either None or one of ({0:s})'
                  .format(', '.join([repr(dd) for dd in darray.dims])))
     ndims = len(darray.dims)
@@ -412,7 +412,27 @@ def _infer_line_data(darray, x, y, hue, animate):
     xlabel = label_from_attrs(xplt)
     ylabel = label_from_attrs(yplt)
 
-    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
+    # Remove pd.Intervals if contained in xplt.values.
+    if _valid_other_type(xplt.values, [pd.Interval]):
+        # Is it a step plot? (see matplotlib.Axes.step)
+        if linestyle.startswith('steps-'):
+            xplt_val, yplt_val = _interval_to_double_bound_points(xplt.values,
+                                                                  yplt.values)
+            # Remove steps-* to be sure that matplotlib is not confused
+            linestyle = (linestyle.replace('steps-pre', '')
+                                  .replace('steps-post', '')
+                                  .replace('steps-mid', ''))
+            #if kwargs['linestyle'] == '':
+            #    kwargs.pop('linestyle')
+        else:
+            xplt_val = _interval_to_mid_points(xplt.values)
+            yplt_val = yplt.values
+            xlabel += '_center'
+    else:
+        xplt_val = xplt.values
+        yplt_val = yplt.values
+
+    return xplt_val, yplt_val, hueplt, xlabel, ylabel, huelabel
 
 
 def _infer_xy_labels_3d(darray, x, y, rgb):
@@ -547,7 +567,7 @@ def _rotate_date_xlabels(xdata, ax):
     # Do this without calling autofmt_xdate so that x-axes ticks
     # on other subplots (if any) are not deleted.
     # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-    if np.issubdtype(xdata.dtype, np.datetime64):
+    if np.issubdtype(np.array(xdata).dtype, np.datetime64):
         for xlabels in ax.get_xticklabels():
             xlabels.set_rotation(30)
             xlabels.set_ha('right')
