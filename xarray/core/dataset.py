@@ -2848,8 +2848,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Notes
         -----
-        Although this operation returns a view of each array's data, it
-        is not lazy -- the data will be fully loaded into memory.
+        This operation returns a view of each array's data. It is
+        lazy for dask-backed DataArrays but not for numpy-backed DataArrays
+        -- the data will be fully loaded into memory.
 
         See Also
         --------

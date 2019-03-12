@@ -1385,8 +1385,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Notes
         -----
-        Although this operation returns a view of this array's data, it is
-        not lazy -- the data will be fully loaded.
+        This operation returns a view of this array's data. It is
+        lazy for dask-backed DataArrays but not for numpy-backed DataArrays
+        -- the data will be fully loaded.
 
         See Also
         --------
@@ -2437,10 +2438,10 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dim: str, or a sequence of str
             Coordinate(s) used for the integration.
-        datetime_unit
-            Can be specify the unit if datetime coordinate is used. One of
-            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
-             'as'}
+        datetime_unit: str, optional
+            Can be used to specify the unit if datetime coordinate is used.
+            One of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',
+                    'ps', 'fs', 'as'}
 
         Returns
         -------
