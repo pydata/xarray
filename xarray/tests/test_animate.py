@@ -92,12 +92,3 @@ class TestAnimateLine:
 
         anim = self.darray.plot.line(animate='time')
         assert isinstance(anim, amp.animation.Animation)
-
-    # TODO make this test pass
-    @pytest.mark.xfail
-    def test_animate_as_module(self):
-        anim = self.darray.plot.animate(animate='time')
-        assert isinstance(anim, amp.animation.Animation)
-
-        anim = self.darray.plot.animate.line(animate='time')
-        assert isinstance(anim, amp.animation.Animation)

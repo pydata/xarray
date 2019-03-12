@@ -13,13 +13,11 @@ import pandas as pd
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_xy_labels,
-    _interval_to_double_bound_points, _interval_to_mid_points,
-    _infer_line_data,
-    _process_cmap_cbar_kwargs, _rescale_imshow_rgb, _resolve_intervals_2dplot,
-    _update_axes, _valid_other_type, get_axis, import_matplotlib_pyplot,
+    _infer_line_data, _process_cmap_cbar_kwargs, _rescale_imshow_rgb,
+    _resolve_intervals_2dplot,
+    _update_axes, get_axis, import_matplotlib_pyplot,
     label_from_attrs, _rotate_date_xlabels, _check_animate,
     _transpose_before_animation, _infer_plot_type)
-from .animate import _AnimateMethods
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -319,12 +317,6 @@ class _PlotMethods:
     @functools.wraps(step)
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
-
-    from .animate import animate
-
-    @functools.wraps(animate)
-    def animate(self, **kwargs):
-        return _AnimateMethods(self._da, **kwargs)
 
 
 def _plot2d(plotfunc):
