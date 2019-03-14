@@ -356,7 +356,8 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
-              drop_variables=None, consolidated=False, cache=False):
+              drop_variables=None, consolidated=False, cache=False,
+              max_cache_size=None):
     """Load and decode a dataset from a Zarr store.
 
     .. note:: Experimental
@@ -410,12 +411,12 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
     cache : bool, optional
-        If True, cache data loaded from the underlying datastore in memory as
-        NumPy arrays when accessed to avoid reading from the underlying data-
-        store multiple times. Defaults to True unless you specify the `chunks`
-        argument to use dask, in which case it defaults to False. Does not
-        change the behavior of coordinates corresponding to dimensions, which
-        always load their data from disk into a ``pandas.Index``.
+        If True, the zarr store is wrapped with a
+        ``zarr.storage.LRUStoreCache``.
+    max_cache_size : int, optional
+        The maximum size that the cache may grow to, in number of bytes.
+        Provide `None` if you would like the cache to have unlimited size.
+
     Returns
     -------
     dataset : Dataset
@@ -441,10 +442,11 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
             drop_variables=drop_variables)
-
-        _protect_dataset_variables_inplace(ds, cache)
-
         return ds
+
+    if cache:
+        import zarr
+        store = zarr.LRUStoreCache(store, max_size=max_cache_size)
 
     # Zarr supports a wide range of access modes, but for now xarray either
     # reads or writes from a store, never both. For open_zarr, we only read
