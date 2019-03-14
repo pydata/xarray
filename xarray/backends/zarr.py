@@ -8,6 +8,7 @@ from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from .common import AbstractWritableDataStore, BackendArray
+from .api import _protect_dataset_variables_inplace
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -355,7 +356,7 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
-              drop_variables=None, consolidated=False):
+              drop_variables=None, consolidated=False, cache=False):
     """Load and decode a dataset from a Zarr store.
 
     .. note:: Experimental
@@ -408,7 +409,13 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
-
+    cache : bool, optional
+        If True, cache data loaded from the underlying datastore in memory as
+        NumPy arrays when accessed to avoid reading from the underlying data-
+        store multiple times. Defaults to True unless you specify the `chunks`
+        argument to use dask, in which case it defaults to False. Does not
+        change the behavior of coordinates corresponding to dimensions, which
+        always load their data from disk into a ``pandas.Index``.
     Returns
     -------
     dataset : Dataset
@@ -435,7 +442,7 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
             concat_characters=concat_characters, decode_coords=decode_coords,
             drop_variables=drop_variables)
 
-        # TODO: this is where we would apply caching
+        _protect_dataset_variables_inplace(ds, cache)
 
         return ds
 
