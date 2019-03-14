@@ -275,6 +275,13 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     dataset : Dataset
         The newly created dataset.
 
+    Notes
+    -----
+    ``open_dataset`` opens the file with read-only access. When you modify
+    values of a Dataset, even one linked to files on disk, only the in-memory
+    copy you are manipulating in xarray is modified: the original file on disk
+    is never touched.
+
     See Also
     --------
     open_mfdataset
@@ -623,6 +630,13 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     Returns
     -------
     xarray.Dataset
+
+    Notes
+    -----
+    ``open_mfdataset`` opens files with read-only access. When you modify values
+    of a Dataset, even one linked to files on disk, only the in-memory copy you
+    are manipulating in xarray is modified: the original file on disk is never
+    touched.
 
     See Also
     --------

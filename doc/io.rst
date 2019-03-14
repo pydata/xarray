@@ -1,11 +1,11 @@
 .. _io:
 
-Serialization and IO
-====================
+Reading and writing files
+=========================
 
 xarray supports direct serialization and IO to several file formats, from
 simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
-format.
+format (recommended).
 
 .. ipython:: python
    :suppress:
@@ -739,11 +739,14 @@ options are listed on the PseudoNetCDF page.
 .. _PseudoNetCDF: http://github.com/barronh/PseudoNetCDF
 
 
-Formats supported by Pandas
----------------------------
+CSV and other formats supported by Pandas
+-----------------------------------------
 
 For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of `IO tools`_.
+For CSV files, one might also consider `xarray_extras`_.
+
+.. _xarray_extras: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
 

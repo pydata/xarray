@@ -550,7 +550,7 @@ def decode_numpy_dict_values(attrs):
         if isinstance(v, np.ndarray):
             attrs[k] = v.tolist()
         elif isinstance(v, np.generic):
-            attrs[k] = np.asscalar(v)
+            attrs[k] = v.item()
     return attrs
 
 
