@@ -20,7 +20,8 @@ def _check_inplace(inplace, default=False):
         inplace = default
     else:
         warnings.warn('The inplace argument has been deprecated and will be '
-                      'removed in xarray 0.12.0.', FutureWarning, stacklevel=3)
+                      'removed in a future version of xarray.',
+                      FutureWarning, stacklevel=3)
 
     return inplace
 
@@ -550,7 +551,7 @@ def decode_numpy_dict_values(attrs):
         if isinstance(v, np.ndarray):
             attrs[k] = v.tolist()
         elif isinstance(v, np.generic):
-            attrs[k] = np.asscalar(v)
+            attrs[k] = v.item()
     return attrs
 
 
@@ -601,40 +602,6 @@ class HiddenKeyDict(MutableMapping):
     def __len__(self):
         num_hidden = sum([k in self._hidden_keys for k in self._data])
         return len(self._data) - num_hidden
-
-
-def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
-    """Convert an array containing datetime-like data to an array of floats.
-
-    Parameters
-    ----------
-    da : array
-        Input data
-    offset: Scalar with the same type of array or None
-        If None, subtract minimum values to reduce round off error
-    datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
-        'us', 'ns', 'ps', 'fs', 'as'}
-    dtype: target dtype
-
-    Returns
-    -------
-    array
-    """
-    from . import duck_array_ops
-
-    if offset is None:
-        offset = array.min()
-    array = array - offset
-
-    if datetime_unit:
-        array = array / np.timedelta64(1, datetime_unit)
-    # convert np.NaT to np.nan
-    if array.dtype.kind in 'mM':
-        if hasattr(array, 'isnull'):
-            return np.where(array.isnull(), np.nan, array.astype(dtype))
-        return np.where(duck_array_ops.isnull(array), np.nan,
-                        array.astype(dtype))
-    return array
 
 
 def get_temp_dimname(dims, new_dim):

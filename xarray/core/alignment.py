@@ -3,13 +3,15 @@ import operator
 import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import suppress
+from typing import Any, Mapping, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 
 from . import utils
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice
-from .variable import IndexVariable
+from .variable import IndexVariable, Variable
 
 
 def _get_joiner(join):
@@ -260,8 +262,15 @@ def reindex_like_indexers(target, other):
     return indexers
 
 
-def reindex_variables(variables, sizes, indexes, indexers, method=None,
-                      tolerance=None, copy=True):
+def reindex_variables(
+    variables: Mapping[Any, Variable],
+    sizes: Mapping[Any, int],
+    indexes: Mapping[Any, pd.Index],
+    indexers: Mapping,
+    method: Optional[str] = None,
+    tolerance: Any = None,
+    copy: bool = True,
+) -> 'Tuple[OrderedDict[Any, Variable], OrderedDict[Any, pd.Index]]':
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -274,7 +283,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     sizes : dict-like
         Dictionary from dimension names to integer sizes.
     indexes : dict-like
-        Dictionary of xarray.IndexVariable objects associated with variables.
+        Dictionary of indexes associated with variables.
     indexers : dict
         Dictionary with keys given by dimension names and values given by
         arrays of coordinates tick labels. Any mis-matched coordinate values
@@ -300,13 +309,15 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     Returns
     -------
     reindexed : OrderedDict
-        Another dict, with the items in variables but replaced indexes.
+        Dict of reindexed variables.
+    new_indexes : OrderedDict
+        Dict of indexes associated with the reindexed variables.
     """
     from .dataarray import DataArray
 
     # build up indexers for assignment along each dimension
     int_indexers = {}
-    targets = {}
+    targets = OrderedDict()  # type: OrderedDict[Any, pd.Index]
     masked_dims = set()
     unchanged_dims = set()
 
@@ -346,7 +357,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
                     'the new index %r' % (dim, existing_size, new_size))
 
     # create variables for the new dataset
-    reindexed = OrderedDict()
+    reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
 
     for dim, indexer in indexers.items():
         if isinstance(indexer, DataArray) and indexer.dims != (dim,):
@@ -359,7 +370,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
 
         if dim in variables:
             var = variables[dim]
-            args = (var.attrs, var.encoding)
+            args = (var.attrs, var.encoding)  # type: tuple
         else:
             args = ()
         reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
@@ -384,7 +395,10 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
 
             reindexed[name] = new_var
 
-    return reindexed
+    new_indexes = OrderedDict(indexes)
+    new_indexes.update(targets)
+
+    return reindexed, new_indexes
 
 
 def broadcast(*args, **kwargs):

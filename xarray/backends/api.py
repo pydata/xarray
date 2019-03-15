@@ -161,7 +161,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=None, decode_times=True, autoclose=None,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None,
-                 backend_kwargs=None):
+                 backend_kwargs=None, use_cftime=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -231,11 +231,28 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
     dataset : Dataset
         The newly created dataset.
+
+    Notes
+    -----
+    ``open_dataset`` opens the file with read-only access. When you modify
+    values of a Dataset, even one linked to files on disk, only the in-memory
+    copy you are manipulating in xarray is modified: the original file on disk
+    is never touched.
 
     See Also
     --------
@@ -245,8 +262,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         warnings.warn(
             'The autoclose argument is no longer used by '
             'xarray.open_dataset() and is now ignored; it will be removed in '
-            'xarray v0.12. If necessary, you can control the maximum number '
-            'of simultaneous open files with '
+            'a future version of xarray. If necessary, you can control the '
+            'maximum number of simultaneous open files with '
             'xarray.set_options(file_cache_maxsize=...).',
             FutureWarning, stacklevel=2)
 
@@ -269,7 +286,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
-            drop_variables=drop_variables)
+            drop_variables=drop_variables, use_cftime=use_cftime)
 
         _protect_dataset_variables_inplace(ds, cache)
 
@@ -284,7 +301,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 mtime = None
             token = tokenize(filename_or_obj, mtime, group, decode_cf,
                              mask_and_scale, decode_times, concat_characters,
-                             decode_coords, engine, chunks, drop_variables)
+                             decode_coords, engine, chunks, drop_variables,
+                             use_cftime)
             name_prefix = 'open_dataset-%s' % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
             ds2._file_obj = ds._file_obj
@@ -360,7 +378,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                    mask_and_scale=None, decode_times=True, autoclose=None,
                    concat_characters=True, decode_coords=True, engine=None,
                    chunks=None, lock=None, cache=None, drop_variables=None,
-                   backend_kwargs=None):
+                   backend_kwargs=None, use_cftime=None):
     """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -428,6 +446,16 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Notes
     -----
@@ -450,7 +478,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                            decode_coords=decode_coords, engine=engine,
                            chunks=chunks, lock=lock, cache=cache,
                            drop_variables=drop_variables,
-                           backend_kwargs=backend_kwargs)
+                           backend_kwargs=backend_kwargs,
+                           use_cftime=use_cftime)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
@@ -574,6 +603,13 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     Returns
     -------
     xarray.Dataset
+
+    Notes
+    -----
+    ``open_mfdataset`` opens files with read-only access. When you modify values
+    of a Dataset, even one linked to files on disk, only the in-memory copy you
+    are manipulating in xarray is modified: the original file on disk is never
+    touched.
 
     See Also
     --------

@@ -16,14 +16,14 @@ from xarray import (
     ALL_DIMS, DataArray, Dataset, IndexVariable, MergeError, Variable, align,
     backends, broadcast, open_dataset, set_options)
 from xarray.core import dtypes, indexing, npcompat, utils
-from xarray.core.common import full_like
+from xarray.core.common import duck_array_ops, full_like
 from xarray.core.pycompat import integer_types
 
 from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_dask, requires_scipy,
-    source_ndarray)
+    source_ndarray, requires_cftime)
 
 try:
     import dask.array as da
@@ -1416,7 +1416,7 @@ class TestDataset(object):
         assert_identical(actual['b'].drop('y'), idx_y['b'])
 
         with pytest.raises(KeyError):
-            data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
+            data.sel(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
     def test_sel_method(self):
         data = create_test_data()
@@ -1862,6 +1862,26 @@ class TestDataset(object):
         with raises_regex(
                 ValueError, 'does not have coordinate labels'):
             data.drop(1, 'y')
+
+    def test_drop_dims(self):
+        data = xr.Dataset({'A': (['x', 'y'], np.random.randn(2, 3)),
+                           'B': ('x', np.random.randn(2)),
+                           'x': ['a', 'b'], 'z': np.pi})
+
+        actual = data.drop_dims('x')
+        expected = data.drop(['A', 'B', 'x'])
+        assert_identical(expected, actual)
+
+        actual = data.drop_dims('y')
+        expected = data.drop('A')
+        assert_identical(expected, actual)
+
+        actual = data.drop_dims(['x', 'y'])
+        expected = data.drop(['A', 'B', 'x'])
+        assert_identical(expected, actual)
+
+        with pytest.raises((ValueError, KeyError)):
+            data.drop_dims('z')  # not a dimension
 
     def test_copy(self):
         data = create_test_data()
@@ -3132,7 +3152,7 @@ class TestDataset(object):
         ds = Dataset(OrderedDict([('a', ('t', x, attrs)),
                                   ('b', ('t', y, attrs)),
                                   ('t', ('t', t))]))
-        expected_attrs = {'created': np.asscalar(attrs['created']),
+        expected_attrs = {'created': attrs['created'].item(),
                           'coords': attrs['coords'].tolist(),
                           'maintainer': 'bar'}
         actual = ds.to_dict()
@@ -3633,11 +3653,28 @@ class TestDataset(object):
         actual = ds.reduce(mean_only_one_axis, 'y')
         assert_identical(expected, actual)
 
-        with raises_regex(TypeError, 'non-integer axis'):
+        with raises_regex(TypeError, "missing 1 required positional argument: "
+                                     "'axis'"):
             ds.reduce(mean_only_one_axis)
 
         with raises_regex(TypeError, 'non-integer axis'):
-            ds.reduce(mean_only_one_axis, ['x', 'y'])
+            ds.reduce(mean_only_one_axis, axis=['x', 'y'])
+
+    def test_reduce_no_axis(self):
+
+        def total_sum(x):
+            return np.sum(x.flatten())
+
+        ds = Dataset({'a': (['x', 'y'], [[0, 1, 2, 3, 4]])})
+        expected = Dataset({'a': ((), 10)})
+        actual = ds.reduce(total_sum)
+        assert_identical(expected, actual)
+
+        with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
+            ds.reduce(total_sum, axis=0)
+
+        with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
+            ds.reduce(total_sum, dim='x')
 
     def test_quantile(self):
 
@@ -4493,6 +4530,15 @@ def test_coarsen_coords(ds, dask):
     actual = da.coarsen(time=2).mean()
 
 
+@requires_cftime
+def test_coarsen_coords_cftime():
+    times = xr.cftime_range('2000', periods=6)
+    da = xr.DataArray(range(6), [('time', times)])
+    actual = da.coarsen(time=3).mean()
+    expected_times = xr.cftime_range('2000-01-02', freq='3D', periods=2)
+    np.testing.assert_array_equal(actual.time, expected_times)
+
+
 def test_rolling_properties(ds):
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -4676,7 +4722,7 @@ def test_differentiate_datetime(dask):
     actual = da.differentiate('x', edge_order=1, datetime_unit='D')
     expected_x = xr.DataArray(
         npcompat.gradient(
-            da, utils.datetime_to_numeric(da['x'], datetime_unit='D'),
+            da, da['x'].variable._to_numeric(datetime_unit='D'),
             axis=0, edge_order=1), dims=da.dims, coords=da.coords)
     assert_equal(expected_x, actual)
 
@@ -4710,7 +4756,7 @@ def test_differentiate_cftime(dask):
 
     actual = da.differentiate('time', edge_order=1, datetime_unit='D')
     expected_data = npcompat.gradient(
-        da, utils.datetime_to_numeric(da['time'], datetime_unit='D'),
+        da, da['time'].variable._to_numeric(datetime_unit='D'),
         axis=0, edge_order=1)
     expected = xr.DataArray(expected_data, coords=da.coords, dims=da.dims)
     assert_equal(expected, actual)
@@ -4789,7 +4835,8 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate('time', datetime_unit='D')
     expected_data = np.trapz(
-        da, utils.datetime_to_numeric(da['time'], datetime_unit='D'), axis=0)
+        da, duck_array_ops.datetime_to_numeric(da['time'], datetime_unit='D'),
+        axis=0)
     expected = xr.DataArray(
         expected_data, dims=['y'],
         coords={k: v for k, v in da.coords.items() if 'time' not in v.dims})
