@@ -1976,13 +1976,17 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
     def test_open_twice(self):
         expected = create_test_data()
         expected.attrs['foo'] = 'bar'
-        with raises_regex(ValueError, 'read/write pointer not at zero'):
+        if ON_WINDOWS:
+            error = raises_regex(PermissionError, 'cannot access the file')
+        else:
+            error = raises_regex(ValueError, 'read/write pointer not at zero')
+        with error:
             with create_tmp_file() as tmp_file:
                 expected.to_netcdf(tmp_file, engine='h5netcdf')
-                f = open(tmp_file, 'rb')
-                with open_dataset(f, engine='h5netcdf'):
+                with open(tmp_file, 'rb') as f:
                     with open_dataset(f, engine='h5netcdf'):
-                        pass
+                        with open_dataset(f, engine='h5netcdf'):
+                            pass
 
     def test_open_fileobj(self):
         # open in-memory datasets instead of local file paths
