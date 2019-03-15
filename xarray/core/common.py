@@ -997,15 +997,15 @@ def is_np_datetime_like(dtype):
             np.issubdtype(dtype, np.timedelta64))
 
 
-def contains_cftime_datetimes(var):
-    """Check if a variable contains cftime datetime objects"""
+def _contains_cftime_datetimes(array):
+    """Check if an array contains cftime.datetime objects"""
     try:
         from cftime import datetime as cftime_datetime
     except ImportError:
         return False
     else:
-        if var.dtype == np.dtype('O') and var.data.size > 0:
-            sample = var.data.ravel()[0]
+        if array.dtype == np.dtype('O') and array.size > 0:
+            sample = array.ravel()[0]
             if isinstance(sample, dask_array_type):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
@@ -1013,6 +1013,11 @@ def contains_cftime_datetimes(var):
             return isinstance(sample, cftime_datetime)
         else:
             return False
+
+
+def contains_cftime_datetimes(var):
+    """Check if an xarray.Variable contains cftime.datetime objects"""
+    return _contains_cftime_datetimes(var.data)
 
 
 def _contains_datetime_like_objects(var):

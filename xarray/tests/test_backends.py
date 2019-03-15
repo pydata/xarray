@@ -3495,22 +3495,12 @@ class TestValidateAttrs(object):
                 ds.to_netcdf(tmp_file)
 
             ds, attrs = new_dataset_and_attrs()
-            attrs['test'] = np.arange(12).reshape(3, 4)
-            with create_tmp_file() as tmp_file:
-                ds.to_netcdf(tmp_file)
-
-            ds, attrs = new_dataset_and_attrs()
             attrs['test'] = 'This is a string'
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = ''
-            with create_tmp_file() as tmp_file:
-                ds.to_netcdf(tmp_file)
-
-            ds, attrs = new_dataset_and_attrs()
-            attrs['test'] = np.arange(12).reshape(3, 4)
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
