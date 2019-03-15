@@ -262,8 +262,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         warnings.warn(
             'The autoclose argument is no longer used by '
             'xarray.open_dataset() and is now ignored; it will be removed in '
-            'xarray v0.12. If necessary, you can control the maximum number '
-            'of simultaneous open files with '
+            'a future version of xarray. If necessary, you can control the '
+            'maximum number of simultaneous open files with '
             'xarray.set_options(file_cache_maxsize=...).',
             FutureWarning, stacklevel=2)
 
