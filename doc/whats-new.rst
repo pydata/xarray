@@ -15,8 +15,8 @@ What's New
 
 .. _whats-new.0.12.0:
 
-v0.12.0 (unreleased)
---------------------
+v0.12.0 (15 March 2019)
+-----------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -24,12 +24,10 @@ Breaking changes
 - Remove support for Python 2. This is the first version of xarray that is
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- The `compat` argument to `Dataset` and the `encoding` argument to
-  `DataArray` are deprecated and will be removed in a future release.
+- The ``compat`` argument to ``Dataset`` and the ``encoding`` argument to
+  ``DataArray`` are deprecated and will be removed in a future release.
   (:issue:`1188`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- `cyordereddict` is no longer used as an optional dependency (:issue:`2744`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -104,14 +102,14 @@ Bug fixes
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
 - Line plots with the ``x`` argument set to a non-dimensional coord now plot the correct data for 1D DataArrays.
-  (:issue:`27251). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  (:issue:`27251`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Subtracting a scalar ``cftime.datetime`` object from a
   :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
   instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - backend_kwargs are no longer ignored when using open_dataset with pynio engine
   (:issue:'2380')
-  By 'Jonathan Joyce <https://github.com/jonmjoyce>'_.
+  By `Jonathan Joyce <https://github.com/jonmjoyce>`_.
 - Fix ``open_rasterio`` creating a WKT CRS instead of PROJ.4 with
   ``rasterio`` 1.0.14+ (:issue:`2715`).
   By `David Hoese <https://github.com/djhoese>`_.
