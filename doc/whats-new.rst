@@ -33,7 +33,9 @@ Breaking changes
 
 Enhancements
 ~~~~~~~~~~~~
-
+- Added ability to open netcdf4/hdf5 file-like objects with ``open_dataset``.
+  Requires (h5netcdf>0.7 and h5py>2.9.0). (:issue:`2781`)
+  By `Scott Henderson <https://github.com/scottyhq>`_
 - Internal plotting now supports ``cftime.datetime`` objects as time series.
   (:issue:`2164`)
   By `Julius Busecke <https://github.com/jbusecke>`_ and
@@ -86,6 +88,7 @@ Enhancements
 - Allow ``expand_dims`` method to support inserting/broadcasting dimensions
   with size > 1. (:issue:`2710`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 - Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
   By `Kevin Squire <https://github.com/kmsquire>`_.
