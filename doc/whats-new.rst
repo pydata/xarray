@@ -18,62 +18,44 @@ What's New
 v0.12.0 (15 March 2019)
 -----------------------
 
-Breaking changes
-~~~~~~~~~~~~~~~~
+Highlights include:
 
-- Remove support for Python 2. This is the first version of xarray that is
-  Python 3 only. (:issue:`1876`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
+- Removed support for Python 2. This is the first version of xarray that is
+  Python 3 only!
+- New :py:meth:`~xarray.DataArray.coarsen` and
+  :py:meth:`~xarray.DataArray.integrate` methods. See :ref:`comput.coarsen`
+  and :ref:`compute.using_coordinates` for details.
+- Many improvements to cftime support. See below for details.
+
+Deprecations
+~~~~~~~~~~~~
+
 - The ``compat`` argument to ``Dataset`` and the ``encoding`` argument to
   ``DataArray`` are deprecated and will be removed in a future release.
   (:issue:`1188`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
-Enhancements
-~~~~~~~~~~~~
-- Added ability to open netcdf4/hdf5 file-like objects with ``open_dataset``.
-  Requires (h5netcdf>0.7 and h5py>2.9.0). (:issue:`2781`)
-  By `Scott Henderson <https://github.com/scottyhq>`_
-- Internal plotting now supports ``cftime.datetime`` objects as time series.
-  (:issue:`2164`)
-  By `Julius Busecke <https://github.com/jbusecke>`_ and
-  `Spencer Clark <https://github.com/spencerkclark>`_.
-- Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
-  By `Ryan Abernathey <https://github.com/rabernat>`_
-- :py:meth:`~xarray.DataArray.coarsen` and
-  :py:meth:`~xarray.Dataset.coarsen` are newly added.
-  See :ref:`comput.coarsen` for details.
-  (:issue:`2525`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- Taking the mean of arrays of :py:class:`cftime.datetime` objects, and
-  by extension, use of :py:meth:`~xarray.DataArray.coarsen` with
-  :py:class:`cftime.datetime` coordinates is now possible. By `Spencer Clark
-  <https://github.com/spencerkclark>`_. 
-- Upsampling an array via interpolation with resample is now dask-compatible,
-  as long as the array is not chunked along the resampling dimension.
-  By `Spencer Clark <https://github.com/spencerkclark>`_.
-- :py:func:`xarray.testing.assert_equal` and
-  :py:func:`xarray.testing.assert_identical` now provide a more detailed
-  report showing what exactly differs between the two objects (dimensions /
-  coordinates / variables / attributes)  (:issue:`1507`).
-  By `Benoit Bovy <https://github.com/benbovy>`_.
+cftime related enhancements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 - Resampling of standard and non-standard calendars indexed by
   :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
   By `Jwen Fai Low <https://github.com/jwenfai>`_ and
   `Spencer Clark <https://github.com/spencerkclark>`_.
-- Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
-  ``nearest``. (:issue:`2695`)
-  By `Hauke Schulz <https://github.com/observingClouds>`_.
-- :py:meth:`~xarray.DataArray.integrate` and
-  :py:meth:`~xarray.Dataset.integrate` are newly added.
-  See :ref:`_compute.using_coordinates` for the detail.
-  (:issue:`1332`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- :py:meth:`pandas.Series.dropna` is now supported for a
-  :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
-  (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+- Taking the mean of arrays of :py:class:`cftime.datetime` objects, and
+  by extension, use of :py:meth:`~xarray.DataArray.coarsen` with
+  :py:class:`cftime.datetime` coordinates is now possible. By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
+- Internal plotting now supports ``cftime.datetime`` objects as time series.
+  (:issue:`2164`)
+  By `Julius Busecke <https://github.com/jbusecke>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+
 - :py:meth:`~xarray.cftime_range` now supports QuarterBegin and QuarterEnd offsets (:issue:`2663`).
   By `Jwen Fai Low <https://github.com/jwenfai>`_
+
 - :py:meth:`~xarray.open_dataset` now accepts a ``use_cftime`` argument, which
   can be used to require that ``cftime.datetime`` objects are always used, or
   never used when decoding dates encoded with a standard calendar.  This can be
@@ -83,6 +65,39 @@ Enhancements
   be outside the :py:class:`pandas.Timestamp`-valid range (:issue:`2754`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
 
+- :py:meth:`pandas.Series.dropna` is now supported for a
+  :py:class:`pandas.Series` indexed by a :py:class:`~xarray.CFTimeIndex`
+  (:issue:`2688`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+Other enhancements
+~~~~~~~~~~~~~~~~~~
+
+- Added ability to open netcdf4/hdf5 file-like objects with ``open_dataset``.
+  Requires (h5netcdf>0.7 and h5py>2.9.0). (:issue:`2781`)
+  By `Scott Henderson <https://github.com/scottyhq>`_
+- Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
+  By `Ryan Abernathey <https://github.com/rabernat>`_
+- :py:meth:`DataArray.coarsen` and
+  :py:meth:`Dataset.coarsen` are newly added.
+  See :ref:`comput.coarsen` for details.
+  (:issue:`2525`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Upsampling an array via interpolation with resample is now dask-compatible,
+  as long as the array is not chunked along the resampling dimension.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:func:`xarray.testing.assert_equal` and
+  :py:func:`xarray.testing.assert_identical` now provide a more detailed
+  report showing what exactly differs between the two objects (dimensions /
+  coordinates / variables / attributes)  (:issue:`1507`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
+  ``nearest``. (:issue:`2695`)
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
+- :py:meth:`DataArray.integrate` and
+  :py:meth:`Dataset.integrate` are newly added.
+  See :ref:`compute.using_coordinates` for the detail.
+  (:issue:`1332`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
   By `Kevin Squire <https://github.com/kmsquire>`_.
 
