@@ -86,3 +86,12 @@ def isel_variable_and_index(
         indexer = indexer.data
     new_index = index[indexer]
     return new_variable, new_index
+
+
+def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
+    """Roll an pandas.Index."""
+    count %= index.shape[0]
+    if count != 0:
+        return index[-count:].append(index[:-count])
+    else:
+        return index[:]
