@@ -20,7 +20,8 @@ def _check_inplace(inplace, default=False):
         inplace = default
     else:
         warnings.warn('The inplace argument has been deprecated and will be '
-                      'removed in xarray 0.12.0.', FutureWarning, stacklevel=3)
+                      'removed in a future version of xarray.',
+                      FutureWarning, stacklevel=3)
 
     return inplace
 
@@ -550,7 +551,7 @@ def decode_numpy_dict_values(attrs):
         if isinstance(v, np.ndarray):
             attrs[k] = v.tolist()
         elif isinstance(v, np.generic):
-            attrs[k] = np.asscalar(v)
+            attrs[k] = v.item()
     return attrs
 
 

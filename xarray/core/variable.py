@@ -1133,8 +1133,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         Notes
         -----
-        Although this operation returns a view of this variable's data, it is
-        not lazy -- the data will be fully loaded.
+        This operation returns a view of this variable's data. It is
+        lazy for dask-backed Variables but not for numpy-backed Variables.
 
         See Also
         --------
@@ -1361,8 +1361,11 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         if dim is not None:
             axis = self.get_axis_num(dim)
-        data = func(self.data if allow_lazy else self.values,
-                    axis=axis, **kwargs)
+        input_data = self.data if allow_lazy else self.values
+        if axis is not None:
+            data = func(input_data, axis=axis, **kwargs)
+        else:
+            data = func(input_data, **kwargs)
 
         if getattr(data, 'shape', ()) == self.shape:
             dims = self.dims

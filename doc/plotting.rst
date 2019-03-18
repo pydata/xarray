@@ -40,6 +40,10 @@ For more extensive plotting applications consider the following projects:
   data structures for building even complex visualizations easily." Includes
   native support for xarray objects.
 
+- `hvplot <https://hvplot.pyviz.org/>`_: ``hvplot`` makes it very easy to produce
+  dynamic plots (backed by ``Holoviews`` or ``Geoviews``) by adding a ``hvplot``
+  accessor to DataArrays.
+
 - `Cartopy <http://scitools.org.uk/cartopy/>`_: Provides cartographic
   tools.
 

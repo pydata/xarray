@@ -27,6 +27,7 @@ from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
+from xarray.coding.variables import SerializationWarning
 
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
@@ -34,7 +35,9 @@ from . import (
     requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
     requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
     requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
-    requires_zarr)
+    requires_zarr, requires_h5fileobj)
+from .test_coding_times import (_STANDARD_CALENDARS, _NON_STANDARD_CALENDARS,
+                                _ALL_CALENDARS)
 from .test_dataset import create_test_data
 
 try:
@@ -46,6 +49,12 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+try:
+    from pandas.errors import OutOfBoundsDatetime
+except ImportError:
+    # pandas < 0.20
+    from pandas.tslib import OutOfBoundsDatetime
 
 
 ON_WINDOWS = sys.platform == 'win32'
@@ -1761,7 +1770,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
                 open_dataset(tmp_file, engine='foobar')
 
         netcdf_bytes = data.to_netcdf()
-        with raises_regex(ValueError, 'can only read'):
+        with raises_regex(ValueError, 'unrecognized engine'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
     def test_cross_engine_read_write_netcdf3(self):
@@ -1944,6 +1953,52 @@ class TestH5NetCDFData(NetCDF4Base):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             assert actual.x.encoding['compression'] == 'lzf'
             assert actual.x.encoding['compression_opts'] is None
+
+
+@requires_h5fileobj
+class TestH5NetCDFFileObject(TestH5NetCDFData):
+    engine = 'h5netcdf'
+
+    def test_open_badbytes(self):
+        with raises_regex(ValueError, "HDF5 as bytes"):
+            with open_dataset(b'\211HDF\r\n\032\n', engine='h5netcdf'):
+                pass
+        with raises_regex(ValueError, "not a valid netCDF"):
+            with open_dataset(b'garbage'):
+                pass
+        with raises_regex(ValueError, "can only read bytes"):
+            with open_dataset(b'garbage', engine='netcdf4'):
+                pass
+        with raises_regex(ValueError, "not a valid netCDF"):
+            with open_dataset(BytesIO(b'garbage'), engine='h5netcdf'):
+                pass
+
+    def test_open_twice(self):
+        expected = create_test_data()
+        expected.attrs['foo'] = 'bar'
+        with raises_regex(ValueError, 'read/write pointer not at zero'):
+            with create_tmp_file() as tmp_file:
+                expected.to_netcdf(tmp_file, engine='h5netcdf')
+                with open(tmp_file, 'rb') as f:
+                    with open_dataset(f, engine='h5netcdf'):
+                        with open_dataset(f, engine='h5netcdf'):
+                            pass
+
+    def test_open_fileobj(self):
+        # open in-memory datasets instead of local file paths
+        expected = create_test_data().drop('dim3')
+        expected.attrs['foo'] = 'bar'
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine='h5netcdf')
+
+            with open(tmp_file, 'rb') as f:
+                with open_dataset(f, engine='h5netcdf') as actual:
+                    assert_identical(expected, actual)
+
+                f.seek(0)
+                with BytesIO(f.read()) as bio:
+                    with open_dataset(bio, engine='h5netcdf') as actual:
+                        assert_identical(expected, actual)
 
 
 @requires_h5netcdf
@@ -3436,22 +3491,12 @@ class TestValidateAttrs(object):
                 ds.to_netcdf(tmp_file)
 
             ds, attrs = new_dataset_and_attrs()
-            attrs['test'] = np.arange(12).reshape(3, 4)
-            with create_tmp_file() as tmp_file:
-                ds.to_netcdf(tmp_file)
-
-            ds, attrs = new_dataset_and_attrs()
             attrs['test'] = 'This is a string'
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = ''
-            with create_tmp_file() as tmp_file:
-                ds.to_netcdf(tmp_file)
-
-            ds, attrs = new_dataset_and_attrs()
-            attrs['test'] = np.arange(12).reshape(3, 4)
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
@@ -3536,3 +3581,170 @@ def test_source_encoding_always_present():
         original.to_netcdf(tmp)
         with open_dataset(tmp) as ds:
             assert ds.encoding['source'] == tmp
+
+
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+def test_use_cftime_standard_calendar_default_in_range(calendar):
+    x = [0, 1]
+    time = [0, 720]
+    units_date = '2000-01-01'
+    units = 'days since 2000-01-01'
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    x_timedeltas = np.array(x).astype('timedelta64[D]')
+    time_timedeltas = np.array(time).astype('timedelta64[D]')
+    decoded_x = np.datetime64(units_date, 'ns') + x_timedeltas
+    decoded_time = np.datetime64(units_date, 'ns') + time_timedeltas
+    expected_x = DataArray(decoded_x, [('time', decoded_time)], name='x')
+    expected_time = DataArray(decoded_time, [('time', decoded_time)],
+                              name='time')
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.warns(None) as record:
+            with open_dataset(tmp_file) as ds:
+                assert_identical(expected_x, ds.x)
+                assert_identical(expected_time, ds.time)
+            assert not record
+
+
+@requires_cftime
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2500])
+def test_use_cftime_standard_calendar_default_out_of_range(
+        calendar,
+        units_year):
+    import cftime
+
+    x = [0, 1]
+    time = [0, 720]
+    units = 'days since {}-01-01'.format(units_year)
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    decoded_x = cftime.num2date(x, units, calendar,
+                                only_use_cftime_datetimes=True)
+    decoded_time = cftime.num2date(time, units, calendar,
+                                   only_use_cftime_datetimes=True)
+    expected_x = DataArray(decoded_x, [('time', decoded_time)], name='x')
+    expected_time = DataArray(decoded_time, [('time', decoded_time)],
+                              name='time')
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.warns(SerializationWarning):
+            with open_dataset(tmp_file) as ds:
+                assert_identical(expected_x, ds.x)
+                assert_identical(expected_time, ds.time)
+
+
+@requires_cftime
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _ALL_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2000, 2500])
+def test_use_cftime_true(
+        calendar,
+        units_year):
+    import cftime
+
+    x = [0, 1]
+    time = [0, 720]
+    units = 'days since {}-01-01'.format(units_year)
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    decoded_x = cftime.num2date(x, units, calendar,
+                                only_use_cftime_datetimes=True)
+    decoded_time = cftime.num2date(time, units, calendar,
+                                   only_use_cftime_datetimes=True)
+    expected_x = DataArray(decoded_x, [('time', decoded_time)], name='x')
+    expected_time = DataArray(decoded_time, [('time', decoded_time)],
+                              name='time')
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.warns(None) as record:
+            with open_dataset(tmp_file, use_cftime=True) as ds:
+                assert_identical(expected_x, ds.x)
+                assert_identical(expected_time, ds.time)
+            assert not record
+
+
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+def test_use_cftime_false_standard_calendar_in_range(calendar):
+    x = [0, 1]
+    time = [0, 720]
+    units_date = '2000-01-01'
+    units = 'days since 2000-01-01'
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    x_timedeltas = np.array(x).astype('timedelta64[D]')
+    time_timedeltas = np.array(time).astype('timedelta64[D]')
+    decoded_x = np.datetime64(units_date, 'ns') + x_timedeltas
+    decoded_time = np.datetime64(units_date, 'ns') + time_timedeltas
+    expected_x = DataArray(decoded_x, [('time', decoded_time)], name='x')
+    expected_time = DataArray(decoded_time, [('time', decoded_time)],
+                              name='time')
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.warns(None) as record:
+            with open_dataset(tmp_file, use_cftime=False) as ds:
+                assert_identical(expected_x, ds.x)
+                assert_identical(expected_time, ds.time)
+            assert not record
+
+
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2500])
+def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
+    x = [0, 1]
+    time = [0, 720]
+    units = 'days since {}-01-01'.format(units_year)
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.raises((OutOfBoundsDatetime, ValueError)):
+            open_dataset(tmp_file, use_cftime=False)
+
+
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _NON_STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2000, 2500])
+def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
+    x = [0, 1]
+    time = [0, 720]
+    units = 'days since {}'.format(units_year)
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.raises((OutOfBoundsDatetime, ValueError)):
+            open_dataset(tmp_file, use_cftime=False)
