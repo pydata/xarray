@@ -336,17 +336,12 @@ class TestManualCombine:
         with pytest.raises(KeyError):
             combine_manual(objs, concat_dim='x')
 
-    # TODO weird error from auto_concat on both of these when it tries to infer
-    # dimension?
+    # TODO confused because this should not join up along 'y'??
     @pytest.mark.xfail
     def test_manual_concat_too_many_dims_at_once(self):
-        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
-        with raises_regex(ValueError, 'too many .* dimensions'):
-            combine_manual(objs)
-
-        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
-        with raises_regex(ValueError, 'cannot infer dimension'):
-            combine_manual(objs)
+        objs = [Dataset({'x': [0], 'y': [1]}), Dataset({'y': [0], 'x': [1]})]
+        with pytest.raises(ValueError, "require both concatenation"):
+            result = combine_manual(objs, concat_dim='x')
 
     def test_manual_concat_along_new_dim(self):
         objs = [Dataset({'a': ('x', [10]), 'x': [0]}),
