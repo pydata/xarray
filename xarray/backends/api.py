@@ -10,7 +10,8 @@ import numpy as np
 from .. import Dataset, DataArray, backends, conventions
 from ..core import indexing
 from .. import auto_combine
-from ..core.combine import _manual_combine, _infer_concat_order_from_positions
+from ..core.combine import (combine_auto, _manual_combine,
+    _infer_concat_order_from_positions)
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
 from .locks import _get_scheduler
@@ -507,14 +508,17 @@ class _MultiFileCloser(object):
 def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
-                   combine='auto', autoclose=None, parallel=False, **kwargs):
+                   combine='_old_auto', autoclose=None, parallel=False,
+                   **kwargs):
     """Open multiple files as a single dataset.
 
-    If combine='auto' then the function `auto_combine` is used to combine the
+    If combine='auto' then the function `combine_auto` is used to combine the
     datasets into one before returning the result, and if combine='manual' then
-    `manual_combine` is used. The filepaths must be structured according to
+    `combine_manual` is used. The filepaths must be structured according to
     which combining function is used, the details of which are given in the
-    documentation for ``auto_combine`` and ``manual_combine``.
+    documentation for ``combine_auto`` and ``combine_manual``.
+    By default the old (now deprecated) ``auto_combine`` will be used, please 
+    specify either ``combine='auto'`` or ``combine='manual'`` in future.
     Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
@@ -540,6 +544,10 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         if you want to stack a collection of 2D arrays along a third dimension.
         Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation along a particular dimension.
+    combine : {'auto', 'manual'}, optional
+        Whether ``xarray.auto_combine`` or ``xarray.manual_combine`` is used to
+        combine all the data. Default is to use ``xarray.auto_combine``, but 
+        this function has been deprecated..
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
@@ -594,9 +602,6 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
-    combine : {'auto', 'manual'}, optional
-        Whether ``xarray.auto_combine`` or ``xarray.manual_combine`` is used to
-        combine all the data. Default is 'auto'.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -606,8 +611,9 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
 
     See Also
     --------
+    combine_auto
+    combine_manual
     auto_combine
-    manual_combine
     open_dataset
 
     References
@@ -669,20 +675,26 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
 
     # Combine all datasets, closing them in case of a ValueError
     try:
-        if combine is 'auto':
+        if combine is '_old_auto':
             # Use the old auto_combine for now
-            # After deprecation cycle from #2616 is complete this will redo
-            # ordering from coordinates, ignoring how they were ordered
-            # previously
+            # Remove this after deprecation cycle from #2616 is complete
             combined = auto_combine(datasets, concat_dim=concat_dim,
                                     compat=compat, data_vars=data_vars,
                                     coords=coords)
-        else:
+        elif combine is 'manual':
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _manual_combine(datasets, concat_dims=concat_dim,
                                        compat=compat, data_vars=data_vars,
                                        coords=coords, ids=ids)
+        elif combine is 'auto':
+            # Redo ordering from coordinates, ignoring how they were ordered
+            # previously
+            combined = combine_auto(datasets, compat=compat,
+                                    data_vars=data_vars, coords=coords)
+        else:
+            raise ValueError("{} is an invalid option forthe keyword argument "
+                             "``combine``".format(combine))
     except ValueError:
         for ds in datasets:
             ds.close()

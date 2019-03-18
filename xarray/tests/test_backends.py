@@ -2353,7 +2353,7 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
 
-                with open_mfdataset([tmp1, tmp2]) as actual:
+                with open_mfdataset([tmp2, tmp1], combine='auto') as actual:
                     assert_identical(original, actual)
 
     def test_preprocess_mfdataset(self):
