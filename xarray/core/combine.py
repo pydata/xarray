@@ -562,7 +562,7 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     if concat_dim is '_not_supplied':
         concat_dim = _CONCAT_DIM_DEFAULT
     else:
-        message = """In xarray version 0.13 `auto_combine` will be deprecated,
+        message = """In xarray version 0.14 `auto_combine` will be deprecated,
                   and `open_mfdataset` will no longer accept a `concat_dim`
                   argument. To get equivalent behaviour from now on please use
                   the new `combine_manual` function instead (or the
@@ -570,7 +570,7 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         warnings.warn(message, FutureWarning)
 
     if _dimension_coords_exist(datasets):
-        message = """In xarray version 0.13 `auto_combine` will be deprecated.
+        message = """In xarray version 0.14 `auto_combine` will be deprecated.
                   The datasets supplied have global dimension coordinates.
                   You may want to use the new `combine_auto` function (or the
                   `combine='auto'` option to `open_mfdataset` to order the
@@ -580,7 +580,7 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
                   the `combine='manual'` option to open_mfdataset)."""
         warnings.warn(message, FutureWarning)
     else:
-        message = """In xarray version 0.13 `auto_combine` will be deprecated.
+        message = """In xarray version 0.14 `auto_combine` will be deprecated.
                   The datasets supplied do not have global dimension
                   coordinates. In future, to continue concatenating without
                   supplying dimension coordinates, please use the new
@@ -590,9 +590,9 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
 
     if _requires_concat_and_merge(datasets):
         manual_dims = [concat_dim].append(None)
-        message = """In xarray version 0.13 `auto_combine` will be deprecated.
+        message = """In xarray version 0.14 `auto_combine` will be deprecated.
                   The datasets supplied require both concatenation and merging.
-                  From xarray version 0.13 this will operation will require
+                  From xarray version 0.14 this will operation will require
                   either using the new `manual_combine` function (or the
                   `combine='manual'` option to open_mfdataset), with
                   a nested list structure such that you can combine along the
