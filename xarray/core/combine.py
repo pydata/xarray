@@ -70,8 +70,6 @@ def _infer_concat_order_from_coords(datasets):
                 # Infer order datasets should be arranged in along this dim
                 concat_dims.append(dim)
 
-                print(indexes)
-
                 if all(index.is_monotonic_increasing for index in indexes):
                     ascending = True
                 elif all(index.is_monotonic_decreasing for index in indexes):
