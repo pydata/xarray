@@ -11,7 +11,7 @@ from .. import Dataset, DataArray, backends, conventions
 from ..core import indexing
 from .. import auto_combine
 from ..core.combine import (combine_auto, _manual_combine,
-    _infer_concat_order_from_positions)
+                            _infer_concat_order_from_positions)
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
 from .locks import _get_scheduler

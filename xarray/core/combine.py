@@ -379,7 +379,7 @@ def vars_as_keys(ds):
 
 
 def combine_auto(datasets, compat='no_conflicts', data_vars='all',
-                  coords='different'):
+                 coords='different'):
     """
     Attempt to auto-magically combine the given datasets into one by using
     dimension coordinates.
@@ -565,9 +565,9 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         concat_dim = _CONCAT_DIM_DEFAULT
     else:
         message = """In xarray version 0.13 `auto_combine` will be deprecated,
-                  and `open_mfdataset` will no longer accept a `concat_dim` 
-                  argument. To get equivalent behaviour from now on please use 
-                  the new `combine_manual` function instead (or the 
+                  and `open_mfdataset` will no longer accept a `concat_dim`
+                  argument. To get equivalent behaviour from now on please use
+                  the new `combine_manual` function instead (or the
                   `combine='manual'` option to open_mfdataset)."""
         warnings.warn(message, FutureWarning)
 
@@ -575,18 +575,18 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         message = """In xarray version 0.13 `auto_combine` will be deprecated.
                   The datasets supplied have global dimension coordinates.
                   You may want to use the new `combine_auto` function (or the
-                  `combine='auto'` option to `open_mfdataset` to order the 
-                  datasets before concatenation. Alternatively, to continue 
+                  `combine='auto'` option to `open_mfdataset` to order the
+                  datasets before concatenation. Alternatively, to continue
                   concatenating based on the order the datasets are supplied in
-                  in future, please use the new `combine_manual` function (or 
+                  in future, please use the new `combine_manual` function (or
                   the `combine='manual'` option to open_mfdataset)."""
         warnings.warn(message, FutureWarning)
     else:
         message = """In xarray version 0.13 `auto_combine` will be deprecated.
                   The datasets supplied do not have global dimension
-                  coordinates. In future, to continue concatenating without 
-                  supplying dimension coordinates, please use the new 
-                  `combine_manual` function (or the `combine='manual'` option 
+                  coordinates. In future, to continue concatenating without
+                  supplying dimension coordinates, please use the new
+                  `combine_manual` function (or the `combine='manual'` option
                   to open_mfdataset)."""
         warnings.warn(message, FutureWarning)
 
@@ -594,11 +594,11 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         manual_dims = [concat_dim].append(None)
         message = """In xarray version 0.13 `auto_combine` will be deprecated.
                   The datasets supplied require both concatenation and merging.
-                  From xarray version 0.13 this will operation will require 
+                  From xarray version 0.13 this will operation will require
                   either using the new `manual_combine` function (or the
                   `combine='manual'` option to open_mfdataset), with
-                  a nested list structure such that you can combine along the 
-                  dimensions {}. Alternatively if your datasets have global 
+                  a nested list structure such that you can combine along the
+                  dimensions {}. Alternatively if your datasets have global
                   dimension coordinates then you can use the new `combine_auto`
                   function.""".format(manual_dims)
         warnings.warn(message, FutureWarning)
