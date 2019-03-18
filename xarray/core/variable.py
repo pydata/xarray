@@ -1133,8 +1133,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         Notes
         -----
-        Although this operation returns a view of this variable's data, it is
-        not lazy -- the data will be fully loaded.
+        This operation returns a view of this variable's data. It is
+        lazy for dask-backed Variables but not for numpy-backed Variables.
 
         See Also
         --------

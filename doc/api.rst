@@ -89,6 +89,7 @@ Dataset contents
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop
+   Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
 

@@ -294,7 +294,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     Parameters
     ----------
-    da : array
+    da : np.array
         Input data
     offset: Scalar with the same type of array or None
         If None, subtract minimum values to reduce round off error
@@ -306,6 +306,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     -------
     array
     """
+    # TODO: make this function dask-compatible?
     if offset is None:
         offset = array.min()
     array = array - offset
@@ -326,15 +327,34 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     return array.astype(dtype)
 
 
+def _to_pytimedelta(array, unit='us'):
+    index = pd.TimedeltaIndex(array.ravel(), unit=unit)
+    return index.to_pytimedelta().reshape(array.shape)
+
+
 def mean(array, axis=None, skipna=None, **kwargs):
-    """ inhouse mean that can handle datatime dtype """
+    """inhouse mean that can handle np.datetime64 or cftime.datetime
+    dtypes"""
+    from .common import _contains_cftime_datetimes
+
     array = asarray(array)
     if array.dtype.kind in 'Mm':
         offset = min(array)
-        # xarray always uses datetime[ns] for datetime
+        # xarray always uses np.datetime64[ns] for np.datetime64 data
         dtype = 'timedelta64[ns]'
         return _mean(datetime_to_numeric(array, offset), axis=axis,
                      skipna=skipna, **kwargs).astype(dtype) + offset
+    elif _contains_cftime_datetimes(array):
+        if isinstance(array, dask_array_type):
+            raise NotImplementedError(
+                'Computing the mean of an array containing '
+                'cftime.datetime objects is not yet implemented on '
+                'dask arrays.')
+        offset = min(array)
+        timedeltas = datetime_to_numeric(array, offset, datetime_unit='us')
+        mean_timedeltas = _mean(timedeltas, axis=axis, skipna=skipna,
+                                **kwargs)
+        return _to_pytimedelta(mean_timedeltas, unit='us') + offset
     else:
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
