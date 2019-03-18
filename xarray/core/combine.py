@@ -96,8 +96,6 @@ def _infer_concat_order_from_coords(datasets):
                 rank = series.rank(method='dense', ascending=ascending)
                 order = rank.astype(int).values - 1
 
-                # TODO check that resulting global coordinate is monotonic
-
                 # Append positions along extra dimension to structure which
                 # encodes the multi-dimensional concatentation order
                 tile_ids = [tile_id + (position,) for tile_id, position
@@ -479,14 +477,21 @@ def combine_auto(datasets, compat='no_conflicts', data_vars='all',
         combined_ids, concat_dims = _infer_concat_order_from_coords(
             list(datasets_with_same_vars))
 
-        # TODO checking the shape of the combined ids appropriate here?
         _check_shape_tile_ids(combined_ids)
 
         # Concatenate along all of concat_dims one by one to create single ds
         concatenated = _combine_nd(combined_ids, concat_dims=concat_dims,
                                    data_vars=data_vars, coords=coords)
 
-        # TODO check the overall coordinates are monotonically increasing?
+        # Check the overall coordinates are monotonically increasing
+        for dim in concatenated.dims:
+            if dim in concatenated:
+                indexes = concatenated.indexes.get(dim)
+                if not (indexes.is_monotonic_increasing
+                        or indexes.is_monotonic_decreasing):
+                    raise ValueError("Resulting object does not have monotonic"
+                                     "global indexes along dimension {}"
+                                     .format(dim))
         concatenated_grouped_by_data_vars.append(concatenated)
 
     return merge(concatenated_grouped_by_data_vars, compat=compat)

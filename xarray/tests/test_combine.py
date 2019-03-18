@@ -521,10 +521,6 @@ class TestManualCombine:
 
 
 class TestAutoCombine:
-    """
-    When completing the deprecation cycle from #2616 change all
-    _auto_combine to auto_combine.
-    """
     def test_auto_combine(self):
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
         actual = combine_auto(objs)
