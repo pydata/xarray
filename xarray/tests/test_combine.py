@@ -579,21 +579,6 @@ class TestAutoCombine:
         expected = Dataset({'x': 0, 'y': 1, 'z': 2})
         assert_identical(expected, actual)
 
-    # TODO decide if this test should be rewritten
-    @pytest.mark.xfail
-    def test_internal_ordering(self):
-        # This gives a MergeError if _auto_combine_1d is not sorting by
-        # data_vars correctly, see GH #2662
-        objs = [Dataset({'foo': ('x', [0, 1]), 'x': [0, 1]}),
-                Dataset({'bar': ('x', [10, 20]), 'x': [10, 20]}),
-                Dataset({'foo': ('x', [2, 3]), 'x': [2, 3]}),
-                Dataset({'bar': ('x', [30, 40]), 'x': [30, 40]})]
-        actual = combine_auto(objs)
-        expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
-                            'bar': ('x', [10, 20, 30, 40]),
-                            'x': [0, 1, 10, 20, 30, 40]})
-        assert_identical(expected, actual)
-
     def test_check_for_impossible_ordering(self):
         ds0 = Dataset({'x': [0, 1, 5]})
         ds1 = Dataset({'x': [2, 3]})
