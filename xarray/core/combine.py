@@ -204,8 +204,19 @@ def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
     """
 
     if concat_dim is not None:
-        combined = concat(datasets, dim=concat_dim, data_vars=data_vars,
-                          coords=coords)
+        try:
+            combined = concat(datasets, dim=concat_dim, data_vars=data_vars,
+                              coords=coords)
+        except ValueError as err:
+            if "encountered unexpected variable" in str(err):
+                raise ValueError("These objects cannot be combined along the "
+                                 "dimension {concat_dim} using only "
+                                 "xarray.concat, you must use "
+                                 "xarray.combine_auto instead, as this can "
+                                 "handle combining operations requiring both "
+                                 "concat and merge along the same dimension.")
+            else:
+                raise
     else:
         combined = merge(datasets, compat=compat)
 

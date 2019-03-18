@@ -514,6 +514,11 @@ class TestManualCombine:
         expected = Dataset({'x': [0]})
         assert_identical(expected, actual)
 
+    def test_manual_combine_but_need_auto_combine(self):
+        objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2], 'wall': [0]})]
+        with raises_regex(ValueError, 'cannot be combined'):
+            combine_manual(objs, concat_dim='x')
+
 
 class TestAutoCombine:
     """
