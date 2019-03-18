@@ -150,16 +150,6 @@ class TestTileIDsFromCoords:
         assert_combined_tile_ids_equal(expected, actual)
         assert concat_dims == ['x']
 
-    # TODO implement this error message
-    @pytest.mark.xfail
-    def test_check_for_impossible_ordering(self):
-        ds0 = Dataset({'x': [0, 1, 5]})
-        ds1 = Dataset({'x': [2, 3]})
-        with raises_regex(ValueError, "Unable to arrange datasets such that "
-                                      "coordinate values along dimension x are"
-                                      " monotonically increasing"):
-            _infer_concat_order_from_coords([ds1, ds0])
-
     def test_no_concatenation_needed(self):
         ds = Dataset({'foo': ('x', [0, 1])})
         expected = {(): ds}
@@ -603,6 +593,13 @@ class TestAutoCombine:
                             'bar': ('x', [10, 20, 30, 40]),
                             'x': [0, 1, 10, 20, 30, 40]})
         assert_identical(expected, actual)
+
+    def test_check_for_impossible_ordering(self):
+        ds0 = Dataset({'x': [0, 1, 5]})
+        ds1 = Dataset({'x': [2, 3]})
+        with raises_regex(ValueError, "does not have monotonic global indexes"
+                                      " along dimension x"):
+            combine_auto([ds1, ds0])
 
 
 class TestAutoCombineOldAPI:

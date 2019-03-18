@@ -70,6 +70,8 @@ def _infer_concat_order_from_coords(datasets):
                 # Infer order datasets should be arranged in along this dim
                 concat_dims.append(dim)
 
+                print(indexes)
+
                 if all(index.is_monotonic_increasing for index in indexes):
                     ascending = True
                 elif all(index.is_monotonic_decreasing for index in indexes):
@@ -490,7 +492,7 @@ def combine_auto(datasets, compat='no_conflicts', data_vars='all',
                 if not (indexes.is_monotonic_increasing
                         or indexes.is_monotonic_decreasing):
                     raise ValueError("Resulting object does not have monotonic"
-                                     "global indexes along dimension {}"
+                                     " global indexes along dimension {}"
                                      .format(dim))
         concatenated_grouped_by_data_vars.append(concatenated)
 
