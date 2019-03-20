@@ -2,7 +2,7 @@ name: test_env
 channels:
   - conda-forge
 dependencies:
-  - python=3.5
+  - python=3.5.0
   - cftime
   - dask=0.16
   - h5py
