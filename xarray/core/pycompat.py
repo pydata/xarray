@@ -10,3 +10,5 @@ try:
     dask_array_type = (dask.array.Array,)
 except ImportError:  # pragma: no cover
     dask_array_type = ()
+
+USE_TYPING = sys.version >= '3.5.3'

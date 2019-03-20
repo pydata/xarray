@@ -4,23 +4,26 @@ Functions for applying functions that act on arrays to xarray's labeled data.
 import functools
 import itertools
 import operator
+import typing
 from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
-from typing import (
-    AbstractSet, Any, Callable, Iterable, List, Mapping, Optional, Sequence,
-    Tuple, TYPE_CHECKING, Union,
-)
 
 import numpy as np
 
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import dask_array_type
+from .pycompat import USE_TYPING, dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
-if TYPE_CHECKING:
-    from .dataset import Dataset
+
+if USE_TYPING:
+    if typing.TYPE_CHECKING:
+        from typing import (
+            AbstractSet, Any, Callable, Iterable, List, Mapping, Optional,
+            Sequence, Tuple, Union,
+        )
+        from .dataset import Dataset
 
 _DEFAULT_FROZEN_SET = frozenset()  # type: frozenset
 _NO_FILL_VALUE = utils.ReprObject('<no-fill-value>')

@@ -11,6 +11,7 @@ import xarray as xr  # only for Dataset and DataArray
 
 from . import (
     arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils)
+from .core.pycompat import USE_TYPING
 from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
@@ -20,8 +21,10 @@ from .utils import (
     OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
 
-if typing.TYPE_CHECKING:
-    from typing import Tuple, Type, Union
+if USE_TYPING:
+    if typing.TYPE_CHECKING:
+        from typing import Tuple, Type, Union
+
 
 try:
     import dask.array as da

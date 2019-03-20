@@ -48,10 +48,12 @@ from functools import partial
 import numpy as np
 
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
+from .core.pycompat import USE_TYPING
 from .times import format_cftime_datetime
 
-if typing.TYPE_CHECKING:
-    from typing import ClassVar, Optional
+if USE_TYPING:
+    if typing.TYPE_CHECKING:
+        from typing import ClassVar, Optional
 
 
 def get_date_type(calendar):
