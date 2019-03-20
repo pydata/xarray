@@ -353,13 +353,6 @@ setting) variables and attributes:
 This is particularly useful in an exploratory context, because you can
 tab-complete these variable names with tools like IPython.
 
-.. warning::
-
-  We are changing the behavior of iterating over a Dataset the next major
-  release of xarray, to only include data variables instead of both data
-  variables and coordinates. In the meantime, prefer iterating over
-  ``ds.data_vars`` or ``ds.coords``.
-
 Dictionary like methods
 ~~~~~~~~~~~~~~~~~~~~~~~
 
