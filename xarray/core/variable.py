@@ -1,8 +1,8 @@
 import functools
 import itertools
+import typing
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
-from typing import Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -16,8 +16,12 @@ from .indexing import (
     as_indexable)
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
-from .utils import (OrderedSet, either_dict_or_kwargs,
-                    decode_numpy_dict_values, ensure_us_time_resolution)
+from .utils import (
+    OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
+    ensure_us_time_resolution)
+
+if typing.TYPE_CHECKING:
+    from typing import Tuple, Type, Union
 
 try:
     import dask.array as da
