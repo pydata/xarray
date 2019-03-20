@@ -21,6 +21,7 @@ v0.12.1 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- New :py:meth:`~xarray.GroupBy.quantile` method.
 
 Bug fixes
 ~~~~~~~~~
