@@ -94,6 +94,17 @@ def test_da_groupby_apply_func_args():
     assert_identical(expected, actual)
 
 
+def test_da_groupby_single_value_per_dim():
+
+    array = xr.DataArray([[1, 1, 1], [2, 2, 2]],
+                         [('x', [1, 2]), ('y', [0, 1, 2])])
+
+    # This raises an error.
+    # I think the issue is that gr._group_indices is [0, 1]
+    # instead of [[0,], [1,]]
+    array.groupby('x').mean(dim='x')
+
+
 def test_ds_groupby_apply_func_args():
 
     def func(arg1, arg2, arg3=0):
@@ -102,6 +113,39 @@ def test_ds_groupby_apply_func_args():
     dataset = xr.Dataset({'foo': ('x', [1, 1, 1])}, {'x': [1, 2, 3]})
     expected = xr.Dataset({'foo': ('x', [3, 3, 3])}, {'x': [1, 2, 3]})
     actual = dataset.groupby('x').apply(func, args=(1,), arg3=1)
+    assert_identical(expected, actual)
+
+
+def test_da_groupby_quantile():
+
+    array = xr.DataArray([1, 2, 3, 4, 5, 6],
+                         [('x', [1, 1, 1, 2, 2, 2])])
+
+    # Scalar quantile
+    expected = xr.DataArray([2, 5], [('x', [1, 2])])
+    actual = array.groupby('x').quantile(.5)
+    assert_identical(expected, actual)
+
+    # Vector quantile
+    expected = xr.DataArray([[1, 3], [4, 6]],
+                            [('x', [1, 2]), ('quantile', [0, 1])])
+    actual = array.groupby('x').quantile([0, 1])
+    assert_identical(expected, actual)
+
+    # Multiple dimensions
+    array = xr.DataArray([[1, 11, 21], [2, 12, 22], [3, 13, 23],
+                          [4, 16, 24], [5, 15, 25]],
+                         [('x', [1, 1, 1, 2, 2],),
+                          ('y', [0, 0, 1])])
+
+    expected = xr.DataArray([[1, 11, 21], [4, 15, 24]],
+                            [('x', [1, 2]), ('y', [0, 0, 1])])
+    actual = array.groupby('x').quantile(0, dim='x')
+    assert_identical(expected, actual)
+
+    expected = xr.DataArray([[1, 21],  [2, 22], [3, 23], [4, 24], [5, 25]],
+                            [('x', [1, 1, 1, 2, 2]), ('y', [0, 1])])
+    actual = array.groupby('y').quantile(0, dim='y')
     assert_identical(expected, actual)
 
 
