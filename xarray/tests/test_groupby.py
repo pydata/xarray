@@ -94,6 +94,7 @@ def test_da_groupby_apply_func_args():
     assert_identical(expected, actual)
 
 
+@pytest.mark.xfail
 def test_da_groupby_single_value_per_dim():
 
     array = xr.DataArray([[1, 1, 1], [2, 2, 2]],
