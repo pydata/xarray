@@ -144,7 +144,7 @@ def test_da_groupby_quantile():
     actual = array.groupby('x').quantile(0, dim='x')
     assert_identical(expected, actual)
 
-    expected = xr.DataArray([[1, 21],  [2, 22], [3, 23], [4, 24], [5, 25]],
+    expected = xr.DataArray([[1, 21], [2, 22], [3, 23], [4, 24], [5, 25]],
                             [('x', [1, 1, 1, 2, 2]), ('y', [0, 1])])
     actual = array.groupby('y').quantile(0, dim='y')
     assert_identical(expected, actual)

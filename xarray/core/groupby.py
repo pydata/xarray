@@ -579,7 +579,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         combined = self._maybe_unstack(combined)
         return combined
 
-    def quantile(self,  q, dim=None, interpolation='linear', keep_attrs=None):
+    def quantile(self, q, dim=None, interpolation='linear', keep_attrs=None):
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
 
