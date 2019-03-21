@@ -37,13 +37,12 @@ from .utils import (
     maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
-if USE_TYPING:
-    if typing.TYPE_CHECKING:
-        from typing import (
+if USE_TYPING and typing.TYPE_CHECKING:
+    from typing import (
             Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar,
             Union,
         )
-        from .dataarray import DataArray
+    from .dataarray import DataArray
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info

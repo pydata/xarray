@@ -17,13 +17,12 @@ from .pycompat import USE_TYPING, dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
 
-if USE_TYPING:
-    if typing.TYPE_CHECKING:
-        from typing import (
-            AbstractSet, Any, Callable, Iterable, List, Mapping, Optional,
-            Sequence, Tuple, Union,
-        )
-        from .dataset import Dataset
+if USE_TYPING and typing.TYPE_CHECKING:
+    from typing import (
+        AbstractSet, Any, Callable, Iterable, List, Mapping, Optional,
+        Sequence, Tuple, Union,
+    )
+    from .dataset import Dataset
 
 _DEFAULT_FROZEN_SET = frozenset()  # type: frozenset
 _NO_FILL_VALUE = utils.ReprObject('<no-fill-value>')

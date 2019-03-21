@@ -21,9 +21,8 @@ from .utils import (
     OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
 
-if USE_TYPING:
-    if typing.TYPE_CHECKING:
-        from typing import Tuple, Type, Union
+if USE_TYPING and typing.TYPE_CHECKING:
+    from typing import Tuple, Type, Union
 
 
 try:
