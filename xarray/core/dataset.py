@@ -7,6 +7,8 @@ from collections import OrderedDict, defaultdict
 from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
+from typing import (
+    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -38,10 +40,7 @@ from .utils import (
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if USE_TYPING and typing.TYPE_CHECKING:
-    from typing import (
-        Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar,
-        Union,
-    )
+
     from .dataarray import DataArray
 
 

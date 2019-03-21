@@ -47,8 +47,8 @@ from functools import partial
 
 import numpy as np
 
+from ..core.pycompat import USE_TYPING
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
-from .core.pycompat import USE_TYPING
 from .times import format_cftime_datetime
 
 if USE_TYPING and typing.TYPE_CHECKING:

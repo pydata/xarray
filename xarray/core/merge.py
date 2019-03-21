@@ -1,5 +1,6 @@
 import typing
 from collections import OrderedDict
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 
 import pandas as pd
 
@@ -10,9 +11,7 @@ from .variable import (
     Variable, as_variable, assert_unique_multiindex_level_names)
 
 if USE_TYPING and typing.TYPE_CHECKING:
-    from typing import (
-        Any, Dict, List, Mapping, Optional, Set, Tuple, Union,
-    )
+
     from .dataset import Dataset
 
 

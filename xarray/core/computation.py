@@ -7,6 +7,9 @@ import operator
 import typing
 from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
+from typing import (
+    AbstractSet, Any, Callable, Iterable, List, Mapping, Optional, Sequence,
+    Tuple, Union)
 
 import numpy as np
 
@@ -18,10 +21,7 @@ from .utils import is_dict_like
 from .variable import Variable
 
 if USE_TYPING and typing.TYPE_CHECKING:
-    from typing import (
-        AbstractSet, Any, Callable, Iterable, List, Mapping, Optional,
-        Sequence, Tuple, Union,
-    )
+
     from .dataset import Dataset
 
 _DEFAULT_FROZEN_SET = frozenset()  # type: frozenset
