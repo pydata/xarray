@@ -714,6 +714,40 @@ class CFEncodedBase(DatasetIOBase):
                         actual.variables[k].dtype)
             assert_allclose(decoded, actual, decode_bytes=False)
 
+    def test_grid_mapping_and_bounds_are_coordinates(self):
+        original = Dataset(
+            dict(variable=(('latitude', 'longitude'),
+                           [[0, 1], [2, 3]],
+                           {'grid_mapping': 'latlon'})),
+            dict(
+                latitude=('latitude',
+                          [0, 1],
+                          {'bounds': 'latitude_bnds',
+                           'grid_mapping': 'latlon'}),
+                longitude=('longitude',
+                           [0, 1],
+                           {'bounds': 'longitude_bnds',
+                            'grid_mapping': 'latlon'}),
+                latlon=((), -1, {'grid_mapping_name': 'latitude_longitude'}),
+                latitude_bnds=(('latitude', 'bnds2'),
+                               [[0, 1], [1, 2]]),
+                longitude_bnds=(('longitude', 'bnds2'),
+                                [[0, 1], [1, 2]])
+            )
+        )
+        with self.roundtrip(original) as actual:
+            assert_identical(actual, original)
+
+            with create_tmp_file() as tmp_file:
+                original.to_netcdf(tmp_file)
+                with open_dataset(tmp_file, decode_coords=False) as ds:
+                    assert (ds.coords['latitude'].attrs['bounds'] ==
+                            'latitude_bnds')
+                    assert (ds.coords['longitude'].attrs['bounds'] ==
+                            'longitude_bnds')
+                    assert 'latlon' not in ds['variable'].attrs['coordinates']
+                    assert 'coordinates' not in ds.attrs
+
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
             return obj == 'lat lon' or obj == 'lon lat'
