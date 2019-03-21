@@ -408,6 +408,18 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
                     new_vars[k].encoding['coordinates'] = coord_str
                     del var_attrs['coordinates']
                     coord_names.update(var_coord_names)
+            if 'bounds' in var_attrs:
+                bounds_str = var_attrs['bounds']
+                var_bounds_names = [bounds_str]
+                if all(k in variables for k in var_bounds_names):
+                    new_vars[k].encoding['bounds'] = bounds_str
+                    coord_names.update(var_bounds_names)
+            if 'grid_mapping' in var_attrs:
+                proj_str = var_attrs['grid_mapping']
+                var_proj_names = proj_str.split()
+                if all(k in variables for k in var_proj_names):
+                    new_vars[k].encoding['grid_mapping'] = proj_str
+                    coord_names.update(var_proj_names)
 
     if decode_coords and 'coordinates' in attributes:
         attributes = OrderedDict(attributes)
@@ -535,12 +547,19 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
 
     global_coordinates = non_dim_coord_names.copy()
     variable_coordinates = defaultdict(set)
+    not_technically_coordinates = set()
     for coord_name in non_dim_coord_names:
         target_dims = variables[coord_name].dims
         for k, v in variables.items():
             if (k not in non_dim_coord_names and k not in v.dims and
                     set(target_dims) <= set(v.dims)):
                 variable_coordinates[k].add(coord_name)
+                global_coordinates.discard(coord_name)
+
+            att_val = v.attrs.get
+            if ((att_val("bounds", None) == coord_name or
+                 att_val("grid_mapping", None) == coord_name)):
+                not_technically_coordinates.add(coord_name)
                 global_coordinates.discard(coord_name)
 
     variables = OrderedDict((k, v.copy(deep=False))
@@ -553,6 +572,12 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
             raise ValueError('cannot serialize coordinates because variable '
                              "%s already has an attribute 'coordinates'"
                              % var_name)
+
+        # Only add actual coordinates to coordinates
+        # Exceptions are created using CF mechanisms
+        # Non-CF datasets work as previously
+        for not_coord in not_technically_coordinates:
+            coord_names.discard(not_coord)
         attrs['coordinates'] = ' '.join(map(str, coord_names))
 
     # These coordinates are not associated with any particular variables, so we
