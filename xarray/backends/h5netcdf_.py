@@ -170,6 +170,8 @@ class H5NetCDFStore(WritableCFDataStore):
             variable, raise_on_invalid_encoding=check_encoding)
 
         fillvalue = attrs.pop('_FillValue', None)
+        if dtype is str and fillvalue is False:
+            fillvalue = None
         if dtype is str and fillvalue is not None:
             raise NotImplementedError(
                 'h5netcdf does not yet support setting a fill value for '

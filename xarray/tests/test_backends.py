@@ -1006,6 +1006,15 @@ class NetCDF4Base(CFEncodedBase):
                 assert actual['x'].encoding['dtype'] is str
                 assert_identical(actual, expected)
 
+    def test_string_explicit_no_fillvalue(self):
+        expected = Dataset(
+            dict(test=(('site',), [1, 1, 1, 1])),
+            coords=dict(site=['one', 'two', 'three', 'four']),
+        )
+        expected.coords['site'].encoding['_FillValue'] = False
+        with self.roundtrip(expected) as actual:
+            assert actual.coords['site'].encoding['dtype'] == str
+
     def test_roundtrip_string_with_fill_value_vlen(self):
         values = np.array(['ab', 'cdef', np.nan], dtype=object)
         expected = Dataset({'x': ('t', values)})

@@ -433,7 +433,8 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         fill_value = attrs.pop('_FillValue', None)
 
-        if datatype is str and fill_value is not None:
+        if ((datatype is str and fill_value is not None and
+             fill_value is not False)):
             raise NotImplementedError(
                 'netCDF4 does not yet support setting a fill value for '
                 'variable-length strings '
