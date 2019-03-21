@@ -617,17 +617,16 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
-        grouped = self._iter_grouped_shortcut()
-
-        # Default set to future version.
         if dim is None:
             dim = self._group_dim
 
-        applied = (arr.quantile(q, dim, interpolation) for arr in grouped)
-        da = self._combine(applied, shortcut=True, )
-        if 'quantile' in da.dims:
-            da.coords['quantile'] = Variable('quantile', q)
-        return da
+        out = self.apply(self._obj.__class__.quantile, shortcut=False,
+                         q=q, dim=dim, interpolation=interpolation,
+                         keep_attrs=keep_attrs)
+
+        if np.asarray(q, dtype=np.float64).ndim == 0:
+            out = out.drop('quantile')
+        return out
 
     def reduce(self, func, dim=None, axis=None,
                keep_attrs=None, shortcut=True, **kwargs):
