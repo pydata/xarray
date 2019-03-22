@@ -1,6 +1,6 @@
 # flake8: noqa
 import sys
-import  typing
+import typing
 
 import numpy as np
 
