@@ -1597,7 +1597,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                             "prior to calling this method.")
 
         axis = self.get_axis_num(dim)
-        func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
+        func = bn.nanrankdata if self.dtype.kind == 'f' else bn.rankdata
         ranked = func(self.data, axis=axis)
         if pct:
             count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
