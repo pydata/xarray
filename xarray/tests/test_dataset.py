@@ -1908,8 +1908,6 @@ class TestDataset(object):
 
             assert data.attrs['Test'] is not copied.attrs['Test']
 
-
-
     def test_copy_with_data(self):
         orig = create_test_data()
         new_data = {k: np.random.randn(*v.shape)
