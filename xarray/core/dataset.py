@@ -741,7 +741,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dims is None:
                 dims = self._dims.copy()
             if attrs is self.__default:
-                attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+                attrs = copy.deepcopy(self._attrs) if deep \
+                        else copy.copy(self._attrs)
             if indexes is self.__default:
                 indexes = copy.copy(self._indexes)
             if encoding is self.__default:

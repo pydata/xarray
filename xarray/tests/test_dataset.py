@@ -1885,7 +1885,7 @@ class TestDataset(object):
 
     def test_copy(self):
         data = create_test_data()
-        data.attrs['Test'] = [1,2,3]
+        data.attrs['Test'] = [1, 2, 3]
 
         for copied in [data.copy(deep=False), copy(data)]:
             assert_identical(data, copied)
