@@ -25,6 +25,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Dataset.copy(deep=True) now creates a deep copy of the attrs (:issue:`2835`).
+  By `Andras Gefferth <https://github.com/kefirbandi>`_.
 
 .. _whats-new.0.12.0:
 
