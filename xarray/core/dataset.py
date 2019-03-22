@@ -2308,23 +2308,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names.update(dims_dict.values())
 
         variables = OrderedDict()
+        indexes = OrderedDict()
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             if k in result_dims:
                 var = v.to_index_variable()
+                if k in self.indexes:
+                    indexes[k] = self.indexes[k]
+                else:
+                    indexes[k] = var.to_index()
             else:
                 var = v.to_base_variable()
             var.dims = dims
             variables[k] = var
-
-        indexes = OrderedDict()
-        for k, v in self.indexes.items():
-            if k in dims_dict:
-                new_name = dims_dict[k]
-                new_index = variables[k].to_index()
-                indexes[new_name] = new_index
-            else:
-                indexes[k] = v
 
         return self._replace_with_new_dims(variables, coord_names,
                                            indexes=indexes, inplace=inplace)
