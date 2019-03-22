@@ -32,15 +32,14 @@ from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
     merge_variables)
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import USE_TYPING, dask_array_type
+from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
     either_dict_or_kwargs, ensure_us_time_resolution, hashable, is_dict_like,
     maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
-if USE_TYPING and typing.TYPE_CHECKING:
-
+if TYPE_CHECKING:
     from .dataarray import DataArray
 
 

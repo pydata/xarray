@@ -16,12 +16,11 @@ import numpy as np
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import USE_TYPING, dask_array_type
+from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
 
-if USE_TYPING and typing.TYPE_CHECKING:
-
+if TYPE_CHECKING:
     from .dataset import Dataset
 
 _DEFAULT_FROZEN_SET = frozenset()  # type: frozenset

@@ -15,12 +15,12 @@ from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
 from .options import _get_keep_attrs
-from .pycompat import USE_TYPING, dask_array_type, integer_types
+from .pycompat import TYPE_CHECKING, dask_array_type, integer_types
 from .utils import (
     OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
 
-if USE_TYPING and typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from typing import Tuple, Type, Union
 
 

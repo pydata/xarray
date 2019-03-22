@@ -5,13 +5,12 @@ from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 import pandas as pd
 
 from .alignment import deep_align
-from .pycompat import USE_TYPING
+from .pycompat import TYPE_CHECKING
 from .utils import Frozen
 from .variable import (
     Variable, as_variable, assert_unique_multiindex_level_names)
 
-if USE_TYPING and typing.TYPE_CHECKING:
-
+if TYPE_CHECKING:
     from .dataset import Dataset
 
 

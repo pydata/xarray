@@ -1,5 +1,6 @@
 # flake8: noqa
 import sys
+import  typing
 
 import numpy as np
 
@@ -12,4 +13,6 @@ try:
 except ImportError:  # pragma: no cover
     dask_array_type = ()
 
-USE_TYPING = sys.version >= '3.5.3'
+# Ensure we have some more recent additions to the typing module.
+# Note that TYPE_CHECKING itself is not available on Python 3.5.1.
+TYPE_CHECKING = sys.version >= '3.5.3' and typing.TYPE_CHECKING
