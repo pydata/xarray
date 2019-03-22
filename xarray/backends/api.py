@@ -230,7 +230,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib', 'pseudonetcdf'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib', \
+        'pseudonetcdf'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -444,7 +445,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, \
+        optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -582,7 +584,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding['source']``.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, \
+        optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
