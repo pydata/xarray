@@ -1,17 +1,18 @@
+import typing
 from collections import OrderedDict
-
-from typing import (
-    Any, Dict, List, Mapping, Optional, Set, Tuple, TYPE_CHECKING, Union,
-)
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 
 import pandas as pd
 
 from .alignment import deep_align
+from .pycompat import TYPE_CHECKING
 from .utils import Frozen
 from .variable import (
     Variable, as_variable, assert_unique_multiindex_level_names)
+
 if TYPE_CHECKING:
     from .dataset import Dataset
+
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 

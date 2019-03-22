@@ -5,9 +5,9 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
+from ..plot.plot import _PlotMethods
 from . import (
     computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
-from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
