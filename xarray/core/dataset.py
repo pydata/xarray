@@ -709,7 +709,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes: 'Optional[OrderedDict[Any, pd.Index]]' = __default,
         encoding: Optional[dict] = __default,
         inplace: bool = False,
-        deep: bool = False,
     ) -> T:
         """Fastpath constructor for internal use.
 
@@ -741,8 +740,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dims is None:
                 dims = self._dims.copy()
             if attrs is self.__default:
-                attrs = copy.deepcopy(self._attrs) if deep \
-                        else copy.copy(self._attrs)
+                attrs = copy.copy(self._attrs)
             if indexes is self.__default:
                 indexes = copy.copy(self._indexes)
             if encoding is self.__default:
@@ -918,7 +916,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables = OrderedDict((k, v.copy(deep=deep, data=data.get(k)))
                                     for k, v in self._variables.items())
 
-        return self._replace(variables, deep=deep)
+        _attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+
+        return self._replace(variables, attrs=_attrs)
 
     @property
     def _level_coords(self):
