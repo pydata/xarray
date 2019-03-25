@@ -25,6 +25,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- ``swap_dims`` would create incorrect ``indexes`` (:issue:`2842`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 
 .. _whats-new.0.12.0:
 
