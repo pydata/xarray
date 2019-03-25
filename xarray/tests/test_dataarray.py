@@ -2056,7 +2056,7 @@ class TestDataArray(object):
         with pytest.warns(FutureWarning):
             grouped.sum()
 
-    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.12'),
+    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.13'),
                         reason="not to forget the behavior change")
     def test_groupby_sum_default(self):
         array = self.make_groupby_example_array()

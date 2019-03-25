@@ -1,45 +1,44 @@
 import copy
 import functools
 import sys
+import typing
 import warnings
 from collections import OrderedDict, defaultdict
 from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (
-    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, TYPE_CHECKING,
-    Union,
-)
+    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
 
 import xarray as xr
 
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from . import (
     alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
     pdcompat, resample, rolling, utils)
-from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
     ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
     _contains_datetime_like_objects)
 from .coordinates import (
     DatasetCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
-    remap_label_indexers,
-)
+    remap_label_indexers)
 from .duck_array_ops import datetime_to_numeric
 from .indexes import Indexes, default_indexes, isel_variable_and_index
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
     merge_variables)
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
-    Frozen, SortedKeysDict, _check_inplace,
-    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
-    hashable, maybe_wrap_array)
+    Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
+    either_dict_or_kwargs, ensure_us_time_resolution, hashable, is_dict_like,
+    maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+
 if TYPE_CHECKING:
     from .dataarray import DataArray
 
@@ -2308,23 +2307,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names.update(dims_dict.values())
 
         variables = OrderedDict()
+        indexes = OrderedDict()
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             if k in result_dims:
                 var = v.to_index_variable()
+                if k in self.indexes:
+                    indexes[k] = self.indexes[k]
+                else:
+                    indexes[k] = var.to_index()
             else:
                 var = v.to_base_variable()
             var.dims = dims
             variables[k] = var
-
-        indexes = OrderedDict()
-        for k, v in self.indexes.items():
-            if k in dims_dict:
-                new_name = dims_dict[k]
-                new_index = variables[k].to_index()
-                indexes[new_name] = new_index
-            else:
-                indexes[k] = v
 
         return self._replace_with_new_dims(variables, coord_names,
                                            indexes=indexes, inplace=inplace)
@@ -2848,8 +2843,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Notes
         -----
-        Although this operation returns a view of each array's data, it
-        is not lazy -- the data will be fully loaded into memory.
+        This operation returns a view of each array's data. It is
+        lazy for dask-backed DataArrays but not for numpy-backed DataArrays
+        -- the data will be fully loaded into memory.
 
         See Also
         --------
