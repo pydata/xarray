@@ -2009,13 +2009,10 @@ class TestDataset(object):
         assert_identical(expected, actual)
         assert isinstance(actual.variables['y'], IndexVariable)
         assert isinstance(actual.variables['x'], Variable)
+        assert actual.indexes['y'].equals(pd.Index(list('abc')))
 
         roundtripped = actual.swap_dims({'y': 'x'})
         assert_identical(original.set_coords('y'), roundtripped)
-
-        actual = original.copy()
-        actual = actual.swap_dims({'x': 'y'})
-        assert_identical(expected, actual)
 
         with raises_regex(ValueError, 'cannot swap'):
             original.swap_dims({'y': 'x'})
