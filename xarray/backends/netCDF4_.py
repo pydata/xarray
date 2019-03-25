@@ -298,6 +298,7 @@ def _set_nc_attribute(obj, key, value):
                    'attribute ({}, {}): "{}"'.format(key, value, e))
             raise AttributeError(msg)
 
+
 class NetCDF4DataStore(WritableCFDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
