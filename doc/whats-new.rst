@@ -133,8 +133,8 @@ Other enhancements
   ``transpose_coords`` which enables transposition of coordinates in the
   same way as :py:meth:`Dataset.transpose`. :py:meth:`DataArray.groupby`
   :py:meth:`DataArray.groupby_bins`, and :py:meth:`DataArray.resample` now
-  accept a keyword argument ``restore_coord_dims`` which restores the order
-  of the dimensions of multi-dimensional coordinates (:issue:`1856`).
+  accept a keyword argument ``restore_coord_dims`` which keeps the order
+  of the dimensions of multi-dimensional coordinates intact (:issue:`1856`).
   By `Peter Hausamann <http://github.com/phausamann>`_.
 
 Bug fixes
