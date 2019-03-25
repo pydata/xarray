@@ -1290,6 +1290,13 @@ class TestNetCDF4Data(NetCDF4Base):
                                    totest.attrs['bar'])
                 assert one_string == totest.attrs['baz']
 
+    def test_setncattr_fails(self):
+        attrs = {'CLASS': 'foo'}
+        ds = Dataset({'x': ('y', [1, 2, 3], attrs)})
+        with create_tmp_file() as tmp_file:
+            with pytest.raises(AttributeError, message='(CLASS, foo)'):
+                ds.to_netcdf(tmp_file)
+
     def test_autoclose_future_warning(self):
         data = create_test_data()
         with create_tmp_file() as tmp_file:

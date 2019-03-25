@@ -291,8 +291,12 @@ def _set_nc_attribute(obj, key, value):
                    'upgrade to netCDF4-python 1.2.4 or greater.')
             raise AttributeError(msg)
     else:
-        obj.setncattr(key, value)
-
+        try:
+            obj.setncattr(key, value)
+        except AttributeError as e:
+            msg = ('The following exception occurred when attempting to set '
+                   'attribute ({}, {}): "{}"'.format(key, value, e))
+            raise AttributeError(msg)
 
 class NetCDF4DataStore(WritableCFDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
