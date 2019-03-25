@@ -5,9 +5,9 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
+from ..plot.plot import _PlotMethods
 from . import (
     computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
-from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
@@ -1385,8 +1385,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Notes
         -----
-        Although this operation returns a view of this array's data, it is
-        not lazy -- the data will be fully loaded.
+        This operation returns a view of this array's data. It is
+        lazy for dask-backed DataArrays but not for numpy-backed DataArrays
+        -- the data will be fully loaded.
 
         See Also
         --------
@@ -2437,10 +2438,10 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dim: str, or a sequence of str
             Coordinate(s) used for the integration.
-        datetime_unit
-            Can be specify the unit if datetime coordinate is used. One of
-            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
-             'as'}
+        datetime_unit: str, optional
+            Can be used to specify the unit if datetime coordinate is used.
+            One of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',
+                    'ps', 'fs', 'as'}
 
         Returns
         -------
