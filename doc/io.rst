@@ -286,6 +286,15 @@ converting ``NaN`` to ``-9999``, we would use
 ``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
 Compression and decompression with such discretization is extremely fast.
 
+.. note::
+
+    This form of compression is lossy - the maximum precision available is 
+    `1 / (scaling factor * 2 ** 16)` - slightly better than 4 significant 
+    digits when using a scaling factor of 1. 
+    To achieve the maximum precision for your data, calculate the scaling factor 
+    using `max(data) - min(data)`, and use `min(data)` as the offset.
+
+
 .. _io.string-encoding:
 
 String encoding
