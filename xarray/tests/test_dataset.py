@@ -1885,6 +1885,7 @@ class TestDataset(object):
 
     def test_copy(self):
         data = create_test_data()
+        data.attrs['Test'] = [1, 2, 3]
 
         for copied in [data.copy(deep=False), copy(data)]:
             assert_identical(data, copied)
@@ -1899,11 +1900,17 @@ class TestDataset(object):
             copied['foo'] = ('z', np.arange(5))
             assert 'foo' not in data
 
+            copied.attrs['foo'] = 'bar'
+            assert 'foo' not in data.attrs
+            assert data.attrs['Test'] is copied.attrs['Test']
+
         for copied in [data.copy(deep=True), deepcopy(data)]:
             assert_identical(data, copied)
             for k, v0 in data.variables.items():
                 v1 = copied.variables[k]
                 assert v0 is not v1
+
+            assert data.attrs['Test'] is not copied.attrs['Test']
 
     def test_copy_with_data(self):
         orig = create_test_data()
