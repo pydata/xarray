@@ -915,7 +915,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables = OrderedDict((k, v.copy(deep=deep, data=data.get(k)))
                                     for k, v in self._variables.items())
 
-        return self._replace(variables)
+        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+
+        return self._replace(variables, attrs=attrs)
 
     @property
     def _level_coords(self):
