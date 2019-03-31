@@ -938,6 +938,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         variables = OrderedDict()  # type: OrderedDict[Any, Variable]
         coord_names = set()
+        indexes = OrderedDict()  # type: OrderedDict[Any, pd.Index]
 
         for name in names:
             try:
@@ -948,6 +949,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 variables[var_name] = var
                 if ref_name in self._coord_names or ref_name in self.dims:
                     coord_names.add(var_name)
+                if (var_name,) == var.dims:
+                    indexes[var_name] = var.to_index()
 
         needed_dims = set()  # type: set
         for v in variables.values():
@@ -959,12 +962,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if set(self.variables[k].dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
-
-        if self._indexes is None:
-            indexes = None
-        else:
-            indexes = OrderedDict((k, v) for k, v in self._indexes.items()
-                                  if k in coord_names)
+                if k in self.indexes:
+                    indexes[k] = self.indexes[k]
 
         return self._replace(variables, coord_names, dims, indexes=indexes)
 
@@ -1631,7 +1630,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             if name in self.indexes:
                 new_var, new_index = isel_variable_and_index(
-                    var, self.indexes[name], var_indexers)
+                    name, var, self.indexes[name], var_indexers)
                 if new_index is not None:
                     indexes[name] = new_index
             else:
@@ -2401,6 +2400,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     ' variable name.'.format(dim=d))
 
         variables = OrderedDict()
+        coord_names = self._coord_names.copy()
         # If dim is a dict, then ensure that the values are either integers
         # or iterables.
         for k, v in dim.items():
@@ -2410,7 +2410,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # value within the dim dict to the length of the iterable
                 # for later use.
                 variables[k] = xr.IndexVariable((k,), v)
-                self._coord_names.add(k)
+                coord_names.add(k)
                 dim[k] = variables[k].size
             elif isinstance(v, int):
                 pass  # Do nothing if the dimensions value is just an int
@@ -2420,7 +2420,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         for k, v in self._variables.items():
             if k not in dim:
-                if k in self._coord_names:  # Do not change coordinates
+                if k in coord_names:  # Do not change coordinates
                     variables[k] = v
                 else:
                     result_ndim = len(v.dims) + len(axis)
@@ -2452,10 +2452,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 variables[k] = v.set_dims(k)
 
         new_dims = self._dims.copy()
-        for d in dim:
-            new_dims[d] = 1
+        new_dims.update(dim)
 
-        return self._replace(variables, dims=new_dims)
+        return self._replace_vars_and_dims(
+            variables, dims=new_dims, coord_names=coord_names)
 
     def set_index(self, indexes=None, append=False, inplace=None,
                   **indexes_kwargs):

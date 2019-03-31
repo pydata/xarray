@@ -231,9 +231,6 @@ class DataArray(AbstractArray, DataWithCoords):
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
 
-        # uncomment for a useful consistency check:
-        # assert all(isinstance(v, Variable) for v in coords.values())
-
         # These fully describe a DataArray
         self._variable = variable
         self._coords = coords

@@ -315,49 +315,14 @@ def reindex_variables(
     """
     from .dataarray import DataArray
 
-    # build up indexers for assignment along each dimension
-    int_indexers = {}
-    targets = OrderedDict()  # type: OrderedDict[Any, pd.Index]
-    masked_dims = set()
-    unchanged_dims = set()
-
-    # size of reindexed dimensions
-    new_sizes = {}
-
-    for name, index in indexes.items():
-        if name in indexers:
-            if not index.is_unique:
-                raise ValueError(
-                    'cannot reindex or align along dimension %r because the '
-                    'index has duplicate values' % name)
-
-            target = utils.safe_cast_to_index(indexers[name])
-            new_sizes[name] = len(target)
-
-            int_indexer = get_indexer_nd(index, target, method, tolerance)
-
-            # We uses negative values from get_indexer_nd to signify
-            # values that are missing in the index.
-            if (int_indexer < 0).any():
-                masked_dims.add(name)
-            elif np.array_equal(int_indexer, np.arange(len(index))):
-                unchanged_dims.add(name)
-
-            int_indexers[name] = int_indexer
-            targets[name] = target
-
-    for dim in sizes:
-        if dim not in indexes and dim in indexers:
-            existing_size = sizes[dim]
-            new_size = indexers[dim].size
-            if existing_size != new_size:
-                raise ValueError(
-                    'cannot reindex or align along dimension %r without an '
-                    'index because its size %r is different from the size of '
-                    'the new index %r' % (dim, existing_size, new_size))
-
     # create variables for the new dataset
     reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
+
+    # build up indexers for assignment along each dimension
+    int_indexers = {}
+    new_indexes = OrderedDict(indexes)
+    masked_dims = set()
+    unchanged_dims = set()
 
     for dim, indexer in indexers.items():
         if isinstance(indexer, DataArray) and indexer.dims != (dim,):
@@ -368,12 +333,43 @@ def reindex_variables(
                     str(indexer.dims), dim),
                 FutureWarning, stacklevel=3)
 
+        target = new_indexes[dim] = utils.safe_cast_to_index(indexers[dim])
+
+        if dim in indexes:
+            index = indexes[dim]
+
+            if not index.is_unique:
+                raise ValueError(
+                    'cannot reindex or align along dimension %r because the '
+                    'index has duplicate values' % dim)
+
+            int_indexer = get_indexer_nd(index, target, method, tolerance)
+
+            # We uses negative values from get_indexer_nd to signify
+            # values that are missing in the index.
+            if (int_indexer < 0).any():
+                masked_dims.add(dim)
+            elif np.array_equal(int_indexer, np.arange(len(index))):
+                unchanged_dims.add(dim)
+
+            int_indexers[dim] = int_indexer
+
         if dim in variables:
             var = variables[dim]
             args = (var.attrs, var.encoding)  # type: tuple
         else:
             args = ()
-        reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
+        reindexed[dim] = IndexVariable((dim,), target, *args)
+
+    for dim in sizes:
+        if dim not in indexes and dim in indexers:
+            existing_size = sizes[dim]
+            new_size = indexers[dim].size
+            if existing_size != new_size:
+                raise ValueError(
+                    'cannot reindex or align along dimension %r without an '
+                    'index because its size %r is different from the size of '
+                    'the new index %r' % (dim, existing_size, new_size))
 
     for name, var in variables.items():
         if name not in indexers:
@@ -394,9 +390,6 @@ def reindex_variables(
                 new_var = var[key]
 
             reindexed[name] = new_var
-
-    new_indexes = OrderedDict(indexes)
-    new_indexes.update(targets)
 
     return reindexed, new_indexes
 
