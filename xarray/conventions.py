@@ -235,6 +235,11 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var = maybe_default_fill_value(var)
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var, name=name)
+
+    if var.encoding.get('grid_mapping', None) is not None:
+        var.attrs['grid_mapping'] = var.encoding.pop('grid_mapping')
+    if var.encoding.get('bounds', None) is not None:
+        var.attrs['bounds'] = var.encoding.pop('bounds')
     return var
 
 
@@ -414,12 +419,14 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
                 if all(k in variables for k in var_bounds_names):
                     new_vars[k].encoding['bounds'] = bounds_str
                     coord_names.update(var_bounds_names)
+                del var_attrs['bounds']
             if 'grid_mapping' in var_attrs:
                 proj_str = var_attrs['grid_mapping']
                 var_proj_names = proj_str.split()
                 if all(k in variables for k in var_proj_names):
                     new_vars[k].encoding['grid_mapping'] = proj_str
                     coord_names.update(var_proj_names)
+                del var_attrs['grid_mapping']
 
     if decode_coords and 'coordinates' in attributes:
         attributes = OrderedDict(attributes)
@@ -556,9 +563,9 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
                 global_coordinates.discard(coord_name)
 
-            att_val = v.attrs.get
-            if ((att_val("bounds", None) == coord_name or
-                 att_val("grid_mapping", None) == coord_name)):
+            encoding_val = v.encoding.get
+            if ((encoding_val('bounds', None) == coord_name or
+                 encoding_val('grid_mapping', None) == coord_name)):
                 not_technically_coordinates.add(coord_name)
                 global_coordinates.discard(coord_name)
 
