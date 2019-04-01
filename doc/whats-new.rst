@@ -22,10 +22,18 @@ Enhancements
 ~~~~~~~~~~~~
 
 - New :py:meth:`~xarray.GroupBy.quantile` method.
+- Allow ``expand_dims`` method to support inserting/broadcasting dimensions
+  with size > 1. (:issue:`2710`)
+  By `Martin Pletcher <https://github.com/pletchm>`_.
+  
 
 Bug fixes
 ~~~~~~~~~
 
+- Dataset.copy(deep=True) now creates a deep copy of the attrs (:issue:`2835`).
+  By `Andras Gefferth <https://github.com/kefirbandi>`_.
+- ``swap_dims`` would create incorrect ``indexes`` (:issue:`2842`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.0:
 

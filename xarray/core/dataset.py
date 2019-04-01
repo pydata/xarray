@@ -1,45 +1,44 @@
 import copy
 import functools
 import sys
+import typing
 import warnings
 from collections import OrderedDict, defaultdict
 from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (
-    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, TYPE_CHECKING,
-    Union,
-)
+    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
 
 import xarray as xr
 
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from . import (
     alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
     pdcompat, resample, rolling, utils)
-from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
     ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
     _contains_datetime_like_objects)
 from .coordinates import (
     DatasetCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
-    remap_label_indexers,
-)
+    remap_label_indexers)
 from .duck_array_ops import datetime_to_numeric
 from .indexes import Indexes, default_indexes, isel_variable_and_index
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
     merge_variables)
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
-    Frozen, SortedKeysDict, _check_inplace,
-    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
-    hashable, maybe_wrap_array)
+    Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
+    either_dict_or_kwargs, ensure_us_time_resolution, hashable, is_dict_like,
+    maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+
 if TYPE_CHECKING:
     from .dataarray import DataArray
 
@@ -916,7 +915,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables = OrderedDict((k, v.copy(deep=deep, data=data.get(k)))
                                     for k, v in self._variables.items())
 
-        return self._replace(variables)
+        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+
+        return self._replace(variables, attrs=attrs)
 
     @property
     def _level_coords(self):
@@ -2308,28 +2309,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names.update(dims_dict.values())
 
         variables = OrderedDict()
+        indexes = OrderedDict()
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             if k in result_dims:
                 var = v.to_index_variable()
+                if k in self.indexes:
+                    indexes[k] = self.indexes[k]
+                else:
+                    indexes[k] = var.to_index()
             else:
                 var = v.to_base_variable()
             var.dims = dims
             variables[k] = var
 
-        indexes = OrderedDict()
-        for k, v in self.indexes.items():
-            if k in dims_dict:
-                new_name = dims_dict[k]
-                new_index = variables[k].to_index()
-                indexes[new_name] = new_index
-            else:
-                indexes[k] = v
-
         return self._replace_with_new_dims(variables, coord_names,
                                            indexes=indexes, inplace=inplace)
 
-    def expand_dims(self, dim, axis=None):
+    def expand_dims(self, dim=None, axis=None, **dim_kwargs):
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape.
 
@@ -2338,15 +2335,27 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dim : str or sequence of str.
+        dim : str, sequence of str, dict, or None
             Dimensions to include on the new variable.
-            dimensions are inserted with length 1.
+            If provided as str or sequence of str, then dimensions are inserted
+            with length 1. If provided as a dict, then the keys are the new
+            dimensions and the values are either integers (giving the length of
+            the new dimensions) or sequence/ndarray (giving the coordinates of
+            the new dimensions). **WARNING** for python 3.5, if ``dim`` is
+            dict-like, then it must be an ``OrderedDict``. This is to ensure
+            that the order in which the dims are given is maintained.
         axis : integer, list (or tuple) of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
-            the same length list. If axis=None is passed, all the axes will
-            be inserted to the start of the result array.
+            same length list. If axis=None is passed, all the axes will be
+            inserted to the start of the result array.
+        **dim_kwargs : int or sequence/ndarray
+            The keywords are arbitrary dimensions being inserted and the values
+            are either the lengths of the new dims (if int is given), or their
+            coordinates. Note, this is an alternative to passing a dict to the
+            dim kwarg and will only be used if dim is None. **WARNING** for
+            python 3.5 ``dim_kwargs`` is not available.
 
         Returns
         -------
@@ -2354,10 +2363,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             This object, but with an additional dimension(s).
         """
         if isinstance(dim, int):
-            raise ValueError('dim should be str or sequence of strs or dict')
+            raise TypeError('dim should be str or sequence of strs or dict')
+        elif isinstance(dim, str):
+            dim = OrderedDict(((dim, 1),))
+        elif isinstance(dim, (list, tuple)):
+            if len(dim) != len(set(dim)):
+                raise ValueError('dims should not contain duplicate values.')
+            dim = OrderedDict(((d, 1) for d in dim))
 
-        if isinstance(dim, str):
-            dim = [dim]
+        # TODO: get rid of the below code block when python 3.5 is no longer
+        #   supported.
+        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
+        not_ordereddict = dim is not None and not isinstance(dim, OrderedDict)
+        if not python36_plus and not_ordereddict:
+            raise TypeError("dim must be an OrderedDict for python <3.6")
+        elif not python36_plus and dim_kwargs:
+            raise ValueError("dim_kwargs isn't available for python <3.6")
+
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'expand_dims')
+
         if axis is not None and not isinstance(axis, (list, tuple)):
             axis = [axis]
 
@@ -2376,10 +2400,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     '{dim} already exists as coordinate or'
                     ' variable name.'.format(dim=d))
 
-        if len(dim) != len(set(dim)):
-            raise ValueError('dims should not contain duplicate values.')
-
         variables = OrderedDict()
+        # If dim is a dict, then ensure that the values are either integers
+        # or iterables.
+        for k, v in dim.items():
+            if hasattr(v, "__iter__"):
+                # If the value for the new dimension is an iterable, then
+                # save the coordinates to the variables dict, and set the
+                # value within the dim dict to the length of the iterable
+                # for later use.
+                variables[k] = xr.IndexVariable((k,), v)
+                self._coord_names.add(k)
+                dim[k] = variables[k].size
+            elif isinstance(v, int):
+                pass  # Do nothing if the dimensions value is just an int
+            else:
+                raise TypeError('The value of new dimension {k} must be '
+                                'an iterable or an int'.format(k=k))
+
         for k, v in self._variables.items():
             if k not in dim:
                 if k in self._coord_names:  # Do not change coordinates
@@ -2400,11 +2438,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                                          ' values.')
                     # We need to sort them to make sure `axis` equals to the
                     # axis positions of the result array.
-                    zip_axis_dim = sorted(zip(axis_pos, dim))
+                    zip_axis_dim = sorted(zip(axis_pos, dim.items()))
 
-                    all_dims = list(v.dims)
-                    for a, d in zip_axis_dim:
-                        all_dims.insert(a, d)
+                    all_dims = list(zip(v.dims, v.shape))
+                    for d, c in zip_axis_dim:
+                        all_dims.insert(d, c)
+                    all_dims = OrderedDict(all_dims)
+
                     variables[k] = v.set_dims(all_dims)
             else:
                 # If dims includes a label of a non-dimension coordinate,
