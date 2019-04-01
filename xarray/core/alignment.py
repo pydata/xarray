@@ -298,7 +298,7 @@ def reindex_variables(
           * nearest: use nearest valid index value
     tolerance : optional
         Maximum distance between original and new labels for inexact matches.
-        The values of the index at the matching locations most satisfy the
+        The values of the index at the matching locations must satisfy the
         equation ``abs(index[indexer] - target) <= tolerance``.
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
