@@ -2693,11 +2693,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             assign_coords = {variable_dim: val.name}
             for dim in dims:
-                if (dim not in val):
+                if (dim not in val.dims):
                     assign_coords[dim] = None
 
             expand_dims = set(dims).difference(set(val.dims))
             expand_dims.add(variable_dim)
+            # must be list for .expand_dims
+            expand_dims = list(expand_dims)
+
             return val.assign_coords(**assign_coords) \
                 .expand_dims(expand_dims) \
                 .stack(**{new_dim: (variable_dim,) + dims})
