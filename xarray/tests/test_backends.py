@@ -1291,10 +1291,13 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert one_string == totest.attrs['baz']
 
     def test_setncattr_fails(self):
-        ds = Dataset({'x': ('y', [1, 2, 3], {'CLASS': 'foo'})})
+        ds = Dataset({'bar': ('y', [1, 2, 3], {'CLASS': 'foo'})})
         with create_tmp_file() as tmp_file:
-            with pytest.raises(AttributeError, message='(CLASS, foo)'):
+            with pytest.raises(AttributeError) as e:
                 ds.to_netcdf(tmp_file)
+            msg = ("Failed to write attribute 'CLASS' with value 'foo' on "
+                   "variable 'bar' in a NetCDF file.")
+            assert msg == str(e.value)
 
     def test_autoclose_future_warning(self):
         data = create_test_data()
