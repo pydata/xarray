@@ -24,6 +24,8 @@ Enhancements
 - Allow ``expand_dims`` method to support inserting/broadcasting dimensions
   with size > 1. (:issue:`2710`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
+- New methods for reshaping Datasets of variables with different dimensions
+  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
 
 
 Bug fixes
@@ -1348,9 +1350,6 @@ Enhancements
 
 - Experimental support for the Dask collection interface (:issue:`1674`).
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
-
-- New methods for reshaping Datasets of variables with different dimensions
-  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
 
 Bug fixes
 ~~~~~~~~~
