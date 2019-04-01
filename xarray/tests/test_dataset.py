@@ -2277,7 +2277,6 @@ class TestDataset(object):
         y = D.to_stacked_array('features', feature_dims)\
             .transpose("x", "features")
 
-
         x = y.to_unstacked_dataset("features")
         assert_identical(D, x)
 

@@ -2628,19 +2628,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return result
 
     def to_stacked_array(self, new_dim, dims, variable_dim='variable'):
-        """Combine variables of differing dimensionality into a DataArray without broadcasting.
+        """Combine variables of differing dimensionality into a DataArray
+        without broadcasting.
 
-        This function is basically version of Dataset.to_array which does not broadcast the variables.
+        This function is basically version of Dataset.to_array which does not
+        broadcast the variables.
 
         Parameters
         ----------
         new_dim : str
             Name of the new stacked coordinate
         dims : Sequence[str]
-            Dimensions to be stacked. Not all variables in the dataset need to have
-            these dimensions.
+            Dimensions to be stacked. Not all variables in the dataset need to
+            have these dimensions.
         variable_dim : str, optional
-            Name of the level in the MultiIndex object which corresponds to the variables.
+            Name of the level in the MultiIndex object which corresponds to
+            the variables.
 
         Returns
         -------
@@ -2709,9 +2712,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Xs = [f(self[key]) for key in self.data_vars]
         dataset = xr.concat(Xs, dim=new_dim)
 
-        # coerce the levels of the MultiIndex to have the same type as the input
-        # dimensions. This code is messy, so it might be better to just input a dummy value
-        # for the singleton dimension.
+        # coerce the levels of the MultiIndex to have the same type as the
+        # input dimensions. This code is messy, so it might be better to just
+        # input a dummy value for the singleton dimension.
         idx = dataset.indexes[new_dim]
         levels = [idx.levels[0]]\
             + [level.astype(self[level.name].dtype)
@@ -2719,8 +2722,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         new_idx = idx.set_levels(levels)
         # patch in the new index object
         # dataset[new_dim].variable._data.array = new_idx
-        # This commented line below is much cleaner than the junk above, but I wanted
-        # to modify the IndexVariable inplace to make sure the attrs and encodings are the same
+        # This commented line below is much cleaner than the junk above, but I
+        # wanted to modify the IndexVariable inplace to make sure the attrs
+        # and encodings are the same
         dataset[new_dim] = IndexVariable(new_dim, new_idx)
         return dataset
 
