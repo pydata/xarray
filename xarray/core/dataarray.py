@@ -1407,6 +1407,8 @@ class DataArray(AbstractArray, DataWithCoords):
         """Unstack DataArray expanding to Dataset along a given level of a
         stacked coordinate.
 
+        This is the inverse operation of Dataset.to_stacked_array.
+
         Parameters
         ----------
         dim : str
@@ -1422,6 +1424,29 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.to_stacked_array
 
+        Examples
+        --------
+        >>> import xarray as xr
+        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> data = xr.Dataset({'a': arr, 'b': arr.isel(y=0)})
+        >>> data
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+          * y        (y) int64 0 1 2
+        Data variables:
+            a        (x, y) int64 0 1 2 3 4 5
+            b        (x) int64 0 3
+        >>> stacked = data.to_stacked_array("z", ['y'])
+        >>> stacked.indexes['z']
+        MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
+                labels=[[0, 0, 0, 1], [0, 1, 2, -1]],
+                names=['variable', 'y'])
+        >>> roundtripped = stacked.to_unstacked_dataset(dim='z')
+        >>> data.identical(roundtripped)
+        True
         """
 
         idx = self.indexes[dim]
