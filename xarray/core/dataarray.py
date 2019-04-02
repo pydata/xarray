@@ -1420,10 +1420,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         unstacked: Dataset
 
-        See Also
-        --------
-        Dataset.to_stacked_array
-
         Examples
         --------
         >>> import xarray as xr
@@ -1447,6 +1443,10 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> roundtripped = stacked.to_unstacked_dataset(dim='z')
         >>> data.identical(roundtripped)
         True
+
+        See Also
+        --------
+        Dataset.to_stacked_array
         """
 
         idx = self.indexes[dim]
