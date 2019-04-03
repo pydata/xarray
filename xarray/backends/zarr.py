@@ -257,6 +257,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
         self._consolidate_on_close = consolidate_on_close
+        self.append_dim = None
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
@@ -338,7 +339,24 @@ class ZarrStore(AbstractWritableDataStore):
             only needed in append mode
         """
 
-        variables, attributes = self.encode(variables, attributes)
+        variables_to_encode = OrderedDict()
+        variables_encoded = OrderedDict()
+        ds = None
+        for vn, v in variables.items():
+            name = _encode_variable_name(vn)
+            if name in self.ds:
+                # existing variable, get its encoding
+                # and apply it to appended variable
+                variables_encoded[vn] = v
+                if ds is None:
+                    ds = open_zarr(self.ds.store, auto_chunk=False)
+                v.encoding = ds[vn].encoding
+            else:
+                # new variable, encode it
+                variables_to_encode[vn] = v
+        variables_encoded, _ = self.encode(variables_encoded, {})
+        variables, attributes = self.encode(variables_to_encode, attributes)
+        variables.update(variables_encoded)
 
         self.set_attributes(attributes)
         self.set_dimensions(variables, unlimited_dims=unlimited_dims)
@@ -349,7 +367,7 @@ class ZarrStore(AbstractWritableDataStore):
         pass
 
     def set_variables(self, variables, check_encoding_set, writer,
-                      unlimited_dims=None, append_dim=None):
+                      unlimited_dims=None):
         """
         This provides a centralized method to set the variables on the data
         store.
@@ -365,9 +383,6 @@ class ZarrStore(AbstractWritableDataStore):
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
-        append_dim: str
-            dimension on which the zarray will be appended
-            only needed in append mode
         """
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
@@ -380,11 +395,17 @@ class ZarrStore(AbstractWritableDataStore):
             fill_value = attrs.pop('_FillValue', None)
             if v.encoding == {'_FillValue': None} and fill_value is None:
                 v.encoding = {}
-            append = False
-            try:
+            if name in self.ds:
+                # append to existing variable
                 zarr_array = self.ds[name]
-                append = True
-            except KeyError:
+                if self.append_dim is None:
+                    raise ValueError('dimension being appended is unknown; '
+                    'did you forget to call to_zarr with append_dim argument?')
+                if self.append_dim in dims:
+                    axis = dims.index(self.append_dim)
+                    zarr_array.append(v.data, axis=axis)
+            else:
+                # new variable
                 encoding = _extract_zarr_variable_encoding(
                     v, raise_on_invalid=check)
                 encoded_attrs = OrderedDict()
@@ -397,14 +418,6 @@ class ZarrStore(AbstractWritableDataStore):
                                             fill_value=fill_value, **encoding)
                 zarr_array.attrs.put(encoded_attrs)
                 zarr_array[...] = v.data
-            if append:
-                if self.append_dim is None:
-                    raise ValueError('The dimension on which the data is \
-                     appended has to be named.')
-                if self.append_dim not in dims:
-                    continue
-                axis = dims.index(self.append_dim)
-                zarr_array.append(v.data, axis=axis)
 
     def close(self):
         if self._consolidate_on_close:
