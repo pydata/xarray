@@ -176,7 +176,8 @@ def _assert_indexes_invariants(a):
             _assert_indexes_invariants_checks(a._indexes, a._coords, a.dims)
     elif isinstance(a, xr.Dataset):
         if a._indexes is not None:
-            _assert_indexes_invariants_checks(a._indexes, a._variables, a._dims)
+            _assert_indexes_invariants_checks(
+                a._indexes, a._variables, a._dims)
     elif isinstance(a, xr.Variable):
         # no indexes
         pass

@@ -1502,9 +1502,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # all indexers should be int, slice, np.ndarrays, or Variable
-        indexers_list = []
+        indexers_list = []  # type: List[Tuple[Any, Union[slice, Variable]]]
         for k, v in indexers.items():
-            if isinstance(v, (slice, Variable)):
+            if isinstance(v, slice):
+                indexers_list.append((k, v))
+                continue
+
+            if isinstance(v, Variable):
                 pass
             elif isinstance(v, DataArray):
                 v = v.variable
@@ -1523,14 +1527,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         v = _parse_array_of_cftime_strings(v, index.date_type)
 
                 if v.ndim == 0:
-                    v = as_variable(v)
+                    v = Variable((), v)
                 elif v.ndim == 1:
-                    v = as_variable((k, v))
+                    v = IndexVariable((k,), v)
                 else:
                     raise IndexError(
                         "Unlabeled multi-dimensional array cannot be "
                         "used for indexing: {}".format(k))
+
+            if v.ndim == 1:
+                v = v.to_index_variable()
+
             indexers_list.append((k, v))
+
         return indexers_list
 
     def _get_indexers_coords_and_indexes(self, indexers):
@@ -2116,15 +2125,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes = OrderedDict(
             (k, v) for k, v in obj.indexes.items() if k not in indexers)
         selected = self._replace_with_new_dims(
-            variables, coord_names, indexes=indexes)
+            variables.copy(), coord_names, indexes=indexes)
 
         # attach indexer as coordinate
         variables.update(indexers)
+        indexes.update(
+            (k, v.to_index()) for k, v in indexers.items() if v.dims == (k,)
+        )
+
         # Extract coordinates from indexers
         coord_vars, new_indexes = (
             selected._get_indexers_coords_and_indexes(coords))
         variables.update(coord_vars)
         indexes.update(new_indexes)
+
         coord_names = (set(variables)
                        .intersection(obj._coord_names)
                        .union(coord_vars))
