@@ -1524,11 +1524,11 @@ class ZarrBase(CFEncodedBase):
             assert_identical(original, actual)
 
         # check append mode for append write
-        obj, obj2 = create_append_test_data()
+        obj1, obj2 = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            obj.to_zarr(store_target, mode='w')
-            obj2.to_zarr(store_target, mode='a', append_dim='dim1')
-            original = xr.concat([obj, obj2], dim='dim1')
+            obj1.to_zarr(store_target, mode='w')
+            obj2.to_zarr(store_target, mode='a', append_dim='time')
+            original = xr.concat([obj1, obj2], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
     def test_compressor_encoding(self):

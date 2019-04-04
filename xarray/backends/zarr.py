@@ -339,28 +339,29 @@ class ZarrStore(AbstractWritableDataStore):
             only needed in append mode
         """
 
-        variables_to_encode = OrderedDict()
-        variables_encoded = OrderedDict()
-        ds = None
-        for vn, v in variables.items():
-            name = _encode_variable_name(vn)
-            if name in self.ds:
-                # existing variable, get its encoding
-                # and apply it to appended variable
-                variables_encoded[vn] = v
-                if ds is None:
-                    ds = open_zarr(self.ds.store, auto_chunk=False)
-                v.encoding = ds[vn].encoding
-            else:
-                # new variable, encode it
-                variables_to_encode[vn] = v
-        variables_encoded, _ = self.encode(variables_encoded, {})
-        variables, attributes = self.encode(variables_to_encode, attributes)
-        variables.update(variables_encoded)
+        existing_variables = set([vn for vn in variables
+                                 if _encode_variable_name(vn) in self.ds])
+        new_variables = set(variables).difference(existing_variables)
+        variables_without_encoding = OrderedDict([(vn, variables[vn])
+                                                 for vn in new_variables])
+        variables_encoded, attributes = self.encode(
+            variables_without_encoding, attributes)
+
+        if len(existing_variables) > 0:
+            # there are variables to append
+            # their encoding must be the same as in the store
+            ds = open_zarr(self.ds.store, auto_chunk=False)
+            variables_with_encoding = OrderedDict()
+            for vn in existing_variables:
+                variables_with_encoding[vn] = variables[vn]
+                variables_with_encoding[vn].encoding = ds[vn].encoding
+            variables_with_encoding, _ = self.encode(variables_with_encoding,
+                                                     {})
+            variables_encoded.update(variables_with_encoding)
 
         self.set_attributes(attributes)
-        self.set_dimensions(variables, unlimited_dims=unlimited_dims)
-        self.set_variables(variables, check_encoding_set, writer,
+        self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
+        self.set_variables(variables_encoded, check_encoding_set, writer,
                            unlimited_dims=unlimited_dims)
 
     def sync(self):
@@ -399,8 +400,10 @@ class ZarrStore(AbstractWritableDataStore):
                 # append to existing variable
                 zarr_array = self.ds[name]
                 if self.append_dim is None:
-                    raise ValueError('dimension being appended is unknown; '
-                    'did you forget to call to_zarr with append_dim argument?')
+                    raise ValueError(
+                        'dimension being appended is unknown; '
+                        'did you forget to call to_zarr with append_dim '
+                        'argument?')
                 if self.append_dim in dims:
                     axis = dims.index(self.append_dim)
                     zarr_array.append(v.data, axis=axis)
