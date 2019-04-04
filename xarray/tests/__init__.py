@@ -63,6 +63,8 @@ has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
 has_pynio, requires_pynio = _importorskip('Nio')
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip('PseudoNetCDF')
 has_cftime, requires_cftime = _importorskip('cftime')
+has_nc_time_axis, requires_nc_time_axis = _importorskip('nc_time_axis',
+                                                        minversion='1.2.0')
 has_cftime_1_0_2_1, requires_cftime_1_0_2_1 = _importorskip(
     'cftime', minversion='1.0.2.1')
 has_dask, requires_dask = _importorskip('dask')
@@ -75,6 +77,12 @@ has_iris, requires_iris = _importorskip('iris')
 has_cfgrib, requires_cfgrib = _importorskip('cfgrib')
 
 # some special cases
+has_h5netcdf07, requires_h5netcdf07 = _importorskip('h5netcdf',
+                                                    minversion='0.7')
+has_h5py29, requires_h5py29 = _importorskip('h5py', minversion='2.9.0')
+has_h5fileobj = has_h5netcdf07 and has_h5py29
+requires_h5fileobj = pytest.mark.skipif(
+    not has_h5fileobj, reason='requires h5py>2.9.0 & h5netcdf>0.7')
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason='requires scipy or netCDF4')

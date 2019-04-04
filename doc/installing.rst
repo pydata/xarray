@@ -45,8 +45,6 @@ For accelerating xarray
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
   (1.1 or later)
-- `cyordereddict <https://github.com/shoyer/cyordereddict>`__: speeds up most
-  internal operations with xarray data structures (for python versions < 3.5)
 
 For parallel computing
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -63,6 +61,8 @@ For plotting
   :ref:`plot-maps`
 - `seaborn <https://stanford.edu/~mwaskom/software/seaborn/>`__: for better
   color palettes
+- `nc-time-axis <https://github.com/SciTools/nc-time-axis>`__: for plotting
+  cftime.datetime objects (1.2.0 or later)
 
 
 Instructions

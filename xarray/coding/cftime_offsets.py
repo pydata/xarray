@@ -41,14 +41,18 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
+import typing
 from datetime import timedelta
 from functools import partial
-from typing import ClassVar, Optional
 
 import numpy as np
 
+from ..core.pycompat import TYPE_CHECKING
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
+
+if TYPE_CHECKING:
+    from typing import ClassVar, Optional
 
 
 def get_date_type(calendar):
@@ -68,13 +72,14 @@ def get_date_type(calendar):
             'proleptic_gregorian': cftime.DatetimeProlepticGregorian,
             'julian': cftime.DatetimeJulian,
             'all_leap': cftime.DatetimeAllLeap,
-            'standard': cftime.DatetimeProlepticGregorian
+            'standard': cftime.DatetimeGregorian
         }
         return calendars[calendar]
 
 
 class BaseCFTimeOffset(object):
     _freq = None  # type: ClassVar[str]
+    _day_option = None
 
     def __init__(self, n=1):
         if not isinstance(n, int):
@@ -151,6 +156,41 @@ class BaseCFTimeOffset(object):
     def __repr__(self):
         return str(self)
 
+    def _get_offset_day(self, other):
+        # subclass must implement `_day_option`; calling from the base class
+        # will raise NotImplementedError.
+        return _get_day_of_month(other, self._day_option)
+
+
+def _get_day_of_month(other, day_option):
+    """Find the day in `other`'s month that satisfies a BaseCFTimeOffset's
+    onOffset policy, as described by the `day_option` argument.
+
+    Parameters
+    ----------
+    other : cftime.datetime
+    day_option : 'start', 'end'
+        'start': returns 1
+        'end': returns last day of the month
+
+    Returns
+    -------
+    day_of_month : int
+
+    """
+
+    if day_option == 'start':
+        return 1
+    elif day_option == 'end':
+        days_in_month = _days_in_month(other)
+        return days_in_month
+    elif day_option is None:
+        # Note: unlike `_shift_month`, _get_day_of_month does not
+        # allow day_option = None
+        raise NotImplementedError
+    else:
+        raise ValueError(day_option)
+
 
 def _days_in_month(date):
     """The number of days in the month of the given date"""
@@ -186,7 +226,7 @@ def _adjust_n_years(other, n, month, reference_day):
     return n
 
 
-def _shift_months(date, months, day_option='start'):
+def _shift_month(date, months, day_option='start'):
     """Shift the date to a month start or end a given number of months away.
     """
     delta_year = (date.month + months) // 12
@@ -211,12 +251,69 @@ def _shift_months(date, months, day_option='start'):
     return date.replace(year=year, month=month, day=day, dayofwk=-1)
 
 
+def roll_qtrday(other, n, month, day_option, modby=3):
+    """Possibly increment or decrement the number of periods to shift
+    based on rollforward/rollbackward conventions.
+
+    Parameters
+    ----------
+    other : cftime.datetime
+    n : number of periods to increment, before adjusting for rolling
+    month : int reference month giving the first month of the year
+    day_option : 'start', 'end'
+        The convention to use in finding the day in a given month against
+        which to compare for rollforward/rollbackward decisions.
+    modby : int 3 for quarters, 12 for years
+
+    Returns
+    -------
+    n : int number of periods to increment
+
+    See Also
+    --------
+    _get_day_of_month : Find the day in a month provided an offset.
+    """
+
+    months_since = other.month % modby - month % modby
+
+    if n > 0:
+        if months_since < 0 or (
+                months_since == 0 and
+                other.day < _get_day_of_month(other, day_option)):
+            # pretend to roll back if on same month but
+            # before compare_day
+            n -= 1
+    else:
+        if months_since > 0 or (
+                months_since == 0 and
+                other.day > _get_day_of_month(other, day_option)):
+            # make sure to roll forward, so negate
+            n += 1
+    return n
+
+
+def _validate_month(month, default_month):
+    if month is None:
+        result_month = default_month
+    else:
+        result_month = month
+    if not isinstance(result_month, int):
+        raise TypeError("'self.month' must be an integer value between 1 "
+                        "and 12.  Instead, it was set to a value of "
+                        "{!r}".format(result_month))
+    elif not (1 <= result_month <= 12):
+        raise ValueError("'self.month' must be an integer value between 1 "
+                         "and 12.  Instead, it was set to a value of "
+                         "{!r}".format(result_month))
+    return result_month
+
+
 class MonthBegin(BaseCFTimeOffset):
     _freq = 'MS'
 
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, 1)
-        return _shift_months(other, n, 'start')
+        return _shift_month(other, n, 'start')
 
     def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
@@ -229,7 +326,7 @@ class MonthEnd(BaseCFTimeOffset):
 
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, _days_in_month(other))
-        return _shift_months(other, n, 'end')
+        return _shift_month(other, n, 'end')
 
     def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
@@ -253,6 +350,105 @@ _MONTH_ABBREVIATIONS = {
 }
 
 
+class QuarterOffset(BaseCFTimeOffset):
+    """Quarter representation copied off of pandas/tseries/offsets.py
+    """
+    _freq = None  # type: ClassVar[str]
+    _default_month = None  # type: ClassVar[int]
+
+    def __init__(self, n=1, month=None):
+        BaseCFTimeOffset.__init__(self, n)
+        self.month = _validate_month(month, self._default_month)
+
+    def __apply__(self, other):
+        # months_since: find the calendar quarter containing other.month,
+        # e.g. if other.month == 8, the calendar quarter is [Jul, Aug, Sep].
+        # Then find the month in that quarter containing an onOffset date for
+        # self.  `months_since` is the number of months to shift other.month
+        # to get to this on-offset month.
+        months_since = other.month % 3 - self.month % 3
+        qtrs = roll_qtrday(other, self.n, self.month,
+                           day_option=self._day_option, modby=3)
+        months = qtrs * 3 - months_since
+        return _shift_month(other, months, self._day_option)
+
+    def onOffset(self, date):
+        """Check if the given date is in the set of possible dates created
+        using a length-one version of this offset class."""
+        mod_month = (date.month - self.month) % 3
+        return mod_month == 0 and date.day == self._get_offset_day(date)
+
+    def __sub__(self, other):
+        import cftime
+
+        if isinstance(other, cftime.datetime):
+            raise TypeError('Cannot subtract cftime.datetime from offset.')
+        elif type(other) == type(self) and other.month == self.month:
+            return type(self)(self.n - other.n, month=self.month)
+        else:
+            return NotImplemented
+
+    def __mul__(self, other):
+        return type(self)(n=other * self.n, month=self.month)
+
+    def rule_code(self):
+        return '{}-{}'.format(self._freq, _MONTH_ABBREVIATIONS[self.month])
+
+    def __str__(self):
+        return '<{}: n={}, month={}>'.format(
+            type(self).__name__, self.n, self.month)
+
+
+class QuarterBegin(QuarterOffset):
+    # When converting a string to an offset, pandas converts
+    # 'QS' to a QuarterBegin offset starting in the month of
+    # January.  When creating a QuarterBegin offset directly
+    # from the constructor, however, the default month is March.
+    # We follow that behavior here.
+    _default_month = 3
+    _freq = 'QS'
+    _day_option = 'start'
+
+    def rollforward(self, date):
+        """Roll date forward to nearest start of quarter"""
+        if self.onOffset(date):
+            return date
+        else:
+            return date + QuarterBegin(month=self.month)
+
+    def rollback(self, date):
+        """Roll date backward to nearest start of quarter"""
+        if self.onOffset(date):
+            return date
+        else:
+            return date - QuarterBegin(month=self.month)
+
+
+class QuarterEnd(QuarterOffset):
+    # When converting a string to an offset, pandas converts
+    # 'Q' to a QuarterEnd offset starting in the month of
+    # December.  When creating a QuarterEnd offset directly
+    # from the constructor, however, the default month is March.
+    # We follow that behavior here.
+    _default_month = 3
+    _freq = 'Q'
+    _day_option = 'end'
+
+    def rollforward(self, date):
+        """Roll date forward to nearest end of quarter"""
+        if self.onOffset(date):
+            return date
+        else:
+            return date + QuarterEnd(month=self.month)
+
+    def rollback(self, date):
+        """Roll date backward to nearest end of quarter"""
+        if self.onOffset(date):
+            return date
+        else:
+            return date - QuarterEnd(month=self.month)
+
+
 class YearOffset(BaseCFTimeOffset):
     _freq = None  # type: ClassVar[str]
     _day_option = None  # type: ClassVar[str]
@@ -260,29 +456,13 @@ class YearOffset(BaseCFTimeOffset):
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
-        if month is None:
-            self.month = self._default_month
-        else:
-            self.month = month
-        if not isinstance(self.month, int):
-            raise TypeError("'self.month' must be an integer value between 1 "
-                            "and 12.  Instead, it was set to a value of "
-                            "{!r}".format(self.month))
-        elif not (1 <= self.month <= 12):
-            raise ValueError("'self.month' must be an integer value between 1 "
-                             "and 12.  Instead, it was set to a value of "
-                             "{!r}".format(self.month))
+        self.month = _validate_month(month, self._default_month)
 
     def __apply__(self, other):
-        if self._day_option == 'start':
-            reference_day = 1
-        elif self._day_option == 'end':
-            reference_day = _days_in_month(other)
-        else:
-            raise ValueError(self._day_option)
+        reference_day = _get_day_of_month(other, self._day_option)
         years = _adjust_n_years(other, self.n, self.month, reference_day)
         months = years * 12 + (self.month - other.month)
-        return _shift_months(other, months, self._day_option)
+        return _shift_month(other, months, self._day_option)
 
     def __sub__(self, other):
         import cftime
@@ -358,29 +538,41 @@ class YearEnd(YearOffset):
 class Day(BaseCFTimeOffset):
     _freq = 'D'
 
+    def as_timedelta(self):
+        return timedelta(days=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(days=self.n)
+        return other + self.as_timedelta()
 
 
 class Hour(BaseCFTimeOffset):
     _freq = 'H'
 
+    def as_timedelta(self):
+        return timedelta(hours=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(hours=self.n)
+        return other + self.as_timedelta()
 
 
 class Minute(BaseCFTimeOffset):
     _freq = 'T'
 
+    def as_timedelta(self):
+        return timedelta(minutes=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(minutes=self.n)
+        return other + self.as_timedelta()
 
 
 class Second(BaseCFTimeOffset):
     _freq = 'S'
 
+    def as_timedelta(self):
+        return timedelta(seconds=self.n)
+
     def __apply__(self, other):
-        return other + timedelta(seconds=self.n)
+        return other + self.as_timedelta()
 
 
 _FREQUENCIES = {
@@ -388,6 +580,8 @@ _FREQUENCIES = {
     'AS': YearBegin,
     'Y': YearEnd,
     'YS': YearBegin,
+    'Q': partial(QuarterEnd, month=12),
+    'QS': partial(QuarterBegin, month=1),
     'M': MonthEnd,
     'MS': MonthBegin,
     'D': Day,
@@ -418,13 +612,42 @@ _FREQUENCIES = {
     'A-SEP': partial(YearEnd, month=9),
     'A-OCT': partial(YearEnd, month=10),
     'A-NOV': partial(YearEnd, month=11),
-    'A-DEC': partial(YearEnd, month=12)
+    'A-DEC': partial(YearEnd, month=12),
+    'QS-JAN': partial(QuarterBegin, month=1),
+    'QS-FEB': partial(QuarterBegin, month=2),
+    'QS-MAR': partial(QuarterBegin, month=3),
+    'QS-APR': partial(QuarterBegin, month=4),
+    'QS-MAY': partial(QuarterBegin, month=5),
+    'QS-JUN': partial(QuarterBegin, month=6),
+    'QS-JUL': partial(QuarterBegin, month=7),
+    'QS-AUG': partial(QuarterBegin, month=8),
+    'QS-SEP': partial(QuarterBegin, month=9),
+    'QS-OCT': partial(QuarterBegin, month=10),
+    'QS-NOV': partial(QuarterBegin, month=11),
+    'QS-DEC': partial(QuarterBegin, month=12),
+    'Q-JAN': partial(QuarterEnd, month=1),
+    'Q-FEB': partial(QuarterEnd, month=2),
+    'Q-MAR': partial(QuarterEnd, month=3),
+    'Q-APR': partial(QuarterEnd, month=4),
+    'Q-MAY': partial(QuarterEnd, month=5),
+    'Q-JUN': partial(QuarterEnd, month=6),
+    'Q-JUL': partial(QuarterEnd, month=7),
+    'Q-AUG': partial(QuarterEnd, month=8),
+    'Q-SEP': partial(QuarterEnd, month=9),
+    'Q-OCT': partial(QuarterEnd, month=10),
+    'Q-NOV': partial(QuarterEnd, month=11),
+    'Q-DEC': partial(QuarterEnd, month=12)
 }
 
 
 _FREQUENCY_CONDITION = '|'.join(_FREQUENCIES.keys())
 _PATTERN = r'^((?P<multiple>\d+)|())(?P<freq>({0}))$'.format(
     _FREQUENCY_CONDITION)
+
+
+# pandas defines these offsets as "Tick" objects, which for instance have
+# distinct behavior from monthly or longer frequencies in resample.
+CFTIME_TICKS = (Day, Hour, Minute, Second)
 
 
 def to_offset(freq):
@@ -607,64 +830,93 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     Valid simple frequency strings for use with ``cftime``-calendars include
     any multiples of the following.
 
-    +--------+-----------------------+
-    | Alias  | Description           |
-    +========+=======================+
-    | A, Y   | Year-end frequency    |
-    +--------+-----------------------+
-    | AS, YS | Year-start frequency  |
-    +--------+-----------------------+
-    | M      | Month-end frequency   |
-    +--------+-----------------------+
-    | MS     | Month-start frequency |
-    +--------+-----------------------+
-    | D      | Day frequency         |
-    +--------+-----------------------+
-    | H      | Hour frequency        |
-    +--------+-----------------------+
-    | T, min | Minute frequency      |
-    +--------+-----------------------+
-    | S      | Second frequency      |
-    +--------+-----------------------+
+    +--------+--------------------------+
+    | Alias  | Description              |
+    +========+==========================+
+    | A, Y   | Year-end frequency       |
+    +--------+--------------------------+
+    | AS, YS | Year-start frequency     |
+    +--------+--------------------------+
+    | Q      | Quarter-end frequency    |
+    +--------+--------------------------+
+    | QS     | Quarter-start frequency  |
+    +--------+--------------------------+
+    | M      | Month-end frequency      |
+    +--------+--------------------------+
+    | MS     | Month-start frequency    |
+    +--------+--------------------------+
+    | D      | Day frequency            |
+    +--------+--------------------------+
+    | H      | Hour frequency           |
+    +--------+--------------------------+
+    | T, min | Minute frequency         |
+    +--------+--------------------------+
+    | S      | Second frequency         |
+    +--------+--------------------------+
 
     Any multiples of the following anchored offsets are also supported.
 
-    +----------+-------------------------------------------------------------------+
-    | Alias    | Description                                                       |
-    +==========+===================================================================+
-    | A(S)-JAN | Annual frequency, anchored at the end (or beginning) of January   |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-FEB | Annual frequency, anchored at the end (or beginning) of February  |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-MAR | Annual frequency, anchored at the end (or beginning) of March     |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-APR | Annual frequency, anchored at the end (or beginning) of April     |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-MAY | Annual frequency, anchored at the end (or beginning) of May       |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-JUN | Annual frequency, anchored at the end (or beginning) of June      |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-JUL | Annual frequency, anchored at the end (or beginning) of July      |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-AUG | Annual frequency, anchored at the end (or beginning) of August    |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-SEP | Annual frequency, anchored at the end (or beginning) of September |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-OCT | Annual frequency, anchored at the end (or beginning) of October   |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-NOV | Annual frequency, anchored at the end (or beginning) of November  |
-    +----------+-------------------------------------------------------------------+
-    | A(S)-DEC | Annual frequency, anchored at the end (or beginning) of December  |
-    +----------+-------------------------------------------------------------------+
+    +----------+--------------------------------------------------------------------+
+    | Alias    | Description                                                        |
+    +==========+====================================================================+
+    | A(S)-JAN | Annual frequency, anchored at the end (or beginning) of January    |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-FEB | Annual frequency, anchored at the end (or beginning) of February   |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-MAR | Annual frequency, anchored at the end (or beginning) of March      |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-APR | Annual frequency, anchored at the end (or beginning) of April      |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-MAY | Annual frequency, anchored at the end (or beginning) of May        |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-JUN | Annual frequency, anchored at the end (or beginning) of June       |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-JUL | Annual frequency, anchored at the end (or beginning) of July       |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-AUG | Annual frequency, anchored at the end (or beginning) of August     |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-SEP | Annual frequency, anchored at the end (or beginning) of September  |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-OCT | Annual frequency, anchored at the end (or beginning) of October    |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-NOV | Annual frequency, anchored at the end (or beginning) of November   |
+    +----------+--------------------------------------------------------------------+
+    | A(S)-DEC | Annual frequency, anchored at the end (or beginning) of December   |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-JAN | Quarter frequency, anchored at the end (or beginning) of January   |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-FEB | Quarter frequency, anchored at the end (or beginning) of February  |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-MAR | Quarter frequency, anchored at the end (or beginning) of March     |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-APR | Quarter frequency, anchored at the end (or beginning) of April     |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-MAY | Quarter frequency, anchored at the end (or beginning) of May       |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-JUN | Quarter frequency, anchored at the end (or beginning) of June      |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-JUL | Quarter frequency, anchored at the end (or beginning) of July      |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-AUG | Quarter frequency, anchored at the end (or beginning) of August    |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-SEP | Quarter frequency, anchored at the end (or beginning) of September |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-OCT | Quarter frequency, anchored at the end (or beginning) of October   |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-NOV | Quarter frequency, anchored at the end (or beginning) of November  |
+    +----------+--------------------------------------------------------------------+
+    | Q(S)-DEC | Quarter frequency, anchored at the end (or beginning) of December  |
+    +----------+--------------------------------------------------------------------+
+
 
     Finally, the following calendar aliases are supported.
 
     +--------------------------------+---------------------------------------+
     | Alias                          | Date type                             |
     +================================+=======================================+
-    | standard, proleptic_gregorian  | ``cftime.DatetimeProlepticGregorian`` |
+    | standard, gregorian            | ``cftime.DatetimeGregorian``          |
     +--------------------------------+---------------------------------------+
-    | gregorian                      | ``cftime.DatetimeGregorian``          |
+    | proleptic_gregorian            | ``cftime.DatetimeProlepticGregorian`` |
     +--------------------------------+---------------------------------------+
     | noleap, 365_day                | ``cftime.DatetimeNoLeap``             |
     +--------------------------------+---------------------------------------+

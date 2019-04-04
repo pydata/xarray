@@ -375,12 +375,6 @@ def test_groupby(da):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-def test_resample_error(da):
-    with pytest.raises(NotImplementedError, match='to_datetimeindex'):
-        da.resample(time='Y')
-
-
 SEL_STRING_OR_LIST_TESTS = {
     'string': '0001',
     'string-slice': slice('0001-01-01', '0001-12-30'),  # type: ignore
@@ -586,6 +580,14 @@ def test_indexing_in_series_iloc(series, index):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_series_dropna(index):
+    series = pd.Series([0., 1., np.nan, np.nan], index=index)
+    expected = series.iloc[:2]
+    result = series.dropna()
+    assert result.equals(expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_indexing_in_dataframe_loc(df, index, scalar_args, range_args):
     expected = pd.Series([1], name=index[0])
     for arg in scalar_args:
@@ -696,6 +698,26 @@ def test_cftimeindex_sub_cftimeindex(calendar):
     b = a.shift(2, 'D')
     result = b - a
     expected = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
+    assert result.equals(expected)
+    assert isinstance(result, pd.TimedeltaIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('calendar', _CFTIME_CALENDARS)
+def test_cftimeindex_sub_cftime_datetime(calendar):
+    a = xr.cftime_range('2000', periods=5, calendar=calendar)
+    result = a - a[0]
+    expected = pd.TimedeltaIndex([timedelta(days=i) for i in range(5)])
+    assert result.equals(expected)
+    assert isinstance(result, pd.TimedeltaIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('calendar', _CFTIME_CALENDARS)
+def test_cftime_datetime_sub_cftimeindex(calendar):
+    a = xr.cftime_range('2000', periods=5, calendar=calendar)
+    result = a[0] - a
+    expected = pd.TimedeltaIndex([timedelta(days=-i) for i in range(5)])
     assert result.equals(expected)
     assert isinstance(result, pd.TimedeltaIndex)
 

@@ -1,8 +1,8 @@
 import functools
 import itertools
+import typing
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
-from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
@@ -15,9 +15,14 @@ from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type, integer_types
-from .utils import (OrderedSet, either_dict_or_kwargs,
-                    decode_numpy_dict_values, ensure_us_time_resolution)
+from .pycompat import TYPE_CHECKING, dask_array_type, integer_types
+from .utils import (
+    OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
+    ensure_us_time_resolution)
+
+if TYPE_CHECKING:
+    from typing import Tuple, Type, Union
+
 
 try:
     import dask.array as da
@@ -38,7 +43,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None):
+def as_variable(obj, name=None) -> 'Union[Variable, IndexVariable]':
     """Convert an object into a Variable.
 
     Parameters
@@ -1133,8 +1138,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         Notes
         -----
-        Although this operation returns a view of this variable's data, it is
-        not lazy -- the data will be fully loaded.
+        This operation returns a view of this variable's data. It is
+        lazy for dask-backed Variables but not for numpy-backed Variables.
 
         See Also
         --------
@@ -1361,8 +1366,11 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         if dim is not None:
             axis = self.get_axis_num(dim)
-        data = func(self.data if allow_lazy else self.values,
-                    axis=axis, **kwargs)
+        input_data = self.data if allow_lazy else self.values
+        if axis is not None:
+            data = func(input_data, axis=axis, **kwargs)
+        else:
+            data = func(input_data, **kwargs)
 
         if getattr(data, 'shape', ()) == self.shape:
             dims = self.dims
@@ -1594,7 +1602,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                             "prior to calling this method.")
 
         axis = self.get_axis_num(dim)
-        func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
+        func = bn.nanrankdata if self.dtype.kind == 'f' else bn.rankdata
         ranked = func(self.data, axis=axis)
         if pct:
             count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
@@ -1781,6 +1789,14 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 self.values = f(self_data, other_data)
             return self
         return func
+
+    def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
+        """ A (private) method to convert datetime array to numeric dtype
+        See duck_array_ops.datetime_to_numeric
+        """
+        numeric_array = duck_array_ops.datetime_to_numeric(
+            self.data, offset, datetime_unit, dtype)
+        return type(self)(self.dims, numeric_array, self._attrs)
 
 
 ops.inject_all_ops_and_reduce_methods(Variable)
