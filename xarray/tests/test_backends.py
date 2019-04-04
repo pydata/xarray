@@ -1437,7 +1437,7 @@ class ZarrBase(CFEncodedBase):
         open_kwargs = {'chunks': chunks, 'overwrite_encoded_chunks': True}
         with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
             for k, v in actual.variables.items():
-                    assert v.chunks == rechunked[k].chunks
+                assert v.chunks == rechunked[k].chunks
 
             with self.roundtrip(actual) as auto:
                 # encoding should have changed
