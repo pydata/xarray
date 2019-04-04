@@ -3356,11 +3356,14 @@ class TestRasterio(object):
         import rasterio
         with create_tmp_geotiff() as (tmp_file, expected):
             with rasterio.open(tmp_file) as src:
-                # Estimate the transform, width and height for a change of resolution
+                # Estimate the transform, width and height
+                # for a change of resolution
                 # tmp_file initial res is (1000,2000) (default values)
-                transform, width, height = rasterio.warp.calculate_default_transform(
-                    src.crs, src.crs, src.width, src.height, resolution=500, *src.bounds)
-                with rasterio.vrt.WarpedVRT(src, transform=transform, width=width, height=height) as vrt:
+                trans, w, h = rasterio.warp.calculate_default_transform(
+                    src.crs, src.crs, src.width, src.height,
+                    resolution=500, *src.bounds)
+                with rasterio.vrt.WarpedVRT(src, transform=trans,
+                                            width=w, height=h) as vrt:
                     expected_shape = (vrt.width, vrt.height)
                     expected_res = vrt.res
                     expected_transform = vrt.transform
