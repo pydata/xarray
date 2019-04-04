@@ -33,6 +33,8 @@ Bug fixes
   By `Andras Gefferth <https://github.com/kefirbandi>`_.
 - ``swap_dims`` would create incorrect ``indexes`` (:issue:`2842`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- open_rasterio() now supports rasterio.vrt.WarpedVRT with custom transform, width and height (:issue:`2864`).
+  By `Julien Michel <https://github.com/jmichel-otb>`_.
 
 .. _whats-new.0.12.0:
 
