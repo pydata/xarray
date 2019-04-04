@@ -52,6 +52,7 @@ Documentation
 * :doc:`reshaping`
 * :doc:`combining`
 * :doc:`time-series`
+* :doc:`weather-climate`
 * :doc:`pandas`
 * :doc:`io`
 * :doc:`dask`
@@ -70,6 +71,7 @@ Documentation
    reshaping
    combining
    time-series
+   weather-climate
    pandas
    io
    dask
@@ -138,7 +140,7 @@ to supporting the open source scientific computing community. If you like
 Xarray and want to support our mission, please consider making a donation_
 to support our efforts.
 
-.. _donation: https://www.flipcause.com/secure/cause_pdetails/NDE2NTU=
+.. _donation: https://numfocus.salsalabs.org/donate-to-xarray/
 
 
 History

@@ -3,6 +3,7 @@ import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
+import sys
 
 import numpy as np
 import pandas as pd
@@ -1303,7 +1304,7 @@ class TestDataArray(object):
                           coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
 
-        with raises_regex(ValueError, 'dim should be str or'):
+        with raises_regex(TypeError, 'dim should be str or'):
             array.expand_dims(0)
         with raises_regex(ValueError, 'lengths of dim and axis'):
             # dims and axis argument should be the same length
@@ -1327,6 +1328,16 @@ class TestDataArray(object):
         # Does not raise an IndexError
         array.expand_dims(dim=['y', 'z'], axis=[2, -4])
         array.expand_dims(dim=['y', 'z'], axis=[2, 3])
+
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3)},
+                          attrs={'key': 'entry'})
+        with pytest.raises(TypeError):
+            array.expand_dims(OrderedDict((("new_dim", 3.2),)))
+
+        # Attempt to use both dim and kwargs
+        with pytest.raises(ValueError):
+            array.expand_dims(OrderedDict((("d", 4),)), e=4)
 
     def test_expand_dims(self):
         array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
@@ -1391,6 +1402,46 @@ class TestDataArray(object):
         assert_identical(expected, actual)
         roundtripped = actual.squeeze(['z'], drop=False)
         assert_identical(array, roundtripped)
+
+    def test_expand_dims_with_greater_dim_size(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3), 'z': 1.0},
+                          attrs={'key': 'entry'})
+        # For python 3.5 and earlier this has to be an ordered dict, to
+        # maintain insertion order.
+        actual = array.expand_dims(
+            OrderedDict((('y', 2), ('z', 1), ('dim_1', ['a', 'b', 'c']))))
+
+        expected_coords = OrderedDict((
+            ('y', [0, 1]), ('z', [1.0]), ('dim_1', ['a', 'b', 'c']),
+            ('x', np.linspace(0, 1, 3)), ('dim_0', range(4))))
+        expected = DataArray(array.values * np.ones([2, 1, 3, 3, 4]),
+                             coords=expected_coords,
+                             dims=list(expected_coords.keys()),
+                             attrs={'key': 'entry'}
+                             ).drop(['y', 'dim_0'])
+        assert_identical(expected, actual)
+
+        # Test with kwargs instead of passing dict to dim arg.
+
+        # TODO: only the code under the if-statement is needed when python 3.5
+        #   is no longer supported.
+        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
+        if python36_plus:
+            other_way = array.expand_dims(dim_1=['a', 'b', 'c'])
+
+            other_way_expected = DataArray(
+                array.values * np.ones([3, 3, 4]),
+                coords={'dim_1': ['a', 'b', 'c'],
+                        'x': np.linspace(0, 1, 3),
+                        'dim_0': range(4), 'z': 1.0},
+                dims=['dim_1', 'x', 'dim_0'],
+                attrs={'key': 'entry'}).drop('dim_0')
+            assert_identical(other_way_expected, other_way)
+        else:
+            # In python 3.5, using dim_kwargs should raise a ValueError.
+            with raises_regex(ValueError, "dim_kwargs isn't"):
+                array.expand_dims(e=["l", "m", "n"])
 
     def test_set_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
@@ -2037,7 +2088,7 @@ class TestDataArray(object):
         with pytest.warns(FutureWarning):
             grouped.sum()
 
-    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.12'),
+    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.13'),
                         reason="not to forget the behavior change")
     def test_groupby_sum_default(self):
         array = self.make_groupby_example_array()
