@@ -212,7 +212,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     # zarr allows unicode, but not variable-length strings, so it's both
     # simpler and more compact to always encode as UTF-8 explicitly.
     # TODO: allow toggling this explicitly via dtype in encoding.
-    coder = coding.strings.EncodedStringCoder(allows_unicode=False)
+    coder = coding.strings.EncodedStringCoder(allows_unicode=True)
     var = coder.encode(var, name=name)
     var = coding.strings.ensure_fixed_length_bytes(var)
 
@@ -507,7 +507,8 @@ def open_zarr(store, group=None, synchronizer=None, chunks='auto',
                                       "dimension %r. This significantly "
                                       "degrades performance. Consider "
                                       "rechunking after loading instead."
-                                      % (chunks[dim], chunk_spec[dim], dim))
+                                      % (chunks[dim], chunk_spec[dim], dim),
+                                      stacklevel=2)
                 chunk_spec[dim] = chunks[dim]
         return chunk_spec
 
