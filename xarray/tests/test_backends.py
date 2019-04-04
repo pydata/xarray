@@ -3350,6 +3350,28 @@ class TestRasterio(object):
                         assert actual_shape == expected_shape
                         assert expected_val.all() == actual_val.all()
 
+    def test_rasterio_vrt_with_transform_and_size(self):
+        # Test open_rasterio() support of WarpedVRT with transform, width and
+        # height (issue #2864)
+        import rasterio
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with rasterio.open(tmp_file) as src:
+                # Estimate the transform, width and height for a change of resolution
+                # tmp_file initial res is (1000,2000) (default values)
+                transform, width, height = rasterio.warp.calculate_default_transform(
+                    src.crs, src.crs, src.width, src.height, resolution=500, *src.bounds)
+                with rasterio.vrt.WarpedVRT(src, transform=transform, width=width, height=height) as vrt:
+                    expected_shape = (vrt.width, vrt.height)
+                    expected_res = vrt.res
+                    expected_transform = vrt.transform
+                    with xr.open_rasterio(vrt) as da:
+                        actual_shape = (da.sizes['x'], da.sizes['y'])
+                        actual_res = da.res
+                        actual_transform = da.transform
+                        assert actual_res == expected_res
+                        assert actual_shape == expected_shape
+                        assert actual_transform == expected_transform
+
     @network
     def test_rasterio_vrt_network(self):
         import rasterio
