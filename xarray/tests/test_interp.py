@@ -291,7 +291,7 @@ def test_errors(use_dask):
     if use_dask:
         da = get_example_data(3)
     else:
-        da = get_example_data(1)
+        da = get_example_data(0)
 
     result = da.interp(x=[-1, 1, 3], kwargs={'fill_value': 0.0})
     assert not np.isnan(result.values).any()

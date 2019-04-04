@@ -13,7 +13,7 @@ from xarray.core.combine import (
     _infer_tile_ids_from_nested_list, _new_tile_id)
 
 from . import (
-    InaccessibleArray, assert_array_equal, assert_combined_tile_ids_equal,
+    InaccessibleArray, assert_array_equal,
     assert_equal, assert_identical, raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
@@ -416,6 +416,13 @@ class TestAutoCombine(object):
                             'y': (('baz', 'z'), [[1, 2]])},
                            {'baz': [100]})
         assert_identical(expected, actual)
+
+
+def assert_combined_tile_ids_equal(dict1, dict2):
+    assert len(dict1) == len(dict2)
+    for k, v in dict1.items():
+        assert k in dict2.keys()
+        assert_equal(dict1[k], dict2[k])
 
 
 class TestTileIDsFromNestedList(object):
