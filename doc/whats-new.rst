@@ -15,8 +15,8 @@ What's New
 
 .. _whats-new.0.12.1:
 
-v0.12.1 (unreleased)
---------------------
+v0.12.1 (4 April 2019)
+----------------------
 
 Enhancements
 ~~~~~~~~~~~~
@@ -24,7 +24,6 @@ Enhancements
 - Allow ``expand_dims`` method to support inserting/broadcasting dimensions
   with size > 1. (:issue:`2710`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
-
 
 Bug fixes
 ~~~~~~~~~
