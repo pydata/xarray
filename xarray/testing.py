@@ -166,23 +166,6 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
         (indexes, defaults)
 
 
-def _assert_indexes_invariants(
-    xarray_obj: Union[DataArray, Dataset, Variable],
-):
-    """Separate helper function for checking indexes invariants only."""
-    if isinstance(xarray_obj, DataArray):
-        if xarray_obj._indexes is not None:
-            _assert_indexes_invariants_checks(
-                xarray_obj._indexes, xarray_obj._coords, xarray_obj.dims)
-    elif isinstance(xarray_obj, Dataset):
-        if xarray_obj._indexes is not None:
-            _assert_indexes_invariants_checks(
-                xarray_obj._indexes, xarray_obj._variables, xarray_obj._dims)
-    else:
-        # no indexes
-        pass
-
-
 def _assert_variable_invariants(var: Variable, name: Hashable = None):
     if name is None:
         name_or_empty = ()  # type: tuple
@@ -212,6 +195,9 @@ def _assert_dataarray_invariants(da: DataArray):
         {k: type(v) for k, v in da._coords.items()}
     for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
+
+    if da._indexes is not None:
+        _assert_indexes_invariants_checks(da._indexes, da._coords, da.dims)
 
     assert da._initialized is True
 
@@ -247,6 +233,9 @@ def _assert_dataset_invariants(ds: Dataset):
                if k in ds._dims), \
         {k: v.dims for k, v in ds._variables.items() if k in ds._dims}
 
+    if ds._indexes is not None:
+        _assert_indexes_invariants_checks(ds._indexes, ds._variables, ds._dims)
+
     assert isinstance(ds._encoding, (type(None), dict))
     assert isinstance(ds._attrs, (type(None), OrderedDict))
     assert ds._initialized is True
@@ -271,5 +260,3 @@ def _assert_internal_invariants(
         raise TypeError(
             '{} is not a supported type for xarray invariant checks'
             .format(type(xarray_obj)))
-
-    _assert_indexes_invariants(xarray_obj)
