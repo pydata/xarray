@@ -185,7 +185,7 @@ def source_ndarray(array):
 # invariants
 # TODO: add more invariant checks.
 
-def assert_equal(a, b, *, check_invariants=False):
+def assert_equal(a, b, *, check_invariants=True):
     xarray.testing.assert_equal(a, b)
     if check_invariants:
         xarray.testing._assert_internal_invariants(a)
@@ -195,7 +195,7 @@ def assert_equal(a, b, *, check_invariants=False):
         xarray.testing._assert_indexes_invariants(b)
 
 
-def assert_identical(a, b, *, check_invariants=False):
+def assert_identical(a, b, *, check_invariants=True):
     xarray.testing.assert_identical(a, b)
     if check_invariants:
         xarray.testing._assert_internal_invariants(a)
@@ -205,7 +205,7 @@ def assert_identical(a, b, *, check_invariants=False):
         xarray.testing._assert_indexes_invariants(b)
 
 
-def assert_allclose(a, b, *, check_invariants=False, **kwargs):
+def assert_allclose(a, b, *, check_invariants=True, **kwargs):
     xarray.testing.assert_allclose(a, b, **kwargs)
     if check_invariants:
         xarray.testing._assert_internal_invariants(a)

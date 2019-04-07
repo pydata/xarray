@@ -1,11 +1,15 @@
 """Testing functions exposed to the user API"""
 from collections import OrderedDict
+from typing import Hashable, Union
 
 import numpy as np
 import pandas as pd
 
 from xarray.core import duck_array_ops
 from xarray.core import formatting
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.variable import IndexVariable, Variable
 from xarray.core.indexes import default_indexes
 
 
@@ -49,12 +53,11 @@ def assert_equal(a, b):
     assert_identical, assert_allclose, Dataset.equals, DataArray.equals,
     numpy.testing.assert_array_equal
     """
-    import xarray as xr
     __tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)  # noqa
-    if isinstance(a, (xr.Variable, xr.DataArray)):
+    if isinstance(a, (Variable, DataArray)):
         assert a.equals(b), formatting.diff_array_repr(a, b, 'equals')
-    elif isinstance(a, xr.Dataset):
+    elif isinstance(a, Dataset):
         assert a.equals(b), formatting.diff_dataset_repr(a, b, 'equals')
     else:
         raise TypeError('{} not supported by assertion comparison'
@@ -78,15 +81,14 @@ def assert_identical(a, b):
     --------
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
-    import xarray as xr
     __tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)  # noqa
-    if isinstance(a, xr.Variable):
+    if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, 'identical')
-    elif isinstance(a, xr.DataArray):
+    elif isinstance(a, DataArray):
         assert a.name == b.name
         assert a.identical(b), formatting.diff_array_repr(a, b, 'identical')
-    elif isinstance(a, (xr.Dataset, xr.Variable)):
+    elif isinstance(a, (Dataset, Variable)):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, 'identical')
     else:
         raise TypeError('{} not supported by assertion comparison'
@@ -118,15 +120,14 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     --------
     assert_identical, assert_equal, numpy.testing.assert_allclose
     """
-    import xarray as xr
     __tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)  # noqa
     kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
-    if isinstance(a, xr.Variable):
+    if isinstance(a, Variable):
         assert a.dims == b.dims
         allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
         assert allclose, '{}\n{}'.format(a.values, b.values)
-    elif isinstance(a, xr.DataArray):
+    elif isinstance(a, DataArray):
         assert_allclose(a.variable, b.variable, **kwargs)
         assert set(a.coords) == set(b.coords)
         for v in a.coords.variables:
@@ -136,7 +137,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
                                                b.coords[v].values, **kwargs)
             assert allclose, '{}\n{}'.format(a.coords[v].values,
                                              b.coords[v].values)
-    elif isinstance(a, xr.Dataset):
+    elif isinstance(a, Dataset):
         assert set(a.data_vars) == set(b.data_vars)
         assert set(a.coords) == set(b.coords)
         for k in list(a.variables) + list(a.coords):
@@ -148,14 +149,12 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
 
 
 def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
-    import xarray as xr
-
     assert isinstance(indexes, OrderedDict), indexes
     assert all(isinstance(v, pd.Index) for v in indexes.values()), \
         {k: type(v) for k, v in indexes.items()}
 
     index_vars = {k for k, v in possible_coord_variables.items()
-                  if isinstance(v, xr.IndexVariable)}
+                  if isinstance(v, IndexVariable)}
     assert indexes.keys() <= index_vars, (set(indexes), index_vars)
 
     # Note: when we support non-default indexes, these checks should be opt-in
@@ -167,98 +166,108 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
         (indexes, defaults)
 
 
-def _assert_indexes_invariants(a):
+def _assert_indexes_invariants(
+    xarray_obj: Union[DataArray, Dataset, Variable],
+):
     """Separate helper function for checking indexes invariants only."""
-    import xarray as xr
-
-    if isinstance(a, xr.DataArray):
-        if a._indexes is not None:
-            _assert_indexes_invariants_checks(a._indexes, a._coords, a.dims)
-    elif isinstance(a, xr.Dataset):
-        if a._indexes is not None:
+    if isinstance(xarray_obj, DataArray):
+        if xarray_obj._indexes is not None:
             _assert_indexes_invariants_checks(
-                a._indexes, a._variables, a._dims)
-    elif isinstance(a, xr.Variable):
+                xarray_obj._indexes, xarray_obj._coords, xarray_obj.dims)
+    elif isinstance(xarray_obj, Dataset):
+        if xarray_obj._indexes is not None:
+            _assert_indexes_invariants_checks(
+                xarray_obj._indexes, xarray_obj._variables, xarray_obj._dims)
+    else:
         # no indexes
         pass
 
 
-def _assert_variable_invariants(a, name=None):
-    name_or_empty = (name,) if name is not None else ()
-    assert isinstance(a._dims, tuple), name_or_empty + (a._dims,)
-    assert len(a._dims) == len(a._data.shape), \
-        name_or_empty + (a._dims, a._data.shape)
-    assert isinstance(a._encoding, (type(None), dict)), \
-        name_or_empty + (a._encoding,)
-    assert isinstance(a._attrs, (type(None), OrderedDict)), \
-        name_or_empty + (a._attrs,)
+def _assert_variable_invariants(var: Variable, name: Hashable = None):
+    if name is None:
+        name_or_empty = ()  # type: tuple
+    else:
+        name_or_empty = (name,)
+    assert isinstance(var._dims, tuple), name_or_empty + (var._dims,)
+    assert len(var._dims) == len(var._data.shape), \
+        name_or_empty + (var._dims, var._data.shape)
+    assert isinstance(var._encoding, (type(None), dict)), \
+        name_or_empty + (var._encoding,)
+    assert isinstance(var._attrs, (type(None), OrderedDict)), \
+        name_or_empty + (var._attrs,)
 
 
-def _assert_dataarray_invariants(a):
-    import xarray as xr
+def _assert_dataarray_invariants(da: DataArray):
+    assert isinstance(da._variable, Variable), da._variable
+    _assert_variable_invariants(da._variable)
 
-    assert isinstance(a._variable, xr.Variable), a._variable
-    _assert_variable_invariants(a._variable)
-
-    assert isinstance(a._coords, OrderedDict), a._coords
+    assert isinstance(da._coords, OrderedDict), da._coords
     assert all(
-        isinstance(v, xr.Variable) for v in a._coords.values()), a._coords
-    assert all(set(v.dims) <= set(a.dims) for v in a._coords.values()), \
-        (a.dims, {k: v.dims for k, v in a._coords.items()})
-    assert all(isinstance(v, xr.IndexVariable)
-               for (k, v) in a._coords.items()
+        isinstance(v, Variable) for v in da._coords.values()), da._coords
+    assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), \
+        (da.dims, {k: v.dims for k, v in da._coords.items()})
+    assert all(isinstance(v, IndexVariable)
+               for (k, v) in da._coords.items()
                if v.dims == (k,)), \
-        {k: type(v) for k, v in a._coords.items()}
-    for k, v in a._coords.items():
+        {k: type(v) for k, v in da._coords.items()}
+    for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
 
-    assert a._initialized is True
+    assert da._initialized is True
 
 
-def _assert_dataset_invariants(a):
-    import xarray as xr
-
-    assert isinstance(a._variables, OrderedDict), type(a._variables)
+def _assert_dataset_invariants(ds: Dataset):
+    assert isinstance(ds._variables, OrderedDict), type(ds._variables)
     assert all(
-        isinstance(v, xr.Variable) for v in a._variables.values()), \
-        a._variables
-    for k, v in a._variables.items():
+        isinstance(v, Variable) for v in ds._variables.values()), \
+        ds._variables
+    for k, v in ds._variables.items():
         _assert_variable_invariants(v, k)
 
-    assert isinstance(a._coord_names, set), a._coord_names
-    assert a._coord_names <= a._variables.keys(), \
-        (a._coord_names, set(a._variables))
+    assert isinstance(ds._coord_names, set), ds._coord_names
+    assert ds._coord_names <= ds._variables.keys(), \
+        (ds._coord_names, set(ds._variables))
 
-    assert type(a._dims) is dict, a._dims
-    assert all(isinstance(v, int) for v in a._dims.values()), a._dims
-    var_dims = set.union(*[set(v.dims) for v in a._variables.values()])
-    assert a._dims.keys() == var_dims, (set(a._dims), var_dims)
-    assert all(a._dims[k] == v.sizes[k]
-               for v in a._variables.values()
+    assert type(ds._dims) is dict, ds._dims
+    assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
+    var_dims = set.union(*[set(v.dims) for v in ds._variables.values()])
+    assert ds._dims.keys() == var_dims, (set(ds._dims), var_dims)
+    assert all(ds._dims[k] == v.sizes[k]
+               for v in ds._variables.values()
                for k in v.sizes), \
-        (a._dims, {k: v.sizes for k, v in a._variables.items()})
+        (ds._dims, {k: v.sizes for k, v in ds._variables.items()})
+    assert all(isinstance(v, IndexVariable)
+               for (k, v) in ds._variables.items()
+               if v.dims == (k,)), \
+        {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
+    assert all(v.dims == (k,)
+               for (k, v) in ds._variables.items()
+               if k in ds._dims), \
+        {k: v.dims for k, v in ds._variables.items() if k in ds._dims}
 
-    assert isinstance(a._encoding, (type(None), dict))
-    assert isinstance(a._attrs, (type(None), OrderedDict))
-    assert a._initialized is True
+    assert isinstance(ds._encoding, (type(None), dict))
+    assert isinstance(ds._attrs, (type(None), OrderedDict))
+    assert ds._initialized is True
 
 
-def _assert_internal_invariants(a):
+def _assert_internal_invariants(
+    xarray_obj: Union[DataArray, Dataset, Variable],
+):
     """Validate that an xarray object satisfies its own internal invariants.
 
     This exists for the benefit of xarray's own test suite, but may be useful
     in external projects if they (ill-advisedly) create objects using xarray's
     private APIs.
     """
-    import xarray as xr
-    if isinstance(a, xr.Variable):
-        _assert_variable_invariants(a)
-    elif isinstance(a, xr.DataArray):
-        _assert_dataarray_invariants(a)
-    elif isinstance(a, xr.Dataset):
-        _assert_dataset_invariants(a)
+    if isinstance(xarray_obj, Variable):
+        _assert_variable_invariants(xarray_obj)
+    elif isinstance(xarray_obj, DataArray):
+        _assert_dataarray_invariants(xarray_obj)
+    elif isinstance(xarray_obj, Dataset):
+        _assert_dataset_invariants(xarray_obj)
     else:
-        raise TypeError('{} not supported by assertion comparison'
-                        .format(type(a)))
+        raise TypeError(
+            '{} is not a supported type for xarray invariant checks'
+            .format(type(xarray_obj)))
 
-    _assert_indexes_invariants(a)
+    _assert_indexes_invariants(xarray_obj)
