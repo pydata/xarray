@@ -467,7 +467,7 @@ def merge_core(objs,
                          'coordinates or not in the merged result: %s'
                          % ambiguous_coords)
 
-    return variables, coord_names, dict(dims)
+    return variables, coord_names, dims
 
 
 def merge(objects, compat='no_conflicts', join='outer'):

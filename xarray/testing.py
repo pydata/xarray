@@ -230,7 +230,9 @@ def _assert_dataset_invariants(ds: Dataset):
 
     assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
-    var_dims = set.union(*[set(v.dims) for v in ds._variables.values()])
+    var_dims = set()  # type: set
+    for v in ds._variables.values():
+        var_dims.update(v.dims)
     assert ds._dims.keys() == var_dims, (set(ds._dims), var_dims)
     assert all(ds._dims[k] == v.sizes[k]
                for v in ds._variables.values()

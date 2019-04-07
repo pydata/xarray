@@ -2677,6 +2677,11 @@ class TestDataset(object):
         assert set(data.variables) == all_items - set(['var1', 'numbers'])
         assert 'numbers' not in data.coords
 
+        expected = Dataset()
+        actual = Dataset({'y': ('x', [1, 2])})
+        del actual['y']
+        assert_identical(expected, actual)
+
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
         for args in [[], [['x']], [['x', 'z']]]:

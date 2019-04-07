@@ -183,7 +183,6 @@ def source_ndarray(array):
 
 # Internal versions of xarray's test functions that validate additional
 # invariants
-# TODO: add more invariant checks.
 
 def assert_equal(a, b, *, check_invariants=True):
     xarray.testing.assert_equal(a, b)

@@ -101,7 +101,7 @@ def calculate_dimensions(variables):
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = OrderedDict()
+    dims = {}
     last_used = {}
     scalar_vars = set(k for k, v in variables.items() if not v.dims)
     for k, var in variables.items():
@@ -693,7 +693,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @classmethod
     def _from_vars_and_coord_names(cls, variables, coord_names, attrs=None):
-        dims = dict(calculate_dimensions(variables))
+        dims = calculate_dimensions(variables)
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
     # TODO(shoyer): renable type checking on this signature when pytype has a
@@ -754,18 +754,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names: set = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Any, pd.Index]]' = __default,
+        encoding: Optional[dict] = __default,
         inplace: bool = False,
     ) -> T:
         """Replace variables with recalculated dimensions."""
-        dims = dict(calculate_dimensions(variables))
+        dims = calculate_dimensions(variables)
         return self._replace(
-            variables, coord_names, dims, attrs, indexes, inplace=inplace)
+            variables, coord_names, dims, attrs, indexes, encoding,
+            inplace=inplace)
 
     def _replace_vars_and_dims(  # type: ignore
         self: T,
         variables: 'OrderedDict[Any, Variable]' = None,
         coord_names: set = None,
-        dims: 'OrderedDict[Any, int]' = None,
+        dims: Dict[Any, int] = None,
         attrs: 'Optional[OrderedDict]' = __default,
         inplace: bool = False,
     ) -> T:
@@ -1081,6 +1083,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         del self._variables[key]
         self._coord_names.discard(key)
+        self._dims = calculate_dimensions(self._variables)
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
@@ -2463,7 +2466,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             else:
                 # If dims includes a label of a non-dimension coordinate,
                 # it will be promoted to a 1D coordinate with a single value.
-                variables[k] = v.set_dims(k)
+                variables[k] = v.set_dims(k).to_index_variable()
 
         new_dims = self._dims.copy()
         new_dims.update(dim)
@@ -3548,12 +3551,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _unary_op(f, keep_attrs=False):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            ds = self.coords.to_dataset()
-            for k in self.data_vars:
-                ds._variables[k] = f(self._variables[k], *args, **kwargs)
-            if keep_attrs:
-                ds._attrs = self._attrs
-            return ds
+            variables = OrderedDict()
+            for k, v in self._variables.items():
+                if k in self._coord_names:
+                    variables[k] = v
+                else:
+                    variables[k] = f(v, *args, **kwargs)
+            attrs = self._attrs if keep_attrs else None
+            return self._replace_with_new_dims(
+                variables, attrs=attrs, encoding=None)
 
         return func
 
