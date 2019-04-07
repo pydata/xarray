@@ -15,45 +15,61 @@ Why is pandas not enough?
 -------------------------
 
 pandas is a fantastic library for analysis of low-dimensional labelled data -
-if it can be sensibly described as "rows and columns", pandas is probably the
-right choice.  However, sometimes we want to use higher dimensional arrays
-(`ndim > 2`), or arrays for which the order of dimensions (e.g., columns vs
-rows) shouldn't really matter. For example, the images of a movie can be
-natively represented as an array with four dimensions: time, row, column and
-color.
+if data can be sensibly described as "rows and columns", pandas is probably the
+right choice.  However, xarray has some distinct advantages: higher dimensionality
+and an explicit, production-ready API.
 
-Pandas has historically supported N-dimensional panels, but deprecated them in
-version 0.20 in favor of Xarray data structures.  There are now built-in methods
-on both sides to convert between pandas and Xarray, allowing for more focussed
-development effort.  Xarray objects have a much richer model of dimensionality -
-if you were using Panels:
+Higher dimensionality
+~~~~~~~~~~~~~~~~~~~~~
 
-- You need to create a new factory type for each dimensionality.
-- You can't do math between NDPanels with different dimensionality.
-- Each dimension in a NDPanel has a name (e.g., 'labels', 'items',
-  'major_axis', etc.) but the dimension names refer to order, not their
-  meaning. You can't specify an operation as to be applied along the "time"
-  axis.
-- You often have to manually convert collections of pandas arrays
-  (Series, DataFrames, etc) to have the same number of dimensions.
-  In contrast, this sort of data structure fits very naturally in an
-  xarray ``Dataset``.
-
-You can :ref:`read about switching from Panels to Xarray here <panel transition>`.
+Sometimes we want to use higher dimensional arrays, or arrays for 
+which the names of dimensions have some semantic significance we want to retain.
 Pandas gets a lot of things right, but many science, engineering and complex
 analytics use cases need fully multi-dimensional data structures.
 
-How do xarray data structures differ from those found in pandas?
-----------------------------------------------------------------
+For example, consider the images of a movie, represented as an array of pixels with 
+four dimensions: time, row, column and color; xarray makes working with this 
+much easier than if it were stacked into two dimensions:
 
-The main distinguishing feature of xarray's ``DataArray`` over labeled arrays in
-pandas is that dimensions can have names (e.g., "time", "latitude",
-"longitude"). Names are much easier to keep track of than axis numbers, and
-xarray uses dimension names for indexing, aggregation and broadcasting. Not only
-can you write ``x.sel(time='2000-01-01')`` and  ``x.mean(dim='time')``, but
-operations like ``x - x.mean(dim='time')`` always work, no matter the order
-of the "time" dimension. You never need to reshape arrays (e.g., with
-``np.newaxis``) to align them for arithmetic operations in xarray.
+  - *Name not position*: The dimensions are better represented by their name 
+    than their position. By allowing us to use their names, our code becomes 
+    easier to write and much easier to read; 
+    e.g. ``da.isel(time=0)`` rather than ``da[:, :, 0]``.
+
+  - *Broadcasting*: Xarray can broadcast operations to an array, meaning it
+    applies the operation similarly regardless of the number of dimensions. 
+    This allows our code to be more abstract, requiring far fewer special cases. 
+
+    For example, ``da - 1`` would make every pixel slightly darker, whether 
+    we're dealing with a single or multiple frames, color or B&W, etc. 
+    
+    Similarly ``da - da.mean('row', 'column')`` would normalize the values 
+    based on the mean value in its width and height, again regardless of whether
+    we have a single or multiple frames, color or B&W, etc.
+
+  - *Alignment*: Xarray can package arrays which share some, but not all, of
+    their dimensions in a dataset and align the dimensions they do share. 
+    For example, if we calculated the brightness of our movie images
+    using ``da.mean('row', 'column', 'color')`, we'd have an array with a time
+    dimension. When we add that to a dataset and select the first point in time,
+    ``ds.isel(time=0)``, we'll receive both the frame and the first brightness
+    value. 
+
+    Even following best-pracitices around tidy tabular data, this approach is
+    very difficult to replicate using tabular data.
+
+Pandas previously supported N-dimensional panels, but started removing them in
+version 0.20 in favor of xarray data structures. There are now built-in methods
+on both sides to convert between pandas and xarray, allowing for more focused
+development effort.  You can :ref:`read about switching from Panels to Xarray 
+here <panel transition>`.
+
+Explicit API
+~~~~~~~~~~~~
+
+pandas has the benefit of almost a decade of cumulative improvements, and allows
+a number of . Along with that accumulated experience comes 
+# FIXME finish
 
 
 Should I use xarray instead of pandas?
@@ -64,8 +80,9 @@ back and forth between the tabular data-structures of pandas and its own
 multi-dimensional data-structures.
 
 That said, you should only bother with xarray if some aspect of data is
-fundamentally multi-dimensional. If your data is unstructured or
-one-dimensional, pandas is usually the right choice: it has better performance
+fundamentally multi-dimensional. If your data is unstructured,
+one-dimensional, or `tidy <https://vita.had.co.nz/papers/tidy-data.pdf >`_,
+pandas is usually the right choice: it has better performance
 for common operations such as ``groupby`` and you'll find far more usage
 examples online.
 
