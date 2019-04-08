@@ -1,8 +1,8 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
-from typing import (Callable, Iterable, List, Mapping, MutableMapping,
-                    Optional, Tuple, TypeVar, Union, overload)
+from typing import (Callable, Iterable, List, Mapping, Optional, Tuple,
+                    TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -120,15 +120,8 @@ class AbstractArray(ImplementsArrayReduce):
     def T(self):
         return self.transpose()
 
-    @overload
-    def get_axis_num(self, dim: str) -> int:
-        ...
-
-    @overload  # noqa:F811
-    def get_axis_num(self, dim: Iterable[str]) -> Tuple[int, ...]:
-        ...
-
-    def get_axis_num(self, dim):  # noqa:F811
+    def get_axis_num(self, dim: Union[str, Iterable[str]]
+                     ) -> Union[int, Tuple[int, ...]]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters

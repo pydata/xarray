@@ -9,7 +9,7 @@ import warnings
 from collections import OrderedDict
 from typing import (AbstractSet, Any, Callable, Container, Dict, Iterable,
                     Iterator, Mapping, MutableMapping, MutableSet, Optional,
-                    Sequence, Tuple, TypeVar, ValuesView)
+                    Sequence, Tuple, TypeVar)
 
 import numpy as np
 import pandas as pd
