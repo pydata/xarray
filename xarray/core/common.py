@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
+from typing import (Callable, Iterable, Mapping, Optional, Tuple, TypeVar,
+                    Sequence, Union, overload)
 
 import numpy as np
 import pandas as pd
@@ -13,6 +15,9 @@ from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
+
+
+T = TypeVar('T')
 
 
 class ImplementsArrayReduce(object):
@@ -115,7 +120,15 @@ class AbstractArray(ImplementsArrayReduce):
     def T(self):
         return self.transpose()
 
-    def get_axis_num(self, dim):
+    @overload
+    def get_axis_num(self, dim: str) -> int:
+        pass
+
+    @overload  # noqa:F811
+    def get_axis_num(self, dim: Iterable[str]) -> Tuple[int]:
+        pass
+
+    def get_axis_num(self, dim):  # noqa:F811
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -133,7 +146,7 @@ class AbstractArray(ImplementsArrayReduce):
         else:
             return tuple(self._get_axis_num(d) for d in dim)
 
-    def _get_axis_num(self, dim):
+    def _get_axis_num(self, dim: str) -> int:
         try:
             return self.dims.index(dim)
         except ValueError:
@@ -141,7 +154,7 @@ class AbstractArray(ImplementsArrayReduce):
                              (dim, self.dims))
 
     @property
-    def sizes(self):
+    def sizes(self) -> Frozen[str, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -214,36 +227,38 @@ class AttrAccessMixin(object):
         return list(set(item_lists))
 
 
-def get_squeeze_dims(xarray_obj, dim, axis=None):
+def get_squeeze_dims(xarray_obj, dim: Union[str, Tuple[str, ...], None] = None,
+                     axis: Union[int, Tuple[int, ...], None] = None
+                     ) -> Sequence[str]:
     """Get a list of dimensions to squeeze out.
     """
     if dim is not None and axis is not None:
         raise ValueError('cannot use both parameters `axis` and `dim`')
 
     if dim is None and axis is None:
-        dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
-    else:
-        if isinstance(dim, str):
-            dim = [dim]
-        if isinstance(axis, int):
-            axis = (axis, )
-        if isinstance(axis, tuple):
-            for a in axis:
-                if not isinstance(a, int):
-                    raise ValueError(
-                        'parameter `axis` must be int or tuple of int.')
-            alldims = list(xarray_obj.sizes.keys())
-            dim = [alldims[a] for a in axis]
-        if any(xarray_obj.sizes[k] > 1 for k in dim):
-            raise ValueError('cannot select a dimension to squeeze out '
-                             'which has length greater than one')
+        return [d for d, s in xarray_obj.sizes.items() if s == 1]
+
+    elif isinstance(dim, str):
+        dim = [dim]
+    if isinstance(axis, int):
+        axis = (axis, )
+    if isinstance(axis, tuple):
+        if any(not isinstance(a, int) for a in axis):
+            raise ValueError('parameter `axis` must be int or tuple of int.')
+        alldims = list(xarray_obj.sizes.keys())
+        dim = [alldims[a] for a in axis]
+    if any(xarray_obj.sizes[k] > 1 for k in dim):
+        raise ValueError('cannot select a dimension to squeeze out '
+                         'which has length greater than one')
     return dim
 
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    def squeeze(self, dim=None, drop=False, axis=None):
+    def squeeze(self, dim: Union[str, Tuple[str, ...], None] = None,
+                drop: bool = False,
+                axis: Union[int, Tuple[int, ...], None] = None):
         """Return a new object with squeezed data.
 
         Parameters
@@ -255,8 +270,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         drop : bool, optional
             If ``drop=True``, drop squeezed coordinates instead of making them
             scalar.
-        axis : int, optional
-            Select the dimension to squeeze. Added for compatibility reasons.
+        axis : None or int or tuple of int, optional
+            Like dim, but positional.
 
         Returns
         -------
@@ -271,7 +286,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
-    def get_index(self, key):
+    def get_index(self, key: str) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex
         """
         if key not in self.dims:
@@ -283,7 +298,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             # need to ensure dtype=int64 in case range is empty on Python 2
             return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
-    def _calc_assign_results(self, kwargs):
+    def _calc_assign_results(self, kwargs) -> SortedKeysDict:
         results = SortedKeysDict()
         for k, v in kwargs.items():
             if callable(v):
@@ -372,7 +387,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         out.attrs.update(*args, **kwargs)
         return out
 
-    def pipe(self, func, *args, **kwargs):
+    def pipe(self, func: Union[Callable[..., T], Tuple[Callable[..., T], str]],
+             *args, **kwargs) -> T:
         """
         Apply func(self, *args, **kwargs)
 
@@ -424,15 +440,14 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if isinstance(func, tuple):
             func, target = func
             if target in kwargs:
-                msg = ('%s is both the pipe target and a keyword argument'
-                       % target)
-                raise ValueError(msg)
+                raise ValueError('%s is both the pipe target and a keyword '
+                                 'argument' % target)
             kwargs[target] = self
             return func(*args, **kwargs)
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze=True):
+    def groupby(self, group, squeeze: bool = True):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -478,8 +493,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze)
 
-    def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
-                     include_lowest=False, squeeze=True):
+    def groupby_bins(self, group, bins, right: bool = True, labels=None,
+                     precision: int = 3, include_lowest: bool = False,
+                     squeeze: bool = True):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -530,7 +546,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                              'precision': precision,
                                              'include_lowest': include_lowest})
 
-    def rolling(self, dim=None, min_periods=None, center=False, **dim_kwargs):
+    def rolling(self, dim: Optional[Mapping[str, int]] = None,
+                min_periods: Optional[int] = None, center: bool = False,
+                **dim_kwargs: int):
         """
         Rolling window object.
 
@@ -590,8 +608,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
-    def coarsen(self, dim=None, boundary='exact', side='left',
-                coord_func='mean', **dim_kwargs):
+    def coarsen(self, dim: Optional[Mapping[str, int]] = None,
+                boundary: str = 'exact',
+                side: Union[str, Mapping[str, str]] = 'left',
+                coord_func: str = 'mean',
+                **dim_kwargs: int):
         """
         Coarsen object.
 
@@ -650,8 +671,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
 
-    def resample(self, indexer=None, skipna=None, closed=None, label=None,
-                 base=0, keep_attrs=None, loffset=None, **indexer_kwargs):
+    def resample(self, indexer: Optional[Mapping[str, str]] = None,
+                 skipna=None, closed: Optional[str] = None,
+                 label: Optional[str] = None,
+                 base: int = 0, keep_attrs: Optional[bool] = None,
+                 loffset=None,
+                 **indexer_kwargs: str):
         """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. If any intervals contain no
@@ -772,7 +797,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return resampler
 
-    def where(self, cond, other=dtypes.NA, drop=False):
+    def where(self, cond, other=dtypes.NA, drop: bool = False):
         """Filter elements from this object according to a condition.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -858,7 +883,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
-    def close(self):
+    def close(self) -> None:
         """Close any files linked to this object
         """
         if self._file_obj is not None:
@@ -921,7 +946,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self.close()
 
 
-def full_like(other, fill_value, dtype=None):
+def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -961,7 +986,8 @@ def full_like(other, fill_value, dtype=None):
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
-def _full_like_variable(other, fill_value, dtype=None):
+def _full_like_variable(other, fill_value,
+                        dtype: Union[str, np.dtype, None] = None):
     """Inner function of full_like, where other must be a variable
     """
     from .variable import Variable
@@ -978,27 +1004,28 @@ def _full_like_variable(other, fill_value, dtype=None):
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype=None):
+def zeros_like(other, dtype: Union[str, np.dtype, None] = None):
     """Shorthand for full_like(other, 0, dtype)
     """
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype=None):
+def ones_like(other, dtype: Union[str, np.dtype, None] = None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)
 
 
-def is_np_datetime_like(dtype):
+def is_np_datetime_like(dtype: Union[str, np.dtype]) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types
     """
     return (np.issubdtype(dtype, np.datetime64) or
             np.issubdtype(dtype, np.timedelta64))
 
 
-def _contains_cftime_datetimes(array):
-    """Check if an array contains cftime.datetime objects"""
+def _contains_cftime_datetimes(array) -> bool:
+    """Check if an array contains cftime.datetime objects
+    """
     try:
         from cftime import datetime as cftime_datetime
     except ImportError:
@@ -1015,12 +1042,14 @@ def _contains_cftime_datetimes(array):
             return False
 
 
-def contains_cftime_datetimes(var):
-    """Check if an xarray.Variable contains cftime.datetime objects"""
+def contains_cftime_datetimes(var) -> bool:
+    """Check if an xarray.Variable contains cftime.datetime objects
+    """
     return _contains_cftime_datetimes(var.data)
 
 
-def _contains_datetime_like_objects(var):
+def _contains_datetime_like_objects(var) -> bool:
     """Check if a variable contains datetime like objects (either
-    np.datetime64, np.timedelta64, or cftime.datetime)"""
+    np.datetime64, np.timedelta64, or cftime.datetime)
+    """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
