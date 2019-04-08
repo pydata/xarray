@@ -337,16 +337,10 @@ class Frozen(Mapping[K, V], SingleSlotPickleMixin):
     def __iter__(self) -> Iterator[K]:
         return iter(self.mapping)
 
-    def keys(self) -> AbstractSet[K]:
-        return self.mapping.keys()
-
-    def values(self) -> ValuesView[V]:
-        return self.mapping.values()
-
     def __len__(self) -> int:
         return len(self.mapping)
 
-    def __contains__(self, key: K) -> bool:
+    def __contains__(self, key: object) -> bool:
         return key in self.mapping
 
     def __repr__(self) -> str:
@@ -357,8 +351,7 @@ def FrozenOrderedDict(*args, **kwargs) -> Frozen:
     return Frozen(OrderedDict(*args, **kwargs))
 
 
-class SortedKeysDict(MutableMapping[K, V],
-                     SingleSlotPickleMixin):
+class SortedKeysDict(MutableMapping[K, V], SingleSlotPickleMixin):
     """An wrapper for dictionary-like objects that always iterates over its
     items in sorted order by key but is otherwise equivalent to the underlying
     mapping.
@@ -380,23 +373,14 @@ class SortedKeysDict(MutableMapping[K, V],
     def __iter__(self) -> Iterator[K]:
         return iter(sorted(self.mapping))
 
-    def keys(self) -> AbstractSet[K]:
-        return self.mapping.keys()
-
-    def values(self) -> ValuesView[V]:
-        return self.mapping.values()
-
     def __len__(self) -> int:
         return len(self.mapping)
 
-    def __contains__(self, key: K) -> bool:
+    def __contains__(self, key: object) -> bool:
         return key in self.mapping
 
     def __repr__(self) -> str:
         return '%s(%r)' % (type(self).__name__, self.mapping)
-
-    def copy(self) -> 'SortedKeysDict[K, V]':
-        return type(self)(self.mapping.copy())
 
 
 class OrderedSet(MutableSet[T]):
@@ -408,11 +392,11 @@ class OrderedSet(MutableSet[T]):
     def __init__(self, values: Optional[AbstractSet[T]] = None) -> None:
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
         if values is not None:
-            self |= values
+            self.__ior__(values)
 
     # Required methods for MutableSet
 
-    def __contains__(self, value: T) -> bool:
+    def __contains__(self, value: object) -> bool:
         return value in self._ordered_dict
 
     def __iter__(self) -> Iterator[T]:
@@ -430,7 +414,7 @@ class OrderedSet(MutableSet[T]):
     # Additional methods
 
     def update(self, values: AbstractSet[T]) -> None:
-        self |= values
+        self.__ior__(values)
 
     def __repr__(self) -> str:
         return '%s(%r)' % (type(self).__name__, list(self))

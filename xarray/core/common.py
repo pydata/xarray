@@ -1,8 +1,8 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
-from typing import (Callable, Iterable, Mapping, Optional, Tuple, TypeVar,
-                    Sequence, Union, overload)
+from typing import (Callable, Iterable, List, Mapping, MutableMapping,
+                    Optional, Tuple, TypeVar, Union, overload)
 
 import numpy as np
 import pandas as pd
@@ -122,11 +122,11 @@ class AbstractArray(ImplementsArrayReduce):
 
     @overload
     def get_axis_num(self, dim: str) -> int:
-        pass
+        ...
 
     @overload  # noqa:F811
-    def get_axis_num(self, dim: Iterable[str]) -> Tuple[int]:
-        pass
+    def get_axis_num(self, dim: Iterable[str]) -> Tuple[int, ...]:
+        ...
 
     def get_axis_num(self, dim):  # noqa:F811
         """Return axis number(s) corresponding to dimension(s) in this array.
@@ -154,7 +154,7 @@ class AbstractArray(ImplementsArrayReduce):
                              (dim, self.dims))
 
     @property
-    def sizes(self) -> Frozen[str, int]:
+    def sizes(self) -> Mapping[str, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -227,26 +227,32 @@ class AttrAccessMixin(object):
         return list(set(item_lists))
 
 
-def get_squeeze_dims(xarray_obj, dim: Union[str, Tuple[str, ...], None] = None,
-                     axis: Union[int, Tuple[int, ...], None] = None
-                     ) -> Sequence[str]:
+def get_squeeze_dims(xarray_obj,
+                     dim: Union[str, Iterable[str], None] = None,
+                     axis: Union[int, Iterable[int], None] = None
+                     ) -> List[str]:
     """Get a list of dimensions to squeeze out.
     """
     if dim is not None and axis is not None:
         raise ValueError('cannot use both parameters `axis` and `dim`')
-
     if dim is None and axis is None:
         return [d for d, s in xarray_obj.sizes.items() if s == 1]
 
-    elif isinstance(dim, str):
+    if isinstance(dim, str):
         dim = [dim]
-    if isinstance(axis, int):
-        axis = (axis, )
-    if isinstance(axis, tuple):
+    elif dim is not None:
+        dim = list(dim)
+    else:
+        assert axis is not None
+        if isinstance(axis, int):
+            axis = [axis]
+        axis = list(axis)
         if any(not isinstance(a, int) for a in axis):
-            raise ValueError('parameter `axis` must be int or tuple of int.')
+            raise TypeError(
+                'parameter `axis` must be int or iterable of int.')
         alldims = list(xarray_obj.sizes.keys())
         dim = [alldims[a] for a in axis]
+
     if any(xarray_obj.sizes[k] > 1 for k in dim):
         raise ValueError('cannot select a dimension to squeeze out '
                          'which has length greater than one')
@@ -256,21 +262,21 @@ def get_squeeze_dims(xarray_obj, dim: Union[str, Tuple[str, ...], None] = None,
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    def squeeze(self, dim: Union[str, Tuple[str, ...], None] = None,
+    def squeeze(self, dim: Union[str, Iterable[str], None] = None,
                 drop: bool = False,
-                axis: Union[int, Tuple[int, ...], None] = None):
+                axis: Union[int, Iterable[int], None] = None):
         """Return a new object with squeezed data.
 
         Parameters
         ----------
-        dim : None or str or tuple of str, optional
+        dim : None or str or iterable of str, optional
             Selects a subset of the length one dimensions. If a dimension is
             selected with length greater than one, an error is raised. If
             None, all length one dimensions are squeezed.
         drop : bool, optional
             If ``drop=True``, drop squeezed coordinates instead of making them
             scalar.
-        axis : None or int or tuple of int, optional
+        axis : None or int or iterable of int, optional
             Like dim, but positional.
 
         Returns
@@ -298,8 +304,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             # need to ensure dtype=int64 in case range is empty on Python 2
             return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
-    def _calc_assign_results(self, kwargs) -> SortedKeysDict:
-        results = SortedKeysDict()
+    def _calc_assign_results(self, kwargs: Mapping[str, T]
+                             ) -> SortedKeysDict[str, T]:
+        results = SortedKeysDict()  # type: SortedKeysDict[str, T]
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)
@@ -770,12 +777,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 "objects, e.g., data.resample(time='1D').mean()")
 
         indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
-
         if len(indexer) != 1:
             raise ValueError(
                 "Resampling only supported along single dimensions."
             )
-        dim, freq = indexer.popitem()
+        dim, freq = next(iter(indexer.items()))
 
         dim_name = dim
         dim_coord = self[dim]
