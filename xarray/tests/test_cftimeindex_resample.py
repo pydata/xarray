@@ -1,5 +1,3 @@
-import re
-
 import pytest
 
 import datetime
@@ -7,10 +5,48 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from xarray.core.resample_cftime import CFTimeGrouper
-from xarray.coding.cftime_offsets import _PATTERN
+
 
 pytest.importorskip('cftime')
 pytest.importorskip('pandas', minversion='0.24')
+
+
+# Create a list of pairs of similar-length initial and resample frequencies
+# that cover:
+# - Resampling from shorter to longer frequencies
+# - Resampling from longer to shorter frequencies
+# - Resampling from one initial frequency to another.
+# These are used to test the cftime version of resample against pandas
+# with a standard calendar.
+FREQS = [
+    ('8003D', '4001D'),
+    ('8003D', '16006D'),
+    ('8003D', '21AS'),
+    ('6H', '3H'),
+    ('6H', '12H'),
+    ('6H', '400T'),
+    ('11D', '5D'),
+    ('11D', '22D'),
+    ('11D', 'MS'),
+    ('3MS', 'MS'),
+    ('3MS', '6MS'),
+    ('3MS', '85D'),
+    ('7M', '3M'),
+    ('7M', '14M'),
+    ('7M', '2QS-APR'),
+    ('43QS-AUG', '21QS-AUG'),
+    ('43QS-AUG', '86QS-AUG'),
+    ('43QS-AUG', '11A-JUN'),
+    ('11Q-JUN', '5Q-JUN'),
+    ('11Q-JUN', '22Q-JUN'),
+    ('11Q-JUN', '51MS'),
+    ('3AS-MAR', 'AS-MAR'),
+    ('3AS-MAR', '6AS-MAR'),
+    ('3AS-MAR', '14Q-FEB'),
+    ('7A-MAY', '3A-MAY'),
+    ('7A-MAY', '14A-MAY'),
+    ('7A-MAY', '85M')
+]
 
 
 def da(index):
@@ -18,52 +54,31 @@ def da(index):
                         coords=[index], dims=['time'])
 
 
-def _scale_freq(freq, mode):
-    """Scale input to a longer or shorter frequency string"""
-    freq_data = re.match(_PATTERN, freq).groupdict()
-    if mode == 'longer':
-        new_multiple = int(freq_data['multiple']) * 2
-    elif mode == 'shorter':
-        new_multiple = int(freq_data['multiple']) // 2
-    else:
-        raise ValueError
-    return '{}{}'.format(new_multiple, freq_data['freq'])
-
-
-@pytest.mark.parametrize('freq', [
-    '8001T', '12H',
-    '8D', '2MS',
-    '7M', '41QS-AUG',
-    '11Q-JUN', '3AS-MAR',
-    '4A-MAY'])
+@pytest.mark.parametrize('freqs', FREQS, ids=lambda x: '{}->{}'.format(*x))
 @pytest.mark.parametrize('closed', [None, 'left', 'right'])
 @pytest.mark.parametrize('label', [None, 'left', 'right'])
 @pytest.mark.parametrize('base', [24, 31])
-@pytest.mark.parametrize(
-    'da_freq_length',
-    ['longer', 'shorter'],
-    ids=['longer_da_freq', 'shorter_da_freq']
-)
-def test_resample(freq, closed, label, base, da_freq_length):
-    da_freq = _scale_freq(freq, da_freq_length)
-    index_kwargs = dict(start='2000-01-01T12:07:01', periods=5, freq=da_freq)
+def test_resample(freqs, closed, label, base):
+    initial_freq, resample_freq = freqs
+    start = '2000-01-01T12:07:01'
+    index_kwargs = dict(start=start, periods=5, freq=initial_freq)
     datetime_index = pd.date_range(**index_kwargs)
     cftime_index = xr.cftime_range(**index_kwargs)
 
     loffset = '12H'
     try:
         da_datetime = da(datetime_index).resample(
-            time=freq, closed=closed, label=label, base=base,
+            time=resample_freq, closed=closed, label=label, base=base,
             loffset=loffset).mean()
     except ValueError:
         with pytest.raises(ValueError):
             da(cftime_index).resample(
-                time=freq, closed=closed, label=label, base=base,
+                time=resample_freq, closed=closed, label=label, base=base,
                 loffset=loffset).mean()
     else:
-        da_cftime = da(cftime_index).resample(time=freq, closed=closed,
-                                              label=label, base=base,
-                                              loffset=loffset).mean()
+        da_cftime = da(cftime_index).resample(
+            time=resample_freq, closed=closed,
+            label=label, base=base, loffset=loffset).mean()
         da_cftime['time'] = da_cftime.indexes['time'].to_datetimeindex()
         xr.testing.assert_identical(da_cftime, da_datetime)
 
@@ -78,6 +93,7 @@ def test_closed_label_defaults(freq, expected):
     assert CFTimeGrouper(freq=freq).label == expected
 
 
+@pytest.mark.filterwarnings('ignore:Converting a CFTimeIndex')
 @pytest.mark.parametrize('calendar', ['gregorian', 'noleap', 'all_leap',
                                       '360_day', 'julian'])
 def test_calendars(calendar):
