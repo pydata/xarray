@@ -5,15 +5,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import xarray as xr
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs
-from xarray.testing import assert_identical
 
 from . import (
-    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_cftime,
-    requires_dask)
+    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_dask)
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -177,19 +174,6 @@ class TestDictionaries(object):
         assert list(y) == ['a', 'b', 'c']
         assert repr(utils.SortedKeysDict()) == \
             "SortedKeysDict({})"
-
-    def test_chain_map(self):
-        m = utils.ChainMap({'x': 0, 'y': 1}, {'x': -100, 'z': 2})
-        assert 'x' in m
-        assert 'y' in m
-        assert 'z' in m
-        assert m['x'] == 0
-        assert m['y'] == 1
-        assert m['z'] == 2
-        m['x'] = 100
-        assert m['x'] == 100
-        assert m.maps[0]['x'] == 100
-        assert set(m) == {'x', 'y', 'z'}
 
 
 def test_repr_object():
