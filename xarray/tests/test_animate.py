@@ -5,6 +5,13 @@ import pytest
 from xarray import DataArray
 from . import requires_animatplot
 
+# import mpl and change the backend before other mpl imports
+try:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 # TODO should check that matplotlib >= 2.2 is present first?
 try:
     import animatplot as amp
@@ -68,19 +75,38 @@ class TestAnimateLine:
         self.darray.time.attrs['units'] = 's'
         self.darray.position.attrs['units'] = 'cm'
 
-    def test_animate_single_line(self):
+    def test_animate_single_line_classes(self):
         anim = self.darray.plot(animate='time')
         assert isinstance(anim, amp.animation.Animation)
 
         line_block, title_block = anim.blocks
+
         assert isinstance(line_block, amp.blocks.Line)
         assert isinstance(title_block, amp.blocks.Title)
+
+    def test_animate_single_line_data(self):
+        line_block, title_block = self.darray.plot(animate='time').blocks
 
         assert len(line_block) == 5
         assert len(line_block) == len(title_block)
 
-        # TODO check many more things here
-        # (also better testing in animatplot needed)
+        npt.assert_equal(line_block.y, self.darray.transpose().values)
+        npt.assert_equal(line_block.x[:, 0],
+                         self.darray.coords['position'].values)
+
+    def test_animate_single_line_text(self):
+        anim = self.darray.plot(animate='time')
+        line_block, title_block = anim.blocks
+
+        assert title_block.titles[0] == 'time = 0'
+        assert line_block.ax.get_xlabel() == 'position [cm]'
+        assert anim.timeline.units == ' [s]'
+
+    def test_animate_single_line_axes(self):
+        line_block, title_block = self.darray.plot(animate='time').blocks
+
+        # Check current axes is the plot (not the timeline etc.)
+        assert plt.gca() is line_block.ax
 
     def test_animate_as_function(self):
         anim = xarray.plot.animate.line(self.darray, animate='time')

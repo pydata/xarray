@@ -14,7 +14,7 @@ import pandas as pd
 
 from .utils import (_infer_line_data, _ensure_plottable, _update_axes,
                     get_axis, _rotate_date_xlabels, _check_animate,
-                    _transpose_before_animation)
+                    _transpose_before_animation, import_matplotlib_pyplot)
 
 
 def line(darray, animate=None, **kwargs):
@@ -138,9 +138,12 @@ def line(darray, animate=None, **kwargs):
                  xticks, yticks, xlim, ylim)
 
     anim = Animation([line_block, title_block], timeline=timeline)
-    # TODO I think ax should be passed to timeline_slider args
-    # but that just plots a single huge timeline and no line plot?!
     anim.controls(timeline_slider_args={'text': animate, 'valfmt': '%s'})
+
+    # Stop subsequent matplotlib plotting calls plotting onto the pause button!
+    plt = import_matplotlib_pyplot()
+    plt.sca(ax)
+
     return anim
 
 
