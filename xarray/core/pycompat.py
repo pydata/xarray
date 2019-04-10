@@ -37,8 +37,13 @@ else:
     # The above confuses mypy 0.700;
     # see: https://github.com/python/mypy/issues/6652
     # As a workaround, use:
+    #
     # from typing import Mapping, MutableMapping, MutableSet
     # try:
     #     from .pycompat import Mapping, MutableMapping, MutableSet
     # except ImportError:
     #      pass
+    #
+    # This is only necessary in modules that define subclasses of the
+    # abstract collections; when only type inference is needed, one can just
+    # use typing also in Python 3.5.0~3.5.2 (although mypy will misbehave).

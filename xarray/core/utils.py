@@ -17,7 +17,7 @@ import pandas as pd
 from .pycompat import dask_array_type
 
 from typing import Mapping, MutableMapping, MutableSet
-try:
+try:  # Fix typed collections in Python 3.5.0~3.5.2
     from .pycompat import Mapping, MutableMapping, MutableSet  # noqa: F811
 except ImportError:
     pass
@@ -28,7 +28,7 @@ V = TypeVar('V')
 T = TypeVar('T')
 
 
-def _check_inplace(inplace, default=False):
+def _check_inplace(inplace: bool, default: bool = False) -> bool:
     if inplace is None:
         inplace = default
     else:
@@ -48,7 +48,7 @@ def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
                   stacklevel=stacklevel)
 
 
-def alias(obj: Callable, old_name: str) -> Callable:
+def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     assert isinstance(old_name, str)
 
     @functools.wraps(obj)
@@ -59,7 +59,7 @@ def alias(obj: Callable, old_name: str) -> Callable:
     return wrapper
 
 
-def _maybe_cast_to_cftimeindex(index):
+def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from ..coding.cftimeindex import CFTimeIndex
 
     if index.dtype == 'O':
@@ -71,7 +71,7 @@ def _maybe_cast_to_cftimeindex(index):
         return index
 
 
-def safe_cast_to_index(array):
+def safe_cast_to_index(array: Any) -> pd.Index:
     """Given an array, safely cast it to a pandas.Index.
 
     If it is already a pandas.Index, return it unchanged.
@@ -132,7 +132,7 @@ def maybe_wrap_array(original, new_array):
         return new_array
 
 
-def equivalent(first, second) -> bool:
+def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray
     """
@@ -247,7 +247,7 @@ def is_valid_numpy_dtype(dtype: Any) -> bool:
         return True
 
 
-def to_0d_object_array(value) -> np.ndarray:
+def to_0d_object_array(value: Any) -> np.ndarray:
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object.
     """
     result = np.empty((), dtype=object)
@@ -255,7 +255,7 @@ def to_0d_object_array(value) -> np.ndarray:
     return result
 
 
-def to_0d_array(value) -> np.ndarray:
+def to_0d_array(value: Any) -> np.ndarray:
     """Given a value, wrap it in a 0-D numpy.ndarray.
     """
     if np.isscalar(value) or (isinstance(value, np.ndarray) and
@@ -434,15 +434,15 @@ class NdimSizeLenMixin:
     one that also defines ``ndim``, ``size`` and ``__len__``.
     """
     @property
-    def ndim(self) -> int:
+    def ndim(self: Any) -> int:
         return len(self.shape)
 
     @property
-    def size(self) -> int:
+    def size(self: Any) -> int:
         # cast to int so that shape = () gives size = 1
         return int(np.prod(self.shape))
 
-    def __len__(self) -> int:
+    def __len__(self: Any) -> int:
         try:
             return self.shape[0]
         except IndexError:
@@ -457,17 +457,17 @@ class NDArrayMixin(NdimSizeLenMixin):
     `dtype`, `shape` and `__getitem__`.
     """
     @property
-    def dtype(self) -> np.dtype:
+    def dtype(self: Any) -> np.dtype:
         return self.array.dtype
 
     @property
-    def shape(self) -> Tuple[int]:
+    def shape(self: Any) -> Tuple[int]:
         return self.array.shape
 
-    def __getitem__(self, key):
+    def __getitem__(self: Any, key):
         return self.array[key]
 
-    def __repr__(self) -> str:
+    def __repr__(self: Any) -> str:
         return '%s(array=%r)' % (type(self).__name__, self.array)
 
 
@@ -517,7 +517,7 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
     return bool(np.isclose(diffs.min(), diffs.max(), **kwargs))
 
 
-def hashable(v) -> bool:
+def hashable(v: Any) -> bool:
     """Determine whether `v` can be hashed.
     """
     try:

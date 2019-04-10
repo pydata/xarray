@@ -1,8 +1,8 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
-from typing import (Any, Callable, Hashable, Iterable, List, Optional, Tuple,
-                    TypeVar, Union)
+from typing import (Any, Callable, Hashable, Iterable, Iterator, List, Mapping,
+                    MutableMapping, Optional, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -13,11 +13,6 @@ from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
-from typing import Mapping, MutableMapping
-try:
-    from .pycompat import Mapping, MutableMapping  # noqa: F811
-except ImportError:
-    pass
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
@@ -28,7 +23,8 @@ T = TypeVar('T')
 
 class ImplementsArrayReduce:
     @classmethod
-    def _reduce_method(cls, func, include_skipna: bool, numeric_only):
+    def _reduce_method(cls, func: Callable, include_skipna: bool,
+                       numeric_only):
         if include_skipna:
             def wrapped_func(self, dim=None, axis=None, skipna=None,
                              **kwargs):
@@ -59,7 +55,8 @@ class ImplementsArrayReduce:
 
 class ImplementsDatasetReduce(object):
     @classmethod
-    def _reduce_method(cls, func, include_skipna, numeric_only):
+    def _reduce_method(cls, func: Callable, include_skipna: bool,
+                       numeric_only: bool):
         if include_skipna:
             def wrapped_func(self, dim=None, skipna=None,
                              **kwargs):
@@ -89,38 +86,36 @@ class ImplementsDatasetReduce(object):
 class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable."""
 
-    def __bool__(self):
+    def __bool__(self: Any) -> bool:
         return bool(self.values)
 
-    # Python 3 uses __bool__, Python 2 uses __nonzero__
-    __nonzero__ = __bool__
-
-    def __float__(self):
+    def __float__(self: Any) -> float:
         return float(self.values)
 
-    def __int__(self):
+    def __int__(self: Any) -> int:
         return int(self.values)
 
-    def __complex__(self):
+    def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self, dtype=None):
+    def __array__(self: Any, dtype: Union[str, np.dtype, None] = None
+                  ) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return formatting.array_repr(self)
 
-    def _iter(self):
+    def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
             yield self[n]
 
-    def __iter__(self):
+    def __iter__(self: Any):
         if self.ndim == 0:
             raise TypeError('iteration over a 0-d array')
         return self._iter()
 
     @property
-    def T(self):
+    def T(self: Any):
         return self.transpose()
 
     def get_axis_num(self, dim: Union[Hashable, Iterable[Hashable]]
@@ -142,7 +137,7 @@ class AbstractArray(ImplementsArrayReduce):
         else:
             return self._get_axis_num(dim)
 
-    def _get_axis_num(self, dim: Hashable) -> int:
+    def _get_axis_num(self: Any, dim: Hashable) -> int:
         try:
             return self.dims.index(dim)
         except ValueError:
@@ -150,7 +145,7 @@ class AbstractArray(ImplementsArrayReduce):
                              (dim, self.dims))
 
     @property
-    def sizes(self) -> Mapping[Hashable, int]:
+    def sizes(self: Any) -> Mapping[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -885,7 +880,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
-    def close(self) -> None:
+    def close(self: Any) -> None:
         """Close any files linked to this object
         """
         if self._file_obj is not None:
@@ -941,10 +936,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             dask='allowed',
         )
 
-    def __enter__(self):
+    def __enter__(self: T) -> T:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
 
