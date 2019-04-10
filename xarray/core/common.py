@@ -24,7 +24,7 @@ T = TypeVar('T')
 class ImplementsArrayReduce:
     @classmethod
     def _reduce_method(cls, func: Callable, include_skipna: bool,
-                       numeric_only):
+                       numeric_only: bool):
         if include_skipna:
             def wrapped_func(self, dim=None, axis=None, skipna=None,
                              **kwargs):
@@ -53,7 +53,7 @@ class ImplementsArrayReduce:
             and 'axis' arguments can be supplied.""")
 
 
-class ImplementsDatasetReduce(object):
+class ImplementsDatasetReduce:
     @classmethod
     def _reduce_method(cls, func: Callable, include_skipna: bool,
                        numeric_only: bool):
@@ -84,8 +84,8 @@ class ImplementsDatasetReduce(object):
 
 
 class AbstractArray(ImplementsArrayReduce):
-    """Shared base class for DataArray and Variable."""
-
+    """Shared base class for DataArray and Variable.
+    """
     def __bool__(self: Any) -> bool:
         return bool(self.values)
 
