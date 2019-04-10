@@ -13,18 +13,38 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.12.1:
+.. _whats-new.0.12.2:
 
-v0.12.1 (unreleased)
+v0.12.2 (unreleased)
 --------------------
 
 Enhancements
 ~~~~~~~~~~~~
 
+Bug fixes
+~~~~~~~~~
+
+.. _whats-new.0.12.1:
+
+v0.12.1 (4 April 2019)
+----------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- Allow ``expand_dims`` method to support inserting/broadcasting dimensions
+  with size > 1. (:issue:`2710`)
+  By `Martin Pletcher <https://github.com/pletchm>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Dataset.copy(deep=True) now creates a deep copy of the attrs (:issue:`2835`).
+  By `Andras Gefferth <https://github.com/kefirbandi>`_.
+- Fix incorrect ``indexes`` resulting from various ``Dataset`` operations
+  (e.g., ``swap_dims``, ``isel``, ``reindex``, ``[]``) (:issue:`2842`,
+  :issue:`2856`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.0:
 
