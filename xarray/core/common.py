@@ -607,8 +607,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """  # noqa
-        dim_ = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
-        return self._rolling_cls(self, dim_, min_periods=min_periods,
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
+        return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
     def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
@@ -669,9 +669,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        dim_ = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
         return self._coarsen_cls(
-            self, dim_, boundary=boundary, side=side,
+            self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
 
     def resample(self, indexer: Optional[Mapping[Hashable, str]] = None,
@@ -772,12 +772,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 '`dim` arguments. Instead call methods on resample '
                 "objects, e.g., data.resample(time='1D').mean()")
 
-        indexer_ = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
-        if len(indexer_) != 1:
+        indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
+        if len(indexer) != 1:
             raise ValueError(
                 "Resampling only supported along single dimensions."
             )
-        dim, freq = next(iter(indexer_.items()))
+        dim, freq = next(iter(indexer.items()))
 
         dim_name = dim
         dim_coord = self[dim]

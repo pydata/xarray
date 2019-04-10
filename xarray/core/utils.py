@@ -9,7 +9,7 @@ import warnings
 from collections import OrderedDict
 from typing import (AbstractSet, Any, Callable, Container, Dict, Hashable,
                     Iterable, Iterator, Optional, Sequence,
-                    Tuple, TypeVar, Union)
+                    Tuple, TypeVar, cast)
 
 import numpy as np
 import pandas as pd
@@ -212,7 +212,7 @@ def is_full_slice(value: Any) -> bool:
 def either_dict_or_kwargs(pos_kwargs: Optional[Mapping[Hashable, T]],
                           kw_kwargs: Mapping[str, T],
                           func_name: str
-                          ) -> Union[Mapping[Hashable, T], Mapping[str, T]]:
+                          ) -> Mapping[Hashable, T]:
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
             raise ValueError('the first argument to .%s must be a dictionary'
@@ -222,7 +222,9 @@ def either_dict_or_kwargs(pos_kwargs: Optional[Mapping[Hashable, T]],
                              'arguments to .%s' % func_name)
         return pos_kwargs
     else:
-        return kw_kwargs
+        # Need an explicit cast to appease mypy due to invariance; see
+        # https://github.com/python/mypy/issues/6228
+        return cast(Mapping[Hashable, T], kw_kwargs)
 
 
 def is_scalar(value: Any) -> bool:

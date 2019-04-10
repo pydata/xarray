@@ -34,7 +34,9 @@ else:
 
     # from typing import Mapping, MutableMapping, MutableSet
 
-    # The above confuses mypy 0.700. To workaround, use instead
+    # The above confuses mypy 0.700;
+    # see: https://github.com/python/mypy/issues/6652
+    # As a workaround, use:
     # from typing import Mapping, MutableMapping, MutableSet
     # try:
     #     from .pycompat import Mapping, MutableMapping, MutableSet
