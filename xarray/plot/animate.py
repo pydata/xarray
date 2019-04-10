@@ -43,6 +43,9 @@ def line(darray, animate=None, **kwargs):
     ax : matplotlib axes object, optional
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
+    hue : string, optional
+        Dimension or coordinate for which you want multiple lines plotted.
+        If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
         Dimensions or coordinates for x, y axis.
         Only one of these may be specified.
@@ -59,6 +62,8 @@ def line(darray, animate=None, **kwargs):
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
+    add_legend : boolean, optional
+        Add legend with y axis coordinates (3D inputs only).
     **kwargs : optional
         Additional arguments to animatplot.blocks.Line
 
@@ -72,16 +77,11 @@ def line(darray, animate=None, **kwargs):
     if row or col:
         raise NotImplementedError("Animated FacetGrids not yet implemented")
 
-    hue = kwargs.pop('hue', None)
-    if hue:
-        raise NotImplementedError("Animating multiple lines at once is not yet"
-                                  "implemented")
-
     _check_animate(darray, animate)
     darray = _transpose_before_animation(darray, animate)
 
-    ndims = len(darray[animate].dims)
-    if ndims > 2:
+    ndims = len(darray.dims)
+    if ndims > 3:
         raise ValueError('Animated line plots are for 2- or 3-dimensional '
                          'DataArrays. Passed DataArray has {ndims} '
                          'dimensions'.format(ndims=ndims+1))
@@ -103,6 +103,7 @@ def line(darray, animate=None, **kwargs):
     yticks = kwargs.pop('yticks', None)
     xlim = kwargs.pop('xlim', None)
     ylim = kwargs.pop('ylim', None)
+    add_legend = kwargs.pop('add_legend', True)
     _labels = kwargs.pop('_labels', True)
 
     ax = get_axis(figsize, size, aspect, ax)
@@ -117,9 +118,17 @@ def line(darray, animate=None, **kwargs):
     if ylim is None:
         ylim = [np.min(yplt_val), np.max(yplt_val)]
 
-    # animatplot assumes that the x positions might vary over time too
-    line_block = Line(xplt_val, yplt_val, ax=ax, t_axis=-1, **kwargs)
+    # TODO this currently breaks step plots because they have a list of arrays for yplt_val
+    num_lines = len(hueplt) if hueplt is not None else 1
+    # We transposed in _infer_line_data so that animate is last dim and hue is second-last dim
+    # TODO think of a more robust way of doing this
+    hueaxis = -2 if hue else 0
 
+    line_blocks = [Line(xplt_val, yplt_val_line.squeeze(),
+                        ax=ax, t_axis=-1, **kwargs)
+                   for yplt_val_line in np.split(yplt_val, num_lines, hueaxis)]
+
+    # TODO if not _labels then no Title block is needed
     if _labels:
         if xlabel is not None:
             ax.set_xlabel(xlabel)
@@ -132,12 +141,18 @@ def line(darray, animate=None, **kwargs):
                         for i in range(len(timeline))]
         title_block = Title(frame_titles, ax=ax)
 
+    if ndims == 3 and add_legend:
+        # TODO ensure the legend stays in the same place throughout the animation
+        ax.legend(handles=[block.line for block in line_blocks],
+                  labels=list(hueplt.values),
+                  title=huelabel)
+
     _rotate_date_xlabels(xplt_val, ax)
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale,
                  xticks, yticks, xlim, ylim)
 
-    anim = Animation([line_block, title_block], timeline=timeline)
+    anim = Animation([*line_blocks, title_block], timeline=timeline)
     anim.controls(timeline_slider_args={'text': animate, 'valfmt': '%s'})
 
     # Stop subsequent matplotlib plotting calls plotting onto the pause button!

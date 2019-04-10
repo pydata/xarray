@@ -283,6 +283,8 @@ def _infer_plot_type(darray, row=None, col=None, col_wrap=None, ax=None,
     if animate is not None:
         animate_dim = _check_animate(darray, animate)
         kwargs['animate'] = animate
+        if col is not None or row is not None:
+            raise NotImplementedError("Animated FacetGrids not yet supported")
     else:
         animate_dim = None
 
@@ -369,17 +371,18 @@ def _infer_line_data(darray, x, y, hue, animate, linestyle):
             yplt = darray
 
     else:
-        if animate is not None:
-            raise NotImplementedError
-
         if x is None and y is None and hue is None:
             raise ValueError('For 2D inputs, please'
                              'specify either hue, x or y.')
 
         if y is None:
-            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue,
+                                              animate=animate)
             xplt = darray[xname]
             if xplt.ndim > 1:
+                if animate is not None:
+                    raise NotImplementedError
+
                 if huename in darray.dims:
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     otherdim = darray.dims[otherindex]
@@ -390,9 +393,15 @@ def _infer_line_data(darray, x, y, hue, animate, linestyle):
                                      + ' i.e. one of ' + repr(darray.dims))
 
             else:
-                yplt = darray.transpose(xname, huename)
+                if animate is not None:
+                    yplt = darray.transpose(xname, huename, animate)
+                else:
+                    yplt = darray.transpose(xname, huename)
 
         else:
+            if animate is not None:
+                raise NotImplementedError
+
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
             yplt = darray[yname]
             if yplt.ndim > 1:
@@ -485,28 +494,41 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
     return _infer_xy_labels(darray.isel(**{rgb: 0}), x, y)
 
 
-def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
+def _infer_xy_labels(darray, x, y, animate=None, imshow=False, rgb=None):
     """
     Determine x and y labels. For use in _plot2d
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
     assert x is None or x != y
+    if animate is not None:
+        assert animate != x and animate != y
+
     if imshow and darray.ndim == 3:
+        if animate is not None:
+            raise NotImplementedError
         return _infer_xy_labels_3d(darray, x, y, rgb)
 
+    # TODO there must be a more pythonic way of doing this
+    dims = list(darray.dims)
+    if animate in dims:
+        dims.remove(animate)
+    plotdims = tuple(dims)
+
     if x is None and y is None:
-        if darray.ndim != 2:
-            raise ValueError('DataArray must be 2d')
-        y, x = darray.dims
+        required_ndims = 2 if animate is None else 3
+        if darray.ndim != required_ndims:
+            raise ValueError('DataArray must be {}d'.format(required_ndims))
+        y, x = plotdims
     elif x is None:
         if y not in darray.dims and y not in darray.coords:
             raise ValueError('y must be a dimension name if x is not supplied')
-        x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
+        x = plotdims[0] if y == plotdims[1] else plotdims[1]
     elif y is None:
         if x not in darray.dims and x not in darray.coords:
-            raise ValueError('x must be a dimension name if y is not supplied')
-        y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
+            raise ValueError(
+                'x must be a dimension name if y is not supplied')
+        y = plotdims[0] if x == plotdims[1] else plotdims[1]
     elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
         raise ValueError('x and y must be coordinate variables')
     return x, y
