@@ -337,7 +337,7 @@ class Frozen(Mapping[K, V], SingleSlotPickleMixin):
     """
     __slots__ = ['mapping']
 
-    def __init__(self, mapping: Mapping[K, V]) -> None:
+    def __init__(self, mapping: Mapping[K, V]):
         self.mapping = mapping
 
     def __getitem__(self, key: K) -> V:
@@ -367,7 +367,7 @@ class SortedKeysDict(MutableMapping[K, V], SingleSlotPickleMixin):
     """
     __slots__ = ['mapping']
 
-    def __init__(self, mapping: Optional[MutableMapping[K, V]] = None) -> None:
+    def __init__(self, mapping: Optional[MutableMapping[K, V]] = None):
         self.mapping = {} if mapping is None else mapping
 
     def __getitem__(self, key: K) -> V:
@@ -398,10 +398,13 @@ class OrderedSet(MutableSet[T]):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
-    def __init__(self, values: Optional[AbstractSet[T]] = None) -> None:
+    def __init__(self, values: Optional[AbstractSet[T]] = None):
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
         if values is not None:
-            self.__ior__(values)
+            # Disable type checking - both mypy and PyCharm believes that
+            # we're altering the type of self in place (see signature of
+            # MutableSet.__ior__)
+            self |= values  # type: ignore
 
     # Required methods for MutableSet
 
@@ -423,7 +426,8 @@ class OrderedSet(MutableSet[T]):
     # Additional methods
 
     def update(self, values: AbstractSet[T]) -> None:
-        self.__ior__(values)
+        # See comment on __init__ re. type checking
+        self |= values  # type: ignore
 
     def __repr__(self) -> str:
         return '%s(%r)' % (type(self).__name__, list(self))
@@ -474,7 +478,7 @@ class NDArrayMixin(NdimSizeLenMixin):
 class ReprObject:
     """Object that prints as the given value, for use with sentinel values.
     """
-    def __init__(self, value: str) -> None:
+    def __init__(self, value: str):
         self._value = value
 
     def __repr__(self) -> str:
@@ -559,8 +563,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
     """
     # ``__init__`` method required to create instance from class.
 
-    def __init__(self, data: MutableMapping[K, V], hidden_keys: Iterable[K]
-                 ) -> None:
+    def __init__(self, data: MutableMapping[K, V], hidden_keys: Iterable[K]):
         self._data = data
         self._hidden_keys = frozenset(hidden_keys)
 
