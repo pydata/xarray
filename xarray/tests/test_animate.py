@@ -1,7 +1,10 @@
+from functools import partial
+
 import numpy as np
 import numpy.testing as npt
 import pytest
 
+import xarray as xr
 from xarray import DataArray
 from . import requires_animatplot
 
@@ -17,6 +20,8 @@ try:
     import animatplot as amp
 except ImportError:
     pass
+
+from .test_plot import PlotTestCase, easy_array
 
 from xarray.plot.animate import _create_timeline
 import xarray.plot.animate
@@ -58,7 +63,7 @@ class TestTimeline:
 
 
 @requires_animatplot
-class TestAnimateLine:
+class TestAnimateLine(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         d = np.array([[0.0, 1.1, 0.0, 2],
@@ -102,6 +107,9 @@ class TestAnimateLine:
         assert line_block.ax.get_xlabel() == 'position [cm]'
         assert anim.timeline.units == ' [s]'
 
+    def test_can_pass_in_axis(self):
+        self.pass_in_axis(partial(self.darray.plot, animate='time'))
+
     def test_animate_single_line_axes(self):
         line_block, title_block = self.darray.plot(animate='time').blocks
 
@@ -118,3 +126,19 @@ class TestAnimateLine:
 
         anim = self.darray.plot.line(animate='time')
         assert isinstance(anim, amp.animation.Animation)
+
+
+@requires_animatplot
+class TestAnimateStep(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.darray = DataArray(easy_array((4, 5, 6)))
+
+    def test_coord_with_interval_step(self):
+        bins = [-1, 0, 1, 2]
+        da = self.darray.groupby_bins('dim_0', bins).mean(xr.ALL_DIMS)
+        da = xr.concat([da, da*2, da*1.7], dim='new_dim')
+
+        anim = da.plot.step(animate='new_dim')
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+        npt.assert_equal(anim.timeline.t, np.array([0, 1, 2]))
