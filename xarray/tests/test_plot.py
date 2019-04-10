@@ -186,6 +186,13 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x='dim_1')
         assert plt.gca().get_xlabel() == 'dim_1'
 
+    def test_2d_line_accepts_y_kw(self):
+        self.darray[:, :, 0].plot.line(y='dim_0')
+        assert plt.gca().get_ylabel() == 'dim_0'
+        plt.cla()
+        self.darray[:, :, 0].plot.line(y='dim_1')
+        assert plt.gca().get_ylabel() == 'dim_1'
+
     def test_2d_line_accepts_hue_kw(self):
         self.darray[:, :, 0].plot.line(hue='dim_0')
         assert (plt.gca().get_legend().get_title().get_text()
