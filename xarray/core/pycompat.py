@@ -1,6 +1,5 @@
-# flake8: noqa
+from collections import abc
 import sys
-import typing
 
 import numpy as np
 
@@ -13,6 +12,23 @@ try:
 except ImportError:  # pragma: no cover
     dask_array_type = ()
 
-# Ensure we have some more recent additions to the typing module.
-# Note that TYPE_CHECKING itself is not available on Python 3.5.1.
-TYPE_CHECKING = sys.version >= '3.5.3' and typing.TYPE_CHECKING
+
+if sys.version < '3.5.3':
+    TYPE_CHECKING = False
+
+    class _ABCDummyBrackets(type(abc.Mapping)):  # abc.ABCMeta
+        def __getitem__(cls, name):
+            return cls
+
+    class Mapping(abc.Mapping, metaclass=_ABCDummyBrackets):
+        pass
+
+    class MutableMapping(abc.MutableMapping, metaclass=_ABCDummyBrackets):
+        pass
+
+    class MutableSet(abc.MutableSet, metaclass=_ABCDummyBrackets):
+        pass
+
+else:
+    from typing import (  # noqa: F401
+        TYPE_CHECKING, Mapping, MutableMapping, MutableSet)

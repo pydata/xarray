@@ -7,14 +7,14 @@ import os.path
 import re
 import warnings
 from collections import OrderedDict
-from typing import (AbstractSet, Any, Callable, Container, Dict, Iterable,
-                    Iterator, Mapping, MutableMapping, MutableSet, Optional,
-                    Sequence, Tuple, TypeVar)
+from typing import (AbstractSet, Any, Callable, Container, Dict, Hashable,
+                    Iterable, Iterator, Optional, Sequence,
+                    Tuple, TypeVar)
 
 import numpy as np
 import pandas as pd
 
-from .pycompat import dask_array_type
+from .pycompat import dask_array_type, Mapping, MutableMapping, MutableSet
 
 
 K = TypeVar('K')
@@ -509,7 +509,8 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
 
 
 def hashable(v) -> bool:
-    """Determine whether `v` can be hashed."""
+    """Determine whether `v` can be hashed.
+    """
     try:
         hash(v)
     except TypeError:
@@ -581,7 +582,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
         return len(self._data) - num_hidden
 
 
-def get_temp_dimname(dims: Container[str], new_dim: str) -> str:
+def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> str:
     """ Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
@@ -595,5 +596,5 @@ def get_temp_dimname(dims: Container[str], new_dim: str) -> str:
         -> ['__rolling']
     """
     while new_dim in dims:
-        new_dim = '_' + new_dim
+        new_dim = '_' + str(new_dim)
     return new_dim

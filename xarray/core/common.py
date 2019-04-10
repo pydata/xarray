@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
-from typing import (Callable, Iterable, List, Mapping, Optional, Tuple,
+from typing import (Any, Callable, Hashable, Iterable, List, Optional, Tuple,
                     TypeVar, Union)
 
 import numpy as np
@@ -10,7 +10,7 @@ import pandas as pd
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import dask_array_type, Mapping, MutableMapping
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
@@ -20,9 +20,9 @@ ALL_DIMS = ReprObject('<all-dims>')
 T = TypeVar('T')
 
 
-class ImplementsArrayReduce(object):
+class ImplementsArrayReduce:
     @classmethod
-    def _reduce_method(cls, func, include_skipna, numeric_only):
+    def _reduce_method(cls, func, include_skipna: bool, numeric_only):
         if include_skipna:
             def wrapped_func(self, dim=None, axis=None, skipna=None,
                              **kwargs):
@@ -98,9 +98,6 @@ class AbstractArray(ImplementsArrayReduce):
     def __complex__(self):
         return complex(self.values)
 
-    def __long__(self):
-        return long(self.values)  # noqa
-
     def __array__(self, dtype=None):
         return np.asarray(self.values, dtype=dtype)
 
@@ -120,7 +117,7 @@ class AbstractArray(ImplementsArrayReduce):
     def T(self):
         return self.transpose()
 
-    def get_axis_num(self, dim: Union[str, Iterable[str]]
+    def get_axis_num(self, dim: Union[Hashable, Iterable[Hashable]]
                      ) -> Union[int, Tuple[int, ...]]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
@@ -134,12 +131,12 @@ class AbstractArray(ImplementsArrayReduce):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dim, str):
-            return self._get_axis_num(dim)
-        else:
+        if isinstance(dim, Iterable) and not isinstance(dim, str):
             return tuple(self._get_axis_num(d) for d in dim)
+        else:
+            return self._get_axis_num(dim)
 
-    def _get_axis_num(self, dim: str) -> int:
+    def _get_axis_num(self, dim: Hashable) -> int:
         try:
             return self.dims.index(dim)
         except ValueError:
@@ -147,7 +144,7 @@ class AbstractArray(ImplementsArrayReduce):
                              (dim, self.dims))
 
     @property
-    def sizes(self) -> Mapping[str, int]:
+    def sizes(self) -> Mapping[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -159,7 +156,7 @@ class AbstractArray(ImplementsArrayReduce):
         return Frozen(OrderedDict(zip(self.dims, self.shape)))
 
 
-class AttrAccessMixin(object):
+class AttrAccessMixin:
     """Mixin class that allows getting keys with attribute access
     """
     _initialized = False
@@ -174,7 +171,7 @@ class AttrAccessMixin(object):
         """List of places to look-up items for key-autocompletion """
         return []
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         if name != '__setstate__':
             # this avoids an infinite loop when pickle looks for the
             # __setstate__ attribute before the xarray object is initialized
@@ -184,7 +181,7 @@ class AttrAccessMixin(object):
         raise AttributeError("%r object has no attribute %r" %
                              (type(self).__name__, name))
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         if self._initialized:
             try:
                 # Allow setting instance variables if they already exist
@@ -198,7 +195,7 @@ class AttrAccessMixin(object):
                     "assign variables." % (name, type(self).__name__))
         object.__setattr__(self, name, value)
 
-    def __dir__(self):
+    def __dir__(self) -> List[str]:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
@@ -208,7 +205,7 @@ class AttrAccessMixin(object):
                        if isinstance(item, str)]
         return sorted(set(dir(type(self)) + extra_attrs))
 
-    def _ipython_key_completions_(self):
+    def _ipython_key_completions_(self) -> List[str]:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
@@ -221,9 +218,9 @@ class AttrAccessMixin(object):
 
 
 def get_squeeze_dims(xarray_obj,
-                     dim: Union[str, Iterable[str], None] = None,
+                     dim: Union[Hashable, Iterable[Hashable], None] = None,
                      axis: Union[int, Iterable[int], None] = None
-                     ) -> List[str]:
+                     ) -> List[Hashable]:
     """Get a list of dimensions to squeeze out.
     """
     if dim is not None and axis is not None:
@@ -231,10 +228,10 @@ def get_squeeze_dims(xarray_obj,
     if dim is None and axis is None:
         return [d for d, s in xarray_obj.sizes.items() if s == 1]
 
-    if isinstance(dim, str):
-        dim = [dim]
-    elif dim is not None:
+    if isinstance(dim, Iterable) and not isinstance(dim, str):
         dim = list(dim)
+    elif dim is not None:
+        dim = [dim]
     else:
         assert axis is not None
         if isinstance(axis, int):
@@ -255,14 +252,14 @@ def get_squeeze_dims(xarray_obj,
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    def squeeze(self, dim: Union[str, Iterable[str], None] = None,
+    def squeeze(self, dim: Union[Hashable, Iterable[Hashable], None] = None,
                 drop: bool = False,
                 axis: Union[int, Iterable[int], None] = None):
         """Return a new object with squeezed data.
 
         Parameters
         ----------
-        dim : None or str or iterable of str, optional
+        dim : None or Hashable or iterable of Hashable, optional
             Selects a subset of the length one dimensions. If a dimension is
             selected with length greater than one, an error is raised. If
             None, all length one dimensions are squeezed.
@@ -285,7 +282,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
-    def get_index(self, key: str) -> pd.Index:
+    def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex
         """
         if key not in self.dims:
@@ -298,7 +295,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
     def _calc_assign_results(self, kwargs: Mapping[str, T]
-                             ) -> SortedKeysDict[str, T]:
+                             ) -> MutableMapping[str, T]:
         results = SortedKeysDict()  # type: SortedKeysDict[str, T]
         for k, v in kwargs.items():
             if callable(v):
@@ -546,7 +543,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                              'precision': precision,
                                              'include_lowest': include_lowest})
 
-    def rolling(self, dim: Optional[Mapping[str, int]] = None,
+    def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
                 min_periods: Optional[int] = None, center: bool = False,
                 **dim_kwargs: int):
         """
@@ -608,9 +605,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
-    def coarsen(self, dim: Optional[Mapping[str, int]] = None,
+    def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
                 boundary: str = 'exact',
-                side: Union[str, Mapping[str, str]] = 'left',
+                side: Union[str, Mapping[Hashable, str]] = 'left',
                 coord_func: str = 'mean',
                 **dim_kwargs: int):
         """
@@ -671,7 +668,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
 
-    def resample(self, indexer: Optional[Mapping[str, str]] = None,
+    def resample(self, indexer: Optional[Mapping[Hashable, str]] = None,
                  skipna=None, closed: Optional[str] = None,
                  label: Optional[str] = None,
                  base: int = 0, keep_attrs: Optional[bool] = None,
