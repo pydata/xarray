@@ -3731,7 +3731,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 variables[name] = var
 
         indexes = OrderedDict(self.indexes)
-        indexes[dim] = kwargs_new[dim]
+        if dim in indexes:
+            indexes[dim] = indexes[dim][kwargs_new[dim]]
 
         difference = self._replace_with_new_dims(variables, indexes=indexes)
 
