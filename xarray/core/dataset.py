@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (
-    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union)
+    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union, Sequence)
 
 import numpy as np
 import pandas as pd
@@ -1516,6 +1516,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 v = as_variable(v)
             elif isinstance(v, Dataset):
                 raise TypeError('cannot use a Dataset as an indexer')
+            elif isinstance(v, Sequence) and len(v) == 0:
+                v = IndexVariable((k, ), np.asarray(v, dtype='int64'))
             else:
                 v = np.asarray(v)
 
