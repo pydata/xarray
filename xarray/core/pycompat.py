@@ -1,5 +1,5 @@
-from collections import abc
 import sys
+from collections import abc
 
 import numpy as np
 
@@ -30,5 +30,13 @@ if sys.version < '3.5.3':
         pass
 
 else:
-    from typing import (  # noqa: F401
-        TYPE_CHECKING, Mapping, MutableMapping, MutableSet)
+    from typing import TYPE_CHECKING  # noqa: F401
+
+    # from typing import Mapping, MutableMapping, MutableSet
+
+    # The above confuses mypy 0.700. To workaround, use instead
+    # from typing import Mapping, MutableMapping, MutableSet
+    # try:
+    #     from .pycompat import Mapping, MutableMapping, MutableSet
+    # except ImportError:
+    #      pass

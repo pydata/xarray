@@ -9,12 +9,18 @@ import warnings
 from collections import OrderedDict
 from typing import (AbstractSet, Any, Callable, Container, Dict, Hashable,
                     Iterable, Iterator, Optional, Sequence,
-                    Tuple, TypeVar)
+                    Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
 
-from .pycompat import dask_array_type, Mapping, MutableMapping, MutableSet
+from .pycompat import dask_array_type
+
+from typing import Mapping, MutableMapping, MutableSet
+try:
+    from .pycompat import Mapping, MutableMapping, MutableSet  # noqa: F811
+except ImportError:
+    pass
 
 
 K = TypeVar('K')
@@ -203,9 +209,10 @@ def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
-def either_dict_or_kwargs(pos_kwargs: Optional[Mapping[K, V]],
-                          kw_kwargs: Mapping[K, V],
-                          func_name: str) -> Mapping[K, V]:
+def either_dict_or_kwargs(pos_kwargs: Optional[Mapping[Hashable, T]],
+                          kw_kwargs: Mapping[str, T],
+                          func_name: str
+                          ) -> Union[Mapping[Hashable, T], Mapping[str, T]]:
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
             raise ValueError('the first argument to .%s must be a dictionary'
@@ -582,7 +589,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
         return len(self._data) - num_hidden
 
 
-def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> str:
+def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     """ Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 

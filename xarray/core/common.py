@@ -10,8 +10,14 @@ import pandas as pd
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type, Mapping, MutableMapping
+from .pycompat import dask_array_type
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
+
+from typing import Mapping, MutableMapping
+try:
+    from .pycompat import Mapping, MutableMapping  # noqa: F811
+except ImportError:
+    pass
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
@@ -601,8 +607,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """  # noqa
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
-        return self._rolling_cls(self, dim, min_periods=min_periods,
+        dim_ = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
+        return self._rolling_cls(self, dim_, min_periods=min_periods,
                                  center=center)
 
     def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
@@ -663,9 +669,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        dim_ = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
         return self._coarsen_cls(
-            self, dim, boundary=boundary, side=side,
+            self, dim_, boundary=boundary, side=side,
             coord_func=coord_func)
 
     def resample(self, indexer: Optional[Mapping[Hashable, str]] = None,
@@ -766,12 +772,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 '`dim` arguments. Instead call methods on resample '
                 "objects, e.g., data.resample(time='1D').mean()")
 
-        indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
-        if len(indexer) != 1:
+        indexer_ = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
+        if len(indexer_) != 1:
             raise ValueError(
                 "Resampling only supported along single dimensions."
             )
-        dim, freq = next(iter(indexer.items()))
+        dim, freq = next(iter(indexer_.items()))
 
         dim_name = dim
         dim_coord = self[dim]
