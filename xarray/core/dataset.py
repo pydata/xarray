@@ -1517,7 +1517,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             elif isinstance(v, Dataset):
                 raise TypeError('cannot use a Dataset as an indexer')
             elif isinstance(v, Sequence) and len(v) == 0:
-                v = IndexVariable((k, ), np.asarray(v, dtype='int64'))
+                v = IndexVariable((k, ), np.zeros((0,), dtype='int64'))
             else:
                 v = np.asarray(v)
 
