@@ -1,13 +1,14 @@
 import functools
+import sys
 import warnings
 from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
 
+from ..plot.plot import _PlotMethods
 from . import (
     computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
-from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
@@ -229,9 +230,6 @@ class DataArray(AbstractArray, DataWithCoords):
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
-
-        # uncomment for a useful consistency check:
-        # assert all(isinstance(v, Variable) for v in coords.values())
 
         # These fully describe a DataArray
         self._variable = variable
@@ -1138,7 +1136,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
-    def expand_dims(self, dim, axis=None):
+    def expand_dims(self, dim=None, axis=None, **dim_kwargs):
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape.
 
@@ -1147,21 +1145,53 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim : str or sequence of str.
+        dim : str, sequence of str, dict, or None
             Dimensions to include on the new variable.
-            dimensions are inserted with length 1.
+            If provided as str or sequence of str, then dimensions are inserted
+            with length 1. If provided as a dict, then the keys are the new
+            dimensions and the values are either integers (giving the length of
+            the new dimensions) or sequence/ndarray (giving the coordinates of
+            the new dimensions). **WARNING** for python 3.5, if ``dim`` is
+            dict-like, then it must be an ``OrderedDict``. This is to ensure
+            that the order in which the dims are given is maintained.
         axis : integer, list (or tuple) of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
+        **dim_kwargs : int or sequence/ndarray
+            The keywords are arbitrary dimensions being inserted and the values
+            are either the lengths of the new dims (if int is given), or their
+            coordinates. Note, this is an alternative to passing a dict to the
+            dim kwarg and will only be used if dim is None. **WARNING** for
+            python 3.5 ``dim_kwargs`` is not available.
 
         Returns
         -------
         expanded : same type as caller
             This object, but with an additional dimension(s).
         """
+        if isinstance(dim, int):
+            raise TypeError('dim should be str or sequence of strs or dict')
+        elif isinstance(dim, str):
+            dim = OrderedDict(((dim, 1),))
+        elif isinstance(dim, (list, tuple)):
+            if len(dim) != len(set(dim)):
+                raise ValueError('dims should not contain duplicate values.')
+            dim = OrderedDict(((d, 1) for d in dim))
+
+        # TODO: get rid of the below code block when python 3.5 is no longer
+        #   supported.
+        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
+        not_ordereddict = dim is not None and not isinstance(dim, OrderedDict)
+        if not python36_plus and not_ordereddict:
+            raise TypeError("dim must be an OrderedDict for python <3.6")
+        elif not python36_plus and dim_kwargs:
+            raise ValueError("dim_kwargs isn't available for python <3.6")
+        dim_kwargs = OrderedDict(dim_kwargs)
+
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'expand_dims')
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
@@ -1369,7 +1399,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def transpose(self, *dims):
+    def transpose(self, *dims) -> 'DataArray':
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1385,8 +1415,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Notes
         -----
-        Although this operation returns a view of this array's data, it is
-        not lazy -- the data will be fully loaded.
+        This operation returns a view of this array's data. It is
+        lazy for dask-backed DataArrays but not for numpy-backed DataArrays
+        -- the data will be fully loaded.
 
         See Also
         --------
@@ -1395,6 +1426,10 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         variable = self.variable.transpose(*dims)
         return self._replace(variable)
+
+    @property
+    def T(self) -> 'DataArray':
+        return self.transpose()
 
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.
@@ -2437,10 +2472,10 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dim: str, or a sequence of str
             Coordinate(s) used for the integration.
-        datetime_unit
-            Can be specify the unit if datetime coordinate is used. One of
-            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
-             'as'}
+        datetime_unit: str, optional
+            Can be used to specify the unit if datetime coordinate is used.
+            One of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',
+                    'ps', 'fs', 'as'}
 
         Returns
         -------
