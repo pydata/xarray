@@ -503,15 +503,11 @@ class TestDataArray(object):
 
     def test_getitem_empty_index(self):
         da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'])
-        assert da[{'x': []}].size == 0
-        assert da[{'x': []}].x.size == 0
-        assert da[{'x': []}].y.size == da.y.size
-
-        assert da.loc[{'x': []}].size == 0
-        assert da.loc[{'x': []}].x.size == 0
-        assert da.loc[{'x': []}].y.size == da.y.size
-
-        assert da[[]].shape == da.values[[]].shape
+        assert_identical(da[{'x': []}],
+                         DataArray(np.zeros((0, 4)), dims=['x', 'y']))
+        assert_identical(da.loc[{'y': []}],
+                         DataArray(np.zeros((3, 0)), dims=['x', 'y']))
+        assert_identical(da[[]], DataArray(np.zeros((0, 4)), dims=['x', 'y']))
 
     def test_setitem(self):
         # basic indexing should work as numpy's indexing
