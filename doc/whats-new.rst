@@ -45,6 +45,8 @@ Bug fixes
   (e.g., ``swap_dims``, ``isel``, ``reindex``, ``[]``) (:issue:`2842`,
   :issue:`2856`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- open_rasterio() now supports rasterio.vrt.WarpedVRT with custom transform, width and height (:issue:`2864`).
+  By `Julien Michel <https://github.com/jmichel-otb>`_.
 
 .. _whats-new.0.12.0:
 
