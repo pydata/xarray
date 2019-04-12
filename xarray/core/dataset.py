@@ -2642,12 +2642,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dimensions to be stacked. Not all variables in the dataset need to
             have these dimensions.
         variable_dim : str, optional
-            Name of the level in the MultiIndex object which corresponds to
+            Name of the level in the stacked coordinate which corresponds to
             the variables.
 
         Returns
         -------
         stacked : DataArray
+            DataArray with the specified dimensions and data variables
+            stacked together. The stacked coordinate is named ``new_dim``
+            and represented by a MultiIndex object with a level containing the
+            data variable names. The name of this level is controlled using
+            the ``variable_dim`` argument.
 
         See Also
         --------
@@ -2720,11 +2725,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             + [level.astype(self[level.name].dtype)
                for level in idx.levels[1:]]
         new_idx = idx.set_levels(levels)
-        # patch in the new index object
-        # dataset[new_dim].variable._data.array = new_idx
-        # This commented line below is much cleaner than the junk above, but I
-        # wanted to modify the IndexVariable inplace to make sure the attrs
-        # and encodings are the same
         dataset[new_dim] = IndexVariable(new_dim, new_idx)
         return dataset
 

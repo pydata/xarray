@@ -148,8 +148,10 @@ But :py:meth:`~xarray.Dataset.to_array` will broadcast the dataarrays together,
 which will effectively tile the lower dimensional variable along the missing
 dimensions. The method :py:meth:`xarray.Dataset.to_stacked_array` allows
 combining variables of differing dimensions without this wasteful copying while
-:py:meth:`xarray.DataArray.to_unstacked_dataset` reverses this operation. These
-methods are used like this:
+:py:meth:`xarray.DataArray.to_unstacked_dataset` reverses this operation.
+Just as with :py:meth:`xarray.Dataset.stack` the stacked coordinate is
+represented by a :py:class:`pandas.MultiIndex` object. These methods are used
+like this:
 
 .. ipython:: python
 
