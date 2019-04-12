@@ -2061,12 +2061,8 @@ class TestDataset(object):
         if python36_plus:
             with raises_regex(ValueError, 'both keyword and positional'):
                 original.expand_dims(OrderedDict((("d", 4),)), e=4)
-        else:
-            # In python 3.5, using dim_kwargs should raise a ValueError.
-            with raises_regex(ValueError, "dim_kwargs isn't"):
-                original.expand_dims(OrderedDict((("d", 4),)), e=4)
 
-    def test_expand_dims(self):
+    def test_expand_dims_int(self):
         original = Dataset({'x': ('a', np.random.randn(3)),
                             'y': (['b', 'a'], np.random.randn(4, 3))},
                            coords={'a': np.linspace(0, 1, 3),
@@ -2099,9 +2095,37 @@ class TestDataset(object):
         roundtripped = actual.squeeze('z')
         assert_identical(original, roundtripped)
 
+    def test_expand_dims_coords(self):
+        original = Dataset({'x': ('a', np.array([1, 2, 3]))})
+        expected = Dataset(
+            {'x': (('b', 'a'), np.array([[1, 2, 3], [1, 2, 3]]))},
+            coords={'b': [1, 2]},
+        )
+        actual = original.expand_dims(OrderedDict(b=[1, 2]))
+        assert_identical(expected, actual)
+        assert 'b' not in original._coord_names
+
+    def test_expand_dims_existing_scalar_coord(self):
+        original = Dataset({'x': 1}, {'a': 2})
+        expected = Dataset({'x': (('a',), [1])}, {'a': [2]})
+        actual = original.expand_dims('a')
+        assert_identical(expected, actual)
+
+    def test_isel_expand_dims_roundtrip(self):
+        original = Dataset({'x': (('a',), [1])}, {'a': [2]})
+        actual = original.isel(a=0).expand_dims('a')
+        assert_identical(actual, original)
+
+    def test_expand_dims_mixed_int_and_coords(self):
         # Test expanding one dimension to have size > 1 that doesn't have
         # coordinates, and also expanding another dimension to have size > 1
         # that DOES have coordinates.
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3))},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)})
+
         actual = original.expand_dims(
             OrderedDict((("d", 4), ("e", ["l", "m", "n"]))))
 
@@ -2117,34 +2141,45 @@ class TestDataset(object):
                                            b=np.linspace(0, 1, 4),
                                            a=np.linspace(0, 1, 3)),
                                dims=['d', 'e', 'b', 'a']).drop('d')},
-            coords={'c': np.linspace(0, 1, 5)},
-            attrs={'key': 'entry'})
+            coords={'c': np.linspace(0, 1, 5)})
         assert_identical(actual, expected)
 
-        # Test with kwargs instead of passing dict to dim arg.
+    @pytest.mark.skipif(
+        sys.version_info[:2] > (3, 5),
+        reason="we only raise these errors for Python 3.5",
+    )
+    def test_expand_dims_kwargs_python35(self):
+        original = Dataset({'x': ('a', np.random.randn(3))})
+        with raises_regex(ValueError, "dim_kwargs isn't"):
+            original.expand_dims(e=["l", "m", "n"])
+        with raises_regex(TypeError, "must be an OrderedDict"):
+            original.expand_dims({'e': ["l", "m", "n"]})
 
-        # TODO: only the code under the if-statement is needed when python 3.5
-        #   is no longer supported.
-        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
-        if python36_plus:
-            other_way = original.expand_dims(e=["l", "m", "n"])
-            other_way_expected = Dataset(
-                {'x': xr.DataArray(original['x'].values * np.ones([3, 3]),
-                                   coords=dict(e=['l', 'm', 'n'],
-                                               a=np.linspace(0, 1, 3)),
-                                   dims=['e', 'a']),
-                 'y': xr.DataArray(original['y'].values * np.ones([3, 4, 3]),
-                                   coords=dict(e=['l', 'm', 'n'],
-                                               b=np.linspace(0, 1, 4),
-                                               a=np.linspace(0, 1, 3)),
-                                   dims=['e', 'b', 'a'])},
-                coords={'c': np.linspace(0, 1, 5)},
-                attrs={'key': 'entry'})
-            assert_identical(other_way_expected, other_way)
-        else:
-            # In python 3.5, using dim_kwargs should raise a ValueError.
-            with raises_regex(ValueError, "dim_kwargs isn't"):
-                original.expand_dims(e=["l", "m", "n"])
+    @pytest.mark.skipif(
+        sys.version_info[:2] < (3, 6),
+        reason='keyword arguments are only ordered on Python 3.6+',
+    )
+    def test_expand_dims_kwargs_python36plus(self):
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3))},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+        other_way = original.expand_dims(e=["l", "m", "n"])
+        other_way_expected = Dataset(
+            {'x': xr.DataArray(original['x'].values * np.ones([3, 3]),
+                               coords=dict(e=['l', 'm', 'n'],
+                                           a=np.linspace(0, 1, 3)),
+                               dims=['e', 'a']),
+             'y': xr.DataArray(original['y'].values * np.ones([3, 4, 3]),
+                               coords=dict(e=['l', 'm', 'n'],
+                                           b=np.linspace(0, 1, 4),
+                                           a=np.linspace(0, 1, 3)),
+                               dims=['e', 'b', 'a'])},
+            coords={'c': np.linspace(0, 1, 5)},
+            attrs={'key': 'entry'})
+        assert_identical(other_way_expected, other_way)
 
     def test_set_index(self):
         expected = create_test_multiindex()

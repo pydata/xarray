@@ -13,10 +13,24 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.12.2:
+
+v0.12.2 (unreleased)
+--------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+- indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
+  By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
+
 .. _whats-new.0.12.1:
 
-v0.12.1 (unreleased)
---------------------
+v0.12.1 (4 April 2019)
+----------------------
 
 Enhancements
 ~~~~~~~~~~~~
@@ -27,14 +41,17 @@ Enhancements
 - New methods for reshaping Datasets of variables with different dimensions
   (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
 
-
 Bug fixes
 ~~~~~~~~~
 
 - Dataset.copy(deep=True) now creates a deep copy of the attrs (:issue:`2835`).
   By `Andras Gefferth <https://github.com/kefirbandi>`_.
-- ``swap_dims`` would create incorrect ``indexes`` (:issue:`2842`).
+- Fix incorrect ``indexes`` resulting from various ``Dataset`` operations
+  (e.g., ``swap_dims``, ``isel``, ``reindex``, ``[]``) (:issue:`2842`,
+  :issue:`2856`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- open_rasterio() now supports rasterio.vrt.WarpedVRT with custom transform, width and height (:issue:`2864`).
+  By `Julien Michel <https://github.com/jmichel-otb>`_.
 
 .. _whats-new.0.12.0:
 

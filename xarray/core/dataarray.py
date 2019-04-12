@@ -231,9 +231,6 @@ class DataArray(AbstractArray, DataWithCoords):
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
 
-        # uncomment for a useful consistency check:
-        # assert all(isinstance(v, Variable) for v in coords.values())
-
         # These fully describe a DataArray
         self._variable = variable
         self._coords = coords
@@ -1462,7 +1459,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # unstacked dataset
         return Dataset(data_dict)
 
-    def transpose(self, *dims):
+    def transpose(self, *dims) -> 'DataArray':
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1489,6 +1486,10 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         variable = self.variable.transpose(*dims)
         return self._replace(variable)
+
+    @property
+    def T(self) -> 'DataArray':
+        return self.transpose()
 
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.

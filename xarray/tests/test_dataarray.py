@@ -501,6 +501,14 @@ class TestDataArray(object):
         assert_equal(da[ind], da[[0, 1]])
         assert_equal(da[ind], da[ind.values])
 
+    def test_getitem_empty_index(self):
+        da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'])
+        assert_identical(da[{'x': []}],
+                         DataArray(np.zeros((0, 4)), dims=['x', 'y']))
+        assert_identical(da.loc[{'y': []}],
+                         DataArray(np.zeros((3, 0)), dims=['x', 'y']))
+        assert_identical(da[[]], DataArray(np.zeros((0, 4)), dims=['x', 'y']))
+
     def test_setitem(self):
         # basic indexing should work as numpy's indexing
         tuples = [(0, 0), (0, slice(None, None)),
