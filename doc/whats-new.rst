@@ -24,6 +24,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
+  By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
+
 .. _whats-new.0.12.1:
 
 v0.12.1 (4 April 2019)
