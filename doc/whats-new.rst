@@ -26,6 +26,8 @@ Bug fixes
 
 - indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
+- Return correct count for scalar datetime64 arrays (:issue:`2770`)
+  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 
 .. _whats-new.0.12.1:
 
