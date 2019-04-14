@@ -214,3 +214,6 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 
     import os
     os.remove('example.nc')
+
+
+It is common for many datasets to be distributed across multiple files (commonly one file per timestep). xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods.
