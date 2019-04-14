@@ -65,7 +65,7 @@ xarray supports four kind of indexing. Since we have assigned coordinate labels 
     data.sel(x=[10, 20])
 
 
-Unlike positional indexing, label-based indexing frees us from having to know how our array is organized. All we need to know are the dimension name and the label we wish to index i.e. ``data.sel(x=10)`` works regardless of whether ``x`` is the first or second dimension of the array and regardless of whether ``10`` is the first or second element of ``x``. We have already told xarray that x is the first dimension when we created ``data``: xarray keeps track of this so we don't have to. These operations are just as fast as in pandas, because xarray borrows pandas' indexing machinery.
+Unlike positional indexing, label-based indexing frees us from having to know how our array is organized. All we need to know are the dimension name and the label we wish to index i.e. ``data.sel(x=10)`` works regardless of whether ``x`` is the first or second dimension of the array and regardless of whether ``10`` is the first or second element of ``x``. We have already told xarray that x is the first dimension when we created ``data``: xarray keeps track of this so we don't have to. These operations are just as fast as in pandas, because xarray borrows pandas' indexing machinery. For more, see :ref:`indexing`.
 
 
 Attributes
@@ -130,10 +130,12 @@ Operations also align based on index labels:
 
     data[:-1] - data[:1]
 
+For more, see :ref:`comput`.
+
 GroupBy
 -------
 
-xarray supports grouped operations using a very similar API to pandas:
+xarray supports grouped operations using a very similar API to pandas (see :ref:`groupby`):
 
 .. ipython:: python
 
@@ -152,7 +154,7 @@ Visualizing your datasets is quick and convenient:
     @savefig plotting_quick_overview.png
     data.plot()
 
-Note the automatic labeling with names and units. Our effort in adding metadata attributes has paid off!
+Note the automatic labeling with names and units. Our effort in adding metadata attributes has paid off! Many aspects of these figures are customizable: see :ref:`plotting`.
     
 pandas
 ------
@@ -228,4 +230,4 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
     os.remove('example.nc')
 
 
-It is common for many datasets to be distributed across multiple files (commonly one file per timestep). xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods.
+It is common for many datasets to be distributed across multiple files (commonly one file per timestep). xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods. For more, see :ref:`io`.
