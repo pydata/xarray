@@ -27,7 +27,7 @@ array or list, with optional *dimensions* and *coordinates*:
                         coords={'x': [10, 20]})
     data
 
-In this case, we have generated a 2D array, assigned the names *x* and *y* to the two dimensions respectively and associated two *coordinate labels* 'a' and 'b' with the two locations along the x dimension. If you supply a pandas :py:class:`~pandas.Series` or :py:class:`~pandas.DataFrame`, metadata is copied directly:
+In this case, we have generated a 2D array, assigned the names *x* and *y* to the two dimensions respectively and associated two *coordinate labels* '10' and '20' with the two locations along the x dimension. If you supply a pandas :py:class:`~pandas.Series` or :py:class:`~pandas.DataFrame`, metadata is copied directly:
 
 .. ipython:: python
 
@@ -65,7 +65,7 @@ xarray supports four kind of indexing. Since we have assigned coordinate labels 
     data.sel(x=[10, 20])
 
 
-Unlike positional indexing, label-based indexing frees us from having to know how our array is organized. All we need to know are the dimension name and the label you wish to index i.e. ``data.sel(x=10)`` works regardless of whether x is the first or second dimension of the array and regardless of whether ``10`` is the first or second element of ``x``. We have already told xarray that x is the first dimension when we created ``data``. xarray keeps track of this so you don't have to. These operations are just as fast as in pandas, because xarray borrows pandas' indexing machinery.
+Unlike positional indexing, label-based indexing frees us from having to know how our array is organized. All we need to know are the dimension name and the label we wish to index i.e. ``data.sel(x=10)`` works regardless of whether ``x`` is the first or second dimension of the array and regardless of whether ``10`` is the first or second element of ``x``. We have already told xarray that x is the first dimension when we created ``data``: xarray keeps track of this so we don't have to. These operations are just as fast as in pandas, because xarray borrows pandas' indexing machinery.
 
 
 Attributes
