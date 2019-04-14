@@ -179,16 +179,28 @@ objects. You can think of it as a multi-dimensional generalization of the
     ds = xr.Dataset({'foo': data, 'bar': ('x', [1, 2]), 'baz': np.pi})
     ds
 
-Use dictionary indexing to pull out ``Dataset`` variables as ``DataArray``
-objects:
+
+This creates a dataset with three DataArrays named ``foo``, ``bar`` and ``baz``. Use dictionary or dot indexing to pull out ``Dataset`` variables as ``DataArray`` objects but note that assignment only works with dictionary indexing:
 
 .. ipython:: python
 
     ds['foo']
+    ds.foo
+
+
+When creating ``ds``, we told xarray that ``foo`` is identical to ``data`` created earlier, ``bar`` is one-dimensional with single dimension ``x`` and associated values '1' and '2', and ``baz`` is a scalar not associated with any dimension in ``ds``.
 
 Variables in datasets can have different ``dtype`` and even different
 dimensions, but all dimensions are assumed to refer to points in the same shared
-coordinate system.
+coordinate system i.e. if two variables have dimension ``x``, that dimension must be identical in both variables.
+
+For example, when creating ``ds`` xarray automatically *aligns* ``bar`` with ``DataArray`` ``foo`` i.e. they share the same coordinate system so that ``ds.bar['x'] == ds.foo['x'] == ds['x']``. Consequently, the following works without out explicitly specifying the coordinate ``x`` when creating ``ds['bar']``:
+
+.. ipython:: python
+
+    ds.bar.sel(x=10)
+
+
 
 You can do almost everything you can do with ``DataArray`` objects with
 ``Dataset`` objects (including indexing and arithmetic) if you prefer to work
