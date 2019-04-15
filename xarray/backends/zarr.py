@@ -8,6 +8,7 @@ from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from .common import AbstractWritableDataStore, BackendArray
+from .api import _protect_dataset_variables_inplace
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -355,7 +356,8 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
-              drop_variables=None, consolidated=False):
+              drop_variables=None, consolidated=False, cache=False,
+              max_cache_size=None):
     """Load and decode a dataset from a Zarr store.
 
     .. note:: Experimental
@@ -408,6 +410,12 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+    cache : bool, optional
+        If True, the zarr store is wrapped with a
+        ``zarr.storage.LRUStoreCache``.
+    max_cache_size : int, optional
+        The maximum size that the cache may grow to, in number of bytes.
+        Provide `None` if you would like the cache to have unlimited size.
 
     Returns
     -------
@@ -434,10 +442,11 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
             drop_variables=drop_variables)
-
-        # TODO: this is where we would apply caching
-
         return ds
+
+    if cache:
+        import zarr
+        store = zarr.LRUStoreCache(store, max_size=max_cache_size)
 
     # Zarr supports a wide range of access modes, but for now xarray either
     # reads or writes from a store, never both. For open_zarr, we only read
