@@ -190,11 +190,7 @@ This creates a dataset with three DataArrays named ``foo``, ``bar`` and ``baz``.
     ds.foo
 
 
-When creating ``ds``, we told xarray that ``foo`` is identical to ``data`` created earlier, ``bar`` is one-dimensional with single dimension ``x`` and associated values '1' and '2', and ``baz`` is a scalar not associated with any dimension in ``ds``.
-
-Variables in datasets can have different ``dtype`` and even different
-dimensions, but all dimensions are assumed to refer to points in the same shared
-coordinate system i.e. if two variables have dimension ``x``, that dimension must be identical in both variables.
+When creating ``ds``, we specified that ``foo`` is identical to ``data`` created earlier, ``bar`` is one-dimensional with single dimension ``x`` and associated values '1' and '2', and ``baz`` is a scalar not associated with any dimension in ``ds``. Variables in datasets can have different ``dtype`` and even different dimensions, but all dimensions are assumed to refer to points in the same shared coordinate system i.e. if two variables have dimension ``x``, that dimension must be identical in both variables.
 
 For example, when creating ``ds`` xarray automatically *aligns* ``bar`` with ``DataArray`` ``foo`` i.e. they share the same coordinate system so that ``ds.bar['x'] == ds.foo['x'] == ds['x']``. Consequently, the following works without out explicitly specifying the coordinate ``x`` when creating ``ds['bar']``:
 
@@ -230,4 +226,4 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
     os.remove('example.nc')
 
 
-It is common for many datasets to be distributed across multiple files (commonly one file per timestep). xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods. For more, see :ref:`io`.
+It is common for datasets to be distributed across multiple files (commonly one file per timestep). xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods. For more, see :ref:`io`.
