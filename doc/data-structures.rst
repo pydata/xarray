@@ -401,6 +401,20 @@ operations keep around coordinates:
     list(ds[['x']])
     list(ds.drop('temperature'))
 
+When working with a dataset containing many variables, it can be useful to
+select a subset of variables. Passing a list of variables to the
+:py:meth:`~xarray.Dataset.get` method returns a ``Dataset`` with only those
+variables:
+
+.. ipython:: python
+
+    ds['temperature_double'] = (('x', 'y', 'time'), temp * 2)
+    ds['precipitation_double'] = (('x', 'y', 'time'), precip * 2)
+
+    list(ds.get(['temperature', 'temperature_double']))
+    # alternative syntax
+    list(ds[['temperature', 'temperature_double']])
+
 To remove a dimension, you can use :py:meth:`~xarray.Dataset.drop_dims` method.
 Any variables using that dimension are dropped:
 
