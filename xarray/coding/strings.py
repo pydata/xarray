@@ -103,16 +103,19 @@ class CharacterArrayCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
         if data.dtype.kind == 'S' and encoding.get('dtype') is not str:
             data = bytes_to_char(data)
-            dims = dims + ('string%s' % data.shape[-1],)
+            if 'char_dim_name' in encoding.keys():
+                dims = dims + (encoding['char_dim_name'],)
+            else:
+                dims = dims + ('string%s' % data.shape[-1],)
         return Variable(dims, data, attrs, encoding)
 
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         if data.dtype == 'S1' and dims:
+            encoding.update({'char_dim_name': dims[-1]})
             dims = dims[:-1]
             data = char_to_bytes(data)
-
         return Variable(dims, data, attrs, encoding)
 
 
