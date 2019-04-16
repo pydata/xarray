@@ -363,6 +363,7 @@ example, to create this example dataset from scratch, we could have written:
 
     ds = xr.Dataset()
     ds['temperature'] = (('x', 'y', 'time'), temp)
+    ds['temperature_double'] = (('x', 'y', 'time'), temp * 2 )
     ds['precipitation'] = (('x', 'y', 'time'), precip)
     ds.coords['lat'] = (('x', 'y'), lat)
     ds.coords['lon'] = (('x', 'y'), lon)
@@ -397,9 +398,9 @@ operations keep around coordinates:
 
 .. ipython:: python
 
-    list(ds[['temperature']])
-    list(ds[['x']])
-    list(ds.drop('temperature'))
+    ds[['temperature']]
+    ds[['temperature', 'temperature_double']]
+    ds.drop('temperature')
 
 To remove a dimension, you can use :py:meth:`~xarray.Dataset.drop_dims` method.
 Any variables using that dimension are dropped:
