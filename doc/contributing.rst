@@ -285,17 +285,23 @@ How to build the *xarray* documentation
 
 Requirements
 ~~~~~~~~~~~~
+Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
+to build the docs you need to use the environment file ``doc/environment.yml``.
 
-First, you need to have a development environment to be able to build xarray
-(see the docs on :ref:`creating a development environment above <contributing.dev_env>`).
+.. code-block:: none
+
+    # Create and activate the docs environment
+    conda env create -f doc/environment.yml
+    conda activate xarray-docs
+
+    # or with older versions of Anaconda:
+    source activate xarray-docs
+
+    # Build and install xarray
+    pip install -e .
 
 Building the documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In your development environment, install ``sphinx``, ``sphinx_rtd_theme``,
-``sphinx-gallery`` and ``numpydoc``::
-
-    conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc
 
 Navigate to your local ``xarray/doc/`` directory in the console and run::
 
