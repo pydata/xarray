@@ -102,6 +102,7 @@ def test_CharacterArrayCoder_roundtrip(original):
     else:
         assert original.encoding == roundtripped.encoding
 
+
 @pytest.mark.parametrize('data', [
     np.array([b'a', b'bc']),
     np.array([b'a', b'bc'], dtype=strings.create_vlen_dtype(bytes)),
