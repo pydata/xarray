@@ -2029,7 +2029,7 @@ class TestAsCompatibleData(object):
 
         array = CustomIndexable(np.arange(3))
         orig = Variable(dims=('x'), data=array, attrs={'foo': 'bar'})
-        assert isinstance(orig._data, CustomIndexable)        
+        assert isinstance(orig._data, CustomIndexable)
 
         array = CustomWithValuesAttr(np.arange(3))
         orig = Variable(dims=('x'), data=array, attrs={'foo': 'bar'})
