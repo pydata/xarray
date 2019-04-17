@@ -84,6 +84,7 @@ def test_EncodedStringCoder_encode():
 
 @pytest.mark.parametrize('original', [
     Variable(('x',), [b'ab', b'cdef']),
+    Variable(('x',), [b'ab', b'cdef'], encoding={'char_dim_name': 'foo'}),
     Variable((), b'ab'),
     Variable(('x',), [b'a', b'b']),
     Variable((), b'a'),
@@ -92,7 +93,14 @@ def test_CharacterArrayCoder_roundtrip(original):
     coder = strings.CharacterArrayCoder()
     roundtripped = coder.decode(coder.encode(original))
     assert_identical(original, roundtripped)
-
+    if original.encoding == {}:
+        expected_encoding = {
+            'char_dim_name':
+            'string%s' % coder.encode(original).data.shape[-1]
+        }
+        assert roundtripped.encoding == expected_encoding
+    else:
+        assert original.encoding == roundtripped.encoding
 
 @pytest.mark.parametrize('data', [
     np.array([b'a', b'bc']),
