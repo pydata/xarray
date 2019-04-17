@@ -28,6 +28,10 @@ Bug fixes
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Use specific type checks in
+  :py:func:`~xarray.core.variable.as_compatible_data` instead of blanket
+  access to ``values`` attribute (:issue:`2097`)
+  By `Yunus Sevinchan <https://github.com/blusquare>`_.
 
 .. _whats-new.0.12.1:
 
