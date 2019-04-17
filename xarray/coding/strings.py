@@ -113,7 +113,7 @@ class CharacterArrayCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         if data.dtype == 'S1' and dims:
-            encoding.update({'char_dim_name': dims[-1]})
+            encoding['char_dim_name'] = dims[-1]
             dims = dims[:-1]
             data = char_to_bytes(data)
         return Variable(dims, data, attrs, encoding)
