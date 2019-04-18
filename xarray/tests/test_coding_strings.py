@@ -84,7 +84,6 @@ def test_EncodedStringCoder_encode():
 
 @pytest.mark.parametrize('original', [
     Variable(('x',), [b'ab', b'cdef']),
-    Variable(('x',), [b'ab', b'cdef'], encoding={'char_dim_name': 'foo'}),
     Variable((), b'ab'),
     Variable(('x',), [b'a', b'b']),
     Variable((), b'a'),
@@ -93,14 +92,6 @@ def test_CharacterArrayCoder_roundtrip(original):
     coder = strings.CharacterArrayCoder()
     roundtripped = coder.decode(coder.encode(original))
     assert_identical(original, roundtripped)
-    if original.encoding == {}:
-        expected_encoding = {
-            'char_dim_name':
-            'string%s' % coder.encode(original).data.shape[-1]
-        }
-        assert roundtripped.encoding == expected_encoding
-    else:
-        assert original.encoding == roundtripped.encoding
 
 
 @pytest.mark.parametrize('data', [
@@ -114,6 +105,35 @@ def test_CharacterArrayCoder_encode(data):
     expected = Variable(('x', 'string2'),
                         np.array([[b'a', b''], [b'b', b'c']]))
     assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize(
+    'original',
+    [
+        Variable(('x',), [b'ab', b'cdef']),
+        Variable(('x',), [b'ab', b'cdef'], encoding={'char_dim_name': 'foo'})
+    ]
+)
+def test_CharacterArrayCoder_char_dim_name(original):
+    coder = strings.CharacterArrayCoder()
+
+    encoded = coder.encode(original)
+    roundtripped = coder.decode(encoded)
+    assert encoded.encoding == roundtripped.encoding
+    assert encoded.dims[-1] == encoded.encoding['char_dim_name']
+    assert roundtripped.dims[-1] == original.dims[-1]
+
+    # To compare with the original requires logic since encoding either preserves
+    # encoding['char_dim_name'] or it creates it from scratch. Could hardcode to get
+    # around the logic but then the test is brittle to change/addition in the
+    # parametrized data used and similarly confusing in its arbitrariness.
+    if 'char_dim_name' in original.encoding.keys():
+        expected_char_dim_name = original.encoding['char_dim_name']
+    else:
+        expected_char_dim_name = 'string%s' % encoded.data.shape[-1]
+
+    assert encoded.encoding['char_dim_name'] == expected_char_dim_name
+    assert roundtripped.encoding['char_dim_name'] == expected_char_dim_name
 
 
 def test_StackedBytesArray():

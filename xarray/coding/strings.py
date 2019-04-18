@@ -106,7 +106,9 @@ class CharacterArrayCoder(VariableCoder):
             if 'char_dim_name' in encoding.keys():
                 dims = dims + (encoding['char_dim_name'],)
             else:
-                dims = dims + ('string%s' % data.shape[-1],)
+                default_char_dim_name = 'string%s' % data.shape[-1]
+                dims = dims + (default_char_dim_name,)
+                encoding['char_dim_name'] = default_char_dim_name
         return Variable(dims, data, attrs, encoding)
 
     def decode(self, variable, name=None):
