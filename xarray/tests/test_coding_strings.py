@@ -119,10 +119,8 @@ def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name):
     coder = strings.CharacterArrayCoder()
     encoded = coder.encode(original)
     roundtripped = coder.decode(encoded)
-    assert encoded.encoding['char_dim_name'] == expected_char_dim_name
     assert encoded.dims[-1] == expected_char_dim_name
     assert roundtripped.encoding['char_dim_name'] == expected_char_dim_name
-    assert encoded.encoding == roundtripped.encoding
     assert roundtripped.dims[-1] == original.dims[-1]
 
 

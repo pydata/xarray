@@ -104,11 +104,10 @@ class CharacterArrayCoder(VariableCoder):
         if data.dtype.kind == 'S' and encoding.get('dtype') is not str:
             data = bytes_to_char(data)
             if 'char_dim_name' in encoding.keys():
-                dims = dims + (encoding['char_dim_name'],)
+                dims = dims + (encoding.pop('char_dim_name'),)
             else:
                 default_char_dim_name = 'string%s' % data.shape[-1]
                 dims = dims + (default_char_dim_name,)
-                encoding['char_dim_name'] = default_char_dim_name
         return Variable(dims, data, attrs, encoding)
 
     def decode(self, variable, name=None):
