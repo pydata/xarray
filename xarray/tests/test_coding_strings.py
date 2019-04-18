@@ -109,10 +109,11 @@ def test_CharacterArrayCoder_encode(data):
 
 @pytest.mark.parametrize(
     ['original', 'expected_char_dim_name'],
-    [(Variable(('x',), [b'ab', b'cdef']),
-      'string4'),
-     (Variable(('x',), [b'ab', b'cdef'], encoding={'char_dim_name': 'foo'}),
-      'foo')
+    [
+        (Variable(('x',), [b'ab', b'cdef']),
+         'string4'),
+        (Variable(('x',), [b'ab', b'cdef'], encoding={'char_dim_name': 'foo'}),
+         'foo')
     ]
 )
 def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name):
