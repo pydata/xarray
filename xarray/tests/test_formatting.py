@@ -303,17 +303,6 @@ class TestFormatting(object):
         actual = formatting.diff_dataset_repr(ds_a, ds_b, 'identical')
         assert actual == expected
 
-    def test_array_repr(self):
-        ds = xr.Dataset(coords={'foo':[1,2,3], 'bar':[1,2,3]})
-        ds[(1,2)] = xr.DataArray([0], dims='test')
-        actual = formatting.array_repr(ds[(1,2)])
-        expected = dedent("""\
-        <xarray.DataArray (1, 2) (test: 1)>
-        array([0])
-        Dimensions without coordinates: test""")
-
-        assert actual == expected
-
 
 def test_set_numpy_options():
     original_options = np.get_printoptions()
