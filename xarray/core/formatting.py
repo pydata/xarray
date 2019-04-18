@@ -116,7 +116,7 @@ def format_timestamp(t):
         if time_str == '00:00:00':
             return date_str
         else:
-            return '%sT%s' % (date_str, time_str)
+            return '{0}T{1}'.format(date_str, time_str)
 
 
 def format_timedelta(t, timedelta_format=None):
@@ -212,12 +212,12 @@ def summarize_variable(name, var, col_width, show_values=True,
                        marker=' ', max_width=None):
     if max_width is None:
         max_width = OPTIONS['display_width']
-    first_col = pretty_print('  %s %s ' % (marker, name), col_width)
+    first_col = pretty_print('  {0} {1} '.format(marker, name), col_width)
     if var.dims:
-        dims_str = '(%s) ' % ', '.join(map(str, var.dims))
+        dims_str = '({0}) '.format(', '.join(map(str, var.dims)))
     else:
         dims_str = ''
-    front_str = '%s%s%s ' % (first_col, dims_str, var.dtype)
+    front_str = '{0}{1}{2} '.format(first_col, dims_str, var.dtype)
     if show_values:
         values_str = format_array_flat(var, max_width - len(front_str))
     elif isinstance(var._data, dask_array_type):
@@ -229,8 +229,9 @@ def summarize_variable(name, var, col_width, show_values=True,
 
 
 def _summarize_coord_multiindex(coord, col_width, marker):
-    first_col = pretty_print('  %s %s ' % (marker, coord.name), col_width)
-    return '%s(%s) MultiIndex' % (first_col, str(coord.dims[0]))
+    first_col = pretty_print('  {0} {1} '.format(
+                             marker, coord.name), col_width)
+    return '{0}({1}) MultiIndex'.format(first_col, str(coord.dims[0]))
 
 
 def _summarize_coord_levels(coord, col_width, marker='-'):
@@ -264,13 +265,14 @@ def summarize_coord(name, var, col_width):
 def summarize_attr(key, value, col_width=None):
     """Summary for __repr__ - use ``X.attrs[key]`` for full value."""
     # Indent key and add ':', then right-pad if col_width is not None
-    k_str = '    %s:' % key
+    k_str = '    {0}:'.format(key)
     if col_width is not None:
         k_str = pretty_print(k_str, col_width)
     # Replace tabs and newlines, so we print on one line in known width
     v_str = str(value).replace('\t', '\\t').replace('\n', '\\n')
     # Finally, truncate to the desired display width
-    return maybe_truncate('%s %s' % (k_str, v_str), OPTIONS['display_width'])
+    return maybe_truncate('{0} {1}'.format(k_str, v_str),
+                          OPTIONS['display_width'])
 
 
 EMPTY_REPR = '    *empty*'
@@ -303,7 +305,7 @@ def _calculate_col_width(col_items):
 def _mapping_repr(mapping, title, summarizer, col_width=None):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
-    summary = ['%s:' % title]
+    summary = ['{0}:'.format(title)]
     if mapping:
         summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
@@ -329,19 +331,19 @@ def coords_repr(coords, col_width=None):
 def indexes_repr(indexes):
     summary = []
     for k, v in indexes.items():
-        summary.append(wrap_indent(repr(v), '%s: ' % k))
+        summary.append(wrap_indent(repr(v), '{0}: '.format(k)))
     return '\n'.join(summary)
 
 
 def dim_summary(obj):
-    elements = ['%s: %s' % (k, v) for k, v in obj.sizes.items()]
+    elements = ['{0}: {1}'.format(k, v) for k, v in obj.sizes.items()]
     return ', '.join(elements)
 
 
 def unindexed_dims_repr(dims, coords):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
-        dims_str = ', '.join('%s' % d for d in unindexed_dims)
+        dims_str = ', '.join('{0}'.format(d) for d in unindexed_dims)
         return 'Dimensions without coordinates: ' + dims_str
     else:
         return None
@@ -382,10 +384,11 @@ def short_dask_repr(array, show_dtype=True):
     """
     chunksize = tuple(c[0] for c in array.chunks)
     if show_dtype:
-        return 'dask.array<shape=%s, dtype=%s, chunksize=%s>' % (
+        return 'dask.array<shape={0}, dtype={1}, chunksize={2}>'.format(
             array.shape, array.dtype, chunksize)
     else:
-        return 'dask.array<shape=%s, chunksize=%s>' % (array.shape, chunksize)
+        return 'dask.array<shape={0}, chunksize={1}>'.format(
+            array.shape, chunksize)
 
 
 def short_data_repr(array):
@@ -394,18 +397,18 @@ def short_data_repr(array):
     elif array._in_memory or array.size < 1e5:
         return short_array_repr(array.values)
     else:
-        return u'[%s values with dtype=%s]' % (array.size, array.dtype)
+        return u'[{0} values with dtype={1}]'.format(array.size, array.dtype)
 
 
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
-        name_str = '%r ' % arr.name
+        name_str = '{0} '.format(arr.name)
     else:
         name_str = ''
 
-    summary = ['<xarray.%s %s(%s)>'
-               % (type(arr).__name__, name_str, dim_summary(arr))]
+    summary = ['<xarray.{0} {1}({2})>'.format(
+               type(arr).__name__, name_str, dim_summary(arr))]
 
     summary.append(short_data_repr(arr))
 
@@ -424,12 +427,12 @@ def array_repr(arr):
 
 
 def dataset_repr(ds):
-    summary = ['<xarray.%s>' % type(ds).__name__]
+    summary = ['<xarray.{0}>'.format(type(ds).__name__)]
 
     col_width = _calculate_col_width(_get_col_items(ds.variables))
 
     dims_start = pretty_print('Dimensions:', col_width)
-    summary.append('%s(%s)' % (dims_start, dim_summary(ds)))
+    summary.append('{0}({1})'.format(dims_start, dim_summary(ds)))
 
     if ds.coords:
         summary.append(coords_repr(ds.coords, col_width=col_width))
