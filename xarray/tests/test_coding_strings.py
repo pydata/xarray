@@ -123,10 +123,11 @@ def test_CharacterArrayCoder_char_dim_name(original):
     assert encoded.dims[-1] == encoded.encoding['char_dim_name']
     assert roundtripped.dims[-1] == original.dims[-1]
 
-    # To compare with the original requires logic since encoding either preserves
-    # encoding['char_dim_name'] or it creates it from scratch. Could hardcode to get
-    # around the logic but then the test is brittle to change/addition in the
-    # parametrized data used and similarly confusing in its arbitrariness.
+    # To compare with the original requires logic since encoding either
+    # preserves encoding['char_dim_name'] or it creates it from scratch.
+    # Could hardcode to get around the logic but then the test is brittle
+    # to change/addition in the parametrized data used and similarly
+    # confusing in its arbitrariness.
     if 'char_dim_name' in original.encoding.keys():
         expected_char_dim_name = original.encoding['char_dim_name']
     else:
