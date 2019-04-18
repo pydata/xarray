@@ -140,6 +140,11 @@ Other enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
   By `Kevin Squire <https://github.com/kmsquire>`_.
+- ``xr.open_zarr`` now accepts manually specified chunks with the ``chunks=`` 
+  parameter. ``auto_chunk=True`` is equivalent to ``chunks='auto'`` for 
+  backwards compatibility. The ``overwrite_encoded_chunks`` parameter is 
+  added to remove the original zarr chunk encoding.
+  By `Lily Wang <https://github.com/lilyminium>`_.
 
 Bug fixes
 ~~~~~~~~~
