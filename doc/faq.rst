@@ -56,7 +56,7 @@ much easier than if it were stacked into two dimensions:
     value. 
 
     Even following best-pracitices around tidy tabular data, this approach is
-    very difficult to replicate using tabular data.
+    very difficult or at least unintuitive to replicate using tabular data.
 
 Pandas previously supported N-dimensional panels, but started removing them in
 version 0.20 in favor of xarray data structures. There are now built-in methods
