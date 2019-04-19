@@ -15,7 +15,7 @@ Why is pandas not enough?
 -------------------------
 
 pandas is a fantastic library for analysis of low-dimensional labelled data -
-if data can be sensibly described as "rows and columns", pandas is probably the
+if the data can be sensibly described as "rows and columns", pandas is probably the
 right choice.  However, xarray has some distinct advantages: higher dimensionality
 and an explicit, production-ready API.
 
