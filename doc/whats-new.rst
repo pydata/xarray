@@ -20,6 +20,7 @@ v0.12.2 (unreleased)
 
 Enhancements
 ~~~~~~~~~~~~
+
  - Character arrays' character dimension name decoding and encoding handled by
    `var.encoding['char_dim_name']` (:issue:`2895`)
    By `James McCreight <https://github.com/jmccreight>'_.
