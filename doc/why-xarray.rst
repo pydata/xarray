@@ -22,13 +22,13 @@ Xarray doesn't just keep track of labels on arrays -- it uses them to provide a
 powerful and concise interface. For example:
 
 -  Apply operations over dimensions by name: ``x.sum('time')``.
--  Select values by label instead of integer location:
+-  Select values by label (or logical location) instead of integer location:
    ``x.loc['2014-01-01']`` or ``x.sel(time='2014-01-01')``.
 -  Mathematical operations (e.g., ``x - y``) vectorize across multiple
    dimensions (array broadcasting) based on dimension names, not shape.
 -  Flexible split-apply-combine operations with groupby:
    ``x.groupby('time.dayofyear').mean()``.
--  Database like alignment based on coordinate labels that smoothly
+-  Database-like alignment based on coordinate labels that smoothly
    handles missing values: ``x, y = xr.align(x, y, join='outer')``.
 -  Keep track of arbitrary metadata in the form of a Python dictionary:
    ``x.attrs``.
@@ -48,7 +48,7 @@ Core data structures
 --------------------
 
 xarray has two core data structures, which build upon and extend the core
-strengths of  NumPy_ and pandas_. Both are fundamentally N-dimensional:
+strengths of  NumPy_ and pandas_. Both data structures are fundamentally N-dimensional:
 
 - :py:class:`~xarray.DataArray` is our implementation of a labeled, N-dimensional
   array. It is an N-D generalization of a :py:class:`pandas.Series`. The name

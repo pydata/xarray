@@ -11,11 +11,11 @@ intuitive, more concise, and less error-prone developer experience.
 The package includes a large and growing library of domain-agnostic functions
 for advanced analytics and visualization with these data structures.
 
-Xarray was inspired by and borrows heavily from pandas_, the popular data
-analysis package focused on labelled tabular data.
-It is particularly tailored to working with netCDF_ files, which were the
+Xarray is particularly tailored to working with netCDF_ files, which were the
 source of xarray's data model, and integrates tightly with dask_ for parallel
 computing.
+It is inspired by and borrows heavily from pandas_, the popular data
+analysis package focused on labelled tabular data.
 
 .. _NumPy: http://www.numpy.org
 .. _pandas: http://pandas.pydata.org
@@ -55,10 +55,11 @@ Documentation
 * :doc:`combining`
 * :doc:`time-series`
 * :doc:`weather-climate`
-* :doc:`pandas`
 * :doc:`io`
 * :doc:`dask`
 * :doc:`plotting`
+* :doc:`extending`
+* :doc:`pandas`
 
 .. toctree::
    :maxdepth: 1
@@ -74,10 +75,11 @@ Documentation
    combining
    time-series
    weather-climate
-   pandas
    io
    dask
    plotting
+   extending
+   pandas
 
 **Help & reference**
 
