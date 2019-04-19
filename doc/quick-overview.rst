@@ -65,7 +65,7 @@ xarray supports four kind of indexing. Since we have assigned coordinate labels 
     data.sel(x=[10, 20])
 
 
-Unlike positional indexing, label-based indexing frees us from having to know how our array is organized. All we need to know are the dimension name and the label we wish to index i.e. ``data.sel(x=10)`` works regardless of whether ``x`` is the first or second dimension of the array and regardless of whether ``10`` is the first or second element of ``x``. We have already told xarray that x is the first dimension when we created ``data``: xarray keeps track of this so we don't have to. These operations are just as fast as in pandas, because xarray borrows pandas' indexing machinery. For more, see :ref:`indexing`.
+Unlike positional indexing, label-based indexing frees us from having to know how our array is organized. All we need to know are the dimension name and the label we wish to index i.e. ``data.sel(x=10)`` works regardless of whether ``x`` is the first or second dimension of the array and regardless of whether ``10`` is the first or second element of ``x``. We have already told xarray that x is the first dimension when we created ``data``: xarray keeps track of this so we don't have to. For more, see :ref:`indexing`.
 
 
 Attributes
@@ -192,7 +192,7 @@ This creates a dataset with three DataArrays named ``foo``, ``bar`` and ``baz``.
 
 When creating ``ds``, we specified that ``foo`` is identical to ``data`` created earlier, ``bar`` is one-dimensional with single dimension ``x`` and associated values '1' and '2', and ``baz`` is a scalar not associated with any dimension in ``ds``. Variables in datasets can have different ``dtype`` and even different dimensions, but all dimensions are assumed to refer to points in the same shared coordinate system i.e. if two variables have dimension ``x``, that dimension must be identical in both variables.
 
-For example, when creating ``ds`` xarray automatically *aligns* ``bar`` with ``DataArray`` ``foo`` i.e. they share the same coordinate system so that ``ds.bar['x'] == ds.foo['x'] == ds['x']``. Consequently, the following works without out explicitly specifying the coordinate ``x`` when creating ``ds['bar']``:
+For example, when creating ``ds`` xarray automatically *aligns* ``bar`` with ``DataArray`` ``foo``, i.e., they share the same coordinate system so that ``ds.bar['x'] == ds.foo['x'] == ds['x']``. Consequently, the following works without explicitly specifying the coordinate ``x`` when creating ``ds['bar']``:
 
 .. ipython:: python
 
