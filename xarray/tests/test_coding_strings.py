@@ -107,6 +107,24 @@ def test_CharacterArrayCoder_encode(data):
     assert_identical(actual, expected)
 
 
+@pytest.mark.parametrize(
+    ['original', 'expected_char_dim_name'],
+    [
+        (Variable(('x',), [b'ab', b'cdef']),
+         'string4'),
+        (Variable(('x',), [b'ab', b'cdef'], encoding={'char_dim_name': 'foo'}),
+         'foo')
+    ]
+)
+def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name):
+    coder = strings.CharacterArrayCoder()
+    encoded = coder.encode(original)
+    roundtripped = coder.decode(encoded)
+    assert encoded.dims[-1] == expected_char_dim_name
+    assert roundtripped.encoding['char_dim_name'] == expected_char_dim_name
+    assert roundtripped.dims[-1] == original.dims[-1]
+
+
 def test_StackedBytesArray():
     array = np.array([[b'a', b'b', b'c'], [b'd', b'e', b'f']], dtype='S')
     actual = strings.StackedBytesArray(array)
