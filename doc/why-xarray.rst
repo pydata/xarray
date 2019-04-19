@@ -1,6 +1,10 @@
 Overview: Why xarray?
 =====================
 
+Xarray introduces labels in the form of dimensions, coordinates and attributes on top of
+raw NumPy-like multidimensional arrays, which allows for a more intuitive, more concise,
+and less error-prone developer experience.
+
 What labels enable
 ------------------
 
