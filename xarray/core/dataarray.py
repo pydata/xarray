@@ -231,9 +231,6 @@ class DataArray(AbstractArray, DataWithCoords):
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
 
-        # uncomment for a useful consistency check:
-        # assert all(isinstance(v, Variable) for v in coords.values())
-
         # These fully describe a DataArray
         self._variable = variable
         self._coords = coords
@@ -905,7 +902,7 @@ class DataArray(AbstractArray, DataWithCoords):
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         copy : bool, optional
@@ -957,7 +954,7 @@ class DataArray(AbstractArray, DataWithCoords):
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
         **indexers_kwarg : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
@@ -1402,7 +1399,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def transpose(self, *dims):
+    def transpose(self, *dims) -> 'DataArray':
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1429,6 +1426,10 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         variable = self.variable.transpose(*dims)
         return self._replace(variable)
+
+    @property
+    def T(self) -> 'DataArray':
+        return self.transpose()
 
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.

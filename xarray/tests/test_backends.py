@@ -1391,7 +1391,7 @@ class ZarrBase(CFEncodedBase):
         original = create_test_data().chunk()
 
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': False}) as actual:
+                original, open_kwargs={'chunks': None}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
@@ -1399,19 +1399,101 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks is None
 
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': True}) as actual:
+                original, open_kwargs={'chunks': 'auto'}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
 
+    def test_manual_chunk(self):
+        original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
+
+        # All of these should return non-chunked arrays
+        NO_CHUNKS = (None, 0, {})
+        for no_chunk in NO_CHUNKS:
+            open_kwargs = {'chunks': no_chunk}
+            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # there should be no chunks
+                    assert v.chunks is None
+
+        # uniform arrays
+        for i in range(2, 6):
+            rechunked = original.chunk(chunks=i)
+            open_kwargs = {'chunks': i}
+            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # chunk size should be the same as rechunked
+                    assert v.chunks == rechunked[k].chunks
+
+        chunks = {'dim1': 2, 'dim2': 3, 'dim3': 5}
+        rechunked = original.chunk(chunks=chunks)
+
+        open_kwargs = {'chunks': chunks, 'overwrite_encoded_chunks': True}
+        with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+            for k, v in actual.variables.items():
+                assert v.chunks == rechunked[k].chunks
+
+            with self.roundtrip(actual) as auto:
+                # encoding should have changed
+                for k, v in actual.variables.items():
+                    assert v.chunks == rechunked[k].chunks
+
+                assert_identical(actual, auto)
+                assert_identical(actual.load(), auto.load())
+
+    def test_warning_on_bad_chunks(self):
+        original = create_test_data().chunk({'dim1': 4, 'dim2': 3, 'dim3': 5})
+
+        bad_chunks = (2, {'dim2': (3, 3, 2, 1)})
+        for chunks in bad_chunks:
+            kwargs = {'chunks': chunks}
+            with pytest.warns(UserWarning):
+                with self.roundtrip(original, open_kwargs=kwargs) as actual:
+                    for k, v in actual.variables.items():
+                        # only index variables should be in memory
+                        assert v._in_memory == (k in actual.dims)
+
+        good_chunks = ({'dim2': 3}, {'dim3': 10})
+        for chunks in good_chunks:
+            kwargs = {'chunks': chunks}
+            with pytest.warns(None) as record:
+                with self.roundtrip(original, open_kwargs=kwargs) as actual:
+                    for k, v in actual.variables.items():
+                        # only index variables should be in memory
+                        assert v._in_memory == (k in actual.dims)
+            assert len(record) == 0
+
+    def test_deprecate_auto_chunk(self):
+        original = create_test_data().chunk()
+        with pytest.warns(FutureWarning):
+            with self.roundtrip(
+                    original, open_kwargs={'auto_chunk': True}) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # chunk size should be the same as original
+                    assert v.chunks == original[k].chunks
+
+        with pytest.warns(FutureWarning):
+            with self.roundtrip(
+                    original, open_kwargs={'auto_chunk': False}) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # there should be no chunks
+                    assert v.chunks is None
+
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225
         original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
-
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': True}) as actual:
+                original, open_kwargs={'chunks': 'auto'}) as actual:
             for k, v in actual.data_vars.items():
                 print(k)
                 assert v.chunks == actual[k].chunks
@@ -3355,6 +3437,33 @@ class TestRasterio(object):
                         assert actual_res == expected_res
                         assert actual_shape == expected_shape
                         assert expected_val.all() == actual_val.all()
+
+    def test_rasterio_vrt_with_transform_and_size(self):
+        # Test open_rasterio() support of WarpedVRT with transform, width and
+        # height (issue #2864)
+        import rasterio
+        from rasterio.warp import calculate_default_transform
+        from affine import Affine
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with rasterio.open(tmp_file) as src:
+                # Estimate the transform, width and height
+                # for a change of resolution
+                # tmp_file initial res is (1000,2000) (default values)
+                trans, w, h = calculate_default_transform(
+                    src.crs, src.crs, src.width, src.height,
+                    resolution=500, *src.bounds)
+                with rasterio.vrt.WarpedVRT(src, transform=trans,
+                                            width=w, height=h) as vrt:
+                    expected_shape = (vrt.width, vrt.height)
+                    expected_res = vrt.res
+                    expected_transform = vrt.transform
+                    with xr.open_rasterio(vrt) as da:
+                        actual_shape = (da.sizes['x'], da.sizes['y'])
+                        actual_res = da.res
+                        actual_transform = Affine(*da.transform)
+                        assert actual_res == expected_res
+                        assert actual_shape == expected_shape
+                        assert actual_transform == expected_transform
 
     @network
     def test_rasterio_vrt_network(self):

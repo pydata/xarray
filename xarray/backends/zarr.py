@@ -1,3 +1,4 @@
+import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
 
@@ -446,10 +447,11 @@ class ZarrStore(AbstractWritableDataStore):
             zarr.consolidate_metadata(self.ds.store)
 
 
-def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
+def open_zarr(store, group=None, synchronizer=None, chunks='auto',
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
-              drop_variables=None, consolidated=False):
+              drop_variables=None, consolidated=False,
+              overwrite_encoded_chunks=False, **kwargs):
     """Load and decode a dataset from a Zarr store.
 
     .. note:: Experimental
@@ -469,10 +471,15 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
         Array synchronizer provided to zarr
     group : str, obtional
         Group path. (a.k.a. `path` in zarr terminology.)
-    auto_chunk : bool, optional
-        Whether to automatically create dask chunks corresponding to each
-        variable's zarr chunks. If False, zarr array data will lazily convert
-        to numpy arrays upon access.
+    chunks : int or dict or tuple or {None, 'auto'}, optional
+        Chunk sizes along each dimension, e.g., ``5`` or
+        ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created
+        based on the variable's zarr chunks. If `chunks=None`, zarr array
+        data will lazily convert to numpy arrays upon access. This accepts
+        all the chunk specifications as Dask does.
+    overwrite_encoded_chunks: bool, optional
+        Whether to drop the zarr chunks encoded for each variable when a
+        dataset is loaded with specified chunk sizes (default: False)
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -516,6 +523,24 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
     ----------
     http://zarr.readthedocs.io/
     """
+    if 'auto_chunk' in kwargs:
+        auto_chunk = kwargs.pop('auto_chunk')
+        if auto_chunk:
+            chunks = 'auto'  # maintain backwards compatibility
+        else:
+            chunks = None
+
+        warnings.warn("auto_chunk is deprecated. Use chunks='auto' instead.",
+                      FutureWarning, stacklevel=2)
+
+    if kwargs:
+        raise TypeError("open_zarr() got unexpected keyword arguments " +
+                        ",".join(kwargs.keys()))
+
+    if not isinstance(chunks, (int, dict)):
+        if chunks != 'auto' and chunks is not None:
+            raise ValueError("chunks must be an int, dict, 'auto', or None. "
+                             "Instead found %s. " % chunks)
 
     if not decode_cf:
         mask_and_scale = False
@@ -543,21 +568,60 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
 
     # auto chunking needs to be here and not in ZarrStore because variable
     # chunks do not survive decode_cf
-    if auto_chunk:
-        # adapted from Dataset.Chunk()
-        def maybe_chunk(name, var):
-            from dask.base import tokenize
-            chunks = var.encoding.get('chunks')
-            if (var.ndim > 0) and (chunks is not None):
-                # does this cause any data to be read?
-                token2 = tokenize(name, var._data)
-                name2 = 'zarr-%s' % token2
-                return var.chunk(chunks, name=name2, lock=None)
-            else:
-                return var
-
-        variables = OrderedDict([(k, maybe_chunk(k, v))
-                                 for k, v in ds.variables.items()])
-        return ds._replace_vars_and_dims(variables)
-    else:
+    # return trivial case
+    if not chunks:
         return ds
+
+    # adapted from Dataset.Chunk()
+    if isinstance(chunks, int):
+        chunks = dict.fromkeys(ds.dims, chunks)
+
+    if isinstance(chunks, tuple) and len(chunks) == len(ds.dims):
+        chunks = dict(zip(ds.dims, chunks))
+
+    def get_chunk(name, var, chunks):
+        chunk_spec = dict(zip(var.dims, var.encoding.get('chunks')))
+
+        # Coordinate labels aren't chunked
+        if var.ndim == 1 and var.dims[0] == name:
+            return chunk_spec
+
+        if chunks == 'auto':
+            return chunk_spec
+
+        for dim in var.dims:
+            if dim in chunks:
+                spec = chunks[dim]
+                if isinstance(spec, int):
+                    spec = (spec,)
+                if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
+                    if any(s % chunk_spec[dim] for s in spec):
+                        warnings.warn("Specified Dask chunks %r would "
+                                      "separate Zarr chunk shape %r for "
+                                      "dimension %r. This significantly "
+                                      "degrades performance. Consider "
+                                      "rechunking after loading instead."
+                                      % (chunks[dim], chunk_spec[dim], dim),
+                                      stacklevel=2)
+                chunk_spec[dim] = chunks[dim]
+        return chunk_spec
+
+    def maybe_chunk(name, var, chunks):
+        from dask.base import tokenize
+
+        chunk_spec = get_chunk(name, var, chunks)
+
+        if (var.ndim > 0) and (chunk_spec is not None):
+            # does this cause any data to be read?
+            token2 = tokenize(name, var._data)
+            name2 = 'zarr-%s' % token2
+            var = var.chunk(chunk_spec, name=name2, lock=None)
+            if overwrite_encoded_chunks and var.chunks is not None:
+                var.encoding['chunks'] = tuple(x[0] for x in var.chunks)
+            return var
+        else:
+            return var
+
+    variables = OrderedDict([(k, maybe_chunk(k, v, chunks))
+                            for k, v in ds.variables.items()])
+    return ds._replace_vars_and_dims(variables)
