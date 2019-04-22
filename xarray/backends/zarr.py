@@ -258,6 +258,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._group = self.ds.path
         self._consolidate_on_close = consolidate_on_close
         self.append_dim = None
+        self.chunk_dim = None
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
@@ -341,7 +342,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         existing_variables = set([vn for vn in variables
                                  if _encode_variable_name(vn) in self.ds])
-        new_variables = set(variables).difference(existing_variables)
+        new_variables = set(variables) - existing_variables
         variables_without_encoding = OrderedDict([(vn, variables[vn])
                                                  for vn in new_variables])
         variables_encoded, attributes = self.encode(
@@ -405,8 +406,25 @@ class ZarrStore(AbstractWritableDataStore):
                         'did you forget to call to_zarr with append_dim '
                         'argument?')
                 if self.append_dim in dims:
-                    axis = dims.index(self.append_dim)
-                    zarr_array.append(v.data, axis=axis)
+                    if len(dims) == 1 and self.chunk_dim is not None:
+                        # this is the coordinate along which to append
+                        prev_coord = zarr_array[:]
+                        attrs = zarr_array.attrs.asdict()
+                        dtype = zarr_array.dtype
+                        fill_value = zarr_array.fill_value
+                        new_coord = np.hstack((prev_coord, v.data))
+                        self.ds.create_dataset(name, shape=new_coord.shape,
+                                               chunks=self.chunk_dim,
+                                               fill_value=fill_value,
+                                               dtype=dtype, overwrite=True)
+                        zarr_array = self.ds[name]
+                        zarr_array.attrs.put(attrs)
+                        zarr_array[:] = new_coord
+                    else:
+                        # this is the DataArray that has append_dim as a
+                        # dimension
+                        axis = dims.index(self.append_dim)
+                        zarr_array.append(v.data, axis=axis)
             else:
                 # new variable
                 encoding = _extract_zarr_variable_encoding(

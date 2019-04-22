@@ -597,6 +597,13 @@ store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
+It is also possible to append to an existing store. For that, add ``mode='a'``
+and set ``append_dim`` to the name of the dimension along which to append.
+Optionally, you can also pass ``chunk_dim`` to set the chunk size of the
+appended dimension's coordinate. If you don't, this coordinate will keep the
+same chunk size as before appending, which could be too small if this is e.g. a
+1-D array (typically, the time coordinate).
+
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`~xarray.open_zarr` method:
 

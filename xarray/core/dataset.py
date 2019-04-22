@@ -1325,7 +1325,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
                 encoding=None, compute=True, consolidated=False,
-                append_dim=None):
+                append_dim=None, chunk_dim=None):
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1354,8 +1354,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
-        append_dim: str
-            If mode='a' hand the dimension on which the data will be appended
+        append_dim: str, optional
+            If mode='a', the dimension on which the data will be appended.
+        chunk_dim: int, optional
+            If mode='a', the chunk size of the `append_dim` coordinate.
 
         References
         ----------
@@ -1370,7 +1372,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
                        group=group, encoding=encoding, compute=compute,
-                       consolidated=consolidated, append_dim=append_dim)
+                       consolidated=consolidated, append_dim=append_dim,
+                       chunk_dim=chunk_dim)
 
     def __repr__(self):
         return formatting.dataset_repr(self)
