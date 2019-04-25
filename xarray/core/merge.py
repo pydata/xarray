@@ -476,7 +476,7 @@ def merge_core(objs,
     return variables, coord_names, dict(dims)
 
 
-def merge(objects, compat='no_conflicts', join='outer'):
+def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     """Merge any number of xarray objects into a single Dataset as variables.
 
     Parameters
@@ -498,6 +498,8 @@ def merge(objects, compat='no_conflicts', join='outer'):
           of all non-null values.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         How to combine objects with different indexes.
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -535,7 +537,8 @@ def merge(objects, compat='no_conflicts', join='outer'):
         obj.to_dataset() if isinstance(obj, DataArray) else obj
         for obj in objects]
 
-    variables, coord_names, dims = merge_core(dict_like_objects, compat, join)
+    variables, coord_names, dims = merge_core(dict_like_objects, compat, join,
+                                              fill_value=fill_value)
     # TODO: don't always recompute indexes
     merged = Dataset._construct_direct(
         variables, coord_names, dims, indexes=None)
@@ -543,7 +546,8 @@ def merge(objects, compat='no_conflicts', join='outer'):
     return merged
 
 
-def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
+def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
+                         fill_value=dtypes.NA):
     """Guts of the Dataset.merge method."""
 
     # we are locked into supporting overwrite_vars for the Dataset.merge
@@ -571,7 +575,8 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
         objs = [dataset, other_no_overwrite, other_overwrite]
         priority_arg = 2
 
-    return merge_core(objs, compat, join, priority_arg=priority_arg)
+    return merge_core(objs, compat, join, priority_arg=priority_arg,
+                      fill_value=fill_value)
 
 
 def dataset_update_method(dataset, other):
