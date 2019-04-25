@@ -302,16 +302,23 @@ to using encoded character arrays. Character arrays can be selected even for
 netCDF4 files by setting the ``dtype`` field in ``encoding`` to ``S1``
 (corresponding to NumPy's single-character bytes dtype).
 
-If character arrays are used, the string encoding that was used is stored on
-disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
-`adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
-At the time of this writing (October 2017), a standard convention for indicating
-string encoding for character arrays in netCDF files was
-`still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
-Technically, you can use
-`any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
-by setting the ``_Encoding`` field in ``encoding``. But
-`we don't recommend it <http://utf8everywhere.org/>`_.
+If character arrays are used:
+
+- The string encoding that was used is stored on
+  disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
+  `adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
+  At the time of this writing (October 2017), a standard convention for indicating
+  string encoding for character arrays in netCDF files was
+  `still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
+  Technically, you can use
+  `any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
+  by setting the ``_Encoding`` field in ``encoding``. But
+  `we don't recommend it <http://utf8everywhere.org/>`_.
+- The character dimension name can be specifed by the ``char_dim_name`` field of a variable's
+  ``encoding``. If this is not specified the default name for the character dimension is
+  ``'string%s' % data.shape[-1]``. When decoding character arrays from existing files, the
+  ``char_dim_name`` is added to the variables ``encoding`` to preserve if encoding happens, but
+  the field can be edited by the user.
 
 .. warning::
 

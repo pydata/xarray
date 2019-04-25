@@ -1121,7 +1121,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             result = result._roll_one_dim(dim, count)
         return result
 
-    def transpose(self, *dims):
+    def transpose(self, *dims) -> 'Variable':
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1154,6 +1154,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         data = as_indexable(self._data).transpose(axes)
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
+
+    @property
+    def T(self) -> 'Variable':
+        return self.transpose()
 
     def expand_dims(self, *args):
         import warnings
