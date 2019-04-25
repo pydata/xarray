@@ -8,7 +8,7 @@ from typing import Any, Mapping, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from . import utils
+from . import utils, dtypes
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
@@ -35,8 +35,8 @@ _DEFAULT_EXCLUDE = frozenset()  # type: frozenset
 
 
 def align(*objects, **kwargs):
-    """align(*objects, join='inner', copy=True, indexes=None,
-             exclude=frozenset())
+    """align(*objects, join='inner', copy=True, fill_value=dtypes.NA,
+             indexes=None, exclude=frozenset())
 
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -44,7 +44,8 @@ def align(*objects, **kwargs):
     Array from the aligned objects are suitable as input to mathematical
     operators, because along each dimension they have the same index and size.
 
-    Missing values (if ``join != 'inner'``) are filled with NaN.
+    Missing values (if ``join != 'inner'``) are filled with ``fill_value``.
+    The default fill value is NaN.
 
     Parameters
     ----------
@@ -65,6 +66,8 @@ def align(*objects, **kwargs):
         ``copy=False`` and reindexing is unnecessary, or can be performed with
         only slice operations, then the output may share memory with the input.
         In either case, new xarray objects are always returned.
+    fill_value : scalar, optional
+        Value to use for newly missing values
     exclude : sequence of str, optional
         Dimensions that must be excluded from alignment
     indexes : dict-like, optional
@@ -84,6 +87,7 @@ def align(*objects, **kwargs):
     """
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
+    fill_value = kwargs.pop('fill_value', dtypes.NA)
     indexes = kwargs.pop('indexes', None)
     exclude = kwargs.pop('exclude', _DEFAULT_EXCLUDE)
     if indexes is None:
@@ -162,7 +166,8 @@ def align(*objects, **kwargs):
             # fast path for no reindexing necessary
             new_obj = obj.copy(deep=copy)
         else:
-            new_obj = obj.reindex(copy=copy, **valid_indexers)
+            new_obj = obj.reindex(copy=copy, fill_value=fill_value,
+                                  **valid_indexers)
         new_obj.encoding = obj.encoding
         result.append(new_obj)
 
@@ -170,7 +175,8 @@ def align(*objects, **kwargs):
 
 
 def deep_align(objects, join='inner', copy=True, indexes=None,
-               exclude=frozenset(), raise_on_invalid=True):
+               exclude=frozenset(), raise_on_invalid=True,
+               fill_value=dtypes.NA):
     """Align objects for merging, recursing into dictionary values.
 
     This function is not public API.
@@ -214,7 +220,7 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
             out.append(variables)
 
     aligned = align(*targets, join=join, copy=copy, indexes=indexes,
-                    exclude=exclude)
+                    exclude=exclude, fill_value=fill_value)
 
     for position, key, aligned_obj in zip(positions, keys, aligned):
         if key is no_key:
@@ -270,6 +276,7 @@ def reindex_variables(
     method: Optional[str] = None,
     tolerance: Any = None,
     copy: bool = True,
+    fill_value: Optional[Any] = dtypes.NA,
 ) -> 'Tuple[OrderedDict[Any, Variable], OrderedDict[Any, pd.Index]]':
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
@@ -305,6 +312,8 @@ def reindex_variables(
         ``copy=False`` and reindexing is unnecessary, or can be performed
         with only slice operations, then the output may share memory with
         the input. In either case, new xarray objects are always returned.
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -380,7 +389,7 @@ def reindex_variables(
             needs_masking = any(d in masked_dims for d in var.dims)
 
             if needs_masking:
-                new_var = var._getitem_with_mask(key)
+                new_var = var._getitem_with_mask(key, fill_value=fill_value)
             elif all(is_full_slice(k) for k in key):
                 # no reindexing necessary
                 # here we need to manually deal with copying data, since

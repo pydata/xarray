@@ -1932,9 +1932,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         return self.isel_points(dim=dim, **pos_indexers)
 
-    def reindex_like(self, other, method=None, tolerance=None, copy=True):
-        """Conform this object onto the indexes of another object, filling
-        in missing values with NaN.
+    def reindex_like(self, other, method=None, tolerance=None, copy=True,
+                     fill_value=dtypes.NA):
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -1963,6 +1964,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
 
         Returns
         -------
@@ -1977,12 +1980,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         indexers = alignment.reindex_like_indexers(self, other)
         return self.reindex(indexers=indexers, method=method, copy=copy,
-                            tolerance=tolerance)
+                            fill_value=fill_value, tolerance=tolerance)
 
     def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
-                **indexers_kwargs):
+                fill_value=dtypes.NA, **indexers_kwargs):
         """Conform this object onto a new set of indexes, filling in
-        missing values with NaN.
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -2010,6 +2013,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
         **indexers_kwarg : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -2034,7 +2039,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         variables, indexes = alignment.reindex_variables(
             self.variables, self.sizes, self.indexes, indexers, method,
-            tolerance, copy=copy)
+            tolerance, copy=copy, fill_value=fill_value)
         coord_names = set(self._coord_names)
         coord_names.update(indexers)
         return self._replace_with_new_dims(
