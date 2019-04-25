@@ -1271,7 +1271,6 @@ class TestDataArray(object):
         expected = DataArray([10, 20, fill_value], coords=[('y', [0, 1, 2])])
         assert_identical(expected, actual)
 
-
     @pytest.mark.filterwarnings('ignore:Indexer has dimensions')
     def test_reindex_regressions(self):
         # regression test for #279
