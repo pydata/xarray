@@ -24,7 +24,8 @@ from rasterio.warp import transform
 import xarray as xr
 
 # Read the data
-da = xr.open_rasterio('https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif')
+url = 'https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif'
+da = xr.open_rasterio(url)
 
 # Compute the lon/lat coordinates with rasterio.warp.transform
 ny, nx = len(da['y']), len(da['x'])
