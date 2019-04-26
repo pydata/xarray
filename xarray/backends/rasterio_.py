@@ -165,7 +165,7 @@ def _parse_envi(meta):
 
 
 def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
-                  lock=None, mask=False):
+                  lock=None, masked=False):
     """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often:
@@ -208,7 +208,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         :py:func:`dask.array.from_array`. By default, a global lock is
         used to avoid issues with concurrent access to the same file when using
         dask's multithreaded backend.
-    mask : bool, optional
+    masked : bool, optional
         If True, uses nodatavals to set values to NaN. Defaults to False.
 
     Returns
@@ -307,7 +307,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         nodatavals = tuple(
             np.nan if nodataval is None else nodataval
             for nodataval in riods.nodatavals)
-        if mask:
+        if masked:
             encoding['nodatavals'] = nodatavals
         else:
             attrs['nodatavals'] = nodatavals
@@ -329,7 +329,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
                 attrs[k] = v
 
     data = indexing.LazilyOuterIndexedArray(
-        RasterioArrayWrapper(manager, lock, vrt_params, masked=mask))
+        RasterioArrayWrapper(manager, lock, vrt_params, masked=masked))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
