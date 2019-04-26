@@ -91,15 +91,6 @@ class DataArrayWeighted(object):
         
         obj = self.obj
 
-        # check if invalid values are masked by weights that are 0
-        # e.g. values = [1 NaN]; weights = [1, 0], should return 1
-        # if not skipna:
-        #     # w = w.fillna(0)
-        #     sel = ((w.isnull()) & (obj.isnull()))
-        #     if sel.any():
-        #         obj = obj.where(sel, 0)
-
-
         w = w.fillna(0)
 
         # calculate weighted mean
