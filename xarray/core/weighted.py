@@ -1,5 +1,5 @@
 
-class DataArrayWeighted(object):  
+class DataArrayWeighted(object):
     def __init__(self, obj, weights):
         """
         Weighted operations for DataArray.
@@ -18,9 +18,9 @@ class DataArrayWeighted(object):
         Missing values in the weights are treated as 0 (i.e. no weight).
 
         """
-        
+
         super(DataArrayWeighted, self).__init__()
-        
+
         from .dataarray import DataArray
 
         msg = "'weights' must be a DataArray"
@@ -46,9 +46,8 @@ class DataArrayWeighted(object):
 
         # we need to mask values that are nan; else the weights are wrong
         notnull = self.obj.notnull()
-        
+
         return self.weights.where(notnull).sum(dim=dim, axis=axis, skipna=True)
-        
 
     def mean(self, dim=None, axis=None, skipna=None, **kwargs):
         """
@@ -88,13 +87,14 @@ class DataArrayWeighted(object):
 
         # normalize weights to 1
         w = self.weights / sum_of_weights
-        
+
         obj = self.obj
 
         w = w.fillna(0)
 
         # calculate weighted mean
-        weighted = (obj * w).sum(dim, axis=axis, skipna=skipna, **kwargs)
+        weighted = (obj * w).sum(dim, axis=axis, skipna=skipna,
+                                 **kwargs)
 
         # set to NaN if sum_of_weights is zero
         invalid_weights = sum_of_weights == 0

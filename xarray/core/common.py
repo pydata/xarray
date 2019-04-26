@@ -539,6 +539,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                  cut_kwargs={'right': right, 'labels': labels,
                                              'precision': precision,
                                              'include_lowest': include_lowest})
+    
     def weighted(self, weights):
         """
         Weighted operations.
