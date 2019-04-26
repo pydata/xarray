@@ -19,7 +19,8 @@ import matplotlib.pyplot as plt
 import xarray as xr
 
 # Read the data
-da = xr.open_rasterio('https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif')
+url = 'https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif'
+da = xr.open_rasterio(url)
 
 # The data is in UTM projection. We have to set it manually until
 # https://github.com/SciTools/cartopy/issues/813 is implemented
@@ -30,4 +31,3 @@ ax = plt.subplot(projection=crs)
 da.plot.imshow(ax=ax, rgb='band', transform=crs)
 ax.coastlines('10m', color='r')
 plt.show()
-
