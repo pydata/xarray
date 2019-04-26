@@ -539,6 +539,24 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                  cut_kwargs={'right': right, 'labels': labels,
                                              'precision': precision,
                                              'include_lowest': include_lowest})
+    def weighted(self, weights):
+        """
+        Weighted operations.
+
+        Parameters
+        ----------
+        weights : DataArray
+            An array of weights associated with the values in this Dataset.
+            Each value in a contributes to the average according to its
+            associated weight.
+
+        Note
+        ----
+        Missing values in the weights are treated as 0 (i.e. no weight).
+
+        """
+
+        return self._weighted_cls(self, weights)
 
     def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
                 min_periods: Optional[int] = None, center: bool = False,
