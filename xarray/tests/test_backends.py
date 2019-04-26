@@ -3130,16 +3130,23 @@ class TestRasterio(object):
                 np.testing.assert_array_equal(rioda.attrs['nodatavals'],
                                               [-9765.])
 
-    def test_mask(self):
+    def test_masked(self):
         with create_tmp_geotiff(8, 10, 1, open_kwargs={'nodata': 3}) \
                 as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file, mask=True) as rioda:
+            with xr.open_rasterio(tmp_file, masked=True) as rioda:
                 assert_allclose(rioda, expected.where(expected != 3))
                 np.testing.assert_array_equal(rioda.encoding['nodatavals'], [3.])
                 assert 'nodatavals' not in rioda.attrs.keys()
                 assert 3 not in rioda.data
 
-    def test_mask_is_false_by_default(self):
+            # now write the dataarray to netcdf and read it back.
+            with create_tmp_file() as tmp_nc_file:
+                rioda.to_dataset(name='rio').to_netcdf(tmp_nc_file)
+                with xr.open_dataset(tmp_nc_file) as riods:
+                    da = riods.rio
+                    assert_allclose(da, expected.where(expected != 3))
+
+    def test_masked_is_false_by_default(self):
         with create_tmp_geotiff(8, 10, 1, open_kwargs={'nodata': 3}) \
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
