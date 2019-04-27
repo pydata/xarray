@@ -4,18 +4,18 @@ channels:
 dependencies:
   - python=3.5
   - cftime
-  - dask=0.16
+  - dask
   - h5py
   - h5netcdf
-  - matplotlib=1.5
+  - matplotlib
   - netcdf4
   - pytest
   - pytest-cov
   - pytest-env
   - coveralls
   - flake8
-  - numpy
-  - pandas
+  - numpy>=1.12
+  - pandas>=1.19
   - scipy
   - seaborn
   - toolz
