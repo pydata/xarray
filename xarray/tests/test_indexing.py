@@ -50,7 +50,7 @@ class TestIndexers(object):
             dims=["replicate", "rsample", "exp"],
             coords=dict(
                 replicate=[0, 1, 2],
-                sexp=["a", "b", "c", "d"],
+                exp=["a", "b", "c", "d"],
                 rsample=list(range(23))
             ),
         )
