@@ -43,7 +43,7 @@ much easier than if it were stacked into two dimensions:
     For example, ``da - 1`` would make every pixel slightly darker, whether 
     we're dealing with a single or multiple frames, color or B&W, etc. 
     
-    Similarly ``da - da.mean('row', 'column')`` would normalize the values 
+    Similarly ``da - da.mean(dim=['row', 'column'])`` would normalize the values 
     based on the mean value in its width and height, again regardless of whether
     we have a single or multiple frames, color or grayscale, etc.
 
