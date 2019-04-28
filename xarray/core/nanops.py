@@ -64,12 +64,10 @@ def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
     filled_value = fillna(value, fill_value)
     data = getattr(np, func)(filled_value, axis=axis, **kwargs)
     if not hasattr(data, 'dtype'):  # scalar case
-        data = dtypes.fill_value(value.dtype) if valid_count == 0 else data
-        # we've computed a single min, max value. don't let np.array turn
-        # a tuple back into an array
-        if isinstance(data, tuple):
-            return utils.to_0d_object_array(data)
-        return np.array(data, dtype=value.dtype)
+        data = fill_value if valid_count == 0 else data
+        # we've computed a single min, max value of type object. 
+        # don't let np.array turn a tuple back into an array
+        return utils.to_0d_object_array(data)
     return where_method(data, valid_count != 0)
 
 
