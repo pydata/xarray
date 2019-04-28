@@ -45,7 +45,7 @@ much easier than if it were stacked into two dimensions:
     
     Similarly ``da - da.mean('row', 'column')`` would normalize the values 
     based on the mean value in its width and height, again regardless of whether
-    we have a single or multiple frames, color or B&W, etc.
+    we have a single or multiple frames, color or grayscale, etc.
 
   - *Alignment*: Xarray can package arrays which share some, but not all, of
     their dimensions in a dataset and align the dimensions they do share. 
