@@ -50,7 +50,7 @@ much easier than if it were stacked into two dimensions:
   - *Alignment*: Xarray can package arrays which share some, but not all, of
     their dimensions in a dataset and align the dimensions they do share. 
     For example, if we calculated the brightness of our movie images
-    using ``da.mean('row', 'column', 'color')`, we'd have an array with a time
+    using ``da.mean(dim=['row', 'column', 'color'])``, we'd have an array with a time
     dimension. When we add that to a dataset and select the first point in time,
     ``ds.isel(time=0)``, we'll receive both the frame and the first brightness
     value. 
