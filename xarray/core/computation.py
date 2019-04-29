@@ -4,7 +4,6 @@ Functions for applying functions that act on arrays to xarray's labeled data.
 import functools
 import itertools
 import operator
-import typing
 from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 from typing import (

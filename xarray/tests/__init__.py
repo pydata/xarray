@@ -3,11 +3,11 @@ from contextlib import contextmanager
 from distutils import version
 import re
 import importlib
-from unittest import mock
+from unittest import mock  # noqa: F401
 
 import numpy as np
 from numpy.testing import assert_array_equal  # noqa: F401
-from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
+from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 import pytest
 
 from xarray.core import utils

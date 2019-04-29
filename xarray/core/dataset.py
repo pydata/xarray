@@ -1,14 +1,17 @@
 import copy
 import functools
 import sys
-import typing
 import warnings
 from collections import OrderedDict, defaultdict
-from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
-from typing import (
-    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union, Sequence)
+from typing import (Any, Dict, Hashable, List, Mapping, MutableMapping,
+                    MutableSet, Optional, Sequence, Set, Tuple, TypeVar, Union)
+# Support for Python 3.5.0 ~ 3.5.1
+try:
+    from .pycompat import Mapping  # noqa: F811
+except ImportError:
+    pass
 
 import numpy as np
 import pandas as pd
@@ -35,8 +38,7 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
-    either_dict_or_kwargs, ensure_us_time_resolution, hashable, is_dict_like,
-    maybe_wrap_array)
+    either_dict_or_kwargs, hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
@@ -119,13 +121,12 @@ def calculate_dimensions(variables):
     return dims
 
 
-def merge_indexes(
-        indexes,  # type: Dict[Any, Union[Any, List[Any]]]
-        variables,  # type: Dict[Any, Variable]
-        coord_names,  # type: Set
-        append=False,  # type: bool
-):
-    # type: (...) -> Tuple[OrderedDict[Any, Variable], Set]
+def merge_indexes(indexes: Mapping[Hashable, Union[Hashable, List[Hashable]]],
+                  variables: Mapping[Hashable, Variable],
+                  coord_names: Set[Hashable],
+                  append: bool = False
+                  ) -> Tuple[MutableMapping[Hashable, Variable],
+                             MutableSet[Hashable]]:
     """Merge variables into multi-indexes.
 
     Not public API. Used in Dataset and DataArray set_index
@@ -135,7 +136,7 @@ def merge_indexes(
     vars_to_remove = []  # type: list
 
     for dim, var_names in indexes.items():
-        if isinstance(var_names, str):
+        if isinstance(var_names, Hashable):
             var_names = [var_names]
 
         names, codes, levels = [], [], []  # type: (list, list, list)
@@ -192,22 +193,21 @@ def merge_indexes(
 
 
 def split_indexes(
-    dims_or_levels,  # type: Union[Any, List[Any]]
-    variables,  # type: OrderedDict[Any, Variable]
-    coord_names,  # type: Set
-    level_coords,  # type: Dict[Any, Any]
-    drop=False,  # type: bool
-):
-    # type: (...) -> Tuple[OrderedDict[Any, Variable], Set]
+    dims_or_levels: Union[Hashable, List[Hashable]],
+    variables: Mapping[Hashable, Variable],
+    coord_names: Set,
+    level_coords: Mapping[Hashable, Hashable],
+    drop: bool = False,
+) -> Tuple[MutableMapping[Hashable, Variable], Set]:
     """Extract (multi-)indexes (levels) as variables.
 
     Not public API. Used in Dataset and DataArray reset_index
     methods.
     """
-    if isinstance(dims_or_levels, str):
+    if isinstance(dims_or_levels, Hashable):
         dims_or_levels = [dims_or_levels]
 
-    dim_levels = defaultdict(list)  # type: Dict[Any, list]
+    dim_levels = defaultdict(list)  # type: MutableMapping[Hashable, list]
     dims = []
     for k in dims_or_levels:
         if k in level_coords:
@@ -216,7 +216,7 @@ def split_indexes(
             dims.append(k)
 
     vars_to_replace = {}
-    vars_to_create = OrderedDict()  # type: OrderedDict[Any, Variable]
+    vars_to_create = OrderedDict()  # type: MutableMapping[Hashable, Variable]
     vars_to_remove = []
 
     for d in dims:
@@ -432,7 +432,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> Mapping:
+    def attrs(self) -> MutableMapping[Hashable, Any]:
         """Dictionary of global attributes on this dataset
         """
         if self._attrs is None:
@@ -440,7 +440,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value):
+    def attrs(self, value: Mapping[Hashable, Any]) -> None:
         self._attrs = OrderedDict(value)
 
     @property
@@ -2041,7 +2041,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names, indexes=indexes)
 
     def interp(self, coords=None, method='linear', assume_sorted=False,
-               kwargs={}, **coords_kwargs):
+               kwargs=None, **coords_kwargs):
         """ Multidimensional interpolation of Dataset.
 
         Parameters
@@ -2082,6 +2082,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from . import missing
 
+        if kwargs is None:
+            kwargs = {}
         coords = either_dict_or_kwargs(coords, coords_kwargs, 'interp')
         indexers = OrderedDict(self._validate_indexers(coords))
 
@@ -2148,7 +2150,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names, indexes=indexes)
 
     def interp_like(self, other, method='linear', assume_sorted=False,
-                    kwargs={}):
+                    kwargs=None):
         """Interpolate this object onto the coordinates of another object,
         filling the out of range values with NaN.
 
@@ -2187,6 +2189,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.interp
         Dataset.reindex_like
         """
+        if kwargs is None:
+            kwargs = {}
         coords = alignment.reindex_like_indexers(self, other)
 
         numeric_coords = OrderedDict()
@@ -3918,7 +3922,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        q : float in range of [0,1] (or sequence of floats)
+        q : float in range of [0,1] or array-like of floats
             Quantile to compute, which must be between 0 and 1 inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.

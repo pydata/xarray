@@ -1,7 +1,6 @@
 import functools
 import itertools
 import warnings
-from inspect import getfullargspec
 
 import numpy as np
 
