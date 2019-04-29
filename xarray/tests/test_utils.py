@@ -5,15 +5,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import xarray as xr
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs
-from xarray.testing import assert_identical
 
 from . import (
-    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_cftime,
-    requires_dask)
+    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_dask)
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -178,19 +175,6 @@ class TestDictionaries(object):
         assert repr(utils.SortedKeysDict()) == \
             "SortedKeysDict({})"
 
-    def test_chain_map(self):
-        m = utils.ChainMap({'x': 0, 'y': 1}, {'x': -100, 'z': 2})
-        assert 'x' in m
-        assert 'y' in m
-        assert 'z' in m
-        assert m['x'] == 0
-        assert m['y'] == 1
-        assert m['z'] == 2
-        m['x'] = 100
-        assert m['x'] == 100
-        assert m.maps[0]['x'] == 100
-        assert set(m) == {'x', 'y', 'z'}
-
 
 def test_repr_object():
     obj = utils.ReprObject('foo')
@@ -279,42 +263,3 @@ def test_either_dict_or_kwargs():
 
     with pytest.raises(ValueError, match=r'foo'):
         result = either_dict_or_kwargs(dict(a=1), dict(a=1), 'foo')
-
-
-def test_datetime_to_numeric_datetime64():
-    times = pd.date_range('2000', periods=5, freq='7D')
-    da = xr.DataArray(times, coords=[times], dims=['time'])
-    result = utils.datetime_to_numeric(da, datetime_unit='h')
-    expected = 24 * xr.DataArray(np.arange(0, 35, 7), coords=da.coords)
-    assert_identical(result, expected)
-
-    offset = da.isel(time=1)
-    result = utils.datetime_to_numeric(da, offset=offset, datetime_unit='h')
-    expected = 24 * xr.DataArray(np.arange(-7, 28, 7), coords=da.coords)
-    assert_identical(result, expected)
-
-    dtype = np.float32
-    result = utils.datetime_to_numeric(da, datetime_unit='h', dtype=dtype)
-    expected = 24 * xr.DataArray(
-        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
-    assert_identical(result, expected)
-
-
-@requires_cftime
-def test_datetime_to_numeric_cftime():
-    times = xr.cftime_range('2000', periods=5, freq='7D')
-    da = xr.DataArray(times, coords=[times], dims=['time'])
-    result = utils.datetime_to_numeric(da, datetime_unit='h')
-    expected = 24 * xr.DataArray(np.arange(0, 35, 7), coords=da.coords)
-    assert_identical(result, expected)
-
-    offset = da.isel(time=1)
-    result = utils.datetime_to_numeric(da, offset=offset, datetime_unit='h')
-    expected = 24 * xr.DataArray(np.arange(-7, 28, 7), coords=da.coords)
-    assert_identical(result, expected)
-
-    dtype = np.float32
-    result = utils.datetime_to_numeric(da, datetime_unit='h', dtype=dtype)
-    expected = 24 * xr.DataArray(
-        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
-    assert_identical(result, expected)

@@ -3,13 +3,15 @@ import operator
 import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import suppress
+from typing import Any, Mapping, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 
 from . import utils
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice
-from .variable import IndexVariable
+from .variable import IndexVariable, Variable
 
 
 def _get_joiner(join):
@@ -260,8 +262,15 @@ def reindex_like_indexers(target, other):
     return indexers
 
 
-def reindex_variables(variables, sizes, indexes, indexers, method=None,
-                      tolerance=None, copy=True):
+def reindex_variables(
+    variables: Mapping[Any, Variable],
+    sizes: Mapping[Any, int],
+    indexes: Mapping[Any, pd.Index],
+    indexers: Mapping,
+    method: Optional[str] = None,
+    tolerance: Any = None,
+    copy: bool = True,
+) -> 'Tuple[OrderedDict[Any, Variable], OrderedDict[Any, pd.Index]]':
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -274,7 +283,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     sizes : dict-like
         Dictionary from dimension names to integer sizes.
     indexes : dict-like
-        Dictionary of xarray.IndexVariable objects associated with variables.
+        Dictionary of indexes associated with variables.
     indexers : dict
         Dictionary with keys given by dimension names and values given by
         arrays of coordinates tick labels. Any mis-matched coordinate values
@@ -289,7 +298,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
           * nearest: use nearest valid index value
     tolerance : optional
         Maximum distance between original and new labels for inexact matches.
-        The values of the index at the matching locations most satisfy the
+        The values of the index at the matching locations must satisfy the
         equation ``abs(index[indexer] - target) <= tolerance``.
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
@@ -300,53 +309,20 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     Returns
     -------
     reindexed : OrderedDict
-        Another dict, with the items in variables but replaced indexes.
+        Dict of reindexed variables.
+    new_indexes : OrderedDict
+        Dict of indexes associated with the reindexed variables.
     """
     from .dataarray import DataArray
 
+    # create variables for the new dataset
+    reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
+
     # build up indexers for assignment along each dimension
     int_indexers = {}
-    targets = {}
+    new_indexes = OrderedDict(indexes)
     masked_dims = set()
     unchanged_dims = set()
-
-    # size of reindexed dimensions
-    new_sizes = {}
-
-    for name, index in indexes.items():
-        if name in indexers:
-            if not index.is_unique:
-                raise ValueError(
-                    'cannot reindex or align along dimension %r because the '
-                    'index has duplicate values' % name)
-
-            target = utils.safe_cast_to_index(indexers[name])
-            new_sizes[name] = len(target)
-
-            int_indexer = get_indexer_nd(index, target, method, tolerance)
-
-            # We uses negative values from get_indexer_nd to signify
-            # values that are missing in the index.
-            if (int_indexer < 0).any():
-                masked_dims.add(name)
-            elif np.array_equal(int_indexer, np.arange(len(index))):
-                unchanged_dims.add(name)
-
-            int_indexers[name] = int_indexer
-            targets[name] = target
-
-    for dim in sizes:
-        if dim not in indexes and dim in indexers:
-            existing_size = sizes[dim]
-            new_size = indexers[dim].size
-            if existing_size != new_size:
-                raise ValueError(
-                    'cannot reindex or align along dimension %r without an '
-                    'index because its size %r is different from the size of '
-                    'the new index %r' % (dim, existing_size, new_size))
-
-    # create variables for the new dataset
-    reindexed = OrderedDict()
 
     for dim, indexer in indexers.items():
         if isinstance(indexer, DataArray) and indexer.dims != (dim,):
@@ -357,12 +333,43 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
                     str(indexer.dims), dim),
                 FutureWarning, stacklevel=3)
 
+        target = new_indexes[dim] = utils.safe_cast_to_index(indexers[dim])
+
+        if dim in indexes:
+            index = indexes[dim]
+
+            if not index.is_unique:
+                raise ValueError(
+                    'cannot reindex or align along dimension %r because the '
+                    'index has duplicate values' % dim)
+
+            int_indexer = get_indexer_nd(index, target, method, tolerance)
+
+            # We uses negative values from get_indexer_nd to signify
+            # values that are missing in the index.
+            if (int_indexer < 0).any():
+                masked_dims.add(dim)
+            elif np.array_equal(int_indexer, np.arange(len(index))):
+                unchanged_dims.add(dim)
+
+            int_indexers[dim] = int_indexer
+
         if dim in variables:
             var = variables[dim]
-            args = (var.attrs, var.encoding)
+            args = (var.attrs, var.encoding)  # type: tuple
         else:
             args = ()
-        reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
+        reindexed[dim] = IndexVariable((dim,), target, *args)
+
+    for dim in sizes:
+        if dim not in indexes and dim in indexers:
+            existing_size = sizes[dim]
+            new_size = indexers[dim].size
+            if existing_size != new_size:
+                raise ValueError(
+                    'cannot reindex or align along dimension %r without an '
+                    'index because its size %r is different from the size of '
+                    'the new index %r' % (dim, existing_size, new_size))
 
     for name, var in variables.items():
         if name not in indexers:
@@ -384,7 +391,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
 
             reindexed[name] = new_var
 
-    return reindexed
+    return reindexed, new_indexes
 
 
 def broadcast(*args, **kwargs):

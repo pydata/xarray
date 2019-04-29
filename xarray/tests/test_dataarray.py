@@ -3,6 +3,7 @@ import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
+import sys
 
 import numpy as np
 import pandas as pd
@@ -500,6 +501,14 @@ class TestDataArray(object):
         assert_equal(da[ind], da[[0, 1]])
         assert_equal(da[ind], da[ind.values])
 
+    def test_getitem_empty_index(self):
+        da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'])
+        assert_identical(da[{'x': []}],
+                         DataArray(np.zeros((0, 4)), dims=['x', 'y']))
+        assert_identical(da.loc[{'y': []}],
+                         DataArray(np.zeros((3, 0)), dims=['x', 'y']))
+        assert_identical(da[[]], DataArray(np.zeros((0, 4)), dims=['x', 'y']))
+
     def test_setitem(self):
         # basic indexing should work as numpy's indexing
         tuples = [(0, 0), (0, slice(None, None)),
@@ -683,7 +692,9 @@ class TestDataArray(object):
         da.isel(time=(('points',), [1, 2]), x=(('points',), [2, 2]),
                 y=(('points',), [3, 4]))
         np.testing.assert_allclose(
-            da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
+            da.isel(time=(('p',), [1]),
+                    x=(('p',), [2]),
+                    y=(('p',), [4])).values.squeeze(),
             np_array[1, 4, 2].squeeze())
         da.isel(time=(('points', ), [1, 2]))
         y = [-1, 0]
@@ -1301,7 +1312,7 @@ class TestDataArray(object):
                           coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
 
-        with raises_regex(ValueError, 'dim should be str or'):
+        with raises_regex(TypeError, 'dim should be str or'):
             array.expand_dims(0)
         with raises_regex(ValueError, 'lengths of dim and axis'):
             # dims and axis argument should be the same length
@@ -1325,6 +1336,16 @@ class TestDataArray(object):
         # Does not raise an IndexError
         array.expand_dims(dim=['y', 'z'], axis=[2, -4])
         array.expand_dims(dim=['y', 'z'], axis=[2, 3])
+
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3)},
+                          attrs={'key': 'entry'})
+        with pytest.raises(TypeError):
+            array.expand_dims(OrderedDict((("new_dim", 3.2),)))
+
+        # Attempt to use both dim and kwargs
+        with pytest.raises(ValueError):
+            array.expand_dims(OrderedDict((("d", 4),)), e=4)
 
     def test_expand_dims(self):
         array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
@@ -1389,6 +1410,46 @@ class TestDataArray(object):
         assert_identical(expected, actual)
         roundtripped = actual.squeeze(['z'], drop=False)
         assert_identical(array, roundtripped)
+
+    def test_expand_dims_with_greater_dim_size(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3), 'z': 1.0},
+                          attrs={'key': 'entry'})
+        # For python 3.5 and earlier this has to be an ordered dict, to
+        # maintain insertion order.
+        actual = array.expand_dims(
+            OrderedDict((('y', 2), ('z', 1), ('dim_1', ['a', 'b', 'c']))))
+
+        expected_coords = OrderedDict((
+            ('y', [0, 1]), ('z', [1.0]), ('dim_1', ['a', 'b', 'c']),
+            ('x', np.linspace(0, 1, 3)), ('dim_0', range(4))))
+        expected = DataArray(array.values * np.ones([2, 1, 3, 3, 4]),
+                             coords=expected_coords,
+                             dims=list(expected_coords.keys()),
+                             attrs={'key': 'entry'}
+                             ).drop(['y', 'dim_0'])
+        assert_identical(expected, actual)
+
+        # Test with kwargs instead of passing dict to dim arg.
+
+        # TODO: only the code under the if-statement is needed when python 3.5
+        #   is no longer supported.
+        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
+        if python36_plus:
+            other_way = array.expand_dims(dim_1=['a', 'b', 'c'])
+
+            other_way_expected = DataArray(
+                array.values * np.ones([3, 3, 4]),
+                coords={'dim_1': ['a', 'b', 'c'],
+                        'x': np.linspace(0, 1, 3),
+                        'dim_0': range(4), 'z': 1.0},
+                dims=['dim_1', 'x', 'dim_0'],
+                attrs={'key': 'entry'}).drop('dim_0')
+            assert_identical(other_way_expected, other_way)
+        else:
+            # In python 3.5, using dim_kwargs should raise a ValueError.
+            with raises_regex(ValueError, "dim_kwargs isn't"):
+                array.expand_dims(e=["l", "m", "n"])
 
     def test_set_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
@@ -2035,7 +2096,7 @@ class TestDataArray(object):
         with pytest.warns(FutureWarning):
             grouped.sum()
 
-    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.12'),
+    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.13'),
                         reason="not to forget the behavior change")
     def test_groupby_sum_default(self):
         array = self.make_groupby_example_array()
@@ -2298,16 +2359,6 @@ class TestDataArray(object):
         expected = xr.DataArray([3., 3., 3.], coords=[times], dims=['time'])
         actual = da.resample(time='D').apply(func, args=(1.,), arg3=1.)
         assert_identical(actual, expected)
-
-    @requires_cftime
-    def test_resample_cftimeindex(self):
-        cftime = _import_cftime()
-        times = cftime.num2date(np.arange(12), units='hours since 0001-01-01',
-                                calendar='noleap')
-        array = DataArray(np.arange(12), [('time', times)])
-
-        with raises_regex(NotImplementedError, 'to_datetimeindex'):
-            array.resample(time='6H').mean()
 
     def test_resample_first(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
@@ -2872,6 +2923,15 @@ class TestDataArray(object):
             expected_da,
             DataArray.from_series(actual).drop(['x', 'y']))
 
+    def test_to_and_from_empty_series(self):
+        # GH697
+        expected = pd.Series([])
+        da = DataArray.from_series(expected)
+        assert len(da) == 0
+        actual = da.to_series()
+        assert len(actual) == 0
+        assert expected.equals(actual)
+
     def test_series_categorical_index(self):
         # regression test for GH700
         if not hasattr(pd, 'CategoricalIndex'):
@@ -2962,7 +3022,7 @@ class TestDataArray(object):
                  'maintainer': 'bar'}
         da = DataArray(x, {'t': t, 'lat': lat}, dims=['t', 'lat'],
                        attrs=attrs)
-        expected_attrs = {'created': np.asscalar(attrs['created']),
+        expected_attrs = {'created': attrs['created'].item(),
                           'coords': attrs['coords'].tolist(),
                           'maintainer': 'bar'}
         actual = da.to_dict()
@@ -3691,6 +3751,15 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
+
+
+def test_name_in_masking():
+    name = 'RingoStarr'
+    da = xr.DataArray(range(10), coords=[('x', range(10))], name=name)
+    assert da.where(da > 5).name == name
+    assert da.where((da > 5).rename('YokoOno')).name == name
+    assert da.where(da > 5, drop=True).name == name
+    assert da.where((da > 5).rename('YokoOno'), drop=True).name == name
 
 
 class TestIrisConversion(object):

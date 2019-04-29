@@ -19,7 +19,6 @@ matrix:
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - env: CONDA_ENV=py36-dask-dev
   - env: CONDA_ENV=py36-pandas-dev
-  - env: CONDA_ENV=py36-bottleneck-dev
   - env: CONDA_ENV=py36-rasterio
   - env: CONDA_ENV=py36-zarr-dev
   - env: CONDA_ENV=docs
@@ -31,7 +30,6 @@ matrix:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - env: CONDA_ENV=py36-pandas-dev
-  - env: CONDA_ENV=py36-bottleneck-dev
   - env: CONDA_ENV=py36-zarr-dev
 
 before_install:
@@ -67,7 +65,7 @@ script:
     elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then
       pytest properties ;
     else
-      py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS;
+      py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing $EXTRA_FLAGS;
     fi
 
 after_success:

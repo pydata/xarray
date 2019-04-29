@@ -27,6 +27,7 @@ from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
+from xarray.coding.variables import SerializationWarning
 
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
@@ -34,7 +35,9 @@ from . import (
     requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
     requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
     requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
-    requires_zarr)
+    requires_zarr, requires_h5fileobj)
+from .test_coding_times import (_STANDARD_CALENDARS, _NON_STANDARD_CALENDARS,
+                                _ALL_CALENDARS)
 from .test_dataset import create_test_data
 
 try:
@@ -46,6 +49,12 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+try:
+    from pandas.errors import OutOfBoundsDatetime
+except ImportError:
+    # pandas < 0.20
+    from pandas.tslib import OutOfBoundsDatetime
 
 
 ON_WINDOWS = sys.platform == 'win32'
@@ -171,8 +180,12 @@ class DatasetIOBase(object):
         raise NotImplementedError
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
@@ -180,8 +193,12 @@ class DatasetIOBase(object):
                 yield ds
 
     @contextlib.contextmanager
-    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip_append(self, data, save_kwargs=None, open_kwargs=None,
                          allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as path:
             for i, key in enumerate(data.variables):
@@ -1194,6 +1211,17 @@ class NetCDF4Base(CFEncodedBase):
                 with open_dataset(tmp_file, **kwargs) as actual:
                     assert_identical(expected, actual)
 
+    def test_encoding_unlimited_dims(self):
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims=['y'])) as actual:
+            assert actual.encoding['unlimited_dims'] == set('y')
+            assert_equal(ds, actual)
+        ds.encoding = {'unlimited_dims': ['y']}
+        with self.roundtrip(ds) as actual:
+            assert actual.encoding['unlimited_dims'] == set('y')
+            assert_equal(ds, actual)
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
@@ -1276,12 +1304,17 @@ class TestNetCDF4Data(NetCDF4Base):
 @pytest.mark.filterwarnings('ignore:deallocating CachingFileManager')
 class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if open_kwargs is None:
+            open_kwargs = {}
+        if save_kwargs is None:
+            save_kwargs = {}
+        open_kwargs.setdefault('chunks', -1)
         with TestNetCDF4Data.roundtrip(
                 self, data, save_kwargs, open_kwargs,
                 allow_cleanup_failure) as ds:
-            yield ds.chunk()
+            yield ds
 
     def test_unsorted_index_raises(self):
         # Skip when using dask because dask rewrites indexers to getitem,
@@ -1329,15 +1362,19 @@ class ZarrBase(CFEncodedBase):
             yield ds
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with self.create_zarr_target() as store_target:
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
     @contextlib.contextmanager
-    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip_append(self, data, save_kwargs=None, open_kwargs=None,
                          allow_cleanup_failure=False):
         pytest.skip("zarr backend does not support appending")
 
@@ -1354,7 +1391,7 @@ class ZarrBase(CFEncodedBase):
         original = create_test_data().chunk()
 
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': False}) as actual:
+                original, open_kwargs={'chunks': None}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
@@ -1362,19 +1399,101 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks is None
 
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': True}) as actual:
+                original, open_kwargs={'chunks': 'auto'}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
 
+    def test_manual_chunk(self):
+        original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
+
+        # All of these should return non-chunked arrays
+        NO_CHUNKS = (None, 0, {})
+        for no_chunk in NO_CHUNKS:
+            open_kwargs = {'chunks': no_chunk}
+            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # there should be no chunks
+                    assert v.chunks is None
+
+        # uniform arrays
+        for i in range(2, 6):
+            rechunked = original.chunk(chunks=i)
+            open_kwargs = {'chunks': i}
+            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # chunk size should be the same as rechunked
+                    assert v.chunks == rechunked[k].chunks
+
+        chunks = {'dim1': 2, 'dim2': 3, 'dim3': 5}
+        rechunked = original.chunk(chunks=chunks)
+
+        open_kwargs = {'chunks': chunks, 'overwrite_encoded_chunks': True}
+        with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+            for k, v in actual.variables.items():
+                assert v.chunks == rechunked[k].chunks
+
+            with self.roundtrip(actual) as auto:
+                # encoding should have changed
+                for k, v in actual.variables.items():
+                    assert v.chunks == rechunked[k].chunks
+
+                assert_identical(actual, auto)
+                assert_identical(actual.load(), auto.load())
+
+    def test_warning_on_bad_chunks(self):
+        original = create_test_data().chunk({'dim1': 4, 'dim2': 3, 'dim3': 5})
+
+        bad_chunks = (2, {'dim2': (3, 3, 2, 1)})
+        for chunks in bad_chunks:
+            kwargs = {'chunks': chunks}
+            with pytest.warns(UserWarning):
+                with self.roundtrip(original, open_kwargs=kwargs) as actual:
+                    for k, v in actual.variables.items():
+                        # only index variables should be in memory
+                        assert v._in_memory == (k in actual.dims)
+
+        good_chunks = ({'dim2': 3}, {'dim3': 10})
+        for chunks in good_chunks:
+            kwargs = {'chunks': chunks}
+            with pytest.warns(None) as record:
+                with self.roundtrip(original, open_kwargs=kwargs) as actual:
+                    for k, v in actual.variables.items():
+                        # only index variables should be in memory
+                        assert v._in_memory == (k in actual.dims)
+            assert len(record) == 0
+
+    def test_deprecate_auto_chunk(self):
+        original = create_test_data().chunk()
+        with pytest.warns(FutureWarning):
+            with self.roundtrip(
+                    original, open_kwargs={'auto_chunk': True}) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # chunk size should be the same as original
+                    assert v.chunks == original[k].chunks
+
+        with pytest.warns(FutureWarning):
+            with self.roundtrip(
+                    original, open_kwargs={'auto_chunk': False}) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # there should be no chunks
+                    assert v.chunks is None
+
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225
         original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
-
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': True}) as actual:
+                original, open_kwargs={'chunks': 'auto'}) as actual:
             for k, v in actual.data_vars.items():
                 print(k)
                 assert v.chunks == actual[k].chunks
@@ -1618,8 +1737,12 @@ class TestScipyFileObject(ScipyWriteBase):
         yield backends.ScipyDataStore(fobj, 'w')
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with create_tmp_file() as tmp_file:
             with open(tmp_file, 'wb') as f:
                 self.save(data, f, **save_kwargs)
@@ -1729,10 +1852,9 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
                 open_dataset(tmp_file, engine='foobar')
 
         netcdf_bytes = data.to_netcdf()
-        with raises_regex(ValueError, 'can only read'):
+        with raises_regex(ValueError, 'unrecognized engine'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2050')
     def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
@@ -1801,7 +1923,6 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected) as actual:
                 assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/535')
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into
@@ -1914,6 +2035,92 @@ class TestH5NetCDFData(NetCDF4Base):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             assert actual.x.encoding['compression'] == 'lzf'
             assert actual.x.encoding['compression_opts'] is None
+
+
+@requires_h5fileobj
+class TestH5NetCDFFileObject(TestH5NetCDFData):
+    engine = 'h5netcdf'
+
+    def test_open_badbytes(self):
+        with raises_regex(ValueError, "HDF5 as bytes"):
+            with open_dataset(b'\211HDF\r\n\032\n', engine='h5netcdf'):
+                pass
+        with raises_regex(ValueError, "not a valid netCDF"):
+            with open_dataset(b'garbage'):
+                pass
+        with raises_regex(ValueError, "can only read bytes"):
+            with open_dataset(b'garbage', engine='netcdf4'):
+                pass
+        with raises_regex(ValueError, "not a valid netCDF"):
+            with open_dataset(BytesIO(b'garbage'), engine='h5netcdf'):
+                pass
+
+    def test_open_twice(self):
+        expected = create_test_data()
+        expected.attrs['foo'] = 'bar'
+        with raises_regex(ValueError, 'read/write pointer not at zero'):
+            with create_tmp_file() as tmp_file:
+                expected.to_netcdf(tmp_file, engine='h5netcdf')
+                with open(tmp_file, 'rb') as f:
+                    with open_dataset(f, engine='h5netcdf'):
+                        with open_dataset(f, engine='h5netcdf'):
+                            pass
+
+    def test_open_fileobj(self):
+        # open in-memory datasets instead of local file paths
+        expected = create_test_data().drop('dim3')
+        expected.attrs['foo'] = 'bar'
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine='h5netcdf')
+
+            with open(tmp_file, 'rb') as f:
+                with open_dataset(f, engine='h5netcdf') as actual:
+                    assert_identical(expected, actual)
+
+                f.seek(0)
+                with BytesIO(f.read()) as bio:
+                    with open_dataset(bio, engine='h5netcdf') as actual:
+                        assert_identical(expected, actual)
+
+
+@requires_h5netcdf
+@requires_dask
+@pytest.mark.filterwarnings('ignore:deallocating CachingFileManager')
+class TestH5NetCDFViaDaskData(TestH5NetCDFData):
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
+                  allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
+        open_kwargs.setdefault('chunks', -1)
+        with TestH5NetCDFData.roundtrip(
+                self, data, save_kwargs, open_kwargs,
+                allow_cleanup_failure) as ds:
+            yield ds
+
+    def test_dataset_caching(self):
+        # caching behavior differs for dask
+        pass
+
+    def test_write_inconsistent_chunks(self):
+        # Construct two variables with the same dimensions, but different
+        # chunk sizes.
+        x = da.zeros((100, 100), dtype='f4', chunks=(50, 100))
+        x = DataArray(data=x, dims=('lat', 'lon'), name='x')
+        x.encoding['chunksizes'] = (50, 100)
+        x.encoding['original_shape'] = (100, 100)
+        y = da.ones((100, 100), dtype='f4', chunks=(100, 50))
+        y = DataArray(data=y, dims=('lat', 'lon'), name='y')
+        y.encoding['chunksizes'] = (100, 50)
+        y.encoding['original_shape'] = (100, 100)
+        # Put them both into the same dataset
+        ds = Dataset({'x': x, 'y': y})
+        with self.roundtrip(ds) as actual:
+            assert actual['x'].encoding['chunksizes'] == (50, 100)
+            assert actual['y'].encoding['chunksizes'] == (100, 50)
 
 
 @pytest.fixture(params=['scipy', 'netcdf4', 'h5netcdf', 'pynio'])
@@ -2100,7 +2307,7 @@ class TestDask(DatasetIOBase):
         yield Dataset()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
         yield data.chunk()
 
@@ -2548,6 +2755,12 @@ class TestPyNio(ScipyWriteBase):
         with open_dataset(path, engine='pynio', **kwargs) as ds:
             yield ds
 
+    def test_kwargs(self):
+        kwargs = {'format': 'grib'}
+        path = os.path.join(os.path.dirname(__file__), 'data', 'example')
+        with backends.NioDataStore(path, **kwargs) as store:
+            assert store._manager._kwargs['format'] == 'grib'
+
     def save(self, dataset, path, **kwargs):
         return dataset.to_netcdf(path, engine='scipy', **kwargs)
 
@@ -2593,8 +2806,12 @@ class TestPseudoNetCDFFormat(object):
         return open_dataset(path, engine='pseudonetcdf', **kwargs)
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+    def roundtrip(self, data, save_kwargs=None, open_kwargs=None,
                   allow_cleanup_failure=False):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
@@ -2801,10 +3018,14 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                        transform_args=[5000, 80000, 1000, 2000.],
                        crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
                             'proj': 'utm', 'zone': 18},
-                       open_kwargs={}):
+                       open_kwargs=None):
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
+
+    if open_kwargs is None:
+        open_kwargs = {}
+
     with create_tmp_file(suffix='.tif',
                          allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         # allow 2d or 3d shapes
@@ -3211,6 +3432,33 @@ class TestRasterio(object):
                         assert actual_shape == expected_shape
                         assert expected_val.all() == actual_val.all()
 
+    def test_rasterio_vrt_with_transform_and_size(self):
+        # Test open_rasterio() support of WarpedVRT with transform, width and
+        # height (issue #2864)
+        import rasterio
+        from rasterio.warp import calculate_default_transform
+        from affine import Affine
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with rasterio.open(tmp_file) as src:
+                # Estimate the transform, width and height
+                # for a change of resolution
+                # tmp_file initial res is (1000,2000) (default values)
+                trans, w, h = calculate_default_transform(
+                    src.crs, src.crs, src.width, src.height,
+                    resolution=500, *src.bounds)
+                with rasterio.vrt.WarpedVRT(src, transform=trans,
+                                            width=w, height=h) as vrt:
+                    expected_shape = (vrt.width, vrt.height)
+                    expected_res = vrt.res
+                    expected_transform = vrt.transform
+                    with xr.open_rasterio(vrt) as da:
+                        actual_shape = (da.sizes['x'], da.sizes['y'])
+                        actual_res = da.res
+                        actual_transform = Affine(*da.transform)
+                        assert actual_res == expected_res
+                        assert actual_shape == expected_shape
+                        assert actual_transform == expected_transform
+
     @network
     def test_rasterio_vrt_network(self):
         import rasterio
@@ -3352,22 +3600,12 @@ class TestValidateAttrs(object):
                 ds.to_netcdf(tmp_file)
 
             ds, attrs = new_dataset_and_attrs()
-            attrs['test'] = np.arange(12).reshape(3, 4)
-            with create_tmp_file() as tmp_file:
-                ds.to_netcdf(tmp_file)
-
-            ds, attrs = new_dataset_and_attrs()
             attrs['test'] = 'This is a string'
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = ''
-            with create_tmp_file() as tmp_file:
-                ds.to_netcdf(tmp_file)
-
-            ds, attrs = new_dataset_and_attrs()
-            attrs['test'] = np.arange(12).reshape(3, 4)
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
@@ -3452,3 +3690,170 @@ def test_source_encoding_always_present():
         original.to_netcdf(tmp)
         with open_dataset(tmp) as ds:
             assert ds.encoding['source'] == tmp
+
+
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+def test_use_cftime_standard_calendar_default_in_range(calendar):
+    x = [0, 1]
+    time = [0, 720]
+    units_date = '2000-01-01'
+    units = 'days since 2000-01-01'
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    x_timedeltas = np.array(x).astype('timedelta64[D]')
+    time_timedeltas = np.array(time).astype('timedelta64[D]')
+    decoded_x = np.datetime64(units_date, 'ns') + x_timedeltas
+    decoded_time = np.datetime64(units_date, 'ns') + time_timedeltas
+    expected_x = DataArray(decoded_x, [('time', decoded_time)], name='x')
+    expected_time = DataArray(decoded_time, [('time', decoded_time)],
+                              name='time')
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.warns(None) as record:
+            with open_dataset(tmp_file) as ds:
+                assert_identical(expected_x, ds.x)
+                assert_identical(expected_time, ds.time)
+            assert not record
+
+
+@requires_cftime
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2500])
+def test_use_cftime_standard_calendar_default_out_of_range(
+        calendar,
+        units_year):
+    import cftime
+
+    x = [0, 1]
+    time = [0, 720]
+    units = 'days since {}-01-01'.format(units_year)
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    decoded_x = cftime.num2date(x, units, calendar,
+                                only_use_cftime_datetimes=True)
+    decoded_time = cftime.num2date(time, units, calendar,
+                                   only_use_cftime_datetimes=True)
+    expected_x = DataArray(decoded_x, [('time', decoded_time)], name='x')
+    expected_time = DataArray(decoded_time, [('time', decoded_time)],
+                              name='time')
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.warns(SerializationWarning):
+            with open_dataset(tmp_file) as ds:
+                assert_identical(expected_x, ds.x)
+                assert_identical(expected_time, ds.time)
+
+
+@requires_cftime
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _ALL_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2000, 2500])
+def test_use_cftime_true(
+        calendar,
+        units_year):
+    import cftime
+
+    x = [0, 1]
+    time = [0, 720]
+    units = 'days since {}-01-01'.format(units_year)
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    decoded_x = cftime.num2date(x, units, calendar,
+                                only_use_cftime_datetimes=True)
+    decoded_time = cftime.num2date(time, units, calendar,
+                                   only_use_cftime_datetimes=True)
+    expected_x = DataArray(decoded_x, [('time', decoded_time)], name='x')
+    expected_time = DataArray(decoded_time, [('time', decoded_time)],
+                              name='time')
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.warns(None) as record:
+            with open_dataset(tmp_file, use_cftime=True) as ds:
+                assert_identical(expected_x, ds.x)
+                assert_identical(expected_time, ds.time)
+            assert not record
+
+
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+def test_use_cftime_false_standard_calendar_in_range(calendar):
+    x = [0, 1]
+    time = [0, 720]
+    units_date = '2000-01-01'
+    units = 'days since 2000-01-01'
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    x_timedeltas = np.array(x).astype('timedelta64[D]')
+    time_timedeltas = np.array(time).astype('timedelta64[D]')
+    decoded_x = np.datetime64(units_date, 'ns') + x_timedeltas
+    decoded_time = np.datetime64(units_date, 'ns') + time_timedeltas
+    expected_x = DataArray(decoded_x, [('time', decoded_time)], name='x')
+    expected_time = DataArray(decoded_time, [('time', decoded_time)],
+                              name='time')
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.warns(None) as record:
+            with open_dataset(tmp_file, use_cftime=False) as ds:
+                assert_identical(expected_x, ds.x)
+                assert_identical(expected_time, ds.time)
+            assert not record
+
+
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2500])
+def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
+    x = [0, 1]
+    time = [0, 720]
+    units = 'days since {}-01-01'.format(units_year)
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.raises((OutOfBoundsDatetime, ValueError)):
+            open_dataset(tmp_file, use_cftime=False)
+
+
+@requires_scipy_or_netCDF4
+@pytest.mark.parametrize('calendar', _NON_STANDARD_CALENDARS)
+@pytest.mark.parametrize('units_year', [1500, 2000, 2500])
+def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
+    x = [0, 1]
+    time = [0, 720]
+    units = 'days since {}'.format(units_year)
+    original = DataArray(x, [('time', time)], name='x')
+    original = original.to_dataset()
+    for v in ['x', 'time']:
+        original[v].attrs['units'] = units
+        original[v].attrs['calendar'] = calendar
+
+    with create_tmp_file() as tmp_file:
+        original.to_netcdf(tmp_file)
+        with pytest.raises((OutOfBoundsDatetime, ValueError)):
+            open_dataset(tmp_file, use_cftime=False)

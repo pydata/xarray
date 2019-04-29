@@ -258,12 +258,8 @@ class GroupBy(SupportsArithmetic):
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
-            s = pd.Series(np.arange(index.size), index)
-            first_items = s.groupby(grouper).first()
-            _apply_loffset(grouper, first_items)
-            full_index = first_items.index
-            if first_items.isnull().any():
-                first_items = first_items.dropna()
+            full_index, first_items = self._get_index_and_items(
+                index, grouper)
             sbins = first_items.values.astype(np.int64)
             group_indices = ([slice(i, j)
                               for i, j in zip(sbins[:-1], sbins[1:])] +
@@ -309,6 +305,19 @@ class GroupBy(SupportsArithmetic):
 
     def __iter__(self):
         return zip(self._unique_coord.values, self._iter_grouped())
+
+    def _get_index_and_items(self, index, grouper):
+        from .resample_cftime import CFTimeGrouper
+        s = pd.Series(np.arange(index.size), index)
+        if isinstance(grouper, CFTimeGrouper):
+            first_items = grouper.first_items(index)
+        else:
+            first_items = s.groupby(grouper).first()
+            _apply_loffset(grouper, first_items)
+        full_index = first_items.index
+        if first_items.isnull().any():
+            first_items = first_items.dropna()
+        return full_index, first_items
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
@@ -607,8 +616,9 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             if self._obj.ndim > 1:
                 warnings.warn(
                     "Default reduction dimension will be changed to the "
-                    "grouped dimension after xarray 0.12. To silence this "
-                    "warning, pass dim=xarray.ALL_DIMS explicitly.",
+                    "grouped dimension in a future version of xarray. To "
+                    "silence this warning, pass dim=xarray.ALL_DIMS "
+                    "explicitly.",
                     FutureWarning, stacklevel=2)
 
         if keep_attrs is None:
@@ -722,8 +732,9 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             # the deprecation process. Do not forget to remove _reduce_method
             warnings.warn(
                 "Default reduction dimension will be changed to the "
-                "grouped dimension after xarray 0.12. To silence this "
-                "warning, pass dim=xarray.ALL_DIMS explicitly.",
+                "grouped dimension in a future version of xarray. To "
+                "silence this warning, pass dim=xarray.ALL_DIMS "
+                "explicitly.",
                 FutureWarning, stacklevel=2)
         elif dim is None:
             dim = self._group_dim

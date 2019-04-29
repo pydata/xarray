@@ -375,12 +375,6 @@ def test_groupby(da):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-def test_resample_error(da):
-    with pytest.raises(NotImplementedError, match='to_datetimeindex'):
-        da.resample(time='Y')
-
-
 SEL_STRING_OR_LIST_TESTS = {
     'string': '0001',
     'string-slice': slice('0001-01-01', '0001-12-30'),  # type: ignore
@@ -583,6 +577,14 @@ def test_indexing_in_series_iloc(series, index):
 
     expected = pd.Series([1, 2], index=index[:2])
     assert series.iloc[:2].equals(expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_series_dropna(index):
+    series = pd.Series([0., 1., np.nan, np.nan], index=index)
+    expected = series.iloc[:2]
+    result = series.dropna()
+    assert result.equals(expected)
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')

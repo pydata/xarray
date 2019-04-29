@@ -13,8 +13,7 @@ import pytest
 from xarray.core import utils
 from xarray.core.options import set_options
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.testing import (assert_equal, assert_identical,  # noqa: F401
-                            assert_allclose, assert_combined_tile_ids_equal)
+import xarray.testing
 from xarray.plot.utils import import_seaborn
 
 try:
@@ -63,6 +62,8 @@ has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
 has_pynio, requires_pynio = _importorskip('Nio')
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip('PseudoNetCDF')
 has_cftime, requires_cftime = _importorskip('cftime')
+has_nc_time_axis, requires_nc_time_axis = _importorskip('nc_time_axis',
+                                                        minversion='1.2.0')
 has_cftime_1_0_2_1, requires_cftime_1_0_2_1 = _importorskip(
     'cftime', minversion='1.0.2.1')
 has_dask, requires_dask = _importorskip('dask')
@@ -75,6 +76,12 @@ has_iris, requires_iris = _importorskip('iris')
 has_cfgrib, requires_cfgrib = _importorskip('cfgrib')
 
 # some special cases
+has_h5netcdf07, requires_h5netcdf07 = _importorskip('h5netcdf',
+                                                    minversion='0.7')
+has_h5py29, requires_h5py29 = _importorskip('h5py', minversion='2.9.0')
+has_h5fileobj = has_h5netcdf07 and has_h5py29
+requires_h5fileobj = pytest.mark.skipif(
+    not has_h5fileobj, reason='requires h5py>2.9.0 & h5netcdf>0.7')
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
@@ -172,3 +179,25 @@ def source_ndarray(array):
     if base is None:
         base = array
     return base
+
+
+# Internal versions of xarray's test functions that validate additional
+# invariants
+# TODO: add more invariant checks.
+
+def assert_equal(a, b):
+    xarray.testing.assert_equal(a, b)
+    xarray.testing._assert_indexes_invariants(a)
+    xarray.testing._assert_indexes_invariants(b)
+
+
+def assert_identical(a, b):
+    xarray.testing.assert_identical(a, b)
+    xarray.testing._assert_indexes_invariants(a)
+    xarray.testing._assert_indexes_invariants(b)
+
+
+def assert_allclose(a, b, **kwargs):
+    xarray.testing.assert_allclose(a, b, **kwargs)
+    xarray.testing._assert_indexes_invariants(a)
+    xarray.testing._assert_indexes_invariants(b)

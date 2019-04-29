@@ -10,6 +10,16 @@ from inspect import getfullargspec
 
 from ..core.options import OPTIONS
 from ..core.utils import is_scalar
+from distutils.version import LooseVersion
+
+try:
+    import nc_time_axis
+    if LooseVersion(nc_time_axis.__version__) < LooseVersion('1.2.0'):
+        nc_time_axis_available = False
+    else:
+        nc_time_axis_available = True
+except ImportError:
+    nc_time_axis_available = False
 
 ROBUST_PERCENTILE = 2.0
 
@@ -471,16 +481,29 @@ def _ensure_plottable(*args):
     """
     numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
     other_types = [datetime]
-
+    try:
+        import cftime
+        cftime_datetime = [cftime.datetime]
+    except ImportError:
+        cftime_datetime = []
+    other_types = other_types + cftime_datetime
     for x in args:
         if not (_valid_numpy_subdtype(np.array(x), numpy_types)
                 or _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
-                            'or dates of type np.datetime64 or '
-                            'datetime.datetime or pd.Interval.')
+                            'or dates of type np.datetime64, '
+                            'datetime.datetime, cftime.datetime or '
+                            'pd.Interval.')
+        if (_valid_other_type(np.array(x), cftime_datetime)
+                and not nc_time_axis_available):
+            raise ImportError('Plotting of arrays of cftime.datetime '
+                              'objects or arrays indexed by '
+                              'cftime.datetime objects requires the '
+                              'optional `nc-time-axis` (v1.2.0 or later) '
+                              'package.')
 
 
-def _ensure_numeric(arr):
+def _numeric(arr):
     numpy_types = [np.floating, np.integer]
     return _valid_numpy_subdtype(arr, numpy_types)
 
