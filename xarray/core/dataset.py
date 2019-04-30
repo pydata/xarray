@@ -613,9 +613,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return self.dims
 
-    def load(self, **kwargs) -> "Dataset":
-        """Manually trigger loading of this dataset's data from disk or a
-        remote source into memory and return this dataset.
+    def load(self: T, **kwargs) -> T:
+        """Manually trigger loading and/or computation of this dataset's data
+        from disk or a remote source into memory and return this dataset.
+        Unlike compute, the original dataset is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -770,10 +771,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return Dataset._construct_direct(variables, *args)
 
-    def compute(self, **kwargs) -> "Dataset":
-        """Manually trigger loading of this dataset's data from disk or a
-        remote source into memory and return a new dataset. The original is
-        left unaltered.
+    def compute(self: T, **kwargs) -> T:
+        """Manually trigger loading and/or computation of this dataset's data
+        from disk or a remote source into memory and return a new dataset.
+        Unlike load, the original dataset is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -816,10 +817,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """ Trigger computation, keeping data as dask arrays
 
         This operation can be used to trigger computation on underlying dask
-        arrays, similar to ``.compute()``.  However this operation keeps the
-        data as dask arrays.  This is particularly useful when using the
-        dask.distributed scheduler and you want to load a large amount of data
-        into distributed memory.
+        arrays, similar to ``.compute()`` or ``.load()``.  However this
+        operation keeps the data as dask arrays. This is particularly useful
+        when using the dask.distributed scheduler and you want to load a large
+        amount of data into distributed memory.
 
         Parameters
         ----------

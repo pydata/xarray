@@ -191,11 +191,19 @@ Dask arrays using the :py:meth:`~xarray.Dataset.persist` method:
 
    ds = ds.persist()
 
-This is particularly useful when using a distributed cluster because the data
-will be loaded into distributed memory across your machines and be much faster
-to use than reading repeatedly from disk.  Warning that on a single machine
-this operation will try to load all of your data into memory.  You should make
-sure that your dataset is not larger than available memory.
+:py:meth:`~xarray.Dataset.persist` is particularly useful when using a
+distributed cluster because the data will be loaded into distributed memory
+across your machines and be much faster to use than reading repeatedly from
+disk.
+
+.. warning::
+   On a single machine :py:meth:`~xarray.Dataset.persist` will try to load all of
+   your data into memory. You should make sure that your dataset is not larger than
+   available memory.
+
+.. note::
+   For more on the differences between :py:meth:`~xarray.Dataset.persist` and
+   :py:meth:`~xarray.Dataset.compute` see this `Stack Overflow answer <https://stackoverflow.com/questions/41806850/dask-difference-between-client-persist-and-client-compute>`_ and the `Dask documentation <https://distributed.readthedocs.io/en/latest/manage-computation.html#dask-collections-to-futures>`_.
 
 For performance you may wish to consider chunk sizes.  The correct choice of
 chunk size depends both on your data and on the operations you want to perform.
