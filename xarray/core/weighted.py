@@ -32,6 +32,7 @@ _doc_ = """
         the indicated dimension(s) removed.
     """
 
+
 class DataArrayWeighted(object):
     def __init__(self, obj, weights):
         """
@@ -81,7 +82,7 @@ class DataArrayWeighted(object):
         masked_weights = self.weights.where(self.obj.notnull())
 
         sum_of_weights = masked_weights.sum(dim=dim, axis=axis, skipna=True)
-        
+
         # find all weights that are valid (not 0)
         valid_weights = sum_of_weights != 0.
 
@@ -89,7 +90,7 @@ class DataArrayWeighted(object):
         return sum_of_weights.where(valid_weights)
 
     def sum(self, dim=None, axis=None, skipna=None, **kwargs):
-        
+
         # calculate weighted sum
         return (self.obj * self.weights).sum(dim, axis=axis, skipna=skipna,
                                              **kwargs)
@@ -105,14 +106,14 @@ class DataArrayWeighted(object):
         # calculate weighted mean
         return weighted_sum / sum_of_weights
 
-
     def __repr__(self):
         """provide a nice str repr of our weighted object"""
 
         msg = "{klass} with weights along dimensions: {weight_dims}"
-        return msg.format(klass=self.__class__.__name__, 
+        return msg.format(klass=self.__class__.__name__,
                           weight_dims=", ".join(self.weights.dims))
 
 # add docstrings
 DataArrayWeighted.mean.__doc__ = _doc_.format(fcn='mean')
 DataArrayWeighted.sum.__doc__ = _doc_.format(fcn='sum')
+
