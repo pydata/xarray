@@ -113,7 +113,7 @@ class DataArrayWeighted(object):
         return msg.format(klass=self.__class__.__name__,
                           weight_dims=", ".join(self.weights.dims))
 
+
 # add docstrings
 DataArrayWeighted.mean.__doc__ = _doc_.format(fcn='mean')
 DataArrayWeighted.sum.__doc__ = _doc_.format(fcn='sum')
-
