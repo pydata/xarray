@@ -431,7 +431,7 @@ def _infer_line_data(darray, x, y, hue, animate, linestyle):
             linestyle = (linestyle.replace('steps-pre', '')
                                   .replace('steps-post', '')
                                   .replace('steps-mid', ''))
-            #if kwargs['linestyle'] == '':
+            # if kwargs['linestyle'] == '':
             #    kwargs.pop('linestyle')
         else:
             xplt_val = _interval_to_mid_points(xplt.values)

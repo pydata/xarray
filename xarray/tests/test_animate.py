@@ -65,15 +65,15 @@ class TestTimeline:
 @pytest.fixture
 def linedata():
     dat1 = np.array([[0.0, 1.1, 0.0, 2],
-                         [0.1, 1.3, 0.2, 2.1],
-                         [0.1, 1.4, 0.3, 2.2],
-                         [0.2, 1.3, 0.2, 2.3],
-                         [0.1, 1.2, 0.2, 2.2]])
+                     [0.1, 1.3, 0.2, 2.1],
+                     [0.1, 1.4, 0.3, 2.2],
+                     [0.2, 1.3, 0.2, 2.3],
+                     [0.1, 1.2, 0.2, 2.2]])
     dat2 = np.array([[0.0, 1.1, 0.0, 2],
-                         [0.1, 1.3, 0.2, 2.1],
-                         [0.1, 1.4, 0.3, 2.2],
-                         [0.2, 1.3, 0.2, 2.3],
-                         [0.1, 1.2, 0.2, 2.2]])
+                     [0.1, 1.3, 0.2, 2.1],
+                     [0.1, 1.4, 0.3, 2.2],
+                     [0.2, 1.3, 0.2, 2.3],
+                     [0.1, 1.2, 0.2, 2.2]])
     das = []
     for data in [dat1, dat2]:
         coords = {'time': 10 * np.arange(data.shape[0]),
@@ -174,7 +174,7 @@ class TestAnimateStep(PlotTestCase):
     def test_coord_with_interval_step(self):
         bins = [-1, 0, 1, 2]
         da = self.darray.groupby_bins('dim_0', bins).mean(xr.ALL_DIMS)
-        da = xr.concat([da, da*2, da*1.7], dim='new_dim')
+        da = xr.concat([da, da * 2, da * 1.7], dim='new_dim')
 
         anim = da.plot.step(animate='new_dim')
         assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)

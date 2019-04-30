@@ -84,7 +84,7 @@ def line(darray, animate=None, **kwargs):
     if ndims > 3:
         raise ValueError('Animated line plots are for 2- or 3-dimensional '
                          'DataArrays. Passed DataArray has {ndims} '
-                         'dimensions'.format(ndims=ndims+1))
+                         'dimensions'.format(ndims=ndims + 1))
 
     # Ensures consistency with .plot method
     figsize = kwargs.pop('figsize', None)
@@ -118,9 +118,11 @@ def line(darray, animate=None, **kwargs):
     if ylim is None:
         ylim = [np.min(yplt_val), np.max(yplt_val)]
 
-    # TODO this currently breaks step plots because they have a list of arrays for yplt_val
+    # TODO this currently breaks step plots because they have a list of arrays
+    # for yplt_val
     num_lines = len(hueplt) if hueplt is not None else 1
-    # We transposed in _infer_line_data so that animate is last dim and hue is second-last dim
+    # We transposed in _infer_line_data so that animate is last dim and hue is
+    # second-last dim
     # TODO think of a more robust way of doing this
     hueaxis = -2 if hue else 0
 
@@ -142,7 +144,7 @@ def line(darray, animate=None, **kwargs):
         title_block = Title(frame_titles, ax=ax)
 
     if ndims == 3 and add_legend:
-        # TODO ensure the legend stays in the same place throughout the animation
+        # TODO ensure the legend stays in the same place throughout animation
         ax.legend(handles=[block.line for block in line_blocks],
                   labels=list(hueplt.values),
                   title=huelabel)
