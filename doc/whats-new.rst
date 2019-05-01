@@ -13,21 +13,56 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.12.1:
+.. _whats-new.0.12.2:
 
-v0.12.1 (unreleased)
+v0.12.2 (unreleased)
 --------------------
 
 Enhancements
 ~~~~~~~~~~~~
 
+- Character arrays' character dimension name decoding and encoding handled by
+  ``var.encoding['char_dim_name']`` (:issue:`2895`)
+  By `James McCreight <https://github.com/jmccreight>`_.
+- :py:meth:`DataArray.transpose` now accepts a keyword argument
+  ``transpose_coords`` which enables transposition of coordinates in the
+  same way as :py:meth:`Dataset.transpose`. :py:meth:`DataArray.groupby`
+  :py:meth:`DataArray.groupby_bins`, and :py:meth:`DataArray.resample` now
+  accept a keyword argument ``restore_coord_dims`` which keeps the order
+  of the dimensions of multi-dimensional coordinates intact (:issue:`1856`).
+  By `Peter Hausamann <http://github.com/phausamann>`_.
 
 Bug fixes
 ~~~~~~~~~
 
-- ``swap_dims`` would create incorrect ``indexes`` (:issue:`2842`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
+  By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
+- Return correct count for scalar datetime64 arrays (:issue:`2770`)
+  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 
+.. _whats-new.0.12.1:
+
+v0.12.1 (4 April 2019)
+----------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- Allow ``expand_dims`` method to support inserting/broadcasting dimensions
+  with size > 1. (:issue:`2710`)
+  By `Martin Pletcher <https://github.com/pletchm>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Dataset.copy(deep=True) now creates a deep copy of the attrs (:issue:`2835`).
+  By `Andras Gefferth <https://github.com/kefirbandi>`_.
+- Fix incorrect ``indexes`` resulting from various ``Dataset`` operations
+  (e.g., ``swap_dims``, ``isel``, ``reindex``, ``[]``) (:issue:`2842`,
+  :issue:`2856`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- open_rasterio() now supports rasterio.vrt.WarpedVRT with custom transform, width and height (:issue:`2864`).
+  By `Julien Michel <https://github.com/jmichel-otb>`_.
 
 .. _whats-new.0.12.0:
 
@@ -116,13 +151,11 @@ Other enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
   By `Kevin Squire <https://github.com/kmsquire>`_.
-- :py:meth:`DataArray.transpose` now accepts a keyword argument
-  ``transpose_coords`` which enables transposition of coordinates in the
-  same way as :py:meth:`Dataset.transpose`. :py:meth:`DataArray.groupby`
-  :py:meth:`DataArray.groupby_bins`, and :py:meth:`DataArray.resample` now
-  accept a keyword argument ``restore_coord_dims`` which keeps the order
-  of the dimensions of multi-dimensional coordinates intact (:issue:`1856`).
-  By `Peter Hausamann <http://github.com/phausamann>`_.
+- ``xr.open_zarr`` now accepts manually specified chunks with the ``chunks=`` 
+  parameter. ``auto_chunk=True`` is equivalent to ``chunks='auto'`` for 
+  backwards compatibility. The ``overwrite_encoded_chunks`` parameter is 
+  added to remove the original zarr chunk encoding.
+  By `Lily Wang <https://github.com/lilyminium>`_.
 
 Bug fixes
 ~~~~~~~~~

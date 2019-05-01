@@ -1,8 +1,12 @@
 """Testing functions exposed to the user API"""
+from collections import OrderedDict
+
 import numpy as np
+import pandas as pd
 
 from xarray.core import duck_array_ops
 from xarray.core import formatting
+from xarray.core.indexes import default_indexes
 
 
 def _decode_string_data(data):
@@ -143,8 +147,37 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
                         .format(type(a)))
 
 
-def assert_combined_tile_ids_equal(dict1, dict2):
-    assert len(dict1) == len(dict2)
-    for k, v in dict1.items():
-        assert k in dict2.keys()
-        assert_equal(dict1[k], dict2[k])
+def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
+    import xarray as xr
+
+    assert isinstance(indexes, OrderedDict), indexes
+    assert all(isinstance(v, pd.Index) for v in indexes.values()), \
+        {k: type(v) for k, v in indexes.items()}
+
+    index_vars = {k for k, v in possible_coord_variables.items()
+                  if isinstance(v, xr.IndexVariable)}
+    assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+
+    # Note: when we support non-default indexes, these checks should be opt-in
+    # only!
+    defaults = default_indexes(possible_coord_variables, dims)
+    assert indexes.keys() == defaults.keys(), \
+        (set(indexes), set(defaults))
+    assert all(v.equals(defaults[k]) for k, v in indexes.items()), \
+        (indexes, defaults)
+
+
+def _assert_indexes_invariants(a):
+    """Separate helper function for checking indexes invariants only."""
+    import xarray as xr
+
+    if isinstance(a, xr.DataArray):
+        if a._indexes is not None:
+            _assert_indexes_invariants_checks(a._indexes, a._coords, a.dims)
+    elif isinstance(a, xr.Dataset):
+        if a._indexes is not None:
+            _assert_indexes_invariants_checks(
+                a._indexes, a._variables, a._dims)
+    elif isinstance(a, xr.Variable):
+        # no indexes
+        pass

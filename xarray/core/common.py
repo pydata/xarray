@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
+from typing import (Any, Callable, Hashable, Iterable, Iterator, List, Mapping,
+                    MutableMapping, Optional, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -11,13 +13,18 @@ from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
+
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
 
 
-class ImplementsArrayReduce(object):
+T = TypeVar('T')
+
+
+class ImplementsArrayReduce:
     @classmethod
-    def _reduce_method(cls, func, include_skipna, numeric_only):
+    def _reduce_method(cls, func: Callable, include_skipna: bool,
+                       numeric_only: bool):
         if include_skipna:
             def wrapped_func(self, dim=None, axis=None, skipna=None,
                              **kwargs):
@@ -46,9 +53,10 @@ class ImplementsArrayReduce(object):
             and 'axis' arguments can be supplied.""")
 
 
-class ImplementsDatasetReduce(object):
+class ImplementsDatasetReduce:
     @classmethod
-    def _reduce_method(cls, func, include_skipna, numeric_only):
+    def _reduce_method(cls, func: Callable, include_skipna: bool,
+                       numeric_only: bool):
         if include_skipna:
             def wrapped_func(self, dim=None, skipna=None,
                              **kwargs):
@@ -76,46 +84,38 @@ class ImplementsDatasetReduce(object):
 
 
 class AbstractArray(ImplementsArrayReduce):
-    """Shared base class for DataArray and Variable."""
-
-    def __bool__(self):
+    """Shared base class for DataArray and Variable.
+    """
+    def __bool__(self: Any) -> bool:
         return bool(self.values)
 
-    # Python 3 uses __bool__, Python 2 uses __nonzero__
-    __nonzero__ = __bool__
-
-    def __float__(self):
+    def __float__(self: Any) -> float:
         return float(self.values)
 
-    def __int__(self):
+    def __int__(self: Any) -> int:
         return int(self.values)
 
-    def __complex__(self):
+    def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __long__(self):
-        return long(self.values)  # noqa
-
-    def __array__(self, dtype=None):
+    def __array__(self: Any, dtype: Union[str, np.dtype, None] = None
+                  ) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return formatting.array_repr(self)
 
-    def _iter(self):
+    def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
             yield self[n]
 
-    def __iter__(self):
+    def __iter__(self: Any) -> Iterator[Any]:
         if self.ndim == 0:
             raise TypeError('iteration over a 0-d array')
         return self._iter()
 
-    @property
-    def T(self):
-        return self.transpose()
-
-    def get_axis_num(self, dim):
+    def get_axis_num(self, dim: Union[Hashable, Iterable[Hashable]]
+                     ) -> Union[int, Tuple[int, ...]]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -128,12 +128,12 @@ class AbstractArray(ImplementsArrayReduce):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dim, str):
-            return self._get_axis_num(dim)
-        else:
+        if isinstance(dim, Iterable) and not isinstance(dim, str):
             return tuple(self._get_axis_num(d) for d in dim)
+        else:
+            return self._get_axis_num(dim)
 
-    def _get_axis_num(self, dim):
+    def _get_axis_num(self: Any, dim: Hashable) -> int:
         try:
             return self.dims.index(dim)
         except ValueError:
@@ -141,7 +141,7 @@ class AbstractArray(ImplementsArrayReduce):
                              (dim, self.dims))
 
     @property
-    def sizes(self):
+    def sizes(self: Any) -> Mapping[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -153,7 +153,7 @@ class AbstractArray(ImplementsArrayReduce):
         return Frozen(OrderedDict(zip(self.dims, self.shape)))
 
 
-class AttrAccessMixin(object):
+class AttrAccessMixin:
     """Mixin class that allows getting keys with attribute access
     """
     _initialized = False
@@ -168,7 +168,7 @@ class AttrAccessMixin(object):
         """List of places to look-up items for key-autocompletion """
         return []
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         if name != '__setstate__':
             # this avoids an infinite loop when pickle looks for the
             # __setstate__ attribute before the xarray object is initialized
@@ -178,7 +178,7 @@ class AttrAccessMixin(object):
         raise AttributeError("%r object has no attribute %r" %
                              (type(self).__name__, name))
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         if self._initialized:
             try:
                 # Allow setting instance variables if they already exist
@@ -192,7 +192,7 @@ class AttrAccessMixin(object):
                     "assign variables." % (name, type(self).__name__))
         object.__setattr__(self, name, value)
 
-    def __dir__(self):
+    def __dir__(self) -> List[str]:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
@@ -202,7 +202,7 @@ class AttrAccessMixin(object):
                        if isinstance(item, str)]
         return sorted(set(dir(type(self)) + extra_attrs))
 
-    def _ipython_key_completions_(self):
+    def _ipython_key_completions_(self) -> List[str]:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
@@ -214,49 +214,57 @@ class AttrAccessMixin(object):
         return list(set(item_lists))
 
 
-def get_squeeze_dims(xarray_obj, dim, axis=None):
+def get_squeeze_dims(xarray_obj,
+                     dim: Union[Hashable, Iterable[Hashable], None] = None,
+                     axis: Union[int, Iterable[int], None] = None
+                     ) -> List[Hashable]:
     """Get a list of dimensions to squeeze out.
     """
     if dim is not None and axis is not None:
         raise ValueError('cannot use both parameters `axis` and `dim`')
-
     if dim is None and axis is None:
-        dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
+        return [d for d, s in xarray_obj.sizes.items() if s == 1]
+
+    if isinstance(dim, Iterable) and not isinstance(dim, str):
+        dim = list(dim)
+    elif dim is not None:
+        dim = [dim]
     else:
-        if isinstance(dim, str):
-            dim = [dim]
+        assert axis is not None
         if isinstance(axis, int):
-            axis = (axis, )
-        if isinstance(axis, tuple):
-            for a in axis:
-                if not isinstance(a, int):
-                    raise ValueError(
-                        'parameter `axis` must be int or tuple of int.')
-            alldims = list(xarray_obj.sizes.keys())
-            dim = [alldims[a] for a in axis]
-        if any(xarray_obj.sizes[k] > 1 for k in dim):
-            raise ValueError('cannot select a dimension to squeeze out '
-                             'which has length greater than one')
+            axis = [axis]
+        axis = list(axis)
+        if any(not isinstance(a, int) for a in axis):
+            raise TypeError(
+                'parameter `axis` must be int or iterable of int.')
+        alldims = list(xarray_obj.sizes.keys())
+        dim = [alldims[a] for a in axis]
+
+    if any(xarray_obj.sizes[k] > 1 for k in dim):
+        raise ValueError('cannot select a dimension to squeeze out '
+                         'which has length greater than one')
     return dim
 
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    def squeeze(self, dim=None, drop=False, axis=None):
+    def squeeze(self, dim: Union[Hashable, Iterable[Hashable], None] = None,
+                drop: bool = False,
+                axis: Union[int, Iterable[int], None] = None):
         """Return a new object with squeezed data.
 
         Parameters
         ----------
-        dim : None or str or tuple of str, optional
+        dim : None or Hashable or iterable of Hashable, optional
             Selects a subset of the length one dimensions. If a dimension is
             selected with length greater than one, an error is raised. If
             None, all length one dimensions are squeezed.
         drop : bool, optional
             If ``drop=True``, drop squeezed coordinates instead of making them
             scalar.
-        axis : int, optional
-            Select the dimension to squeeze. Added for compatibility reasons.
+        axis : None or int or iterable of int, optional
+            Like dim, but positional.
 
         Returns
         -------
@@ -271,7 +279,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
-    def get_index(self, key):
+    def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex
         """
         if key not in self.dims:
@@ -283,8 +291,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             # need to ensure dtype=int64 in case range is empty on Python 2
             return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
-    def _calc_assign_results(self, kwargs):
-        results = SortedKeysDict()
+    def _calc_assign_results(self, kwargs: Mapping[str, T]
+                             ) -> MutableMapping[str, T]:
+        results = SortedKeysDict()  # type: SortedKeysDict[str, T]
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)
@@ -372,7 +381,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         out.attrs.update(*args, **kwargs)
         return out
 
-    def pipe(self, func, *args, **kwargs):
+    def pipe(self, func: Union[Callable[..., T], Tuple[Callable[..., T], str]],
+             *args, **kwargs) -> T:
         """
         Apply func(self, *args, **kwargs)
 
@@ -424,15 +434,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if isinstance(func, tuple):
             func, target = func
             if target in kwargs:
-                msg = ('%s is both the pipe target and a keyword argument'
-                       % target)
-                raise ValueError(msg)
+                raise ValueError('%s is both the pipe target and a keyword '
+                                 'argument' % target)
             kwargs[target] = self
             return func(*args, **kwargs)
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze=True, restore_coord_dims=None):
+    def groupby(self, group, squeeze: bool = True,
+                restore_coord_dims: Optional[bool] = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -482,9 +492,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._groupby_cls(self, group, squeeze=squeeze,
                                  restore_coord_dims=restore_coord_dims)
 
-    def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
-                     include_lowest=False, squeeze=True,
-                     restore_coord_dims=None):
+    def groupby_bins(self, group, bins, right: bool = True, labels=None,
+                     precision: int = 3, include_lowest: bool = False,
+                     squeeze: bool = True,
+                     restore_coord_dims: Optional[bool] = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -540,7 +551,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                              'include_lowest':
                                                  include_lowest})
 
-    def rolling(self, dim=None, min_periods=None, center=False, **dim_kwargs):
+    def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
+                min_periods: Optional[int] = None, center: bool = False,
+                **dim_kwargs: int):
         """
         Rolling window object.
 
@@ -600,8 +613,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
-    def coarsen(self, dim=None, boundary='exact', side='left',
-                coord_func='mean', **dim_kwargs):
+    def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
+                boundary: str = 'exact',
+                side: Union[str, Mapping[Hashable, str]] = 'left',
+                coord_func: str = 'mean',
+                **dim_kwargs: int):
         """
         Coarsen object.
 
@@ -660,9 +676,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
 
-    def resample(self, indexer=None, skipna=None, closed=None, label=None,
-                 base=0, keep_attrs=None, loffset=None,
-                 restore_coord_dims=None, **indexer_kwargs):
+    def resample(self, indexer: Optional[Mapping[Hashable, str]] = None,
+                 skipna=None, closed: Optional[str] = None,
+                 label: Optional[str] = None,
+                 base: int = 0, keep_attrs: Optional[bool] = None,
+                 loffset=None, restore_coord_dims: Optional[bool] = None,
+                 **indexer_kwargs: str):
         """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. If any intervals contain no
@@ -759,12 +778,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 "objects, e.g., data.resample(time='1D').mean()")
 
         indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
-
         if len(indexer) != 1:
             raise ValueError(
                 "Resampling only supported along single dimensions."
             )
-        dim, freq = indexer.popitem()
+        dim, freq = next(iter(indexer.items()))
 
         dim_name = dim
         dim_coord = self[dim]
@@ -787,7 +805,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return resampler
 
-    def where(self, cond, other=dtypes.NA, drop=False):
+    def where(self, cond, other=dtypes.NA, drop: bool = False):
         """Filter elements from this object according to a condition.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -873,7 +891,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
-    def close(self):
+    def close(self: Any) -> None:
         """Close any files linked to this object
         """
         if self._file_obj is not None:
@@ -929,14 +947,14 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             dask='allowed',
         )
 
-    def __enter__(self):
+    def __enter__(self: T) -> T:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
 
-def full_like(other, fill_value, dtype=None):
+def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -976,7 +994,8 @@ def full_like(other, fill_value, dtype=None):
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
-def _full_like_variable(other, fill_value, dtype=None):
+def _full_like_variable(other, fill_value,
+                        dtype: Union[str, np.dtype, None] = None):
     """Inner function of full_like, where other must be a variable
     """
     from .variable import Variable
@@ -993,27 +1012,28 @@ def _full_like_variable(other, fill_value, dtype=None):
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype=None):
+def zeros_like(other, dtype: Union[str, np.dtype, None] = None):
     """Shorthand for full_like(other, 0, dtype)
     """
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype=None):
+def ones_like(other, dtype: Union[str, np.dtype, None] = None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)
 
 
-def is_np_datetime_like(dtype):
+def is_np_datetime_like(dtype: Union[str, np.dtype]) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types
     """
     return (np.issubdtype(dtype, np.datetime64) or
             np.issubdtype(dtype, np.timedelta64))
 
 
-def _contains_cftime_datetimes(array):
-    """Check if an array contains cftime.datetime objects"""
+def _contains_cftime_datetimes(array) -> bool:
+    """Check if an array contains cftime.datetime objects
+    """
     try:
         from cftime import datetime as cftime_datetime
     except ImportError:
@@ -1030,12 +1050,14 @@ def _contains_cftime_datetimes(array):
             return False
 
 
-def contains_cftime_datetimes(var):
-    """Check if an xarray.Variable contains cftime.datetime objects"""
+def contains_cftime_datetimes(var) -> bool:
+    """Check if an xarray.Variable contains cftime.datetime objects
+    """
     return _contains_cftime_datetimes(var.data)
 
 
-def _contains_datetime_like_objects(var):
+def _contains_datetime_like_objects(var) -> bool:
     """Check if a variable contains datetime like objects (either
-    np.datetime64, np.timedelta64, or cftime.datetime)"""
+    np.datetime64, np.timedelta64, or cftime.datetime)
+    """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
