@@ -271,7 +271,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     )
 
     if ((levels is not None or isinstance(norm, mpl.colors.BoundaryNorm))
-       and (not cmap_is_colormap)):
+            and (not cmap_is_colormap)):
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 
