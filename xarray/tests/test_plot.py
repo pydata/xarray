@@ -537,9 +537,11 @@ class TestDetermineCmapParams(object):
             cmap_params = _determine_cmap_params(self.data)
             assert cmap_params['cmap'] == 'magma'
 
-    def test_do_nothing_if_provided_cmap(self):
-        cmap = mpl.colors.LinearSegmentedColormap.from_list(
-            'name', ['r', 'g', 'b'])
+    @pytest.mark.parametrize(
+        'cmap', [mpl.colors.LinearSegmentedColormap.from_list('name', ['r', 'g', 'b']),
+                 mpl.colors.ListedColormap(['r', 'g', 'b']),
+                 'RdBu_r'])
+    def test_do_nothing_if_provided_cmap(self, cmap):
         cmap_params = _determine_cmap_params(self.data, cmap=cmap)
         assert cmap_params['cmap'] is cmap
 
