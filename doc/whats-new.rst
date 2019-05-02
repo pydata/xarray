@@ -24,7 +24,10 @@ Enhancements
 - Character arrays' character dimension name decoding and encoding handled by
   ``var.encoding['char_dim_name']`` (:issue:`2895`)
   By `James McCreight <https://github.com/jmccreight>`_.
-   
+
+- Fix facetgrid colormap bug when ``extend=True``. (:issue:`2932`)
+  By `Deepak Cherian <https://github.com/dcherian`_.
+
 Bug fixes
 ~~~~~~~~~
 
