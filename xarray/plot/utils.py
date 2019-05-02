@@ -266,8 +266,8 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         extend = _determine_extend(calc_data, vmin, vmax)
 
     cmap_is_colormap = (
-        isinstance(cmap, mpl.colors.Colormap)
-        or isinstance(cmap, mpl.colors.LinearSegmentedColormap)
+        isinstance(cmap, mpl.colors.LinearSegmentedColormap)
+        or isinstance(cmap, mpl.colors.ListedColormap)
     )
 
     if ((levels is not None or isinstance(norm, mpl.colors.BoundaryNorm))

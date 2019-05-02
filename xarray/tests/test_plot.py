@@ -539,11 +539,16 @@ class TestDetermineCmapParams(object):
 
     @pytest.mark.parametrize(
         'cmap', [mpl.colors.LinearSegmentedColormap.from_list('name', ['r', 'g', 'b']),
-                 mpl.colors.ListedColormap(['r', 'g', 'b']),
-                 'RdBu_r'])
+                 mpl.colors.ListedColormap(['r', 'g', 'b'])])
     def test_do_nothing_if_provided_cmap(self, cmap):
-        cmap_params = _determine_cmap_params(self.data, cmap=cmap)
+        cmap_params = _determine_cmap_params(self.data, cmap=cmap, levels=7)
         assert cmap_params['cmap'] is cmap
+
+    def test_do_something_if_provided_str_cmap(self):
+        cmap = 'RdBu_r'
+        cmap_params = _determine_cmap_params(self.data, cmap=cmap, levels=7)
+        assert cmap_params['cmap'] is not cmap
+        assert isinstance(cmap_params['cmap'], mpl.colors.ListedColormap)
 
     def test_cmap_sequential_explicit_option(self):
         with xr.set_options(cmap_sequential=mpl.cm.magma):
