@@ -126,7 +126,7 @@ def test_weigted_mean_equal_weights(da, skipna):
                                                    ([0, 1], 2.0),
                                                    ([0, 2], 2.0),
                                                    ([0, 0], np.nan)))
-def test_weigted_mean_no_nan(weights, expected):
+def test_weighted_mean_no_nan(weights, expected):
 
     da = DataArray([1, 2])
     weights = DataArray(weights)
