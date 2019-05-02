@@ -26,7 +26,8 @@ powerful and concise interface. For example:
    ``x.loc['2014-01-01']`` or ``x.sel(time='2014-01-01')``.
 -  Mathematical operations (e.g., ``x - y``) vectorize across multiple
    dimensions (array broadcasting) based on dimension names, not shape.
--  Flexible split-apply-combine operations with groupby:
+-  Easily use the `split-apply-combine <https://vita.had.co.nz/papers/plyr.pdf>`_
+   paradigm with ``groupby``:
    ``x.groupby('time.dayofyear').mean()``.
 -  Database-like alignment based on coordinate labels that smoothly
    handles missing values: ``x, y = xr.align(x, y, join='outer')``.
