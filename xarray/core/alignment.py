@@ -31,13 +31,9 @@ def _get_joiner(join):
         raise ValueError('invalid value for join: %s' % join)
 
 
-_DEFAULT_EXCLUDE = frozenset()  # type: frozenset
-
-
-def align(*objects, **kwargs):
-    """align(*objects, join='inner', copy=True, fill_value=dtypes.NA,
-             indexes=None, exclude=frozenset())
-
+def align(*objects, join='inner', copy=True, indexes=None, exclude=frozenset(),
+          fill_value=dtypes.NA):
+    """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
 
@@ -66,13 +62,13 @@ def align(*objects, **kwargs):
         ``copy=False`` and reindexing is unnecessary, or can be performed with
         only slice operations, then the output may share memory with the input.
         In either case, new xarray objects are always returned.
-    fill_value : scalar, optional
-        Value to use for newly missing values
-    exclude : sequence of str, optional
-        Dimensions that must be excluded from alignment
     indexes : dict-like, optional
         Any indexes explicitly provided with the `indexes` argument should be
         used in preference to the aligned indexes.
+    exclude : sequence of str, optional
+        Dimensions that must be excluded from alignment
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -85,16 +81,8 @@ def align(*objects, **kwargs):
         If any dimensions without labels on the arguments have different sizes,
         or a different size than the size of the aligned dimension labels.
     """
-    join = kwargs.pop('join', 'inner')
-    copy = kwargs.pop('copy', True)
-    fill_value = kwargs.pop('fill_value', dtypes.NA)
-    indexes = kwargs.pop('indexes', None)
-    exclude = kwargs.pop('exclude', _DEFAULT_EXCLUDE)
     if indexes is None:
         indexes = {}
-    if kwargs:
-        raise TypeError('align() got unexpected keyword arguments: %s'
-                        % list(kwargs))
 
     if not indexes and len(objects) == 1:
         # fast path for the trivial case
