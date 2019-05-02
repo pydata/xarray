@@ -4,12 +4,10 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
 
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray
-from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
