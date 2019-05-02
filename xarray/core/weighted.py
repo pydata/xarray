@@ -16,7 +16,8 @@ _doc_ = """
         skips missing values for float dtypes; other dtypes either do not
         have a sentinel missing value (int) or skipna=True has not been
         implemented (object, datetime64 or timedelta64).
-        Note: Missing values in the weights are always skipped.
+        Note: Missing values in the weights are replaced with 0 (i.e. no 
+        weight).
     keep_attrs : bool, optional
         If True, the attributes (`attrs`) will be copied from the original
         object to the new one.  If False (default), the new object will be
@@ -41,11 +42,11 @@ class DataArrayWeighted(object):
         Parameters
         ----------
         obj : DataArray
-            Object to window.
+            Object over which the weighted reduction operation is applied.
         weights : DataArray
             An array of weights associated with the values in this Dataset.
-            Each value in a contributes to the average according to its
-            associated weight.
+            Each value in the DataArray contributes to the reduction operation
+            according to its associated weight.
 
         Note
         ----
