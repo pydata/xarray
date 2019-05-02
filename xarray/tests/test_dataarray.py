@@ -3297,6 +3297,28 @@ class TestDataArray(object):
         expected.data = new_data
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize('deep, expected_orig', [
+        [True,
+         xr.DataArray(xr.IndexVariable('a', np.array([1, 2])),
+                      coords={'a': [1, 2]}, dims=['a'])],
+        [False,
+         xr.DataArray(xr.IndexVariable('a', np.array([999, 2])),
+                      coords={'a': [999, 2]}, dims=['a'])]])
+    def test_copy_coords(self, deep, expected_orig):
+        da = xr.DataArray(
+            np.ones([2, 2, 2]),
+            coords={'a': [1, 2], 'b': ['x', 'y'], 'c': [0, 1]},
+            dims=['a', 'b', 'c'])
+        da_cp = da.copy(deep)
+        da_cp['a'].data[0] = 999
+
+        expected_cp = xr.DataArray(
+            xr.IndexVariable('a', np.array([999, 2])),
+            coords={'a': [999, 2]}, dims=['a'])
+        assert_identical(da_cp['a'], expected_cp)
+
+        assert_identical(da['a'], expected_orig)
+
     def test_real_and_imag(self):
         array = DataArray(1 + 2j)
         assert_identical(array.real, DataArray(1))

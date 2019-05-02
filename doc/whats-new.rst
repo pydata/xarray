@@ -32,6 +32,8 @@ Bug fixes
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- A deep copy deep-copies the coords (:issue:`1463`)
+  By `Martin Pletcher <https://github.com/pletchm>`_.
 
 .. _whats-new.0.12.1:
 
