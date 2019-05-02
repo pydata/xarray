@@ -538,7 +538,8 @@ class TestDetermineCmapParams(object):
             assert cmap_params['cmap'] == 'magma'
 
     def test_do_nothing_if_provided_cmap(self):
-        cmap = mpl.colors.LinearSegmentedColormap.from_list('name', ['r', 'g', 'b'])
+        cmap = mpl.colors.LinearSegmentedColormap.from_list(
+            'name', ['r', 'g', 'b'])
         cmap_params = _determine_cmap_params(self.data, cmap=cmap)
         assert cmap_params['cmap'] is cmap
 
