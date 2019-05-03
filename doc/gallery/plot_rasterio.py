@@ -16,9 +16,6 @@ likely be irregular in lon/lat. It is often recommended to work in the data's
 original map projection (see :ref:`recipes.rasterio_rgb`).
 """
 
-import os
-import urllib.request
-
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,12 +23,9 @@ from rasterio.warp import transform
 
 import xarray as xr
 
-# Download the file from rasterio's repository
-url = 'https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif'
-urllib.request.urlretrieve(url, 'RGB.byte.tif')
-
 # Read the data
-da = xr.open_rasterio('RGB.byte.tif')
+url = 'https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif'
+da = xr.open_rasterio(url)
 
 # Compute the lon/lat coordinates with rasterio.warp.transform
 ny, nx = len(da['y']), len(da['x'])
@@ -54,6 +48,3 @@ greyscale.plot(ax=ax, x='lon', y='lat', transform=ccrs.PlateCarree(),
                cmap='Greys_r', add_colorbar=False)
 ax.coastlines('10m', color='r')
 plt.show()
-
-# Delete the file
-os.remove('RGB.byte.tif')
