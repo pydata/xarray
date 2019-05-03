@@ -3513,7 +3513,6 @@ class TestEncodingInvalid(object):
         encoding = _extract_nc4_variable_encoding(var, unlimited_dims=('x',))
         assert {} == encoding
 
-
     def test_extract_h5nc_encoding(self):
         # not supported with h5netcdf (yet)
         var = xr.Variable(('x',), [1, 2, 3], {},
