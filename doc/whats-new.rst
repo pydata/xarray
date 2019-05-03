@@ -28,6 +28,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- NetCDF4 output: variables with unlimited dimensions must be chunked (not
+  contiguous)on output. (:issue:`1849`)
+  By `James McCreight <https://github.com/jmccreight>`_.
 - indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
