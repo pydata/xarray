@@ -2056,6 +2056,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> d.plot.imshow()  # equivalent to xarray.plot.imshow(d)
 
         """
+        self = self.compute()
         return _PlotMethods(self)
 
     def _title_for_slice(self, truncate=50):
