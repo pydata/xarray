@@ -25,9 +25,6 @@ Enhancements
   ``var.encoding['char_dim_name']`` (:issue:`2895`)
   By `James McCreight <https://github.com/jmccreight>`_.
 
-- Fix facetgrid colormap bug when ``extend=True``. (:issue:`2932`)
-  By `Deepak Cherian <https://github.com/dcherian`_.
-
 Bug fixes
 ~~~~~~~~~
 
@@ -35,6 +32,8 @@ Bug fixes
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Fix facetgrid colormap bug when ``extend=True``. (:issue:`2932`)
+  By `Deepak Cherian <https://github.com/dcherian`_.
 
 .. _whats-new.0.12.1:
 
