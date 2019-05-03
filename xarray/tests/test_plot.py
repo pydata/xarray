@@ -537,6 +537,7 @@ class TestDetermineCmapParams(object):
             cmap_params = _determine_cmap_params(self.data)
             assert cmap_params['cmap'] == 'magma'
 
+    @requires_matplotlib
     @pytest.mark.parametrize('cmap', [
         mpl.colors.LinearSegmentedColormap.from_list('name', ['r', 'g', 'b']),
         mpl.colors.ListedColormap(['r', 'g', 'b'])
