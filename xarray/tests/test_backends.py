@@ -3508,6 +3508,12 @@ class TestEncodingInvalid(object):
         encoding = _extract_nc4_variable_encoding(var, raise_on_invalid=True)
         assert {'shuffle': True} == encoding
 
+        # Variables with unlim dims must be chunked on output.
+        var = xr.Variable(('x',), [1, 2, 3], {}, {'contiguous': True})
+        encoding = _extract_nc4_variable_encoding(var, unlimited_dims=('x',))
+        assert {} == encoding
+
+
     def test_extract_h5nc_encoding(self):
         # not supported with h5netcdf (yet)
         var = xr.Variable(('x',), [1, 2, 3], {},

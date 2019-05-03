@@ -183,7 +183,7 @@ def _force_native_endianness(var):
 
 def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
                                    lsd_okay=True, h5py_okay=False,
-                                   backend='netCDF4', unlimited_dims=None):
+                                   backend='netCDF4', unlimited_dims=None, name=None):
     if unlimited_dims is None:
         unlimited_dims = ()
 
@@ -209,6 +209,18 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
         changed_shape = encoding.get('original_shape') != variable.shape
         if chunks_too_big or changed_shape:
             del encoding['chunksizes']
+
+    var_has_unlim_dim = any(dim in unlimited_dims for dim in variable.dims)
+    if var_has_unlim_dim:
+        if 'contiguous' in encoding.keys():
+            del encoding['contiguous'] # sufficent for output.
+            # This does not modify the variable (encoding) itself.
+            if name is None: name = '(name not supplied)'
+            warnings.warn( # the gnarly warning message.
+                "The variable " + name + " contains an unlimited dimension "
+                "and has encoding['contiguous']=True. This is not possible "
+                "for netCDF4 and the variable is written to file chunked."
+            )
 
     for k in safe_to_drop:
         if k in encoding:
@@ -444,7 +456,8 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding,
-            unlimited_dims=unlimited_dims)
+            unlimited_dims=unlimited_dims, name=name)
+
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
