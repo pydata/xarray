@@ -15,8 +15,8 @@ dependencies:
   - pytest-env
   - coveralls
   - pycodestyle
-  - numpy
-  - pandas
+  - numpy>=1.12
+  - pandas>=0.19
   - scipy
   - seaborn
   - toolz
