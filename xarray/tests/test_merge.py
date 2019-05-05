@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.core import merge
+from xarray.core import merge, dtypes
 
 from . import raises_regex
 from .test_dataset import create_test_data
@@ -212,6 +212,21 @@ class TestMergeMethod(object):
         expected = expected.isel(x=slice(1, 2))
         assert expected.identical(ds1.merge(ds2, join='inner'))
         assert expected.identical(ds2.merge(ds1, join='inner'))
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_merge_fill_value(self, fill_value):
+        ds1 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
+        ds2 = xr.Dataset({'b': ('x', [3, 4]), 'x': [1, 2]})
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = xr.Dataset({'a': ('x', [1, 2, fill_value]),
+                               'b': ('x', [fill_value, 3, 4])},
+                              {'x': [0, 1, 2]})
+        assert expected.identical(ds1.merge(ds2, fill_value=fill_value))
+        assert expected.identical(ds2.merge(ds1, fill_value=fill_value))
+        assert expected.identical(xr.merge([ds1, ds2], fill_value=fill_value))
 
     def test_merge_no_conflicts(self):
         ds1 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})

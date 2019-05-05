@@ -1259,6 +1259,18 @@ class TestDataArray(object):
                 ValueError, 'different size for unlabeled'):
             foo.reindex_like(bar)
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_reindex_fill_value(self, fill_value):
+        foo = DataArray([10, 20], dims='y', coords={'y': [0, 1]})
+        bar = DataArray([10, 20, 30], dims='y', coords={'y': [0, 1, 2]})
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        actual = x.reindex_like(bar, fill_value=fill_value)
+        expected = DataArray([10, 20, fill_value], coords=[('y', [0, 1, 2])])
+        assert_identical(expected, actual)
+
     @pytest.mark.filterwarnings('ignore:Indexer has dimensions')
     def test_reindex_regressions(self):
         # regression test for #279
@@ -1284,6 +1296,18 @@ class TestDataArray(object):
         alt = Dataset({'y': y})
         actual = x.reindex_like(alt, method='backfill')
         expected = DataArray([10, 20, np.nan], coords=[('y', y)])
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_reindex_fill_value(self, fill_value):
+        x = DataArray([10, 20], dims='y', coords={'y': [0, 1]})
+        y = [0, 1, 2]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        actual = x.reindex(y=y, fill_value=fill_value)
+        expected = DataArray([10, 20, fill_value], coords=[('y', y)])
         assert_identical(expected, actual)
 
     def test_rename(self):
