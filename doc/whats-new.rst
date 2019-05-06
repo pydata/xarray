@@ -27,10 +27,13 @@ Enhancements
 - Character arrays' character dimension name decoding and encoding handled by
   ``var.encoding['char_dim_name']`` (:issue:`2895`)
   By `James McCreight <https://github.com/jmccreight>`_.
-   
+
 Bug fixes
 ~~~~~~~~~
 
+- a bug fix in rolling with dask and bottleneck
+  (:issue:`2940`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
@@ -147,9 +150,9 @@ Other enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
   By `Kevin Squire <https://github.com/kmsquire>`_.
-- ``xr.open_zarr`` now accepts manually specified chunks with the ``chunks=`` 
-  parameter. ``auto_chunk=True`` is equivalent to ``chunks='auto'`` for 
-  backwards compatibility. The ``overwrite_encoded_chunks`` parameter is 
+- ``xr.open_zarr`` now accepts manually specified chunks with the ``chunks=``
+  parameter. ``auto_chunk=True`` is equivalent to ``chunks='auto'`` for
+  backwards compatibility. The ``overwrite_encoded_chunks`` parameter is
   added to remove the original zarr chunk encoding.
   By `Lily Wang <https://github.com/lilyminium>`_.
 

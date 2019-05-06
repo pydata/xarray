@@ -275,7 +275,7 @@ class DataArrayRolling(Rolling):
                 if isinstance(padded.data, dask_array_type):
                     # Workaround to make the padded chunk size is larger than
                     # self.window-1
-                    shift = - (self.window + 1) // 2
+                    shift = - (self.window - 1)
                     offset = (self.window - 1) // 2
                     valid = (slice(None), ) * axis + (
                         slice(offset, offset + self.obj.shape[axis]), )
@@ -285,7 +285,7 @@ class DataArrayRolling(Rolling):
                 padded = padded.pad_with_fill_value({self.dim: (0, -shift)})
 
             if isinstance(padded.data, dask_array_type):
-                values = dask_rolling_wrapper(func, padded,
+                values = dask_rolling_wrapper(func, padded.data,
                                               window=self.window,
                                               min_count=min_count,
                                               axis=axis)
