@@ -537,13 +537,16 @@ class TestDetermineCmapParams(object):
             cmap_params = _determine_cmap_params(self.data)
             assert cmap_params['cmap'] == 'magma'
 
-    @pytest.mark.parametrize('cmap', [
-        mpl.colors.LinearSegmentedColormap.from_list('name', ['r', 'g', 'b']),
-        mpl.colors.ListedColormap(['r', 'g', 'b'])
-    ])
-    def test_do_nothing_if_provided_cmap(self, cmap):
-        cmap_params = _determine_cmap_params(self.data, cmap=cmap, levels=7)
-        assert cmap_params['cmap'] is cmap
+    def test_do_nothing_if_provided_cmap(self):
+        # can't parametrize with mpl objects
+        for cmap in [
+                mpl.colors.LinearSegmentedColormap.from_list(
+                    'name', ['r', 'g', 'b']),
+                mpl.colors.ListedColormap(['r', 'g', 'b'])]:
+            cmap_params = _determine_cmap_params(self.data,
+                                                 cmap=cmap,
+                                                 levels=7)
+            assert cmap_params['cmap'] is cmap
 
     def test_do_something_if_provided_str_cmap(self):
         cmap = 'RdBu_r'
