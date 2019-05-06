@@ -543,7 +543,7 @@ class TestDetermineCmapParams(object):
             mpl.colors.ListedColormap(['r', 'g', 'b'])
         ]
 
-        # can't parametrize with mpl objects
+        # can't parametrize with mpl objects when mpl is absent
         for cmap in cmap_list:
             cmap_params = _determine_cmap_params(self.data,
                                                  cmap=cmap,
