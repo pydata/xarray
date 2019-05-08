@@ -1971,6 +1971,29 @@ class TestDataset(object):
             expected[k].data = v
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize('deep, expected_orig', [
+        [True,
+         xr.DataArray(xr.IndexVariable('a', np.array([1, 2])),
+                      coords={'a': [1, 2]}, dims=['a'])],
+        [False,
+         xr.DataArray(xr.IndexVariable('a', np.array([999, 2])),
+                      coords={'a': [999, 2]}, dims=['a'])]])
+    def test_copy_coords(self, deep, expected_orig):
+        ds = xr.DataArray(
+            np.ones([2, 2, 2]),
+            coords={'a': [1, 2], 'b': ['x', 'y'], 'c': [0, 1]},
+            dims=['a', 'b', 'c'],
+            name='value').to_dataset()
+        ds_cp = ds.copy(deep=deep)
+        ds_cp.coords['a'].data[0] = 999
+
+        expected_cp = xr.DataArray(
+            xr.IndexVariable('a', np.array([999, 2])),
+            coords={'a': [999, 2]}, dims=['a'])
+        assert_identical(ds_cp.coords['a'], expected_cp)
+
+        assert_identical(ds.coords['a'], expected_orig)
+
     def test_copy_with_data_errors(self):
         orig = create_test_data()
         new_var1 = np.arange(orig['var1'].size).reshape(orig['var1'].shape)
