@@ -185,9 +185,6 @@ class DataArray(AbstractArray, DataWithCoords):
                  coords: Union[
                      Sequence[Tuple[Hashable, Any]],
                      Mapping[Hashable, Any],
-                     Mapping[Hashable, Variable],
-                     Mapping[Hashable, Tuple[Hashable, Any]],
-                     Mapping[Hashable, Tuple[Tuple[Hashable, ...], Any]],
                      None
                  ] = None,
                  dims: Union[Hashable, Sequence[Hashable], None] = None,
@@ -217,6 +214,7 @@ class DataArray(AbstractArray, DataWithCoords):
             does not match the dimension name, or a coord based on multiple
             dimensions, with one of the following notations:
 
+            - mapping {coord name: DataArray}
             - mapping {coord name: Variable}
             - mapping {coord name: (dimension name, array-like)}
             - mapping {coord name: (tuple of dimension names, array-like)}
