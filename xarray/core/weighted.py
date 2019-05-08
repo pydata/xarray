@@ -16,7 +16,7 @@ _doc_ = """
         skips missing values for float dtypes; other dtypes either do not
         have a sentinel missing value (int) or skipna=True has not been
         implemented (object, datetime64 or timedelta64).
-        Note: Missing values in the weights are replaced with 0 (i.e. no 
+        Note: Missing values in the weights are replaced with 0 (i.e. no
         weight).
     keep_attrs : bool, optional
         If True, the attributes (`attrs`) will be copied from the original
