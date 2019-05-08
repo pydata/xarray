@@ -6,7 +6,8 @@ from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (Any, Dict, Hashable, List, Mapping, MutableMapping,
-                    MutableSet, Optional, Sequence, Set, Tuple, TypeVar, Union)
+                    MutableSet, Optional, Sequence, Set, Tuple, TypeVar, Union,
+                    cast)
 # Support for Python 3.5.0 ~ 3.5.1
 try:
     from .pycompat import Mapping  # noqa: F811
@@ -38,7 +39,7 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
-    either_dict_or_kwargs, hashable, maybe_wrap_array)
+    either_dict_or_kwargs, hashable, is_dim_type, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
@@ -136,8 +137,9 @@ def merge_indexes(indexes: Mapping[Hashable, Union[Hashable, List[Hashable]]],
     vars_to_remove = []  # type: list
 
     for dim, var_names in indexes.items():
-        if isinstance(var_names, Hashable):
+        if is_dim_type(var_names):
             var_names = [var_names]
+        var_names = cast(List[Hashable], var_names)
 
         names, codes, levels = [], [], []  # type: (list, list, list)
         current_index_variable = variables.get(dim)
@@ -204,8 +206,9 @@ def split_indexes(
     Not public API. Used in Dataset and DataArray reset_index
     methods.
     """
-    if isinstance(dims_or_levels, Hashable):
+    if is_dim_type(dims_or_levels):
         dims_or_levels = [dims_or_levels]
+    dims_or_levels = cast(List[Hashable], dims_or_levels)
 
     dim_levels = defaultdict(list)  # type: MutableMapping[Hashable, list]
     dims = []

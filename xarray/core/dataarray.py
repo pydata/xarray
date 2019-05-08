@@ -22,7 +22,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .pycompat import TYPE_CHECKING
 from .options import OPTIONS
-from .utils import _check_inplace, either_dict_or_kwargs
+from .utils import _check_inplace, either_dict_or_kwargs, is_dim_type
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -1264,12 +1264,13 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         if isinstance(dim, int):
             raise TypeError('dim should be str or sequence of strs or dict')
-        elif isinstance(dim, Hashable) and not isinstance(dim, tuple):
-            dim = OrderedDict(((dim, 1),))
+        elif is_dim_type(dim):
+            dim = OrderedDict(((cast(Hashable, dim), 1),))
         elif isinstance(dim, Sequence):
             if len(dim) != len(set(dim)):
                 raise ValueError('dims should not contain duplicate values.')
             dim = OrderedDict(((d, 1) for d in dim))
+        dim = cast(Optional[Mapping[Hashable, Any]], dim)
 
         # TODO: get rid of the below code block when python 3.5 is no longer
         #   supported.
@@ -1715,8 +1716,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return ops.fillna(self, other, join="outer")
 
     def reduce(self, func: Callable[..., Any],
-               dim=Union[None, Hashable, Sequence[Hashable]],
-               axis=Union[None, int, Sequence[int]],
+               dim: Union[None, Hashable, Sequence[Hashable]] = None,
+               axis: Union[None, int, Sequence[int]] = None,
                keep_attrs: Optional[bool] = None,
                **kwargs: Any) -> 'DataArray':
         """Reduce this array by applying `func` along some dimension(s).
@@ -1747,7 +1748,6 @@ class DataArray(AbstractArray, DataWithCoords):
             DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
         return self._replace_maybe_drop_dims(var)
 

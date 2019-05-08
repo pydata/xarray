@@ -273,6 +273,10 @@ class LevelCoordinatesSource(Iterable[Hashable]):
     def __init__(self, data_object: 'Union[DataArray, Dataset]'):
         self._data = data_object
 
+    def __getitem__(self, key):
+        # not necessary -- everything here can already be found in coords.
+        raise KeyError()
+
     def __iter__(self) -> Iterator[Hashable]:
         return iter(self._data._level_coords)
 
