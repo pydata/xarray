@@ -1259,6 +1259,18 @@ class TestDataArray(object):
                 ValueError, 'different size for unlabeled'):
             foo.reindex_like(bar)
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_reindex_fill_value(self, fill_value):
+        foo = DataArray([10, 20], dims='y', coords={'y': [0, 1]})
+        bar = DataArray([10, 20, 30], dims='y', coords={'y': [0, 1, 2]})
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        actual = x.reindex_like(bar, fill_value=fill_value)
+        expected = DataArray([10, 20, fill_value], coords=[('y', [0, 1, 2])])
+        assert_identical(expected, actual)
+
     @pytest.mark.filterwarnings('ignore:Indexer has dimensions')
     def test_reindex_regressions(self):
         # regression test for #279
@@ -1284,6 +1296,18 @@ class TestDataArray(object):
         alt = Dataset({'y': y})
         actual = x.reindex_like(alt, method='backfill')
         expected = DataArray([10, 20, np.nan], coords=[('y', y)])
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_reindex_fill_value(self, fill_value):
+        x = DataArray([10, 20], dims='y', coords={'y': [0, 1]})
+        y = [0, 1, 2]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        actual = x.reindex(y=y, fill_value=fill_value)
+        expected = DataArray([10, 20, fill_value], coords=[('y', y)])
         assert_identical(expected, actual)
 
     def test_rename(self):
@@ -3594,6 +3618,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 @pytest.mark.parametrize('window', (7, 8))
+@pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2940')
 def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     pytest.importorskip('dask.array')
     # dask version
