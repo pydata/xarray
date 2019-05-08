@@ -1,7 +1,6 @@
 import functools
 import operator
 from collections import defaultdict
-from collections.abc import Hashable
 from contextlib import suppress
 from datetime import timedelta
 
@@ -10,7 +9,7 @@ import pandas as pd
 
 from . import duck_array_ops, nputils, utils
 from .pycompat import dask_array_type, integer_types
-from .utils import is_dict_like
+from .utils import is_dict_like, is_dim_type
 
 
 def expanded_indexer(key, ndim):
@@ -152,7 +151,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
         else:
             for k, v in label.items():
                 # index should be an item (i.e. Hashable) not an array-like
-                if not isinstance(v, Hashable):
+                if not is_dim_type(v):
                     raise ValueError('Vectorized selection is not '
                                      'available along level variable: ' + k)
             indexer, new_index = index.get_loc_level(

@@ -22,7 +22,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .pycompat import TYPE_CHECKING
 from .options import OPTIONS
-from .utils import _check_inplace, either_dict_or_kwargs
+from .utils import _check_inplace, either_dict_or_kwargs, is_dim_type
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -954,10 +954,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def reindex_like(self, other: Union['DataArray', Dataset],
                      method: Optional[str] = None, tolerance=None,
-                     copy: bool = True
-                     ) -> 'DataArray':
-        """Conform this object onto the indexes of another object, filling
-        in missing values with NaN.
+                     copy: bool = True, fill_value=dtypes.NA) -> 'DataArray':
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -986,6 +985,8 @@ class DataArray(AbstractArray, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
 
         Returns
         -------
@@ -1000,14 +1001,14 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         indexers = reindex_like_indexers(self, other)
         return self.reindex(method=method, tolerance=tolerance, copy=copy,
-                            **indexers)
+                            fill_value=fill_value, **indexers)
 
     def reindex(self, indexers: Optional[Mapping[Hashable, Any]] = None,
-                method: Optional[str] = None,
-                tolerance=None, copy: bool = True,
-                **indexers_kwargs: Any) -> 'DataArray':
-        """Conform this object onto a new set of indexes, filling in
-        missing values with NaN.
+                method: Optional[str] = None, tolerance=None,
+                copy: bool = True, fill_value=dtypes.NA, **indexers_kwargs: Any
+                ) -> 'DataArray':
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -1034,6 +1035,8 @@ class DataArray(AbstractArray, DataWithCoords):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+        fill_value : scalar, optional
+            Value to use for newly missing values
         **indexers_kwarg : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -1052,7 +1055,8 @@ class DataArray(AbstractArray, DataWithCoords):
         indexers = either_dict_or_kwargs(
             indexers, indexers_kwargs, 'reindex')
         ds = self._to_temp_dataset().reindex(
-            indexers=indexers, method=method, tolerance=tolerance, copy=copy)
+            indexers=indexers, method=method, tolerance=tolerance, copy=copy,
+            fill_value=fill_value)
         return self._from_temp_dataset(ds)
 
     def interp(self, coords: Optional[Mapping[Hashable, Any]] = None,
@@ -1260,12 +1264,13 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         if isinstance(dim, int):
             raise TypeError('dim should be str or sequence of strs or dict')
-        elif isinstance(dim, Hashable) and not isinstance(dim, tuple):
-            dim = OrderedDict(((dim, 1),))
+        elif is_dim_type(dim):
+            dim = OrderedDict(((cast(Hashable, dim), 1),))
         elif isinstance(dim, Sequence):
             if len(dim) != len(set(dim)):
                 raise ValueError('dims should not contain duplicate values.')
             dim = OrderedDict(((d, 1) for d in dim))
+        dim = cast(Optional[Mapping[Hashable, Any]], dim)
 
         # TODO: get rid of the below code block when python 3.5 is no longer
         #   supported.
@@ -1711,8 +1716,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return ops.fillna(self, other, join="outer")
 
     def reduce(self, func: Callable[..., Any],
-               dim=Union[None, Hashable, Sequence[Hashable]],
-               axis=Union[None, int, Sequence[int]],
+               dim: Union[None, Hashable, Sequence[Hashable]] = None,
+               axis: Union[None, int, Sequence[int]] = None,
                keep_attrs: Optional[bool] = None,
                **kwargs: Any) -> 'DataArray':
         """Reduce this array by applying `func` along some dimension(s).
@@ -1743,7 +1748,6 @@ class DataArray(AbstractArray, DataWithCoords):
             DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
         return self._replace_maybe_drop_dims(var)
 
@@ -2451,7 +2455,8 @@ class DataArray(AbstractArray, DataWithCoords):
             q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation)
         return self._from_temp_dataset(ds)
 
-    def rank(self, dim, pct=False, keep_attrs=None):
+    def rank(self, dim: Hashable, pct: bool = False, keep_attrs: bool = None
+             ) -> 'DataArray':
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
@@ -2464,7 +2469,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim : str
+        dim : hashable
             Dimension over which to compute rank.
         pct : bool, optional
             If True, compute percentage ranks, otherwise compute integer ranks.
@@ -2491,7 +2496,8 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
-    def differentiate(self, coord, edge_order=1, datetime_unit=None):
+    def differentiate(self, coord: Hashable, edge_order: int = 1,
+                      datetime_unit: Optional[str] = None) -> 'DataArray':
         """ Differentiate the array with the second order accurate central
         differences.
 
@@ -2501,7 +2507,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        coord: str
+        coord: hashable
             The coordinate to be used to compute the gradient.
         edge_order: 1 or 2. Default 1
             N-th order accurate differences at the boundaries.
@@ -2546,7 +2552,8 @@ class DataArray(AbstractArray, DataWithCoords):
             coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
-    def integrate(self, dim, datetime_unit=None):
+    def integrate(self, dim: Union[Hashable, Sequence[Hashable]],
+                  datetime_unit: Optional[str] = None) -> 'DataArray':
         """ integrate the array with the trapezoidal rule.
 
         .. note::
@@ -2555,7 +2562,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim: str, or a sequence of str
+        dim: hashable, or a sequence of hashable
             Coordinate(s) used for the integration.
         datetime_unit: str, optional
             Can be used to specify the unit if datetime coordinate is used.
