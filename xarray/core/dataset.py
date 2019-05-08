@@ -137,7 +137,7 @@ def merge_indexes(indexes: Mapping[Hashable, Union[Hashable, List[Hashable]]],
     vars_to_remove = []  # type: list
 
     for dim, var_names in indexes.items():
-        if is_dim_type(var_names):
+        if isinstance(var_names, str):
             var_names = [var_names]
         var_names = cast(List[Hashable], var_names)
 
@@ -206,7 +206,7 @@ def split_indexes(
     Not public API. Used in Dataset and DataArray reset_index
     methods.
     """
-    if is_dim_type(dims_or_levels):
+    if isinstance(dims_or_levels, str):
         dims_or_levels = [dims_or_levels]
     dims_or_levels = cast(List[Hashable], dims_or_levels)
 
