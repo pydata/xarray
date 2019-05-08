@@ -4149,7 +4149,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError('Coordinate {} does not exist.'.format(dim))
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:

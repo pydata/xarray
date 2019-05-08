@@ -1004,8 +1004,9 @@ class DataArray(AbstractArray, DataWithCoords):
                             fill_value=fill_value, **indexers)
 
     def reindex(self, indexers: Optional[Mapping[Hashable, Any]] = None,
-                method: Optional[str] = None, tolerance=None, copy: bool = True,
-                fill_value=dtypes.NA, **indexers_kwargs: Any) -> 'DataArray':
+                method: Optional[str] = None, tolerance=None,
+                copy: bool = True, fill_value=dtypes.NA, **indexers_kwargs: Any
+                ) -> 'DataArray':
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
 
@@ -2454,7 +2455,8 @@ class DataArray(AbstractArray, DataWithCoords):
             q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation)
         return self._from_temp_dataset(ds)
 
-    def rank(self, dim, pct=False, keep_attrs=None):
+    def rank(self, dim: Hashable, pct: bool = False, keep_attrs: bool = None
+             ) -> 'DataArray':
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
@@ -2467,7 +2469,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim : str
+        dim : hashable
             Dimension over which to compute rank.
         pct : bool, optional
             If True, compute percentage ranks, otherwise compute integer ranks.
@@ -2494,7 +2496,8 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
-    def differentiate(self, coord, edge_order=1, datetime_unit=None):
+    def differentiate(self, coord: Hashable, edge_order: int = 1,
+                      datetime_unit: Optional[str] = None) -> 'DataArray':
         """ Differentiate the array with the second order accurate central
         differences.
 
@@ -2504,7 +2507,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        coord: str
+        coord: hashable
             The coordinate to be used to compute the gradient.
         edge_order: 1 or 2. Default 1
             N-th order accurate differences at the boundaries.
@@ -2549,7 +2552,8 @@ class DataArray(AbstractArray, DataWithCoords):
             coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
-    def integrate(self, dim, datetime_unit=None):
+    def integrate(self, dim: Union[Hashable, Sequence[Hashable]],
+                  datetime_unit: Optional[str] = None) -> 'DataArray':
         """ integrate the array with the trapezoidal rule.
 
         .. note::
@@ -2558,7 +2562,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim: str, or a sequence of str
+        dim: hashable, or a sequence of hashable
             Coordinate(s) used for the integration.
         datetime_unit: str, optional
             Can be used to specify the unit if datetime coordinate is used.
