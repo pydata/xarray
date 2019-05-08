@@ -417,7 +417,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._name
 
     @name.setter
-    def name(self, value: str) -> None:
+    def name(self, value: Optional[str]) -> None:
         self._name = value
 
     @property
