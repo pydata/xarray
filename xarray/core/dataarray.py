@@ -110,18 +110,18 @@ def _infer_coords_and_dims(shape, coords, dims) -> Tuple[
     return new_coords, dims
 
 
-class _LocIndexer(object):
-    def __init__(self, data_array):
+class _LocIndexer:
+    def __init__(self, data_array: 'DataArray'):
         self.data_array = data_array
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> 'DataArray':
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
         return self.data_array.sel(**key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)

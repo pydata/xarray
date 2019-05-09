@@ -7,7 +7,7 @@ from distutils.version import LooseVersion
 from numbers import Number
 from typing import (Any, Dict, Hashable, Iterator, List, Mapping,
                     MutableMapping, MutableSet, Optional, Sequence, Set,
-                    Tuple, TypeVar, Union, cast)
+                    Tuple, Union)
 # Support for Python 3.5.0 ~ 3.5.1
 try:
     from .pycompat import Mapping  # noqa: F811
@@ -126,7 +126,8 @@ def calculate_dimensions(variables: Mapping[Hashable, Variable]
     return dims
 
 
-def merge_indexes(indexes: Mapping[Hashable, Union[Hashable, List[Hashable]]],
+def merge_indexes(indexes: Mapping[Hashable,
+                                   Union[Hashable, Sequence[Hashable]]],
                   variables: Mapping[Hashable, Variable],
                   coord_names: Set[Hashable],
                   append: bool = False
@@ -141,9 +142,8 @@ def merge_indexes(indexes: Mapping[Hashable, Union[Hashable, List[Hashable]]],
     vars_to_remove = []  # type: list
 
     for dim, var_names in indexes.items():
-        if isinstance(var_names, str):
+        if isinstance(var_names, str) or not isinstance(var_names, Sequence):
             var_names = [var_names]
-        var_names = cast(List[Hashable], var_names)
 
         names, codes, levels = [], [], []  # type: (list, list, list)
         current_index_variable = variables.get(dim)
@@ -198,22 +198,24 @@ def merge_indexes(indexes: Mapping[Hashable, Union[Hashable, List[Hashable]]],
     return new_variables, new_coord_names
 
 
-def split_indexes(dims_or_levels: Union[Hashable, List[Hashable]],
+def split_indexes(dims_or_levels: Union[Hashable, Sequence[Hashable]],
                   variables: Mapping[Hashable, Variable],
                   coord_names: Set[Hashable],
                   level_coords: Mapping[Hashable, Hashable],
                   drop: bool = False,
-                  ) -> Tuple[MutableMapping[Hashable, Variable], Set]:
+                  ) -> Tuple[MutableMapping[Hashable, Variable],
+                             MutableSet[Hashable]]:
     """Extract (multi-)indexes (levels) as variables.
 
     Not public API. Used in Dataset and DataArray reset_index
     methods.
     """
-    if isinstance(dims_or_levels, str):
+    if (isinstance(dims_or_levels, str)
+            or not isinstance(dims_or_levels, Sequence)):
         dims_or_levels = [dims_or_levels]
-    dims_or_levels = cast(List[Hashable], dims_or_levels)
 
-    dim_levels = defaultdict(list)  # type: MutableMapping[Hashable, list]
+    dim_levels \
+        = defaultdict(list)  # type: MutableMapping[Hashable, List[Hashable]]
     dims = []
     for k in dims_or_levels:
         if k in level_coords:
