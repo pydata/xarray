@@ -8,7 +8,7 @@ from .pycompat import dask_array_type
 from .utils import not_implemented
 
 
-class SupportsArithmetic(object):
+class SupportsArithmetic:
     """Base class for xarray types that support arithmetic.
 
     Used by Dataset, DataArray, Variable and GroupBy.

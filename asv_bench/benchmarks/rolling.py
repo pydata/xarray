@@ -19,7 +19,7 @@ randn_t = randn((nt, ))
 randn_long = randn((long_nx, ), frac_nan=0.1)
 
 
-class Rolling(object):
+class Rolling:
     def setup(self, *args, **kwargs):
         self.ds = xr.Dataset(
             {'var1': (('x', 'y'), randn_xy),

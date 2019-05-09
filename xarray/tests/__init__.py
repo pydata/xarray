@@ -151,13 +151,13 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
         raise UnexpectedDataAccess("Tried accessing data")
 
 
-class ReturnItem(object):
+class ReturnItem:
 
     def __getitem__(self, key):
         return key
 
 
-class IndexerMaker(object):
+class IndexerMaker:
 
     def __init__(self, indexer_cls):
         self._indexer_cls = indexer_cls

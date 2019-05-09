@@ -15,7 +15,7 @@ class SerializationWarning(RuntimeWarning):
     """Warnings about encoding/decoding issues in serialization."""
 
 
-class VariableCoder(object):
+class VariableCoder:
     """Base class for encoding and decoding transformations on variables.
 
     We use coders for transforming variables between xarray's data model and

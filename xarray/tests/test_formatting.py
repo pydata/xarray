@@ -10,7 +10,7 @@ from xarray.core import formatting
 from . import raises_regex
 
 
-class TestFormatting(object):
+class TestFormatting:
 
     def test_get_indexer_at_least_n_items(self):
         cases = [

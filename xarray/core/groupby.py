@@ -113,7 +113,7 @@ def _inverse_permutation_indices(positions):
     return indices
 
 
-class _DummyGroup(object):
+class _DummyGroup:
     """Class for keeping track of grouped dimensions without coordinates.
 
     Should not be user visible.
