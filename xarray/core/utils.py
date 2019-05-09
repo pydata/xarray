@@ -201,11 +201,6 @@ def remove_incompatible_items(first_dict: MutableMapping[K, V],
             del first_dict[k]
 
 
-def is_dim_type(value: Any) -> bool:
-    return (value is not None and not isinstance(value, tuple) and
-            isinstance(value, Hashable))
-
-
 def is_dict_like(value: Any) -> bool:
     return hasattr(value, 'keys') and hasattr(value, '__getitem__')
 

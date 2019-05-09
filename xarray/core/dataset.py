@@ -339,8 +339,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def __init__(self,
                  data_vars: Optional[Mapping[Hashable, Union[
-                     DataArray,
-                     Variable,
+                     'DataArray', Variable,
                      Tuple[Hashable, Any],
                      Tuple[Tuple[Hashable, ...], Any]]]] = None,
                  coords: Optional[Mapping[Hashable, Any]] = None,

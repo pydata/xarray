@@ -22,7 +22,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .pycompat import TYPE_CHECKING
 from .options import OPTIONS
-from .utils import _check_inplace, either_dict_or_kwargs, is_dim_type
+from .utils import _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -1261,14 +1261,14 @@ class DataArray(AbstractArray, DataWithCoords):
             This object, but with an additional dimension(s).
         """
         if isinstance(dim, int):
-            raise TypeError('dim should be str or sequence of strs or dict')
-        elif is_dim_type(dim):
-            dim = OrderedDict(((cast(Hashable, dim), 1),))
-        elif isinstance(dim, Sequence):
+            raise TypeError('dim should be hashable or sequence/mapping of '
+                            'hashables')
+        elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError('dims should not contain duplicate values.')
             dim = OrderedDict(((d, 1) for d in dim))
-        dim = cast(Optional[Mapping[Hashable, Any]], dim)
+        elif dim is not None and not isinstance(dim, Mapping):
+            dim = OrderedDict(((cast(Hashable, dim), 1),))
 
         # TODO: get rid of the below code block when python 3.5 is no longer
         #   supported.

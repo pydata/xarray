@@ -3,13 +3,14 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
 
 from . import duck_array_ops, nputils, utils
 from .pycompat import dask_array_type, integer_types
-from .utils import is_dict_like, is_dim_type
+from .utils import is_dict_like
 
 
 def expanded_indexer(key, ndim):
@@ -151,7 +152,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
         else:
             for k, v in label.items():
                 # index should be an item (i.e. Hashable) not an array-like
-                if not is_dim_type(v):
+                if isinstance(v, Sequence) and not isinstance(v, str):
                     raise ValueError('Vectorized selection is not '
                                      'available along level variable: ' + k)
             indexer, new_index = index.get_loc_level(

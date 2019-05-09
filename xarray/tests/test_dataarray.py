@@ -1336,7 +1336,7 @@ class TestDataArray(object):
                           coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
 
-        with raises_regex(TypeError, 'dim should be str or'):
+        with raises_regex(TypeError, 'dim should be hashable or'):
             array.expand_dims(0)
         with raises_regex(ValueError, 'lengths of dim and axis'):
             # dims and axis argument should be the same length
