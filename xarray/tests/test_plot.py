@@ -4,12 +4,10 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
 
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray
-from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
@@ -538,6 +536,25 @@ class TestDetermineCmapParams:
         with xr.set_options(cmap_sequential='magma'):
             cmap_params = _determine_cmap_params(self.data)
             assert cmap_params['cmap'] == 'magma'
+
+    def test_do_nothing_if_provided_cmap(self):
+        cmap_list = [
+            mpl.colors.LinearSegmentedColormap.from_list('name', ['r', 'g']),
+            mpl.colors.ListedColormap(['r', 'g', 'b'])
+        ]
+
+        # can't parametrize with mpl objects when mpl is absent
+        for cmap in cmap_list:
+            cmap_params = _determine_cmap_params(self.data,
+                                                 cmap=cmap,
+                                                 levels=7)
+            assert cmap_params['cmap'] is cmap
+
+    def test_do_something_if_provided_str_cmap(self):
+        cmap = 'RdBu_r'
+        cmap_params = _determine_cmap_params(self.data, cmap=cmap, levels=7)
+        assert cmap_params['cmap'] is not cmap
+        assert isinstance(cmap_params['cmap'], mpl.colors.ListedColormap)
 
     def test_cmap_sequential_explicit_option(self):
         with xr.set_options(cmap_sequential=mpl.cm.magma):
