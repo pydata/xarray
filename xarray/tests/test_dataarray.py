@@ -23,7 +23,7 @@ from xarray.tests import (
     requires_scipy, source_ndarray)
 
 
-class TestDataArray(object):
+class TestDataArray:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.attrs = {'attr1': 'value1', 'attr2': 2929}
@@ -3809,7 +3809,7 @@ def test_name_in_masking():
     assert da.where((da > 5).rename('YokoOno'), drop=True).name == name
 
 
-class TestIrisConversion(object):
+class TestIrisConversion:
     @requires_iris
     def test_to_and_from_iris(self):
         import iris

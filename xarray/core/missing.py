@@ -14,7 +14,7 @@ from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
 
-class BaseInterpolator(object):
+class BaseInterpolator:
     '''gerneric interpolator class for normalizing interpolation methods'''
     cons_kwargs = {}  # type: Dict[str, Any]
     call_kwargs = {}  # type: Dict[str, Any]

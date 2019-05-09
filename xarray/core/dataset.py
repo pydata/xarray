@@ -303,7 +303,7 @@ class DataVariables(Mapping):
                 if key not in self._dataset._coord_names]
 
 
-class _LocIndexer(object):
+class _LocIndexer:
     def __init__(self, dataset):
         self.dataset = dataset
 

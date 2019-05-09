@@ -8,7 +8,7 @@ from . import raises_regex
 from .test_dataset import create_test_data
 
 
-class TestMergeInternals(object):
+class TestMergeInternals:
     def test_broadcast_dimension_size(self):
         actual = merge.broadcast_dimension_size(
             [xr.Variable('x', [1]), xr.Variable('y', [2, 1])])
@@ -19,11 +19,11 @@ class TestMergeInternals(object):
         assert actual == {'x': 1, 'y': 2}
 
         with pytest.raises(ValueError):
-            actual = merge.broadcast_dimension_size(
+            merge.broadcast_dimension_size(
                 [xr.Variable(('x', 'y'), [[1, 2]]), xr.Variable('y', [2])])
 
 
-class TestMergeFunction(object):
+class TestMergeFunction:
     def test_merge_arrays(self):
         data = create_test_data()
         actual = xr.merge([data.var1, data.var2])
@@ -128,7 +128,7 @@ class TestMergeFunction(object):
         assert expected.identical(actual)
 
 
-class TestMergeMethod(object):
+class TestMergeMethod:
 
     def test_merge(self):
         data = create_test_data()

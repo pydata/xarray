@@ -135,7 +135,7 @@ def acquire(lock, blocking=True):
         return lock.acquire(blocking)
 
 
-class CombinedLock(object):
+class CombinedLock:
     """A combination of multiple locks.
 
     Like a locked door, a CombinedLock is locked if any of its constituent
@@ -167,7 +167,7 @@ class CombinedLock(object):
         return "CombinedLock(%r)" % list(self.locks)
 
 
-class DummyLock(object):
+class DummyLock:
     """DummyLock provides the lock API without any actual locking."""
 
     def acquire(self, blocking=True):

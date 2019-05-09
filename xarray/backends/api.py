@@ -529,7 +529,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     return data_array
 
 
-class _MultiFileCloser(object):
+class _MultiFileCloser:
     def __init__(self, file_objs):
         self.file_objs = file_objs
 
