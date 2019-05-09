@@ -18,7 +18,7 @@ from . import (
 from .test_dataset import create_test_data
 
 
-class TestConcatDataset(object):
+class TestConcatDataset:
     def test_concat(self):
         # TODO: simplify and split this test case
 
@@ -238,7 +238,7 @@ class TestConcatDataset(object):
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
 
-class TestConcatDataArray(object):
+class TestConcatDataArray:
     def test_concat(self):
         ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 3))),
                       'bar': (['x', 'y'], np.random.random((2, 3)))},
@@ -307,7 +307,7 @@ class TestConcatDataArray(object):
         assert combined.dims == ('z', 'x', 'y')
 
 
-class TestAutoCombine(object):
+class TestAutoCombine:
 
     @pytest.mark.parametrize("combine", [_auto_combine_1d, auto_combine])
     @requires_dask  # only for toolz
@@ -425,7 +425,7 @@ def assert_combined_tile_ids_equal(dict1, dict2):
         assert_equal(dict1[k], dict2[k])
 
 
-class TestTileIDsFromNestedList(object):
+class TestTileIDsFromNestedList:
     def test_1d(self):
         ds = create_test_data
         input = [ds(0), ds(1)]
@@ -533,7 +533,7 @@ def _create_tile_ids(shape):
 
 
 @requires_dask  # only for toolz
-class TestCombineND(object):
+class TestCombineND:
     @pytest.mark.parametrize("old_id, new_id", [((3, 0, 1), (0, 1)),
                                                 ((0, 0), (0,)),
                                                 ((1,), ()),
@@ -598,7 +598,7 @@ class TestCombineND(object):
         assert_equal(result, expected)
 
 
-class TestCheckShapeTileIDs(object):
+class TestCheckShapeTileIDs:
     def test_check_depths(self):
         ds = create_test_data(0)
         combined_tile_ids = {(0,): ds, (0, 1): ds}
@@ -616,7 +616,7 @@ class TestCheckShapeTileIDs(object):
 
 
 @requires_dask  # only for toolz
-class TestAutoCombineND(object):
+class TestAutoCombineND:
     def test_single_dataset(self):
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
         actual = auto_combine(objs)
@@ -712,7 +712,7 @@ class TestAutoCombineND(object):
         assert_identical(expected, actual)
 
 
-class TestAutoCombineUsingCoords(object):
+class TestAutoCombineUsingCoords:
     def test_order_inferred_from_coords(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]

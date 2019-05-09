@@ -12,7 +12,7 @@ from .ops import (
 from .pycompat import dask_array_type
 
 
-class Rolling(object):
+class Rolling:
     """A object that implements the moving window pattern.
 
     See Also
@@ -435,7 +435,7 @@ class DatasetRolling(Rolling):
             **{self.dim: slice(None, None, stride)})
 
 
-class Coarsen(object):
+class Coarsen:
     """A object that implements the coarsen.
 
     See Also

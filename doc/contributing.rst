@@ -457,7 +457,7 @@ typically find tests wrapped in a class.
 
 .. code-block:: python
 
-    class TestReallyCoolFeature(object):
+    class TestReallyCoolFeature:
         ....
 
 Going forward, we are moving to a more *functional* style using the

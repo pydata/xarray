@@ -29,7 +29,7 @@ _DEFAULT_NAME = utils.ReprObject('<default-name>')
 _JOINS_WITHOUT_FILL_VALUES = frozenset({'inner', 'exact'})
 
 
-class _UFuncSignature(object):
+class _UFuncSignature:
     """Core dimensions signature for a given function.
 
     Based on the signature provided by generalized ufuncs in NumPy.

@@ -19,7 +19,7 @@ REF_COUNTS = {}  # type: Dict[Any, int]
 _DEFAULT_MODE = utils.ReprObject('<unused>')
 
 
-class FileManager(object):
+class FileManager:
     """Manager for acquiring and closing a file object.
 
     Use FileManager subclasses (CachingFileManager in particular) on backend
@@ -237,7 +237,7 @@ class CachingFileManager(FileManager):
             type(self).__name__, self._opener, args_string, self._kwargs)
 
 
-class _RefCounter(object):
+class _RefCounter:
     """Class for keeping track of reference counts."""
     def __init__(self, counts):
         self._counts = counts

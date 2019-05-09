@@ -410,7 +410,7 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
-class _PlotMethods(object):
+class _PlotMethods:
     """
     Enables use of xarray.plot functions as attributes on a DataArray.
     For example, DataArray.plot.imshow

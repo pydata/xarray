@@ -9,7 +9,7 @@ from . import (
     has_dask, raises_regex, requires_dask)
 
 
-class TestDatetimeAccessor(object):
+class TestDatetimeAccessor:
     @pytest.fixture(autouse=True)
     def setup(self):
         nt = 100

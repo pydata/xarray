@@ -45,7 +45,7 @@ import numpy as np
 import pandas as pd
 
 
-class CFTimeGrouper(object):
+class CFTimeGrouper:
     """This is a simple container for the grouping parameters that implements a
     single method, the only one required for resampling in xarray.  It cannot
     be used in a call to groupby like a pandas.Grouper object can."""

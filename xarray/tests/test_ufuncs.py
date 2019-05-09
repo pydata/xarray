@@ -107,7 +107,7 @@ def test_kwargs():
 @requires_np113
 def test_xarray_defers_to_unrecognized_type():
 
-    class Other(object):
+    class Other:
         def __array_ufunc__(self, *args, **kwargs):
             return 'other'
 

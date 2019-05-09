@@ -14,7 +14,7 @@ from . import (
 from .test_coding_times import _all_cftime_date_types
 
 
-class TestAlias(object):
+class TestAlias:
     def test(self):
         def new_method():
             pass
@@ -92,7 +92,7 @@ def test_multiindex_from_product_levels_non_unique():
     np.testing.assert_array_equal(result.levels[1], [1, 2])
 
 
-class TestArrayEquiv(object):
+class TestArrayEquiv:
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
@@ -102,7 +102,7 @@ class TestArrayEquiv(object):
         assert not duck_array_ops.array_equiv(0, np.array(1, dtype=object))
 
 
-class TestDictionaries(object):
+class TestDictionaries:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.x = {'a': 'A', 'b': 'B'}
@@ -197,7 +197,7 @@ def test_is_grib_path():
     assert utils.is_grib_path('example.grb2')
 
 
-class Test_is_uniform_and_sorted(object):
+class Test_is_uniform_and_sorted:
 
     def test_sorted_uniform(self):
         assert utils.is_uniform_spaced(np.arange(5))
@@ -218,7 +218,7 @@ class Test_is_uniform_and_sorted(object):
         assert utils.is_uniform_spaced([0, 0.97, 2], rtol=0.1)
 
 
-class Test_hashable(object):
+class Test_hashable:
 
     def test_hashable(self):
         for v in [False, 1, (2, ), (3, 4), 'four']:

@@ -81,7 +81,7 @@ def create_test_dataarray_attrs(seed=0, var='var1'):
     return da
 
 
-class TestAttrRetention(object):
+class TestAttrRetention:
     def test_dataset_attr_retention(self):
         # Use .mean() for all tests: a typical reduction operation
         ds = create_test_dataset_attrs()

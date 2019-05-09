@@ -92,7 +92,7 @@ def _infer_coords_and_dims(shape, coords, dims):
     return new_coords, dims
 
 
-class _LocIndexer(object):
+class _LocIndexer:
     def __init__(self, data_array):
         self.data_array = data_array
 

@@ -294,7 +294,7 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     return indexer
 
 
-class ExplicitIndexer(object):
+class ExplicitIndexer:
     """Base class for explicit indexer objects.
 
     ExplicitIndexer objects wrap a tuple of values given by their ``tuple``
@@ -430,7 +430,7 @@ class VectorizedIndexer(ExplicitIndexer):
         super(VectorizedIndexer, self).__init__(new_key)
 
 
-class ExplicitlyIndexed(object):
+class ExplicitlyIndexed:
     """Mixin to mark support for Indexer subclasses in indexing."""
 
 
@@ -740,7 +740,7 @@ def _combine_indexers(old_key, shape, new_key):
                                    np.broadcast_arrays(*old_key.tuple)))
 
 
-class IndexingSupport(object):  # could inherit from enum.Enum on Python 3
+class IndexingSupport:  # could inherit from enum.Enum on Python 3
     # for backends that support only basic indexer
     BASIC = 'BASIC'
     # for backends that support basic / outer indexer

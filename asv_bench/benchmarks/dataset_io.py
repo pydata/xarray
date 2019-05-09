@@ -19,7 +19,7 @@ except ImportError:
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 
 
-class IOSingleNetCDF(object):
+class IOSingleNetCDF:
     """
     A few examples that benchmark reading/writing a single netCDF file with
     xarray
@@ -214,7 +214,7 @@ class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
                             chunks=self.time_chunks).load()
 
 
-class IOMultipleNetCDF(object):
+class IOMultipleNetCDF:
     """
     A few examples that benchmark reading/writing multiple netCDF files with
     xarray
@@ -419,7 +419,7 @@ def create_delayed_write():
     return ds.to_netcdf('file.nc', engine='netcdf4', compute=False)
 
 
-class IOWriteNetCDFDask(object):
+class IOWriteNetCDFDask:
     timeout = 60
     repeat = 1
     number = 5
@@ -432,7 +432,7 @@ class IOWriteNetCDFDask(object):
         self.write.compute()
 
 
-class IOWriteNetCDFDaskDistributed(object):
+class IOWriteNetCDFDaskDistributed:
     def setup(self):
         try:
             import distributed

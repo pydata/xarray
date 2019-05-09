@@ -20,7 +20,7 @@ from . import (
     requires_dask)
 
 
-class TestOps(object):
+class TestOps:
 
     @pytest.fixture(autouse=True)
     def setUp(self):

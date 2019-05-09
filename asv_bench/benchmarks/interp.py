@@ -24,7 +24,7 @@ new_x_long = np.linspace(0.3 * nx, 0.7 * nx, 1000)
 new_y_long = np.linspace(0.1, 0.9, 1000)
 
 
-class Interpolation(object):
+class Interpolation:
     def setup(self, *args, **kwargs):
         self.ds = xr.Dataset(
             {'var1': (('x', 'y'), randn_xy),

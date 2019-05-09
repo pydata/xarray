@@ -110,7 +110,7 @@ def _round_field(values, name, freq):
         return _round_series(values, name, freq)
 
 
-class DatetimeAccessor(object):
+class DatetimeAccessor:
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
      Similar to pandas, fields can be accessed through the `.dt` attribute

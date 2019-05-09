@@ -81,7 +81,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
                     k, v in self._variables.items())
 
 
-class TestDataset(object):
+class TestDataset:
     def test_repr(self):
         data = create_test_data(seed=123)
         data.attrs['foo'] = 'bar'
@@ -267,7 +267,7 @@ class TestDataset(object):
             actual = Dataset({'x': arg})
             assert_identical(expected, actual)
 
-        class Arbitrary(object):
+        class Arbitrary:
             pass
 
         d = pd.Timestamp('2000-01-01T12')
