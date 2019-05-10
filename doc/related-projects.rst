@@ -33,6 +33,7 @@ Geosciences
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
 - `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
 - `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
+- `xcube <https://github.com/dcs4cop/xcube>`_: xarray-based data cube tools and web services.
 - `xESMF <https://xesmf.readthedocs.io>`_: Universal Regridder for Geospatial Data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
 - `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.
@@ -66,6 +67,7 @@ Visualization
 - `Datashader <https://datashader.org>`_, `geoviews <http://geo.holoviews.org>`_, `holoviews <http://holoviews.org/>`_, : visualization packages for large data.
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
+- `xcube-viewer <https://github.com/dcs4cop/xcube-viewer>`_: Data cube viewer for `xcube <https://github.com/dcs4cop/xcube-viewer>`_ web services.
 
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~
