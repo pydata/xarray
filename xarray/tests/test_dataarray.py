@@ -23,7 +23,7 @@ from xarray.tests import (
     requires_scipy, source_ndarray)
 
 
-class TestDataArray(object):
+class TestDataArray:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.attrs = {'attr1': 'value1', 'attr2': 2929}
@@ -3321,6 +3321,32 @@ class TestDataArray(object):
         expected.data = new_data
         assert_identical(expected, actual)
 
+    @pytest.mark.xfail(raises=AssertionError)
+    @pytest.mark.parametrize('deep, expected_orig', [
+        [True,
+         xr.DataArray(xr.IndexVariable('a', np.array([1, 2])),
+                      coords={'a': [1, 2]}, dims=['a'])],
+        [False,
+         xr.DataArray(xr.IndexVariable('a', np.array([999, 2])),
+                      coords={'a': [999, 2]}, dims=['a'])]])
+    def test_copy_coords(self, deep, expected_orig):
+        """The test fails for the shallow copy, and apparently only on Windows
+        for some reason. In windows coords seem to be immutable unless it's one
+        dataarray deep copied from another."""
+        da = xr.DataArray(
+            np.ones([2, 2, 2]),
+            coords={'a': [1, 2], 'b': ['x', 'y'], 'c': [0, 1]},
+            dims=['a', 'b', 'c'])
+        da_cp = da.copy(deep)
+        da_cp['a'].data[0] = 999
+
+        expected_cp = xr.DataArray(
+            xr.IndexVariable('a', np.array([999, 2])),
+            coords={'a': [999, 2]}, dims=['a'])
+        assert_identical(da_cp['a'], expected_cp)
+
+        assert_identical(da['a'], expected_orig)
+
     def test_real_and_imag(self):
         array = DataArray(1 + 2j)
         assert_identical(array.real, DataArray(1))
@@ -3787,7 +3813,7 @@ def test_name_in_masking():
     assert da.where((da > 5).rename('YokoOno'), drop=True).name == name
 
 
-class TestIrisConversion(object):
+class TestIrisConversion:
     @requires_iris
     def test_to_and_from_iris(self):
         import iris

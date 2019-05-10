@@ -29,7 +29,7 @@ def _nicetitle(coord, value, maxchar, template):
     return title
 
 
-class FacetGrid(object):
+class FacetGrid:
     """
     Initialize the matplotlib figure and FacetGrid object.
 

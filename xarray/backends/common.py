@@ -154,7 +154,7 @@ class AbstractDataStore(Mapping):
         self.close()
 
 
-class ArrayWriter(object):
+class ArrayWriter:
     def __init__(self, lock=None):
         self.sources = []
         self.targets = []
