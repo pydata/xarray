@@ -24,10 +24,10 @@ def requires_quantities(test):
 def sample_data():
     from collections import namedtuple
 
-    x = np.arange(10) * pq.A
-    y = np.arange(20)
-    xp = np.arange(10) * pq.J
-    v = np.arange(10 * 20).reshape(10, 20) * pq.V
+    x = (np.arange(10) + 1) * pq.A
+    y = (np.arange(20) + 1)
+    xp = (np.arange(10) + 1) * pq.J
+    v = (np.arange(10 * 20).reshape(10, 20) + 1) * pq.V
     da = DataArray(
         v,
         dims=('x', 'y'),
