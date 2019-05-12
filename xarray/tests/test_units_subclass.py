@@ -74,7 +74,7 @@ class TestWithQuantities(object):
         assert equal_with_units(da + g, v + f.T)
 
         # broadcasting
-        f = np.arange(10) * pq.m
+        f = (np.arange(10) + 1) * pq.m
         g = DataArray(f, dims=['x'], coords=dict(x=x))
         assert equal_with_units(da / g, v / f[:, None])
         
