@@ -219,6 +219,21 @@ def _as_array_or_item(data):
     return data
 
 
+def _as_any_array_or_item(data):
+    """ Return the given values as a numpy array subclass instance, or
+    individual item if it's a 0d datetime64 or timedelta64 array.
+
+    The same caveats as for ``_as_array_or_item`` apply.
+    """
+    data = np.asanyarray(data)
+    if data.ndim == 0:
+        if data.dtype.kind == 'M':
+            data = np.datetime64(data, 'ns')
+        elif data.dtype.kind == 'm':
+            data = np.timedelta64(data, 'ns')
+    return data
+
+
 class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                utils.NdimSizeLenMixin):
     """A netcdf-like variable consisting of dimensions, data and attributes
@@ -294,7 +309,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         if isinstance(self._data, dask_array_type):
             return self._data
         else:
-            return self.values
+            return _as_any_array_or_item(self._data)
 
     @data.setter
     def data(self, data):
