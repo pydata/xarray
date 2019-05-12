@@ -99,7 +99,6 @@ class TestWithQuantities(object):
         da = sample_data.da
         assert equal_with_units(da.x, x)
 
-    @pytest.mark.xfail
     def test_sel(self, sample_data):
         y = sample_data.y
         v = sample_data.v
