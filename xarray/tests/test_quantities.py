@@ -77,7 +77,7 @@ class TestWithQuantities(object):
         f = (np.arange(10) + 1) * pq.m
         g = DataArray(f, dims=['x'], coords=dict(x=x))
         assert equal_with_units(da / g, v / f[:, None])
-        
+
     def test_unit_checking(self, sample_data):
         da = sample_data.da
         x = sample_data.x
