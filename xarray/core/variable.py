@@ -183,7 +183,7 @@ def as_compatible_data(data, fastpath=False):
             data = np.asarray(data)
 
     # validate whether the data is valid data types
-    data = np.asarray(data)
+    data = np.asanyarray(data)
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':
