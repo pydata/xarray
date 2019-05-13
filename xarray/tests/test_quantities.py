@@ -11,13 +11,10 @@ try:
 except ImportError:
     has_quantities = False
 
-
-def requires_quantities(test):
-    return (
-        test
-        if has_quantities
-        else pytest.mark.skip('requires python-quantities')(test)
-    )
+pytestmark = pytest.mark.skipif(
+    not has_quantities,
+    reason="requires python-quantities",
+)
 
 
 def equal_with_units(a, b):
@@ -63,7 +60,6 @@ def with_keys(mapping, keys):
     }
 
 
-@requires_quantities
 class TestWithQuantities(object):
     def test_units_in_data_and_coords(self, data_array):
         assert equal_with_units(data_array.xp.data, data_array.xp)
