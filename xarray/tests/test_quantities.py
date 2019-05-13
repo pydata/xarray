@@ -61,6 +61,7 @@ def with_keys(mapping, keys):
 
 
 def test_units_in_data_and_coords(data_array):
+    assert equal_with_units(data_array.data, data_array)
     assert equal_with_units(data_array.xp.data, data_array.xp)
 
 
