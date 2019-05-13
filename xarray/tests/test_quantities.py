@@ -86,6 +86,15 @@ class TestWithQuantities(object):
         g = DataArray(f, dims=['x'], coords=with_keys(coords, ['x']))
         assert equal_with_units(da / g, v / f[:, None])
 
+    @pytest.mark.xfail(reason="units don't survive through combining yet")
+    def test_combine(self, data_array):
+        from xarray import concat
+
+        a = data_array[:, :10]
+        b = data_array[:, 10:]
+
+        assert equal_with_units(concat([a, b], dim='y'), data_array)
+
     def test_unit_checking(self, data_array, coords):
         da = data_array
 
