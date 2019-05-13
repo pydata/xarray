@@ -92,7 +92,7 @@ class TestWithQuantities(object):
     def test_units_in_indexes(self, sample_data):
         """ Test if units survive through xarray indexes.
         Indexes are borrowed from Pandas, and Pandas does not support
-        units. Therefore, we currently don't inted to support units on
+        units. Therefore, we currently don't intend to support units on
         indexes either.
         """
         x = sample_data.x
