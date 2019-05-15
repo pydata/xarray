@@ -235,6 +235,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var = maybe_default_fill_value(var)
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var, name=name)
+
     return var
 
 
@@ -599,7 +600,7 @@ def cf_encoder(variables, attributes):
     as possible.  This includes masking, scaling, character
     array handling, and CF-time encoding.
 
-    Decode a set of CF encoded variables and attributes.
+    Encode a set of CF encoded variables and attributes.
 
     See Also, decode_cf_variable
 
@@ -619,6 +620,19 @@ def cf_encoder(variables, attributes):
 
     See also: encode_cf_variable
     """
+
     new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
                            for k, v in variables.items())
+
+    # Remove attrs from bounds variables before encoding
+    for var in new_vars.values():
+        bounds = var.attrs['bounds'] if 'bounds' in var.attrs else None
+        if bounds and bounds in new_vars:
+            # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries
+            for attr in ['units', 'standard_name', 'axis', 'positive',
+                         'calendar', 'long_name', 'leap_month', 'leap_year',
+                         'month_lengths']:
+                if attr in new_vars[bounds].attrs:
+                    new_vars[bounds].attrs.pop(attr)
+
     return new_vars, attributes
