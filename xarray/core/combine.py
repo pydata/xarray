@@ -4,7 +4,7 @@ from collections import Counter, OrderedDict
 
 import pandas as pd
 
-from . import utils
+from . import utils, dtypes
 from .alignment import align
 from .merge import merge
 from .variable import IndexVariable, Variable, as_variable
@@ -14,7 +14,7 @@ from .computation import result_name
 
 def concat(objs, dim=None, data_vars='all', coords='different',
            compat='equals', positions=None, indexers=None, mode=None,
-           concat_over=None):
+           concat_over=None, fill_value=dtypes.NA):
     """Concatenate xarray objects along a new or existing dimension.
 
     Parameters
@@ -117,7 +117,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
     else:
         raise TypeError('can only concatenate xarray Dataset and DataArray '
                         'objects, got %s' % type(first_obj))
-    return f(objs, dim, data_vars, coords, compat, positions)
+    return f(objs, dim, data_vars, coords, compat, positions, fill_value)
 
 
 def _calc_concat_dim_coord(dim):
@@ -212,7 +212,8 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     return concat_over, equals
 
 
-def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
+def _dataset_concat(datasets, dim, data_vars, coords, compat, positions,
+                    fill_value=dtypes.NA):
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
@@ -225,7 +226,8 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
-    datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
+    datasets = align(*datasets, join='outer', copy=False, exclude=[dim],
+                     fill_value=fill_value)
 
     concat_over, equals = _calc_concat_over(datasets, dim, data_vars, coords)
 
@@ -317,7 +319,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
 
 
 def _dataarray_concat(arrays, dim, data_vars, coords, compat,
-                      positions):
+                      positions, fill_value=dtypes.NA):
     arrays = list(arrays)
 
     if data_vars != 'all':
@@ -336,14 +338,15 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
         datasets.append(arr._to_temp_dataset())
 
     ds = _dataset_concat(datasets, dim, data_vars, coords, compat,
-                         positions)
+                         positions, fill_value)
     result = arrays[0]._from_temp_dataset(ds, name)
 
     result.name = result_name(arrays)
     return result
 
 
-def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
+def _auto_concat(datasets, dim=None, data_vars='all', coords='different',
+                 fill_value=dtypes.NA):
     if len(datasets) == 1 and dim is None:
         # There is nothing more to combine, so kick out early.
         return datasets[0]
@@ -366,7 +369,8 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
                                  'supply the ``concat_dim`` argument '
                                  'explicitly')
             dim, = concat_dims
-        return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)
+        return concat(datasets, dim=dim, data_vars=data_vars,
+                      coords=coords, fill_value=fill_value)
 
 
 _CONCAT_DIM_DEFAULT = utils.ReprObject('<inferred>')
@@ -442,7 +446,8 @@ def _check_shape_tile_ids(combined_tile_ids):
 
 
 def _combine_nd(combined_ids, concat_dims, data_vars='all',
-                coords='different', compat='no_conflicts'):
+                coords='different', compat='no_conflicts',
+                fill_value=dtypes.NA):
     """
     Concatenates and merges an N-dimensional structure of datasets.
 
@@ -472,13 +477,14 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
                                                          dim=concat_dim,
                                                          data_vars=data_vars,
                                                          coords=coords,
-                                                         compat=compat)
+                                                         compat=compat,
+                                                         fill_value=fill_value)
     combined_ds = list(combined_ids.values())[0]
     return combined_ds
 
 
 def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
-                                      coords, compat):
+                                      coords, compat, fill_value=dtypes.NA):
     # Group into lines of datasets which must be combined along dim
     # need to sort by _new_tile_id first for groupby to work
     # TODO remove all these sorted OrderedDicts once python >= 3.6 only
@@ -490,7 +496,8 @@ def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
         combined_ids = OrderedDict(sorted(group))
         datasets = combined_ids.values()
         new_combined_ids[new_id] = _auto_combine_1d(datasets, dim, compat,
-                                                    data_vars, coords)
+                                                    data_vars, coords,
+                                                    fill_value)
     return new_combined_ids
 
 
@@ -500,18 +507,20 @@ def vars_as_keys(ds):
 
 def _auto_combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
                      compat='no_conflicts',
-                     data_vars='all', coords='different'):
+                     data_vars='all', coords='different',
+                     fill_value=dtypes.NA):
     # This is just the old auto_combine function (which only worked along 1D)
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
         sorted_datasets = sorted(datasets, key=vars_as_keys)
         grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
         concatenated = [_auto_concat(list(ds_group), dim=dim,
-                                     data_vars=data_vars, coords=coords)
+                                     data_vars=data_vars, coords=coords,
+                                     fill_value=fill_value)
                         for id, ds_group in grouped_by_vars]
     else:
         concatenated = datasets
-    merged = merge(concatenated, compat=compat)
+    merged = merge(concatenated, compat=compat, fill_value=fill_value)
     return merged
 
 
@@ -521,7 +530,7 @@ def _new_tile_id(single_id_ds_pair):
 
 
 def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
-                  infer_order_from_coords, ids):
+                  infer_order_from_coords, ids, fill_value=dtypes.NA):
     """
     Calls logic to decide concatenation order before concatenating.
     """
@@ -550,12 +559,14 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
 
     # Repeatedly concatenate then merge along each dimension
     combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                           data_vars=data_vars, coords=coords)
+                           data_vars=data_vars, coords=coords,
+                           fill_value=fill_value)
     return combined
 
 
 def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
-                 compat='no_conflicts', data_vars='all', coords='different'):
+                 compat='no_conflicts', data_vars='all', coords='different',
+                 fill_value=dtypes.NA):
     """Attempt to auto-magically combine the given datasets into one.
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
@@ -622,4 +633,4 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     return _auto_combine(datasets, concat_dims=concat_dims, compat=compat,
                          data_vars=data_vars, coords=coords,
                          infer_order_from_coords=infer_order_from_coords,
-                         ids=False)
+                         ids=False, fill_value=fill_value)
