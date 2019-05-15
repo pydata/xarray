@@ -725,7 +725,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     combined._file_obj = _MultiFileCloser(file_objs)
     combined.attrs = datasets[0].attrs
     for v in combined:
-        combined[v].encoding = datasets[0][v].attrs
+        if v in datasets[0]:
+            combined[v].encoding = datasets[0][v].encoding
     return combined
 
 

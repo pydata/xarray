@@ -623,6 +623,7 @@ def cf_encoder(variables, attributes):
                            for k, v in variables.items())
 
     # Remove attrs from bounds variables before encoding
+    # See issue #2921
     for var in new_vars.values():
         bounds = var.attrs['bounds'] if 'bounds' in var.attrs else None
         if bounds and bounds in new_vars:
