@@ -66,6 +66,8 @@ def concat(objs, dim=None, data_vars='all', coords='different',
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
         supplied, objects are concatenated in the provided order.
+    fill_value : scalar, optional
+        Value to use for newly missing values
     indexers, mode, concat_over : deprecated
 
     Returns
@@ -607,6 +609,8 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of conca
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
