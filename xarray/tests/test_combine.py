@@ -320,7 +320,7 @@ class TestConcatDataArray:
         combined = concat(arrays, dim='z')
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ('z', 'x', 'y')
-    
+
     @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
     def test_concat_fill_value(self, fill_value):
         foo = DataArray([1, 2], coords=[('x', [1, 2])])
