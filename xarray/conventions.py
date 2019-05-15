@@ -235,7 +235,6 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var = maybe_default_fill_value(var)
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var, name=name)
-
     return var
 
 
@@ -620,7 +619,6 @@ def cf_encoder(variables, attributes):
 
     See also: encode_cf_variable
     """
-
     new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
                            for k, v in variables.items())
 
