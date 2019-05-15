@@ -33,6 +33,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Don't set attributes on bounds variables when writing to netCDF.
+  :py:meth:`xr.open_mfdataset` sets variable encodings to that of variables
+  in first file.(:issue:`2436`, :issue:`2921`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)

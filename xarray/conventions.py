@@ -491,8 +491,6 @@ def cf_decoder(variables, attributes,
     """
     Decode a set of CF encoded variables and attributes.
 
-    See Also, decode_cf_variable
-
     Parameters
     ----------
     variables : dict
@@ -514,6 +512,10 @@ def cf_decoder(variables, attributes,
         A dictionary mapping from variable name to xarray.Variable objects.
     decoded_attributes : dict
         A dictionary mapping from attribute name to values.
+
+    See also
+    --------
+    decode_cf_variable
     """
     variables, attributes, _ = decode_cf_variables(
         variables, attributes, concat_characters, mask_and_scale, decode_times)
@@ -594,14 +596,12 @@ def encode_dataset_coordinates(dataset):
 
 def cf_encoder(variables, attributes):
     """
-    A function which takes a dicts of variables and attributes
-    and encodes them to conform to CF conventions as much
-    as possible.  This includes masking, scaling, character
-    array handling, and CF-time encoding.
-
     Encode a set of CF encoded variables and attributes.
+    Takes a dicts of variables and attributes and encodes them
+    to conform to CF conventions as much as possible.
+    This includes masking, scaling, character array handling,
+    and CF-time encoding.
 
-    See Also, decode_cf_variable
 
     Parameters
     ----------
@@ -617,13 +617,14 @@ def cf_encoder(variables, attributes):
     encoded_attributes : dict
         A dictionary mapping from attribute name to value
 
-    See also: encode_cf_variable
+    See also
+    --------
+    decode_cf_variable, encode_cf_variable
     """
     new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
                            for k, v in variables.items())
 
-    # Remove attrs from bounds variables before encoding
-    # See issue #2921
+    # Remove attrs from bounds variables (issue #2921)
     for var in new_vars.values():
         bounds = var.attrs['bounds'] if 'bounds' in var.attrs else None
         if bounds and bounds in new_vars:
