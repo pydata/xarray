@@ -170,15 +170,15 @@ class DataArrayRolling(Rolling):
         --------
         >>> da = DataArray(np.arange(8).reshape(2, 4), dims=('a', 'b'))
         >>>
-        >>> rolling = da.rolling(a=3)
-        >>> rolling.to_datarray('window_dim')
+        >>> rolling = da.rolling(b=3)
+        >>> rolling.construct('window_dim')
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
         array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
                [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
         Dimensions without coordinates: a, b, window_dim
         >>>
-        >>> rolling = da.rolling(a=3, center=True)
-        >>> rolling.to_datarray('window_dim')
+        >>> rolling = da.rolling(b=3, center=True)
+        >>> rolling.construct('window_dim')
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
         array([[[np.nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, np.nan]],
                [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
