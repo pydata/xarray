@@ -258,7 +258,7 @@ class DataArrayCoordinates(AbstractCoordinates):
         return self._data._ipython_key_completions_()
 
 
-class LevelCoordinatesSource(object):
+class LevelCoordinatesSource:
     """Iterator for MultiIndex level coordinates.
 
     Used for attribute style lookup with AttrAccessMixin. Not returned directly
