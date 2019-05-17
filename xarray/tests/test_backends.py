@@ -2474,6 +2474,26 @@ class TestDask(DatasetIOBase):
                                       'no attribute'):
                         actual.test2
 
+    def test_encoding_mfdataset(self):
+        original = Dataset({'foo': ('t', np.random.randn(10)),
+                            't': ('t', pd.date_range(start='2010-01-01',
+                                                     periods=10,
+                                                     freq='1D'))})
+        original.t.encoding['units'] = 'days since 2010-01-01'
+
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1 = original.isel(t=slice(5))
+                ds2 = original.isel(t=slice(5, 10))
+                ds1.t.encoding['units'] = 'days since 2010-01-01'
+                ds2.t.encoding['units'] = 'days since 2000-01-01'
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2]) as actual:
+                    assert actual.t.encoding['units'] == original.t.encoding['units']  # noqa
+                    assert actual.t.encoding['units'] == ds1.t.encoding['units']  # noqa
+                    assert actual.t.encoding['units'] != ds2.t.encoding['units']  # noqa
+
     def test_preprocess_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
