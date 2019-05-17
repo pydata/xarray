@@ -632,7 +632,8 @@ def cf_encoder(variables, attributes):
             for attr in ['units', 'standard_name', 'axis', 'positive',
                          'calendar', 'long_name', 'leap_month', 'leap_year',
                          'month_lengths']:
-                if attr in new_vars[bounds].attrs:
-                    new_vars[bounds].attrs.pop(attr)
+                if attr in new_vars[bounds].attrs and attr in var.attrs:
+                    if new_vars[bounds].attrs[attr] == var.attrs[attr]:
+                        new_vars[bounds].attrs.pop(attr)
 
     return new_vars, attributes
