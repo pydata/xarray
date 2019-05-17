@@ -42,6 +42,8 @@ Enhancements
   helpful for avoiding file-lock errors when trying to write to files opened
   using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Better warning message when supplying invalid objects to ``xr.merge``
+  (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Bug fixes
 ~~~~~~~~~
