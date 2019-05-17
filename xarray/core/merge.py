@@ -533,21 +533,14 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    if isinstance(objects, (DataArray, Dataset, dict)):
-        raise ValueError("'objects' must be an iterable containing "
-                         "Dataset(s), DataArray(s), or dictionaries.")
-
     dict_like_objects = list()
     for obj in objects:
-
         if not (isinstance(obj, (DataArray, Dataset, dict))):
-            raise ValueError("'objects' must be an iterable containing "
-                             "Dataset(s), DataArray(s), or dictionaries.")
+            raise ValueError("'objects' must be an iterable containing only "
+                             "Dataset(s), DataArray(s), and dictionaries.")
 
         obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
-
-
-        dict_like_objects.append(obj)        
+        dict_like_objects.append(obj)
 
     variables, coord_names, dims = merge_core(dict_like_objects, compat, join,
                                               fill_value=fill_value)
