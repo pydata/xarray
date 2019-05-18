@@ -20,7 +20,8 @@ Top-level functions
    concat
    merge
    auto_combine
-   manual_combine
+   combine_auto
+   combine_manual
    where
    set_options
    full_like
