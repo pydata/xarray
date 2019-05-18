@@ -123,6 +123,14 @@ def align(*objects, join='inner', copy=True, indexes=None, exclude=frozenset(),
                         'indexes along dimension {!r} are not equal'
                         .format(dim))
                 index = joiner(matching_indexes)
+                # Pandas.Index.union gets called for an outer join, and the index
+                # is sorted in ascending order. When all indexes are monotonic
+                # descending, it's desirable to keep maintain descending order.
+                # The ascending sort doesn't happen if only one index is joined.
+                if join == 'outer' and len(matching_indexes) > 1:
+                    if all((matching_index.is_monotonic_decreasing
+                            for matching_index in matching_indexes)):
+                        index = index[::-1]
                 joined_indexes[dim] = index
             else:
                 index = matching_indexes[0]

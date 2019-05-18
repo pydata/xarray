@@ -67,6 +67,13 @@ class TestMergeFunction:
         with raises_regex(ValueError, 'indexes .* not equal'):
             xr.merge([ds, other], join='exact')
 
+    def test_merge_monotonic_descending_indexes(self):
+        ds = xr.Dataset(coords={'x': [2, 1]})
+        other = xr.Dataset(coords={'x': [3, 2]})
+        actual = xr.merge([ds, other])
+        expected = xr.Dataset(coords={'x': [3, 2, 1]})
+        assert expected.identical(actual)
+
     def test_merge_no_conflicts_single_var(self):
         ds1 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
         ds2 = xr.Dataset({'a': ('x', [2, 3]), 'x': [1, 2]})

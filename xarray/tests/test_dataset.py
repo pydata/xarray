@@ -1851,13 +1851,13 @@ class TestDataset:
                                       coords={'y': [1, 2], 'x': [10, -3]})})
         x2, y2 = broadcast(x, y)
         expected_x2 = Dataset(
-            {'foo': DataArray([[3, 3], [2, 2], [1, 1], [np.nan, np.nan]],
+            {'foo': DataArray([[np.nan, np.nan], [1, 1], [2, 2], [3, 3]],
                               dims=['x', 'y'],
-                              coords={'y': [1, 2], 'x': [-3, -2, -1, 10]})})
+                              coords={'y': [1, 2], 'x': [10, -1, -2, -3]})})
         expected_y2 = Dataset(
             {'bar': DataArray(
-                [[2, 4], [np.nan, np.nan], [np.nan, np.nan], [1, 3]],
-                dims=['x', 'y'], coords={'y': [1, 2], 'x': [-3, -2, -1, 10]})})
+                [[1, 3], [np.nan, np.nan], [np.nan, np.nan], [2, 4]],
+                dims=['x', 'y'], coords={'y': [1, 2], 'x': [10, -1, -2, -3]})})
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
 
