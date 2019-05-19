@@ -673,39 +673,46 @@ def test_decode_cf_time_bounds():
 
 
 def test_encode_time_bounds():
-    # create time and time_bounds DataArrays for Jan-1850 and Feb-1850
-    time_bounds_vals = np.array([[0.0, 31.0], [31.0, 59.0]],
-                                dtype=np.int64)
-    time_vals = time_bounds_vals.mean(axis=1)
 
-    time_var = DataArray(time_vals, dims='time',
-                         coords={'time': time_vals})
-    time_bounds_var = DataArray(time_bounds_vals, dims=('time', 'd2'),
-                                coords={'time': time_vals})
+    time = pd.date_range('2000-01-16', periods=1)
+    time_bounds = pd.date_range('2000-01-01', periods=2, freq='MS')
+    ds = Dataset(dict(time=time, time_bounds=time_bounds))
+    ds.time.attrs = {'bounds': 'time_bounds'}
+    ds.time.encoding = {'calendar': 'noleap',
+                        'units': 'days since 2000-01-01'}
 
-    # create Dataset of time and time_bounds
-    ds = Dataset(coords={'time': time_var},
-                 data_vars={'time_bounds': time_bounds_var})
-    ds.time.attrs = {'bounds': 'time_bounds', 'calendar': 'noleap',
-                     'units': 'days since 1850-01-01'}
+    expected = dict()
+    # expected['time'] = Variable(data=np.array([15]), dims=['time'])
+    expected['time_bounds'] = Variable(data=np.array([0, 31]), dims=['time_bounds'])
 
-    # if time_bounds attrs are same as time attrs, pop them.
-    ds.time_bounds.attrs = {'calendar': 'noleap',
-                            'units': 'days since 1850-01-01'}
+    encoded, _ = cf_encoder(ds.variables, ds.attrs)
+    assert_equal(encoded['time_bounds'], expected['time_bounds'])
+    assert 'calendar' not in encoded['time_bounds'].attrs
+    assert 'units' not in encoded['time_bounds'].attrs
+
+    # if time_bounds attrs are same as time attrs, it doesn't matter
+    ds.time_bounds.encoding = {'calendar': 'noleap',
+                               'units': 'days since 2000-01-01'}
     encoded, _ = cf_encoder({k: ds[k] for k in ds.variables},
                             ds.attrs)
+    assert_equal(encoded['time_bounds'], expected['time_bounds'])
     assert 'calendar' not in encoded['time_bounds'].attrs
     assert 'units' not in encoded['time_bounds'].attrs
 
     # for CF-noncompliant case of time_bounds attrs being different from
     # time attrs; preserve them for faithful roundtrip
-    ds.time_bounds.attrs = {'calendar': 'noleap',
-                            'units': 'days since 1849-01-01'}
+    ds.time_bounds.encoding = {'calendar': 'noleap',
+                               'units': 'days since 1849-01-01'}
     encoded, _ = cf_encoder({k: ds[k] for k in ds.variables},
                             ds.attrs)
+    with pytest.raises(AssertionError):
+        assert_equal(encoded['time_bounds'], expected['time_bounds'])
     assert 'calendar' not in encoded['time_bounds'].attrs
-    assert encoded['time_bounds'].attrs['units'] == ds.time_bounds.attrs['units']  # noqa
+    assert encoded['time_bounds'].attrs['units'] == ds.time_bounds.encoding['units']  # noqa
 
+    ds.time.encoding = {}
+    with pytest.warns(UserWarning):
+        cf_encoder(ds.variables, ds.attrs)
 
 @pytest.fixture(params=_ALL_CALENDARS)
 def calendar(request):

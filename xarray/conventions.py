@@ -7,6 +7,7 @@ import pandas as pd
 from .coding import strings, times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
+from .core.common import contains_cftime_datetimes
 from .core.pycompat import dask_array_type
 from .core.variable import IndexVariable, Variable, as_variable
 
@@ -353,6 +354,43 @@ def _update_bounds_attributes(variables):
                 if 'calendar' in attrs:
                     bounds_attrs.setdefault('calendar', attrs['calendar'])
 
+def _update_bounds_encoding(variables):
+    """Adds time encoding to time bounds variables.
+
+    Variables handling time bounds ("Cell boundaries" in the CF
+    conventions) do not necessarily carry the necessary attributes to be
+    decoded. This copies the encoding from the time variable to the
+    associated bounds variable so that we write CF-compliant files.
+
+    See Also:
+
+    http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
+         cf-conventions.html#cell-boundaries
+
+    https://github.com/pydata/xarray/issues/2565
+    """
+
+    # For all time variables with bounds
+    for v in variables.values():
+        attrs = v.attrs
+        encoding = v.encoding
+        has_date_units = 'units' in encoding and 'since' in encoding['units']
+        is_datetime_type = (np.issubdtype(v.dtype, np.datetime64) or
+                            contains_cftime_datetimes(v))
+        if is_datetime_type and not has_date_units and 'bounds' in attrs:
+            warnings.warn('Variable {0} has datetime units and a '
+                          'bounds variable but {0}.encoding does not have '
+                          'units specified. Output file might not comply with '
+                          'CF-conventions'.format(v.name),
+                          UserWarning)
+
+
+        if has_date_units and 'bounds' in attrs:
+            if attrs['bounds'] in variables:
+                bounds_encoding = variables[attrs['bounds']].encoding
+                bounds_encoding.setdefault('units', encoding['units'])
+                if 'calendar' in encoding:
+                    bounds_encoding.setdefault('calendar', encoding['calendar'])
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
@@ -621,6 +659,10 @@ def cf_encoder(variables, attributes):
     --------
     decode_cf_variable, encode_cf_variable
     """
+
+    # add encoding for time bounds variables so that they are encoded correctly.
+    _update_bounds_encoding(variables)
+
     new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
                            for k, v in variables.items())
 
