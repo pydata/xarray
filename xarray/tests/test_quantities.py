@@ -1,9 +1,7 @@
 import numpy as np
-
-from xarray import DataArray
-
 import pytest
 
+from xarray import DataArray
 
 try:
     import quantities as pq
