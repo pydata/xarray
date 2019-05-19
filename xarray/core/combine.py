@@ -439,7 +439,7 @@ def combine_auto(datasets, compat='no_conflicts', data_vars='all',
 
     Combining two datasets using their common dimension coordinates. Notice
     they are concatenated based on the values in their dimension coordinates,
-    not on their position in the list passed to `auto_combine`.
+    not on their position in the list passed to `combine_auto`.
 
     >>> x1
     <xarray.Dataset>
@@ -518,6 +518,9 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     ``auto_combine`` works well if you have N years of data and M data
     variables, and each combination of a distinct time period and set of data
     variables is saved its own dataset.
+
+    This entire function is in the process of being deprecated in favour of
+    ``combine_manual`` and ``combine_auto``.
 
     Parameters
     ----------
