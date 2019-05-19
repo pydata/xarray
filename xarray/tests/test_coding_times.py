@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, coding, decode_cf
-from xarray.backends.api import open_dataset, open_mfdataset
 from xarray.coding.times import (
     _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime)
 from xarray.coding.variables import SerializationWarning
@@ -16,7 +15,7 @@ from xarray.testing import assert_equal
 
 from . import (
     assert_array_equal, has_cftime, has_cftime_or_netCDF4, has_dask,
-    requires_cftime_or_netCDF4, requires_cftime)
+    requires_cftime, requires_cftime_or_netCDF4)
 
 try:
     from pandas.errors import OutOfBoundsDatetime
@@ -684,7 +683,8 @@ def test_encode_time_bounds():
 
     expected = dict()
     # expected['time'] = Variable(data=np.array([15]), dims=['time'])
-    expected['time_bounds'] = Variable(data=np.array([0, 31]), dims=['time_bounds'])
+    expected['time_bounds'] = Variable(data=np.array([0, 31]),
+                                       dims=['time_bounds'])
 
     encoded, _ = cf_encoder(ds.variables, ds.attrs)
     assert_equal(encoded['time_bounds'], expected['time_bounds'])
@@ -714,6 +714,7 @@ def test_encode_time_bounds():
     ds.time.encoding = {}
     with pytest.warns(UserWarning):
         cf_encoder(ds.variables, ds.attrs)
+
 
 @pytest.fixture(params=_ALL_CALENDARS)
 def calendar(request):

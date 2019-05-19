@@ -354,6 +354,7 @@ def _update_bounds_attributes(variables):
                 if 'calendar' in attrs:
                     bounds_attrs.setdefault('calendar', attrs['calendar'])
 
+
 def _update_bounds_encoding(variables):
     """Adds time encoding to time bounds variables.
 
@@ -395,7 +396,9 @@ def _update_bounds_encoding(variables):
                 bounds_encoding = variables[attrs['bounds']].encoding
                 bounds_encoding.setdefault('units', encoding['units'])
                 if 'calendar' in encoding:
-                    bounds_encoding.setdefault('calendar', encoding['calendar'])
+                    bounds_encoding.setdefault('calendar',
+                                               encoding['calendar'])
+
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
@@ -665,7 +668,7 @@ def cf_encoder(variables, attributes):
     decode_cf_variable, encode_cf_variable
     """
 
-    # add encoding for time bounds variables so that they are encoded correctly.
+    # add encoding for time bounds variables if present.
     _update_bounds_encoding(variables)
 
     new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
