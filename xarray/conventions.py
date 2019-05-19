@@ -378,11 +378,16 @@ def _update_bounds_encoding(variables):
         is_datetime_type = (np.issubdtype(v.dtype, np.datetime64) or
                             contains_cftime_datetimes(v))
 
-        if is_datetime_type and not has_date_units and 'bounds' in attrs:
-            warnings.warn("Variable '{0}' has datetime units and a "
+        if (is_datetime_type and not has_date_units and
+           'bounds' in attrs and attrs['bounds'] in variables):
+            warnings.warn("Variable '{0}' has datetime type and a "
                           "bounds variable but {0}.encoding does not have "
-                          "units specified. Output file might not comply with "
-                          "CF-conventions.".format(v.name),
+                          "units specified. The units encodings for '{0}' "
+                          "and '{1}' will be determined independently "
+                          "and may not be equal, counter to CF-conventions. "
+                          "If this is a concern, specify a units encoding for "
+                          "'{0}' before writing to a file."
+                          .format(v.name, attrs['bounds']),
                           UserWarning)
 
         if has_date_units and 'bounds' in attrs:

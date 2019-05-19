@@ -672,6 +672,7 @@ def test_decode_cf_time_bounds():
     _update_bounds_attributes(ds.variables)
 
 
+@requires_cftime_or_netCDF4
 def test_encode_time_bounds():
 
     time = pd.date_range('2000-01-16', periods=1)
