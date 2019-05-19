@@ -20,7 +20,7 @@ from . import (
     requires_dask)
 
 
-class TestOps(object):
+class TestOps:
 
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -85,6 +85,8 @@ class TestOps(object):
 
         expected = array([[1, 2, 3], [3, 2, 1]])
         assert_array_equal(expected, count(self.x, axis=-1))
+
+        assert 1 == count(np.datetime64('2000-01-01'))
 
     def test_where_type_promotion(self):
         result = where([True, False], [1, 2], ['a', 'b'])

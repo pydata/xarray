@@ -186,12 +186,64 @@ def _finalize_store(write, store):
     store.close()
 
 
+def load_dataset(filename_or_obj, **kwargs):
+    """Open, load into memory, and close a Dataset from a file or file-like
+    object.
+
+    This is a thin wrapper around :py:meth:`~xarray.open_dataset`. It differs
+    from `open_dataset` in that it loads the Dataset into memory, closes the
+    file, and returns the Dataset. In contrast, `open_dataset` keeps the file
+    handle open and lazy loads its contents. All parameters are passed directly
+    to `open_dataset`. See that documentation for further details.
+
+    Returns
+    -------
+    dataset : Dataset
+        The newly created Dataset.
+
+    See Also
+    --------
+    open_dataset
+    """
+    if 'cache' in kwargs:
+        raise TypeError('cache has no effect in this context')
+
+    with open_dataset(filename_or_obj, **kwargs) as ds:
+        return ds.load()
+
+
+def load_dataarray(filename_or_obj, **kwargs):
+    """Open, load into memory, and close a DataArray from a file or file-like
+    object containing a single data variable.
+
+    This is a thin wrapper around :py:meth:`~xarray.open_dataarray`. It differs
+    from `open_dataarray` in that it loads the Dataset into memory, closes the
+    file, and returns the Dataset. In contrast, `open_dataarray` keeps the file
+    handle open and lazy loads its contents. All parameters are passed directly
+    to `open_dataarray`. See that documentation for further details.
+
+    Returns
+    -------
+    datarray : DataArray
+        The newly created DataArray.
+
+    See Also
+    --------
+    open_dataarray
+    """
+    if 'cache' in kwargs:
+        raise TypeError('cache has no effect in this context')
+
+    with open_dataarray(filename_or_obj, **kwargs) as da:
+        return da.load()
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=None, decode_times=True, autoclose=None,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None,
                  backend_kwargs=None, use_cftime=None):
-    """Load and decode a dataset from a file or file-like object.
+    """Open and decode a dataset from a file or file-like object.
 
     Parameters
     ----------
@@ -231,7 +283,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib',
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib', \
         'pseudonetcdf'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -407,7 +459,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                    concat_characters=True, decode_coords=True, engine=None,
                    chunks=None, lock=None, cache=None, drop_variables=None,
                    backend_kwargs=None, use_cftime=None):
-    """Open an DataArray from a netCDF file containing a single data variable.
+    """Open an DataArray from a file or file-like object containing a single
+    data variable.
 
     This is designed to read netCDF files with only one data variable. If
     multiple variables are present then a ValueError is raised.
@@ -446,7 +499,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, \
         optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -530,7 +583,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     return data_array
 
 
-class _MultiFileCloser(object):
+class _MultiFileCloser:
     def __init__(self, file_objs):
         self.file_objs = file_objs
 
@@ -598,7 +651,7 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding['source']``.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, \
         optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for

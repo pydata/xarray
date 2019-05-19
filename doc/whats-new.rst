@@ -13,18 +13,64 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.12.1:
+.. _whats-new.0.12.2:
 
-v0.12.1 (unreleased)
+v0.12.2 (unreleased)
 --------------------
 
 Enhancements
 ~~~~~~~~~~~~
 
+- Add ``fill_value`` argument for reindex, align, and merge operations
+  to enable custom fill values. (:issue:`2876`)
+  By `Zach Griffith <https://github.com/zdgriffith>`_.
+- Character arrays' character dimension name decoding and encoding handled by
+  ``var.encoding['char_dim_name']`` (:issue:`2895`)
+  By `James McCreight <https://github.com/jmccreight>`_.
+- Clean up Python 2 compatibility in code (:issue:`2950`)
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Implement ``load_dataset()`` and ``load_dataarray()`` as alternatives to
+  ``open_dataset()`` and ``open_dataarray()`` to open, load into memory,
+  and close files, returning the Dataset or DataArray. These functions are
+  helpful for avoiding file-lock errors when trying to write to files opened
+  using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
+  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
+  By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
+- Return correct count for scalar datetime64 arrays (:issue:`2770`)
+  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Fix facetgrid colormap bug when ``extend=True``. (:issue:`2932`)
+  By `Deepak Cherian <https://github.com/dcherian`_.
+- A deep copy deep-copies the coords (:issue:`1463`)
+  By `Martin Pletcher <https://github.com/pletchm>`_.
+
+.. _whats-new.0.12.1:
+
+v0.12.1 (4 April 2019)
+----------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- Allow ``expand_dims`` method to support inserting/broadcasting dimensions
+  with size > 1. (:issue:`2710`)
+  By `Martin Pletcher <https://github.com/pletchm>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Dataset.copy(deep=True) now creates a deep copy of the attrs (:issue:`2835`).
+  By `Andras Gefferth <https://github.com/kefirbandi>`_.
+- Fix incorrect ``indexes`` resulting from various ``Dataset`` operations
+  (e.g., ``swap_dims``, ``isel``, ``reindex``, ``[]``) (:issue:`2842`,
+  :issue:`2856`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- open_rasterio() now supports rasterio.vrt.WarpedVRT with custom transform, width and height (:issue:`2864`).
+  By `Julien Michel <https://github.com/jmichel-otb>`_.
 
 .. _whats-new.0.12.0:
 
@@ -132,6 +178,11 @@ Other enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added :py:meth:`~xarray.Dataset.drop_dims` (:issue:`1949`).
   By `Kevin Squire <https://github.com/kmsquire>`_.
+- ``xr.open_zarr`` now accepts manually specified chunks with the ``chunks=``
+  parameter. ``auto_chunk=True`` is equivalent to ``chunks='auto'`` for
+  backwards compatibility. The ``overwrite_encoded_chunks`` parameter is
+  added to remove the original zarr chunk encoding.
+  By `Lily Wang <https://github.com/lilyminium>`_.
 
 Bug fixes
 ~~~~~~~~~

@@ -12,9 +12,15 @@ from xarray.core.combine import (
     _combine_nd, _infer_concat_order_from_positions,
     _infer_concat_order_from_coords)
 
-from . import (assert_combined_tile_ids_equal, assert_identical, assert_equal,
-               raises_regex)
+from . import (assert_identical, assert_equal, raises_regex)
 from .test_dataset import create_test_data
+
+
+def assert_combined_tile_ids_equal(dict1, dict2):
+    assert len(dict1) == len(dict2)
+    for k, v in dict1.items():
+        assert k in dict2.keys()
+        assert_equal(dict1[k], dict2[k])
 
 
 class TestTileIDsFromNestedList:

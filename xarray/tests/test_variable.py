@@ -26,7 +26,7 @@ from . import (
     raises_regex, requires_dask, source_ndarray)
 
 
-class VariableSubclassobjects(object):
+class VariableSubclassobjects:
     def test_properties(self):
         data = 0.5 * np.arange(10)
         v = self.cls(['time'], data, {'foo': 'bar'})
@@ -195,7 +195,7 @@ class VariableSubclassobjects(object):
 
     def test_index_0d_object(self):
 
-        class HashableItemWrapper(object):
+        class HashableItemWrapper:
             def __init__(self, item):
                 self.item = item
 
@@ -1892,7 +1892,7 @@ class TestIndexVariable(VariableSubclassobjects):
         super(TestIndexVariable, self).test_coarsen_2d()
 
 
-class TestAsCompatibleData(object):
+class TestAsCompatibleData:
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
         for t in types:
@@ -2033,7 +2033,7 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
-class TestBackendIndexing(object):
+class TestBackendIndexing:
     """    Make sure all the array wrappers can be indexed. """
 
     @pytest.fixture(autouse=True)

@@ -1,8 +1,9 @@
 import collections
+import collections.abc
 import threading
 
 
-class LRUCache(collections.MutableMapping):
+class LRUCache(collections.abc.MutableMapping):
     """Thread-safe LRUCache based on an OrderedDict.
 
     All dict operations (__getitem__, __setitem__, __contains__) update the

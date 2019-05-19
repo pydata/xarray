@@ -1,8 +1,8 @@
 import functools
 import itertools
+import typing
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
-from typing import Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -15,9 +15,14 @@ from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type, integer_types
-from .utils import (OrderedSet, either_dict_or_kwargs,
-                    decode_numpy_dict_values, ensure_us_time_resolution)
+from .pycompat import TYPE_CHECKING, dask_array_type, integer_types
+from .utils import (
+    OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
+    ensure_us_time_resolution)
+
+if TYPE_CHECKING:
+    from typing import Tuple, Type, Union
+
 
 try:
     import dask.array as da
@@ -1116,7 +1121,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             result = result._roll_one_dim(dim, count)
         return result
 
-    def transpose(self, *dims):
+    def transpose(self, *dims) -> 'Variable':
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1149,6 +1154,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         data = as_indexable(self._data).transpose(axes)
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
+
+    @property
+    def T(self) -> 'Variable':
+        return self.transpose()
 
     def expand_dims(self, *args):
         import warnings
@@ -1597,7 +1606,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                             "prior to calling this method.")
 
         axis = self.get_axis_num(dim)
-        func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
+        func = bn.nanrankdata if self.dtype.kind == 'f' else bn.rankdata
         ranked = func(self.data, axis=axis)
         if pct:
             count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
@@ -1897,7 +1906,8 @@ class IndexVariable(Variable):
         Parameters
         ----------
         deep : bool, optional
-            Deep is always ignored.
+            Deep is ignored when data is given. Whether the data array is
+            loaded into memory and copied onto the new object. Default is True.
         data : array_like, optional
             Data to use in the new object. Must have same shape as original.
 
@@ -1908,7 +1918,14 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            data = self._data
+            if deep:
+                # self._data should be a `PandasIndexAdapter` instance at this
+                # point, which doesn't have a copy method, so make a deep copy
+                # of the underlying `pandas.MultiIndex` and create a new
+                # `PandasIndexAdapter` instance with it.
+                data = PandasIndexAdapter(self._data.array.copy(deep=True))
+            else:
+                data = self._data
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:
