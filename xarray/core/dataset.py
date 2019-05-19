@@ -1381,7 +1381,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         pandas.DataFrame.assign
-        ncdump : netCDF's ncdump command line utility
+        netCDF's ncdump
         """
 
         if buf is None:  # pragma: no cover
