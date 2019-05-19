@@ -33,7 +33,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Don't set attributes on bounds variables when writing to netCDF.
+- Don't set encoding attributes on bounds variables when writing to netCDF.
   :py:meth:`xr.open_mfdataset` sets variable encodings to that of variables
   in first file.(:issue:`2436`, :issue:`2921`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
