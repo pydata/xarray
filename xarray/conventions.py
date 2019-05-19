@@ -83,7 +83,7 @@ def maybe_encode_nonstring_dtype(var, name=None):
             if np.issubdtype(dtype, np.integer):
                 if (np.issubdtype(var.dtype, np.floating) and
                     '_FillValue' not in var.attrs and
-                    'missing_value' not in var.attrs):
+                    'missing_value' not in var.attrs):  # noqa
                     warnings.warn('saving variable %s with floating '
                                   'point data as an integer dtype without '
                                   'any _FillValue to use for NaNs' % name,
