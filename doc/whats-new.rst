@@ -41,6 +41,8 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
+- Increased support for `missing_value` (:issue:`2871`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.12.1:
 
