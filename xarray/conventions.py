@@ -379,10 +379,10 @@ def _update_bounds_encoding(variables):
                             contains_cftime_datetimes(v))
 
         if is_datetime_type and not has_date_units and 'bounds' in attrs:
-            warnings.warn('Variable {0} has datetime units and a '
-                          'bounds variable but {0}.encoding does not have '
-                          'units specified. Output file might not comply with '
-                          'CF-conventions'.format(v.name),
+            warnings.warn("Variable '{0}' has datetime units and a "
+                          "bounds variable but {0}.encoding does not have "
+                          "units specified. Output file might not comply with "
+                          "CF-conventions.".format(v.name),
                           UserWarning)
 
         if has_date_units and 'bounds' in attrs:
