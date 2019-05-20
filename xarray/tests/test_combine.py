@@ -332,12 +332,12 @@ class TestManualCombine:
         with pytest.raises(KeyError):
             combine_manual(objs, concat_dim='x')
 
-    # TODO confused because this should not join up along 'y'??
+    # Fails because of concat's weird treatment of dimension coords, see #2975
     @pytest.mark.xfail
     def test_manual_concat_too_many_dims_at_once(self):
         objs = [Dataset({'x': [0], 'y': [1]}), Dataset({'y': [0], 'x': [1]})]
-        with pytest.raises(ValueError, "require both concatenation"):
-            result = combine_manual(objs, concat_dim='x')
+        with pytest.raises(ValueError, "not equal across datasets"):
+            combine_manual(objs, concat_dim='x', coords='minimal')
 
     def test_manual_concat_along_new_dim(self):
         objs = [Dataset({'a': ('x', [10]), 'x': [0]}),
