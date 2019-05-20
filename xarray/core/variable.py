@@ -191,6 +191,8 @@ def as_compatible_data(data, fastpath=False):
             data[mask] = fill_value
         else:
             data = np.asarray(data)
+    elif isinstance(data, np.matrix):
+        data = np.asarray(data)
 
     # validate whether the data is valid data types
     data = _as_array_subclass(data)
