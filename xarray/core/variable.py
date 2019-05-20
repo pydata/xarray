@@ -139,6 +139,16 @@ def _possibly_convert_objects(values):
     return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
 
 
+def _as_array_subclass(data):
+    asarray = (
+        np.asanyarray
+        if OPTIONS["enable_experimental_ndarray_subclass_support"]
+        else np.asarray
+        )
+
+    return asarray(data)
+
+
 def as_compatible_data(data, fastpath=False):
     """Prepare and wrap data to put in a Variable.
 
@@ -183,11 +193,7 @@ def as_compatible_data(data, fastpath=False):
             data = np.asarray(data)
 
     # validate whether the data is valid data types
-    if OPTIONS["enable_experimental_ndarray_subclass_support"]:
-        data = np.asanyarray(data)
-    else:
-        data = np.asarray(data)
-
+    data = _as_array_subclass(data)
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':
             data = _possibly_convert_objects(data)
@@ -228,7 +234,7 @@ def _as_any_array_or_item(data):
 
     The same caveats as for ``_as_array_or_item`` apply.
     """
-    data = np.asanyarray(data)
+    data = _as_array_subclass(data)
     if data.ndim == 0:
         if data.dtype.kind == 'M':
             data = np.datetime64(data, 'ns')
@@ -311,10 +317,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
     def data(self):
         if isinstance(self._data, dask_array_type):
             return self._data
-        elif OPTIONS["enable_experimental_ndarray_subclass_support"]:
-            return _as_any_array_or_item(self._data)
         else:
-            return self.values
+            return _as_array_subclass(self._data)
 
     @data.setter
     def data(self, data):
