@@ -30,23 +30,30 @@ def assert_equal_with_units(a, b):
     )
 
 
-@pytest.fixture
-def data():
+def create_data():
     return (np.arange(10 * 20).reshape(10, 20) + 1) * pq.V
 
 
-@pytest.fixture
-def coords():
-    return {
-        'x': (np.arange(10) + 1) * pq.A,
-        'y': np.arange(20) + 1,
-        'xp': (np.arange(10) + 1) * pq.J,
-    }
+def create_coord_arrays():
+    x = (np.arange(10) + 1) * pq.A
+    y = np.arange(20) + 1
+    xp = (np.arange(10) + 1) * pq.J
+    return x, y, xp
 
 
-@pytest.fixture
-def data_array(data, coords):
-    coords['xp'] = (['x'], coords['xp'])
+def create_coords():
+    x, y, xp = create_coord_arrays()
+    coords = dict(
+        x=x,
+        y=y,
+        xp=(['x'], xp),
+    )
+    return coords
+
+
+def create_data_array():
+    data = create_data()
+    coords = create_coords()
     return DataArray(
         data,
         dims=('x', 'y'),
@@ -62,14 +69,17 @@ def with_keys(mapping, keys):
     }
 
 
-def test_units_in_data_and_coords(data_array):
+def test_units_in_data_and_coords():
+    data_array = create_data_array()
 
     assert_equal_with_units(data_array.data, data_array)
     assert_equal_with_units(data_array.xp.data, data_array.xp)
 
-def test_arithmetics(data_array, data, coords):
-    v = data
-    da = data_array
+
+def test_arithmetics():
+    v = create_data()
+    coords = create_coords()
+    da = create_data_array()
 
     f = np.arange(10 * 20).reshape(10, 20) * pq.A
     g = DataArray(f, dims=['x', 'y'], coords=with_keys(coords, ['x', 'y']))
@@ -87,8 +97,10 @@ def test_arithmetics(data_array, data, coords):
 
 
 @pytest.mark.xfail(reason="units don't survive through combining yet")
-def test_combine(data_array):
+def test_combine():
     from xarray import concat
+
+    data_array = create_data_array()
 
     a = data_array[:, :10]
     b = data_array[:, 10:]
@@ -96,8 +108,9 @@ def test_combine(data_array):
     assert_equal_with_units(concat([a, b], dim='y'), data_array)
 
 
-def test_unit_checking(data_array, coords):
-    da = data_array
+def test_unit_checking():
+    coords = create_coords()
+    da = create_data_array()
 
     f = np.arange(10 * 20).reshape(10, 20) * pq.A
     g = DataArray(f, dims=['x', 'y'], coords=with_keys(coords, ['x', 'y']))
@@ -107,19 +120,25 @@ def test_unit_checking(data_array, coords):
 
 
 @pytest.mark.xfail(reason="units in indexes not supported")
-def test_units_in_indexes(data_array, coords):
+def test_units_in_indexes():
     """ Test if units survive through xarray indexes.
     Indexes are borrowed from Pandas, and Pandas does not support
     units. Therefore, we currently don't intend to support units on
     indexes either.
     """
-    assert_equal_with_units(data_array.x, coords['x'])
+    x, *_ = create_coord_arrays()
+    data_array = create_data_array()
+    assert_equal_with_units(data_array.x, x)
 
 
-def test_sel(data_array, coords, data):
-    assert_equal_with_units(data_array.sel(y=coords['y'][0]), data[:, 0])
+def test_sel():
+    data = create_data()
+    _, y, _ = create_coord_arrays()
+    data_array = create_data_array()
+    assert_equal_with_units(data_array.sel(y=y[0]), data[:, 0])
 
 
-@pytest.mark.xfail
-def test_mean(data_array, data):
+def test_mean():
+    data = create_data()
+    data_array = create_data_array()
     assert_equal_with_units(data_array.mean('x'), data.mean(0))
