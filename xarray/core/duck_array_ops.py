@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from . import dask_array_ops, dtypes, npcompat, nputils
+from .options import OPTIONS
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 
@@ -117,7 +118,13 @@ masked_invalid = _dask_or_eager_func(
 
 
 def asarray(data):
-    return data if isinstance(data, dask_array_type) else np.asarray(data)
+    _asarray = (
+        np.asanyarray
+        if OPTIONS["enable_experimental_ndarray_subclass_support"]
+        else np.asarray
+    )
+
+    return data if isinstance(data, dask_array_type) else _asarray(data)
 
 
 def as_shared_dtype(scalars_or_arrays):
