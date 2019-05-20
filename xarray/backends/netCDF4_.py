@@ -242,7 +242,7 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
     return encoding
 
 
-class GroupWrapper(object):
+class GroupWrapper:
     """Wrap netCDF4.Group objects so closing them closes the root group."""
     def __init__(self, value):
         self.value = value
