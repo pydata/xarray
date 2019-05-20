@@ -593,6 +593,8 @@ class TestAutoCombine:
             combine_auto([ds1, ds0])
 
 
+@pytest.mark.filterwarnings("ignore:In xarray version 0.14 `auto_combine` "
+                            "will be deprecated")
 class TestAutoCombineOldAPI:
     """
     Set of tests which check that old 1-dimensional auto_combine behaviour is

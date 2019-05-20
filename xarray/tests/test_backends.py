@@ -2163,6 +2163,8 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
+@pytest.mark.filterwarnings("ignore:In xarray version 0.14 `auto_combine` "
+                            "will be deprecated")
 def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
                                   file_cache_maxsize):
 
@@ -2196,6 +2198,8 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
 
 
 @requires_scipy_or_netCDF4
+@pytest.mark.filterwarnings("ignore:In xarray version 0.14 `auto_combine` "
+                            "will be deprecated")
 class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     coord_name = 'lon'
     var_name = 'v1'
@@ -2301,6 +2305,8 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 @requires_dask
 @requires_scipy
 @requires_netCDF4
+@pytest.mark.filterwarnings("ignore:In xarray version 0.14 `auto_combine` "
+                            "will be deprecated")
 class TestDask(DatasetIOBase):
     @contextlib.contextmanager
     def create_store(self):
