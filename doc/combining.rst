@@ -244,6 +244,15 @@ in this manner.
 Combining along multiple dimensions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. note::
+
+  There are currently three combining functions with similar names:
+  ``auto_combine``, ``combine_auto``, and ``combine_manual``. This is because
+  ``auto_combine`` is in the process of being deprecated in favour of the other
+  two functions, which are more general. If your code currently relies on
+  ``auto_combine``, then you will be able to get similar functionality by using
+  ``combine_manual``.
+
 For combining many objects along multiple dimensions xarray provides
 ``combine_manual`` and ``combine_auto``. These functions use a combination of
 ``concat`` and ``merge`` across different variables to combine many objects
@@ -253,11 +262,13 @@ into one.
 combined, while ``combine_auto`` attempts to infer this ordering automatically
 from the coordinates in the data.
 
-``manual_combine`` is useful when you know the spatial relationship between
-each object in advance. A common task is collecting data from a parallelized
-simulation where each processor wrote out data to a separate file. A domain
-which was decomposed into 4 parts, 2 each along both the x and y axes, requires
-organising the datasets into a doubly-nested list, e.g:
+``combine_manual`` is useful when you know the spatial relationship between
+each object in advance. The datasets must be provided in form of a nested list,
+which specifies their relative position and ordering. A common task is
+collecting data from a parallelized simulation where each processor wrote out
+data to a separate file. A domain which was decomposed into 4 parts, 2 each
+along both the x and y axes, requires organising the datasets into a
+doubly-nested list, e.g:
 
 .. ipython:: python
 
@@ -266,7 +277,7 @@ organising the datasets into a doubly-nested list, e.g:
     ds_grid = [[arr, arr], [arr, arr]]
     xr.combine_manual(ds_grid, concat_dim=['x', 'y'])
 
-``manual_combine`` can also be used to explicitly merge datasets with
+``combine_manual`` can also be used to explicitly merge datasets with
 different variables. For example if we have 4 datasets, which are divided
 along two times, and contain two different variables, we can pass ``None``
 to ``'concat_dim'`` to specify the dimension of the nested list over which

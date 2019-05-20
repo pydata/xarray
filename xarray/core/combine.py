@@ -253,11 +253,11 @@ def combine_manual(datasets, concat_dim, compat='no_conflicts',
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
 
-    Does not sort data under any circumstances, so the datasets must be passed
-    in the order you wish them to be concatenated. It does align coordinates,
-    but different variables on datasets can cause it to fail under some
-    scenarios. In complex cases, you may need to clean up your data and use
-    concat/merge explicitly.
+    Does not sort the supplied datasets under any circumstances, so the
+    datasets must be passed in the order you wish them to be concatenated. It
+    does align coordinates, but different variables on datasets can cause it to
+    fail under some scenarios. In complex cases, you may need to clean up your
+    data and use concat/merge explicitly.
 
     To concatenate along multiple dimensions the datasets must be passed as a
     nested list-of-lists, with a depth equal to the length of ``concat_dims``.
@@ -509,6 +509,9 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     """
     Attempt to auto-magically combine the given datasets into one.
 
+    This entire function is in the process of being deprecated in favour of
+    ``combine_manual`` and ``combine_auto``.
+
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
     It does not concatenate along more than one dimension or sort data under
@@ -518,9 +521,6 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     ``auto_combine`` works well if you have N years of data and M data
     variables, and each combination of a distinct time period and set of data
     variables is saved its own dataset.
-
-    This entire function is in the process of being deprecated in favour of
-    ``combine_manual`` and ``combine_auto``.
 
     Parameters
     ----------

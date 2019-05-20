@@ -35,6 +35,23 @@ Enhancements
   helpful for avoiding file-lock errors when trying to write to files opened
   using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Combining datasets along N dimensions:
+  Datasets can now be combined along any number of dimensions,
+  instead of just a one-dimensional list of datasets.
+
+  The new ``combine_manual`` will accept the datasets as a a nested
+  list-of-lists, and combine by applying a series of concat and merge
+  operations. The new ``combine_auto`` will instead use the dimension
+  coordinates of the datasets to order them.
+
+  ``open_mfdataset`` can use either ``combine_manual`` or ``combine_auto`` to
+  combine datasets along multiple dimensions, by specifying the argument
+  `combine='manual'` or `combine='auto'`.
+
+  This means that the original function ``auto_combine`` is being deprecated.
+  To avoid FutureWarnings switch to using `combine_manual` or `combine_auto`,
+  (or set the `combine` argument in `open_mfdataset`). (:issue:`2159`)
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -149,21 +166,6 @@ Other enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-- Combining datasets along N dimensions:
-  Datasets can now be combined along any number of dimensions,
-  instead of just a one-dimensional list of datasets.
-
-  The new ``manual_combine`` will accept the datasets as a a nested
-  list-of-lists, and combine by applying a series of concat and merge
-  operations.
-
-  ``open_mfdataset`` can use ``manual_combine`` to combine datasets along
-  multiple dimensions, by specifying `combine='manual'`.
-
-  Some combinations of datasets will now throw FutureWarnings. To avoid these
-  switch to using `manual_combine` (or `combine='manual'` in `open_mfdataset`).
-  (:issue:`2159`) By `Tom Nicholas <http://github.com/TomNicholas>`_.
-
 - Resampling of standard and non-standard calendars indexed by
   :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
   By `Jwen Fai Low <https://github.com/jwenfai>`_ and
