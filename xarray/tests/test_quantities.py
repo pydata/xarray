@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from xarray import DataArray
+from xarray import DataArray, set_options
 
 try:
     import quantities as pq
@@ -13,6 +13,9 @@ pytestmark = pytest.mark.skipif(
     not has_quantities,
     reason="requires python-quantities",
 )
+
+
+set_options(enable_experimental_ndarray_subclass_support=True)
 
 
 def assert_equal_with_units(a, b):
@@ -67,6 +70,12 @@ def with_keys(mapping, keys):
         for key, value in mapping.items()
         if key in keys
     }
+
+
+def test_without_subclass_support():
+    with set_options(enable_experimental_ndarray_subclass_support=False):
+        data_array = create_data_array()
+        assert not hasattr(data_array.data, "units")
 
 
 def test_units_in_data_and_coords():

@@ -14,7 +14,7 @@ from . import (
 from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
-from .options import _get_keep_attrs
+from .options import _get_keep_attrs, OPTIONS
 from .pycompat import TYPE_CHECKING, dask_array_type, integer_types
 from .utils import (
     OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
@@ -183,7 +183,10 @@ def as_compatible_data(data, fastpath=False):
             data = np.asarray(data)
 
     # validate whether the data is valid data types
-    data = np.asanyarray(data)
+    if OPTIONS["enable_experimental_ndarray_subclass_support"]:
+        data = np.asanyarray(data)
+    else:
+        data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':
@@ -308,8 +311,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
     def data(self):
         if isinstance(self._data, dask_array_type):
             return self._data
-        else:
+        elif OPTIONS["enable_experimental_ndarray_subclass_support"]:
             return _as_any_array_or_item(self._data)
+        else:
+            return self.values
 
     @data.setter
     def data(self, data):

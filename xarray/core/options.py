@@ -8,6 +8,7 @@ WARN_FOR_UNCLOSED_FILES = 'warn_for_unclosed_files'
 CMAP_SEQUENTIAL = 'cmap_sequential'
 CMAP_DIVERGENT = 'cmap_divergent'
 KEEP_ATTRS = 'keep_attrs'
+ENABLE_EXPERIMENTAL_NDARRAY_SUBCLASS_SUPPORT = 'enable_experimental_ndarray_subclass_support'
 
 
 OPTIONS = {
@@ -18,7 +19,8 @@ OPTIONS = {
     WARN_FOR_UNCLOSED_FILES: False,
     CMAP_SEQUENTIAL: 'viridis',
     CMAP_DIVERGENT: 'RdBu_r',
-    KEEP_ATTRS: 'default'
+    KEEP_ATTRS: 'default',
+    ENABLE_EXPERIMENTAL_NDARRAY_SUBCLASS_SUPPORT: False,
 }
 
 _JOIN_OPTIONS = frozenset(['inner', 'outer', 'left', 'right', 'exact'])
@@ -34,7 +36,8 @@ _VALIDATORS = {
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
-    KEEP_ATTRS: lambda choice: choice in [True, False, 'default']
+    KEEP_ATTRS: lambda choice: choice in [True, False, 'default'],
+    ENABLE_EXPERIMENTAL_NDARRAY_SUBCLASS_SUPPORT: lambda value: isinstance(value, bool),
 }
 
 
@@ -96,6 +99,9 @@ class set_options:
       attrs, ``False`` to always discard them, or ``'default'`` to use original
       logic that attrs should only be kept in unambiguous circumstances.
       Default: ``'default'``.
+    - ``enable_experimental_ndarray_subclass_support``: whether or not
+      to enable the support for subclasses of numpy's ndarray.
+      Default: ``False``.
 
     You can use ``set_options`` either as a context manager:
 
