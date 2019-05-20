@@ -8,7 +8,9 @@ WARN_FOR_UNCLOSED_FILES = 'warn_for_unclosed_files'
 CMAP_SEQUENTIAL = 'cmap_sequential'
 CMAP_DIVERGENT = 'cmap_divergent'
 KEEP_ATTRS = 'keep_attrs'
-ENABLE_EXPERIMENTAL_NDARRAY_SUBCLASS_SUPPORT = 'enable_experimental_ndarray_subclass_support'
+ENABLE_EXPERIMENTAL_NDARRAY_SUBCLASS_SUPPORT = (
+    'enable_experimental_ndarray_subclass_support'
+)
 
 
 OPTIONS = {
@@ -37,7 +39,8 @@ _VALIDATORS = {
     FILE_CACHE_MAXSIZE: _positive_integer,
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
     KEEP_ATTRS: lambda choice: choice in [True, False, 'default'],
-    ENABLE_EXPERIMENTAL_NDARRAY_SUBCLASS_SUPPORT: lambda value: isinstance(value, bool),
+    ENABLE_EXPERIMENTAL_NDARRAY_SUBCLASS_SUPPORT: lambda value: isinstance(
+        value, bool),
 }
 
 
