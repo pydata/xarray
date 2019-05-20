@@ -78,7 +78,9 @@ def test_without_subclass_support():
         assert not hasattr(data_array.data, "units")
 
 
-@pytest.mark.filterwarnings("ignore:the matrix subclass:PendingDeprecationWarning")
+@pytest.mark.filterwarnings(
+    "ignore:the matrix subclass:PendingDeprecationWarning"
+)
 def test_matrix():
     matrix = np.matrix([[1, 2], [3, 4]])
     da = DataArray(matrix)
