@@ -144,7 +144,7 @@ def _as_array_subclass(data):
         np.asanyarray
         if OPTIONS["enable_experimental_ndarray_subclass_support"]
         else np.asarray
-        )
+    )
 
     return asarray(data)
 
