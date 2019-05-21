@@ -77,9 +77,9 @@ def get_date_type(calendar):
         return calendars[calendar]
 
 
-class BaseCFTimeOffset(object):
+class BaseCFTimeOffset:
     _freq = None  # type: ClassVar[str]
-    _day_option = None
+    _day_option = None  # type: ClassVar[str]
 
     def __init__(self, n=1):
         if not isinstance(n, int):

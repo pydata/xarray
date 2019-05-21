@@ -11,7 +11,6 @@ matrix:
   fast_finish: true
   include:
   - env: CONDA_ENV=py35-min
-  - env: CONDA_ENV=py35
   - env: CONDA_ENV=py36
   - env: CONDA_ENV=py37
   - env:
@@ -65,7 +64,7 @@ script:
     elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then
       pytest properties ;
     else
-      py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS;
+      py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing $EXTRA_FLAGS;
     fi
 
 after_success:
