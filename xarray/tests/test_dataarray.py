@@ -1681,14 +1681,14 @@ class TestDataArray:
         assert_identical(expected, actual)
 
         actual = orig[0, :] + orig[:, 0]
-        assert_identical(expected.T, actual)
+        assert_identical(expected.transpose(transpose_coords=True), actual)
 
-        actual = orig - orig.T
+        actual = orig - orig.transpose(transpose_coords=True)
         expected = DataArray(np.zeros((2, 3)), orig.coords)
         assert_identical(expected, actual)
 
-        actual = orig.T - orig
-        assert_identical(expected.T, actual)
+        actual = orig.transpose(transpose_coords=True) - orig
+        assert_identical(expected.transpose(transpose_coords=True), actual)
 
         alt = DataArray([1, 1], {'x': [-1, -2], 'c': 'foo', 'd': 555}, 'x')
         actual = orig + alt
@@ -1801,8 +1801,27 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_transpose(self):
-        assert_equal(self.dv.variable.transpose(),
-                     self.dv.transpose().variable)
+        da = DataArray(np.random.randn(3, 4, 5), dims=('x', 'y', 'z'),
+                       coords={'x': range(3), 'y': range(4), 'z': range(5),
+                               'xy': (('x', 'y'), np.random.randn(3, 4))})
+
+        actual = da.transpose(transpose_coords=False)
+        expected = DataArray(da.values.T, dims=('z', 'y', 'x'),
+                             coords=da.coords)
+        assert_equal(expected, actual)
+
+        actual = da.transpose('z', 'y', 'x', transpose_coords=True)
+        expected = DataArray(da.values.T, dims=('z', 'y', 'x'),
+                             coords={'x': da.x.values, 'y': da.y.values,
+                                     'z': da.z.values,
+                                     'xy': (('y', 'x'), da.xy.values.T)})
+        assert_equal(expected, actual)
+
+        with pytest.raises(ValueError):
+            da.transpose('x', 'y')
+
+        with pytest.warns(FutureWarning):
+            da.transpose()
 
     def test_squeeze(self):
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
@@ -2258,6 +2277,23 @@ class TestDataArray:
             result = array.groupby(by).apply(lambda x: x.squeeze())
             assert result.dims == expected_dims
 
+    def test_groupby_restore_coord_dims(self):
+        array = DataArray(np.random.randn(5, 3),
+                          coords={'a': ('x', range(5)), 'b': ('y', range(3)),
+                                  'c': (('x', 'y'), np.random.randn(5, 3))},
+                          dims=['x', 'y'])
+
+        for by, expected_dims in [('x', ('x', 'y')),
+                                  ('y', ('x', 'y')),
+                                  ('a', ('a', 'y')),
+                                  ('b', ('x', 'b'))]:
+            result = array.groupby(by, restore_coord_dims=True).apply(
+                lambda x: x.squeeze())['c']
+            assert result.dims == expected_dims
+
+        with pytest.warns(FutureWarning):
+            array.groupby('x').apply(lambda x: x.squeeze())
+
     def test_groupby_first_and_last(self):
         array = DataArray([1, 2, 3, 4, 5], dims='x')
         by = DataArray(['a'] * 2 + ['b'] * 3, dims='x', name='ab')
@@ -2445,15 +2481,18 @@ class TestDataArray:
         array = ds['data']
 
         # Re-sample
-        actual = array.resample(time="12H").mean('time')
+        actual = array.resample(
+            time="12H", restore_coord_dims=True).mean('time')
         assert 'tc' not in actual.coords
 
         # Up-sample - filling
-        actual = array.resample(time="1H").ffill()
+        actual = array.resample(
+            time="1H", restore_coord_dims=True).ffill()
         assert 'tc' not in actual.coords
 
         # Up-sample - interpolation
-        actual = array.resample(time="1H").interpolate('linear')
+        actual = array.resample(
+            time="1H", restore_coord_dims=True).interpolate('linear')
         assert 'tc' not in actual.coords
 
     def test_resample_keep_attrs(self):
