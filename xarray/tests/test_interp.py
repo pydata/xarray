@@ -143,7 +143,8 @@ def test_interpolate_vectorize(use_dask):
                                     'y': da['y'],
                                     'x': ('z', xdest.values),
                                     'x2': ('z', func(da['x2'], 'x', xdest))})
-    assert_allclose(actual, expected.transpose('z', 'y'))
+    assert_allclose(actual,
+                    expected.transpose('z', 'y', transpose_coords=True))
 
     # xdest is 2d
     xdest = xr.DataArray(np.linspace(0.1, 0.9, 30).reshape(6, 5),
@@ -160,7 +161,8 @@ def test_interpolate_vectorize(use_dask):
         coords={'z': xdest['z'], 'w': xdest['w'], 'z2': xdest['z2'],
                 'y': da['y'], 'x': (('z', 'w'), xdest),
                 'x2': (('z', 'w'), func(da['x2'], 'x', xdest))})
-    assert_allclose(actual, expected.transpose('z', 'w', 'y'))
+    assert_allclose(actual,
+                    expected.transpose('z', 'w', 'y', transpose_coords=True))
 
 
 @pytest.mark.parametrize('case', [3, 4])

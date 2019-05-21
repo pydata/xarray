@@ -4062,14 +4062,20 @@ class TestDataset:
 
     def test_dataset_transpose(self):
         ds = Dataset({'a': (('x', 'y'), np.random.randn(3, 4)),
-                      'b': (('y', 'x'), np.random.randn(4, 3))})
+                      'b': (('y', 'x'), np.random.randn(4, 3))},
+                     coords={'x': range(3), 'y': range(4),
+                             'xy': (('x', 'y'), np.random.randn(3, 4))})
 
         actual = ds.transpose()
-        expected = ds.apply(lambda x: x.transpose())
+        expected = Dataset({'a': (('y', 'x'), ds.a.values.T),
+                            'b': (('x', 'y'), ds.b.values.T)},
+                           coords={'x': ds.x.values, 'y': ds.y.values,
+                                   'xy': (('y', 'x'), ds.xy.values.T)})
         assert_identical(expected, actual)
 
         actual = ds.transpose('x', 'y')
-        expected = ds.apply(lambda x: x.transpose('x', 'y'))
+        expected = ds.apply(
+            lambda x: x.transpose('x', 'y', transpose_coords=True))
         assert_identical(expected, actual)
 
         ds = create_test_data()
