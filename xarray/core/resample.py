@@ -4,7 +4,7 @@ from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
 RESAMPLE_DIM = '__resample_dim__'
 
 
-class Resample(object):
+class Resample:
     """An object that extends the `GroupBy` object with additional logic
     for handling specialized re-sampling operations.
 

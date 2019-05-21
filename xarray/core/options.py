@@ -69,7 +69,7 @@ def _get_keep_attrs(default):
             " True, False or 'default'.")
 
 
-class set_options(object):
+class set_options:
     """Set options for xarray in a controlled context.
 
     Currently supported options:

@@ -113,7 +113,7 @@ def _inverse_permutation_indices(positions):
     return indices
 
 
-class _DummyGroup(object):
+class _DummyGroup:
     """Class for keeping track of grouped dimensions without coordinates.
 
     Should not be user visible.
@@ -534,6 +534,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         Apply uses heuristics (like `pandas.GroupBy.apply`) to figure out how
         to stack together the array. The rule is:
+
         1. If the dimension along which the group coordinate is defined is
            still in the first grouped array after applying `func`, then stack
            over this dimension.
@@ -676,6 +677,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         Apply uses heuristics (like `pandas.GroupBy.apply`) to figure out how
         to stack together the datasets. The rule is:
+
         1. If the dimension along which the group coordinate is defined is
            still in the first grouped item after applying `func`, then stack
            over this dimension.
