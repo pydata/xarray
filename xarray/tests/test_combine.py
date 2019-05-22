@@ -457,6 +457,7 @@ class TestAutoCombine:
                                   [[fill_value, 2, 3], [1, 2, fill_value]])},
                            {'x': [0, 1, 2]})
         actual = auto_combine(datasets, concat_dim='t', fill_value=fill_value)
+        assert_identical(expected, actual)
 
 
 def assert_combined_tile_ids_equal(dict1, dict2):
