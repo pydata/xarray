@@ -57,6 +57,14 @@ By default, the file is saved as netCDF4 (assuming netCDF4-Python is
 installed). You can control the format and engine used to write the file with
 the ``format`` and ``engine`` arguments.
 
+.. tip::
+
+   Using the `h5netcdf <https://github.com/shoyer/h5netcdf>`_  package
+   by passing ``engine='h5netcdf'`` to :py:meth:`~xarray.open_dataset` can
+   be quicker than the default ``engine='netcdf4'`` that uses the
+   `netCDF4 <https://github.com/Unidata/netcdf4-python>`_ package.
+
+
 We can load netCDF files to create a new Dataset using
 :py:func:`~xarray.open_dataset`:
 

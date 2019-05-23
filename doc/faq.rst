@@ -15,8 +15,8 @@ Frequently Asked Questions
 Your documentation keeps mentioning pandas. What is pandas?
 -----------------------------------------------------------
 
-pandas_ is the premier data analysis package in Python
-with wide usage in many data analysis fields. Our API is heavily inspired by pandas —
+pandas_ is a very popular data analysis package in Python
+with wide usage in many fields. Our API is heavily inspired by pandas —
 this is why there are so many references to pandas.
 
 .. _pandas: https://pandas.pydata.org
