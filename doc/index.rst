@@ -55,11 +55,10 @@ Documentation
 * :doc:`combining`
 * :doc:`time-series`
 * :doc:`weather-climate`
+* :doc:`pandas`
 * :doc:`io`
 * :doc:`dask`
 * :doc:`plotting`
-* :doc:`extending`
-* :doc:`pandas`
 
 .. toctree::
    :maxdepth: 1
@@ -75,11 +74,10 @@ Documentation
    combining
    time-series
    weather-climate
+   pandas
    io
    dask
    plotting
-   extending
-   pandas
 
 **Help & reference**
 
