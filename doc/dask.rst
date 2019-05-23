@@ -394,6 +394,11 @@ one million elements (e.g., a 1000x1000 matrix). With large arrays (10+ GB), the
 cost of queueing up Dask operations can be noticeable, and you may need even
 larger chunksizes.
 
+.. tip::
+
+   Check out the dask documentation on `chunks <https://docs.dask.org/en/latest/array-chunks.html>`_.
+
+
 Optimization Tips
 -----------------
 
