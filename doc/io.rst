@@ -81,7 +81,15 @@ convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
 when loading, ensuring that the ``DataArray`` that is loaded is always exactly
 the same as the one that was saved.
 
-Data is always loaded lazily from netCDF files. You can manipulate, slice and subset
+A dataset can also be loaded or written to a specific group within a netCDF
+file. To load from a group, pass a ``group`` keyword argument to the
+``open_dataset`` function. The group can be specified as a path-like
+string, e.g., to access subgroup 'bar' within group 'foo' pass
+'/foo/bar' as the ``group`` argument. When writing multiple groups in one file,
+pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
+file.
+
+Data is *always* loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
