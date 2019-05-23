@@ -37,13 +37,14 @@ which allows Dask to take full advantage of multiple processors available on
 most modern computers.
 
 For more details on Dask, read `its documentation <http://dask.pydata.org/>`__.
+Note that xarray only makes use of ``dask.array`` and ``dask.delayed``.
 
 .. _dask.io:
 
 Reading and writing data
 ------------------------
 
-The usual way to create a dataset filled with Dask arrays is to load the
+The usual way to create a ``Dataset`` filled with Dask arrays is to load the
 data from a netCDF file or files. You can do this by supplying a ``chunks``
 argument to :py:func:`~xarray.open_dataset` or using the
 :py:func:`~xarray.open_mfdataset` function.
@@ -71,8 +72,8 @@ argument to :py:func:`~xarray.open_dataset` or using the
 
 In this example ``latitude`` and ``longitude`` do not appear in the ``chunks``
 dict, so only one chunk will be used along those dimensions.  It is also
-entirely equivalent to opening a dataset using ``open_dataset`` and then
-chunking the data using the ``chunk`` method, e.g.,
+entirely equivalent to opening a dataset using :py:meth:`~xarray.open_dataset`
+and then chunking the data using the ``chunk`` method, e.g.,
 ``xr.open_dataset('example-data.nc').chunk({'time': 10})``.
 
 To open multiple files simultaneously in parallel using Dask delayed,
@@ -82,11 +83,14 @@ use :py:func:`~xarray.open_mfdataset`::
 
 This function will automatically concatenate and merge dataset into one in
 the simple cases that it understands (see :py:func:`~xarray.auto_combine`
-for the full disclaimer). By default, :py:func:`~xarray.open_mfdataset` will chunk each
+for the full disclaimer). By default, :py:meth:`~xarray.open_mfdataset` will chunk each
 netCDF file into a single Dask array; again, supply the ``chunks`` argument to
 control the size of the resulting Dask arrays. In more complex cases, you can
-open each file individually using ``open_dataset`` and merge the result, as
-described in :ref:`combining data`.
+open each file individually using :py:meth:`~xarray.open_dataset` and merge the result, as
+described in :ref:`combining data`. If you have a distributed cluster running,
+passing the keyword argument ``parallel=True`` to :py:meth:`~xarray.open_mfdataset`
+will speed up the reading of large multi-file datasets by executing those read tasks
+in parallel using ``dask.delayed``.
 
 You'll notice that printing a dataset still shows a preview of array values,
 even if they are actually Dask arrays. We can do this quickly with Dask because
@@ -106,7 +110,7 @@ usual way.
     ds.to_netcdf('manipulated-example-data.nc')
 
 By setting the ``compute`` argument to ``False``, :py:meth:`~xarray.Dataset.to_netcdf`
-will return a Dask delayed object that can be computed later.
+will return a ``dask.delayed`` object that can be computed later.
 
 .. ipython:: python
 
@@ -154,7 +158,7 @@ enable label based indexing, xarray will automatically load coordinate labels
 into memory.
 
 The easiest way to convert an xarray data structure from lazy Dask arrays into
-eager, in-memory NumPy arrays is to use the :py:meth:`~xarray.Dataset.load` method:
+*eager*, in-memory NumPy arrays is to use the :py:meth:`~xarray.Dataset.load` method:
 
 .. ipython:: python
 
@@ -197,6 +201,7 @@ across your machines and be much faster to use than reading repeatedly from
 disk.
 
 .. warning::
+
    On a single machine :py:meth:`~xarray.Dataset.persist` will try to load all of
    your data into memory. You should make sure that your dataset is not larger than
    available memory.
