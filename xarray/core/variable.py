@@ -263,7 +263,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         self._data = as_compatible_data(data, fastpath=fastpath)
         self._dims = self._parse_dimensions(dims)
-        self._attrs = None
+        self._attrs = OrderedDict()
         self._encoding = None
         if attrs is not None:
             self.attrs = attrs
