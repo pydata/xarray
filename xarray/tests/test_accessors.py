@@ -183,14 +183,13 @@ def test_cftime_strftime_access(data):
     """ compare cftime formatting against datetime formatting """
     date_format = '%Y%m%d%H'
     result = data.time.dt.strftime(date_format)
-    
-    data_time_array = xr.DataArray(
+    datetime_array = xr.DataArray(
         xr.coding.cftimeindex.CFTimeIndex(
-        data.time.values).to_datetimeindex(),
+            data.time.values).to_datetimeindex(),
         name="stftime",
         coords=data.time.coords,
         dims=data.time.dims)
-    expected = data_time_array.dt.strftime(date_format)
+    expected = datetime_array.dt.strftime(date_format)
     assert_equal(result, expected)
 
 

@@ -784,6 +784,7 @@ def test_parse_array_of_cftime_strings():
     result = _parse_array_of_cftime_strings(strings, DatetimeNoLeap)
     np.testing.assert_array_equal(result, expected)
 
+
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize('calendar', _ALL_CALENDARS)
 @pytest.mark.parametrize('unsafe', [False, True])

@@ -113,9 +113,11 @@ def _round_field(values, name, freq):
 def _strftime_through_array(values, date_format):
     """ Return string formatted values for all items in array """
     values_unravelled = values.ravel()
-    field_values = np.array([date.strftime(date_format) for date in values_unravelled])
+    field_values = np.array([date.strftime(date_format)
+                             for date in values_unravelled])
 
     return field_values.reshape(values.shape)
+
 
 def _strftime_through_cftimeindex(values, date_format):
     """Coerce an array of datetime-like values to a CFTimeIndex
