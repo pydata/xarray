@@ -3465,7 +3465,7 @@ class TestDataArray:
         da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
         da = DataArray(da_vals, coords=[x, y, z], dims=['x', 'y', 'z'])
 
-        result = da @ da 
+        result = da @ da
         expected = da.dot(da)
         assert_identical(result, expected)
 
