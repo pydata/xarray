@@ -110,6 +110,35 @@ def _round_field(values, name, freq):
         return _round_series(values, name, freq)
 
 
+def _strftime_through_array(values, date_format):
+    """ Return string formatted values for all items in array """
+    values_unravelled = values.ravel()
+    field_values = np.array([date.strftime(date_format) for date in values_unravelled])
+
+    return field_values.reshape(values.shape)
+
+
+def _strftime_through_series(values, date_format):
+    """Coerce an array of datetime-like values to a pandas Series and
+    apply string formatting
+    """
+    values_as_series = pd.Series(values.ravel())
+    strs = values_as_series.dt.strftime(date_format)
+    return strs.values.reshape(values.shape)
+
+
+def _strftime(values, date_format):
+    if is_np_datetime_like(values.dtype):
+        access_method = _strftime_through_series
+    else:
+        access_method = _strftime_through_array
+    if isinstance(values, dask_array_type):
+        from dask.array import map_blocks
+        return map_blocks(access_method, values, date_format)
+    else:
+        return access_method(values, date_format)
+
+
 class DatetimeAccessor:
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
@@ -256,3 +285,30 @@ class DatetimeAccessor:
             Array-like of datetime fields accessed for each element in values
         '''
         return self._tslib_round_accessor("round", freq)
+
+    def strftime(self, date_format):
+        '''
+        Return an array of formatted strings specified by date_format, which
+        supports the same string format as the python standard library. Details
+        of the string format can be found in `python string format doc
+        <https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior>`__
+
+        Parameters
+        ----------
+        date_format : str
+            date format string (e.g. "%Y-%m-%d")
+
+        Returns
+        -------
+        ndarray of formatted strings
+        '''
+        values = self._obj.data
+        obj_type = type(self._obj)
+
+        result = _strftime(values, date_format)
+
+        return obj_type(
+            result,
+            name="strftime",
+            coords=self._obj.coords,
+            dims=self._obj.dims)
