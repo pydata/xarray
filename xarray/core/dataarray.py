@@ -2014,6 +2014,9 @@ class DataArray(AbstractArray, DataWithCoords):
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
 
+    def __matmul__(self, obj):
+        return self.dot(obj)
+
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
