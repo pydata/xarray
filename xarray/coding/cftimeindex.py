@@ -476,6 +476,24 @@ class CFTimeIndex(pd.Index):
                 'dates.'.format(calendar), RuntimeWarning, stacklevel=2)
         return pd.DatetimeIndex(nptimes)
 
+    def strftime(self, date_format):
+        """
+        Return a pd.Index of formatted strings specified by date_format, which
+        supports the same string format as the python standard library. Details
+        of the string format can be found in `python string format doc
+        <https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior>`__
+
+        Parameters
+        ----------
+        date_format : str
+            date format string (e.g. "%Y-%m-%d")
+
+        Returns
+        -------
+        ndarray of formatted strings
+        """
+        return pd.Index([date.strftime(date_format) for date in self._data])
+
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
     date, _ = _parse_iso8601_with_reso(date_type, datetime_str)

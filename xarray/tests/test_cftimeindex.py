@@ -784,6 +784,17 @@ def test_parse_array_of_cftime_strings():
     result = _parse_array_of_cftime_strings(strings, DatetimeNoLeap)
     np.testing.assert_array_equal(result, expected)
 
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('calendar', _ALL_CALENDARS)
+@pytest.mark.parametrize('unsafe', [False, True])
+def test_strftime_of_cftime_array(calendar, unsafe):
+    date_format = '%Y%m%d%H%M'
+    cf_values = xr.cftime_range('2000', periods=5, calendar=calendar)
+    dt_values = pd.date_range('2000', periods=5)
+    expected = dt_values.strftime(date_format)
+    result = cf_values.strftime(date_format)
+    assert result.equals(expected)
+
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize('calendar', _ALL_CALENDARS)

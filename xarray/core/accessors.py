@@ -117,6 +117,16 @@ def _strftime_through_array(values, date_format):
 
     return field_values.reshape(values.shape)
 
+def _strftime_through_cftimeindex(values, date_format):
+    """Coerce an array of datetime-like values to a CFTimeIndex
+    and access requested datetime component
+    """
+    from ..coding.cftimeindex import CFTimeIndex
+    values_as_cftimeindex = CFTimeIndex(values.ravel())
+
+    field_values = values_as_cftimeindex._strftime(date_format)
+    return field_values.reshape(values.shape)
+
 
 def _strftime_through_series(values, date_format):
     """Coerce an array of datetime-like values to a pandas Series and
