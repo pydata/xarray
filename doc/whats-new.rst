@@ -21,6 +21,8 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Enable `@` operator for DataArray. This is equivalent to :py:meth:`DataArray.dot`
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add ``fill_value`` argument for reindex, align, and merge operations
   to enable custom fill values. (:issue:`2876`)
   By `Zach Griffith <https://github.com/zdgriffith>`_.
