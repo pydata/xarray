@@ -495,12 +495,12 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> rng = xr.cftime_range(start='2000', periods=6, freq='2MS',
+        >>> rng = xr.cftime_range(start='2000', periods=5, freq='2MS',
         ...                       calendar='noleap')
         >>> rng.strftime('%B %d, %Y, %r')
         Index(['January 01, 2000, 12:00:00 AM', 'March 01, 2000, 12:00:00 AM',
                'May 01, 2000, 12:00:00 AM', 'July 01, 2000, 12:00:00 AM',
-               'September 01, 2000, 12:00:00 AM', 'November 01, 2000, 12:00:00 AM'],
+               'September 01, 2000, 12:00:00 AM'],
               dtype='object')
         """
         return pd.Index([date.strftime(date_format) for date in self._data])
