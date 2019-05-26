@@ -478,7 +478,7 @@ class CFTimeIndex(pd.Index):
 
     def strftime(self, date_format):
         """
-        Return a pd.Index of formatted strings specified by date_format, which
+        Return a Index of formatted strings specified by date_format, which
         supports the same string format as the python standard library. Details
         of the string format can be found in `python string format doc
         <https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior>`__
@@ -486,11 +486,22 @@ class CFTimeIndex(pd.Index):
         Parameters
         ----------
         date_format : str
-            date format string (e.g. "%Y-%m-%d")
+            Date format string (e.g. "%Y-%m-%d")
 
         Returns
         -------
-        ndarray of formatted strings
+        Index
+            Index of formatted strings
+
+        Examples
+        --------
+        >>> rng = xr.cftime_range(start='2000', periods=6, freq='2MS',
+        ...                       calendar='noleap')
+        >>> rng.strftime('%B %d, %Y, %r')
+        Index(['January 01, 2000, 12:00:00 AM', 'March 01, 2000, 12:00:00 AM',
+               'May 01, 2000, 12:00:00 AM', 'July 01, 2000, 12:00:00 AM',
+               'September 01, 2000, 12:00:00 AM', 'November 01, 2000, 12:00:00 AM'],
+              dtype='object')
         """
         return pd.Index([date.strftime(date_format) for date in self._data])
 

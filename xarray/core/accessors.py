@@ -120,7 +120,7 @@ def _strftime_through_array(values, date_format):
 
 
 def _strftime_through_cftimeindex(values, date_format):
-    """Coerce an array of datetime-like values to a CFTimeIndex
+    """Coerce an array of cftime-like values to a CFTimeIndex
     and access requested datetime component
     """
     from ..coding.cftimeindex import CFTimeIndex
@@ -312,7 +312,17 @@ class DatetimeAccessor:
 
         Returns
         -------
-        ndarray of formatted strings
+        formatted strings : same type as values
+            Array-like of strings formatted for each element in values
+
+        Examples
+        --------
+        >>> rng = xr.Dataset({'time': datetime.datetime(2000, 1, 1)})
+        >>> rng['time'].dt.strftime('%B %d, %Y, %r')
+        <xarray.DataArray 'strftime' ()>
+        array('January 01, 2000, 12:00:00 AM', dtype=object)
+        """
+
         '''
         values = self._obj.data
         obj_type = type(self._obj)
