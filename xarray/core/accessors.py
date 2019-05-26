@@ -110,15 +110,6 @@ def _round_field(values, name, freq):
         return _round_series(values, name, freq)
 
 
-def _strftime_through_array(values, date_format):
-    """ Return string formatted values for all items in array """
-    values_unravelled = values.ravel()
-    field_values = np.array([date.strftime(date_format)
-                             for date in values_unravelled])
-
-    return field_values.reshape(values.shape)
-
-
 def _strftime_through_cftimeindex(values, date_format):
     """Coerce an array of cftime-like values to a CFTimeIndex
     and access requested datetime component
@@ -126,8 +117,8 @@ def _strftime_through_cftimeindex(values, date_format):
     from ..coding.cftimeindex import CFTimeIndex
     values_as_cftimeindex = CFTimeIndex(values.ravel())
 
-    field_values = values_as_cftimeindex._strftime(date_format)
-    return field_values.reshape(values.shape)
+    field_values = values_as_cftimeindex.strftime(date_format)
+    return field_values.values.reshape(values.shape)
 
 
 def _strftime_through_series(values, date_format):
@@ -143,7 +134,7 @@ def _strftime(values, date_format):
     if is_np_datetime_like(values.dtype):
         access_method = _strftime_through_series
     else:
-        access_method = _strftime_through_array
+        access_method = _strftime_through_cftimeindex
     if isinstance(values, dask_array_type):
         from dask.array import map_blocks
         return map_blocks(access_method, values, date_format)
@@ -324,10 +315,9 @@ class DatetimeAccessor:
         """
 
         '''
-        values = self._obj.data
         obj_type = type(self._obj)
 
-        result = _strftime(values, date_format)
+        result = _strftime(self._obj.data, date_format)
 
         return obj_type(
             result,
