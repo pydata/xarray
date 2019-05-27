@@ -536,7 +536,7 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     dict_like_objects = list()
     for obj in objects:
         if not (isinstance(obj, (DataArray, Dataset, dict))):
-            raise ValueError("'objects' must be an iterable containing only "
+            raise TypeError("objects must be an iterable containing only "
                              "Dataset(s), DataArray(s), and dictionaries.")
 
         obj = obj.to_dataset() if isinstance(obj, DataArray) else obj

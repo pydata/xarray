@@ -68,12 +68,12 @@ class TestMergeFunction:
             xr.merge([ds, other], join='exact')
 
     def test_merge_wrong_input_error(self):
-        with raises_regex(ValueError, "'objects' must be an iterable"):
+        with raises_regex(TypeError, "objects must be an iterable"):
             xr.merge([1])
         ds = xr.Dataset(coords={'x': [1, 2]})
-        with raises_regex(ValueError, "'objects' must be an iterable"):
+        with raises_regex(TypeError, "objects must be an iterable"):
             xr.merge({'a': ds})
-        with raises_regex(ValueError, "'objects' must be an iterable"):
+        with raises_regex(TypeError, "objects must be an iterable"):
             xr.merge([ds, 1])
 
     def test_merge_no_conflicts_single_var(self):
