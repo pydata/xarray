@@ -527,8 +527,8 @@ class TestManualCombine:
         assert_identical(expected, actual)
 
 
-class TestAutoCombine:
-    def test_auto_combine(self):
+class TestCombineAuto:
+    def test_combine_auto(self):
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
         actual = combine_auto(objs)
         expected = Dataset({'x': [0, 1]})
@@ -571,7 +571,7 @@ class TestAutoCombine:
         expected = data
         assert expected.broadcast_equals(actual)
 
-    def test_auto_combine_previously_failed(self):
+    def test_combine_auto_previously_failed(self):
         # In the above scenario, one file is missing, containing the data for
         # one year's data for one variable.
         datasets = [Dataset({'a': ('x', [0]), 'x': [0]}),
@@ -582,7 +582,7 @@ class TestAutoCombine:
         actual = combine_auto(datasets)
         assert_identical(expected, actual)
 
-    def test_auto_combine_still_fails(self):
+    def test_combine_auto_still_fails(self):
         # concat can't handle new variables (yet):
         # https://github.com/pydata/xarray/issues/508
         datasets = [Dataset({'x': 0}, {'y': 0}),
@@ -590,7 +590,7 @@ class TestAutoCombine:
         with pytest.raises(ValueError):
             combine_auto(datasets, 'y')
 
-    def test_auto_combine_no_concat(self):
+    def test_combine_auto_no_concat(self):
         objs = [Dataset({'x': 0}), Dataset({'y': 1})]
         actual = combine_auto(objs)
         expected = Dataset({'x': 0, 'y': 1})
