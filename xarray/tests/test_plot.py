@@ -1202,7 +1202,8 @@ class Common2dMixin:
 
     def test_2d_coord_with_interval(self):
         for dim in self.darray.dims:
-            gp = self.darray.groupby_bins(dim, range(15)).mean(dim)
+            gp = self.darray.groupby_bins(
+                dim, range(15), restore_coord_dims=True).mean(dim)
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 getattr(gp.plot, kind)()
 

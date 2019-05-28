@@ -5,6 +5,7 @@ from collections import Counter, OrderedDict
 import pandas as pd
 
 from .dataarray import DataArray
+from . import dtypes
 from .merge import merge
 from .concat import concat
 
@@ -131,7 +132,8 @@ def _check_shape_tile_ids(combined_tile_ids):
 
 
 def _combine_nd(combined_ids, concat_dims, data_vars='all',
-                coords='different', compat='no_conflicts'):
+                coords='different', compat='no_conflicts',
+                fill_value=dtypes.NA):
     """
     Combines an N-dimensional structure of datasets into one by applying a
     series of either concat and merge operations along each dimension.
@@ -171,12 +173,14 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
                                                     dim=concat_dim,
                                                     data_vars=data_vars,
                                                     coords=coords,
-                                                    compat=compat)
+                                                    compat=compat,
+                                                    fill_value=fill_value)
     combined_ds = list(combined_ids.values())[0]
     return combined_ds
 
 
-def _combine_all_along_first_dim(combined_ids, dim, data_vars, coords, compat):
+def _combine_all_along_first_dim(combined_ids, dim, data_vars, coords, compat,
+                                 fill_value=dtypes.NA):
 
     # Group into lines of datasets which must be combined along dim
     # need to sort by _new_tile_id first for groupby to work
@@ -190,12 +194,12 @@ def _combine_all_along_first_dim(combined_ids, dim, data_vars, coords, compat):
         combined_ids = OrderedDict(sorted(group))
         datasets = combined_ids.values()
         new_combined_ids[new_id] = _combine_1d(datasets, dim, compat,
-                                               data_vars, coords)
+                                               data_vars, coords, fill_value)
     return new_combined_ids
 
 
 def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
-                coords='different'):
+                coords='different', fill_value=dtypes.NA):
     """
     Applies either concat or merge to 1D list of datasets depending on value
     of concat_dim
@@ -204,7 +208,7 @@ def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
     if concat_dim is not None:
         try:
             combined = concat(datasets, dim=concat_dim, data_vars=data_vars,
-                              coords=coords)
+                              coords=coords, fill_value=fill_value)
         except ValueError as err:
             if "encountered unexpected variable" in str(err):
                 raise ValueError("These objects cannot be combined along the "
@@ -216,7 +220,7 @@ def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
             else:
                 raise
     else:
-        combined = merge(datasets, compat=compat)
+        combined = merge(datasets, compat=compat, fill_value=fill_value)
 
     return combined
 
@@ -226,7 +230,8 @@ def _new_tile_id(single_id_ds_pair):
     return tile_id[1:]
 
 
-def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids):
+def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids,
+                    fill_value=dtypes.NA):
 
     # Arrange datasets for concatenation
     # Use information from the shape of the user input
@@ -243,12 +248,13 @@ def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids):
 
     # Apply series of concatenate or merge operations along each dimension
     combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                           data_vars=data_vars, coords=coords)
+                           data_vars=data_vars, coords=coords,
+                           fill_value=fill_value)
     return combined
 
 
 def combine_manual(datasets, concat_dim, compat='no_conflicts',
-                   data_vars='all', coords='different'):
+                   data_vars='all', coords='different', fill_value=dtypes.NA):
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
@@ -299,6 +305,8 @@ def combine_manual(datasets, concat_dim, compat='no_conflicts',
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of concat
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -369,7 +377,8 @@ def combine_manual(datasets, concat_dim, compat='no_conflicts',
 
     # The IDs argument tells _manual_combine that datasets aren't yet sorted
     return _manual_combine(datasets, concat_dims=concat_dim, compat=compat,
-                           data_vars=data_vars, coords=coords, ids=False)
+                           data_vars=data_vars, coords=coords, ids=False,
+                           fill_value=fill_value)
 
 
 def vars_as_keys(ds):
@@ -377,7 +386,7 @@ def vars_as_keys(ds):
 
 
 def combine_auto(datasets, compat='no_conflicts', data_vars='all',
-                 coords='different'):
+                 coords='different', fill_value=dtypes.NA):
     """
     Attempt to auto-magically combine the given datasets into one by using
     dimension coordinates.
@@ -423,6 +432,8 @@ def combine_auto(datasets, compat='no_conflicts', data_vars='all',
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of concat
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -481,7 +492,8 @@ def combine_auto(datasets, compat='no_conflicts', data_vars='all',
 
         # Concatenate along all of concat_dims one by one to create single ds
         concatenated = _combine_nd(combined_ids, concat_dims=concat_dims,
-                                   data_vars=data_vars, coords=coords)
+                                   data_vars=data_vars, coords=coords,
+                                   fill_value=fill_value)
 
         # Check the overall coordinates are monotonically increasing
         for dim in concatenated.dims:
@@ -494,7 +506,8 @@ def combine_auto(datasets, compat='no_conflicts', data_vars='all',
                                      .format(dim))
         concatenated_grouped_by_data_vars.append(concatenated)
 
-    return merge(concatenated_grouped_by_data_vars, compat=compat)
+    return merge(concatenated_grouped_by_data_vars, compat=compat,
+                 fill_value=fill_value)
 
 
 # Everything beyond here is only needed until the deprecation cycle in #2616
@@ -505,7 +518,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
 def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
-                 data_vars='all', coords='different'):
+                 data_vars='all', coords='different', fill_value=dtypes.NA):
     """
     Attempt to auto-magically combine the given datasets into one.
 
@@ -551,6 +564,8 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' o list of str}, optional
         Details are in the documentation of concat
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -606,7 +621,7 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
 
     return _old_auto_combine(datasets, concat_dim=concat_dim,
                              compat=compat, data_vars=data_vars,
-                             coords=coords)
+                             coords=coords, fill_value=fill_value)
 
 
 def _dimension_coords_exist(datasets):
@@ -658,7 +673,8 @@ def _requires_concat_and_merge(datasets):
 
 def _old_auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
                       compat='no_conflicts',
-                      data_vars='all', coords='different'):
+                      data_vars='all', coords='different',
+                      fill_value=dtypes.NA):
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
 
@@ -666,15 +682,17 @@ def _old_auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
         grouped = itertools.groupby(sorted_datasets, key=vars_as_keys)
 
         concatenated = [_auto_concat(list(datasets), dim=dim,
-                                     data_vars=data_vars, coords=coords)
+                                     data_vars=data_vars, coords=coords,
+                                     fill_value=fill_value)
                         for vars, datasets in grouped]
     else:
         concatenated = datasets
-    merged = merge(concatenated, compat=compat)
+    merged = merge(concatenated, compat=compat, fill_value=fill_value)
     return merged
 
 
-def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
+def _auto_concat(datasets, dim=None, data_vars='all', coords='different',
+                 fill_value=dtypes.NA):
     if len(datasets) == 1 and dim is None:
         # There is nothing more to combine, so kick out early.
         return datasets[0]
@@ -697,4 +715,5 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
                                  'supply the ``concat_dim`` argument '
                                  'explicitly')
             dim, = concat_dims
-        return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)
+        return concat(datasets, dim=dim, data_vars=data_vars, coords=coords,
+                      fill_value=fill_value)

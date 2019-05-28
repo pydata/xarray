@@ -27,6 +27,13 @@ Enhancements
 - Character arrays' character dimension name decoding and encoding handled by
   ``var.encoding['char_dim_name']`` (:issue:`2895`)
   By `James McCreight <https://github.com/jmccreight>`_.
+- :py:meth:`DataArray.transpose` now accepts a keyword argument
+  ``transpose_coords`` which enables transposition of coordinates in the
+  same way as :py:meth:`Dataset.transpose`. :py:meth:`DataArray.groupby`
+  :py:meth:`DataArray.groupby_bins`, and :py:meth:`DataArray.resample` now
+  accept a keyword argument ``restore_coord_dims`` which keeps the order
+  of the dimensions of multi-dimensional coordinates intact (:issue:`1856`).
+  By `Peter Hausamann <http://github.com/phausamann>`_.
 - Clean up Python 2 compatibility in code (:issue:`2950`)
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Implement ``load_dataset()`` and ``load_dataarray()`` as alternatives to
@@ -64,6 +71,8 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
+- Removed usages of `pytest.config`, which is deprecated (:issue:`2988`:)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.12.1:
 

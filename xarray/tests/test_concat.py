@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
-
+from xarray.core import dtypes
 from . import (
     InaccessibleArray, assert_array_equal,
     assert_equal, assert_identical, raises_regex, requires_dask)
@@ -233,6 +233,21 @@ class TestConcatDataset(object):
         assert expected.equals(actual)
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_concat_fill_value(self, fill_value):
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[fill_value, 2, 3],
+                                   [1, 2, fill_value]])},
+                           {'x': [0, 1, 2]})
+        actual = concat(datasets, dim='t', fill_value=fill_value)
+        assert_identical(actual, expected)
+
 
 class TestConcatDataArray(object):
     def test_concat(self):
@@ -292,3 +307,17 @@ class TestConcatDataArray(object):
         combined = concat(arrays, dim='z')
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ('z', 'x', 'y')
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_concat_fill_value(self, fill_value):
+        foo = DataArray([1, 2], coords=[('x', [1, 2])])
+        bar = DataArray([1, 2], coords=[('x', [1, 3])])
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = DataArray([[1, 2, fill_value], [1, fill_value, 2]],
+                             dims=['y', 'x'], coords={'x': [1, 2, 3]})
+        actual = concat((foo, bar), dim='y', fill_value=fill_value)
+        assert_identical(actual, expected)
+

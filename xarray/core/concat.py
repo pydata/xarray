@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from . import utils
+from . import utils, dtypes
 from .alignment import align
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
@@ -13,7 +13,7 @@ from .variable import concat as concat_vars
 
 def concat(objs, dim=None, data_vars='all', coords='different',
            compat='equals', positions=None, indexers=None, mode=None,
-           concat_over=None):
+           concat_over=None, fill_value=dtypes.NA):
     """Concatenate xarray objects along a new or existing dimension.
 
     Parameters
@@ -65,6 +65,8 @@ def concat(objs, dim=None, data_vars='all', coords='different',
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
         supplied, objects are concatenated in the provided order.
+    fill_value : scalar, optional
+        Value to use for newly missing values
     indexers, mode, concat_over : deprecated
 
     Returns
@@ -116,7 +118,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
     else:
         raise TypeError('can only concatenate xarray Dataset and DataArray '
                         'objects, got %s' % type(first_obj))
-    return f(objs, dim, data_vars, coords, compat, positions)
+    return f(objs, dim, data_vars, coords, compat, positions, fill_value)
 
 
 def _calc_concat_dim_coord(dim):
@@ -211,7 +213,8 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     return concat_over, equals
 
 
-def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
+def _dataset_concat(datasets, dim, data_vars, coords, compat, positions,
+                    fill_value=dtypes.NA):
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
@@ -224,7 +227,8 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
-    datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
+    datasets = align(*datasets, join='outer', copy=False, exclude=[dim],
+                     fill_value=fill_value)
 
     concat_over, equals = _calc_concat_over(datasets, dim, data_vars, coords)
 
@@ -316,7 +320,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
 
 
 def _dataarray_concat(arrays, dim, data_vars, coords, compat,
-                      positions):
+                      positions, fill_value=dtypes.NA):
     arrays = list(arrays)
 
     if data_vars != 'all':
@@ -335,5 +339,5 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
         datasets.append(arr._to_temp_dataset())
 
     ds = _dataset_concat(datasets, dim, data_vars, coords, compat,
-                         positions)
+                         positions, fill_value=fill_value)
     return arrays[0]._from_temp_dataset(ds, name)

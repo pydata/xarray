@@ -7,6 +7,7 @@ import pytest
 
 from xarray import DataArray, Dataset, concat, combine_auto, combine_manual
 from xarray import auto_combine
+from xarray.core import dtypes
 from xarray.core.combine import (
     _new_tile_id, _check_shape_tile_ids, _combine_all_along_first_dim,
     _combine_nd, _infer_concat_order_from_positions,
@@ -510,6 +511,21 @@ class TestManualCombine:
         with raises_regex(ValueError, 'cannot be combined'):
             combine_manual(objs, concat_dim='x')
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_combine_manual_fill_value(self, fill_value):
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[fill_value, 2, 3], [1, 2, fill_value]])},
+                           {'x': [0, 1, 2]})
+        actual = combine_manual(datasets, concat_dim='t',
+                                fill_value=fill_value)
+        assert_identical(expected, actual)
+
 
 class TestAutoCombine:
     def test_auto_combine(self):
@@ -702,6 +718,20 @@ class TestAutoCombineOldAPI:
         actual = auto_combine(objs)
         expected = Dataset({'foo': ('x', [0, 1])},
                            coords={'x': ('x', [1, 0])})
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_auto_combine_fill_value(self, fill_value):
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[fill_value, 2, 3], [1, 2, fill_value]])},
+                           {'x': [0, 1, 2]})
+        actual = auto_combine(datasets, concat_dim='t', fill_value=fill_value)
         assert_identical(expected, actual)
 
 
