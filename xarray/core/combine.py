@@ -1,10 +1,12 @@
 import itertools
 import warnings
 from collections import Counter, OrderedDict
+from textwrap import dedent
 
 import pandas as pd
 
 from .dataarray import DataArray
+from .dataset import Dataset
 from . import dtypes
 from .merge import merge
 from .concat import concat
@@ -83,11 +85,10 @@ def _infer_concat_order_from_coords(datasets):
 
                 # Assume that any two datasets whose coord along dim starts
                 # with the same value have the same coord values throughout.
-                try:
-                    first_items = pd.Index([index.take([0])
-                                            for index in indexes])
-                except IndexError:
+                if any(index.size == 0 for index in indexes):
                     raise ValueError('Cannot handle size zero dimensions')
+                first_items = pd.Index([index.take([0])
+                                        for index in indexes])
 
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
@@ -117,6 +118,9 @@ def _check_shape_tile_ids(combined_tile_ids):
     # Check all tuples are the same length
     # i.e. check that all lists are nested to the same depth
     nesting_depths = [len(tile_id) for tile_id in tile_ids]
+    print(nesting_depths)
+    if not nesting_depths:
+        nesting_depths = [0]
     if not set(nesting_depths) == {nesting_depths[0]}:
         raise ValueError("The supplied objects do not form a hypercube because"
                          " sub-lists do not have consistent depths")
@@ -157,13 +161,13 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
     combined_ds : xarray.Dataset
     """
 
-    tile_id, ds = list(combined_ids.items())[0]
+    example_tile_id = next(iter(combined_ids.keys()))
 
-    n_dims = len(tile_id)
+    n_dims = len(example_tile_id)
     if len(concat_dims) != n_dims:
         raise ValueError("concat_dims has length {} but the datasets "
                          "passed are nested in a {}-dimensional structure"
-                         .format(str(len(concat_dims)), str(n_dims)))
+                         .format(len(concat_dims), n_dims))
 
     # Each iteration of this loop reduces the length of the tile_ids tuples
     # by one. It always combines along the first dimension, removing the first
@@ -175,7 +179,7 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
                                                     coords=coords,
                                                     compat=compat,
                                                     fill_value=fill_value)
-    combined_ds = list(combined_ids.values())[0]
+    (combined_ds,) = combined_ids.values()
     return combined_ds
 
 
@@ -232,6 +236,9 @@ def _new_tile_id(single_id_ds_pair):
 
 def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids,
                     fill_value=dtypes.NA):
+
+    if len(datasets) == 0:
+        return Dataset()
 
     # Arrange datasets for concatenation
     # Use information from the shape of the user input
@@ -522,8 +529,8 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     """
     Attempt to auto-magically combine the given datasets into one.
 
-    This entire function is in the process of being deprecated in favour of
-    ``combine_manual`` and ``combine_auto``.
+    This entire function is deprecated in favour of ``combine_manual`` and
+    ``combine_auto``.
 
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
@@ -577,47 +584,44 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     Dataset.merge
     """
 
+    message = """In xarray version 0.14 `auto_combine` will be deprecated."""
+
     if concat_dim is '_not_supplied':
         concat_dim = _CONCAT_DIM_DEFAULT
     else:
-        message = """In xarray version 0.14 `auto_combine` will be deprecated,
-                  and `open_mfdataset` will no longer accept a `concat_dim`
-                  argument. To get equivalent behaviour from now on please use
-                  the new `combine_manual` function instead (or the
-                  `combine='manual'` option to open_mfdataset)."""
-        warnings.warn(message, FutureWarning)
+        message += dedent("""\
+        Also `open_mfdataset` will no longer accept a `concat_dim` argument. 
+        To get equivalent behaviour from now on please use the new 
+        `combine_manual` function instead (or the `combine='manual'` option to 
+        `open_mfdataset`).""")
 
     if _dimension_coords_exist(datasets):
-        message = """In xarray version 0.14 `auto_combine` will be deprecated.
-                  The datasets supplied have global dimension coordinates.
-                  You may want to use the new `combine_auto` function (or the
-                  `combine='auto'` option to `open_mfdataset` to order the
-                  datasets before concatenation. Alternatively, to continue
-                  concatenating based on the order the datasets are supplied in
-                  in future, please use the new `combine_manual` function (or
-                  the `combine='manual'` option to open_mfdataset)."""
-        warnings.warn(message, FutureWarning)
+        message += dedent("""\
+        The datasets supplied have global dimension coordinates. You may want 
+        to use the new `combine_auto` function (or the `combine='auto'` option 
+        to `open_mfdataset` to order the datasets before concatenation. 
+        Alternatively, to continue concatenating based on the order the 
+        datasets are supplied in in future, please use the new `combine_manual`
+        function (or the `combine='manual'` option to open_mfdataset).""")
     else:
-        message = """In xarray version 0.14 `auto_combine` will be deprecated.
-                  The datasets supplied do not have global dimension
-                  coordinates. In future, to continue concatenating without
-                  supplying dimension coordinates, please use the new
-                  `combine_manual` function (or the `combine='manual'` option
-                  to open_mfdataset)."""
-        warnings.warn(message, FutureWarning)
+        message += dedent("""\
+        The datasets supplied do not have global dimension coordinates. In 
+        future, to continue concatenating without supplying dimension 
+        coordinates, please use the new `combine_manual` function (or the 
+        `combine='manual'` option to open_mfdataset.""")
 
     if _requires_concat_and_merge(datasets):
         manual_dims = [concat_dim].append(None)
-        message = """In xarray version 0.14 `auto_combine` will be deprecated.
-                  The datasets supplied require both concatenation and merging.
-                  From xarray version 0.14 this will operation will require
-                  either using the new `manual_combine` function (or the
-                  `combine='manual'` option to open_mfdataset), with
-                  a nested list structure such that you can combine along the
-                  dimensions {}. Alternatively if your datasets have global
-                  dimension coordinates then you can use the new `combine_auto`
-                  function.""".format(manual_dims)
-        warnings.warn(message, FutureWarning)
+        message += dedent("""\
+        The datasets supplied require both concatenation and merging. From 
+        xarray version 0.14 this will operation will require either using the 
+        new `combine_manual` function (or the `combine='manual'` option to 
+        open_mfdataset), with a nested list structure such that you can combine
+        along the dimensions {}. Alternatively if your datasets have global 
+        dimension coordinates then you can use the new `combine_auto` function.
+        """.format(manual_dims))
+
+    warnings.warn(message, FutureWarning, stacklevel=2)
 
     return _old_auto_combine(datasets, concat_dim=concat_dim,
                              compat=compat, data_vars=data_vars,

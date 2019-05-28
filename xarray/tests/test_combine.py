@@ -317,6 +317,9 @@ class TestManualCombine:
         actual = combine_manual([actual], concat_dim=None)
         assert_identical(expected, actual)
 
+        actual = combine_manual([actual], concat_dim='x')
+        assert_identical(expected, actual)
+
         objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
         actual = combine_manual(objs, concat_dim='x')
         expected = Dataset({'x': [0, 1, 2]})
@@ -332,6 +335,9 @@ class TestManualCombine:
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
         with pytest.raises(KeyError):
             combine_manual(objs, concat_dim='x')
+
+    def test_empty_input(self):
+        assert_identical(Dataset(), combine_manual([], concat_dim='x'))
 
     # Fails because of concat's weird treatment of dimension coords, see #2975
     @pytest.mark.xfail
@@ -563,6 +569,9 @@ class TestCombineAuto:
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
         with raises_regex(ValueError, 'Every dimension needs a coordinate'):
             combine_auto(objs)
+
+        def test_empty_input(self):
+            assert_identical(Dataset(), combine_auto([]))
 
     def test_infer_order_from_coords(self):
         data = create_test_data()

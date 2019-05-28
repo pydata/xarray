@@ -633,8 +633,9 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         disable concatenation along a particular dimension.
     combine : {'auto', 'manual'}, optional
         Whether ``xarray.auto_combine`` or ``xarray.manual_combine`` is used to
-        combine all the data. Default is to use ``xarray.auto_combine``, but 
-        this function has been deprecated..
+        combine all the data. If this argument is not provided, 
+        `xarray.auto_combine` is used, but in the future this behavior will 
+        switch to use `xarray.combine_auto`.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
@@ -732,7 +733,7 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
     # If combine='auto' then this is unnecessary, but quick.
     # If combine='manual' then this creates a flat list which is easier to
     # iterate over, while saving the originally-supplied structure as "ids"
-    if combine is 'manual':
+    if combine == 'manual':
         if concat_dim is '__auto_combine__':
             raise ValueError("Must supply concat_dim when using manual "
                              "combine")
@@ -787,8 +788,8 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
             combined = combine_auto(datasets, compat=compat,
                                     data_vars=data_vars, coords=coords)
         else:
-            raise ValueError("{} is an invalid option forthe keyword argument "
-                             "``combine``".format(combine))
+            raise ValueError("{} is an invalid option for the keyword argument"
+                             " ``combine``".format(combine))
     except ValueError:
         for ds in datasets:
             ds.close()
