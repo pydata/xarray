@@ -590,34 +590,34 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         concat_dim = _CONCAT_DIM_DEFAULT
     else:
         message += dedent("""\
-        Also `open_mfdataset` will no longer accept a `concat_dim` argument. 
-        To get equivalent behaviour from now on please use the new 
-        `combine_manual` function instead (or the `combine='manual'` option to 
+        Also `open_mfdataset` will no longer accept a `concat_dim` argument.
+        To get equivalent behaviour from now on please use the new
+        `combine_manual` function instead (or the `combine='manual'` option to
         `open_mfdataset`).""")
 
     if _dimension_coords_exist(datasets):
         message += dedent("""\
-        The datasets supplied have global dimension coordinates. You may want 
-        to use the new `combine_auto` function (or the `combine='auto'` option 
-        to `open_mfdataset` to order the datasets before concatenation. 
-        Alternatively, to continue concatenating based on the order the 
+        The datasets supplied have global dimension coordinates. You may want
+        to use the new `combine_auto` function (or the `combine='auto'` option
+        to `open_mfdataset` to order the datasets before concatenation.
+        Alternatively, to continue concatenating based on the order the
         datasets are supplied in in future, please use the new `combine_manual`
         function (or the `combine='manual'` option to open_mfdataset).""")
     else:
         message += dedent("""\
-        The datasets supplied do not have global dimension coordinates. In 
-        future, to continue concatenating without supplying dimension 
-        coordinates, please use the new `combine_manual` function (or the 
+        The datasets supplied do not have global dimension coordinates. In
+        future, to continue concatenating without supplying dimension
+        coordinates, please use the new `combine_manual` function (or the
         `combine='manual'` option to open_mfdataset.""")
 
     if _requires_concat_and_merge(datasets):
         manual_dims = [concat_dim].append(None)
         message += dedent("""\
-        The datasets supplied require both concatenation and merging. From 
-        xarray version 0.14 this will operation will require either using the 
-        new `combine_manual` function (or the `combine='manual'` option to 
+        The datasets supplied require both concatenation and merging. From
+        xarray version 0.14 this will operation will require either using the
+        new `combine_manual` function (or the `combine='manual'` option to
         open_mfdataset), with a nested list structure such that you can combine
-        along the dimensions {}. Alternatively if your datasets have global 
+        along the dimensions {}. Alternatively if your datasets have global
         dimension coordinates then you can use the new `combine_auto` function.
         """.format(manual_dims))
 
