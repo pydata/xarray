@@ -294,7 +294,7 @@ class DatetimeAccessor:
         Return an array of formatted strings specified by date_format, which
         supports the same string format as the python standard library. Details
         of the string format can be found in `python string format doc
-        <https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior>`__
+        <https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior>`__
 
         Parameters
         ----------

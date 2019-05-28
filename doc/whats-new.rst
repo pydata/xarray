@@ -44,11 +44,11 @@ Enhancements
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 - Added `strftime`` method to ``.dt`` accessor, making it simpler to hand
   datetime ``DataArray`` to other code expecting formatted dates and times.
-  (:issue:`2090`). By `Alan Brammer <https://github.com/abrammer>` and
+  (:issue:`2090`). By `Alan Brammer <https://github.com/abrammer>`_ and
   `Ryan May <https://github.com/dopplershift>`_.
 - Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports
-  `strftime` method to return an index of string formatted datetimes. By
-  `Alan Brammer <https://github.com/abrammer>`_.
+  :py:meth:`~xarray.CFTimeIndex.strftime` method to return an index of string
+  formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
 
 Bug fixes
 ~~~~~~~~~
