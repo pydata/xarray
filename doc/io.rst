@@ -51,6 +51,11 @@ We can save a Dataset to disk using the
 
 .. ipython:: python
 
+    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
+                    coords={'x': [10, 20, 30, 40],
+                            'y': pd.date_range('2000-01-01', periods=5),
+                            'z': ('x', list('abcd'))})
+
     ds.to_netcdf('saved_on_disk.nc')
 
 By default, the file is saved as netCDF4 (assuming netCDF4-Python is
@@ -61,7 +66,7 @@ the ``format`` and ``engine`` arguments.
 
    Using the `h5netcdf <https://github.com/shoyer/h5netcdf>`_  package
    by passing ``engine='h5netcdf'`` to :py:meth:`~xarray.open_dataset` can
-   be quicker than the default ``engine='netcdf4'`` that uses the
+   sometimes be quicker than the default ``engine='netcdf4'`` that uses the
    `netCDF4 <https://github.com/Unidata/netcdf4-python>`_ package.
 
 
@@ -191,8 +196,6 @@ will remove encoding information.
     :suppress:
 
     ds_disk.close()
-    import os
-    os.remove('saved_on_disk.nc')
 
 
 .. _combining multiple files:
@@ -633,11 +636,6 @@ module:
 
     import pickle
 
-    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
-                    coords={'x': [10, 20, 30, 40],
-                            'y': pd.date_range('2000-01-01', periods=5),
-                            'z': ('x', list('abcd'))})
-
     # use the highest protocol (-1) because it is way faster than the default
     # text based pickle format
     pkl = pickle.dumps(ds, protocol=-1)
@@ -696,6 +694,12 @@ To export just the dataset schema, without the data itself, use the
 
 This can be useful for generating indices of dataset contents to expose to
 search indices or other automated data discovery tools.
+
+.. ipython:: python
+    :suppress:
+
+    import os
+    os.remove('saved_on_disk.nc')
 
 .. _io.rasterio:
 
