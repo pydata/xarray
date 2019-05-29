@@ -215,12 +215,11 @@ def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
                               coords=coords, fill_value=fill_value)
         except ValueError as err:
             if "encountered unexpected variable" in str(err):
-                raise ValueError("These objects cannot be combined along the "
-                                 "dimension {concat_dim} using only "
-                                 "xarray.concat, you must use "
-                                 "xarray.combine_auto instead, as this can "
-                                 "handle combining operations requiring both "
-                                 "concat and merge along the same dimension.")
+                raise ValueError("These objects cannot be combined using only "
+                                 "xarray.combine_manual, instead either use "
+                                 "xarray.combine_auto, or do it manually "
+                                 "with xarray.concat, xarray.merge and "
+                                 "xarray.align")
             else:
                 raise
     else:

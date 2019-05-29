@@ -320,4 +320,3 @@ class TestConcatDataArray(object):
                              dims=['y', 'x'], coords={'x': [1, 2, 3]})
         actual = concat((foo, bar), dim='y', fill_value=fill_value)
         assert_identical(actual, expected)
-
