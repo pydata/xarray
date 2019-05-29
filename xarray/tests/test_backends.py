@@ -19,7 +19,7 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
-    save_mfdataset)
+    save_mfdataset, load_dataset, load_dataarray)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
@@ -2640,6 +2640,23 @@ class TestDask(DatasetIOBase):
                 delayed_obj.compute()
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(actual, original)
+
+    def test_load_dataset(self):
+        with create_tmp_file() as tmp:
+            original = Dataset({'foo': ('x', np.random.randn(10))})
+            original.to_netcdf(tmp)
+            ds = load_dataset(tmp)
+            # this would fail if we used open_dataset instead of load_dataset
+            ds.to_netcdf(tmp)
+
+    def test_load_dataarray(self):
+        with create_tmp_file() as tmp:
+            original = Dataset({'foo': ('x', np.random.randn(10))})
+            original.to_netcdf(tmp)
+            ds = load_dataarray(tmp)
+            # this would fail if we used open_dataarray instead of
+            # load_dataarray
+            ds.to_netcdf(tmp)
 
 
 @requires_scipy_or_netCDF4

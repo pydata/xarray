@@ -1405,7 +1405,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def transpose(self, *dims) -> 'DataArray':
+    def transpose(self, *dims, transpose_coords=None) -> 'DataArray':
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1413,6 +1413,8 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
+        transpose_coords : boolean, optional
+            If True, also transpose the coordinates of this DataArray.
 
         Returns
         -------
@@ -1430,8 +1432,28 @@ class DataArray(AbstractArray, DataWithCoords):
         numpy.transpose
         Dataset.transpose
         """
+        if dims:
+            if set(dims) ^ set(self.dims):
+                raise ValueError('arguments to transpose (%s) must be '
+                                 'permuted array dimensions (%s)'
+                                 % (dims, tuple(self.dims)))
+
         variable = self.variable.transpose(*dims)
-        return self._replace(variable)
+        if transpose_coords:
+            coords = {}
+            for name, coord in self.coords.items():
+                coord_dims = tuple(dim for dim in dims if dim in coord.dims)
+                coords[name] = coord.variable.transpose(*coord_dims)
+            return self._replace(variable, coords)
+        else:
+            if transpose_coords is None \
+                    and any(self[c].ndim > 1 for c in self.coords):
+                warnings.warn('This DataArray contains multi-dimensional '
+                              'coordinates. In the future, these coordinates '
+                              'will be transposed as well unless you specify '
+                              'transpose_coords=False.',
+                              FutureWarning, stacklevel=2)
+            return self._replace(variable)
 
     @property
     def T(self) -> 'DataArray':
