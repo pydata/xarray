@@ -2017,6 +2017,11 @@ class DataArray(AbstractArray, DataWithCoords):
     def __matmul__(self, obj):
         return self.dot(obj)
 
+    def __rmatmul__(self, other):
+        # currently somewhat duplicative, as only other DataArrays are
+        # compatible with matmul
+        return computation.dot(other, self)
+
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
