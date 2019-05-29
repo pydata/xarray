@@ -1134,7 +1134,7 @@ class NetCDF4Base(CFEncodedBase):
 
         assert ds.x.encoding == {}
 
-    def test_keep_chunksizes_if_no_orignal_shape(self):
+    def test_keep_chunksizes_if_no_original_shape(self):
         orig_ds = Dataset({'x': [1, 2, 3]})
         chunksizes = (2, )
         orig_ds.variables['x'].encoding = {
