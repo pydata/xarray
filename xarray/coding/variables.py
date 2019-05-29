@@ -159,7 +159,7 @@ class CFMaskCoder(VariableCoder):
             if not pd.isnull(fill_value):
                 data = duck_array_ops.fillna(data, fill_value)
 
-        if mv is not None:
+        elif mv is not None:
             fill_value = pop_to(encoding, attrs, 'missing_value', name=name)
             if not pd.isnull(fill_value):
                 data = duck_array_ops.fillna(data, fill_value)
