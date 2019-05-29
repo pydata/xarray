@@ -1,15 +1,14 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import itertools
 import warnings
+from inspect import getfullargspec
 
 import numpy as np
 
 from ..core.formatting import format_item
-from ..core.pycompat import getargspec
 from .utils import (
-    _determine_cmap_params, _infer_xy_labels, import_matplotlib_pyplot)
+    _infer_xy_labels, _process_cmap_cbar_kwargs,
+    import_matplotlib_pyplot, label_from_attrs)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -31,7 +30,7 @@ def _nicetitle(coord, value, maxchar, template):
     return title
 
 
-class FacetGrid(object):
+class FacetGrid:
     """
     Initialize the matplotlib figure and FacetGrid object.
 
@@ -188,6 +187,7 @@ class FacetGrid(object):
         self._y_var = None
         self._cmap_extend = None
         self._mappables = []
+        self._finalized = False
 
     @property
     def _left_axes(self):
@@ -219,27 +219,13 @@ class FacetGrid(object):
 
         """
 
-        cmapkw = kwargs.get('cmap')
-        colorskw = kwargs.get('colors')
+        if kwargs.get('cbar_ax', None) is not None:
+            raise ValueError('cbar_ax not supported by FacetGrid.')
 
-        # colors is mutually exclusive with cmap
-        if cmapkw and colorskw:
-            raise ValueError("Can't specify both cmap and colors.")
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            func, kwargs, self.data.values)
 
-        # These should be consistent with xarray.plot._plot2d
-        cmap_kwargs = {'plot_data': self.data.values,
-                       # MPL default
-                       'levels': 7 if 'contour' in func.__name__ else None,
-                       'filled': func.__name__ != 'contour',
-                       }
-
-        cmap_args = getargspec(_determine_cmap_params).args
-        cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
-
-        cmap_params = _determine_cmap_params(**cmap_kwargs)
-
-        if colorskw is not None:
-            cmap_params['cmap'] = None
+        self._cmap_extend = cmap_params.get('extend')
 
         # Order is important
         func_kwargs = kwargs.copy()
@@ -255,26 +241,85 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x, y, ax=ax, **func_kwargs)
+                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
                 self._mappables.append(mappable)
 
         self._cmap_extend = cmap_params.get('extend')
         self._finalize_grid(x, y)
 
         if kwargs.get('add_colorbar', True):
-            self.add_colorbar()
+            self.add_colorbar(**cbar_kwargs)
+
+        return self
+
+    def map_dataarray_line(self, func, x, y, **kwargs):
+        from .plot import _infer_line_data
+
+        add_legend = kwargs.pop('add_legend', True)
+        kwargs['add_legend'] = False
+        func_kwargs = kwargs.copy()
+        func_kwargs['_labels'] = False
+
+        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            # None is the sentinel value
+            if d is not None:
+                subset = self.data.loc[d]
+                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
+                self._mappables.append(mappable)
+
+        _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
+            darray=self.data.loc[self.name_dicts.flat[0]],
+            x=x, y=y, hue=func_kwargs['hue'])
+
+        self._hue_var = hueplt
+        self._hue_label = huelabel
+        self._finalize_grid(xlabel, ylabel)
+
+        if add_legend and hueplt is not None and huelabel is not None:
+            self.add_legend()
 
         return self
 
     def _finalize_grid(self, *axlabels):
         """Finalize the annotations and layout."""
-        self.set_axis_labels(*axlabels)
-        self.set_titles()
-        self.fig.tight_layout()
+        if not self._finalized:
+            self.set_axis_labels(*axlabels)
+            self.set_titles()
+            self.fig.tight_layout()
 
-        for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
-            if namedict is None:
-                ax.set_visible(False)
+            for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
+                if namedict is None:
+                    ax.set_visible(False)
+
+            self._finalized = True
+
+    def add_legend(self, **kwargs):
+        figlegend = self.fig.legend(
+            handles=self._mappables[-1],
+            labels=list(self._hue_var.values),
+            title=self._hue_label,
+            loc="center right", **kwargs)
+
+        # Draw the plot to set the bounding boxes correctly
+        self.fig.draw(self.fig.canvas.get_renderer())
+
+        # Calculate and set the new width of the figure so the legend fits
+        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        figure_width = self.fig.get_figwidth()
+        self.fig.set_figwidth(figure_width + legend_width)
+
+        # Draw the plot again to get the new transformations
+        self.fig.draw(self.fig.canvas.get_renderer())
+
+        # Now calculate how much space we need on the right side
+        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        space_needed = legend_width / (figure_width + legend_width) + 0.02
+        # margin = .01
+        # _space_needed = margin + space_needed
+        right = 1 - space_needed
+
+        # Place the subplot axes to give space for the legend
+        self.fig.subplots_adjust(right=right)
 
     def add_colorbar(self, **kwargs):
         """Draw a colorbar
@@ -282,8 +327,8 @@ class FacetGrid(object):
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault('extend', self._cmap_extend)
-        if getattr(self.data, 'name', None) is not None:
-            kwargs.setdefault('label', self.data.name)
+        if 'label' not in kwargs:
+            kwargs.setdefault('label', label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(self._mappables[-1],
                                       ax=list(self.axes.flat),
                                       **kwargs)
@@ -292,17 +337,25 @@ class FacetGrid(object):
     def set_axis_labels(self, x_var=None, y_var=None):
         """Set axis labels on the left column and bottom row of the grid."""
         if x_var is not None:
-            self._x_var = x_var
-            self.set_xlabels(x_var)
+            if x_var in self.data.coords:
+                self._x_var = x_var
+                self.set_xlabels(label_from_attrs(self.data[x_var]))
+            else:
+                # x_var is a string
+                self.set_xlabels(x_var)
+
         if y_var is not None:
-            self._y_var = y_var
-            self.set_ylabels(y_var)
+            if y_var in self.data.coords:
+                self._y_var = y_var
+                self.set_ylabels(label_from_attrs(self.data[y_var]))
+            else:
+                self.set_ylabels(y_var)
         return self
 
     def set_xlabels(self, label=None, **kwargs):
         """Label the x axis on the bottom row of the grid."""
         if label is None:
-            label = self._x_var
+            label = label_from_attrs(self.data[self._x_var])
         for ax in self._bottom_axes:
             ax.set_xlabel(label, **kwargs)
         return self
@@ -310,7 +363,7 @@ class FacetGrid(object):
     def set_ylabels(self, label=None, **kwargs):
         """Label the y axis on the left column of the grid."""
         if label is None:
-            label = self._y_var
+            label = label_from_attrs(self.data[self._y_var])
         for ax in self._left_axes:
             ax.set_ylabel(label, **kwargs)
         return self
@@ -426,10 +479,43 @@ class FacetGrid(object):
                 data = self.data.loc[namedict]
                 plt.sca(ax)
                 innerargs = [data[a].values for a in args]
-                # TODO: is it possible to verify that an artist is mappable?
-                mappable = func(*innerargs, **kwargs)
-                self._mappables.append(mappable)
+                maybe_mappable = func(*innerargs, **kwargs)
+                # TODO: better way to verify that an artist is mappable?
+                # https://stackoverflow.com/questions/33023036/is-it-possible-to-detect-if-a-matplotlib-artist-is-a-mappable-suitable-for-use-w#33023522
+                if (maybe_mappable and
+                   hasattr(maybe_mappable, 'autoscale_None')):
+                    self._mappables.append(maybe_mappable)
 
         self._finalize_grid(*args[:2])
 
         return self
+
+
+def _easy_facetgrid(data, plotfunc, kind, x=None, y=None, row=None,
+                    col=None, col_wrap=None, sharex=True, sharey=True,
+                    aspect=None, size=None, subplot_kws=None, **kwargs):
+    """
+    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
+
+    kwargs are the arguments to 2d plotting method
+    """
+    ax = kwargs.pop('ax', None)
+    figsize = kwargs.pop('figsize', None)
+    if ax is not None:
+        raise ValueError("Can't use axes when making faceted plots.")
+    if aspect is None:
+        aspect = 1
+    if size is None:
+        size = 3
+    elif figsize is not None:
+        raise ValueError('cannot provide both `figsize` and `size` arguments')
+
+    g = FacetGrid(data=data, col=col, row=row, col_wrap=col_wrap,
+                  sharex=sharex, sharey=sharey, figsize=figsize,
+                  aspect=aspect, size=size, subplot_kws=subplot_kws)
+
+    if kind == 'line':
+        return g.map_dataarray_line(plotfunc, x, y, **kwargs)
+
+    if kind == 'dataarray':
+        return g.map_dataarray(plotfunc, x, y, **kwargs)

@@ -193,6 +193,14 @@ Indexing axes with monotonic decreasing labels also works, as long as the
    reversed_da.loc[3.1:0.9]
 
 
+.. note::
+
+  If you want to interpolate along coordinates rather than looking up the
+  nearest neighbors, use :py:meth:`~xarray.Dataset.interp` and
+  :py:meth:`~xarray.Dataset.interp_like`.
+  See :ref:`interpolation <interp>` for the details.
+
+
 Dataset indexing
 ----------------
 
@@ -221,8 +229,8 @@ arrays). However, you can do normal indexing with dimension names:
 Using indexing to *assign* values to a subset of dataset (e.g.,
 ``ds[dict(space=0)] = 1``) is not yet supported.
 
-Dropping labels
----------------
+Dropping labels and dimensions
+------------------------------
 
 The :py:meth:`~xarray.Dataset.drop` method returns a new object with the listed
 index labels along a dimension dropped:
@@ -232,6 +240,13 @@ index labels along a dimension dropped:
     ds.drop(['IN', 'IL'], dim='space')
 
 ``drop`` is both a ``Dataset`` and ``DataArray`` method.
+
+Use :py:meth:`~xarray.Dataset.drop_dims` to drop a full dimension from a Dataset.
+Any variables with these dimensions are also dropped:
+
+.. ipython:: python
+
+    ds.drop_dims('time')
 
 
 .. _masking with where:
@@ -363,7 +378,7 @@ Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
     ind = xr.DataArray([['a', 'b'], ['b', 'a']], dims=['a', 'b'])
     da.loc[:, ind]  # same as da.sel(y=ind)
 
-These methods may and also be applied to ``Dataset`` objects
+These methods may also be applied to ``Dataset`` objects
 
 .. ipython:: python
 
@@ -403,7 +418,7 @@ can use indexing with ``.loc`` :
 
 .. ipython:: python
 
-    ds = xr.tutorial.load_dataset('air_temperature')
+    ds = xr.tutorial.open_dataset('air_temperature')
 
     #add an empty 2D dataarray
     ds['empty']= xr.full_like(ds.air.mean('time'),fill_value=0)
@@ -510,7 +525,7 @@ where three elements at ``(ix, iy) = ((0, 0), (1, 1), (6, 0))`` are selected
 and mapped along a new dimension ``z``.
 
 If you want to add a coordinate to the new dimension ``z``,
-you can supply a :py:meth:`~xarray.DataArray` with a coordinate,
+you can supply a :py:class:`~xarray.DataArray` with a coordinate,
 
 .. ipython:: python
 

@@ -1,4 +1,5 @@
- - [ ] Closes #xxxx (remove if there is no corresponding issue, which should only be the case for minor changes)
- - [ ] Tests added (for all bug fixes or enhancements)
- - [ ] Tests passed (for all non-documentation changes)
- - [ ] Fully documented, including `whats-new.rst` for all changes and `api.rst` for new API (remove if this change should not be visible to users, e.g., if it is an internal clean-up, or if this is part of a larger project that will be documented later)
+<!-- Feel free to remove check-list items aren't relevant to your change -->
+
+ - [ ] Closes #xxxx
+ - [ ] Tests added
+ - [ ] Fully documented, including `whats-new.rst` for all changes and `api.rst` for new API

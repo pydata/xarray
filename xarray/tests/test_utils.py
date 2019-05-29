@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division, print_function
-
+from collections import OrderedDict
 from datetime import datetime
 
 import numpy as np
@@ -8,17 +7,14 @@ import pytest
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
-from xarray.core.options import set_options
-from xarray.core.pycompat import OrderedDict
 from xarray.core.utils import either_dict_or_kwargs
 
 from . import (
-    TestCase, assert_array_equal, has_cftime, has_cftime_or_netCDF4,
-    requires_dask)
+    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_dask)
 from .test_coding_times import _all_cftime_date_types
 
 
-class TestAlias(TestCase):
+class TestAlias:
     def test(self):
         def new_method():
             pass
@@ -44,19 +40,17 @@ def test_safe_cast_to_index():
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
+def test_safe_cast_to_index_cftimeindex():
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         dates = [date_type(1, 1, day) for day in range(1, 20)]
 
-        if enable_cftimeindex and has_cftime:
+        if has_cftime:
             expected = CFTimeIndex(dates)
         else:
             expected = pd.Index(dates)
 
-        with set_options(enable_cftimeindex=enable_cftimeindex):
-            actual = utils.safe_cast_to_index(np.array(dates))
+        actual = utils.safe_cast_to_index(np.array(dates))
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
         assert isinstance(actual, type(expected))
@@ -64,13 +58,11 @@ def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
 
 # Test that datetime.datetime objects are never used in a CFTimeIndex
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
+def test_safe_cast_to_index_datetime_datetime():
     dates = [datetime(1, 1, day) for day in range(1, 20)]
 
     expected = pd.Index(dates)
-    with set_options(enable_cftimeindex=enable_cftimeindex):
-        actual = utils.safe_cast_to_index(np.array(dates))
+    actual = utils.safe_cast_to_index(np.array(dates))
     assert_array_equal(expected, actual)
     assert isinstance(actual, pd.Index)
 
@@ -79,7 +71,9 @@ def test_multiindex_from_product_levels():
     result = utils.multiindex_from_product_levels(
         [pd.Index(['b', 'a']), pd.Index([1, 3, 2])])
     np.testing.assert_array_equal(
-        result.labels, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
+        # compat for pandas < 0.24
+        result.codes if hasattr(result, 'codes') else result.labels,
+        [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
     np.testing.assert_array_equal(result.levels[1], [1, 3, 2])
 
@@ -91,12 +85,14 @@ def test_multiindex_from_product_levels_non_unique():
     result = utils.multiindex_from_product_levels(
         [pd.Index(['b', 'a']), pd.Index([1, 1, 2])])
     np.testing.assert_array_equal(
-        result.labels, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]])
+        # compat for pandas < 0.24
+        result.codes if hasattr(result, 'codes') else result.labels,
+        [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]])
     np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
     np.testing.assert_array_equal(result.levels[1], [1, 2])
 
 
-class TestArrayEquiv(TestCase):
+class TestArrayEquiv:
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
@@ -106,8 +102,9 @@ class TestArrayEquiv(TestCase):
         assert not duck_array_ops.array_equiv(0, np.array(1, dtype=object))
 
 
-class TestDictionaries(TestCase):
-    def setUp(self):
+class TestDictionaries:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.x = {'a': 'A', 'b': 'B'}
         self.y = {'c': 'C', 'b': 'B'}
         self.z = {'a': 'Z'}
@@ -174,22 +171,9 @@ class TestDictionaries(TestCase):
     def test_sorted_keys_dict(self):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
-        self.assertItemsEqual(y, ['a', 'b', 'c'])
+        assert list(y) == ['a', 'b', 'c']
         assert repr(utils.SortedKeysDict()) == \
             "SortedKeysDict({})"
-
-    def test_chain_map(self):
-        m = utils.ChainMap({'x': 0, 'y': 1}, {'x': -100, 'z': 2})
-        assert 'x' in m
-        assert 'y' in m
-        assert 'z' in m
-        assert m['x'] == 0
-        assert m['y'] == 1
-        assert m['z'] == 2
-        m['x'] = 100
-        assert m['x'] == 100
-        assert m.maps[0]['x'] == 100
-        self.assertItemsEqual(['x', 'y', 'z'], m)
 
 
 def test_repr_object():
@@ -197,7 +181,23 @@ def test_repr_object():
     assert repr(obj) == 'foo'
 
 
-class Test_is_uniform_and_sorted(TestCase):
+def test_is_remote_uri():
+    assert utils.is_remote_uri('http://example.com')
+    assert utils.is_remote_uri('https://example.com')
+    assert not utils.is_remote_uri(' http://example.com')
+    assert not utils.is_remote_uri('example.nc')
+
+
+def test_is_grib_path():
+    assert not utils.is_grib_path('example.nc')
+    assert not utils.is_grib_path('example.grib ')
+    assert utils.is_grib_path('example.grib')
+    assert utils.is_grib_path('example.grib2')
+    assert utils.is_grib_path('example.grb')
+    assert utils.is_grib_path('example.grb2')
+
+
+class Test_is_uniform_and_sorted:
 
     def test_sorted_uniform(self):
         assert utils.is_uniform_spaced(np.arange(5))
@@ -218,7 +218,7 @@ class Test_is_uniform_and_sorted(TestCase):
         assert utils.is_uniform_spaced([0, 0.97, 2], rtol=0.1)
 
 
-class Test_hashable(TestCase):
+class Test_hashable:
 
     def test_hashable(self):
         for v in [False, 1, (2, ), (3, 4), 'four']:

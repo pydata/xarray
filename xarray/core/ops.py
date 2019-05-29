@@ -5,15 +5,12 @@ NumPy's __array_ufunc__ and mixin classes instead of the unintuitive "inject"
 functions.
 """
 
-from __future__ import absolute_import, division, print_function
-
 import operator
 
 import numpy as np
 
 from . import dtypes, duck_array_ops
 from .nputils import array_eq, array_ne
-from .pycompat import PY3
 
 try:
     import bottleneck as bn
@@ -28,8 +25,6 @@ UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
 CMP_BINARY_OPS = ['lt', 'le', 'ge', 'gt']
 NUM_BINARY_OPS = ['add', 'sub', 'mul', 'truediv', 'floordiv', 'mod',
                   'pow', 'and', 'xor', 'or']
-if not PY3:
-    NUM_BINARY_OPS.append('div')
 
 # methods which pass on the numpy return value unchanged
 # be careful not to list methods that we would want to wrap later
@@ -86,7 +81,7 @@ skipna : bool, optional
     If True, skip missing values (as marked by NaN). By default, only
     skips missing values for float dtypes; other dtypes either do not
     have a sentinel missing value (int) or skipna=True has not been
-    implemented (object, datetime64 or timedelta64).
+    implemented (object, datetime64 or timedelta64).{min_count_docs}
 keep_attrs : bool, optional
     If True, the attributes (`attrs`) will be copied from the original
     object to the new one.  If False (default), the new object will be
@@ -102,6 +97,12 @@ reduced : {cls}
     indicated dimension(s) removed.
 """
 
+_MINCOUNT_DOCSTRING = """
+min_count : int, default None
+    The required number of valid values to perform the operation.
+    If fewer than min_count non-NA values are present the result will
+    be NA. New in version 0.10.8: Added with the default being None."""
+
 _ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
 Reduce this {da_or_ds}'s data windows by applying `{name}` along its dimension.
 
@@ -114,6 +115,20 @@ Returns
 -------
 reduced : {da_or_ds}
     New {da_or_ds} object with `{name}` applied along its rolling dimnension.
+"""
+
+_COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
+Coarsen this object by applying `{name}` along its dimensions.
+
+Parameters
+----------
+**kwargs : dict
+    Additional keyword arguments passed on to `{name}`.
+
+Returns
+-------
+reduced : DataArray or Dataset
+    New object with `{name}` applied along its coasen dimnensions.
 """
 
 
@@ -236,11 +251,15 @@ def inject_reduce_methods(cls):
                [('count', duck_array_ops.count, False)])
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, 'numeric_only', False)
+        available_min_count = getattr(f, 'available_min_count', False)
+        min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ''
+
         func = cls._reduce_method(f, include_skipna, numeric_only)
         func.__name__ = name
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
             name=name, cls=cls.__name__,
-            extra_args=cls._reduce_extra_args_docstring.format(name=name))
+            extra_args=cls._reduce_extra_args_docstring.format(name=name),
+            min_count_docs=min_count_docs)
         setattr(cls, name, func)
 
 
@@ -368,3 +387,15 @@ def inject_datasetrolling_methods(cls):
     func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
         name=func.__name__, da_or_ds='Dataset')
     setattr(cls, 'count', func)
+
+
+def inject_coarsen_methods(cls):
+    # standard numpy reduce methods
+    methods = [(name, getattr(duck_array_ops, name))
+               for name in NAN_REDUCE_METHODS]
+    for name, f in methods:
+        func = cls._reduce_method(f)
+        func.__name__ = name
+        func.__doc__ = _COARSEN_REDUCE_DOCSTRING_TEMPLATE.format(
+            name=func.__name__)
+        setattr(cls, name, func)

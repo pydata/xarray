@@ -1,11 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
+import os
+
 import numpy as np
 import pandas as pd
 
 import xarray as xr
 
-from . import randn, randint, requires_dask
+from . import randint, randn, requires_dask
 
 try:
     import dask
@@ -14,7 +16,10 @@ except ImportError:
     pass
 
 
-class IOSingleNetCDF(object):
+os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+
+
+class IOSingleNetCDF:
     """
     A few examples that benchmark reading/writing a single netCDF file with
     xarray
@@ -163,7 +168,7 @@ class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
         ds = ds.isel(**self.vinds).load()
 
     def time_load_dataset_netcdf4_with_block_chunks_multiprocessing(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_dataset(self.filepath, engine='netcdf4',
                             chunks=self.block_chunks).load()
 
@@ -172,7 +177,7 @@ class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
                         chunks=self.time_chunks).load()
 
     def time_load_dataset_netcdf4_with_time_chunks_multiprocessing(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_dataset(self.filepath, engine='netcdf4',
                             chunks=self.time_chunks).load()
 
@@ -189,7 +194,7 @@ class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
         self.ds.to_netcdf(self.filepath, format=self.format)
 
     def time_load_dataset_scipy_with_block_chunks(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_dataset(self.filepath, engine='scipy',
                             chunks=self.block_chunks).load()
 
@@ -204,12 +209,12 @@ class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
         ds = ds.isel(**self.vinds).load()
 
     def time_load_dataset_scipy_with_time_chunks(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_dataset(self.filepath, engine='scipy',
                             chunks=self.time_chunks).load()
 
 
-class IOMultipleNetCDF(object):
+class IOMultipleNetCDF:
     """
     A few examples that benchmark reading/writing multiple netCDF files with
     xarray
@@ -344,7 +349,7 @@ class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
                           chunks=self.block_chunks).load()
 
     def time_load_dataset_netcdf4_with_block_chunks_multiprocessing(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_mfdataset(self.filenames_list, engine='netcdf4',
                               chunks=self.block_chunks).load()
 
@@ -353,7 +358,7 @@ class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
                           chunks=self.time_chunks).load()
 
     def time_load_dataset_netcdf4_with_time_chunks_multiprocessing(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_mfdataset(self.filenames_list, engine='netcdf4',
                               chunks=self.time_chunks).load()
 
@@ -362,7 +367,7 @@ class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
                           chunks=self.block_chunks)
 
     def time_open_dataset_netcdf4_with_block_chunks_multiprocessing(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_mfdataset(self.filenames_list, engine='netcdf4',
                               chunks=self.block_chunks)
 
@@ -371,7 +376,7 @@ class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
                           chunks=self.time_chunks)
 
     def time_open_dataset_netcdf4_with_time_chunks_multiprocessing(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_mfdataset(self.filenames_list, engine='netcdf4',
                               chunks=self.time_chunks)
 
@@ -387,21 +392,57 @@ class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
                           format=self.format)
 
     def time_load_dataset_scipy_with_block_chunks(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_mfdataset(self.filenames_list, engine='scipy',
                               chunks=self.block_chunks).load()
 
     def time_load_dataset_scipy_with_time_chunks(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_mfdataset(self.filenames_list, engine='scipy',
                               chunks=self.time_chunks).load()
 
     def time_open_dataset_scipy_with_block_chunks(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_mfdataset(self.filenames_list, engine='scipy',
                               chunks=self.block_chunks)
 
     def time_open_dataset_scipy_with_time_chunks(self):
-        with dask.set_options(get=dask.multiprocessing.get):
+        with dask.config.set(scheduler="multiprocessing"):
             xr.open_mfdataset(self.filenames_list, engine='scipy',
                               chunks=self.time_chunks)
+
+
+def create_delayed_write():
+    import dask.array as da
+    vals = da.random.random(300, chunks=(1,))
+    ds = xr.Dataset({'vals': (['a'], vals)})
+    return ds.to_netcdf('file.nc', engine='netcdf4', compute=False)
+
+
+class IOWriteNetCDFDask:
+    timeout = 60
+    repeat = 1
+    number = 5
+
+    def setup(self):
+        requires_dask()
+        self.write = create_delayed_write()
+
+    def time_write(self):
+        self.write.compute()
+
+
+class IOWriteNetCDFDaskDistributed:
+    def setup(self):
+        try:
+            import distributed
+        except ImportError:
+            raise NotImplementedError
+        self.client = distributed.Client()
+        self.write = create_delayed_write()
+
+    def cleanup(self):
+        self.client.shutdown()
+
+    def time_write(self):
+        self.write.compute()

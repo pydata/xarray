@@ -11,11 +11,11 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
-  - numpy
-  - pandas
+  - pytest-env
+  - numpy>=1.12
+  - pandas>=0.19
   - scipy
   - seaborn
   - toolz
   - rasterio
   - zarr
-

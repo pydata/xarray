@@ -7,20 +7,14 @@ branches:
 environment:
 
   matrix:
-    - PYTHON: "C:\\Python27-conda32"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "32"
-      CONDA_ENV: "py27-windows"
-
-    - PYTHON: "C:\\Python27-conda64"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "64"
-      CONDA_ENV: "py27-windows"
-
     - PYTHON: "C:\\Python36-conda64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
       CONDA_ENV: "py36-windows"
+    - PYTHON: "C:\\Python37-conda64"
+      PYTHON_VERSION: "3.7"
+      PYTHON_ARCH: "64"
+      CONDA_ENV: "py37-windows"
 
 install:
   # Install miniconda Python
@@ -41,4 +35,4 @@ install:
 build: false
 
 test_script:
-  - "py.test xarray --verbose"
+  - "py.test xarray"

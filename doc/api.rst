@@ -87,6 +87,7 @@ Dataset contents
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop
+   Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
 
@@ -110,6 +111,8 @@ Indexing
    Dataset.isel
    Dataset.sel
    Dataset.squeeze
+   Dataset.interp
+   Dataset.interp_like
    Dataset.reindex
    Dataset.reindex_like
    Dataset.set_index
@@ -145,9 +148,12 @@ Computation
    Dataset.groupby
    Dataset.groupby_bins
    Dataset.rolling
+   Dataset.coarsen
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.differentiate
+   Dataset.integrate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -263,6 +269,8 @@ Indexing
    DataArray.isel
    DataArray.sel
    DataArray.squeeze
+   DataArray.interp
+   DataArray.interp_like
    DataArray.reindex
    DataArray.reindex_like
    DataArray.set_index
@@ -307,12 +315,15 @@ Computation
    DataArray.groupby
    DataArray.groupby_bins
    DataArray.rolling
+   DataArray.coarsen
    DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.differentiate
+   DataArray.integrate
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -371,7 +382,7 @@ Universal functions
 .. warning::
 
    With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obliviates the need
+   supported directly on all xarray and dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
    unless compatibility with versions of NumPy prior to v1.13 is required.
 
@@ -449,6 +460,7 @@ Dataset methods
    :toctree: generated/
 
    open_dataset
+   load_dataset
    open_mfdataset
    open_rasterio
    open_zarr
@@ -476,6 +488,7 @@ DataArray methods
    :toctree: generated/
 
    open_dataarray
+   load_dataarray
    DataArray.to_dataset
    DataArray.to_netcdf
    DataArray.to_pandas
@@ -551,6 +564,13 @@ Custom Indexes
 
    CFTimeIndex
 
+Creating custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   cftime_range
+
 Plotting
 ========
 
@@ -611,3 +631,6 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.FileManager
+   backends.CachingFileManager
+   backends.DummyFileManager

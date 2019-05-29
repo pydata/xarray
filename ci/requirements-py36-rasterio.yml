@@ -1,7 +1,6 @@
 name: test_env
 channels:
   - conda-forge
-  - conda-forge/label/dev
 dependencies:
   - python=3.6
   - cftime
@@ -12,14 +11,14 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
-  - numpy
-  - pandas
+  - pytest-cov
+  - pytest-env
+  - coveralls
+  - numpy>=1.12
+  - pandas>=0.19
   - scipy
   - seaborn
   - toolz
-  - rasterio>=1.*
+  - rasterio>=1.0
   - bottleneck
-  - pip:
-    - coveralls
-    - pytest-cov
-    - pydap
+  - pydap

@@ -1,17 +1,13 @@
-from __future__ import absolute_import, division, print_function
-
 import warnings
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 
 import numpy as np
 import pandas as pd
 
-from .coding import times, strings, variables
+from .coding import strings, times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
-from .core.pycompat import (
-    OrderedDict, basestring, bytes_type, iteritems, dask_array_type,
-    unicode_type)
+from .core.pycompat import dask_array_type
 from .core.variable import IndexVariable, Variable, as_variable
 
 
@@ -127,7 +123,7 @@ def _infer_dtype(array, name=None):
         return np.dtype(float)
 
     element = array[(0,) * array.ndim]
-    if isinstance(element, (bytes_type, unicode_type)):
+    if isinstance(element, (bytes, str)):
         return strings.create_vlen_dtype(type(element))
 
     dtype = np.array(element).dtype
@@ -244,7 +240,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
 
 def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
                        decode_times=True, decode_endianness=True,
-                       stack_char_dim=True):
+                       stack_char_dim=True, use_cftime=None):
     """
     Decodes a variable which may hold CF encoded information.
 
@@ -274,6 +270,16 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         Whether to stack characters into bytes along the last dimension of this
         array. Passed as an argument because we need to look at the full
         dataset to figure out if this is appropriate.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
@@ -296,7 +302,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
 
     if decode_times:
         for coder in [times.CFTimedeltaCoder(),
-                      times.CFDatetimeCoder()]:
+                      times.CFDatetimeCoder(use_cftime=use_cftime)]:
             var = coder.decode(var, name=name)
 
     dimensions, data, attributes, encoding = (
@@ -320,11 +326,40 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
     return Variable(dimensions, data, attributes, encoding=encoding)
 
 
+def _update_bounds_attributes(variables):
+    """Adds time attributes to time bounds variables.
+
+    Variables handling time bounds ("Cell boundaries" in the CF
+    conventions) do not necessarily carry the necessary attributes to be
+    decoded. This copies the attributes from the time variable to the
+    associated boundaries.
+
+    See Also:
+
+    http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
+         cf-conventions.html#cell-boundaries
+
+    https://github.com/pydata/xarray/issues/2565
+    """
+
+    # For all time variables with bounds
+    for v in variables.values():
+        attrs = v.attrs
+        has_date_units = 'units' in attrs and 'since' in attrs['units']
+        if has_date_units and 'bounds' in attrs:
+            if attrs['bounds'] in variables:
+                bounds_attrs = variables[attrs['bounds']].attrs
+                bounds_attrs.setdefault('units', attrs['units'])
+                if 'calendar' in attrs:
+                    bounds_attrs.setdefault('calendar', attrs['calendar'])
+
+
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
-                        decode_coords=True, drop_variables=None):
+                        decode_coords=True, drop_variables=None,
+                        use_cftime=None):
     """
-    Decode a several CF encoded variables.
+    Decode several CF encoded variables.
 
     See: decode_cf_variable
     """
@@ -344,14 +379,18 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
     coord_names = set()
 
-    if isinstance(drop_variables, basestring):
+    if isinstance(drop_variables, str):
         drop_variables = [drop_variables]
     elif drop_variables is None:
         drop_variables = []
     drop_variables = set(drop_variables)
 
+    # Time bounds coordinates might miss the decoding attributes
+    if decode_times:
+        _update_bounds_attributes(variables)
+
     new_vars = OrderedDict()
-    for k, v in iteritems(variables):
+    for k, v in variables.items():
         if k in drop_variables:
             continue
         stack_char_dim = (concat_characters and v.dtype == 'S1' and
@@ -359,7 +398,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         new_vars[k] = decode_cf_variable(
             k, v, concat_characters=concat_characters,
             mask_and_scale=mask_and_scale, decode_times=decode_times,
-            stack_char_dim=stack_char_dim)
+            stack_char_dim=stack_char_dim, use_cftime=use_cftime)
         if decode_coords:
             var_attrs = new_vars[k].attrs
             if 'coordinates' in var_attrs:
@@ -378,7 +417,8 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def decode_cf(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True, decode_coords=True, drop_variables=None):
+              decode_times=True, decode_coords=True, drop_variables=None,
+              use_cftime=None):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -402,6 +442,16 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
@@ -426,7 +476,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
 
     vars, attrs, coord_names = decode_cf_variables(
         vars, attrs, concat_characters, mask_and_scale, decode_times,
-        decode_coords, drop_variables=drop_variables)
+        decode_coords, drop_variables=drop_variables, use_cftime=use_cftime)
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
     ds._file_obj = file_obj
@@ -475,7 +525,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     non_dim_coord_names = set(non_dim_coord_names)
 
     for name in list(non_dim_coord_names):
-        if isinstance(name, basestring) and ' ' in name:
+        if isinstance(name, str) and ' ' in name:
             warnings.warn(
                 'coordinate {!r} has a space in its name, which means it '
                 'cannot be marked as a coordinate on disk and will be '
@@ -570,5 +620,5 @@ def cf_encoder(variables, attributes):
     See also: encode_cf_variable
     """
     new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
-                           for k, v in iteritems(variables))
+                           for k, v in variables.items())
     return new_vars, attributes

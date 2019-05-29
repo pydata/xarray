@@ -1,11 +1,12 @@
 name: test_env
 dependencies:
-  - python=2.7
+  - python=3.5.0
   - pytest
   - flake8
   - mock
-  - numpy==1.11
-  - pandas==0.18.0
+  - numpy=1.12
+  - pandas=0.19
   - pip:
-    - coveralls
+    - pytest-env
     - pytest-cov
+    - coveralls

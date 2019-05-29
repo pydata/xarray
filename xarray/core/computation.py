@@ -1,28 +1,35 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
-from __future__ import absolute_import, division, print_function
-from distutils.version import LooseVersion
 import functools
 import itertools
 import operator
-from collections import Counter
+import typing
+from collections import Counter, OrderedDict
+from distutils.version import LooseVersion
+from typing import (
+    AbstractSet, Any, Callable, Iterable, List, Mapping, Optional, Sequence,
+    Tuple, Union)
 
 import numpy as np
 
-from . import duck_array_ops, utils, dtypes
+from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, dask_array_type, basestring
+from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import is_dict_like
+from .variable import Variable
 
-_DEFAULT_FROZEN_SET = frozenset()
+if TYPE_CHECKING:
+    from .dataset import Dataset
+
+_DEFAULT_FROZEN_SET = frozenset()  # type: frozenset
 _NO_FILL_VALUE = utils.ReprObject('<no-fill-value>')
 _DEFAULT_NAME = utils.ReprObject('<default-name>')
 _JOINS_WITHOUT_FILL_VALUES = frozenset({'inner', 'exact'})
 
 
-class _UFuncSignature(object):
+class _UFuncSignature:
     """Core dimensions signature for a given function.
 
     Based on the signature provided by generalized ufuncs in NumPy.
@@ -110,8 +117,7 @@ class _UFuncSignature(object):
         return str(alt_signature)
 
 
-def result_name(objects):
-    # type: List[object] -> Any
+def result_name(objects: list) -> Any:
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
     names = {getattr(obj, 'name', _DEFAULT_NAME) for obj in objects}
@@ -137,10 +143,10 @@ def _get_coord_variables(args):
 
 
 def build_output_coords(
-        args,                      # type: list
-        signature,                 # type: _UFuncSignature
-        exclude_dims=frozenset(),  # type: set
-):
+    args: list,
+    signature: _UFuncSignature,
+    exclude_dims: AbstractSet = frozenset(),
+) -> 'List[OrderedDict[Any, Variable]]':
     """Build output coordinates for an operation.
 
     Parameters
@@ -158,7 +164,6 @@ def build_output_coords(
     -------
     OrderedDict of Variable objects with merged coordinates.
     """
-    # type: (...) -> List[OrderedDict[Any, Variable]]
     input_coords = _get_coord_variables(args)
 
     if exclude_dims:
@@ -186,24 +191,27 @@ def build_output_coords(
     return output_coords
 
 
-def apply_dataarray_ufunc(func, *args, **kwargs):
-    """apply_dataarray_ufunc(func, *args, signature, join='inner',
-                             exclude_dims=frozenset())
+def apply_dataarray_vfunc(
+    func,
+    *args,
+    signature,
+    join='inner',
+    exclude_dims=frozenset(),
+    keep_attrs=False
+):
+    """Apply a variable level function over DataArray, Variable and/or ndarray
+    objects.
     """
     from .dataarray import DataArray
-
-    signature = kwargs.pop('signature')
-    join = kwargs.pop('join', 'inner')
-    exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
-    if kwargs:
-        raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
-                        'arguments: %s' % list(kwargs))
 
     if len(args) > 1:
         args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
                           raise_on_invalid=False)
 
-    name = result_name(args)
+    if keep_attrs and hasattr(args[0], 'name'):
+        name = args[0].name
+    else:
+        name = result_name(args)
     result_coords = build_output_coords(args, signature, exclude_dims)
 
     data_vars = [getattr(a, 'variable', a) for a in args]
@@ -219,17 +227,15 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     return out
 
 
-def ordered_set_union(all_keys):
-    # type: List[Iterable] -> Iterable
-    result_dict = OrderedDict()
+def ordered_set_union(all_keys: List[Iterable]) -> Iterable:
+    result_dict = OrderedDict()  # type: OrderedDict[Any, None]
     for keys in all_keys:
         for key in keys:
             result_dict[key] = None
     return result_dict.keys()
 
 
-def ordered_set_intersection(all_keys):
-    # type: List[Iterable] -> Iterable
+def ordered_set_intersection(all_keys: List[Iterable]) -> Iterable:
     intersection = set(all_keys[0])
     for keys in all_keys[1:]:
         intersection.intersection_update(keys)
@@ -255,15 +261,19 @@ _JOINERS = {
 }
 
 
-def join_dict_keys(objects, how='inner'):
-    # type: (Iterable[Union[Mapping, Any]], str) -> Iterable
+def join_dict_keys(
+    objects: Iterable[Union[Mapping, Any]], how: str = 'inner',
+) -> Iterable:
     joiner = _JOINERS[how]
     all_keys = [obj.keys() for obj in objects if hasattr(obj, 'keys')]
     return joiner(all_keys)
 
 
-def collect_dict_values(objects, keys, fill_value=None):
-    # type: (Iterable[Union[Mapping, Any]], Iterable, Any) -> List[list]
+def collect_dict_values(
+    objects: Iterable[Union[Mapping, Any]],
+    keys: Iterable,
+    fill_value: object = None,
+) -> List[list]:
     return [[obj.get(key, fill_value)
              if is_dict_like(obj)
              else obj
@@ -282,28 +292,22 @@ def _as_variables_or_variable(arg):
 
 
 def _unpack_dict_tuples(
-        result_vars,  # type: Mapping[Any, Tuple[Variable]]
-        num_outputs,    # type: int
-):
-    # type: (...) -> Tuple[Dict[Any, Variable]]
-    out = tuple(OrderedDict() for _ in range(num_outputs))
+    result_vars: Mapping[Any, Tuple[Variable]],
+    num_outputs: int,
+) -> 'Tuple[OrderedDict[Any, Variable], ...]':
+    out = tuple(OrderedDict() for _ in range(num_outputs))  # type: ignore
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
     return out
 
 
-def apply_dict_of_variables_ufunc(func, *args, **kwargs):
-    """apply_dict_of_variables_ufunc(func, *args, signature, join='inner',
-                                     fill_value=None):
+def apply_dict_of_variables_vfunc(
+    func, *args, signature, join='inner', fill_value=None
+):
+    """Apply a variable level function over dicts of DataArray, DataArray,
+    Variable and ndarray objects.
     """
-    signature = kwargs.pop('signature')
-    join = kwargs.pop('join', 'inner')
-    fill_value = kwargs.pop('fill_value', None)
-    if kwargs:
-        raise TypeError('apply_dict_of_variables_ufunc() got unexpected '
-                        'keyword arguments: %s' % list(kwargs))
-
     args = [_as_variables_or_variable(arg) for arg in args]
     names = join_dict_keys(args, how=join)
     grouped_by_name = collect_dict_values(args, names, fill_value)
@@ -318,8 +322,10 @@ def apply_dict_of_variables_ufunc(func, *args, **kwargs):
         return result_vars
 
 
-def _fast_dataset(variables, coord_variables):
-    # type: (OrderedDict[Any, Variable], Mapping[Any, Variable]) -> Dataset
+def _fast_dataset(
+    variables: 'OrderedDict[Any, Variable]',
+    coord_variables: Mapping[Any, Variable],
+) -> 'Dataset':
     """Create a dataset as quickly as possible.
 
     Beware: the `variables` OrderedDict is modified INPLACE.
@@ -330,21 +336,20 @@ def _fast_dataset(variables, coord_variables):
     return Dataset._from_vars_and_coord_names(variables, coord_names)
 
 
-def apply_dataset_ufunc(func, *args, **kwargs):
-    """apply_dataset_ufunc(func, *args, signature, join='inner',
-                           dataset_join='inner', fill_value=None,
-                           exclude_dims=frozenset(), keep_attrs=False):
-
-       If dataset_join != 'inner', a non-default fill_value must be supplied
-       by the user.  Otherwise a TypeError is raised.
+def apply_dataset_vfunc(
+    func,
+    *args,
+    signature,
+    join='inner',
+    dataset_join='exact',
+    fill_value=_NO_FILL_VALUE,
+    exclude_dims=frozenset(),
+    keep_attrs=False
+):
+    """Apply a variable level function over Dataset, dict of DataArray,
+    DataArray, Variable and/or ndarray objects.
     """
     from .dataset import Dataset
-    signature = kwargs.pop('signature')
-    join = kwargs.pop('join', 'inner')
-    dataset_join = kwargs.pop('dataset_join', 'inner')
-    fill_value = kwargs.pop('fill_value', None)
-    exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
-    keep_attrs = kwargs.pop('keep_attrs', False)
     first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
 
     if (dataset_join not in _JOINS_WITHOUT_FILL_VALUES and
@@ -353,9 +358,6 @@ def apply_dataset_ufunc(func, *args, **kwargs):
                         'data variables with apply_ufunc, you must supply the '
                         'dataset_fill_value argument.')
 
-    if kwargs:
-        raise TypeError('apply_dataset_ufunc() got unexpected keyword '
-                        'arguments: %s' % list(kwargs))
     if len(args) > 1:
         args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
                           raise_on_invalid=False)
@@ -363,7 +365,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     list_of_coords = build_output_coords(args, signature, exclude_dims)
     args = [getattr(arg, 'data_vars', arg) for arg in args]
 
-    result_vars = apply_dict_of_variables_ufunc(
+    result_vars = apply_dict_of_variables_vfunc(
         func, *args, signature=signature, join=dataset_join,
         fill_value=fill_value)
 
@@ -397,7 +399,10 @@ def _iter_over_selections(obj, dim, values):
         yield obj_sel
 
 
-def apply_groupby_ufunc(func, *args):
+def apply_groupby_func(func, *args):
+    """Apply a dataset or datarray level function over GroupBy, Dataset,
+    DataArray, Variable and/or ndarray objects.
+    """
     from .groupby import GroupBy, peek_at
     from .variable import Variable
 
@@ -437,9 +442,12 @@ def apply_groupby_ufunc(func, *args):
     return combined
 
 
-def unified_dim_sizes(variables, exclude_dims=frozenset()):
-    # type: Iterable[Variable] -> OrderedDict[Any, int]
-    dim_sizes = OrderedDict()
+def unified_dim_sizes(
+    variables: Iterable[Variable],
+    exclude_dims: AbstractSet = frozenset()
+) -> 'OrderedDict[Any, int]':
+
+    dim_sizes = OrderedDict()  # type: OrderedDict[Any, int]
 
     for var in variables:
         if len(set(var.dims)) < len(var.dims):
@@ -459,11 +467,9 @@ def unified_dim_sizes(variables, exclude_dims=frozenset()):
 
 SLICE_NONE = slice(None)
 
-# A = TypeVar('A', numpy.ndarray, dask.array.Array)
-
 
 def broadcast_compat_data(variable, broadcast_dims, core_dims):
-    # type: (Variable[A], tuple, tuple) -> A
+    # type: (Variable, tuple, tuple) -> Any
     data = variable.data
 
     old_dims = variable.dims
@@ -510,20 +516,19 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
     return data
 
 
-def apply_variable_ufunc(func, *args, **kwargs):
-    """apply_variable_ufunc(func, *args, signature, exclude_dims=frozenset())
+def apply_variable_ufunc(
+    func,
+    *args,
+    signature,
+    exclude_dims=frozenset(),
+    dask='forbidden',
+    output_dtypes=None,
+    output_sizes=None,
+    keep_attrs=False
+):
+    """Apply a ndarray level function over Variable and/or ndarray objects.
     """
     from .variable import Variable, as_compatible_data
-
-    signature = kwargs.pop('signature')
-    exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
-    dask = kwargs.pop('dask', 'forbidden')
-    output_dtypes = kwargs.pop('output_dtypes', None)
-    output_sizes = kwargs.pop('output_sizes', None)
-    keep_attrs = kwargs.pop('keep_attrs', False)
-    if kwargs:
-        raise TypeError('apply_variable_ufunc() got unexpected keyword '
-                        'arguments: %s' % list(kwargs))
 
     dim_sizes = unified_dim_sizes((a for a in args if hasattr(a, 'dims')),
                                   exclude_dims=exclude_dims)
@@ -655,14 +660,8 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
                    new_axes=output_sizes)
 
 
-def apply_array_ufunc(func, *args, **kwargs):
-    """apply_array_ufunc(func, *args, dask='forbidden')
-    """
-    dask = kwargs.pop('dask', 'forbidden')
-    if kwargs:
-        raise TypeError('apply_array_ufunc() got unexpected keyword '
-                        'arguments: %s' % list(kwargs))
-
+def apply_array_ufunc(func, *args, dask='forbidden'):
+    """Apply a ndarray level function over ndarray objects."""
     if any(isinstance(arg, dask_array_type) for arg in args):
         if dask == 'forbidden':
             raise ValueError('apply_ufunc encountered a dask array on an '
@@ -681,23 +680,23 @@ def apply_array_ufunc(func, *args, **kwargs):
     return func(*args)
 
 
-def apply_ufunc(func, *args, **kwargs):
-    """apply_ufunc(func : Callable,
-                   *args : Any,
-                   input_core_dims : Optional[Sequence[Sequence]] = None,
-                   output_core_dims : Optional[Sequence[Sequence]] = ((),),
-                   exclude_dims : Collection = frozenset(),
-                   vectorize : bool = False,
-                   join : str = 'exact',
-                   dataset_join : str = 'exact',
-                   dataset_fill_value : Any = _NO_FILL_VALUE,
-                   keep_attrs : bool = False,
-                   kwargs : Mapping = None,
-                   dask : str = 'forbidden',
-                   output_dtypes : Optional[Sequence] = None,
-                   output_sizes : Optional[Mapping[Any, int]] = None)
-
-    Apply a vectorized function for unlabeled arrays on xarray objects.
+def apply_ufunc(
+    func: Callable,
+    *args: Any,
+    input_core_dims: Optional[Sequence[Sequence]] = None,
+    output_core_dims: Optional[Sequence[Sequence]] = ((),),
+    exclude_dims: AbstractSet = frozenset(),
+    vectorize: bool = False,
+    join: str = 'exact',
+    dataset_join: str = 'exact',
+    dataset_fill_value: object = _NO_FILL_VALUE,
+    keep_attrs: bool = False,
+    kwargs: Mapping = None,
+    dask: str = 'forbidden',
+    output_dtypes: Optional[Sequence] = None,
+    output_sizes: Optional[Mapping[Any, int]] = None
+) -> Any:
+    """Apply a vectorized function for unlabeled arrays on xarray objects.
 
     The function will be mapped over the data variable(s) of the input
     arguments using xarray's standard rules for labeled computation, including
@@ -901,24 +900,16 @@ def apply_ufunc(func, *args, **kwargs):
     from .dataarray import DataArray
     from .variable import Variable
 
-    input_core_dims = kwargs.pop('input_core_dims', None)
-    output_core_dims = kwargs.pop('output_core_dims', ((),))
-    vectorize = kwargs.pop('vectorize', False)
-    join = kwargs.pop('join', 'exact')
-    dataset_join = kwargs.pop('dataset_join', 'exact')
-    keep_attrs = kwargs.pop('keep_attrs', False)
-    exclude_dims = kwargs.pop('exclude_dims', frozenset())
-    dataset_fill_value = kwargs.pop('dataset_fill_value', _NO_FILL_VALUE)
-    kwargs_ = kwargs.pop('kwargs', None)
-    dask = kwargs.pop('dask', 'forbidden')
-    output_dtypes = kwargs.pop('output_dtypes', None)
-    output_sizes = kwargs.pop('output_sizes', None)
-    if kwargs:
-        raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
-                        % list(kwargs))
-
     if input_core_dims is None:
         input_core_dims = ((),) * (len(args))
+    elif len(input_core_dims) != len(args):
+        raise ValueError(
+            'input_core_dims must be None or a tuple with the length same to '
+            'the number of arguments. Given input_core_dims: {}, '
+            'number of args: {}.'.format(input_core_dims, len(args)))
+
+    if kwargs is None:
+        kwargs = {}
 
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 
@@ -926,8 +917,8 @@ def apply_ufunc(func, *args, **kwargs):
         raise ValueError('each dimension in `exclude_dims` must also be a '
                          'core dimension in the function signature')
 
-    if kwargs_:
-        func = functools.partial(func, **kwargs_)
+    if kwargs:
+        func = functools.partial(func, **kwargs)
 
     if vectorize:
         if signature.all_core_dims:
@@ -939,14 +930,11 @@ def apply_ufunc(func, *args, **kwargs):
                     'dimensions.')
             func = np.vectorize(func,
                                 otypes=output_dtypes,
-                                signature=signature.to_gufunc_string(),
-                                excluded=set(kwargs))
+                                signature=signature.to_gufunc_string())
         else:
-            func = np.vectorize(func,
-                                otypes=output_dtypes,
-                                excluded=set(kwargs))
+            func = np.vectorize(func, otypes=output_dtypes)
 
-    variables_ufunc = functools.partial(apply_variable_ufunc, func,
+    variables_vfunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,
                                         exclude_dims=exclude_dims,
                                         keep_attrs=keep_attrs,
@@ -955,7 +943,6 @@ def apply_ufunc(func, *args, **kwargs):
                                         output_sizes=output_sizes)
 
     if any(isinstance(a, GroupBy) for a in args):
-        # kwargs has already been added into func
         this_apply = functools.partial(apply_ufunc, func,
                                        input_core_dims=input_core_dims,
                                        output_core_dims=output_core_dims,
@@ -965,30 +952,29 @@ def apply_ufunc(func, *args, **kwargs):
                                        dataset_fill_value=dataset_fill_value,
                                        keep_attrs=keep_attrs,
                                        dask=dask)
-        return apply_groupby_ufunc(this_apply, *args)
+        return apply_groupby_func(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
-        return apply_dataset_ufunc(variables_ufunc, *args,
+        return apply_dataset_vfunc(variables_vfunc, *args,
                                    signature=signature,
                                    join=join,
                                    exclude_dims=exclude_dims,
-                                   fill_value=dataset_fill_value,
                                    dataset_join=dataset_join,
+                                   fill_value=dataset_fill_value,
                                    keep_attrs=keep_attrs)
     elif any(isinstance(a, DataArray) for a in args):
-        return apply_dataarray_ufunc(variables_ufunc, *args,
+        return apply_dataarray_vfunc(variables_vfunc, *args,
                                      signature=signature,
                                      join=join,
-                                     exclude_dims=exclude_dims)
+                                     exclude_dims=exclude_dims,
+                                     keep_attrs=keep_attrs)
     elif any(isinstance(a, Variable) for a in args):
-        return variables_ufunc(*args)
+        return variables_vfunc(*args)
     else:
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-def dot(*arrays, **kwargs):
-    """ dot(*arrays, dims=None)
-
-    Generalized dot product for xarray objects. Like np.einsum, but
+def dot(*arrays, dims=None, **kwargs):
+    """Generalized dot product for xarray objects. Like np.einsum, but
     provides a simpler interface based on array dimensions.
 
     Parameters
@@ -1024,8 +1010,6 @@ def dot(*arrays, **kwargs):
     from .dataarray import DataArray
     from .variable import Variable
 
-    dims = kwargs.pop('dims', None)
-
     if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError('Only xr.DataArray and xr.Variable are supported.'
                         'Given {}.'.format([type(arr) for arr in arrays]))
@@ -1033,7 +1017,7 @@ def dot(*arrays, **kwargs):
     if len(arrays) == 0:
         raise TypeError('At least one array should be given.')
 
-    if isinstance(dims, basestring):
+    if isinstance(dims, str):
         dims = (dims, )
 
     common_dims = set.intersection(*[set(arr.dims) for arr in arrays])

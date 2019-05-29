@@ -1,34 +1,33 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function
+from contextlib import suppress
 
 import numpy as np
 import pytest
 
 from xarray import Variable
-from xarray.core.pycompat import bytes_type, unicode_type, suppress
 from xarray.coding import strings
 from xarray.core import indexing
 
-from . import (IndexerMaker, assert_array_equal, assert_identical,
-               raises_regex, requires_dask)
-
+from . import (
+    IndexerMaker, assert_array_equal, assert_identical, raises_regex,
+    requires_dask)
 
 with suppress(ImportError):
     import dask.array as da
 
 
 def test_vlen_dtype():
-    dtype = strings.create_vlen_dtype(unicode_type)
-    assert dtype.metadata['element_type'] == unicode_type
+    dtype = strings.create_vlen_dtype(str)
+    assert dtype.metadata['element_type'] == str
     assert strings.is_unicode_dtype(dtype)
     assert not strings.is_bytes_dtype(dtype)
-    assert strings.check_vlen_dtype(dtype) is unicode_type
+    assert strings.check_vlen_dtype(dtype) is str
 
-    dtype = strings.create_vlen_dtype(bytes_type)
-    assert dtype.metadata['element_type'] == bytes_type
+    dtype = strings.create_vlen_dtype(bytes)
+    assert dtype.metadata['element_type'] == bytes
     assert not strings.is_unicode_dtype(dtype)
     assert strings.is_bytes_dtype(dtype)
-    assert strings.check_vlen_dtype(dtype) is bytes_type
+    assert strings.check_vlen_dtype(dtype) is bytes
 
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
@@ -36,12 +35,12 @@ def test_vlen_dtype():
 def test_EncodedStringCoder_decode():
     coder = strings.EncodedStringCoder()
 
-    raw_data = np.array([b'abc', u'ß∂µ∆'.encode('utf-8')])
+    raw_data = np.array([b'abc', 'ß∂µ∆'.encode('utf-8')])
     raw = Variable(('x',), raw_data, {'_Encoding': 'utf-8'})
     actual = coder.decode(raw)
 
     expected = Variable(
-        ('x',), np.array([u'abc', u'ß∂µ∆'], dtype=object))
+        ('x',), np.array(['abc', 'ß∂µ∆'], dtype=object))
     assert_identical(actual, expected)
 
     assert_identical(coder.decode(actual[0]), expected[0])
@@ -51,12 +50,12 @@ def test_EncodedStringCoder_decode():
 def test_EncodedStringCoder_decode_dask():
     coder = strings.EncodedStringCoder()
 
-    raw_data = np.array([b'abc', u'ß∂µ∆'.encode('utf-8')])
+    raw_data = np.array([b'abc', 'ß∂µ∆'.encode('utf-8')])
     raw = Variable(('x',), raw_data, {'_Encoding': 'utf-8'}).chunk()
     actual = coder.decode(raw)
     assert isinstance(actual.data, da.Array)
 
-    expected = Variable(('x',), np.array([u'abc', u'ß∂µ∆'], dtype=object))
+    expected = Variable(('x',), np.array(['abc', 'ß∂µ∆'], dtype=object))
     assert_identical(actual, expected)
 
     actual_indexed = coder.decode(actual[0])
@@ -65,8 +64,8 @@ def test_EncodedStringCoder_decode_dask():
 
 
 def test_EncodedStringCoder_encode():
-    dtype = strings.create_vlen_dtype(unicode_type)
-    raw_data = np.array([u'abc', u'ß∂µ∆'], dtype=dtype)
+    dtype = strings.create_vlen_dtype(str)
+    raw_data = np.array(['abc', 'ß∂µ∆'], dtype=dtype)
     expected_data = np.array([r.encode('utf-8') for r in raw_data],
                              dtype=object)
 
@@ -97,7 +96,7 @@ def test_CharacterArrayCoder_roundtrip(original):
 
 @pytest.mark.parametrize('data', [
     np.array([b'a', b'bc']),
-    np.array([b'a', b'bc'], dtype=strings.create_vlen_dtype(bytes_type)),
+    np.array([b'a', b'bc'], dtype=strings.create_vlen_dtype(bytes)),
 ])
 def test_CharacterArrayCoder_encode(data):
     coder = strings.CharacterArrayCoder()
@@ -106,6 +105,24 @@ def test_CharacterArrayCoder_encode(data):
     expected = Variable(('x', 'string2'),
                         np.array([[b'a', b''], [b'b', b'c']]))
     assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ['original', 'expected_char_dim_name'],
+    [
+        (Variable(('x',), [b'ab', b'cdef']),
+         'string4'),
+        (Variable(('x',), [b'ab', b'cdef'], encoding={'char_dim_name': 'foo'}),
+         'foo')
+    ]
+)
+def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name):
+    coder = strings.CharacterArrayCoder()
+    encoded = coder.encode(original)
+    roundtripped = coder.decode(encoded)
+    assert encoded.dims[-1] == expected_char_dim_name
+    assert roundtripped.encoding['char_dim_name'] == expected_char_dim_name
+    assert roundtripped.dims[-1] == original.dims[-1]
 
 
 def test_StackedBytesArray():

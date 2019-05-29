@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import itertools
 
 import numpy as np
@@ -8,15 +6,13 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
-from xarray.core.pycompat import native_int_types
 
-from . import (
-    IndexerMaker, ReturnItem, TestCase, assert_array_equal, raises_regex)
+from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
 
 B = IndexerMaker(indexing.BasicIndexer)
 
 
-class TestIndexers(TestCase):
+class TestIndexers:
     def set_to_zero(self, x, i):
         x = x.copy()
         x[i] = 0
@@ -25,7 +21,7 @@ class TestIndexers(TestCase):
     def test_expanded_indexer(self):
         x = np.random.randn(10, 11, 12, 13, 14)
         y = np.arange(5)
-        I = ReturnItem()  # noqa: E741  # allow ambiguous name
+        I = ReturnItem()  # noqa
         for i in [I[:], I[...], I[0, :, 10], I[..., 10], I[:5, ..., 0],
                   I[..., 0, :], I[y], I[y, y], I[..., y, y],
                   I[..., 0, 1, 2, 3, 4]]:
@@ -133,7 +129,7 @@ class TestIndexers(TestCase):
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
 
-class TestLazyArray(TestCase):
+class TestLazyArray:
     def test_slice_slice(self):
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
         for size in [100, 99]:
@@ -175,7 +171,7 @@ class TestLazyArray(TestCase):
                                           indexing.LazilyOuterIndexedArray)
 
                         # make sure actual.key is appropriate type
-                        if all(isinstance(k, native_int_types + (slice, ))
+                        if all(isinstance(k, (int, slice, ))
                                for k in v_lazy._data.key.tuple):
                             assert isinstance(v_lazy._data.key,
                                               indexing.BasicIndexer)
@@ -248,7 +244,7 @@ class TestLazyArray(TestCase):
         check_indexing(v_eager, v_lazy, indexers)
 
 
-class TestCopyOnWriteArray(TestCase):
+class TestCopyOnWriteArray:
     def test_setitem(self):
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
@@ -272,7 +268,7 @@ class TestCopyOnWriteArray(TestCase):
         assert np.array(x[B[0]][B[()]]) == 'foo'
 
 
-class TestMemoryCachedArray(TestCase):
+class TestMemoryCachedArray:
     def test_wrapper(self):
         original = indexing.LazilyOuterIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
@@ -341,7 +337,7 @@ def check_integer(indexer_cls):
 def check_slice(indexer_cls):
     (value,) = indexer_cls((slice(1, None, np.int64(2)),)).tuple
     assert value == slice(1, None, 2)
-    assert isinstance(value.step, native_int_types)
+    assert isinstance(value.step, int)
 
 
 def check_array1d(indexer_cls):
@@ -385,8 +381,9 @@ def test_vectorized_indexer():
                                     np.arange(5, dtype=np.int64)))
 
 
-class Test_vectorized_indexer(TestCase):
-    def setUp(self):
+class Test_vectorized_indexer:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.data = indexing.NumpyIndexingAdapter(np.random.randn(10, 12, 13))
         self.indexers = [np.array([[0, 3, 2], ]),
                          np.array([[0, 3, 3], [4, 6, 7]]),

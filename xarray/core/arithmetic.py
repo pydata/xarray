@@ -1,16 +1,14 @@
 """Base classes implementing arithmetic for xarray objects."""
-from __future__ import absolute_import, division, print_function
-
 import numbers
 
 import numpy as np
 
 from .options import OPTIONS
-from .pycompat import bytes_type, dask_array_type, unicode_type
+from .pycompat import dask_array_type
 from .utils import not_implemented
 
 
-class SupportsArithmetic(object):
+class SupportsArithmetic:
     """Base class for xarray types that support arithmetic.
 
     Used by Dataset, DataArray, Variable and GroupBy.
@@ -21,8 +19,8 @@ class SupportsArithmetic(object):
     # numpy.lib.mixins.NDArrayOperatorsMixin.
 
     # TODO: allow extending this with some sort of registration system
-    _HANDLED_TYPES = (np.ndarray, np.generic, numbers.Number, bytes_type,
-                      unicode_type) + dask_array_type
+    _HANDLED_TYPES = (np.ndarray, np.generic, numbers.Number, bytes,
+                      str) + dask_array_type
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         from .computation import apply_ufunc

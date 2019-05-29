@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import pytest
 
@@ -50,3 +48,39 @@ def test_result_type_dask_array():
 def test_inf(obj):
     assert dtypes.INF > obj
     assert dtypes.NINF < obj
+
+
+@pytest.mark.parametrize("kind, expected", [
+    ('a', (np.dtype('O'), 'nan')),  # dtype('S')
+    ('b', (np.float32, 'nan')),  # dtype('int8')
+    ('B', (np.float32, 'nan')),  # dtype('uint8')
+    ('c', (np.dtype('O'), 'nan')),  # dtype('S1')
+    ('D', (np.complex128, '(nan+nanj)')),  # dtype('complex128')
+    ('d', (np.float64, 'nan')),  # dtype('float64')
+    ('e', (np.float16, 'nan')),  # dtype('float16')
+    ('F', (np.complex64, '(nan+nanj)')),  # dtype('complex64')
+    ('f', (np.float32, 'nan')),  # dtype('float32')
+    ('h', (np.float32, 'nan')),  # dtype('int16')
+    ('H', (np.float32, 'nan')),  # dtype('uint16')
+    ('i', (np.float64, 'nan')),  # dtype('int32')
+    ('I', (np.float64, 'nan')),  # dtype('uint32')
+    ('l', (np.float64, 'nan')),  # dtype('int64')
+    ('L', (np.float64, 'nan')),  # dtype('uint64')
+    ('m', (np.timedelta64, 'NaT')),  # dtype('<m8')
+    ('M', (np.datetime64, 'NaT')),  # dtype('<M8')
+    ('O', (np.dtype('O'), 'nan')),  # dtype('O')
+    ('p', (np.float64, 'nan')),  # dtype('int64')
+    ('P', (np.float64, 'nan')),  # dtype('uint64')
+    ('q', (np.float64, 'nan')),  # dtype('int64')
+    ('Q', (np.float64, 'nan')),  # dtype('uint64')
+    ('S', (np.dtype('O'), 'nan')),  # dtype('S')
+    ('U', (np.dtype('O'), 'nan')),  # dtype('<U')
+    ('V', (np.dtype('O'), 'nan')),  # dtype('V')
+])
+def test_maybe_promote(kind, expected):
+    # 'g': np.float128 is not tested : not available on all platforms
+    # 'G': np.complex256 is not tested : not available on all platforms
+
+    actual = dtypes.maybe_promote(np.dtype(kind))
+    assert actual[0] == expected[0]
+    assert str(actual[1]) == expected[1]

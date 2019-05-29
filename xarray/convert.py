@@ -1,15 +1,15 @@
 """Functions for converting to and from xarray objects
 """
-from __future__ import absolute_import, division, print_function
+from collections import Counter, OrderedDict
 
 import numpy as np
+import pandas as pd
 
 from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from .conventions import decode_cf
 from .core import duck_array_ops
 from .core.dataarray import DataArray
 from .core.dtypes import get_fill_value
-from .core.pycompat import OrderedDict, range
 
 cdms2_ignored_attrs = {'name', 'tileIndex'}
 iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis',
@@ -38,15 +38,28 @@ def from_cdms2(variable):
     """
     values = np.asarray(variable)
     name = variable.id
-    coords = [(v.id, np.asarray(v),
-               _filter_attrs(v.attributes, cdms2_ignored_attrs))
-              for v in variable.getAxisList()]
+    dims = variable.getAxisIds()
+    coords = {}
+    for axis in variable.getAxisList():
+        coords[axis.id] = DataArray(
+            np.asarray(axis), dims=[axis.id],
+            attrs=_filter_attrs(axis.attributes, cdms2_ignored_attrs))
+    grid = variable.getGrid()
+    if grid is not None:
+        ids = [a.id for a in grid.getAxisList()]
+        for axis in grid.getLongitude(), grid.getLatitude():
+            if axis.id not in variable.getAxisIds():
+                coords[axis.id] = DataArray(
+                    np.asarray(axis[:]), dims=ids,
+                    attrs=_filter_attrs(axis.attributes,
+                                        cdms2_ignored_attrs))
     attrs = _filter_attrs(variable.attributes, cdms2_ignored_attrs)
-    dataarray = DataArray(values, coords=coords, name=name, attrs=attrs)
+    dataarray = DataArray(values, dims=dims, coords=coords, name=name,
+                          attrs=attrs)
     return decode_cf(dataarray.to_dataset())[dataarray.name]
 
 
-def to_cdms2(dataarray):
+def to_cdms2(dataarray, copy=True):
     """Convert a DataArray into a cdms2 variable
     """
     # we don't want cdms2 to be a hard dependency
@@ -56,6 +69,7 @@ def to_cdms2(dataarray):
         for k, v in attrs.items():
             setattr(var, k, v)
 
+    # 1D axes
     axes = []
     for dim in dataarray.dims:
         coord = encode(dataarray.coords[dim])
@@ -63,9 +77,42 @@ def to_cdms2(dataarray):
         set_cdms2_attrs(axis, coord.attrs)
         axes.append(axis)
 
+    # Data
     var = encode(dataarray)
-    cdms2_var = cdms2.createVariable(var.values, axes=axes, id=dataarray.name)
+    cdms2_var = cdms2.createVariable(var.values, axes=axes, id=dataarray.name,
+                                     mask=pd.isnull(var.values), copy=copy)
+
+    # Attributes
     set_cdms2_attrs(cdms2_var, var.attrs)
+
+    # Curvilinear and unstructured grids
+    if dataarray.name not in dataarray.coords:
+
+        cdms2_axes = OrderedDict()
+        for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
+
+            coord_array = dataarray.coords[coord_name].to_cdms2()
+
+            cdms2_axis_cls = (cdms2.coord.TransientAxis2D
+                              if coord_array.ndim else
+                              cdms2.auxcoord.TransientAuxAxis1D)
+            cdms2_axis = cdms2_axis_cls(coord_array)
+            if cdms2_axis.isLongitude():
+                cdms2_axes['lon'] = cdms2_axis
+            elif cdms2_axis.isLatitude():
+                cdms2_axes['lat'] = cdms2_axis
+
+        if 'lon' in cdms2_axes and 'lat' in cdms2_axes:
+            if len(cdms2_axes['lon'].shape) == 2:
+                cdms2_grid = cdms2.hgrid.TransientCurveGrid(
+                    cdms2_axes['lat'], cdms2_axes['lon'])
+            else:
+                cdms2_grid = cdms2.gengrid.AbstractGenericGrid(
+                    cdms2_axes['lat'], cdms2_axes['lon'])
+            for axis in cdms2_grid.getAxisList():
+                cdms2_var.setAxis(cdms2_var.getAxisIds().index(axis.id), axis)
+            cdms2_var.setGrid(cdms2_grid)
+
     return cdms2_var
 
 
@@ -107,8 +154,12 @@ def to_iris(dataarray):
         if coord.dims:
             axis = dataarray.get_axis_num(coord.dims)
         if coord_name in dataarray.dims:
-            iris_coord = iris.coords.DimCoord(coord.values, **coord_args)
-            dim_coords.append((iris_coord, axis))
+            try:
+                iris_coord = iris.coords.DimCoord(coord.values, **coord_args)
+                dim_coords.append((iris_coord, axis))
+            except ValueError:
+                iris_coord = iris.coords.AuxCoord(coord.values, **coord_args)
+                aux_coords.append((iris_coord, axis))
         else:
             iris_coord = iris.coords.AuxCoord(coord.values, **coord_args)
             aux_coords.append((iris_coord, axis))
@@ -134,7 +185,7 @@ def _iris_obj_to_attrs(obj):
              'long_name': obj.long_name}
     if obj.units.calendar:
         attrs['calendar'] = obj.units.calendar
-    if obj.units.origin != '1':
+    if obj.units.origin != '1' and not obj.units.is_unknown():
         attrs['units'] = obj.units.origin
     attrs.update(obj.attributes)
     return dict((k, v) for k, v in attrs.items() if v is not None)
@@ -157,34 +208,46 @@ def _iris_cell_methods_to_str(cell_methods_obj):
     return ' '.join(cell_methods)
 
 
+def _name(iris_obj, default='unknown'):
+    """ Mimicks `iris_obj.name()` but with different name resolution order.
+
+    Similar to iris_obj.name() method, but using iris_obj.var_name first to
+    enable roundtripping.
+    """
+    return (iris_obj.var_name or iris_obj.standard_name or
+            iris_obj.long_name or default)
+
+
 def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
     from xarray.core.pycompat import dask_array_type
 
-    name = cube.var_name
+    name = _name(cube)
+    if name == 'unknown':
+        name = None
     dims = []
     for i in range(cube.ndim):
         try:
             dim_coord = cube.coord(dim_coords=True, dimensions=(i,))
-            dims.append(dim_coord.var_name)
+            dims.append(_name(dim_coord))
         except iris.exceptions.CoordinateNotFoundError:
             dims.append("dim_{}".format(i))
+
+    if len(set(dims)) != len(dims):
+        duplicates = [k for k, v in Counter(dims).items() if v > 1]
+        raise ValueError('Duplicate coordinate name {}.'.format(duplicates))
 
     coords = OrderedDict()
 
     for coord in cube.coords():
         coord_attrs = _iris_obj_to_attrs(coord)
         coord_dims = [dims[i] for i in cube.coord_dims(coord)]
-        if not coord.var_name:
-            raise ValueError("Coordinate '{}' has no "
-                             "var_name attribute".format(coord.name()))
         if coord_dims:
-            coords[coord.var_name] = (coord_dims, coord.points, coord_attrs)
+            coords[_name(coord)] = (coord_dims, coord.points, coord_attrs)
         else:
-            coords[coord.var_name] = ((),
-                                      np.asscalar(coord.points), coord_attrs)
+            coords[_name(coord)] = ((), coord.points.item(), coord_attrs)
 
     array_attrs = _iris_obj_to_attrs(cube)
     cell_methods = _iris_cell_methods_to_str(cube.cell_methods)

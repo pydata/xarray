@@ -1,9 +1,7 @@
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import pandas as pd
 
-from .common import is_np_datetime_like, _contains_datetime_like_objects
+from .common import _contains_datetime_like_objects, is_np_datetime_like
 from .pycompat import dask_array_type
 
 
@@ -112,7 +110,7 @@ def _round_field(values, name, freq):
         return _round_series(values, name, freq)
 
 
-class DatetimeAccessor(object):
+class DatetimeAccessor:
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
      Similar to pandas, fields can be accessed through the `.dt` attribute

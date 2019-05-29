@@ -1,6 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
-from distutils.version import LooseVersion
 import pickle
 
 import numpy as np
@@ -9,14 +6,9 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 
-from . import (
-    assert_array_equal, assert_identical as assert_identical_, mock,
-    raises_regex,
-)
-
-
-requires_numpy113 = pytest.mark.skipif(LooseVersion(np.__version__) < '1.13',
-                                       reason='numpy 1.13 or newer required')
+from . import assert_array_equal
+from . import assert_identical as assert_identical_
+from . import mock, raises_regex, requires_np113
 
 
 def assert_identical(a, b):
@@ -27,7 +19,7 @@ def assert_identical(a, b):
         assert_array_equal(a, b)
 
 
-@requires_numpy113
+@requires_np113
 def test_unary():
     args = [0,
             np.zeros(2),
@@ -38,7 +30,7 @@ def test_unary():
         assert_identical(a + 1, np.cos(a))
 
 
-@requires_numpy113
+@requires_np113
 def test_binary():
     args = [0,
             np.zeros(2),
@@ -53,7 +45,7 @@ def test_binary():
             assert_identical(t2 + 1, np.maximum(t2 + 1, t1))
 
 
-@requires_numpy113
+@requires_np113
 def test_binary_out():
     args = [1,
             np.ones(2),
@@ -66,7 +58,7 @@ def test_binary_out():
         assert_identical(actual_exponent, arg)
 
 
-@requires_numpy113
+@requires_np113
 def test_groupby():
     ds = xr.Dataset({'a': ('x', [0, 0, 0])}, {'c': ('x', [0, 0, 1])})
     ds_grouped = ds.groupby('c')
@@ -89,7 +81,7 @@ def test_groupby():
         np.maximum(ds.a.variable, ds_grouped)
 
 
-@requires_numpy113
+@requires_np113
 def test_alignment():
     ds1 = xr.Dataset({'a': ('x', [1, 2])}, {'x': [0, 1]})
     ds2 = xr.Dataset({'a': ('x', [2, 3]), 'b': 4}, {'x': [1, 2]})
@@ -105,17 +97,17 @@ def test_alignment():
         assert_identical_(actual, expected)
 
 
-@requires_numpy113
+@requires_np113
 def test_kwargs():
     x = xr.DataArray(0)
     result = np.add(x, 1, dtype=np.float64)
     assert result.dtype == np.float64
 
 
-@requires_numpy113
+@requires_np113
 def test_xarray_defers_to_unrecognized_type():
 
-    class Other(object):
+    class Other:
         def __array_ufunc__(self, *args, **kwargs):
             return 'other'
 
@@ -125,7 +117,7 @@ def test_xarray_defers_to_unrecognized_type():
     assert np.sin(xarray_obj, out=other) == 'other'
 
 
-@requires_numpy113
+@requires_np113
 def test_xarray_handles_dask():
     da = pytest.importorskip('dask.array')
     x = xr.DataArray(np.ones((2, 2)), dims=['x', 'y'])
@@ -135,7 +127,7 @@ def test_xarray_handles_dask():
     assert isinstance(result, xr.DataArray)
 
 
-@requires_numpy113
+@requires_np113
 def test_dask_defers_to_xarray():
     da = pytest.importorskip('dask.array')
     x = xr.DataArray(np.ones((2, 2)), dims=['x', 'y'])
@@ -145,14 +137,14 @@ def test_dask_defers_to_xarray():
     assert isinstance(result, xr.DataArray)
 
 
-@requires_numpy113
+@requires_np113
 def test_gufunc_methods():
     xarray_obj = xr.DataArray([1, 2, 3])
     with raises_regex(NotImplementedError, 'reduce method'):
         np.add.reduce(xarray_obj, 1)
 
 
-@requires_numpy113
+@requires_np113
 def test_out():
     xarray_obj = xr.DataArray([1, 2, 3])
 
@@ -166,7 +158,7 @@ def test_out():
     assert_identical(other, np.array([1, 2, 3]))
 
 
-@requires_numpy113
+@requires_np113
 def test_gufuncs():
     xarray_obj = xr.DataArray([1, 2, 3])
     fake_gufunc = mock.Mock(signature='(n)->()', autospec=np.sin)
@@ -178,7 +170,43 @@ def test_xarray_ufuncs_deprecation():
     with pytest.warns(PendingDeprecationWarning, match='xarray.ufuncs'):
         xu.cos(xr.DataArray([0, 1]))
 
+    with pytest.warns(None) as record:
+        xu.angle(xr.DataArray([0, 1]))
+    record = [el.message for el in record
+              if el.category == PendingDeprecationWarning]
+    assert len(record) == 0
 
+
+@requires_np113
+@pytest.mark.filterwarnings('ignore::RuntimeWarning')
+@pytest.mark.parametrize(
+    'name',
+    [name for name in dir(xu)
+        if (not name.startswith('_') and hasattr(np, name)
+            and name not in ['print_function', 'absolute_import', 'division'])]
+)
+def test_numpy_ufuncs(name, request):
+    x = xr.DataArray([1, 1])
+
+    np_func = getattr(np, name)
+    if hasattr(np_func, 'nin') and np_func.nin == 2:
+        args = (x, x)
+    else:
+        args = (x,)
+
+    y = np_func(*args)
+
+    if name in ['angle', 'iscomplex']:
+        # these functions need to be handled with __array_function__ protocol
+        assert isinstance(y, np.ndarray)
+    elif name in ['frexp']:
+        # np.frexp returns a tuple
+        assert not isinstance(y, xr.DataArray)
+    else:
+        assert isinstance(y, xr.DataArray)
+
+
+@pytest.mark.filterwarnings("ignore:xarray.ufuncs")
 def test_xarray_ufuncs_pickle():
     a = 1.0
     cos_pickled = pickle.loads(pickle.dumps(xu.cos))

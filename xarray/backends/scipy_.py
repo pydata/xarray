@@ -1,7 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
-import functools
 import warnings
+from collections import OrderedDict
 from distutils.version import LooseVersion
 from io import BytesIO
 
@@ -9,9 +7,10 @@ import numpy as np
 
 from .. import Variable
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.pycompat import OrderedDict, basestring, iteritems
 from ..core.utils import Frozen, FrozenOrderedDict
-from .common import BackendArray, DataStorePickleMixin, WritableCFDataStore
+from .common import BackendArray, WritableCFDataStore
+from .file_manager import CachingFileManager, DummyFileManager
+from .locks import ensure_lock, get_write_lock
 from .netcdf3 import (
     encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
 
@@ -26,7 +25,7 @@ def _decode_attrs(d):
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
     return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
-                       for (k, v) in iteritems(d))
+                       for (k, v) in d.items())
 
 
 class ScipyArrayWrapper(BackendArray):
@@ -34,29 +33,26 @@ class ScipyArrayWrapper(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
-        array = self.get_array()
+        array = self.get_variable().data
         self.shape = array.shape
         self.dtype = np.dtype(array.dtype.kind +
                               str(array.dtype.itemsize))
 
-    def get_array(self):
-        self.datastore.assert_open()
-        return self.datastore.ds.variables[self.variable_name].data
+    def get_variable(self, needs_lock=True):
+        ds = self.datastore._manager.acquire(needs_lock)
+        return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        with self.datastore.ensure_open(autoclose=True):
-            data = NumpyIndexingAdapter(self.get_array())[key]
-            # Copy data if the source file is mmapped.
-            # This makes things consistent
-            # with the netCDF4 library by ensuring
-            # we can safely read arrays even
-            # after closing associated files.
-            copy = self.datastore.ds.use_mmap
-            return np.array(data, dtype=self.dtype, copy=copy)
+        data = NumpyIndexingAdapter(self.get_variable().data)[key]
+        # Copy data if the source file is mmapped. This makes things consistent
+        # with the netCDF4 library by ensuring we can safely read arrays even
+        # after closing associated files.
+        copy = self.datastore.ds.use_mmap
+        return np.array(data, dtype=self.dtype, copy=copy)
 
     def __setitem__(self, key, value):
-        with self.datastore.ensure_open(autoclose=True):
-            data = self.datastore.ds.variables[self.variable_name]
+        with self.datastore.lock:
+            data = self.get_variable(needs_lock=False)
             try:
                 data[key] = value
             except TypeError:
@@ -72,7 +68,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
     import gzip
 
     # if the string ends with .gz, then gunzip and open as netcdf file
-    if isinstance(filename, basestring) and filename.endswith('.gz'):
+    if isinstance(filename, str) and filename.endswith('.gz'):
         try:
             return scipy.io.netcdf_file(gzip.open(filename), mode=mode,
                                         mmap=mmap, version=version)
@@ -106,7 +102,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
             raise
 
 
-class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
+class ScipyDataStore(WritableCFDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
 
     This store has the advantage of being able to be initialized with a
@@ -116,7 +112,7 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     """
 
     def __init__(self, filename_or_obj, mode='r', format=None, group=None,
-                 writer=None, mmap=None, autoclose=False, lock=None):
+                 mmap=None, lock=None):
         import scipy
         import scipy.io
 
@@ -140,34 +136,40 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             raise ValueError('invalid format for scipy.io.netcdf backend: %r'
                              % format)
 
-        opener = functools.partial(_open_scipy_netcdf,
-                                   filename=filename_or_obj,
-                                   mode=mode, mmap=mmap, version=version)
-        self._ds = opener()
-        self._autoclose = autoclose
-        self._isopen = True
-        self._opener = opener
-        self._mode = mode
+        if (lock is None and mode != 'r' and
+                isinstance(filename_or_obj, str)):
+            lock = get_write_lock(filename_or_obj)
 
-        super(ScipyDataStore, self).__init__(writer, lock=lock)
+        self.lock = ensure_lock(lock)
+
+        if isinstance(filename_or_obj, str):
+            manager = CachingFileManager(
+                _open_scipy_netcdf, filename_or_obj, mode=mode, lock=lock,
+                kwargs=dict(mmap=mmap, version=version))
+        else:
+            scipy_dataset = _open_scipy_netcdf(
+                filename_or_obj, mode=mode, mmap=mmap, version=version)
+            manager = DummyFileManager(scipy_dataset)
+
+        self._manager = manager
+
+    @property
+    def ds(self):
+        return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        with self.ensure_open(autoclose=False):
-            return Variable(var.dimensions, ScipyArrayWrapper(name, self),
-                            _decode_attrs(var._attributes))
+        return Variable(var.dimensions, ScipyArrayWrapper(name, self),
+                        _decode_attrs(var._attributes))
 
     def get_variables(self):
-        with self.ensure_open(autoclose=False):
-            return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                     for k, v in iteritems(self.ds.variables))
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
-        with self.ensure_open(autoclose=True):
-            return Frozen(_decode_attrs(self.ds._attributes))
+        return Frozen(_decode_attrs(self.ds._attributes))
 
     def get_dimensions(self):
-        with self.ensure_open(autoclose=True):
-            return Frozen(self.ds.dimensions)
+        return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
         encoding = {}
@@ -176,22 +178,20 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
-        with self.ensure_open(autoclose=False):
-            if name in self.ds.dimensions:
-                raise ValueError('%s does not support modifying dimensions'
-                                 % type(self).__name__)
-            dim_length = length if not is_unlimited else None
-            self.ds.createDimension(name, dim_length)
+        if name in self.ds.dimensions:
+            raise ValueError('%s does not support modifying dimensions'
+                             % type(self).__name__)
+        dim_length = length if not is_unlimited else None
+        self.ds.createDimension(name, dim_length)
 
     def _validate_attr_key(self, key):
         if not is_valid_nc3_name(key):
             raise ValueError("Not a valid attribute name")
 
     def set_attribute(self, key, value):
-        with self.ensure_open(autoclose=False):
-            self._validate_attr_key(key)
-            value = encode_nc3_attr_value(value)
-            setattr(self.ds, key, value)
+        self._validate_attr_key(key)
+        value = encode_nc3_attr_value(value)
+        setattr(self.ds, key, value)
 
     def encode_variable(self, variable):
         variable = encode_nc3_variable(variable)
@@ -211,7 +211,7 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         if name not in self.ds.variables:
             self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
-        for k, v in iteritems(variable.attrs):
+        for k, v in variable.attrs.items():
             self._validate_attr_key(k)
             setattr(scipy_var, k, v)
 
@@ -219,27 +219,8 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
 
         return target, data
 
-    def sync(self, compute=True):
-        if not compute:
-            raise NotImplementedError(
-                'compute=False is not supported for the scipy backend yet')
-        with self.ensure_open(autoclose=True):
-            super(ScipyDataStore, self).sync(compute=compute)
-            self.ds.flush()
+    def sync(self):
+        self.ds.sync()
 
     def close(self):
-        self.ds.close()
-        self._isopen = False
-
-    def __exit__(self, type, value, tb):
-        self.close()
-
-    def __setstate__(self, state):
-        filename = state['_opener'].keywords['filename']
-        if hasattr(filename, 'seek'):
-            # it's a file-like object
-            # seek to the start of the file so scipy can read it
-            filename.seek(0)
-        super(ScipyDataStore, self).__setstate__(state)
-        self._ds = None
-        self._isopen = False
+        self._manager.close()

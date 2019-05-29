@@ -5,13 +5,12 @@ Useful for:
 * building tutorials in the documentation.
 
 '''
-from __future__ import absolute_import, division, print_function
-
 import hashlib
 import os as _os
+import warnings
+from urllib.request import urlretrieve
 
 from .backends.api import open_dataset as _open_dataset
-from .core.pycompat import urlretrieve as _urlretrieve
 
 _default_cache_dir = _os.sep.join(('~', '.xarray_tutorial_data'))
 
@@ -24,11 +23,11 @@ def file_md5_checksum(fname):
 
 
 # idea borrowed from Seaborn
-def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
+def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
                  github_url='https://github.com/pydata/xarray-data',
                  branch='master', **kws):
     """
-    Load a dataset from the online repository (requires internet).
+    Open a dataset from the online repository (requires internet).
 
     If a local copy is found then always use that to avoid network traffic.
 
@@ -48,6 +47,10 @@ def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
     kws : dict, optional
         Passed to xarray.open_dataset
 
+    See Also
+    --------
+    xarray.open_dataset
+
     """
     longdir = _os.path.expanduser(cache_dir)
     fullname = name + '.nc'
@@ -63,9 +66,9 @@ def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
             _os.mkdir(longdir)
 
         url = '/'.join((github_url, 'raw', branch, fullname))
-        _urlretrieve(url, localfile)
+        urlretrieve(url, localfile)
         url = '/'.join((github_url, 'raw', branch, md5name))
-        _urlretrieve(url, md5file)
+        urlretrieve(url, md5file)
 
         localmd5 = file_md5_checksum(localfile)
         with open(md5file, 'r') as f:
@@ -77,9 +80,23 @@ def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
             """
             raise IOError(msg)
 
-    ds = _open_dataset(localfile, **kws).load()
+    ds = _open_dataset(localfile, **kws)
 
     if not cache:
+        ds = ds.load()
         _os.remove(localfile)
 
     return ds
+
+
+def load_dataset(*args, **kwargs):
+    """
+    Open, load into memory, and close a dataset from the online repository
+    (requires internet).
+
+    See Also
+    --------
+    open_dataset
+    """
+    with open_dataset(*args, **kwargs) as ds:
+        return ds.load()

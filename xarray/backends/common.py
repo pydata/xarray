@@ -1,83 +1,22 @@
-from __future__ import absolute_import, division, print_function
-
-import contextlib
 import logging
-import multiprocessing
-import threading
 import time
 import traceback
 import warnings
-from collections import Mapping, OrderedDict
+from collections import OrderedDict
+from collections.abc import Mapping
 
 import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
-from ..core.pycompat import dask_array_type, iteritems
+from ..core.pycompat import dask_array_type
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
-
-# Import default lock
-try:
-    from dask.utils import SerializableLock
-    HDF5_LOCK = SerializableLock()
-except ImportError:
-    HDF5_LOCK = threading.Lock()
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = '__values__'
-
-
-def get_scheduler(get=None, collection=None):
-    """ Determine the dask scheduler that is being used.
-
-    None is returned if not dask scheduler is active.
-
-    See also
-    --------
-    dask.utils.effective_get
-    """
-    try:
-        from dask.utils import effective_get
-        actual_get = effective_get(get, collection)
-        try:
-            from dask.distributed import Client
-            if isinstance(actual_get.__self__, Client):
-                return 'distributed'
-        except (ImportError, AttributeError):
-            try:
-                import dask.multiprocessing
-                if actual_get == dask.multiprocessing.get:
-                    return 'multiprocessing'
-                else:
-                    return 'threaded'
-            except ImportError:
-                return 'threaded'
-    except ImportError:
-        return None
-
-
-def get_scheduler_lock(scheduler, path_or_file=None):
-    """ Get the appropriate lock for a certain situation based onthe dask
-       scheduler used.
-
-    See Also
-    --------
-    dask.utils.get_scheduler_lock
-    """
-
-    if scheduler == 'distributed':
-        from dask.distributed import Lock
-        return Lock(path_or_file)
-    elif scheduler == 'multiprocessing':
-        return multiprocessing.Lock()
-    elif scheduler == 'threaded':
-        from dask.utils import SerializableLock
-        return SerializableLock()
-    else:
-        return threading.Lock()
 
 
 def _encode_variable_name(name):
@@ -126,39 +65,6 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
             time.sleep(1e-3 * next_delay)
 
 
-class CombinedLock(object):
-    """A combination of multiple locks.
-
-    Like a locked door, a CombinedLock is locked if any of its constituent
-    locks are locked.
-    """
-
-    def __init__(self, locks):
-        self.locks = tuple(set(locks))  # remove duplicates
-
-    def acquire(self, *args):
-        return all(lock.acquire(*args) for lock in self.locks)
-
-    def release(self, *args):
-        for lock in self.locks:
-            lock.release(*args)
-
-    def __enter__(self):
-        for lock in self.locks:
-            lock.__enter__()
-
-    def __exit__(self, *args):
-        for lock in self.locks:
-            lock.__exit__(*args)
-
-    @property
-    def locked(self):
-        return any(lock.locked for lock in self.locks)
-
-    def __repr__(self):
-        return "CombinedLock(%r)" % list(self.locks)
-
-
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
     def __array__(self, dtype=None):
@@ -167,9 +73,6 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
 
 class AbstractDataStore(Mapping):
-    _autoclose = None
-    _ds = None
-    _isopen = False
 
     def __iter__(self):
         return iter(self.variables)
@@ -205,9 +108,9 @@ class AbstractDataStore(Mapping):
                 def load(self):
                     variables, attributes = AbstractDataStore.load(self)
                     variables = {'%s_suffix' % k: v
-                                 for k, v in iteritems(variables)}
+                                 for k, v in variables.items()}
                     attributes = {'%s_suffix' % k: v
-                                  for k, v in iteritems(attributes)}
+                                  for k, v in attributes.items()}
                     return variables, attributes
 
         This function will be called anytime variables or attributes
@@ -251,8 +154,8 @@ class AbstractDataStore(Mapping):
         self.close()
 
 
-class ArrayWriter(object):
-    def __init__(self, lock=HDF5_LOCK):
+class ArrayWriter:
+    def __init__(self, lock=None):
         self.sources = []
         self.targets = []
         self.lock = lock
@@ -267,6 +170,9 @@ class ArrayWriter(object):
     def sync(self, compute=True):
         if self.sources:
             import dask.array as da
+            # TODO: consider wrapping targets with dask.delayed, if this makes
+            # for any discernable difference in perforance, e.g.,
+            # targets = [dask.delayed(t) for t in self.targets]
             delayed_store = da.store(self.sources, self.targets,
                                      lock=self.lock, compute=compute,
                                      flush=True)
@@ -276,11 +182,6 @@ class ArrayWriter(object):
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-    def __init__(self, writer=None, lock=HDF5_LOCK):
-        if writer is None:
-            writer = ArrayWriter(lock=lock)
-        self.writer = writer
-        self.delayed_store = None
 
     def encode(self, variables, attributes):
         """
@@ -322,12 +223,6 @@ class AbstractWritableDataStore(AbstractDataStore):
     def set_variable(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
-    def sync(self, compute=True):
-        if self._isopen and self._autoclose:
-            # datastore will be reopened during write
-            self.close()
-        self.delayed_store = self.writer.sync(compute=compute)
-
     def store_dataset(self, dataset):
         """
         in stores, variables are all variables AND coordinates
@@ -338,7 +233,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         self.store(dataset, dataset.attrs)
 
     def store(self, variables, attributes, check_encoding_set=frozenset(),
-              unlimited_dims=None):
+              writer=None, unlimited_dims=None):
         """
         Top level method for putting data on this store, this method:
           - encodes variables/attributes
@@ -354,16 +249,19 @@ class AbstractWritableDataStore(AbstractDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
+        writer : ArrayWriter
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
         """
+        if writer is None:
+            writer = ArrayWriter()
 
         variables, attributes = self.encode(variables, attributes)
 
         self.set_attributes(attributes)
         self.set_dimensions(variables, unlimited_dims=unlimited_dims)
-        self.set_variables(variables, check_encoding_set,
+        self.set_variables(variables, check_encoding_set, writer,
                            unlimited_dims=unlimited_dims)
 
     def set_attributes(self, attributes):
@@ -376,10 +274,10 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes : dict-like
             Dictionary of key/value (attribute name / attribute) pairs
         """
-        for k, v in iteritems(attributes):
+        for k, v in attributes.items():
             self.set_attribute(k, v)
 
-    def set_variables(self, variables, check_encoding_set,
+    def set_variables(self, variables, check_encoding_set, writer,
                       unlimited_dims=None):
         """
         This provides a centralized method to set the variables on the data
@@ -392,18 +290,19 @@ class AbstractWritableDataStore(AbstractDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
+        writer : ArrayWriter
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
         """
 
-        for vn, v in iteritems(variables):
+        for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
             target, source = self.prepare_variable(
                 name, v, check, unlimited_dims=unlimited_dims)
 
-            self.writer.add(source, target)
+            writer.add(source, target)
 
     def set_dimensions(self, variables, unlimited_dims=None):
         """
@@ -450,60 +349,3 @@ class WritableCFDataStore(AbstractWritableDataStore):
         attributes = OrderedDict([(k, self.encode_attribute(v))
                                   for k, v in attributes.items()])
         return variables, attributes
-
-
-class DataStorePickleMixin(object):
-    """Subclasses must define `ds`, `_opener` and `_mode` attributes.
-
-    Do not subclass this class: it is not part of xarray's external API.
-    """
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        del state['_ds']
-        del state['_isopen']
-        if self._mode == 'w':
-            # file has already been created, don't override when restoring
-            state['_mode'] = 'a'
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self._ds = None
-        self._isopen = False
-
-    @property
-    def ds(self):
-        if self._ds is not None and self._isopen:
-            return self._ds
-        ds = self._opener(mode=self._mode)
-        self._isopen = True
-        return ds
-
-    @contextlib.contextmanager
-    def ensure_open(self, autoclose=None):
-        """
-        Helper function to make sure datasets are closed and opened
-        at appropriate times to avoid too many open file errors.
-
-        Use requires `autoclose=True` argument to `open_mfdataset`.
-        """
-
-        if autoclose is None:
-            autoclose = self._autoclose
-
-        if not self._isopen:
-            try:
-                self._ds = self._opener()
-                self._isopen = True
-                yield
-            finally:
-                if autoclose:
-                    self.close()
-        else:
-            yield
-
-    def assert_open(self):
-        if not self._isopen:
-            raise AssertionError('internal failure: file must be open '
-                                 'if `autoclose=True` is used.')

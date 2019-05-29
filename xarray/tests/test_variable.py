@@ -1,36 +1,32 @@
-
-from __future__ import absolute_import, division, print_function
-
-from collections import namedtuple
+import warnings
+from collections import OrderedDict
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from textwrap import dedent
-import warnings
 
 import numpy as np
 import pandas as pd
 import pytest
 import pytz
 
-from xarray import Coordinate, Dataset, IndexVariable, Variable
-from xarray.core import indexing
+from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
+from xarray.core import dtypes, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
     LazilyOuterIndexedArray, MemoryCachedArray, NumpyIndexingAdapter,
     OuterIndexer, PandasIndexAdapter, VectorizedIndexer)
-from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import requires_bottleneck
 
 from . import (
-    TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, raises_regex, requires_dask, source_ndarray)
+    assert_allclose, assert_array_equal, assert_equal, assert_identical,
+    raises_regex, requires_dask, source_ndarray)
 
 
-class VariableSubclassTestCases(object):
+class VariableSubclassobjects:
     def test_properties(self):
         data = 0.5 * np.arange(10)
         v = self.cls(['time'], data, {'foo': 'bar'})
@@ -43,7 +39,7 @@ class VariableSubclassTestCases(object):
         assert v.nbytes == 80
         assert v.ndim == 1
         assert len(v) == 10
-        assert v.attrs == {'foo': u'bar'}
+        assert v.attrs == {'foo': 'bar'}
 
     def test_attrs(self):
         v = self.cls(['time'], 0.5 * np.arange(10))
@@ -141,8 +137,8 @@ class VariableSubclassTestCases(object):
         # check value is equal for both ndarray and Variable
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', "In the future, 'NAT == x'")
-            assert variable.values[0] == expected_value0
-            assert variable[0].values == expected_value0
+            np.testing.assert_equal(variable.values[0], expected_value0)
+            np.testing.assert_equal(variable[0].values, expected_value0)
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
@@ -165,10 +161,10 @@ class VariableSubclassTestCases(object):
             self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_string(self):
-        for value, dtype in [('foo', np.dtype('U3' if PY3 else 'S3')),
-                             (u'foo', np.dtype('U3'))]:
-            x = self.cls(['x'], [value])
-            self._assertIndexedLikeNDArray(x, value, dtype)
+        value = 'foo'
+        dtype = np.dtype('U3')
+        x = self.cls(['x'], [value])
+        self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_datetime(self):
         d = datetime(2000, 1, 1)
@@ -199,7 +195,7 @@ class VariableSubclassTestCases(object):
 
     def test_index_0d_object(self):
 
-        class HashableItemWrapper(object):
+        class HashableItemWrapper:
             def __init__(self, item):
                 self.item = item
 
@@ -480,20 +476,20 @@ class VariableSubclassTestCases(object):
         assert_identical(expected, actual)
         assert actual.dtype == object
 
-    def test_copy(self):
+    @pytest.mark.parametrize('deep', [True, False])
+    def test_copy(self, deep):
         v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})
-        for deep in [True, False]:
-            w = v.copy(deep=deep)
-            assert type(v) is type(w)
-            assert_identical(v, w)
-            assert v.dtype == w.dtype
-            if self.cls is Variable:
-                if deep:
-                    assert source_ndarray(v.values) is not \
-                        source_ndarray(w.values)
-                else:
-                    assert source_ndarray(v.values) is \
-                        source_ndarray(w.values)
+        w = v.copy(deep=deep)
+        assert type(v) is type(w)
+        assert_identical(v, w)
+        assert v.dtype == w.dtype
+        if self.cls is Variable:
+            if deep:
+                assert (source_ndarray(v.values) is not
+                        source_ndarray(w.values))
+            else:
+                assert (source_ndarray(v.values) is
+                        source_ndarray(w.values))
         assert_identical(v, copy(v))
 
     def test_copy_index(self):
@@ -505,6 +501,34 @@ class VariableSubclassTestCases(object):
             assert isinstance(w._data, PandasIndexAdapter)
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
+
+    def test_copy_with_data(self):
+        orig = Variable(('x', 'y'), [[1.5, 2.0], [3.1, 4.3]], {'foo': 'bar'})
+        new_data = np.array([[2.5, 5.0], [7.1, 43]])
+        actual = orig.copy(data=new_data)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
+
+    def test_copy_with_data_errors(self):
+        orig = Variable(('x', 'y'), [[1.5, 2.0], [3.1, 4.3]], {'foo': 'bar'})
+        new_data = [2.5, 5.0]
+        with raises_regex(ValueError, 'must match shape of object'):
+            orig.copy(data=new_data)
+
+    def test_copy_index_with_data(self):
+        orig = IndexVariable('x', np.arange(5))
+        new_data = np.arange(5, 10)
+        actual = orig.copy(data=new_data)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
+
+    def test_copy_index_with_data_errors(self):
+        orig = IndexVariable('x', np.arange(5))
+        new_data = np.arange(5, 20)
+        with raises_regex(ValueError, 'must match shape of object'):
+            orig.copy(data=new_data)
 
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
@@ -787,10 +811,11 @@ class VariableSubclassTestCases(object):
                     v_loaded[0] = 1.0
 
 
-class TestVariable(TestCase, VariableSubclassTestCases):
+class TestVariable(VariableSubclassobjects):
     cls = staticmethod(Variable)
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
     def test_data_and_values(self):
@@ -841,13 +866,13 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             assert v.values.dtype == np.dtype('timedelta64[ns]')
 
     def test_0d_str(self):
-        v = Variable([], u'foo')
+        v = Variable([], 'foo')
         assert v.dtype == np.dtype('U3')
         assert v.values == 'foo'
 
         v = Variable([], np.string_('foo'))
         assert v.dtype == np.dtype('S3')
-        assert v.values == bytes('foo', 'ascii') if PY3 else 'foo'
+        assert v.values == bytes('foo', 'ascii')
 
     def test_0d_datetime(self):
         v = Variable([], pd.Timestamp('2000-01-01'))
@@ -938,27 +963,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert not isinstance(ds['x'], Variable)
         assert isinstance(as_variable(ds['x']), Variable)
 
-        FakeVariable = namedtuple('FakeVariable', 'values dims')
-        fake_xarray = FakeVariable(expected.values, expected.dims)
-        assert_identical(expected, as_variable(fake_xarray))
-
-        FakeVariable = namedtuple('FakeVariable', 'data dims')
-        fake_xarray = FakeVariable(expected.data, expected.dims)
-        assert_identical(expected, as_variable(fake_xarray))
-
-        FakeVariable = namedtuple('FakeVariable',
-                                  'data values dims attrs encoding')
-        fake_xarray = FakeVariable(expected_extra.data, expected_extra.values,
-                                   expected_extra.dims, expected_extra.attrs,
-                                   expected_extra.encoding)
-        assert_identical(expected_extra, as_variable(fake_xarray))
-
         xarray_tuple = (expected_extra.dims, expected_extra.values,
                         expected_extra.attrs, expected_extra.encoding)
         assert_identical(expected_extra, as_variable(xarray_tuple))
 
-        with raises_regex(TypeError, 'tuples to convert'):
+        with raises_regex(TypeError, 'tuple of form'):
             as_variable(tuple(data))
+        with raises_regex(ValueError, 'tuple of form'):  # GH1016
+            as_variable(('five', 'six', 'seven'))
         with raises_regex(
                 TypeError, 'without an explicit list of dimensions'):
             as_variable(data)
@@ -978,6 +990,13 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with raises_regex(
                 ValueError, 'has more than 1-dimension'):
             as_variable(expected, name='x')
+
+        # test datetime, timedelta conversion
+        dt = np.array([datetime(1999, 1, 1) + timedelta(days=x)
+                       for x in range(10)])
+        assert as_variable(dt, 'time').dtype.kind == 'M'
+        td = np.array([timedelta(days=x) for x in range(10)])
+        assert as_variable(td, 'time').dtype.kind == 'm'
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
@@ -1123,6 +1142,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert v_new.dims == ('x', )
         assert_array_equal(v_new, v._data[:, 1])
 
+        # test that we obtain a modifiable view when taking a 0d slice
+        v_new = v[0, 0]
+        v_new[...] += 99
+        assert_array_equal(v_new, v._data[0, 0])
+
     def test_getitem_with_mask_2d_input(self):
         v = Variable(('x', 'y'), [[0, 1, 2], [3, 4, 5]])
         assert_identical(v._getitem_with_mask(([-1, 0], [1, -1])),
@@ -1143,33 +1167,41 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable([], np.string_('asdf'))
         assert_identical(v[()], v)
 
-        v = Variable([], np.unicode_(u'asdf'))
+        v = Variable([], np.unicode_('asdf'))
         assert_identical(v[()], v)
 
     def test_indexing_0d_unicode(self):
         # regression test for GH568
-        actual = Variable(('x'), [u'tmax'])[0][()]
-        expected = Variable((), u'tmax')
+        actual = Variable(('x'), ['tmax'])[0][()]
+        expected = Variable((), 'tmax')
         assert_identical(actual, expected)
 
-    def test_shift(self):
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_shift(self, fill_value):
         v = Variable('x', [1, 2, 3, 4, 5])
 
         assert_identical(v, v.shift(x=0))
         assert v is not v.shift(x=0)
 
-        expected = Variable('x', [np.nan, 1, 2, 3, 4])
-        assert_identical(expected, v.shift(x=1))
-
         expected = Variable('x', [np.nan, np.nan, 1, 2, 3])
         assert_identical(expected, v.shift(x=2))
 
-        expected = Variable('x', [2, 3, 4, 5, np.nan])
-        assert_identical(expected, v.shift(x=-1))
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value_exp = np.nan
+        else:
+            fill_value_exp = fill_value
 
-        expected = Variable('x', [np.nan] * 5)
-        assert_identical(expected, v.shift(x=5))
-        assert_identical(expected, v.shift(x=6))
+        expected = Variable('x', [fill_value_exp, 1, 2, 3, 4])
+        assert_identical(expected, v.shift(x=1, fill_value=fill_value))
+
+        expected = Variable('x', [2, 3, 4, 5, fill_value_exp])
+        assert_identical(expected, v.shift(x=-1, fill_value=fill_value))
+
+        expected = Variable('x', [fill_value_exp] * 5)
+        assert_identical(expected, v.shift(x=5, fill_value=fill_value))
+        assert_identical(expected, v.shift(x=6, fill_value=fill_value))
 
         with raises_regex(ValueError, 'dimension'):
             v.shift(z=0)
@@ -1177,8 +1209,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable('x', [1, 2, 3, 4, 5], {'foo': 'bar'})
         assert_identical(v, v.shift(x=0))
 
-        expected = Variable('x', [np.nan, 1, 2, 3, 4], {'foo': 'bar'})
-        assert_identical(expected, v.shift(x=1))
+        expected = Variable('x', [fill_value_exp, 1, 2, 3, 4], {'foo': 'bar'})
+        assert_identical(expected, v.shift(x=1, fill_value=fill_value))
 
     def test_shift2d(self):
         v = Variable(('x', 'y'), [[1, 2], [3, 4]])
@@ -1496,20 +1528,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert_identical(v.cumprod(axis=0),
                          Variable('x', np.array([1, 1, 2, 6])))
         assert_identical(v.var(), Variable([], 2.0 / 3))
-
-        if LooseVersion(np.__version__) < '1.9':
-            with pytest.raises(NotImplementedError):
-                v.median()
-        else:
-            assert_identical(v.median(), Variable([], 2))
+        assert_identical(v.median(), Variable([], 2))
 
         v = Variable('x', [True, False, False])
         assert_identical(v.any(), Variable([], True))
         assert_identical(v.all(dim='x'), Variable([], False))
 
         v = Variable('t', pd.date_range('2000-01-01', periods=3))
-        with pytest.raises(NotImplementedError):
-            v.argmax(skipna=True)
+        assert v.argmax(skipna=True) == 2
+
         assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
@@ -1527,6 +1554,18 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         vm = v.mean(keep_attrs=True)
         assert len(vm.attrs) == len(_attrs)
         assert vm.attrs == _attrs
+
+    def test_binary_ops_keep_attrs(self):
+        _attrs = {'units': 'test', 'long_name': 'testing'}
+        a = Variable(['x', 'y'], np.random.randn(3, 3), _attrs)
+        b = Variable(['x', 'y'], np.random.randn(3, 3), _attrs)
+        # Test dropped attrs
+        d = a - b   # just one operation
+        assert d.attrs == OrderedDict()
+        # Test kept attrs
+        with set_options(keep_attrs=True):
+            d = a - b
+        assert d.attrs == _attrs
 
     def test_count(self):
         expected = Variable([], 3)
@@ -1642,9 +1681,61 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = Variable(['x', 'y'], [[2, 3], [3, 4], [4, 5]])
         assert_identical(v, expected)
 
+    def test_coarsen(self):
+        v = self.cls(['x'], [0, 1, 2, 3, 4])
+        actual = v.coarsen({'x': 2}, boundary='pad', func='mean')
+        expected = self.cls(['x'], [0.5, 2.5, 4])
+        assert_identical(actual, expected)
+
+        actual = v.coarsen({'x': 2}, func='mean', boundary='pad',
+                           side='right')
+        expected = self.cls(['x'], [0, 1.5, 3.5])
+        assert_identical(actual, expected)
+
+        actual = v.coarsen({'x': 2}, func=np.mean, side='right',
+                           boundary='trim')
+        expected = self.cls(['x'], [1.5, 3.5])
+        assert_identical(actual, expected)
+
+        # working test
+        v = self.cls(['x', 'y', 'z'],
+                     np.arange(40 * 30 * 2).reshape(40, 30, 2))
+        for windows, func, side, boundary in [
+                ({'x': 2}, np.mean, 'left', 'trim'),
+                ({'x': 2}, np.median, {'x': 'left'}, 'pad'),
+                ({'x': 2, 'y': 3}, np.max, 'left', {'x': 'pad', 'y': 'trim'})]:
+            v.coarsen(windows, func, boundary, side)
+
+    def test_coarsen_2d(self):
+        # 2d-mean should be the same with the successive 1d-mean
+        v = self.cls(['x', 'y'], np.arange(6 * 12).reshape(6, 12))
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean')
+        expected = v.coarsen({'x': 3}, func='mean').coarsen(
+            {'y': 4}, func='mean')
+        assert_equal(actual, expected)
+
+        v = self.cls(['x', 'y'], np.arange(7 * 12).reshape(7, 12))
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
+        expected = v.coarsen({'x': 3}, func='mean', boundary='trim').coarsen(
+            {'y': 4}, func='mean', boundary='trim')
+        assert_equal(actual, expected)
+
+        # if there is nan, the two should be different
+        v = self.cls(['x', 'y'], 1.0 * np.arange(6 * 12).reshape(6, 12))
+        v[2, 4] = np.nan
+        v[3, 5] = np.nan
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
+        expected = v.coarsen({'x': 3}, func='sum', boundary='trim').coarsen(
+            {'y': 4}, func='sum', boundary='trim') / 12
+        assert not actual.equals(expected)
+        # adjusting the nan count
+        expected[0, 1] *= 12 / 11
+        expected[1, 1] *= 12 / 11
+        assert_allclose(actual, expected)
+
 
 @requires_dask
-class TestVariableWithDask(TestCase, VariableSubclassTestCases):
+class TestVariableWithDask(VariableSubclassobjects):
     cls = staticmethod(lambda *args: Variable(*args).chunk())
 
     @pytest.mark.xfail
@@ -1665,16 +1756,16 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         super(TestVariableWithDask, self).test_eq_all_dtypes()
 
     def test_getitem_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_fancy()
 
     def test_getitem_1d_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_1d_fancy()
+
+    def test_equals_all_dtypes(self):
+        import dask
+        if '0.18.2' <= LooseVersion(dask.__version__) < '0.19.1':
+            pytest.xfail('https://github.com/pydata/xarray/issues/2318')
+        super(TestVariableWithDask, self).test_equals_all_dtypes()
 
     def test_getitem_with_mask_nd_indexer(self):
         import dask.array as da
@@ -1684,7 +1775,7 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
                          self.cls(('x', 'y'), [[0, -1], [-1, 2]]))
 
 
-class TestIndexVariable(TestCase, VariableSubclassTestCases):
+class TestIndexVariable(VariableSubclassobjects):
     cls = staticmethod(IndexVariable)
 
     def test_init(self):
@@ -1796,8 +1887,12 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
     def test_rolling_window(self):
         super(TestIndexVariable, self).test_rolling_window()
 
+    @pytest.mark.xfail
+    def test_coarsen_2d(self):
+        super(TestIndexVariable, self).test_coarsen_2d()
 
-class TestAsCompatibleData(TestCase):
+
+class TestAsCompatibleData:
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
         for t in types:
@@ -1938,9 +2033,10 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
-class TestBackendIndexing(TestCase):
+class TestBackendIndexing:
     """    Make sure all the array wrappers can be indexed. """
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 

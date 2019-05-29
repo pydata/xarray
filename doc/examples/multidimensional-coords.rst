@@ -25,7 +25,7 @@ As an example, consider this dataset from the
 
 .. ipython:: python
 
-    ds = xr.tutorial.load_dataset('rasm')
+    ds = xr.tutorial.open_dataset('rasm').load()
     ds
 
 In this example, the *logical coordinates* are ``x`` and ``y``, while
@@ -78,9 +78,8 @@ grid, we can take advantage of xarray's ability to apply
     ax = plt.axes(projection=ccrs.PlateCarree());
     ds.Tair[0].plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree(),
                                x='xc', y='yc', add_colorbar=False);
-    ax.coastlines();
     @savefig xarray_multidimensional_coords_12_0.png width=100%
-    plt.tight_layout();
+    ax.coastlines();
 
 Multidimensional Groupby
 ------------------------
@@ -107,7 +106,8 @@ function to specify the output coordinates of the group.
     # define a label for each bin corresponding to the central latitude
     lat_center = np.arange(1, 90, 2)
     # group according to those bins and take the mean
-    Tair_lat_mean = ds.Tair.groupby_bins('xc', lat_bins, labels=lat_center).mean()
+    Tair_lat_mean = (ds.Tair.groupby_bins('xc', lat_bins, labels=lat_center)
+	             .mean(xr.ALL_DIMS))
     # plot the result
     @savefig xarray_multidimensional_coords_14_1.png width=5in
     Tair_lat_mean.plot();
