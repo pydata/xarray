@@ -734,9 +734,9 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
     # If combine='manual' then this creates a flat list which is easier to
     # iterate over, while saving the originally-supplied structure as "ids"
     if combine == 'manual':
-        if concat_dim is '__auto_combine__':
-            raise ValueError("Must supply concat_dim when using manual "
-                             "combine")
+        if str(concat_dim) == '_not_supplied':
+            raise ValueError("Must supply concat_dim when using "
+                             "combine='manual'")
         else:
             if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
                 concat_dim = [concat_dim]
