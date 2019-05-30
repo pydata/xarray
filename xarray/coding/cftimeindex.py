@@ -478,7 +478,7 @@ class CFTimeIndex(pd.Index):
 
     def strftime(self, date_format):
         """
-        Return a Index of formatted strings specified by date_format, which
+        Return an Index of formatted strings specified by date_format, which
         supports the same string format as the python standard library. Details
         of the string format can be found in `python string format doc
         <https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior>`__
