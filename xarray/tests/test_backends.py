@@ -1135,20 +1135,16 @@ class NetCDF4Base(CFEncodedBase):
         assert ds.x.encoding == {}
 
     def test_keep_chunksizes_if_no_original_shape(self):
-        orig_ds = Dataset({'x': [1, 2, 3]})
+        ds = Dataset({'x': [1, 2, 3]})
         chunksizes = (2, )
-        orig_ds.variables['x'].encoding = {
+        ds.variables['x'].encoding = {
             'chunksizes': chunksizes
         }
 
-        with create_tmp_file() as tmp_file:
-            orig_ds.to_netcdf(path=tmp_file)
-
-            nc = nc4.Dataset(tmp_file, mode='r')
-            with open_dataset(tmp_file) as ds:
-                assert_identical(orig_ds, ds)
-                assert_array_equal(orig_ds['x'].encoding['chunksizes'],
-                                   ds['x'].encoding['chunksizes'])
+        with self.roundtrip(ds) as actual:
+            assert_identical(ds, actual)
+            assert_array_equal(ds['x'].encoding['chunksizes'],
+                               actual['x'].encoding['chunksizes'])
 
     def test_encoding_chunksizes_unlimited(self):
         # regression test for GH1225
