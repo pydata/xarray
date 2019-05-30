@@ -21,6 +21,9 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- netCDF chunksizes are now only dropped when original_shape is different,
+  not when it isn't found. (:issue:`2207`)
+  By `Karel van de Plassche <https://github.com/Karel-van-de-Plassche>`_.
 - Add ``fill_value`` argument for reindex, align, and merge operations
   to enable custom fill values. (:issue:`2876`)
   By `Zach Griffith <https://github.com/zdgriffith>`_.
