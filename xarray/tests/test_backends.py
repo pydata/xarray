@@ -1145,11 +1145,10 @@ class NetCDF4Base(CFEncodedBase):
             orig_ds.to_netcdf(path=tmp_file)
 
             nc = nc4.Dataset(tmp_file, mode='r')
-            with backends.NetCDF4DataStore(nc, autoclose=False) as store:
-                with open_dataset(store) as ds:
-                    assert_identical(orig_ds, ds)
-                    assert_array_equal(orig_ds['x'].encoding['chunksizes'],
-                                       ds['x'].encoding['chunksizes'])
+            with open_dataset(tmp_file) as ds:
+                assert_identical(orig_ds, ds)
+                assert_array_equal(orig_ds['x'].encoding['chunksizes'],
+                                   ds['x'].encoding['chunksizes'])
 
     def test_encoding_chunksizes_unlimited(self):
         # regression test for GH1225
