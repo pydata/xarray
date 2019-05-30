@@ -42,7 +42,7 @@ def test_signature_properties():
 
 def test_result_name():
 
-    class Named(object):
+    class Named:
         def __init__(self, name=None):
             self.name = name
 

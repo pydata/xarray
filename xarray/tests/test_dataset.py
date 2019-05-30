@@ -81,7 +81,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
                     k, v in self._variables.items())
 
 
-class TestDataset(object):
+class TestDataset:
     def test_repr(self):
         data = create_test_data(seed=123)
         data.attrs['foo'] = 'bar'
@@ -267,7 +267,7 @@ class TestDataset(object):
             actual = Dataset({'x': arg})
             assert_identical(expected, actual)
 
-        class Arbitrary(object):
+        class Arbitrary:
             pass
 
         d = pd.Timestamp('2000-01-01T12')
@@ -1619,6 +1619,54 @@ class TestDataset(object):
         actual = ds.reindex_like(alt, method='pad')
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_reindex_fill_value(self, fill_value):
+        ds = Dataset({'x': ('y', [10, 20]), 'y': [0, 1]})
+        y = [0, 1, 2]
+        actual = ds.reindex(y=y, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'x': ('y', [10, 20, fill_value]), 'y': y})
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_reindex_like_fill_value(self, fill_value):
+        ds = Dataset({'x': ('y', [10, 20]), 'y': [0, 1]})
+        y = [0, 1, 2]
+        alt = Dataset({'y': y})
+        actual = ds.reindex_like(alt, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'x': ('y', [10, 20, fill_value]), 'y': y})
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_align_fill_value(self, fill_value):
+        x = Dataset({'foo': DataArray([1, 2], dims=['x'],
+                                      coords={'x': [1, 2]})})
+        y = Dataset({'bar': DataArray([1, 2], dims=['x'],
+                                      coords={'x': [1, 3]})})
+        x2, y2 = align(x, y, join='outer', fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+
+        expected_x2 = Dataset(
+            {'foo': DataArray([1, 2, fill_value],
+                              dims=['x'],
+                              coords={'x': [1, 2, 3]})})
+        expected_y2 = Dataset(
+            {'bar': DataArray([1, fill_value, 2],
+                              dims=['x'],
+                              coords={'x': [1, 2, 3]})})
+        assert_identical(expected_x2, x2)
+        assert_identical(expected_y2, y2)
+
     def test_align(self):
         left = create_test_data()
         right = left.copy(deep=True)
@@ -1922,6 +1970,33 @@ class TestDataset(object):
         for k, v in new_data.items():
             expected[k].data = v
         assert_identical(expected, actual)
+
+    @pytest.mark.xfail(raises=AssertionError)
+    @pytest.mark.parametrize('deep, expected_orig', [
+        [True,
+         xr.DataArray(xr.IndexVariable('a', np.array([1, 2])),
+                      coords={'a': [1, 2]}, dims=['a'])],
+        [False,
+         xr.DataArray(xr.IndexVariable('a', np.array([999, 2])),
+                      coords={'a': [999, 2]}, dims=['a'])]])
+    def test_copy_coords(self, deep, expected_orig):
+        """The test fails for the shallow copy, and apparently only on Windows
+        for some reason. In windows coords seem to be immutable unless it's one
+        dataset deep copied from another."""
+        ds = xr.DataArray(
+            np.ones([2, 2, 2]),
+            coords={'a': [1, 2], 'b': ['x', 'y'], 'c': [0, 1]},
+            dims=['a', 'b', 'c'],
+            name='value').to_dataset()
+        ds_cp = ds.copy(deep=deep)
+        ds_cp.coords['a'].data[0] = 999
+
+        expected_cp = xr.DataArray(
+            xr.IndexVariable('a', np.array([999, 2])),
+            coords={'a': [999, 2]}, dims=['a'])
+        assert_identical(ds_cp.coords['a'], expected_cp)
+
+        assert_identical(ds.coords['a'], expected_orig)
 
     def test_copy_with_data_errors(self):
         orig = create_test_data()
@@ -3987,14 +4062,20 @@ class TestDataset(object):
 
     def test_dataset_transpose(self):
         ds = Dataset({'a': (('x', 'y'), np.random.randn(3, 4)),
-                      'b': (('y', 'x'), np.random.randn(4, 3))})
+                      'b': (('y', 'x'), np.random.randn(4, 3))},
+                     coords={'x': range(3), 'y': range(4),
+                             'xy': (('x', 'y'), np.random.randn(3, 4))})
 
         actual = ds.transpose()
-        expected = ds.apply(lambda x: x.transpose())
+        expected = Dataset({'a': (('y', 'x'), ds.a.values.T),
+                            'b': (('x', 'y'), ds.b.values.T)},
+                           coords={'x': ds.x.values, 'y': ds.y.values,
+                                   'xy': (('y', 'x'), ds.xy.values.T)})
         assert_identical(expected, actual)
 
         actual = ds.transpose('x', 'y')
-        expected = ds.apply(lambda x: x.transpose('x', 'y'))
+        expected = ds.apply(
+            lambda x: x.transpose('x', 'y', transpose_coords=True))
         assert_identical(expected, actual)
 
         ds = create_test_data()
