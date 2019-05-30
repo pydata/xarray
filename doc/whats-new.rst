@@ -46,7 +46,7 @@ Enhancements
   datetime ``DataArray`` to other code expecting formatted dates and times.
   (:issue:`2090`). By `Alan Brammer <https://github.com/abrammer>`_ and
   `Ryan May <https://github.com/dopplershift>`_.
-- Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports
+- Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports a
   :py:meth:`~xarray.CFTimeIndex.strftime` method to return an index of string
   formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
 
