@@ -21,6 +21,11 @@ v0.12.1 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Decode the CF attributes 'grid_mapping' and 'bounds' on file read
+  (put the referenced variables into 'coords' instead of 'data_vars')
+  and encode on write (write attributes corresponding to encoding
+  values).
+
 
 Bug fixes
 ~~~~~~~~~

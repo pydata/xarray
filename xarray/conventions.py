@@ -236,9 +236,9 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var, name=name)
 
-    if var.encoding.get('grid_mapping', None) is not None:
+    if 'grid_mapping' in var.encoding:
         var.attrs['grid_mapping'] = var.encoding.pop('grid_mapping')
-    if var.encoding.get('bounds', None) is not None:
+    if 'bounds' in var.encoding:
         var.attrs['bounds'] = var.encoding.pop('bounds')
     return var
 
@@ -564,8 +564,8 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 global_coordinates.discard(coord_name)
 
             encoding_val = v.encoding.get
-            if ((encoding_val('bounds', None) == coord_name or
-                 encoding_val('grid_mapping', None) == coord_name)):
+            if ((encoding_val('bounds') == coord_name or
+                 encoding_val('grid_mapping') == coord_name)):
                 not_technically_coordinates.add(coord_name)
                 global_coordinates.discard(coord_name)
 
