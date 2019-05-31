@@ -1,4 +1,5 @@
 import functools
+import sys
 import warnings
 from collections import OrderedDict
 
@@ -91,7 +92,7 @@ def _infer_coords_and_dims(shape, coords, dims):
     return new_coords, dims
 
 
-class _LocIndexer(object):
+class _LocIndexer:
     def __init__(self, data_array):
         self.data_array = data_array
 
@@ -229,9 +230,6 @@ class DataArray(AbstractArray, DataWithCoords):
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
-
-        # uncomment for a useful consistency check:
-        # assert all(isinstance(v, Variable) for v in coords.values())
 
         # These fully describe a DataArray
         self._variable = variable
@@ -881,9 +879,10 @@ class DataArray(AbstractArray, DataWithCoords):
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
 
-    def reindex_like(self, other, method=None, tolerance=None, copy=True):
-        """Conform this object onto the indexes of another object, filling
-        in missing values with NaN.
+    def reindex_like(self, other, method=None, tolerance=None, copy=True,
+                     fill_value=dtypes.NA):
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -904,7 +903,7 @@ class DataArray(AbstractArray, DataWithCoords):
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         copy : bool, optional
@@ -912,6 +911,8 @@ class DataArray(AbstractArray, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
 
         Returns
         -------
@@ -926,12 +927,12 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         indexers = reindex_like_indexers(self, other)
         return self.reindex(method=method, tolerance=tolerance, copy=copy,
-                            **indexers)
+                            fill_value=fill_value, **indexers)
 
     def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
-                **indexers_kwargs):
-        """Conform this object onto a new set of indexes, filling in
-        missing values with NaN.
+                fill_value=dtypes.NA, **indexers_kwargs):
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -956,8 +957,10 @@ class DataArray(AbstractArray, DataWithCoords):
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+        fill_value : scalar, optional
+            Value to use for newly missing values
         **indexers_kwarg : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -976,7 +979,8 @@ class DataArray(AbstractArray, DataWithCoords):
         indexers = either_dict_or_kwargs(
             indexers, indexers_kwargs, 'reindex')
         ds = self._to_temp_dataset().reindex(
-            indexers=indexers, method=method, tolerance=tolerance, copy=copy)
+            indexers=indexers, method=method, tolerance=tolerance, copy=copy,
+            fill_value=fill_value)
         return self._from_temp_dataset(ds)
 
     def interp(self, coords=None, method='linear', assume_sorted=False,
@@ -1138,7 +1142,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
-    def expand_dims(self, dim, axis=None):
+    def expand_dims(self, dim=None, axis=None, **dim_kwargs):
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape.
 
@@ -1147,21 +1151,53 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim : str or sequence of str.
+        dim : str, sequence of str, dict, or None
             Dimensions to include on the new variable.
-            dimensions are inserted with length 1.
+            If provided as str or sequence of str, then dimensions are inserted
+            with length 1. If provided as a dict, then the keys are the new
+            dimensions and the values are either integers (giving the length of
+            the new dimensions) or sequence/ndarray (giving the coordinates of
+            the new dimensions). **WARNING** for python 3.5, if ``dim`` is
+            dict-like, then it must be an ``OrderedDict``. This is to ensure
+            that the order in which the dims are given is maintained.
         axis : integer, list (or tuple) of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
+        **dim_kwargs : int or sequence/ndarray
+            The keywords are arbitrary dimensions being inserted and the values
+            are either the lengths of the new dims (if int is given), or their
+            coordinates. Note, this is an alternative to passing a dict to the
+            dim kwarg and will only be used if dim is None. **WARNING** for
+            python 3.5 ``dim_kwargs`` is not available.
 
         Returns
         -------
         expanded : same type as caller
             This object, but with an additional dimension(s).
         """
+        if isinstance(dim, int):
+            raise TypeError('dim should be str or sequence of strs or dict')
+        elif isinstance(dim, str):
+            dim = OrderedDict(((dim, 1),))
+        elif isinstance(dim, (list, tuple)):
+            if len(dim) != len(set(dim)):
+                raise ValueError('dims should not contain duplicate values.')
+            dim = OrderedDict(((d, 1) for d in dim))
+
+        # TODO: get rid of the below code block when python 3.5 is no longer
+        #   supported.
+        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
+        not_ordereddict = dim is not None and not isinstance(dim, OrderedDict)
+        if not python36_plus and not_ordereddict:
+            raise TypeError("dim must be an OrderedDict for python <3.6")
+        elif not python36_plus and dim_kwargs:
+            raise ValueError("dim_kwargs isn't available for python <3.6")
+        dim_kwargs = OrderedDict(dim_kwargs)
+
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'expand_dims')
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
@@ -1369,7 +1405,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def transpose(self, *dims):
+    def transpose(self, *dims, transpose_coords=None) -> 'DataArray':
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1377,6 +1413,8 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
+        transpose_coords : boolean, optional
+            If True, also transpose the coordinates of this DataArray.
 
         Returns
         -------
@@ -1394,8 +1432,32 @@ class DataArray(AbstractArray, DataWithCoords):
         numpy.transpose
         Dataset.transpose
         """
+        if dims:
+            if set(dims) ^ set(self.dims):
+                raise ValueError('arguments to transpose (%s) must be '
+                                 'permuted array dimensions (%s)'
+                                 % (dims, tuple(self.dims)))
+
         variable = self.variable.transpose(*dims)
-        return self._replace(variable)
+        if transpose_coords:
+            coords = {}
+            for name, coord in self.coords.items():
+                coord_dims = tuple(dim for dim in dims if dim in coord.dims)
+                coords[name] = coord.variable.transpose(*coord_dims)
+            return self._replace(variable, coords)
+        else:
+            if transpose_coords is None \
+                    and any(self[c].ndim > 1 for c in self.coords):
+                warnings.warn('This DataArray contains multi-dimensional '
+                              'coordinates. In the future, these coordinates '
+                              'will be transposed as well unless you specify '
+                              'transpose_coords=False.',
+                              FutureWarning, stacklevel=2)
+            return self._replace(variable)
+
+    @property
+    def T(self) -> 'DataArray':
+        return self.transpose()
 
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.

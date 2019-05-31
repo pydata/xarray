@@ -16,7 +16,7 @@ dependencies:
   - pytest-env
   - coveralls
   - flake8
-  - numpy
+  - numpy>=1.12
   - scipy
   - toolz
   - pip:
