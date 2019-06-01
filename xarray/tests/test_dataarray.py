@@ -3456,6 +3456,19 @@ class TestDataArray:
         with pytest.raises(TypeError):
             da.dot(dm.values)
 
+    def test_matmul(self):
+
+        # copied from above (could make a fixture)
+        x = np.linspace(-3, 3, 6)
+        y = np.linspace(-3, 3, 5)
+        z = range(4)
+        da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
+        da = DataArray(da_vals, coords=[x, y, z], dims=['x', 'y', 'z'])
+
+        result = da @ da
+        expected = da.dot(da)
+        assert_identical(result, expected)
+
     def test_binary_op_join_setting(self):
         dim = 'x'
         align_type = "outer"

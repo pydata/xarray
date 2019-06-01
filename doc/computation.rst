@@ -45,6 +45,12 @@ Use :py:func:`~xarray.where` to conditionally switch between values:
 
     xr.where(arr > 0, 'positive', 'negative')
 
+Use `@` to perform matrix multiplication:
+
+.. ipython:: python
+
+    arr @ arr
+
 Data arrays also implement many :py:class:`numpy.ndarray` methods:
 
 .. ipython:: python
