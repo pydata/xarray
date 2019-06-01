@@ -2014,6 +2014,14 @@ class DataArray(AbstractArray, DataWithCoords):
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
 
+    def __matmul__(self, obj):
+        return self.dot(obj)
+
+    def __rmatmul__(self, other):
+        # currently somewhat duplicative, as only other DataArrays are
+        # compatible with matmul
+        return computation.dot(other, self)
+
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
