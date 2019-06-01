@@ -5,19 +5,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import xarray as xr
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs
-from xarray.testing import assert_identical
 
 from . import (
-    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_cftime,
-    requires_dask)
+    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_dask)
 from .test_coding_times import _all_cftime_date_types
 
 
-class TestAlias(object):
+class TestAlias:
     def test(self):
         def new_method():
             pass
@@ -95,7 +92,7 @@ def test_multiindex_from_product_levels_non_unique():
     np.testing.assert_array_equal(result.levels[1], [1, 2])
 
 
-class TestArrayEquiv(object):
+class TestArrayEquiv:
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
@@ -105,7 +102,7 @@ class TestArrayEquiv(object):
         assert not duck_array_ops.array_equiv(0, np.array(1, dtype=object))
 
 
-class TestDictionaries(object):
+class TestDictionaries:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.x = {'a': 'A', 'b': 'B'}
@@ -178,19 +175,6 @@ class TestDictionaries(object):
         assert repr(utils.SortedKeysDict()) == \
             "SortedKeysDict({})"
 
-    def test_chain_map(self):
-        m = utils.ChainMap({'x': 0, 'y': 1}, {'x': -100, 'z': 2})
-        assert 'x' in m
-        assert 'y' in m
-        assert 'z' in m
-        assert m['x'] == 0
-        assert m['y'] == 1
-        assert m['z'] == 2
-        m['x'] = 100
-        assert m['x'] == 100
-        assert m.maps[0]['x'] == 100
-        assert set(m) == {'x', 'y', 'z'}
-
 
 def test_repr_object():
     obj = utils.ReprObject('foo')
@@ -213,7 +197,7 @@ def test_is_grib_path():
     assert utils.is_grib_path('example.grb2')
 
 
-class Test_is_uniform_and_sorted(object):
+class Test_is_uniform_and_sorted:
 
     def test_sorted_uniform(self):
         assert utils.is_uniform_spaced(np.arange(5))
@@ -234,7 +218,7 @@ class Test_is_uniform_and_sorted(object):
         assert utils.is_uniform_spaced([0, 0.97, 2], rtol=0.1)
 
 
-class Test_hashable(object):
+class Test_hashable:
 
     def test_hashable(self):
         for v in [False, 1, (2, ), (3, 4), 'four']:

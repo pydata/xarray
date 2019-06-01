@@ -9,19 +9,19 @@ from . import raises_regex
 
 @xr.register_dataset_accessor('example_accessor')
 @xr.register_dataarray_accessor('example_accessor')
-class ExampleAccessor(object):
+class ExampleAccessor:
     """For the pickling tests below."""
 
     def __init__(self, xarray_obj):
         self.obj = xarray_obj
 
 
-class TestAccessor(object):
+class TestAccessor:
     def test_register(self):
 
         @xr.register_dataset_accessor('demo')
         @xr.register_dataarray_accessor('demo')
-        class DemoAccessor(object):
+        class DemoAccessor:
             """Demo accessor."""
 
             def __init__(self, xarray_obj):
@@ -52,7 +52,7 @@ class TestAccessor(object):
 
         with pytest.warns(Warning, match='overriding a preexisting attribute'):
             @xr.register_dataarray_accessor('demo')
-            class Foo(object):
+            class Foo:
                 pass
 
         # it didn't get registered again
@@ -80,7 +80,7 @@ class TestAccessor(object):
         # regression test for GH933
 
         @xr.register_dataset_accessor('stupid_accessor')
-        class BrokenAccessor(object):
+        class BrokenAccessor:
             def __init__(self, xarray_obj):
                 raise AttributeError('broken')
 
