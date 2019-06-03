@@ -211,7 +211,7 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
             del encoding['chunksizes']
 
     var_has_unlim_dim = any(dim in unlimited_dims for dim in variable.dims)
-    if var_has_unlim_dim and 'contiguous' in encoding.keys():
+    if not raise_on_invalid and var_has_unlim_dim and 'contiguous' in encoding.keys():
         del encoding['contiguous']
 
     for k in safe_to_drop:
