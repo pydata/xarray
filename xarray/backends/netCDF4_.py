@@ -210,6 +210,11 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
         if chunks_too_big or changed_shape:
             del encoding['chunksizes']
 
+    var_has_unlim_dim = any(dim in unlimited_dims for dim in variable.dims)
+    if (not raise_on_invalid and var_has_unlim_dim
+            and 'contiguous' in encoding.keys()):
+        del encoding['contiguous']
+
     for k in safe_to_drop:
         if k in encoding:
             del encoding[k]
@@ -445,6 +450,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding,
             unlimited_dims=unlimited_dims)
+
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
