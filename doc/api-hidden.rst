@@ -153,3 +153,4 @@
 
    CFTimeIndex.shift
    CFTimeIndex.to_datetimeindex
+   CFTimeIndex.strftime

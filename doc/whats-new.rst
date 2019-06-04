@@ -21,12 +21,21 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Enable `@` operator for DataArray. This is equivalent to :py:meth:`DataArray.dot`
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add ``fill_value`` argument for reindex, align, and merge operations
   to enable custom fill values. (:issue:`2876`)
   By `Zach Griffith <https://github.com/zdgriffith>`_.
 - Character arrays' character dimension name decoding and encoding handled by
   ``var.encoding['char_dim_name']`` (:issue:`2895`)
   By `James McCreight <https://github.com/jmccreight>`_.
+- :py:meth:`DataArray.transpose` now accepts a keyword argument
+  ``transpose_coords`` which enables transposition of coordinates in the
+  same way as :py:meth:`Dataset.transpose`. :py:meth:`DataArray.groupby`
+  :py:meth:`DataArray.groupby_bins`, and :py:meth:`DataArray.resample` now
+  accept a keyword argument ``restore_coord_dims`` which keeps the order
+  of the dimensions of multi-dimensional coordinates intact (:issue:`1856`).
+  By `Peter Hausamann <http://github.com/phausamann>`_.
 - Clean up Python 2 compatibility in code (:issue:`2950`)
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Implement ``load_dataset()`` and ``load_dataarray()`` as alternatives to
@@ -35,6 +44,13 @@ Enhancements
   helpful for avoiding file-lock errors when trying to write to files opened
   using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Added ``strftime`` method to ``.dt`` accessor, making it simpler to hand a
+  datetime ``DataArray`` to other code expecting formatted dates and times.
+  (:issue:`2090`). By `Alan Brammer <https://github.com/abrammer>`_ and
+  `Ryan May <https://github.com/dopplershift>`_.
+- Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports a
+  :py:meth:`~xarray.CFTimeIndex.strftime` method to return an index of string
+  formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -47,6 +63,8 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
+- Removed usages of `pytest.config`, which is deprecated (:issue:`2988`:)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.12.1:
 
