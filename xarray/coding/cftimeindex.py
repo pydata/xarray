@@ -184,7 +184,7 @@ def get_date_type(self):
 def assert_all_valid_date_type(data):
     import cftime
 
-    if data.size:
+    if len(data) > 0:
         sample = data[0]
         date_type = type(sample)
         if not isinstance(sample, cftime.datetime):
@@ -229,12 +229,12 @@ class CFTimeIndex(pd.Index):
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):
+        assert_all_valid_date_type(data)
         if name is None and hasattr(data, 'name'):
             name = data.name
 
         result = object.__new__(cls)
         result._data = np.array(data, dtype='O')
-        assert_all_valid_date_type(result._data)
         result.name = name
         return result
 

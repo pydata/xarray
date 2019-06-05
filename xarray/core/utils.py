@@ -62,7 +62,7 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from ..coding.cftimeindex import CFTimeIndex
 
-    if index.dtype == 'O':
+    if len(index) > 0 and index.dtype == 'O':
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
