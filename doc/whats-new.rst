@@ -21,9 +21,12 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+
 - netCDF chunksizes are now only dropped when original_shape is different,
   not when it isn't found. (:issue:`2207`)
   By `Karel van de Plassche <https://github.com/Karel-van-de-Plassche>`_.
+- Enable `@` operator for DataArray. This is equivalent to :py:meth:`DataArray.dot`
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add ``fill_value`` argument for reindex, align, and merge operations
   to enable custom fill values. (:issue:`2876`)
   By `Zach Griffith <https://github.com/zdgriffith>`_.
@@ -45,10 +48,20 @@ Enhancements
   helpful for avoiding file-lock errors when trying to write to files opened
   using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Added ``strftime`` method to ``.dt`` accessor, making it simpler to hand a
+  datetime ``DataArray`` to other code expecting formatted dates and times.
+  (:issue:`2090`). By `Alan Brammer <https://github.com/abrammer>`_ and
+  `Ryan May <https://github.com/dopplershift>`_.
+- Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports a
+  :py:meth:`~xarray.CFTimeIndex.strftime` method to return an index of string
+  formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- NetCDF4 output: variables with unlimited dimensions must be chunked (not
+  contiguous) on output. (:issue:`1849`)
+  By `James McCreight <https://github.com/jmccreight>`_.
 - indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
