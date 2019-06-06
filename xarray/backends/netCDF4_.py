@@ -206,7 +206,9 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
         chunks_too_big = any(
             c > d and dim not in unlimited_dims
             for c, d, dim in zip(chunksizes, variable.shape, variable.dims))
-        changed_shape = encoding.get('original_shape') != variable.shape
+        has_original_shape = 'original_shape' in encoding
+        changed_shape = (has_original_shape and
+                         encoding.get('original_shape') != variable.shape)
         if chunks_too_big or changed_shape:
             del encoding['chunksizes']
 

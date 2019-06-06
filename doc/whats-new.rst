@@ -21,6 +21,10 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+
+- netCDF chunksizes are now only dropped when original_shape is different,
+  not when it isn't found. (:issue:`2207`)
+  By `Karel van de Plassche <https://github.com/Karel-van-de-Plassche>`_.
 - Enable `@` operator for DataArray. This is equivalent to :py:meth:`DataArray.dot`
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add ``fill_value`` argument for reindex, align, and merge operations
