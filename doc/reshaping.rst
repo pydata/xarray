@@ -159,12 +159,21 @@ like this:
                       'b': ('x', [6, 7])},
             coords={'y': ['u', 'v', 'w']}
         )
-        stacked = data.to_stacked_array("z", ['y'])
+        stacked = data.to_stacked_array("z", sample_dims=['x'])
         stacked
         unstacked = stacked.to_unstacked_dataset("z")
         unstacked
 
-In this example, ``stacked`` is a two dimensional array that we can easily pass to a scikit-learn or another generic numerical method.
+In this example, ``stacked`` is a two dimensional array that we can easily pass to a scikit-learn or another generic
+numerical method.
+
+.. note::
+
+    Unlike with ``stack``,  in ``to_stacked_array``, the user specifies the dimensions they **do not** want stacked.
+    For a machine learning task, these unstacked dimensions can be interpreted as the dimensions over which samples are
+    drawn, whereas the stacked coordinates are the features. Naturally, all variables should possess these sampling
+    dimensions.
+
 
 .. _reshape.set_index:
 

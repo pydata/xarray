@@ -2370,23 +2370,32 @@ class TestDataset:
         actual = stacked.isel(z=slice(None, None, -1)).unstack('z')
         assert actual.identical(ds[['b']])
 
+    def test_to_stacked_array_invalid_sample_dims(self):
+        data = xr.Dataset(
+            data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
+                       'b': ('x', [6, 7])},
+            coords={'y': ['u', 'v', 'w']}
+        )
+        with pytest.raises(ValueError):
+            data.to_stacked_array("features", sample_dims=['y'])
+
     def test_to_stacked_array_name(self):
         name = 'adf9d'
 
         # make a two dimensional dataset
         a, b = create_test_stacked_array()
         D = xr.Dataset({'a': a, 'b': b})
-        feature_dims = ['y']
+        sample_dims = ['x']
 
-        y = D.to_stacked_array('features', feature_dims, name=name)
+        y = D.to_stacked_array('features', sample_dims, name=name)
         assert y.name == name
 
     def test_to_stacked_array_dtype_dims(self):
         # make a two dimensional dataset
         a, b = create_test_stacked_array()
         D = xr.Dataset({'a': a, 'b': b})
-        feature_dims = ['y']
-        y = D.to_stacked_array('features', feature_dims)
+        sample_dims = ['x']
+        y = D.to_stacked_array('features', sample_dims)
         assert y.indexes['features'].levels[1].dtype == D.y.dtype
         assert y.dims == ('x', 'features')
 
@@ -2394,8 +2403,8 @@ class TestDataset:
         # make a two dimensional dataset
         a, b = create_test_stacked_array()
         D = xr.Dataset({'a': a, 'b': b})
-        feature_dims = ['y']
-        y = D.to_stacked_array('features', feature_dims)\
+        sample_dims = ['x']
+        y = D.to_stacked_array('features', sample_dims)\
             .transpose("x", "features")
 
         x = y.to_unstacked_dataset("features")
@@ -2409,23 +2418,23 @@ class TestDataset:
     def test_to_stacked_array_to_unstacked_dataset_different_dimension(self):
         # test when variables have different dimensionality
         a, b = create_test_stacked_array()
-        feature_dims = ['y']
+        sample_dims = ['x']
         D = xr.Dataset({'a': a, 'b': b.isel(y=0)})
 
-        y = D.to_stacked_array('features', feature_dims)
+        y = D.to_stacked_array('features', sample_dims)
         x = y.to_unstacked_dataset('features')
         assert_identical(D, x)
 
         # another test
         ds = D.isel(x=0)
-        ds_flat = ds.to_stacked_array('features', ['y'])
+        ds_flat = ds.to_stacked_array('features', sample_dims)
         ds_comp = ds_flat.to_unstacked_dataset('features')
         assert_identical(ds, ds_comp)
 
     def test_to_stacked_array_to_unstacked_dataset_scalar(self):
         a = xr.DataArray(np.r_[:6], dims=('x', ), coords={'x': np.r_[:6]})
         ds = xr.Dataset({'a': a, 'b': 1.0})
-        ds_flat = ds.to_stacked_array('features', ['x'])
+        ds_flat = ds.to_stacked_array('features', sample_dims=['y'])
         ds_comp = ds_flat.to_unstacked_dataset('features')
         assert_identical(ds, ds_comp)
 

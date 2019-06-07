@@ -2648,7 +2648,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._stack_once(dims, new_dim)
         return result
 
-    def to_stacked_array(self, new_dim, dims, variable_dim='variable', name=None):
+    def to_stacked_array(self, new_dim, sample_dims, variable_dim='variable', name=None):
         """Combine variables of differing dimensionality into a DataArray
         without broadcasting.
 
@@ -2659,9 +2659,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         new_dim : str
             Name of the new stacked coordinate
-        dims : Sequence[str]
-            Dimensions to be stacked. Not all variables in the dataset need to
-            have these dimensions.
+        sample_dims : Sequence[str]
+            Dimensions that **will not** be stacked. Each array in the dataset
+            must share these dimensions. For machine learning applications,
+            these define the dimensions over which samples are drawn.
         variable_dim : str, optional
             Name of the level in the stacked coordinate which corresponds to
             the variables.
@@ -2701,7 +2702,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             a        (x, y) int64 0 1 2 3 4 5
             b        (x) int64 6 7
 
-        >>> data.to_stacked_array("z", ['y'])
+        >>> data.to_stacked_array("z", ['x'])
         <xarray.DataArray (x: 2, z: 4)>
         array([[0, 1, 2, 6],
             [3, 4, 5, 7]])
@@ -2712,24 +2713,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dimensions without coordinates: x
 
         """
-        dims = tuple(dims)
+        stacking_dims = tuple(dim for dim in self.dims
+                              if dim not in sample_dims)
+
+        for variable in self:
+            dims = self[variable].dims
+            dims_include_sample_dims = set(sample_dims) < set(dims)
+            if not dims_include_sample_dims:
+                raise ValueError(
+                    "All DataArrays must share the dims: {}. ".format(dims)
+                )
 
         def f(val):
             # ensure square output
 
             assign_coords = {variable_dim: val.name}
-            for dim in dims:
+            for dim in stacking_dims:
                 if (dim not in val.dims):
                     assign_coords[dim] = None
 
-            expand_dims = set(dims).difference(set(val.dims))
+            expand_dims = set(stacking_dims).difference(set(val.dims))
             expand_dims.add(variable_dim)
             # must be list for .expand_dims
             expand_dims = list(expand_dims)
 
             return val.assign_coords(**assign_coords) \
                 .expand_dims(expand_dims) \
-                .stack(**{new_dim: (variable_dim,) + dims})
+                .stack(**{new_dim: (variable_dim,) + stacking_dims})
 
         # concatenate the arrays
         Xs = [f(self[key]) for key in self.data_vars]
