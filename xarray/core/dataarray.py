@@ -1399,8 +1399,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def to_unstacked_dataset(self, dim, level=0,
-                             variable_dim='variable'):
+    def to_unstacked_dataset(self, dim, level=0, variable_dim='variable'):
         """Unstack DataArray expanding to Dataset along a given level of a
         stacked coordinate.
 
@@ -1410,8 +1409,12 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dim : str
             Name of existing dimension to unstack
-        level : int
-            Index of level to expand to dataset along
+        level : int or str
+            The MultiIndex level to expand to a dataset along. Can either be
+            the integer index of the level or its name.
+        label : int, optional
+            Label of the level to expand dataset along. Overrides the label
+            argument if given.
 
         Returns
         -------
@@ -1449,7 +1452,8 @@ class DataArray(AbstractArray, DataWithCoords):
         idx = self.indexes[dim]
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(dim, "is not a stacked coordinate")
-        variables = idx.levels[level]
+
+        variables = idx.get_level_values(level)
 
         # pull variables out of datarray
         data_dict = OrderedDict()
