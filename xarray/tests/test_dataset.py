@@ -2295,6 +2295,17 @@ class TestDataset(object):
         actual = stacked.isel(z=slice(None, None, -1)).unstack('z')
         assert actual.identical(ds[['b']])
 
+    def test_to_stacked_array_name(self):
+        name = 'adf9d'
+
+        # make a two dimensional dataset
+        a, b = create_test_stacked_array()
+        D = xr.Dataset({'a': a, 'b': b})
+        feature_dims = ['y']
+
+        y = D.to_stacked_array('features', feature_dims, name=name)
+        assert y.name == name
+
     def test_to_stacked_array_dtype_dims(self):
         # make a two dimensional dataset
         a, b = create_test_stacked_array()

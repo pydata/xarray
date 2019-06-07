@@ -2643,7 +2643,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._stack_once(dims, new_dim)
         return result
 
-    def to_stacked_array(self, new_dim, dims, variable_dim='variable'):
+    def to_stacked_array(self, new_dim, dims, variable_dim='variable', name=None):
         """Combine variables of differing dimensionality into a DataArray
         without broadcasting.
 
@@ -2660,6 +2660,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variable_dim : str, optional
             Name of the level in the stacked coordinate which corresponds to
             the variables.
+        name : str, optional
+            Name of the new data array.
 
         Returns
         -------
@@ -2737,6 +2739,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                for level in idx.levels[1:]]
         new_idx = idx.set_levels(levels)
         dataset[new_dim] = IndexVariable(new_dim, new_idx)
+
+        if name is not None:
+            dataset.name = name
+
         return dataset
 
     def _unstack_once(self, dim):
