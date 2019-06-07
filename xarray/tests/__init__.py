@@ -108,23 +108,8 @@ if has_dask:
     else:
         dask.config.set(scheduler='single-threaded')
 
-# pytest config
-try:
-    _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
-    _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")
-except (ValueError, AttributeError):
-    # Can't get config from pytest, e.g., because xarray is installed instead
-    # of being run from a development version (and hence conftests.py is not
-    # available). Don't run flaky tests.
-    _SKIP_FLAKY = True
-    _SKIP_NETWORK_TESTS = True
-
-flaky = pytest.mark.skipif(
-    _SKIP_FLAKY, reason="set --run-flaky option to run flaky tests")
-network = pytest.mark.skipif(
-    _SKIP_NETWORK_TESTS,
-    reason="set --run-network-tests option to run tests requiring an "
-    "internet connection")
+flaky = pytest.mark.flaky
+network = pytest.mark.network
 
 
 @contextmanager
@@ -151,13 +136,13 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
         raise UnexpectedDataAccess("Tried accessing data")
 
 
-class ReturnItem(object):
+class ReturnItem:
 
     def __getitem__(self, key):
         return key
 
 
-class IndexerMaker(object):
+class IndexerMaker:
 
     def __init__(self, indexer_cls):
         self._indexer_cls = indexer_cls

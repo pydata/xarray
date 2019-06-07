@@ -462,6 +462,7 @@ Dataset methods
    :toctree: generated/
 
    open_dataset
+   load_dataset
    open_mfdataset
    open_rasterio
    open_zarr
@@ -489,6 +490,7 @@ DataArray methods
    :toctree: generated/
 
    open_dataarray
+   load_dataarray
    DataArray.to_dataset
    DataArray.to_netcdf
    DataArray.to_pandas

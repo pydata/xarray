@@ -9,7 +9,7 @@ from . import (
     has_dask, raises_regex, requires_dask)
 
 
-class TestDatetimeAccessor(object):
+class TestDatetimeAccessor:
     @pytest.fixture(autouse=True)
     def setup(self):
         nt = 100
@@ -42,6 +42,10 @@ class TestDatetimeAccessor(object):
         assert_equal(days, self.data.time.dt.day)
         assert_equal(hours, self.data.time.dt.hour)
 
+    def test_strftime(self):
+        assert ('2000-01-01 01:00:00' == self.data.time.dt.strftime(
+            '%Y-%m-%d %H:%M:%S')[1])
+
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype('int8')
@@ -60,6 +64,7 @@ class TestDatetimeAccessor(object):
         floor = self.times_data.dt.floor('D')
         ceil = self.times_data.dt.ceil('D')
         round = self.times_data.dt.round('D')
+        strftime = self.times_data.dt.strftime('%Y-%m-%d %H:%M:%S')
 
         dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
         dask_times_2d = xr.DataArray(dask_times_arr,
@@ -73,12 +78,14 @@ class TestDatetimeAccessor(object):
         dask_floor = dask_times_2d.dt.floor('D')
         dask_ceil = dask_times_2d.dt.ceil('D')
         dask_round = dask_times_2d.dt.round('D')
+        dask_strftime = dask_times_2d.dt.strftime('%Y-%m-%d %H:%M:%S')
 
         # Test that the data isn't eagerly evaluated
         assert isinstance(dask_year.data, da.Array)
         assert isinstance(dask_month.data, da.Array)
         assert isinstance(dask_day.data, da.Array)
         assert isinstance(dask_hour.data, da.Array)
+        assert isinstance(dask_strftime.data, da.Array)
 
         # Double check that outcome chunksize is unchanged
         dask_chunks = dask_times_2d.chunks
@@ -86,6 +93,7 @@ class TestDatetimeAccessor(object):
         assert dask_month.data.chunks == dask_chunks
         assert dask_day.data.chunks == dask_chunks
         assert dask_hour.data.chunks == dask_chunks
+        assert dask_strftime.data.chunks == dask_chunks
 
         # Check the actual output from the accessors
         assert_equal(years, dask_year.compute())
@@ -95,6 +103,7 @@ class TestDatetimeAccessor(object):
         assert_equal(floor, dask_floor.compute())
         assert_equal(ceil, dask_ceil.compute())
         assert_equal(round, dask_round.compute())
+        assert_equal(strftime, dask_strftime.compute())
 
     def test_seasons(self):
         dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
@@ -166,6 +175,21 @@ def test_field_access(data, field):
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
         name=field, coords=data.time.coords, dims=data.time.dims)
 
+    assert_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftime_strftime_access(data):
+    """ compare cftime formatting against datetime formatting """
+    date_format = '%Y%m%d%H'
+    result = data.time.dt.strftime(date_format)
+    datetime_array = xr.DataArray(
+        xr.coding.cftimeindex.CFTimeIndex(
+            data.time.values).to_datetimeindex(),
+        name="stftime",
+        coords=data.time.coords,
+        dims=data.time.dims)
+    expected = datetime_array.dt.strftime(date_format)
     assert_equal(result, expected)
 
 
