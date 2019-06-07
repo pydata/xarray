@@ -2653,8 +2653,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Combine variables of differing dimensionality into a DataArray
         without broadcasting.
 
-        This function is basically version of Dataset.to_array which does not
-        broadcast the variables.
+        This method is similar to Dataset.to_array but does not broadcast the
+        variables.
 
         Parameters
         ----------
