@@ -1453,7 +1453,9 @@ class DataArray(AbstractArray, DataWithCoords):
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(dim, "is not a stacked coordinate")
 
-        variables = idx.get_level_values(level)
+        level_number = idx._get_level_number(level)
+        variables = idx.levels[level_number]
+        variable_dim = idx.names[level_number]
 
         # pull variables out of datarray
         data_dict = OrderedDict()
