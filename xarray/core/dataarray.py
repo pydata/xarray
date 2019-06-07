@@ -1399,7 +1399,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def to_unstacked_dataset(self, dim, level=0, variable_dim='variable'):
+    def to_unstacked_dataset(self, dim, level=0):
         """Unstack DataArray expanding to Dataset along a given level of a
         stacked coordinate.
 
