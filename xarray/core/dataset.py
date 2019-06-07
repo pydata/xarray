@@ -2678,36 +2678,31 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
+        >>> data = Dataset(
+        ...     data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
+        ...                'b': ('x', [6, 7])},
+        ...     coords={'y': ['u', 'v', 'w']}
+        ... )
 
-        >>> arr = DataArray(np.arange(6).reshape(2, 3),
-        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
-        >>> data = Dataset({'a': arr, 'b': arr.isel(y=0)})
         >>> data
-
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 3)
         Coordinates:
-        * x        (x) <U1 'a' 'b'
-        * y        (y) int64 0 1 2
+        * y        (y) <U1 'u' 'v' 'w'
+        Dimensions without coordinates: x
         Data variables:
             a        (x, y) int64 0 1 2 3 4 5
-            b        (x) int64 0 3
-        >>> stacked = data.to_stacked_array("z", ['y'])
-        >>> stacked.indexes['z']
+            b        (x) int64 6 7
 
-        MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
-                labels=[[0, 0, 0, 1], [0, 1, 2, -1]],
-                names=['variable', 'y'])
-        >>> stacked
-
-        <xarray.DataArray 'a' (x: 2, z: 4)>
-        array([[0, 1, 2, 0],
-            [3, 4, 5, 3]])
+        >>> data.to_stacked_array("z", ['y'])
+        <xarray.DataArray (x: 2, z: 4)>
+        array([[0, 1, 2, 6],
+            [3, 4, 5, 7]])
         Coordinates:
-        * x         (x) <U1 'a' 'b'
         * z         (z) MultiIndex
         - variable  (z) object 'a' 'a' 'a' 'b'
-        - y         (z) object 0 1 2 nan
+        - y         (z) object 'u' 'v' 'w' nan
+        Dimensions without coordinates: x
 
         """
         dims = tuple(dims)

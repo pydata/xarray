@@ -154,10 +154,11 @@ represented by a :py:class:`pandas.MultiIndex` object. These methods are used
 like this:
 
 .. ipython:: python
-
-        arr = xr.DataArray(np.arange(6).reshape(2, 3),
-                        coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
-        data = xr.Dataset({'a': arr, 'b': arr.isel(y=0)})
+        data = xr.Dataset(
+            data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
+                      'b': ('x', [6, 7])},
+            coords={'y': ['u', 'v', 'w']}
+        )
         stacked = data.to_stacked_array("z", ['y'])
         stacked
         unstacked = stacked.to_unstacked_dataset("z")
