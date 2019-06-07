@@ -2425,19 +2425,6 @@ class TestDataset:
         x = y.to_unstacked_dataset('features')
         assert_identical(D, x)
 
-        # another test
-        ds = D.isel(x=0)
-        ds_flat = ds.to_stacked_array('features', sample_dims)
-        ds_comp = ds_flat.to_unstacked_dataset('features')
-        assert_identical(ds, ds_comp)
-
-    def test_to_stacked_array_to_unstacked_dataset_scalar(self):
-        a = xr.DataArray(np.r_[:6], dims=('x', ), coords={'x': np.r_[:6]})
-        ds = xr.Dataset({'a': a, 'b': 1.0})
-        ds_flat = ds.to_stacked_array('features', sample_dims=['y'])
-        ds_comp = ds_flat.to_unstacked_dataset('features')
-        assert_identical(ds, ds_comp)
-
     def test_update(self):
         data = create_test_data(seed=0)
         expected = data.copy()

@@ -2719,7 +2719,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         for variable in self:
             dims = self[variable].dims
-            dims_include_sample_dims = set(sample_dims) < set(dims)
+            dims_include_sample_dims = set(sample_dims) <= set(dims)
             if not dims_include_sample_dims:
                 raise ValueError(
                     "All DataArrays must share the dims: {}. ".format(dims)
