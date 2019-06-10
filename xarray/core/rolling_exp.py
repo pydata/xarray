@@ -11,7 +11,7 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
     return 1 / (1 + com)
 
 
-def move_exp_nanmean(array, *, axis, window):
+def move_exp_nanmean(array, *, axis, alpha):
     if isinstance(array, dask_array_type):
         raise TypeError("rolling_exp is not currently support for dask arrays")
     import numbagg
@@ -19,7 +19,7 @@ def move_exp_nanmean(array, *, axis, window):
         return array.astype(np.float64)
     else:
         return numbagg.moving.move_exp_nanmean(
-            array, axis=axis, window=window)
+            array, axis=axis, alpha=alpha)
 
 
 def _get_center_of_mass(comass, span, halflife, alpha):
@@ -104,4 +104,4 @@ class RollingExp(object):
         """
 
         return self.obj.reduce(
-            move_exp_nanmean, dim=self.dim, window=self.alpha)
+            move_exp_nanmean, dim=self.dim, alpha=self.alpha)
