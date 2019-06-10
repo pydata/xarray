@@ -190,6 +190,22 @@ We can also manually iterate through ``Rolling`` objects:
    for label, arr_window in r:
       # arr_window is a view of x
 
+.. _comput.rolling_exp:
+
+While ``rolling`` provides a simple moving average, ``DataArray``s also support
+an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
+This is similiar to pandas' ``ewm`` method. numbagg_ is required.
+
+.. _numbagg: https://github.com/shoyer/numbagg
+
+.. code:: python
+
+    arr.rolling_exp(y=3).mean()
+
+The ``rolling_exp`` method takes a ``window_type`` kwarg, which can be ``'alpha'``,
+``'com'`` (for ``center-of-mass``), ``'span'``, and ``'halflife'``. The default is
+``span``.
+
 Finally, the rolling object has a ``construct`` method which returns a
 view of the original ``DataArray`` with the windowed dimension in
 the last position.
