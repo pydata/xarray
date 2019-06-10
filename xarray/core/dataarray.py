@@ -1746,8 +1746,9 @@ class DataArray(AbstractArray, DataWithCoords):
         result : MaskedArray
             Masked where invalid values (nan or inf) occur.
         """
-        isnull = pd.isnull(self.values)
-        return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
+        values = self.values  # only compute lazy arrays once
+        isnull = pd.isnull(values)
+        return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
     def to_netcdf(self, *args, **kwargs):
         """Write DataArray contents to a netCDF file.
