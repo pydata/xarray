@@ -22,8 +22,8 @@ from xarray.core.pycompat import integer_types
 from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
-    raises_regex, requires_bottleneck, requires_dask, requires_scipy,
-    source_ndarray, requires_cftime)
+    raises_regex, requires_bottleneck, requires_cftime, requires_dask,
+    requires_scipy, source_ndarray)
 
 try:
     import dask.array as da

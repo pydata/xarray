@@ -1,9 +1,9 @@
 import pickle
+import sys
 import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
-import sys
 
 import numpy as np
 import pandas as pd

@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (
-    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union, Sequence)
+    Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
