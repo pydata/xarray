@@ -5,6 +5,7 @@
 
 scanner:
     diff_only: False  # If True, errors caused by only the patch are shown
+    linter: flake8
 
 pycodestyle:
     max-line-length: 79
@@ -14,3 +15,4 @@ pycodestyle:
         - E741  # ambiguous variable name
         - W503  # line break before binary operator
         - W504  # line break after binary operator
+        - F401  # Unused imports; TODO: Allow typing to work without triggering errors
