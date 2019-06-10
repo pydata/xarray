@@ -165,13 +165,13 @@ class DatetimeAccessor:
 
      """
 
-    def __init__(self, xarray_obj):
-        if not _contains_datetime_like_objects(xarray_obj):
+    def __init__(self, obj):
+        if not _contains_datetime_like_objects(obj):
             raise TypeError("'dt' accessor only available for "
                             "DataArray with datetime64 timedelta64 dtype or "
                             "for arrays containing cftime datetime "
                             "objects.")
-        self._obj = xarray_obj
+        self._obj = obj
 
     def _tslib_field_accessor(name, docstring=None, dtype=None):
         def f(self, dtype=dtype):
