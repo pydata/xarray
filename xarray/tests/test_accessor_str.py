@@ -44,8 +44,7 @@ import pytest
 
 import xarray as xr
 
-from . import (
-    assert_array_equal, assert_equal, has_dask, raises_regex, requires_dask)
+from . import assert_equal, requires_dask
 
 
 @pytest.fixture(params=[np.str_, np.bytes_])

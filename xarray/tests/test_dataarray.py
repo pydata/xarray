@@ -12,7 +12,7 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast)
-from xarray.coding.times import CFDatetimeCoder, _import_cftime
+from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import ALL_DIMS, full_like
@@ -1632,8 +1632,8 @@ class TestDataArray:
         assert (a + a.rename(None)).name is None
         assert (a + a.rename('bar')).name is None
         assert (a + a).name == 'foo'
-        assert (+a['x']).name is 'x'
-        assert (a['x'] + 0).name is 'x'
+        assert (+a['x']).name == 'x'
+        assert (a['x'] + 0).name == 'x'
         assert (a + a['x']).name is None
 
     def test_math_with_coords(self):

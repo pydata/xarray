@@ -35,8 +35,7 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
-    either_dict_or_kwargs, ensure_us_time_resolution, hashable, is_dict_like,
-    maybe_wrap_array)
+    either_dict_or_kwargs, hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
@@ -4145,7 +4144,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError('Coordinate {} does not exist.'.format(dim))
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:

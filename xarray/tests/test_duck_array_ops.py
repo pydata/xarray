@@ -13,7 +13,7 @@ from xarray.core.duck_array_ops import (
     array_notnull_equiv, concatenate, count, first, gradient, last, mean,
     rolling_window, stack, where)
 from xarray.core.pycompat import dask_array_type
-from xarray.testing import assert_allclose, assert_equal, assert_identical
+from xarray.testing import assert_allclose, assert_equal
 
 from . import (
     assert_array_equal, has_dask, has_np113, raises_regex, requires_cftime,
