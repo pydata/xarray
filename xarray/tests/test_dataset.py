@@ -4756,9 +4756,9 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
 
     func_name = 'move_{0}'.format(name)
     actual = getattr(rolling_obj, name)()
-    if key is 'z1':  # z1 does not depend on 'Time' axis. Stored as it is.
+    if key == 'z1':  # z1 does not depend on 'Time' axis. Stored as it is.
         expected = ds[key]
-    elif key is 'z2':
+    elif key == 'z2':
         expected = getattr(bn, func_name)(ds[key].values, window=7, axis=0,
                                           min_count=min_periods)
     assert_array_equal(actual[key].values, expected)
