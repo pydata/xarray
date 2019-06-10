@@ -3108,6 +3108,7 @@ class TestRasterio:
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
+                assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3131,6 +3132,7 @@ class TestRasterio:
                 assert 'x' not in rioda.coords
                 assert 'y' not in rioda.coords
                 assert 'crs' not in rioda.attrs
+                assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -3151,6 +3153,7 @@ class TestRasterio:
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
+                assert rioda.attrs['scales'] == (1.0,)
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3190,6 +3193,7 @@ class TestRasterio:
                                              })
                 with xr.open_rasterio(tmp_file) as rioda:
                     assert_allclose(rioda, expected)
+                    assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
                     assert isinstance(rioda.attrs['res'], tuple)
                     assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                     assert isinstance(rioda.attrs['transform'], tuple)
