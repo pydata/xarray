@@ -3,6 +3,7 @@ import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
+from unittest import mock  # noqa
 
 import numpy as np
 import pytest
