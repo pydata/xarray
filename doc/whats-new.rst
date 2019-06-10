@@ -55,6 +55,8 @@ Enhancements
 - Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports a
   :py:meth:`~xarray.CFTimeIndex.strftime` method to return an index of string
   formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
+- Add ``.str`` accessor to DataArrays for string related manipulations.
+  By `0x0L <https://github.com/0x0L>`_.
 
 Bug fixes
 ~~~~~~~~~
