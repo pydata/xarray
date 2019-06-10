@@ -13,6 +13,7 @@ Geosciences
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meterology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
+- `MetPy <https://unidata.github.io/MetPy/dev/index.html>`_: A collection of tools in Python for reading, visualizing, and performing calculations with weather data.
 - `MPAS-Analysis <http://mpas-analysis.readthedocs.io>`_: Analysis for simulations produced with Model for Prediction Across Scales (MPAS) components and the Accelerated Climate Model for Energy (ACME).
 - `OGGM <http://oggm.org/>`_: Open Global Glacier Model
 - `Oocgcm <https://oocgcm.readthedocs.io/>`_: Analysis of large gridded geophysical datasets
@@ -32,6 +33,7 @@ Geosciences
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
 - `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
 - `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
+- `xclim <https://xclim.readthedocs.io/>`_: A library for calculating climate science indices with unit handling built from xarray and dask.
 - `xESMF <https://xesmf.readthedocs.io>`_: Universal Regridder for Geospatial Data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
 - `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.

@@ -35,7 +35,7 @@ def _dispatch_priority(obj):
     return -1
 
 
-class _UFuncDispatcher(object):
+class _UFuncDispatcher:
     """Wrapper for dispatching ufuncs."""
 
     def __init__(self, name):

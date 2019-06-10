@@ -143,7 +143,8 @@ def test_interpolate_vectorize(use_dask):
                                     'y': da['y'],
                                     'x': ('z', xdest.values),
                                     'x2': ('z', func(da['x2'], 'x', xdest))})
-    assert_allclose(actual, expected.transpose('z', 'y'))
+    assert_allclose(actual,
+                    expected.transpose('z', 'y', transpose_coords=True))
 
     # xdest is 2d
     xdest = xr.DataArray(np.linspace(0.1, 0.9, 30).reshape(6, 5),
@@ -160,7 +161,8 @@ def test_interpolate_vectorize(use_dask):
         coords={'z': xdest['z'], 'w': xdest['w'], 'z2': xdest['z2'],
                 'y': da['y'], 'x': (('z', 'w'), xdest),
                 'x2': (('z', 'w'), func(da['x2'], 'x', xdest))})
-    assert_allclose(actual, expected.transpose('z', 'w', 'y'))
+    assert_allclose(actual,
+                    expected.transpose('z', 'w', 'y', transpose_coords=True))
 
 
 @pytest.mark.parametrize('case', [3, 4])
@@ -291,7 +293,7 @@ def test_errors(use_dask):
     if use_dask:
         da = get_example_data(3)
     else:
-        da = get_example_data(1)
+        da = get_example_data(0)
 
     result = da.interp(x=[-1, 1, 3], kwargs={'fill_value': 0.0})
     assert not np.isnan(result.values).any()
@@ -523,7 +525,8 @@ def test_cftime_type_error():
 def test_cftime_list_of_strings():
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range('2000', periods=24, freq='D')
+    times = xr.cftime_range('2000', periods=24, freq='D',
+                            calendar='proleptic_gregorian')
     da = xr.DataArray(np.arange(24), coords=[times], dims='time')
 
     times_new = ['2000-01-01T12:00', '2000-01-02T12:00', '2000-01-03T12:00']
@@ -542,7 +545,8 @@ def test_cftime_list_of_strings():
 def test_cftime_single_string():
     from cftime import DatetimeProlepticGregorian
 
-    times = xr.cftime_range('2000', periods=24, freq='D')
+    times = xr.cftime_range('2000', periods=24, freq='D',
+                            calendar='proleptic_gregorian')
     da = xr.DataArray(np.arange(24), coords=[times], dims='time')
 
     times_new = '2000-01-01T12:00'
@@ -571,3 +575,16 @@ def test_cftime_to_non_cftime_error():
 
     with pytest.raises(TypeError):
         da.interp(time=0.5)
+
+
+@requires_scipy
+def test_datetime_interp_noerror():
+    # GH:2667
+    a = xr.DataArray(
+        np.arange(21).reshape(3, 7), dims=['x', 'time'],
+        coords={'x': [1, 2, 3],
+                'time': pd.date_range('01-01-2001', periods=7, freq='D')})
+    xi = xr.DataArray(
+        np.linspace(1, 3, 50), dims=['time'],
+        coords={'time': pd.date_range('01-01-2001', periods=50, freq='H')})
+    a.interp(x=xi, time=xi.time)  # should not raise an error

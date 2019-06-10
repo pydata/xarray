@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python=3.7
   - cftime
+  - nc-time-axis
   - dask
   - distributed
   - h5py
@@ -12,8 +13,8 @@ dependencies:
   - netcdf4
   - pytest
   - pytest-env
-  - numpy
-  - pandas
+  - numpy>=1.12
+  - pandas>=0.19
   - scipy
   - seaborn
   - toolz

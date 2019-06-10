@@ -1,17 +1,19 @@
+import typing
 from collections import OrderedDict
-
-from typing import (
-    Any, Dict, List, Mapping, Optional, Set, Tuple, TYPE_CHECKING, Union,
-)
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 
 import pandas as pd
 
+from . import dtypes
 from .alignment import deep_align
+from .pycompat import TYPE_CHECKING
 from .utils import Frozen
 from .variable import (
     Variable, as_variable, assert_unique_multiindex_level_names)
+
 if TYPE_CHECKING:
     from .dataset import Dataset
+
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 
@@ -22,13 +24,14 @@ _VALID_COMPAT = Frozen({'identical': 0,
                         'no_conflicts': 4})
 
 
-def broadcast_dimension_size(variables):
-    # type: (List[Variable],) -> Variable
+def broadcast_dimension_size(
+    variables: List[Variable],
+) -> 'OrderedDict[Any, int]':
     """Extract dimension sizes from a dictionary of variables.
 
     Raises ValueError if any dimensions have different sizes.
     """
-    dims = OrderedDict()
+    dims = OrderedDict()  # type: OrderedDict[Any, int]
     for var in variables:
         for dim, size in zip(var.dims, var.shape):
             if dim in dims and size != dims[dim]:
@@ -149,7 +152,7 @@ def merge_variables(
 
     # n.b. it's important to fill up merged in the original order in which
     # variables appear
-    merged = OrderedDict()
+    merged = OrderedDict()  # type: OrderedDict[Any, Variable]
 
     for name, var_list in lookup.items():
         if name in priority_vars:
@@ -175,8 +178,9 @@ def merge_variables(
     return merged
 
 
-def expand_variable_dicts(list_of_variable_dicts):
-    # type: (List[Union[Dataset, Dict]]) -> List[Dict[Any, Variable]]
+def expand_variable_dicts(
+    list_of_variable_dicts: 'List[Union[Dataset, OrderedDict]]',
+) -> 'List[Mapping[Any, Variable]]':
     """Given a list of dicts with xarray object values, expand the values.
 
     Parameters
@@ -201,22 +205,23 @@ def expand_variable_dicts(list_of_variable_dicts):
 
     for variables in list_of_variable_dicts:
         if isinstance(variables, Dataset):
-            sanitized_vars = variables.variables
-        else:
-            # append coords to var_dicts before appending sanitized_vars,
-            # because we want coords to appear first
-            sanitized_vars = OrderedDict()
+            var_dicts.append(variables.variables)
+            continue
 
-            for name, var in variables.items():
-                if isinstance(var, DataArray):
-                    # use private API for speed
-                    coords = var._coords.copy()
-                    # explicitly overwritten variables should take precedence
-                    coords.pop(name, None)
-                    var_dicts.append(coords)
+        # append coords to var_dicts before appending sanitized_vars,
+        # because we want coords to appear first
+        sanitized_vars = OrderedDict()  # type: OrderedDict[Any, Variable]
 
-                var = as_variable(var, name=name)
-                sanitized_vars[name] = var
+        for name, var in variables.items():
+            if isinstance(var, DataArray):
+                # use private API for speed
+                coords = var._coords.copy()
+                # explicitly overwritten variables should take precedence
+                coords.pop(name, None)
+                var_dicts.append(coords)
+
+            var = as_variable(var, name=name)
+            sanitized_vars[name] = var
 
         var_dicts.append(sanitized_vars)
 
@@ -345,7 +350,7 @@ def expand_and_merge_variables(objs, priority_arg=None):
 
 
 def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
-                 indexes=None):
+                 indexes=None, fill_value=dtypes.NA):
     """Merge coordinate variables.
 
     See merge_core below for argument descriptions. This works similarly to
@@ -354,7 +359,8 @@ def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
     """
     _assert_compat_valid(compat)
     coerced = coerce_pandas_values(objs)
-    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
+    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes,
+                         fill_value=fill_value)
     expanded = expand_variable_dicts(aligned)
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
@@ -400,7 +406,8 @@ def merge_core(objs,
                join='outer',
                priority_arg=None,
                explicit_coords=None,
-               indexes=None):
+               indexes=None,
+               fill_value=dtypes.NA):
     """Core logic for merging labeled objects.
 
     This is not public API.
@@ -419,6 +426,8 @@ def merge_core(objs,
         An explicit list of variables from `objs` that are coordinates.
     indexes : dict, optional
         Dictionary with values given by pandas.Index objects.
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -438,7 +447,8 @@ def merge_core(objs,
     _assert_compat_valid(compat)
 
     coerced = coerce_pandas_values(objs)
-    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
+    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes,
+                         fill_value=fill_value)
     expanded = expand_variable_dicts(aligned)
 
     coord_names, noncoord_names = determine_coords(coerced)
@@ -466,7 +476,7 @@ def merge_core(objs,
     return variables, coord_names, dict(dims)
 
 
-def merge(objects, compat='no_conflicts', join='outer'):
+def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     """Merge any number of xarray objects into a single Dataset as variables.
 
     Parameters
@@ -488,6 +498,8 @@ def merge(objects, compat='no_conflicts', join='outer'):
           of all non-null values.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         How to combine objects with different indexes.
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -525,13 +537,17 @@ def merge(objects, compat='no_conflicts', join='outer'):
         obj.to_dataset() if isinstance(obj, DataArray) else obj
         for obj in objects]
 
-    variables, coord_names, dims = merge_core(dict_like_objects, compat, join)
-    merged = Dataset._construct_direct(variables, coord_names, dims)
+    variables, coord_names, dims = merge_core(dict_like_objects, compat, join,
+                                              fill_value=fill_value)
+    # TODO: don't always recompute indexes
+    merged = Dataset._construct_direct(
+        variables, coord_names, dims, indexes=None)
 
     return merged
 
 
-def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
+def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
+                         fill_value=dtypes.NA):
     """Guts of the Dataset.merge method."""
 
     # we are locked into supporting overwrite_vars for the Dataset.merge
@@ -559,7 +575,8 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
         objs = [dataset, other_no_overwrite, other_overwrite]
         priority_arg = 2
 
-    return merge_core(objs, compat, join, priority_arg=priority_arg)
+    return merge_core(objs, compat, join, priority_arg=priority_arg,
+                      fill_value=fill_value)
 
 
 def dataset_update_method(dataset, other):

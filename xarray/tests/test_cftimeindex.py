@@ -375,12 +375,6 @@ def test_groupby(da):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-def test_resample_error(da):
-    with pytest.raises(NotImplementedError, match='to_datetimeindex'):
-        da.resample(time='Y')
-
-
 SEL_STRING_OR_LIST_TESTS = {
     'string': '0001',
     'string-slice': slice('0001-01-01', '0001-12-30'),  # type: ignore
@@ -586,6 +580,14 @@ def test_indexing_in_series_iloc(series, index):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_series_dropna(index):
+    series = pd.Series([0., 1., np.nan, np.nan], index=index)
+    expected = series.iloc[:2]
+    result = series.dropna()
+    assert result.equals(expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_indexing_in_dataframe_loc(df, index, scalar_args, range_args):
     expected = pd.Series([1], name=index[0])
     for arg in scalar_args:
@@ -781,6 +783,17 @@ def test_parse_array_of_cftime_strings():
     expected = np.array(DatetimeNoLeap(2000, 1, 1))
     result = _parse_array_of_cftime_strings(strings, DatetimeNoLeap)
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('calendar', _ALL_CALENDARS)
+def test_strftime_of_cftime_array(calendar):
+    date_format = '%Y%m%d%H%M'
+    cf_values = xr.cftime_range('2000', periods=5, calendar=calendar)
+    dt_values = pd.date_range('2000', periods=5)
+    expected = dt_values.strftime(date_format)
+    result = cf_values.strftime(date_format)
+    assert result.equals(expected)
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')

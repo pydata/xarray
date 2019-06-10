@@ -75,6 +75,34 @@ def _get_default_engine_netcdf():
     return engine
 
 
+def _get_engine_from_magic_number(filename_or_obj):
+    # check byte header to determine file type
+    if isinstance(filename_or_obj, bytes):
+        magic_number = filename_or_obj[:8]
+    else:
+        if filename_or_obj.tell() != 0:
+            raise ValueError("file-like object read/write pointer not at zero "
+                             "please close and reopen, or use a context "
+                             "manager")
+        magic_number = filename_or_obj.read(8)
+        filename_or_obj.seek(0)
+
+    if magic_number.startswith(b'CDF'):
+        engine = 'scipy'
+    elif magic_number.startswith(b'\211HDF\r\n\032\n'):
+        engine = 'h5netcdf'
+        if isinstance(filename_or_obj, bytes):
+            raise ValueError("can't open netCDF4/HDF5 as bytes "
+                             "try passing a path or file-like object")
+    else:
+        if isinstance(filename_or_obj, bytes) and len(filename_or_obj) > 80:
+            filename_or_obj = filename_or_obj[:80] + b'...'
+        raise ValueError('{} is not a valid netCDF file '
+                         'did you mean to pass a string for a path instead?'
+                         .format(filename_or_obj))
+    return engine
+
+
 def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):
         engine = _get_default_engine_remote_uri()
@@ -157,12 +185,64 @@ def _finalize_store(write, store):
     store.close()
 
 
+def load_dataset(filename_or_obj, **kwargs):
+    """Open, load into memory, and close a Dataset from a file or file-like
+    object.
+
+    This is a thin wrapper around :py:meth:`~xarray.open_dataset`. It differs
+    from `open_dataset` in that it loads the Dataset into memory, closes the
+    file, and returns the Dataset. In contrast, `open_dataset` keeps the file
+    handle open and lazy loads its contents. All parameters are passed directly
+    to `open_dataset`. See that documentation for further details.
+
+    Returns
+    -------
+    dataset : Dataset
+        The newly created Dataset.
+
+    See Also
+    --------
+    open_dataset
+    """
+    if 'cache' in kwargs:
+        raise TypeError('cache has no effect in this context')
+
+    with open_dataset(filename_or_obj, **kwargs) as ds:
+        return ds.load()
+
+
+def load_dataarray(filename_or_obj, **kwargs):
+    """Open, load into memory, and close a DataArray from a file or file-like
+    object containing a single data variable.
+
+    This is a thin wrapper around :py:meth:`~xarray.open_dataarray`. It differs
+    from `open_dataarray` in that it loads the Dataset into memory, closes the
+    file, and returns the Dataset. In contrast, `open_dataarray` keeps the file
+    handle open and lazy loads its contents. All parameters are passed directly
+    to `open_dataarray`. See that documentation for further details.
+
+    Returns
+    -------
+    datarray : DataArray
+        The newly created DataArray.
+
+    See Also
+    --------
+    open_dataarray
+    """
+    if 'cache' in kwargs:
+        raise TypeError('cache has no effect in this context')
+
+    with open_dataarray(filename_or_obj, **kwargs) as da:
+        return da.load()
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=None, decode_times=True, autoclose=None,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None,
-                 backend_kwargs=None):
-    """Load and decode a dataset from a file or file-like object.
+                 backend_kwargs=None, use_cftime=None):
+    """Open and decode a dataset from a file or file-like object.
 
     Parameters
     ----------
@@ -170,8 +250,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
-        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
-        with scipy.io.netcdf (only netCDF3 supported).
+        scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
+        objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -202,7 +282,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib',
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib', \
         'pseudonetcdf'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -231,22 +311,46 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
     dataset : Dataset
         The newly created dataset.
 
+    Notes
+    -----
+    ``open_dataset`` opens the file with read-only access. When you modify
+    values of a Dataset, even one linked to files on disk, only the in-memory
+    copy you are manipulating in xarray is modified: the original file on disk
+    is never touched.
+
     See Also
     --------
     open_mfdataset
     """
+    engines = [None, 'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio',
+               'cfgrib', 'pseudonetcdf']
+    if engine not in engines:
+        raise ValueError('unrecognized engine for open_dataset: {}\n'
+                         'must be one of: {}'
+                         .format(engine, engines))
+
     if autoclose is not None:
         warnings.warn(
             'The autoclose argument is no longer used by '
             'xarray.open_dataset() and is now ignored; it will be removed in '
-            'xarray v0.12. If necessary, you can control the maximum number '
-            'of simultaneous open files with '
+            'a future version of xarray. If necessary, you can control the '
+            'maximum number of simultaneous open files with '
             'xarray.set_options(file_cache_maxsize=...).',
             FutureWarning, stacklevel=2)
 
@@ -269,7 +373,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
-            drop_variables=drop_variables)
+            drop_variables=drop_variables, use_cftime=use_cftime)
 
         _protect_dataset_variables_inplace(ds, cache)
 
@@ -284,7 +388,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 mtime = None
             token = tokenize(filename_or_obj, mtime, group, decode_cf,
                              mask_and_scale, decode_times, concat_characters,
-                             decode_coords, engine, chunks, drop_variables)
+                             decode_coords, engine, chunks, drop_variables,
+                             use_cftime)
             name_prefix = 'open_dataset-%s' % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
             ds2._file_obj = ds._file_obj
@@ -298,18 +403,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
-        ds = maybe_decode_store(store)
-    elif isinstance(filename_or_obj, str):
 
-        if (isinstance(filename_or_obj, bytes) and
-                filename_or_obj.startswith(b'\x89HDF')):
-            raise ValueError('cannot read netCDF4/HDF5 file images')
-        elif (isinstance(filename_or_obj, bytes) and
-                filename_or_obj.startswith(b'CDF')):
-            # netCDF3 file images are handled by scipy
-            pass
-        elif isinstance(filename_or_obj, str):
-            filename_or_obj = _normalize_path(filename_or_obj)
+    elif isinstance(filename_or_obj, str):
+        filename_or_obj = _normalize_path(filename_or_obj)
 
         if engine is None:
             engine = _get_default_engine(filename_or_obj,
@@ -334,18 +430,19 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         elif engine == 'cfgrib':
             store = backends.CfGribDataStore(
                 filename_or_obj, lock=lock, **backend_kwargs)
-        else:
-            raise ValueError('unrecognized engine for open_dataset: %r'
-                             % engine)
 
-        with close_on_error(store):
-            ds = maybe_decode_store(store)
     else:
-        if engine is not None and engine != 'scipy':
-            raise ValueError('can only read file-like objects with '
-                             "default engine or engine='scipy'")
-        # assume filename_or_obj is a file-like object
-        store = backends.ScipyDataStore(filename_or_obj)
+        if engine not in [None, 'scipy', 'h5netcdf']:
+            raise ValueError("can only read bytes or file-like objects "
+                             "with engine='scipy' or 'h5netcdf'")
+        engine = _get_engine_from_magic_number(filename_or_obj)
+        if engine == 'scipy':
+            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
+        elif engine == 'h5netcdf':
+            store = backends.H5NetCDFStore(filename_or_obj, group=group,
+                                           lock=lock, **backend_kwargs)
+
+    with close_on_error(store):
         ds = maybe_decode_store(store)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
@@ -360,8 +457,9 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                    mask_and_scale=None, decode_times=True, autoclose=None,
                    concat_characters=True, decode_coords=True, engine=None,
                    chunks=None, lock=None, cache=None, drop_variables=None,
-                   backend_kwargs=None):
-    """Open an DataArray from a netCDF file containing a single data variable.
+                   backend_kwargs=None, use_cftime=None):
+    """Open an DataArray from a file or file-like object containing a single
+    data variable.
 
     This is designed to read netCDF files with only one data variable. If
     multiple variables are present then a ValueError is raised.
@@ -372,8 +470,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         Strings and Paths are interpreted as a path to a netCDF file or an
         OpenDAP URL and opened with python-netCDF4, unless the filename ends
         with .gz, in which case the file is gunzipped and opened with
-        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
-        with scipy.io.netcdf (only netCDF3 supported).
+        scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
+        objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -400,7 +498,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, \
         optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -428,6 +526,16 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Notes
     -----
@@ -450,7 +558,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                            decode_coords=decode_coords, engine=engine,
                            chunks=chunks, lock=lock, cache=cache,
                            drop_variables=drop_variables,
-                           backend_kwargs=backend_kwargs)
+                           backend_kwargs=backend_kwargs,
+                           use_cftime=use_cftime)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
@@ -473,7 +582,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     return data_array
 
 
-class _MultiFileCloser(object):
+class _MultiFileCloser:
     def __init__(self, file_objs):
         self.file_objs = file_objs
 
@@ -528,7 +637,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding['source']``.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, \
         optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -574,6 +683,13 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     Returns
     -------
     xarray.Dataset
+
+    Notes
+    -----
+    ``open_mfdataset`` opens files with read-only access. When you modify values
+    of a Dataset, even one linked to files on disk, only the in-memory copy you
+    are manipulating in xarray is modified: the original file on disk is never
+    touched.
 
     See Also
     --------

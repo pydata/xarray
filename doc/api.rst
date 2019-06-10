@@ -87,6 +87,7 @@ Dataset contents
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop
+   Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
 
@@ -153,6 +154,7 @@ Computation
    Dataset.diff
    Dataset.quantile
    Dataset.differentiate
+   Dataset.integrate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -323,6 +325,8 @@ Computation
    DataArray.dot
    DataArray.quantile
    DataArray.differentiate
+   DataArray.integrate
+   DataArray.str
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -459,6 +463,7 @@ Dataset methods
    :toctree: generated/
 
    open_dataset
+   load_dataset
    open_mfdataset
    open_rasterio
    open_zarr
@@ -486,6 +491,7 @@ DataArray methods
    :toctree: generated/
 
    open_dataarray
+   load_dataarray
    DataArray.to_dataset
    DataArray.to_netcdf
    DataArray.to_pandas
@@ -554,6 +560,15 @@ Resample objects also implement the GroupBy interface
    core.resample.DatasetResample.interpolate
    core.resample.DatasetResample.nearest
    core.resample.DatasetResample.pad
+
+Accessors
+=========
+
+.. autosummary::
+   :toctree: generated/
+
+   core.accessor_dt.DatetimeAccessor
+   core.accessor_str.StringAccessor
 
 Custom Indexes
 ==============

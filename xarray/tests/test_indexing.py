@@ -12,7 +12,7 @@ from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
 B = IndexerMaker(indexing.BasicIndexer)
 
 
-class TestIndexers(object):
+class TestIndexers:
     def set_to_zero(self, x, i):
         x = x.copy()
         x[i] = 0
@@ -129,7 +129,7 @@ class TestIndexers(object):
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
 
-class TestLazyArray(object):
+class TestLazyArray:
     def test_slice_slice(self):
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
         for size in [100, 99]:
@@ -244,7 +244,7 @@ class TestLazyArray(object):
         check_indexing(v_eager, v_lazy, indexers)
 
 
-class TestCopyOnWriteArray(object):
+class TestCopyOnWriteArray:
     def test_setitem(self):
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
@@ -268,7 +268,7 @@ class TestCopyOnWriteArray(object):
         assert np.array(x[B[0]][B[()]]) == 'foo'
 
 
-class TestMemoryCachedArray(object):
+class TestMemoryCachedArray:
     def test_wrapper(self):
         original = indexing.LazilyOuterIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
@@ -381,7 +381,7 @@ def test_vectorized_indexer():
                                     np.arange(5, dtype=np.int64)))
 
 
-class Test_vectorized_indexer(object):
+class Test_vectorized_indexer:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.data = indexing.NumpyIndexingAdapter(np.random.randn(10, 12, 13))
