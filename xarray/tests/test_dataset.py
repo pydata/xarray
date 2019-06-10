@@ -4615,7 +4615,7 @@ def test_dataset_constructor_aligns_to_explicit_coords(
 
 
 def test_error_message_on_set_supplied():
-    with pytest.raises(TypeError, match='has invalid type set'):
+    with pytest.raises(TypeError, match="has invalid type <class 'set'>"):
         xr.Dataset(dict(date=[1, 2, 3], sec={4}))
 
 
