@@ -1,6 +1,6 @@
-
 import numpy as np
-from pandas.core.window import _get_center_of_mass
+
+from .pycompat import dask_array_type
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -12,12 +12,49 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
 
 
 def move_exp_nanmean(array, *, axis, window):
+    if isinstance(array, dask_array_type):
+        raise TypeError("rolling_exp is not currently support for dask arrays")
     import numbagg
     if axis == ():
-        return array.astype(np.float)
+        return array.astype(np.float64)
     else:
         return numbagg.moving.move_exp_nanmean(
             array, axis=axis, window=window)
+
+
+def _get_center_of_mass(comass, span, halflife, alpha):
+    """
+    Vendored from pandas.core.window._get_center_of_mass
+
+    See licenses/PANDAS_LICENSE for the function's license
+    """
+    from pandas.core import common as com
+    valid_count = com.count_not_none(comass, span, halflife, alpha)
+    if valid_count > 1:
+        raise ValueError("comass, span, halflife, and alpha "
+                         "are mutually exclusive")
+
+    # Convert to center of mass; domain checks ensure 0 < alpha <= 1
+    if comass is not None:
+        if comass < 0:
+            raise ValueError("comass must satisfy: comass >= 0")
+    elif span is not None:
+        if span < 1:
+            raise ValueError("span must satisfy: span >= 1")
+        comass = (span - 1) / 2.
+    elif halflife is not None:
+        if halflife <= 0:
+            raise ValueError("halflife must satisfy: halflife > 0")
+        decay = 1 - np.exp(np.log(0.5) / halflife)
+        comass = 1 / decay - 1
+    elif alpha is not None:
+        if alpha <= 0 or alpha > 1:
+            raise ValueError("alpha must satisfy: 0 < alpha <= 1")
+        comass = (1.0 - alpha) / alpha
+    else:
+        raise ValueError("Must pass one of comass, span, halflife, or alpha")
+
+    return float(comass)
 
 
 class RollingExp(object):
