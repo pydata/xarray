@@ -76,6 +76,9 @@ Bug fixes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Fixed performance issues with cftime installed (:issue:`3000`)
   By `0x0L <https://github.com/0x0L>`_.
+- Replace incorrect usages of `message` in pytest assertions 
+  with `match` (:issue:`3011`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.12.1:
 
