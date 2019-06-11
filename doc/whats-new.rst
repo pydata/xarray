@@ -30,6 +30,11 @@ Enhancements
 - Add ``fill_value`` argument for reindex, align, and merge operations
   to enable custom fill values. (:issue:`2876`)
   By `Zach Griffith <https://github.com/zdgriffith>`_.
+- :py:meth:`~xarray.DataArray.rolling_exp` and
+  :py:meth:`~xarray.Dataset.rolling_exp` added, similar to pandas' 
+  ``pd.DataFrame.ewm`` method. Calling ``.mean`` on the resulting object 
+  will return an exponentially weighted moving average.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Character arrays' character dimension name decoding and encoding handled by
   ``var.encoding['char_dim_name']`` (:issue:`2895`)
   By `James McCreight <https://github.com/jmccreight>`_.
@@ -173,11 +178,6 @@ Other enhancements
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
-- :py:meth:`~xarray.DataArray.rolling_exp` and
-  :py:meth:`~xarray.Dataset.rolling_exp` added, similar to pandas' 
-  ``pd.DataFrame.ewm`` method. Calling ``.mean`` on the resulting object 
-  will return an exponentially weighted moving average.
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
   
 - :py:func:`xarray.testing.assert_equal` and
   :py:func:`xarray.testing.assert_identical` now provide a more detailed
