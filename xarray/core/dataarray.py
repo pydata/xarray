@@ -1351,7 +1351,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
-                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
 
         See also
@@ -1394,7 +1394,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
-                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
         >>> roundtripped = stacked.unstack()
         >>> arr.identical(roundtripped)

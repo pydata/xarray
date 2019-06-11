@@ -1762,8 +1762,12 @@ class TestDataArray:
 
         # test GH3000
         a = orig[:0, :1].stack(dim=('x', 'y')).dim.to_index()
-        b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                          labels=[[], []], names=['x', 'y'])
+        if pd.__version__ < '0.24.0':
+            b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])],
+                              labels=[[], []], names=['x', 'y'])
+        else:
+            b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])],
+                              codes=[[], []], names=['x', 'y'])
         pd.util.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=['x', 'y']).unstack('z').drop(['x', 'y'])
