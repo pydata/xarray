@@ -2258,7 +2258,7 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             ds.set_index(x=mindex.names, inplace=True)
             assert_identical(ds, expected)
 
@@ -2278,7 +2278,7 @@ class TestDataset:
         obj = ds.reset_index('x')
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             ds.reset_index('x', inplace=True)
             assert_identical(ds, expected)
 
@@ -2291,7 +2291,7 @@ class TestDataset:
         reindexed = ds.reorder_levels(x=['level_2', 'level_1'])
         assert_identical(reindexed, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             ds.reorder_levels(x=['level_2', 'level_1'], inplace=True)
             assert_identical(ds, expected)
 
@@ -2375,7 +2375,7 @@ class TestDataset:
         assert actual_result is actual
         assert_identical(expected, actual)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             actual = data.update(data, inplace=False)
             expected = data
             assert actual is not expected
@@ -4615,7 +4615,7 @@ def test_dataset_constructor_aligns_to_explicit_coords(
 
 
 def test_error_message_on_set_supplied():
-    with pytest.raises(TypeError, message='has invalid type set'):
+    with pytest.raises(TypeError, match="has invalid type <class 'set'>"):
         xr.Dataset(dict(date=[1, 2, 3], sec={4}))
 
 
