@@ -9,7 +9,8 @@ import pandas as pd
 from ..plot.plot import _PlotMethods
 from . import (
     computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
-from .accessors import DatetimeAccessor
+from .accessor_dt import DatetimeAccessor
+from .accessor_str import StringAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
@@ -162,6 +163,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)
+    str = property(StringAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None, indexes=None, fastpath=False):
@@ -1746,8 +1748,9 @@ class DataArray(AbstractArray, DataWithCoords):
         result : MaskedArray
             Masked where invalid values (nan or inf) occur.
         """
-        isnull = pd.isnull(self.values)
-        return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
+        values = self.values  # only compute lazy arrays once
+        isnull = pd.isnull(values)
+        return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
     def to_netcdf(self, *args, **kwargs):
         """Write DataArray contents to a netCDF file.
