@@ -7,8 +7,8 @@ import numpy as np
 from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import (
-    bn, has_bottleneck, inject_bottleneck_rolling_methods,
-    inject_coarsen_methods, inject_datasetrolling_methods)
+    bn, has_bottleneck, inject_coarsen_methods,
+    inject_bottleneck_rolling_methods, inject_datasetrolling_methods)
 from .pycompat import dask_array_type
 
 
@@ -523,7 +523,6 @@ class DataArrayCoarsen(Coarsen):
         Return a wrapped function for injecting numpy methods.
         see ops.inject_coarsen_methods
         """
-
         def wrapped_func(self, **kwargs):
             from .dataarray import DataArray
 
@@ -552,7 +551,6 @@ class DatasetCoarsen(Coarsen):
         Return a wrapped function for injecting numpy methods.
         see ops.inject_coarsen_methods
         """
-
         def wrapped_func(self, **kwargs):
             from .dataset import Dataset
 
