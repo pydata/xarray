@@ -8,7 +8,7 @@ from typing import Any, Mapping, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from . import utils, dtypes
+from . import dtypes, utils
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable

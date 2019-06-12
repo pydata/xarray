@@ -1,9 +1,9 @@
 import pickle
+import sys
 import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
-import sys
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast)
-from xarray.coding.times import CFDatetimeCoder, _import_cftime
+from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import ALL_DIMS, full_like
@@ -1259,18 +1259,6 @@ class TestDataArray:
                 ValueError, 'different size for unlabeled'):
             foo.reindex_like(bar)
 
-    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
-    def test_reindex_fill_value(self, fill_value):
-        foo = DataArray([10, 20], dims='y', coords={'y': [0, 1]})
-        bar = DataArray([10, 20, 30], dims='y', coords={'y': [0, 1, 2]})
-        if fill_value == dtypes.NA:
-            # if we supply the default, we expect the missing value for a
-            # float array
-            fill_value = np.nan
-        actual = x.reindex_like(bar, fill_value=fill_value)
-        expected = DataArray([10, 20, fill_value], coords=[('y', [0, 1, 2])])
-        assert_identical(expected, actual)
-
     @pytest.mark.filterwarnings('ignore:Indexer has dimensions')
     def test_reindex_regressions(self):
         # regression test for #279
@@ -1644,8 +1632,8 @@ class TestDataArray:
         assert (a + a.rename(None)).name is None
         assert (a + a.rename('bar')).name is None
         assert (a + a).name == 'foo'
-        assert (+a['x']).name is 'x'
-        assert (a['x'] + 0).name is 'x'
+        assert (+a['x']).name == 'x'
+        assert (a['x'] + 0).name == 'x'
         assert (a + a['x']).name is None
 
     def test_math_with_coords(self):
