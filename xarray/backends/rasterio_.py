@@ -310,6 +310,9 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     if hasattr(riods, 'descriptions') and any(riods.descriptions):
         # Descriptions for each dataset band
         attrs['descriptions'] = riods.descriptions
+    if hasattr(riods, 'units') and any(riods.units):
+        # A list of units string for each dataset band
+        attrs['units'] = riods.units
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
