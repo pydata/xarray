@@ -6,7 +6,7 @@ import pytest
 import xarray as xr
 from xarray.coding import variables
 
-from . import assert_identical, requires_dask
+from . import assert_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da
@@ -18,6 +18,23 @@ def test_CFMaskCoder_decode():
     coder = variables.CFMaskCoder()
     encoded = coder.decode(original)
     assert_identical(expected, encoded)
+
+
+def test_CFMaskCoder_missing_value():
+    expected = xr.DataArray(np.array([[26915, 27755, -9999, 27705],
+                                      [25595, -9999, 28315, -9999]]),
+                            dims=['npts', 'ntimes'],
+                            name='tmpk')
+    expected.attrs['missing_value'] = -9999
+
+    decoded = xr.decode_cf(expected.to_dataset())
+    encoded, _ = xr.conventions.cf_encoder(decoded, decoded.attrs)
+
+    assert_equal(encoded['tmpk'], expected.variable)
+
+    decoded.tmpk.encoding['_FillValue'] = -9940
+    with pytest.raises(ValueError):
+        encoded, _ = xr.conventions.cf_encoder(decoded, decoded.attrs)
 
 
 @requires_dask
