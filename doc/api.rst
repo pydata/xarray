@@ -189,6 +189,7 @@ Computation
 :py:attr:`~core.groupby.DatasetGroupBy.last`
 :py:attr:`~core.groupby.DatasetGroupBy.fillna`
 :py:attr:`~core.groupby.DatasetGroupBy.where`
+:py:attr:`~core.groupby.DatasetGroupBy.quantile`
 
 Reshaping and reorganizing
 --------------------------
@@ -360,7 +361,7 @@ Computation
 :py:attr:`~core.groupby.DataArrayGroupBy.last`
 :py:attr:`~core.groupby.DataArrayGroupBy.fillna`
 :py:attr:`~core.groupby.DataArrayGroupBy.where`
-
+:py:attr:`~core.groupby.DataArrayGroupBy.quantile`
 
 Reshaping and reorganizing
 --------------------------
