@@ -48,6 +48,8 @@ Enhancements
   helpful for avoiding file-lock errors when trying to write to files opened
   using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Better warning message when supplying invalid objects to ``xr.merge``
+  (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
 - Added ``strftime`` method to ``.dt`` accessor, making it simpler to hand a
   datetime ``DataArray`` to other code expecting formatted dates and times.
   (:issue:`2090`). By `Alan Brammer <https://github.com/abrammer>`_ and
