@@ -161,11 +161,13 @@ def test_da_groupby_quantile():
 
     times = pd.date_range('2000-01-01', periods=365)
     x = [0, 1]
-    foo = xr.DataArray(np.reshape(np.arange(365*2), (365, 2)), coords=dict(time=times, x=x), dims=('time', 'x'))
+    foo = xr.DataArray(np.reshape(np.arange(365 * 2), (365, 2)),
+                       coords=dict(time=times, x=x), dims=('time', 'x'))
     g = foo.groupby(foo.time.dt.month)
 
     actual = g.quantile(0)
-    expected = xr.DataArray([0., 62., 120., 182., 242., 304., 364., 426., 488., 548., 610., 670.],
+    expected = xr.DataArray([0., 62., 120., 182., 242., 304.,
+                             364., 426., 488., 548., 610., 670.],
                             [('month', np.arange(1, 13))])
     assert_identical(expected, actual)
 
