@@ -45,7 +45,6 @@ import numpy as np
 
 from .computation import apply_ufunc
 
-
 _cpython_optimized_encoders = (
     "utf-8", "utf8", "latin-1", "latin1", "iso-8859-1", "mbcs", "ascii"
 )

@@ -39,12 +39,12 @@
 
 import re
 
-import pytest
 import numpy as np
+import pytest
+
 import xarray as xr
 
-from . import (
-    assert_array_equal, assert_equal, has_dask, raises_regex, requires_dask)
+from . import assert_equal, requires_dask
 
 
 @pytest.fixture(params=[np.str_, np.bytes_])
@@ -138,14 +138,14 @@ def test_replace(dtype):
 def test_replace_callable():
     values = xr.DataArray(['fooBAD__barBAD'])
     # test with callable
-    repl = lambda m: m.group(0).swapcase()
+    repl = lambda m: m.group(0).swapcase()  # noqa
     result = values.str.replace('[a-z][A-Z]{2}', repl, n=2)
     exp = xr.DataArray(['foObaD__baRbaD'])
     assert_equal(result, exp)
     # test regex named groups
     values = xr.DataArray(['Foo Bar Baz'])
     pat = r"(?P<first>\w+) (?P<middle>\w+) (?P<last>\w+)"
-    repl = lambda m: m.group('middle').swapcase()
+    repl = lambda m: m.group('middle').swapcase()  # noqa
     result = values.str.replace(pat, repl)
     exp = xr.DataArray(['bAR'])
     assert_equal(result, exp)

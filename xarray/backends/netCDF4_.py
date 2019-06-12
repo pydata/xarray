@@ -174,7 +174,7 @@ def _force_native_endianness(var):
         # if endian exists, remove it from the encoding.
         var.encoding.pop('endian', None)
     # check to see if encoding has a value for endian its 'native'
-    if not var.encoding.get('endian', 'native') is 'native':
+    if not var.encoding.get('endian', 'native') == 'native':
         raise NotImplementedError("Attempt to write non-native endian type, "
                                   "this is not supported by the netCDF4 "
                                   "python library.")
@@ -237,6 +237,7 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 
 class GroupWrapper:
     """Wrap netCDF4.Group objects so closing them closes the root group."""
+
     def __init__(self, value):
         self.value = value
 

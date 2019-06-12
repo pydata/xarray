@@ -1,8 +1,9 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
-from typing import (Any, Callable, Hashable, Iterable, Iterator, List, Mapping,
-                    MutableMapping, Optional, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, Hashable, Iterable, Iterator, List, Mapping, MutableMapping,
+    Optional, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,6 @@ from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
-
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')

@@ -1,19 +1,19 @@
+import importlib
+import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
-import re
-import importlib
 from unittest import mock  # noqa
 
 import numpy as np
-from numpy.testing import assert_array_equal  # noqa: F401
-from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
 import pytest
+from numpy.testing import assert_array_equal  # noqa: F401
 
-from xarray.core import utils
-from xarray.core.options import set_options
-from xarray.core.indexing import ExplicitlyIndexed
 import xarray.testing
+from xarray.core import utils
+from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
+from xarray.core.indexing import ExplicitlyIndexed
+from xarray.core.options import set_options
 from xarray.plot.utils import import_seaborn
 
 try:
