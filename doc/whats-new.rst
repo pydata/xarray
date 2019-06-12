@@ -72,6 +72,8 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
+- Increased support for `missing_value` (:issue:`2871`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Removed usages of `pytest.config`, which is deprecated (:issue:`2988`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Fixed performance issues with cftime installed (:issue:`3000`)
