@@ -134,20 +134,30 @@ def test_da_groupby_quantile():
     assert_identical(expected, actual)
 
     # Multiple dimensions
-    array = xr.DataArray([[1, 11, 21], [2, 12, 22], [3, 13, 23],
+    array = xr.DataArray([[1, 11, 26], [2, 12, 22], [3, 13, 23],
                           [4, 16, 24], [5, 15, 25]],
                          [('x', [1, 1, 1, 2, 2],),
                           ('y', [0, 0, 1])])
 
-    expected = xr.DataArray([[1, 11, 21], [4, 15, 24]],
-                            [('x', [1, 2]), ('y', [0, 0, 1])])
-    actual = array.groupby('x').quantile(0, dim='x')
-    assert_identical(expected, actual)
+    actual_x = array.groupby('x').quantile(0)
+    expected_x = xr.DataArray([1, 4],
+                              [('x', [1, 2]), ])
+    assert_identical(expected_x, actual_x)
 
-    expected = xr.DataArray([[1, 21], [2, 22], [3, 23], [4, 24], [5, 25]],
-                            [('x', [1, 1, 1, 2, 2]), ('y', [0, 1])])
-    actual = array.groupby('y').quantile(0, dim='y')
-    assert_identical(expected, actual)
+    actual_y = array.groupby('y').quantile(0)
+    expected_y = xr.DataArray([1, 22],
+                              [('y', [0, 1]), ])
+    assert_identical(expected_y, actual_y)
+
+    actual_xx = array.groupby('x').quantile(0, dim='x')
+    expected_xx = xr.DataArray([[1, 11, 22], [4, 15, 24]],
+                               [('x', [1, 2]), ('y', [0, 0, 1])])
+    assert_identical(expected_xx, actual_xx)
+
+    actual_yy = array.groupby('y').quantile(0, dim='y')
+    expected_yy = xr.DataArray([[1, 26], [2, 22], [3, 23], [4, 24], [5, 25]],
+                               [('x', [1, 1, 1, 2, 2]), ('y', [0, 1])])
+    assert_identical(expected_yy, actual_yy)
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
