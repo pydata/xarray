@@ -7,16 +7,16 @@ import os.path
 import re
 import warnings
 from collections import OrderedDict
-from typing import (AbstractSet, Any, Callable, Container, Dict, Hashable,
-                    Iterable, Iterator, Optional, Sequence,
-                    Tuple, TypeVar, cast)
+from typing import (
+    AbstractSet, Any, Callable, Container, Dict, Hashable, Iterable, Iterator,
+    Mapping, MutableMapping, MutableSet, Optional, Sequence, Tuple, TypeVar,
+    cast)
 
 import numpy as np
 import pandas as pd
 
 from .pycompat import dask_array_type
 
-from typing import Mapping, MutableMapping, MutableSet
 try:  # Fix typed collections in Python 3.5.0~3.5.2
     from .pycompat import Mapping, MutableMapping, MutableSet  # noqa: F811
 except ImportError:
