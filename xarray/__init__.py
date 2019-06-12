@@ -1,3 +1,4 @@
+""" isort:skip_file """
 # flake8: noqa
 
 from ._version import get_versions

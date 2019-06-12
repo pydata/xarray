@@ -1,11 +1,11 @@
-import pytest
-
 import datetime
+
 import numpy as np
 import pandas as pd
+import pytest
+
 import xarray as xr
 from xarray.core.resample_cftime import CFTimeGrouper
-
 
 pytest.importorskip('cftime')
 pytest.importorskip('pandas', minversion='0.24')

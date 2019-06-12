@@ -351,11 +351,11 @@ the more common ``PEP8`` issues:
   - passing arguments should have spaces after commas, e.g. ``foo(arg1, arg2, kw1='bar')``
 
 :ref:`Continuous Integration <contributing.ci>` will run
-the `pycodestyle <http://pypi.python.org/pypi/pycodestyle>`_ tool
+the `flake8 <http://flake8.pycqa.org/en/latest/>`_ tool
 and report any stylistic errors in your code. Therefore, it is helpful before
-submitting code to run the check yourself::
+submitting code to run the check yourself:
 
-   pycodestyle xarray
+   flake8
 
 Other recommended but optional tools for checking code quality (not currently
 enforced in CI):
@@ -363,8 +363,6 @@ enforced in CI):
 - `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
   make it easier to catch bugs. Please run ``mypy xarray`` if you annotate any
   code with `type hints <https://docs.python.org/3/library/typing.html>`_.
-- `flake8 <http://pypi.python.org/pypi/flake8>`_ includes a few more automated
-  checks than those enforced by pycodestyle.
 - `isort <https://github.com/timothycrosley/isort>`_ will highlight
   incorrectly sorted imports. ``isort -y`` will automatically fix them. See
   also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.

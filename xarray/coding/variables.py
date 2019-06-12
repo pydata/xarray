@@ -1,7 +1,7 @@
 """Coders for individual Variable objects."""
-from typing import Any
 import warnings
 from functools import partial
+from typing import Any
 
 import numpy as np
 import pandas as pd

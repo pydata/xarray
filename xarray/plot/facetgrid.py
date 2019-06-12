@@ -1,14 +1,13 @@
 import functools
 import itertools
 import warnings
-from inspect import getfullargspec
 
 import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
-    _infer_xy_labels, _process_cmap_cbar_kwargs,
-    import_matplotlib_pyplot, label_from_attrs)
+    _infer_xy_labels, _process_cmap_cbar_kwargs, import_matplotlib_pyplot,
+    label_from_attrs)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -483,7 +482,7 @@ class FacetGrid:
                 # TODO: better way to verify that an artist is mappable?
                 # https://stackoverflow.com/questions/33023036/is-it-possible-to-detect-if-a-matplotlib-artist-is-a-mappable-suitable-for-use-w#33023522
                 if (maybe_mappable and
-                   hasattr(maybe_mappable, 'autoscale_None')):
+                        hasattr(maybe_mappable, 'autoscale_None')):
                     self._mappables.append(maybe_mappable)
 
         self._finalize_grid(*args[:2])

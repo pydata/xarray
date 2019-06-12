@@ -4,12 +4,12 @@ from collections import Counter, OrderedDict
 
 import pandas as pd
 
-from . import utils, dtypes
+from . import dtypes, utils
 from .alignment import align
+from .computation import result_name
 from .merge import merge
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
-from .computation import result_name
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',

@@ -4,9 +4,9 @@ Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
 import contextlib
-from functools import partial
 import inspect
 import warnings
+from functools import partial
 
 import numpy as np
 import pandas as pd

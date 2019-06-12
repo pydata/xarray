@@ -9,7 +9,7 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects
 from .computation import apply_ufunc
-from .duck_array_ops import dask_array_type, datetime_to_numeric
+from .duck_array_ops import dask_array_type
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 

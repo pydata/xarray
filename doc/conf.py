@@ -13,11 +13,11 @@
 # serve to show the default.
 from __future__ import absolute_import, division, print_function
 
-from contextlib import suppress
 import datetime
 import os
 import subprocess
 import sys
+from contextlib import suppress
 
 import xarray
 

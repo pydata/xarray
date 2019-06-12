@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.core import merge, dtypes
+from xarray.core import dtypes, merge
 
 from . import raises_regex
 from .test_dataset import create_test_data

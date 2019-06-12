@@ -15,7 +15,7 @@ from xarray.testing import assert_equal
 
 from . import (
     assert_array_equal, has_cftime, has_cftime_or_netCDF4, has_dask,
-    requires_cftime_or_netCDF4, requires_cftime)
+    requires_cftime, requires_cftime_or_netCDF4)
 
 try:
     from pandas.errors import OutOfBoundsDatetime

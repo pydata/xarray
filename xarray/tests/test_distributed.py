@@ -1,4 +1,5 @@
 """ isort:skip_file """
+# flake8: noqa: E402 - ignore linters re order of imports
 import pickle
 
 import pytest
@@ -28,6 +29,7 @@ from . import (
 
 
 da = pytest.importorskip('dask.array')
+loop = loop  # loop is an imported fixture, which flake8 has issues ack-ing
 
 
 @pytest.fixture

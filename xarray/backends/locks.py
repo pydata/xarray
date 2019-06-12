@@ -1,7 +1,7 @@
 import multiprocessing
 import threading
-from typing import Any, MutableMapping
 import weakref
+from typing import Any, MutableMapping
 
 try:
     from dask.utils import SerializableLock

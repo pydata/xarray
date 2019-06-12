@@ -60,7 +60,7 @@ script:
       cd doc;
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html;
     elif [[ "$CONDA_ENV" == "lint" ]]; then
-      pycodestyle xarray ;
+      flake8 ;
     elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then
       pytest properties ;
     else

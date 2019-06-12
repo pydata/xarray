@@ -1,16 +1,6 @@
-# File : .pep8speaks.yml
-
-# This should be kept in sync with the duplicate config in the [pycodestyle]
-# block of setup.cfg.
+# https://github.com/OrkoHunter/pep8speaks for more info
+# pep8speaks will use the flake8 configs in `setup.cfg`
 
 scanner:
-    diff_only: False  # If True, errors caused by only the patch are shown
-
-pycodestyle:
-    max-line-length: 79
-    ignore:  # Errors and warnings to ignore
-        - E402  # module level import not at top of file
-        - E731  # do not assign a lambda expression, use a def
-        - E741  # ambiguous variable name
-        - W503  # line break before binary operator
-        - W504  # line break after binary operator
+    diff_only: False
+    linter: flake8
