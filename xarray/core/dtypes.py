@@ -9,7 +9,7 @@ NA = utils.ReprObject('<NA>')
 
 
 @functools.total_ordering
-class AlwaysGreaterThan(object):
+class AlwaysGreaterThan:
     def __gt__(self, other):
         return True
 
@@ -18,7 +18,7 @@ class AlwaysGreaterThan(object):
 
 
 @functools.total_ordering
-class AlwaysLessThan(object):
+class AlwaysLessThan:
     def __lt__(self, other):
         return True
 

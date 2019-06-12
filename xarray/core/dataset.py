@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (
-    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union, Sequence)
+    Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -35,8 +35,7 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
-    either_dict_or_kwargs, ensure_us_time_resolution, hashable, is_dict_like,
-    maybe_wrap_array)
+    either_dict_or_kwargs, hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
@@ -303,7 +302,7 @@ class DataVariables(Mapping):
                 if key not in self._dataset._coord_names]
 
 
-class _LocIndexer(object):
+class _LocIndexer:
     def __init__(self, dataset):
         self.dataset = dataset
 
@@ -1381,7 +1380,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         pandas.DataFrame.assign
-        netCDF's ncdump
+        ncdump: netCDF's ncdump
         """
 
         if buf is None:  # pragma: no cover
@@ -1932,9 +1931,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         return self.isel_points(dim=dim, **pos_indexers)
 
-    def reindex_like(self, other, method=None, tolerance=None, copy=True):
-        """Conform this object onto the indexes of another object, filling
-        in missing values with NaN.
+    def reindex_like(self, other, method=None, tolerance=None, copy=True,
+                     fill_value=dtypes.NA):
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -1963,6 +1963,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
 
         Returns
         -------
@@ -1977,12 +1979,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         indexers = alignment.reindex_like_indexers(self, other)
         return self.reindex(indexers=indexers, method=method, copy=copy,
-                            tolerance=tolerance)
+                            fill_value=fill_value, tolerance=tolerance)
 
     def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
-                **indexers_kwargs):
+                fill_value=dtypes.NA, **indexers_kwargs):
         """Conform this object onto a new set of indexes, filling in
-        missing values with NaN.
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -2010,6 +2012,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
         **indexers_kwarg : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -2034,7 +2038,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         variables, indexes = alignment.reindex_variables(
             self.variables, self.sizes, self.indexes, indexers, method,
-            tolerance, copy=copy)
+            tolerance, copy=copy, fill_value=fill_value)
         coord_names = set(self._coord_names)
         coord_names.update(indexers)
         return self._replace_with_new_dims(
@@ -2752,7 +2756,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                                            inplace=inplace)
 
     def merge(self, other, inplace=None, overwrite_vars=frozenset(),
-              compat='no_conflicts', join='outer'):
+              compat='no_conflicts', join='outer', fill_value=dtypes.NA):
         """Merge the arrays of two datasets into a single dataset.
 
         This method generally not allow for overriding data, with the exception
@@ -2790,6 +2794,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
+        fill_value: scalar, optional
+            Value to use for newly missing values
 
         Returns
         -------
@@ -2804,7 +2810,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         inplace = _check_inplace(inplace)
         variables, coord_names, dims = dataset_merge_method(
             self, other, overwrite_vars=overwrite_vars, compat=compat,
-            join=join)
+            join=join, fill_value=fill_value)
 
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
@@ -4138,7 +4144,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError('Coordinate {} does not exist.'.format(dim))
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:

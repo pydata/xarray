@@ -7,7 +7,6 @@ Useful for:
 '''
 import hashlib
 import os as _os
-import warnings
 from urllib.request import urlretrieve
 
 from .backends.api import open_dataset as _open_dataset
@@ -27,7 +26,7 @@ def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
                  github_url='https://github.com/pydata/xarray-data',
                  branch='master', **kws):
     """
-    Load a dataset from the online repository (requires internet).
+    Open a dataset from the online repository (requires internet).
 
     If a local copy is found then always use that to avoid network traffic.
 
@@ -91,17 +90,12 @@ def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
 
 def load_dataset(*args, **kwargs):
     """
-    `load_dataset` will be removed a future version of xarray. The current
-    behavior of this function can be achived by using
-    `tutorial.open_dataset(...).load()`.
+    Open, load into memory, and close a dataset from the online repository
+    (requires internet).
 
     See Also
     --------
     open_dataset
     """
-    warnings.warn(
-        "load_dataset` will be removed in a future version of xarray. The "
-        "current behavior of this function can be achived by using "
-        "`tutorial.open_dataset(...).load()`.",
-        DeprecationWarning, stacklevel=2)
-    return open_dataset(*args, **kwargs).load()
+    with open_dataset(*args, **kwargs) as ds:
+        return ds.load()

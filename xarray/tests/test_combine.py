@@ -7,18 +7,19 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
+from xarray.core import dtypes
 from xarray.core.combine import (
     _auto_combine, _auto_combine_1d, _auto_combine_all_along_first_dim,
     _check_shape_tile_ids, _combine_nd, _infer_concat_order_from_positions,
     _infer_tile_ids_from_nested_list, _new_tile_id)
 
 from . import (
-    InaccessibleArray, assert_array_equal,
-    assert_equal, assert_identical, raises_regex, requires_dask)
+    InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
+    raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 
-class TestConcatDataset(object):
+class TestConcatDataset:
     def test_concat(self):
         # TODO: simplify and split this test case
 
@@ -237,8 +238,22 @@ class TestConcatDataset(object):
         assert expected.equals(actual)
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_concat_fill_value(self, fill_value):
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[fill_value, 2, 3], [1, 2, fill_value]])},
+                           {'x': [0, 1, 2]})
+        actual = concat(datasets, dim='t', fill_value=fill_value)
+        assert_identical(actual, expected)
 
-class TestConcatDataArray(object):
+
+class TestConcatDataArray:
     def test_concat(self):
         ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 3))),
                       'bar': (['x', 'y'], np.random.random((2, 3)))},
@@ -306,8 +321,21 @@ class TestConcatDataArray(object):
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ('z', 'x', 'y')
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_concat_fill_value(self, fill_value):
+        foo = DataArray([1, 2], coords=[('x', [1, 2])])
+        bar = DataArray([1, 2], coords=[('x', [1, 3])])
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = DataArray([[1, 2, fill_value], [1, fill_value, 2]],
+                             dims=['y', 'x'], coords={'x': [1, 2, 3]})
+        actual = concat((foo, bar), dim='y', fill_value=fill_value)
+        assert_identical(actual, expected)
 
-class TestAutoCombine(object):
+
+class TestAutoCombine:
 
     @pytest.mark.parametrize("combine", [_auto_combine_1d, auto_combine])
     @requires_dask  # only for toolz
@@ -417,6 +445,20 @@ class TestAutoCombine(object):
                            {'baz': [100]})
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_auto_combine_fill_value(self, fill_value):
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[fill_value, 2, 3], [1, 2, fill_value]])},
+                           {'x': [0, 1, 2]})
+        actual = auto_combine(datasets, concat_dim='t', fill_value=fill_value)
+        assert_identical(expected, actual)
+
 
 def assert_combined_tile_ids_equal(dict1, dict2):
     assert len(dict1) == len(dict2)
@@ -425,7 +467,7 @@ def assert_combined_tile_ids_equal(dict1, dict2):
         assert_equal(dict1[k], dict2[k])
 
 
-class TestTileIDsFromNestedList(object):
+class TestTileIDsFromNestedList:
     def test_1d(self):
         ds = create_test_data
         input = [ds(0), ds(1)]
@@ -533,7 +575,7 @@ def _create_tile_ids(shape):
 
 
 @requires_dask  # only for toolz
-class TestCombineND(object):
+class TestCombineND:
     @pytest.mark.parametrize("old_id, new_id", [((3, 0, 1), (0, 1)),
                                                 ((0, 0), (0,)),
                                                 ((1,), ()),
@@ -598,7 +640,7 @@ class TestCombineND(object):
         assert_equal(result, expected)
 
 
-class TestCheckShapeTileIDs(object):
+class TestCheckShapeTileIDs:
     def test_check_depths(self):
         ds = create_test_data(0)
         combined_tile_ids = {(0,): ds, (0, 1): ds}
@@ -616,7 +658,7 @@ class TestCheckShapeTileIDs(object):
 
 
 @requires_dask  # only for toolz
-class TestAutoCombineND(object):
+class TestAutoCombineND:
     def test_single_dataset(self):
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
         actual = auto_combine(objs)
@@ -712,7 +754,7 @@ class TestAutoCombineND(object):
         assert_identical(expected, actual)
 
 
-class TestAutoCombineUsingCoords(object):
+class TestAutoCombineUsingCoords:
     def test_order_inferred_from_coords(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]

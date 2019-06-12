@@ -1,7 +1,7 @@
 """Coders for individual Variable objects."""
-from typing import Any
 import warnings
 from functools import partial
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ class SerializationWarning(RuntimeWarning):
     """Warnings about encoding/decoding issues in serialization."""
 
 
-class VariableCoder(object):
+class VariableCoder:
     """Base class for encoding and decoding transformations on variables.
 
     We use coders for transforming variables between xarray's data model and

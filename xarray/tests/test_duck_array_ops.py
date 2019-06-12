@@ -7,20 +7,20 @@ import pandas as pd
 import pytest
 from numpy import array, nan
 
-from xarray import DataArray, Dataset, concat, cftime_range
+from xarray import DataArray, Dataset, cftime_range, concat
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv, concatenate, count, first, gradient, last, mean,
     rolling_window, stack, where)
 from xarray.core.pycompat import dask_array_type
-from xarray.testing import assert_allclose, assert_equal, assert_identical
+from xarray.testing import assert_allclose, assert_equal
 
 from . import (
     assert_array_equal, has_dask, has_np113, raises_regex, requires_cftime,
     requires_dask)
 
 
-class TestOps(object):
+class TestOps:
 
     @pytest.fixture(autouse=True)
     def setUp(self):

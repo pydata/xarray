@@ -1,8 +1,9 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
-from typing import (Any, Callable, Hashable, Iterable, Iterator, List, Mapping,
-                    MutableMapping, Optional, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, Hashable, Iterable, Iterator, List, Mapping, MutableMapping,
+    Optional, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,6 @@ from .arithmetic import SupportsArithmetic
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
-
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
@@ -441,7 +441,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze: bool = True):
+    def groupby(self, group, squeeze: bool = True,
+                restore_coord_dims: Optional[bool] = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -453,6 +454,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
 
         Returns
         -------
@@ -485,11 +489,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
         """  # noqa
-        return self._groupby_cls(self, group, squeeze=squeeze)
+        return self._groupby_cls(self, group, squeeze=squeeze,
+                                 restore_coord_dims=restore_coord_dims)
 
     def groupby_bins(self, group, bins, right: bool = True, labels=None,
                      precision: int = 3, include_lowest: bool = False,
-                     squeeze: bool = True):
+                     squeeze: bool = True,
+                     restore_coord_dims: Optional[bool] = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -522,6 +528,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
 
         Returns
         -------
@@ -536,9 +545,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                 restore_coord_dims=restore_coord_dims,
                                  cut_kwargs={'right': right, 'labels': labels,
                                              'precision': precision,
-                                             'include_lowest': include_lowest})
+                                             'include_lowest':
+                                                 include_lowest})
 
     def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
                 min_periods: Optional[int] = None, center: bool = False,
@@ -669,7 +680,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                  skipna=None, closed: Optional[str] = None,
                  label: Optional[str] = None,
                  base: int = 0, keep_attrs: Optional[bool] = None,
-                 loffset=None,
+                 loffset=None, restore_coord_dims: Optional[bool] = None,
                  **indexer_kwargs: str):
         """Returns a Resample object for performing resampling operations.
 
@@ -697,6 +708,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
         **indexer_kwargs : {dim: freq}
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
@@ -786,7 +800,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                           dims=dim_coord.dims, name=RESAMPLE_DIM)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
-                                       resample_dim=RESAMPLE_DIM)
+                                       resample_dim=RESAMPLE_DIM,
+                                       restore_coord_dims=restore_coord_dims)
 
         return resampler
 
