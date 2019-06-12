@@ -94,18 +94,6 @@ def test_da_groupby_apply_func_args():
     assert_identical(expected, actual)
 
 
-@pytest.mark.xfail
-def test_da_groupby_single_value_per_dim():
-
-    array = xr.DataArray([[1, 1, 1], [2, 2, 2]],
-                         [('x', [1, 2]), ('y', [0, 1, 2])])
-
-    # This raises an error.
-    # I think the issue is that gr._group_indices is [0, 1]
-    # instead of [[0,], [1,]]
-    array.groupby('x').mean(dim='x')
-
-
 def test_ds_groupby_apply_func_args():
 
     def func(arg1, arg2, arg3=0):
