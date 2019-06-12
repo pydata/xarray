@@ -1,19 +1,19 @@
+import importlib
+import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
-import re
-import importlib
-from unittest import mock
+from unittest import mock  # noqa
 
 import numpy as np
-from numpy.testing import assert_array_equal  # noqa: F401
-from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
 import pytest
+from numpy.testing import assert_array_equal  # noqa: F401
 
-from xarray.core import utils
-from xarray.core.options import set_options
-from xarray.core.indexing import ExplicitlyIndexed
 import xarray.testing
+from xarray.core import utils
+from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
+from xarray.core.indexing import ExplicitlyIndexed
+from xarray.core.options import set_options
 from xarray.plot.utils import import_seaborn
 
 try:
@@ -108,23 +108,8 @@ if has_dask:
     else:
         dask.config.set(scheduler='single-threaded')
 
-# pytest config
-try:
-    _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
-    _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")
-except (ValueError, AttributeError):
-    # Can't get config from pytest, e.g., because xarray is installed instead
-    # of being run from a development version (and hence conftests.py is not
-    # available). Don't run flaky tests.
-    _SKIP_FLAKY = True
-    _SKIP_NETWORK_TESTS = True
-
-flaky = pytest.mark.skipif(
-    _SKIP_FLAKY, reason="set --run-flaky option to run flaky tests")
-network = pytest.mark.skipif(
-    _SKIP_NETWORK_TESTS,
-    reason="set --run-network-tests option to run tests requiring an "
-    "internet connection")
+flaky = pytest.mark.flaky
+network = pytest.mark.network
 
 
 @contextmanager

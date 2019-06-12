@@ -1,7 +1,7 @@
 import contextlib
 import threading
-from typing import Any, Dict
 import warnings
+from typing import Any, Dict
 
 from ..core import utils
 from ..core.options import OPTIONS

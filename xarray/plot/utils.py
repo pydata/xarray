@@ -2,15 +2,14 @@ import itertools
 import textwrap
 import warnings
 from datetime import datetime
+from distutils.version import LooseVersion
+from inspect import getfullargspec
 
 import numpy as np
 import pandas as pd
 
-from inspect import getfullargspec
-
 from ..core.options import OPTIONS
 from ..core.utils import is_scalar
-from distutils.version import LooseVersion
 
 try:
     import nc_time_axis

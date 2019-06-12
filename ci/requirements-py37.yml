@@ -15,7 +15,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - coveralls
-  - pycodestyle
+  - flake8
   - numpy>=1.12
   - pandas>=0.19
   - scipy
@@ -25,9 +25,8 @@ dependencies:
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
+  - cfgrib>=0.9.2
   - lxml
-  - eccodes
   - pydap
   - pip:
-    - cfgrib>=0.9.2
     - mypy==0.650
