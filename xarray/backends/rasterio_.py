@@ -304,6 +304,12 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     if hasattr(riods, 'scales'):
         # The scale values for the raster bands
         attrs['scales'] = riods.scales
+    if hasattr(riods, 'offsets'):
+        # The offset values for the raster bands
+        attrs['offsets'] = riods.offsets
+    if hasattr(riods, 'descriptions') and any(riods.descriptions):
+        # Descriptions for each dataset band
+        attrs['descriptions'] = riods.descriptions
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
