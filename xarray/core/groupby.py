@@ -633,8 +633,17 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
-        if dim is None:
-            dim = self._group_dim
+        if dim == DEFAULT_DIMS:
+            dim = ALL_DIMS
+            # TODO change this to dim = self._group_dim after
+            # the deprecation process
+            if self._obj.ndim > 1:
+                warnings.warn(
+                    "Default reduction dimension will be changed to the "
+                    "grouped dimension in a future version of xarray. To "
+                    "silence this warning, pass dim=xarray.ALL_DIMS "
+                    "explicitly.",
+                    FutureWarning, stacklevel=2)
 
         out = self.apply(self._obj.__class__.quantile, shortcut=False,
                          q=q, dim=dim, interpolation=interpolation,
