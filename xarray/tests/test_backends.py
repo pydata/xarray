@@ -3073,8 +3073,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
             transform = from_origin(*transform_args)
         if additional_attrs is None:
             additional_attrs = {
-                'descriptions': tuple('desc{}'.format(n + 1) for n in range(nz)),
-                'units': tuple('unit{}'.format(n + 1) for n in range(nz)),
+                'descriptions': tuple('d{}'.format(n + 1) for n in range(nz)),
+                'units': tuple('u{}'.format(n + 1) for n in range(nz)),
             }
         with rasterio.open(
                 tmp_file, 'w',
@@ -3118,8 +3118,8 @@ class TestRasterio:
                 assert_allclose(rioda, expected)
                 assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
                 assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
-                assert rioda.attrs['descriptions'] == ('desc1', 'desc2', 'desc3')
-                assert rioda.attrs['units'] == ('unit1', 'unit2', 'unit3')
+                assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
+                assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3145,8 +3145,8 @@ class TestRasterio:
                 assert 'crs' not in rioda.attrs
                 assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
                 assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
-                assert rioda.attrs['descriptions'] == ('desc1', 'desc2', 'desc3')
-                assert rioda.attrs['units'] == ('unit1', 'unit2', 'unit3')
+                assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
+                assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
