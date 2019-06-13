@@ -313,6 +313,11 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     if hasattr(riods, 'units') and any(riods.units):
         # A list of units string for each dataset band
         attrs['units'] = riods.units
+    if hasattr(riods, 'mask_flag_enums'):
+        # Sets of flags describing the sources of band masks
+        attrs['mask_flags'] = [
+            ' '.join([flag.name for flag in x]) for x in riods.mask_flag_enums
+        ]
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
