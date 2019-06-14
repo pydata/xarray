@@ -174,7 +174,7 @@ def _force_native_endianness(var):
         # if endian exists, remove it from the encoding.
         var.encoding.pop('endian', None)
     # check to see if encoding has a value for endian its 'native'
-    if not var.encoding.get('endian', 'native') is 'native':
+    if not var.encoding.get('endian', 'native') == 'native':
         raise NotImplementedError("Attempt to write non-native endian type, "
                                   "this is not supported by the netCDF4 "
                                   "python library.")
@@ -206,9 +206,16 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
         chunks_too_big = any(
             c > d and dim not in unlimited_dims
             for c, d, dim in zip(chunksizes, variable.shape, variable.dims))
-        changed_shape = encoding.get('original_shape') != variable.shape
+        has_original_shape = 'original_shape' in encoding
+        changed_shape = (has_original_shape and
+                         encoding.get('original_shape') != variable.shape)
         if chunks_too_big or changed_shape:
             del encoding['chunksizes']
+
+    var_has_unlim_dim = any(dim in unlimited_dims for dim in variable.dims)
+    if (not raise_on_invalid and var_has_unlim_dim
+            and 'contiguous' in encoding.keys()):
+        del encoding['contiguous']
 
     for k in safe_to_drop:
         if k in encoding:
@@ -230,6 +237,7 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 
 class GroupWrapper:
     """Wrap netCDF4.Group objects so closing them closes the root group."""
+
     def __init__(self, value):
         self.value = value
 
@@ -445,6 +453,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding,
             unlimited_dims=unlimited_dims)
+
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:

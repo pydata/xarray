@@ -184,7 +184,7 @@ def get_date_type(self):
 def assert_all_valid_date_type(data):
     import cftime
 
-    if data.size:
+    if len(data) > 0:
         sample = data[0]
         date_type = type(sample)
         if not isinstance(sample, cftime.datetime):
@@ -229,12 +229,12 @@ class CFTimeIndex(pd.Index):
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):
+        assert_all_valid_date_type(data)
         if name is None and hasattr(data, 'name'):
             name = data.name
 
         result = object.__new__(cls)
         result._data = np.array(data, dtype='O')
-        assert_all_valid_date_type(result._data)
         result.name = name
         return result
 
@@ -475,6 +475,35 @@ class CFTimeIndex(pd.Index):
                 'in operations that depend on the length of time between '
                 'dates.'.format(calendar), RuntimeWarning, stacklevel=2)
         return pd.DatetimeIndex(nptimes)
+
+    def strftime(self, date_format):
+        """
+        Return an Index of formatted strings specified by date_format, which
+        supports the same string format as the python standard library. Details
+        of the string format can be found in `python string format doc
+        <https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior>`__
+
+        Parameters
+        ----------
+        date_format : str
+            Date format string (e.g. "%Y-%m-%d")
+
+        Returns
+        -------
+        Index
+            Index of formatted strings
+
+        Examples
+        --------
+        >>> rng = xr.cftime_range(start='2000', periods=5, freq='2MS',
+        ...                       calendar='noleap')
+        >>> rng.strftime('%B %d, %Y, %r')
+        Index(['January 01, 2000, 12:00:00 AM', 'March 01, 2000, 12:00:00 AM',
+               'May 01, 2000, 12:00:00 AM', 'July 01, 2000, 12:00:00 AM',
+               'September 01, 2000, 12:00:00 AM'],
+              dtype='object')
+        """
+        return pd.Index([date.strftime(date_format) for date in self._data])
 
 
 def _parse_iso8601_without_reso(date_type, datetime_str):

@@ -5,42 +5,38 @@ import warnings
 from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
-from typing import (Any, Dict, Hashable, Iterator, List, Mapping,
-                    MutableMapping, MutableSet, Optional, Sequence, Set,
-                    Tuple, Union)
+from typing import (Any, Callable, Dict, Hashable, Iterator, List, Mapping,
+                    MutableMapping, MutableSet, Optional, Sequence, Set, Tuple,
+                    TypeVar, Union)
+
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
+from . import (alignment, dtypes, duck_array_ops, formatting, groupby,
+               indexing, ops, pdcompat, resample, rolling, utils)
+from .alignment import align
+from .common import (ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
+                     _contains_datetime_like_objects)
+from .coordinates import (DatasetCoordinates, LevelCoordinatesSource,
+                          assert_coordinate_consistent, remap_label_indexers)
+from .duck_array_ops import datetime_to_numeric
+from .indexes import Indexes, default_indexes, isel_variable_and_index
+from .merge import (dataset_merge_method, dataset_update_method,
+                    merge_data_and_coords, merge_variables)
+from .options import OPTIONS, _get_keep_attrs
+from .pycompat import TYPE_CHECKING, dask_array_type
+from .utils import (Frozen, SortedKeysDict, _check_inplace,
+                    decode_numpy_dict_values, either_dict_or_kwargs, hashable,
+                    maybe_wrap_array)
+from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+
 # Support for Python 3.5.0 ~ 3.5.1
 try:
     from .pycompat import Mapping  # noqa: F811
 except ImportError:
     pass
-
-import numpy as np
-import pandas as pd
-
-import xarray as xr
-
-from ..coding.cftimeindex import _parse_array_of_cftime_strings
-from . import (
-    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
-    pdcompat, resample, rolling, utils)
-from .alignment import align
-from .common import (
-    ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
-    _contains_datetime_like_objects)
-from .coordinates import (
-    DatasetCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
-    remap_label_indexers)
-from .duck_array_ops import datetime_to_numeric
-from .indexes import Indexes, default_indexes, isel_variable_and_index
-from .merge import (
-    dataset_merge_method, dataset_update_method, merge_data_and_coords,
-    merge_variables)
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import TYPE_CHECKING, dask_array_type
-from .utils import (
-    Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
-    either_dict_or_kwargs, hashable, maybe_wrap_array)
-from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -102,7 +98,7 @@ def _get_virtual_variable(variables, key,
 
 
 def calculate_dimensions(variables: Mapping[Hashable, Variable]
-) -> 'OrderedDict[Hashable, int]':
+                         ) -> 'OrderedDict[Hashable, int]':
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
@@ -1416,7 +1412,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         pandas.DataFrame.assign
-        netCDF's ncdump
+        ncdump: netCDF's ncdump
         """
 
         if buf is None:  # pragma: no cover
@@ -1877,7 +1873,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         _ = list(non_indexed_dims)
         reordered = self.transpose(
-            *list(indexer_dims),  *list(non_indexed_dims))
+            *list(indexer_dims), *list(non_indexed_dims))
 
         variables = OrderedDict()  # type: ignore
 
