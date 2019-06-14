@@ -182,7 +182,6 @@ class DataArray(AbstractArray, DataWithCoords):
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)
-    str = property(StringAccessor)
 
     def __init__(self, data: Any,
                  coords: Union[
@@ -2633,6 +2632,10 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         ds = self._to_temp_dataset().integrate(dim, datetime_unit)
         return self._from_temp_dataset(ds)
+
+    # this needs to be at the end, or mypy will confuse with `str`
+    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names  # noqa
+    str = property(StringAccessor)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
