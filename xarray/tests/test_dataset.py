@@ -10,20 +10,40 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-
 import xarray as xr
 from xarray import (
-    ALL_DIMS, DataArray, Dataset, IndexVariable, MergeError, Variable, align,
-    backends, broadcast, open_dataset, set_options)
+    ALL_DIMS,
+    DataArray,
+    Dataset,
+    IndexVariable,
+    MergeError,
+    Variable,
+    align,
+    backends,
+    broadcast,
+    open_dataset,
+    set_options
+)
 from xarray.core import dtypes, indexing, npcompat, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.pycompat import integer_types
 
 from . import (
-    InaccessibleArray, UnexpectedDataAccess, assert_allclose,
-    assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
-    raises_regex, requires_bottleneck, requires_cftime, requires_dask,
-    requires_scipy, source_ndarray)
+    InaccessibleArray,
+    UnexpectedDataAccess,
+    assert_allclose,
+    assert_array_equal,
+    assert_equal,
+    assert_identical,
+    has_cftime,
+    has_dask,
+    raises_regex,
+    requires_bottleneck,
+    requires_cftime,
+    requires_dask,
+    requires_scipy,
+    source_ndarray
+)
 
 try:
     import dask.array as da
@@ -4625,7 +4645,7 @@ def test_error_message_on_set_supplied():
 def test_constructor_raises_with_invalid_coords(unaligned_coords):
 
     with pytest.raises(ValueError,
-                       message='not a subset of the DataArray dimensions'):
+                       match='not a subset of the DataArray dimensions'):
         xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
 
 
