@@ -316,7 +316,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     if hasattr(riods, 'mask_flag_enums'):
         # Sets of flags describing the sources of band masks
         attrs['mask_flags'] = [
-            np.bitwise_and.reduce([flag.value for flag in x]) for x in riods.mask_flag_enums
+            np.bitwise_and.reduce([flag.value for flag in x])
+            for x in riods.mask_flag_enums
         ]
 
     # Parse extra metadata from tags, if supported
