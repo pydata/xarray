@@ -21,7 +21,10 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-
+- Add ``scales``, ``offsets``, ``units``, ``descriptions`` and ``mask_flag_enums``
+  attributes to :py:class:`~xarray.DataArray` returned by
+  :py:func:`~xarray.open_rasterio`. (:issue:`3013`)
+  By `Erle Carrara <https://github.com/ecarrara>`_.
 - netCDF chunksizes are now only dropped when original_shape is different,
   not when it isn't found. (:issue:`2207`)
   By `Karel van de Plassche <https://github.com/Karel-van-de-Plassche>`_.
