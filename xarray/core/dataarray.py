@@ -1,3 +1,4 @@
+import copy
 import functools
 import sys
 import warnings
@@ -302,7 +303,7 @@ class DataArray(AbstractArray, DataWithCoords):
             name: Union[str, None, utils.ReprObject] = __default
             ) -> 'DataArray':
         if variable.dims == self.dims:
-            coords = self._coords.copy()
+            coords = copy.copy(self._coords)
         else:
             allowed_dims = set(variable.dims)
             coords = OrderedDict((k, v) for k, v in self._coords.items()
@@ -313,7 +314,7 @@ class DataArray(AbstractArray, DataWithCoords):
                          ) -> 'DataArray':
         if not len(indexes):
             return self
-        coords = self._coords.copy()
+        coords = copy.copy(self._coords)
         for name, idx in indexes.items():
             coords[name] = IndexVariable(name, idx)
         obj = self._replace(coords=coords)
@@ -366,7 +367,7 @@ class DataArray(AbstractArray, DataWithCoords):
                              'the same name as one of its coordinates')
         # use private APIs for speed: this is called by _to_temp_dataset(),
         # which is used in the guts of a lot of operations (e.g., reindex)
-        variables = self._coords.copy()
+        variables = copy.copy(self._coords)
         variables[name] = self.variable
         if shallow_copy:
             for k in variables:
@@ -1399,7 +1400,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 raise ValueError("coordinate %r has no MultiIndex" % dim)
             replace_coords[dim] = IndexVariable(coord.dims,
                                                 index.reorder_levels(order))
-        coords = self._coords.copy()
+        coords = copy.copy(self._coords)
         coords.update(replace_coords)
         if inplace:
             self._coords = coords

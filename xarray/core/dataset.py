@@ -102,13 +102,13 @@ def _get_virtual_variable(variables, key,
 
 
 def calculate_dimensions(variables: Mapping[Hashable, Variable]
-                         ) -> MutableMapping[Hashable, int]:
+) -> 'OrderedDict[Hashable, int]':
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = OrderedDict()  # type: MutableMapping[Hashable, int]
+    dims = OrderedDict()  # type: OrderedDict[Hashable, int]
     last_used = {}
     scalar_vars = set(k for k, v in variables.items() if not v.dims)
     for k, var in variables.items():
@@ -248,7 +248,7 @@ def split_indexes(dims_or_levels: Union[Hashable, Sequence[Hashable]],
                 idx = index.get_level_values(lev)
                 vars_to_create[idx.name] = Variable(d, idx)
 
-    new_variables = variables.copy()
+    new_variables = dict(variables)
     for v in set(vars_to_remove):
         del new_variables[v]
     new_variables.update(vars_to_replace)
@@ -737,7 +737,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _replace(  # type: ignore
         self,
         variables: 'OrderedDict[Hashable, Variable]' = None,
-        coord_names: set = None,
+        coord_names: Optional[MutableSet[Hashable]] = None,
         dims: Dict[Any, int] = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Hashable, pd.Index]]' = __default,
@@ -770,7 +770,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if variables is None:
                 variables = self._variables.copy()
             if coord_names is None:
-                coord_names = self._coord_names.copy()
+                coord_names = copy.copy(self._coord_names)
             if dims is None:
                 dims = self._dims.copy()
             if attrs is self.__default:
@@ -785,7 +785,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _replace_with_new_dims(  # type: ignore
         self,
-        variables: 'OrderedDict[Hashable, Variable]' = None,
+        variables: 'OrderedDict[Hashable, Variable]',
         coord_names: set = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Hashable, pd.Index]]' = __default,
@@ -798,9 +798,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _replace_vars_and_dims(  # type: ignore
         self,
-        variables: 'OrderedDict[Hashable, Variable]' = None,
+        variables: 'OrderedDict[Hashable, Variable]',
         coord_names: set = None,
-        dims: 'OrderedDict[Hashable, int]' = None,
+        dims: 'Optional[OrderedDict[Hashable, int]]' = None,
         attrs: 'Optional[OrderedDict]' = __default,
         inplace: bool = False,
     ) -> 'Dataset':
@@ -1875,8 +1875,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             dim_name = dim
             dim_coord = None  # type: ignore
 
+        _ = list(non_indexed_dims)
         reordered = self.transpose(
-            *(list(indexer_dims) + list(non_indexed_dims)))
+            *list(indexer_dims),  *list(non_indexed_dims))
 
         variables = OrderedDict()  # type: ignore
 

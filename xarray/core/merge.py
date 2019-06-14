@@ -1,3 +1,4 @@
+import copy
 from collections import OrderedDict
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 
@@ -214,7 +215,7 @@ def expand_variable_dicts(
         for name, var in variables.items():
             if isinstance(var, DataArray):
                 # use private API for speed
-                coords = var._coords.copy()
+                coords = copy.copy(var._coords)
                 # explicitly overwritten variables should take precedence
                 coords.pop(name, None)
                 var_dicts.append(coords)
