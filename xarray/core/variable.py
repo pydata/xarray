@@ -710,7 +710,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> MutableMapping[Hashable, Any]:
+    def attrs(self) -> 'OrderedDict[Hashable, Any]':
         """Dictionary of local attributes on this variable.
         """
         if self._attrs is None:

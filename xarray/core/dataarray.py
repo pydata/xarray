@@ -1,10 +1,9 @@
-import copy
 import functools
 import sys
 import warnings
 from collections import OrderedDict
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
-                    MutableMapping, Optional, Sequence, Tuple, Union, cast)
+                    Optional, Sequence, Tuple, Union, cast)
 
 import numpy as np
 import pandas as pd
@@ -44,8 +43,9 @@ if TYPE_CHECKING:
         iris_Cube = None
 
 
-def _infer_coords_and_dims(shape, coords, dims) -> Tuple[
-        MutableMapping[Hashable, Variable], Tuple[Hashable, ...]]:
+def _infer_coords_and_dims(
+        shape, coords, dims
+) -> 'Tuple[OrderedDict[Hashable, Variable], Tuple[Hashable, ...]]':
     """All the logic for creating a new DataArray"""
 
     if (coords is not None and not utils.is_dict_like(coords) and
@@ -77,7 +77,7 @@ def _infer_coords_and_dims(shape, coords, dims) -> Tuple[
             if not isinstance(d, str):
                 raise TypeError('dimension %s is not a string' % d)
 
-    new_coords = OrderedDict()  # type: MutableMapping[Hashable, Variable]
+    new_coords = OrderedDict()  # type: OrderedDict[Hashable, Variable]
 
     if utils.is_dict_like(coords):
         for k, v in coords.items():
@@ -272,9 +272,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
         # These fully describe a DataArray
         self._variable = variable  # type: Variable
-        if TYPE_CHECKING:
-            coords = cast(MutableMapping[Hashable, Variable], coords)
-        self._coords = coords
+        assert isinstance(coords, OrderedDict)
+        self._coords = coords  # type: OrderedDict[Hashable, Variable]
         self._name = name  # type: Optional[str]
 
         # TODO(shoyer): document this argument, once it becomes part of the
@@ -304,7 +303,7 @@ class DataArray(AbstractArray, DataWithCoords):
             name: Union[str, None, utils.ReprObject] = __default
     ) -> 'DataArray':
         if variable.dims == self.dims:
-            coords = copy.copy(self._coords)
+            coords = self._coords.copy()
         else:
             allowed_dims = set(variable.dims)
             coords = OrderedDict((k, v) for k, v in self._coords.items()
@@ -315,7 +314,7 @@ class DataArray(AbstractArray, DataWithCoords):
                          ) -> 'DataArray':
         if not len(indexes):
             return self
-        coords = copy.copy(self._coords)
+        coords = self._coords.copy()
         for name, idx in indexes.items():
             coords[name] = IndexVariable(name, idx)
         obj = self._replace(coords=coords)
@@ -368,7 +367,7 @@ class DataArray(AbstractArray, DataWithCoords):
                              'the same name as one of its coordinates')
         # use private APIs for speed: this is called by _to_temp_dataset(),
         # which is used in the guts of a lot of operations (e.g., reindex)
-        variables = copy.copy(self._coords)
+        variables = self._coords.copy()
         variables[name] = self.variable
         if shallow_copy:
             for k in variables:
@@ -500,12 +499,11 @@ class DataArray(AbstractArray, DataWithCoords):
             return dict(zip(self.dims, key))
 
     @property
-    def _level_coords(self) -> MutableMapping[Hashable, Hashable]:
+    def _level_coords(self) -> 'OrderedDict[Hashable, Hashable]':
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
-        level_coords \
-            = OrderedDict()  # type: MutableMapping[Hashable, Hashable]
+        level_coords = OrderedDict()  # type: OrderedDict[Hashable, Hashable]
 
         for cname, var in self._coords.items():
             if var.ndim == 1 and isinstance(var, IndexVariable):
@@ -575,7 +573,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return _LocIndexer(self)
 
     @property
-    def attrs(self) -> MutableMapping[Hashable, Any]:
+    def attrs(self) -> 'OrderedDict[Hashable, Any]':
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
@@ -585,7 +583,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self.variable.attrs = value  # type: ignore
 
     @property
-    def encoding(self) -> MutableMapping[Hashable, Any]:
+    def encoding(self) -> 'OrderedDict[Hashable, Any]':
         """Dictionary of format-specific settings for how this array should be
         serialized."""
         return self.variable.encoding
@@ -1401,7 +1399,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 raise ValueError("coordinate %r has no MultiIndex" % dim)
             replace_coords[dim] = IndexVariable(coord.dims,
                                                 index.reorder_levels(order))
-        coords = copy.copy(self._coords)
+        coords = self._coords.copy()
         coords.update(replace_coords)
         if inplace:
             self._coords = coords
@@ -1541,7 +1539,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = {}
+            coords = OrderedDict()
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)

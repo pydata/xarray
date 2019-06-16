@@ -215,7 +215,7 @@ def expand_variable_dicts(
         for name, var in variables.items():
             if isinstance(var, DataArray):
                 # use private API for speed
-                coords = copy.copy(var._coords)
+                coords = var._coords.copy()
                 # explicitly overwritten variables should take precedence
                 coords.pop(name, None)
                 var_dicts.append(coords)
