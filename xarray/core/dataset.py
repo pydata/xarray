@@ -5,42 +5,38 @@ import warnings
 from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
-from typing import (Any, Dict, Hashable, Iterator, List, Mapping,
-                    MutableMapping, MutableSet, Optional, Sequence, Set,
-                    Tuple, Union)
+from typing import (Any, Callable, Dict, Hashable, Iterator, List, Mapping,
+                    MutableMapping, MutableSet, Optional, Sequence, Set, Tuple,
+                    TypeVar, Union)
+
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
+from . import (alignment, dtypes, duck_array_ops, formatting, groupby,
+               indexing, ops, pdcompat, resample, rolling, utils)
+from .alignment import align
+from .common import (ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
+                     _contains_datetime_like_objects)
+from .coordinates import (DatasetCoordinates, LevelCoordinatesSource,
+                          assert_coordinate_consistent, remap_label_indexers)
+from .duck_array_ops import datetime_to_numeric
+from .indexes import Indexes, default_indexes, isel_variable_and_index
+from .merge import (dataset_merge_method, dataset_update_method,
+                    merge_data_and_coords, merge_variables)
+from .options import OPTIONS, _get_keep_attrs
+from .pycompat import TYPE_CHECKING, dask_array_type
+from .utils import (Frozen, SortedKeysDict, _check_inplace,
+                    decode_numpy_dict_values, either_dict_or_kwargs, hashable,
+                    maybe_wrap_array)
+from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+
 # Support for Python 3.5.0 ~ 3.5.1
 try:
     from .pycompat import Mapping  # noqa: F811
 except ImportError:
     pass
-
-import numpy as np
-import pandas as pd
-
-import xarray as xr
-
-from ..coding.cftimeindex import _parse_array_of_cftime_strings
-from . import (
-    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
-    pdcompat, resample, rolling, utils)
-from .alignment import align
-from .common import (
-    ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
-    _contains_datetime_like_objects)
-from .coordinates import (
-    DatasetCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
-    remap_label_indexers)
-from .duck_array_ops import datetime_to_numeric
-from .indexes import Indexes, default_indexes, isel_variable_and_index
-from .merge import (
-    dataset_merge_method, dataset_update_method, merge_data_and_coords,
-    merge_variables)
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import TYPE_CHECKING, dask_array_type
-from .utils import (
-    Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
-    either_dict_or_kwargs, hashable, maybe_wrap_array)
-from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -102,13 +98,13 @@ def _get_virtual_variable(variables, key,
 
 
 def calculate_dimensions(variables: Mapping[Hashable, Variable]
-                         ) -> MutableMapping[Hashable, int]:
+                         ) -> 'OrderedDict[Hashable, int]':
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = OrderedDict()  # type: MutableMapping[Hashable, int]
+    dims = OrderedDict()  # type: OrderedDict[Hashable, int]
     last_used = {}
     scalar_vars = set(k for k, v in variables.items() if not v.dims)
     for k, var in variables.items():
@@ -248,7 +244,7 @@ def split_indexes(dims_or_levels: Union[Hashable, Sequence[Hashable]],
                 idx = index.get_level_values(lev)
                 vars_to_create[idx.name] = Variable(d, idx)
 
-    new_variables = variables.copy()
+    new_variables = dict(variables)
     for v in set(vars_to_remove):
         del new_variables[v]
     new_variables.update(vars_to_replace)
@@ -737,7 +733,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _replace(  # type: ignore
         self,
         variables: 'OrderedDict[Hashable, Variable]' = None,
-        coord_names: set = None,
+        coord_names: Optional[MutableSet[Hashable]] = None,
         dims: Dict[Any, int] = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Hashable, pd.Index]]' = __default,
@@ -770,7 +766,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if variables is None:
                 variables = self._variables.copy()
             if coord_names is None:
-                coord_names = self._coord_names.copy()
+                coord_names = copy.copy(self._coord_names)
             if dims is None:
                 dims = self._dims.copy()
             if attrs is self.__default:
@@ -785,7 +781,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _replace_with_new_dims(  # type: ignore
         self,
-        variables: 'OrderedDict[Hashable, Variable]' = None,
+        variables: 'OrderedDict[Hashable, Variable]',
         coord_names: set = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Hashable, pd.Index]]' = __default,
@@ -798,9 +794,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _replace_vars_and_dims(  # type: ignore
         self,
-        variables: 'OrderedDict[Hashable, Variable]' = None,
+        variables: 'OrderedDict[Hashable, Variable]',
         coord_names: set = None,
-        dims: 'OrderedDict[Hashable, int]' = None,
+        dims: 'Optional[OrderedDict[Hashable, int]]' = None,
         attrs: 'Optional[OrderedDict]' = __default,
         inplace: bool = False,
     ) -> 'Dataset':
@@ -1416,7 +1412,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         pandas.DataFrame.assign
-        netCDF's ncdump
+        ncdump: netCDF's ncdump
         """
 
         if buf is None:  # pragma: no cover
@@ -1875,8 +1871,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             dim_name = dim
             dim_coord = None  # type: ignore
 
+        _ = list(non_indexed_dims)
         reordered = self.transpose(
-            *(list(indexer_dims) + list(non_indexed_dims)))
+            *list(indexer_dims), *list(non_indexed_dims))
 
         variables = OrderedDict()  # type: ignore
 

@@ -4,8 +4,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from xarray.core import duck_array_ops
-from xarray.core import formatting
+from xarray.core import duck_array_ops, formatting
 from xarray.core.indexes import default_indexes
 
 

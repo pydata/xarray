@@ -7,14 +7,15 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
+from xarray.core import dtypes
 from xarray.core.combine import (
     _auto_combine, _auto_combine_1d, _auto_combine_all_along_first_dim,
     _check_shape_tile_ids, _combine_nd, _infer_concat_order_from_positions,
     _infer_tile_ids_from_nested_list, _new_tile_id)
 
 from . import (
-    InaccessibleArray, assert_array_equal,
-    assert_equal, assert_identical, raises_regex, requires_dask)
+    InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
+    raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 
@@ -237,6 +238,20 @@ class TestConcatDataset:
         assert expected.equals(actual)
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_concat_fill_value(self, fill_value):
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[fill_value, 2, 3], [1, 2, fill_value]])},
+                           {'x': [0, 1, 2]})
+        actual = concat(datasets, dim='t', fill_value=fill_value)
+        assert_identical(actual, expected)
+
 
 class TestConcatDataArray:
     def test_concat(self):
@@ -305,6 +320,19 @@ class TestConcatDataArray:
         combined = concat(arrays, dim='z')
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ('z', 'x', 'y')
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_concat_fill_value(self, fill_value):
+        foo = DataArray([1, 2], coords=[('x', [1, 2])])
+        bar = DataArray([1, 2], coords=[('x', [1, 3])])
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = DataArray([[1, 2, fill_value], [1, fill_value, 2]],
+                             dims=['y', 'x'], coords={'x': [1, 2, 3]})
+        actual = concat((foo, bar), dim='y', fill_value=fill_value)
+        assert_identical(actual, expected)
 
 
 class TestAutoCombine:
@@ -415,6 +443,20 @@ class TestAutoCombine:
         expected = Dataset({'x': (('baz', 'z'), [[0, 1]]),
                             'y': (('baz', 'z'), [[1, 2]])},
                            {'baz': [100]})
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_auto_combine_fill_value(self, fill_value):
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[fill_value, 2, 3], [1, 2, fill_value]])},
+                           {'x': [0, 1, 2]})
+        actual = auto_combine(datasets, concat_dim='t', fill_value=fill_value)
         assert_identical(expected, actual)
 
 

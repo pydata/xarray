@@ -1,3 +1,4 @@
+import copy
 from collections import OrderedDict
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 
@@ -214,7 +215,7 @@ def expand_variable_dicts(
         for name, var in variables.items():
             if isinstance(var, DataArray):
                 # use private API for speed
-                coords = var._coords.copy()
+                coords = copy.copy(var._coords)
                 # explicitly overwritten variables should take precedence
                 coords.pop(name, None)
                 var_dicts.append(coords)
@@ -532,9 +533,14 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    dict_like_objects = [
-        obj.to_dataset() if isinstance(obj, DataArray) else obj
-        for obj in objects]
+    dict_like_objects = list()
+    for obj in objects:
+        if not (isinstance(obj, (DataArray, Dataset, dict))):
+            raise TypeError("objects must be an iterable containing only "
+                            "Dataset(s), DataArray(s), and dictionaries.")
+
+        obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
+        dict_like_objects.append(obj)
 
     variables, coord_names, dims = merge_core(dict_like_objects, compat, join,
                                               fill_value=fill_value)
