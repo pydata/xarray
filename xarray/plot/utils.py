@@ -2,15 +2,14 @@ import itertools
 import textwrap
 import warnings
 from datetime import datetime
+from distutils.version import LooseVersion
+from inspect import getfullargspec
 
 import numpy as np
 import pandas as pd
 
-from inspect import getfullargspec
-
 from ..core.options import OPTIONS
 from ..core.utils import is_scalar
-from distutils.version import LooseVersion
 
 try:
     import nc_time_axis
@@ -265,7 +264,8 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
-    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
+    if ((levels is not None or isinstance(norm, mpl.colors.BoundaryNorm))
+            and (not isinstance(cmap, mpl.colors.Colormap))):
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 

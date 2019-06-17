@@ -1,3 +1,4 @@
+""" isort:skip_file """
 # flake8: noqa
 
 from ._version import get_versions
@@ -17,7 +18,7 @@ from .core.merge import merge, MergeError
 from .core.options import set_options
 
 from .backends.api import (open_dataset, open_dataarray, open_mfdataset,
-                           save_mfdataset)
+                           save_mfdataset, load_dataset, load_dataarray)
 from .backends.rasterio_ import open_rasterio
 from .backends.zarr import open_zarr
 

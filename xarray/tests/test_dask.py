@@ -22,7 +22,7 @@ da = pytest.importorskip('dask.array')
 dd = pytest.importorskip('dask.dataframe')
 
 
-class DaskTestCase(object):
+class DaskTestCase:
     def assertLazyAnd(self, expected, actual, test):
 
         with (dask.config.set(scheduler='single-threaded')
@@ -586,7 +586,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
-class TestToDaskDataFrame(object):
+class TestToDaskDataFrame:
 
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames

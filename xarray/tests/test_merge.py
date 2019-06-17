@@ -2,13 +2,13 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.core import merge, dtypes
+from xarray.core import dtypes, merge
 
 from . import raises_regex
 from .test_dataset import create_test_data
 
 
-class TestMergeInternals(object):
+class TestMergeInternals:
     def test_broadcast_dimension_size(self):
         actual = merge.broadcast_dimension_size(
             [xr.Variable('x', [1]), xr.Variable('y', [2, 1])])
@@ -19,11 +19,11 @@ class TestMergeInternals(object):
         assert actual == {'x': 1, 'y': 2}
 
         with pytest.raises(ValueError):
-            actual = merge.broadcast_dimension_size(
+            merge.broadcast_dimension_size(
                 [xr.Variable(('x', 'y'), [[1, 2]]), xr.Variable('y', [2])])
 
 
-class TestMergeFunction(object):
+class TestMergeFunction:
     def test_merge_arrays(self):
         data = create_test_data()
         actual = xr.merge([data.var1, data.var2])
@@ -66,6 +66,15 @@ class TestMergeFunction(object):
         other = xr.Dataset(coords={'x': [2, 3]})
         with raises_regex(ValueError, 'indexes .* not equal'):
             xr.merge([ds, other], join='exact')
+
+    def test_merge_wrong_input_error(self):
+        with raises_regex(TypeError, "objects must be an iterable"):
+            xr.merge([1])
+        ds = xr.Dataset(coords={'x': [1, 2]})
+        with raises_regex(TypeError, "objects must be an iterable"):
+            xr.merge({'a': ds})
+        with raises_regex(TypeError, "objects must be an iterable"):
+            xr.merge([ds, 1])
 
     def test_merge_no_conflicts_single_var(self):
         ds1 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
@@ -128,7 +137,7 @@ class TestMergeFunction(object):
         assert expected.identical(actual)
 
 
-class TestMergeMethod(object):
+class TestMergeMethod:
 
     def test_merge(self):
         data = create_test_data()

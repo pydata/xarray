@@ -6,8 +6,8 @@ import pytest
 
 from xarray import CFTimeIndex
 from xarray.coding.cftime_offsets import (
-    _MONTH_ABBREVIATIONS, BaseCFTimeOffset, Day, Hour, Minute, Second,
-    MonthBegin, MonthEnd, YearBegin, YearEnd, QuarterBegin, QuarterEnd,
+    _MONTH_ABBREVIATIONS, BaseCFTimeOffset, Day, Hour, Minute, MonthBegin,
+    MonthEnd, QuarterBegin, QuarterEnd, Second, YearBegin, YearEnd,
     _days_in_month, cftime_range, get_date_type, to_cftime_datetime, to_offset)
 
 cftime = pytest.importorskip('cftime')
