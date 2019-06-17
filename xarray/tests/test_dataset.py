@@ -69,7 +69,8 @@ def create_append_test_data():
     da2 = xr.DataArray((np.arange(3 * 3 * nt2) + 100).reshape(3, 3, nt2),
                        coords=[lat, lon, time2], dims=['lat', 'lon', 'time'])
     ds2 = da2.to_dataset(name='da')
-    ds2['string_var'] = xr.DataArray(string_var[:nt2], coords=[time2], dims=['time'])
+    ds2['string_var'] = xr.DataArray(string_var[:nt2],
+                                     coords=[time2], dims=['time'])
 
     assert all(objp.data.flags.writeable for objp in ds1.variables.values())
     assert all(objp.data.flags.writeable for objp in ds2.variables.values())

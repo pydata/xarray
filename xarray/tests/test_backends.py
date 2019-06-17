@@ -1651,7 +1651,6 @@ class ZarrBase(CFEncodedBase):
         #         assert_identical(obj1, xr.open_zarr(store_target))
         #         print(xr.open_zarr(store_target).lon.values)
 
-
     def test_compressor_encoding(self):
         original = create_test_data()
         # specify a custom compressor
