@@ -1610,9 +1610,11 @@ class ZarrBase(CFEncodedBase):
         obj1, obj2 = create_append_test_data()
 
         with pytest.raises(ValueError):
+            # check failure when having non-fixed-sized strings
             with self.create_zarr_target() as store_target:
                 obj1.to_zarr(store_target, mode='a')
 
+        # encode strings to fixed sized arrays
         obj1['string_var'] = encode_utf8(obj1.string_var, 2)
         obj2['string_var'] = encode_utf8(obj2.string_var, 2)
         with self.create_zarr_target() as store_target:
@@ -1630,6 +1632,13 @@ class ZarrBase(CFEncodedBase):
             store = zarr.open(store_target)
             assert_identical(original, xr.open_zarr(store_target))
             assert original['time'].shape == store['time'].chunks
+        # TODO: implement that compute = False keeps zarr uninitialized
+        # with self.create_zarr_target() as store_target:
+        #     obj1.to_zarr(store_target, mode='w', compute=False)
+        #     with pytest.raises(ValueError):
+        #         assert_identical(obj1, xr.open_zarr(store_target))
+        #         print(xr.open_zarr(store_target).lon.values)
+
 
     def test_compressor_encoding(self):
         original = create_test_data()
