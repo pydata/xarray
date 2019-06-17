@@ -1474,7 +1474,7 @@ class DataArray(AbstractArray, DataWithCoords):
         errors: {'raise', 'ignore'}, optional
             If 'raise' (default), raises a ValueError error if
             any of the variable or index labels passed are not
-            in the dataset. If ``ignore'', any given labels that are in the
+            in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
         Returns
         -------
