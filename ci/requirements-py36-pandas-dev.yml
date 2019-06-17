@@ -4,7 +4,6 @@ channels:
 dependencies:
   - python=3.6
   - cftime
-  - cython
   - dask
   - distributed
   - h5py
