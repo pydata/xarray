@@ -56,5 +56,6 @@ dependencies:
   - pydap
   - lxml
   - pip:
+    - cython
     - git+https://github.com/pydata/pandas.git
     - mypy==0.660
