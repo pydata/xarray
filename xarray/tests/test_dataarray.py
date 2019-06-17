@@ -1882,7 +1882,7 @@ class TestDataArray:
         expected = arr[:, 2:]
         assert_identical(actual, expected)
 
-        with raises_regex(KeyError, 'not found'):
+        with raises_regex((KeyError, ValueError), 'not found'):
             actual = arr.drop([0, 1, 3], dim='y')
 
         actual = arr.drop([0, 1, 3], dim='y', errors='ignore')
