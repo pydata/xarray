@@ -606,6 +606,11 @@ store, add ``mode='w'`` when invoking ``to_zarr``.
 
 It is also possible to append to an existing store. For that, add ``mode='a'``
 and set ``append_dim`` to the name of the dimension along which to append.
+It is necessary that the data only contains types which are either a subclass
+of ``np.number`` or ``np.string_``. It as well needs to be taken into account,
+that the size of the ``np.string_`` in the first chunk sets the maximum
+string size for all following ones. To encode the data consider using
+:py:func:`~xarray.core.api.encode_utf8`.
 Optionally, you can also pass ``chunk_dim`` to set the chunk size of the
 appended dimension's coordinate. If you don't, this coordinate will keep the
 same chunk size as before appending, which could be too small if this is e.g. a
