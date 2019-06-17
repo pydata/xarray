@@ -7,8 +7,8 @@ import numpy as np
 from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import (
-    bn, has_bottleneck, inject_coarsen_methods,
-    inject_bottleneck_rolling_methods, inject_datasetrolling_methods)
+    bn, has_bottleneck, inject_bottleneck_rolling_methods,
+    inject_coarsen_methods, inject_datasetrolling_methods)
 from .pycompat import dask_array_type
 
 
@@ -211,6 +211,29 @@ class DataArrayRolling(Rolling):
         -------
         reduced : DataArray
             Array with summarized data.
+
+        Examples
+        --------
+        >>> da = DataArray(np.arange(8).reshape(2, 4), dims=('a', 'b'))
+        >>>
+        >>> rolling = da.rolling(b=3)
+        >>> rolling.construct('window_dim')
+        <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
+        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
+               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        Dimensions without coordinates: a, b, window_dim
+        >>>
+        >>> rolling.reduce(np.sum)
+        <xarray.DataArray (a: 2, b: 4)>
+        array([[nan, nan,  3.,  6.],
+               [nan, nan, 15., 18.]])
+        Dimensions without coordinates: a, b
+        >>>
+        >>> rolling = da.rolling(b=3, min_periods=1)
+        >>> rolling.reduce(np.nansum)
+        <xarray.DataArray (a: 2, b: 4)>
+        array([[ 0.,  1.,  3.,  6.],
+               [ 4.,  9., 15., 18.]])
         """
         rolling_dim = utils.get_temp_dimname(self.obj.dims, '_rolling_dim')
         windows = self.construct(rolling_dim)
