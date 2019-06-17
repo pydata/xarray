@@ -19,5 +19,6 @@ dependencies:
   - numpy>=1.12
   - scipy
   - toolz
+  - pip
   - pip:
     - git+https://github.com/pydata/pandas.git
