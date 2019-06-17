@@ -20,6 +20,7 @@ import xarray as xr
 from xarray import (
     DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
     save_mfdataset, load_dataset, load_dataarray)
+from xarray.backends.api import encode_utf8
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
@@ -1607,6 +1608,13 @@ class ZarrBase(CFEncodedBase):
 
         # check append mode for append write
         obj1, obj2 = create_append_test_data()
+
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                obj1.to_zarr(store_target, mode='a')
+
+        obj1['string_var'] = encode_utf8(obj1.string_var, 2)
+        obj2['string_var'] = encode_utf8(obj2.string_var, 2)
         with self.create_zarr_target() as store_target:
             obj1.to_zarr(store_target, mode='w')
             obj2.to_zarr(store_target, mode='a', append_dim='time')
@@ -1614,10 +1622,10 @@ class ZarrBase(CFEncodedBase):
             assert_identical(original, xr.open_zarr(store_target))
         # check chunk size of the append_dim coordinate when chunk_dim is set
         with self.create_zarr_target() as store_target:
-            original = xr.concat([obj1, obj2], dim='time')
             obj1.to_zarr(store_target, mode='w')
             obj2.to_zarr(store_target, mode='a', append_dim='time',
                          chunk_dim=original['time'].shape)
+            original = xr.concat([obj1, obj2], dim='time')
             import zarr
             store = zarr.open(store_target)
             assert_identical(original, xr.open_zarr(store_target))

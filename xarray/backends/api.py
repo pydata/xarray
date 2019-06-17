@@ -4,16 +4,21 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
+import re
 
 import numpy as np
+import pandas as pd
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
 from ..core.combine import (
     _CONCAT_DIM_DEFAULT, _auto_combine, _infer_concat_order_from_positions)
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from ..core.variable import Variable
 from .common import ArrayWriter
 from .locks import _get_scheduler
+from ..coding.variables import safe_setitem, unpack_for_encoding
+from ..coding.strings import encode_string_array
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -1003,6 +1008,28 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                              for w, s in zip(writes, stores)])
 
 
+def encode_utf8(var, string_max_length):
+    dims, data, attrs, encoding = unpack_for_encoding(var)
+    missing = pd.isnull(data)
+    data[missing] = ""
+    data = encode_string_array(data, 'utf-8')
+    data = data.astype(np.dtype(f"S{string_max_length*2}"))
+    return Variable(dims, data, attrs, encoding)
+
+
+def _validate_datatypes_for_zarr_append(dataset):
+    """DataArray.name and Dataset keys must be a string or None"""
+    def check_dtype(var):
+        if (not np.issubdtype(var.dtype, np.number)
+                and not np.issubdtype(var.dtype, np.string_)):
+            # and not re.match('^bytes[1-9]+$', var.dtype.name)):
+            raise ValueError('Invalid dtype for DataVariable: {} '
+                             'dtype must be a subtype of number or '
+                             'a fixed sized string'.format(var))
+    for k in dataset.data_vars.values():
+        check_dtype(k)
+
+
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
             encoding=None, compute=True, consolidated=False, append_dim=None,
             chunk_dim=None):
@@ -1019,6 +1046,9 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
+
+    if mode == "a":
+        _validate_datatypes_for_zarr_append(dataset)
 
     zstore = backends.ZarrStore.open_group(store=store, mode=mode,
                                            synchronizer=synchronizer,

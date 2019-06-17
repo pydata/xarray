@@ -55,18 +55,21 @@ def create_test_data(seed=None):
 def create_append_test_data():
     lat = [2, 1, 0]
     lon = [0, 1, 2]
+    string_var = ["ae", "bc", "df"]
 
     nt1 = 3
     time1 = pd.date_range('2000-01-01', periods=nt1)
     da1 = xr.DataArray(np.arange(3 * 3 * nt1).reshape(3, 3, nt1), coords=[lat,
                        lon, time1], dims=['lat', 'lon', 'time'])
     ds1 = da1.to_dataset(name='da')
+    ds1['string_var'] = xr.DataArray(string_var, coords=[time1], dims=['time'])
 
     nt2 = 2
     time2 = pd.date_range('2000-02-01', periods=nt2)
     da2 = xr.DataArray((np.arange(3 * 3 * nt2) + 100).reshape(3, 3, nt2),
                        coords=[lat, lon, time2], dims=['lat', 'lon', 'time'])
     ds2 = da2.to_dataset(name='da')
+    ds2['string_var'] = xr.DataArray(string_var[:nt2], coords=[time2], dims=['time'])
 
     assert all(objp.data.flags.writeable for objp in ds1.variables.values())
     assert all(objp.data.flags.writeable for objp in ds2.variables.values())
