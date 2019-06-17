@@ -185,7 +185,7 @@ def array_notnull_equiv(arr1, arr2):
 def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes
     """
-    return np.sum(~isnull(data), axis=axis)
+    return np.sum(np.logical_not(isnull(data)), axis=axis)
 
 
 def where(condition, x, y):

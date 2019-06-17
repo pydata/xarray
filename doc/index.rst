@@ -29,6 +29,7 @@ Documentation
 
 * :doc:`why-xarray`
 * :doc:`faq`
+* :doc:`quick-overview`
 * :doc:`examples`
 * :doc:`installing`
 
@@ -39,6 +40,7 @@ Documentation
 
    why-xarray
    faq
+   quick-overview
    examples
    installing
 

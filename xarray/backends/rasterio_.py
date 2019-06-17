@@ -224,6 +224,9 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
                           src_nodata=vrt.src_nodata,
                           dst_nodata=vrt.dst_nodata,
                           tolerance=vrt.tolerance,
+                          transform=vrt.transform,
+                          width=vrt.width,
+                          height=vrt.height,
                           warp_extras=vrt.warp_extras)
 
     if lock is None:

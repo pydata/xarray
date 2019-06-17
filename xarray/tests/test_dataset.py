@@ -1619,6 +1619,54 @@ class TestDataset(object):
         actual = ds.reindex_like(alt, method='pad')
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_reindex_fill_value(self, fill_value):
+        ds = Dataset({'x': ('y', [10, 20]), 'y': [0, 1]})
+        y = [0, 1, 2]
+        actual = ds.reindex(y=y, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'x': ('y', [10, 20, fill_value]), 'y': y})
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_reindex_like_fill_value(self, fill_value):
+        ds = Dataset({'x': ('y', [10, 20]), 'y': [0, 1]})
+        y = [0, 1, 2]
+        alt = Dataset({'y': y})
+        actual = ds.reindex_like(alt, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'x': ('y', [10, 20, fill_value]), 'y': y})
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_align_fill_value(self, fill_value):
+        x = Dataset({'foo': DataArray([1, 2], dims=['x'],
+                                      coords={'x': [1, 2]})})
+        y = Dataset({'bar': DataArray([1, 2], dims=['x'],
+                                      coords={'x': [1, 3]})})
+        x2, y2 = align(x, y, join='outer', fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+
+        expected_x2 = Dataset(
+            {'foo': DataArray([1, 2, fill_value],
+                              dims=['x'],
+                              coords={'x': [1, 2, 3]})})
+        expected_y2 = Dataset(
+            {'bar': DataArray([1, fill_value, 2],
+                              dims=['x'],
+                              coords={'x': [1, 2, 3]})})
+        assert_identical(expected_x2, x2)
+        assert_identical(expected_y2, y2)
+
     def test_align(self):
         left = create_test_data()
         right = left.copy(deep=True)

@@ -14,8 +14,8 @@ dependencies:
   - pytest-cov
   - pytest-env
   - coveralls
-  - numpy
-  - pandas
+  - numpy>=1.12
+  - pandas>=0.19
   - scipy
   - seaborn
   - toolz
