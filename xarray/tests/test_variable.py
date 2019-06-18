@@ -1540,6 +1540,21 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
+    def test_reduce_keepdims(self):
+        v = Variable(['x', 'y'], self.d)
+
+        assert_identical(v.mean(keepdims=True),
+                         Variable(v.dims, np.mean(self.d, keepdims=True)))
+        assert_identical(v.mean(dim='x', keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=0,
+                                  keepdims=True)))
+        assert_identical(v.mean(dim='y', keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=1,
+                                  keepdims=True)))
+        assert_identical(v.mean(dim=['y', 'x'], keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=(1, 0),
+                                  keepdims=True)))
+
     def test_reduce_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}
 

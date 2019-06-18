@@ -1334,7 +1334,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return ops.where_method(self, cond, other)
 
     def reduce(self, func, dim=None, axis=None,
-               keep_attrs=None, allow_lazy=False, **kwargs):
+               keep_attrs=None, keepdims=None, allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1354,6 +1354,9 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        keepdims : bool, optional
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1387,6 +1390,12 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
+
+        if keepdims:
+            for i, d in enumerate(self.dims):
+                if d not in dims:
+                    dims.insert(i, d)
+                    data = np.expand_dims(data, axis=i)
 
         return Variable(dims, data, attrs=attrs)
 
