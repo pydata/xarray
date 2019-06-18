@@ -1013,7 +1013,7 @@ def encode_utf8(var, string_max_length):
     missing = pd.isnull(data)
     data[missing] = ""
     data = encode_string_array(data, 'utf-8')
-    data = data.astype(np.dtype("S{}".format(string_max_length*2)))
+    data = data.astype(np.dtype("S{}".format(string_max_length * 2)))
     return Variable(dims, data, attrs, encoding)
 
 
