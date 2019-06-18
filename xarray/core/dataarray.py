@@ -2,6 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -1442,7 +1443,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = {}
+            coords = OrderedDict()  # type: OrderedDict[Any, Variable]
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
