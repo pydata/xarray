@@ -2,6 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -67,7 +68,7 @@ def _infer_coords_and_dims(shape, coords, dims):
         for dim, coord in zip(dims, coords):
             var = as_variable(coord, name=dim)
             var.dims = (dim,)
-            new_coords[dim] = var
+            new_coords[dim] = var.to_index_variable()
 
     sizes = dict(zip(dims, shape))
     for k, v in new_coords.items():
@@ -1442,7 +1443,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = {}
+            coords = OrderedDict()  # type: OrderedDict[Any, Variable]
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
