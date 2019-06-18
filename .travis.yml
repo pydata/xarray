@@ -31,6 +31,7 @@ matrix:
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - env: CONDA_ENV=py36-pandas-dev
   - env: CONDA_ENV=py36-zarr-dev
+  - env: CONDA_ENV=typing
 
 before_install:
   - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
