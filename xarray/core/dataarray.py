@@ -2,6 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,8 @@ import pandas as pd
 from ..plot.plot import _PlotMethods
 from . import (
     computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
-from .accessors import DatetimeAccessor
+from .accessor_dt import DatetimeAccessor
+from .accessor_str import StringAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
@@ -66,7 +68,7 @@ def _infer_coords_and_dims(shape, coords, dims):
         for dim, coord in zip(dims, coords):
             var = as_variable(coord, name=dim)
             var.dims = (dim,)
-            new_coords[dim] = var
+            new_coords[dim] = var.to_index_variable()
 
     sizes = dict(zip(dims, shape))
     for k, v in new_coords.items():
@@ -92,7 +94,7 @@ def _infer_coords_and_dims(shape, coords, dims):
     return new_coords, dims
 
 
-class _LocIndexer(object):
+class _LocIndexer:
     def __init__(self, data_array):
         self.data_array = data_array
 
@@ -162,6 +164,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)
+    str = property(StringAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None, indexes=None, fastpath=False):
@@ -879,9 +882,10 @@ class DataArray(AbstractArray, DataWithCoords):
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
 
-    def reindex_like(self, other, method=None, tolerance=None, copy=True):
-        """Conform this object onto the indexes of another object, filling
-        in missing values with NaN.
+    def reindex_like(self, other, method=None, tolerance=None, copy=True,
+                     fill_value=dtypes.NA):
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -902,7 +906,7 @@ class DataArray(AbstractArray, DataWithCoords):
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         copy : bool, optional
@@ -910,6 +914,8 @@ class DataArray(AbstractArray, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
 
         Returns
         -------
@@ -924,12 +930,12 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         indexers = reindex_like_indexers(self, other)
         return self.reindex(method=method, tolerance=tolerance, copy=copy,
-                            **indexers)
+                            fill_value=fill_value, **indexers)
 
     def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
-                **indexers_kwargs):
-        """Conform this object onto a new set of indexes, filling in
-        missing values with NaN.
+                fill_value=dtypes.NA, **indexers_kwargs):
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -954,8 +960,10 @@ class DataArray(AbstractArray, DataWithCoords):
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+        fill_value : scalar, optional
+            Value to use for newly missing values
         **indexers_kwarg : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -974,7 +982,8 @@ class DataArray(AbstractArray, DataWithCoords):
         indexers = either_dict_or_kwargs(
             indexers, indexers_kwargs, 'reindex')
         ds = self._to_temp_dataset().reindex(
-            indexers=indexers, method=method, tolerance=tolerance, copy=copy)
+            indexers=indexers, method=method, tolerance=tolerance, copy=copy,
+            fill_value=fill_value)
         return self._from_temp_dataset(ds)
 
     def interp(self, coords=None, method='linear', assume_sorted=False,
@@ -1343,7 +1352,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
-                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
 
         See also
@@ -1386,7 +1395,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
-                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
         >>> roundtripped = stacked.unstack()
         >>> arr.identical(roundtripped)
@@ -1399,7 +1408,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def transpose(self, *dims):
+    def transpose(self, *dims, transpose_coords=None) -> 'DataArray':
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1407,6 +1416,8 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
+        transpose_coords : boolean, optional
+            If True, also transpose the coordinates of this DataArray.
 
         Returns
         -------
@@ -1424,8 +1435,32 @@ class DataArray(AbstractArray, DataWithCoords):
         numpy.transpose
         Dataset.transpose
         """
+        if dims:
+            if set(dims) ^ set(self.dims):
+                raise ValueError('arguments to transpose (%s) must be '
+                                 'permuted array dimensions (%s)'
+                                 % (dims, tuple(self.dims)))
+
         variable = self.variable.transpose(*dims)
-        return self._replace(variable)
+        if transpose_coords:
+            coords = OrderedDict()  # type: OrderedDict[Any, Variable]
+            for name, coord in self.coords.items():
+                coord_dims = tuple(dim for dim in dims if dim in coord.dims)
+                coords[name] = coord.variable.transpose(*coord_dims)
+            return self._replace(variable, coords)
+        else:
+            if transpose_coords is None \
+                    and any(self[c].ndim > 1 for c in self.coords):
+                warnings.warn('This DataArray contains multi-dimensional '
+                              'coordinates. In the future, these coordinates '
+                              'will be transposed as well unless you specify '
+                              'transpose_coords=False.',
+                              FutureWarning, stacklevel=2)
+            return self._replace(variable)
+
+    @property
+    def T(self) -> 'DataArray':
+        return self.transpose()
 
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.
@@ -1714,8 +1749,9 @@ class DataArray(AbstractArray, DataWithCoords):
         result : MaskedArray
             Masked where invalid values (nan or inf) occur.
         """
-        isnull = pd.isnull(self.values)
-        return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
+        values = self.values  # only compute lazy arrays once
+        isnull = pd.isnull(values)
+        return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
     def to_netcdf(self, *args, **kwargs):
         """Write DataArray contents to a netCDF file.
@@ -1981,6 +2017,14 @@ class DataArray(AbstractArray, DataWithCoords):
     def __array_wrap__(self, obj, context=None):
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
+
+    def __matmul__(self, obj):
+        return self.dot(obj)
+
+    def __rmatmul__(self, other):
+        # currently somewhat duplicative, as only other DataArrays are
+        # compatible with matmul
+        return computation.dot(other, self)
 
     @staticmethod
     def _unary_op(f):

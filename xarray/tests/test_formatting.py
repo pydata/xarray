@@ -10,7 +10,7 @@ from xarray.core import formatting
 from . import raises_regex
 
 
-class TestFormatting(object):
+class TestFormatting:
 
     def test_get_indexer_at_least_n_items(self):
         cases = [
@@ -301,6 +301,17 @@ class TestFormatting(object):
             description: desc""")
 
         actual = formatting.diff_dataset_repr(ds_a, ds_b, 'identical')
+        assert actual == expected
+
+    def test_array_repr(self):
+        ds = xr.Dataset(coords={'foo': [1, 2, 3], 'bar': [1, 2, 3]})
+        ds[(1, 2)] = xr.DataArray([0], dims='test')
+        actual = formatting.array_repr(ds[(1, 2)])
+        expected = dedent("""\
+        <xarray.DataArray (1, 2) (test: 1)>
+        array([0])
+        Dimensions without coordinates: test""")
+
         assert actual == expected
 
 

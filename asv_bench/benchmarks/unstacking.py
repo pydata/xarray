@@ -7,7 +7,7 @@ import xarray as xr
 from . import requires_dask
 
 
-class Unstacking(object):
+class Unstacking:
     def setup(self):
         data = np.random.RandomState(0).randn(1, 1000, 500)
         self.ds = xr.DataArray(data).stack(flat_dim=['dim_1', 'dim_2'])

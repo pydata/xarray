@@ -8,7 +8,7 @@ class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
 
 
-class _CachedAccessor(object):
+class _CachedAccessor:
     """Custom property-like object (descriptor) for caching accessors."""
 
     def __init__(self, name, accessor):
@@ -81,7 +81,7 @@ def register_dataset_accessor(name):
         import xarray as xr
 
         @xr.register_dataset_accessor('geo')
-        class GeoAccessor(object):
+        class GeoAccessor:
             def __init__(self, xarray_obj):
                 self._obj = xarray_obj
 

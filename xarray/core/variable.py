@@ -1121,7 +1121,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             result = result._roll_one_dim(dim, count)
         return result
 
-    def transpose(self, *dims):
+    def transpose(self, *dims) -> 'Variable':
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1154,6 +1154,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         data = as_indexable(self._data).transpose(axes)
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
+
+    @property
+    def T(self) -> 'Variable':
+        return self.transpose()
 
     def expand_dims(self, *args):
         import warnings
@@ -1902,7 +1906,8 @@ class IndexVariable(Variable):
         Parameters
         ----------
         deep : bool, optional
-            Deep is always ignored.
+            Deep is ignored when data is given. Whether the data array is
+            loaded into memory and copied onto the new object. Default is True.
         data : array_like, optional
             Data to use in the new object. Must have same shape as original.
 
@@ -1913,7 +1918,14 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            data = self._data
+            if deep:
+                # self._data should be a `PandasIndexAdapter` instance at this
+                # point, which doesn't have a copy method, so make a deep copy
+                # of the underlying `pandas.MultiIndex` and create a new
+                # `PandasIndexAdapter` instance with it.
+                data = PandasIndexAdapter(self._data.array.copy(deep=True))
+            else:
+                data = self._data
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:

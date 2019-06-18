@@ -9,12 +9,12 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects
 from .computation import apply_ufunc
-from .duck_array_ops import dask_array_type, datetime_to_numeric
+from .duck_array_ops import dask_array_type
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
 
-class BaseInterpolator(object):
+class BaseInterpolator:
     '''gerneric interpolator class for normalizing interpolation methods'''
     cons_kwargs = {}  # type: Dict[str, Any]
     call_kwargs = {}  # type: Dict[str, Any]

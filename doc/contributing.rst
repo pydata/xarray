@@ -285,17 +285,23 @@ How to build the *xarray* documentation
 
 Requirements
 ~~~~~~~~~~~~
+Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
+to build the docs you need to use the environment file ``doc/environment.yml``.
 
-First, you need to have a development environment to be able to build xarray
-(see the docs on :ref:`creating a development environment above <contributing.dev_env>`).
+.. code-block:: none
+
+    # Create and activate the docs environment
+    conda env create -f doc/environment.yml
+    conda activate xarray-docs
+
+    # or with older versions of Anaconda:
+    source activate xarray-docs
+
+    # Build and install xarray
+    pip install -e .
 
 Building the documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In your development environment, install ``sphinx``, ``sphinx_rtd_theme``,
-``sphinx-gallery`` and ``numpydoc``::
-
-    conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc
 
 Navigate to your local ``xarray/doc/`` directory in the console and run::
 
@@ -345,11 +351,11 @@ the more common ``PEP8`` issues:
   - passing arguments should have spaces after commas, e.g. ``foo(arg1, arg2, kw1='bar')``
 
 :ref:`Continuous Integration <contributing.ci>` will run
-the `pycodestyle <http://pypi.python.org/pypi/pycodestyle>`_ tool
+the `flake8 <http://flake8.pycqa.org/en/latest/>`_ tool
 and report any stylistic errors in your code. Therefore, it is helpful before
-submitting code to run the check yourself::
+submitting code to run the check yourself:
 
-   pycodestyle xarray
+   flake8
 
 Other recommended but optional tools for checking code quality (not currently
 enforced in CI):
@@ -357,8 +363,6 @@ enforced in CI):
 - `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
   make it easier to catch bugs. Please run ``mypy xarray`` if you annotate any
   code with `type hints <https://docs.python.org/3/library/typing.html>`_.
-- `flake8 <http://pypi.python.org/pypi/flake8>`_ includes a few more automated
-  checks than those enforced by pycodestyle.
 - `isort <https://github.com/timothycrosley/isort>`_ will highlight
   incorrectly sorted imports. ``isort -y`` will automatically fix them. See
   also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
@@ -451,7 +455,7 @@ typically find tests wrapped in a class.
 
 .. code-block:: python
 
-    class TestReallyCoolFeature(object):
+    class TestReallyCoolFeature:
         ....
 
 Going forward, we are moving to a more *functional* style using the

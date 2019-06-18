@@ -4,9 +4,9 @@ Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
 import contextlib
-from functools import partial
 import inspect
 import warnings
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -185,7 +185,7 @@ def array_notnull_equiv(arr1, arr2):
 def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes
     """
-    return np.sum(~isnull(data), axis=axis)
+    return np.sum(np.logical_not(isnull(data)), axis=axis)
 
 
 def where(condition, x, y):

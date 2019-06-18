@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (
-    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union)
+    Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -37,8 +37,7 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
-    either_dict_or_kwargs, ensure_us_time_resolution, hashable, is_dict_like,
-    maybe_wrap_array)
+    either_dict_or_kwargs, hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
@@ -103,7 +102,7 @@ def calculate_dimensions(variables):
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = OrderedDict()
+    dims = {}
     last_used = {}
     scalar_vars = set(k for k, v in variables.items() if not v.dims)
     for k, var in variables.items():
@@ -305,7 +304,7 @@ class DataVariables(Mapping):
                 if key not in self._dataset._coord_names]
 
 
-class _LocIndexer(object):
+class _LocIndexer:
     def __init__(self, dataset):
         self.dataset = dataset
 
@@ -345,7 +344,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         data_vars : dict-like, optional
             A mapping from variable names to :py:class:`~xarray.DataArray`
-            objects, :py:class:`~xarray.Variable` objects or tuples of the
+            objects, :py:class:`~xarray.Variable` objects or to tuples of the
             form ``(dims, data[, attrs])`` which can be used as arguments to
             create a new ``Variable``. Each dimension must have the same length
             in all variables in which it appears.
@@ -695,7 +694,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @classmethod
     def _from_vars_and_coord_names(cls, variables, coord_names, attrs=None):
-        dims = dict(calculate_dimensions(variables))
+        dims = calculate_dimensions(variables)
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
     # TODO(shoyer): renable type checking on this signature when pytype has a
@@ -756,18 +755,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names: set = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Any, pd.Index]]' = __default,
+        encoding: Optional[dict] = __default,
         inplace: bool = False,
     ) -> T:
         """Replace variables with recalculated dimensions."""
-        dims = dict(calculate_dimensions(variables))
+        dims = calculate_dimensions(variables)
         return self._replace(
-            variables, coord_names, dims, attrs, indexes, inplace=inplace)
+            variables, coord_names, dims, attrs, indexes, encoding,
+            inplace=inplace)
 
     def _replace_vars_and_dims(  # type: ignore
         self: T,
         variables: 'OrderedDict[Any, Variable]' = None,
         coord_names: set = None,
-        dims: 'OrderedDict[Any, int]' = None,
+        dims: Dict[Any, int] = None,
         attrs: 'Optional[OrderedDict]' = __default,
         inplace: bool = False,
     ) -> T:
@@ -1083,6 +1084,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         del self._variables[key]
         self._coord_names.discard(key)
+        self._dims = calculate_dimensions(self._variables)
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
@@ -1383,7 +1385,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         pandas.DataFrame.assign
-        netCDF's ncdump
+        ncdump: netCDF's ncdump
         """
 
         if buf is None:  # pragma: no cover
@@ -1518,6 +1520,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 v = as_variable(v)
             elif isinstance(v, Dataset):
                 raise TypeError('cannot use a Dataset as an indexer')
+            elif isinstance(v, Sequence) and len(v) == 0:
+                v = IndexVariable((k, ), np.zeros((0,), dtype='int64'))
             else:
                 v = np.asarray(v)
 
@@ -1701,7 +1705,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         drop : bool, optional
@@ -1901,7 +1905,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         **indexers : {dim: indexer, ...}
@@ -1932,9 +1936,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         return self.isel_points(dim=dim, **pos_indexers)
 
-    def reindex_like(self, other, method=None, tolerance=None, copy=True):
-        """Conform this object onto the indexes of another object, filling
-        in missing values with NaN.
+    def reindex_like(self, other, method=None, tolerance=None, copy=True,
+                     fill_value=dtypes.NA):
+        """Conform this object onto the indexes of another object, filling in
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -1955,7 +1960,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         copy : bool, optional
@@ -1963,6 +1968,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
 
         Returns
         -------
@@ -1977,12 +1984,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         indexers = alignment.reindex_like_indexers(self, other)
         return self.reindex(indexers=indexers, method=method, copy=copy,
-                            tolerance=tolerance)
+                            fill_value=fill_value, tolerance=tolerance)
 
     def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
-                **indexers_kwargs):
+                fill_value=dtypes.NA, **indexers_kwargs):
         """Conform this object onto a new set of indexes, filling in
-        missing values with NaN.
+        missing values with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -2002,7 +2009,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
             Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations most
+            matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         copy : bool, optional
@@ -2010,6 +2017,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
+        fill_value : scalar, optional
+            Value to use for newly missing values
         **indexers_kwarg : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -2034,7 +2043,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         variables, indexes = alignment.reindex_variables(
             self.variables, self.sizes, self.indexes, indexers, method,
-            tolerance, copy=copy)
+            tolerance, copy=copy, fill_value=fill_value)
         coord_names = set(self._coord_names)
         coord_names.update(indexers)
         return self._replace_with_new_dims(
@@ -2465,7 +2474,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             else:
                 # If dims includes a label of a non-dimension coordinate,
                 # it will be promoted to a 1D coordinate with a single value.
-                variables[k] = v.set_dims(k)
+                variables[k] = v.set_dims(k).to_index_variable()
 
         new_dims = self._dims.copy()
         new_dims.update(dim)
@@ -2763,7 +2772,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                                            inplace=inplace)
 
     def merge(self, other, inplace=None, overwrite_vars=frozenset(),
-              compat='no_conflicts', join='outer'):
+              compat='no_conflicts', join='outer', fill_value=dtypes.NA):
         """Merge the arrays of two datasets into a single dataset.
 
         This method generally not allow for overriding data, with the exception
@@ -2801,6 +2810,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
+        fill_value: scalar, optional
+            Value to use for newly missing values
 
         Returns
         -------
@@ -2815,7 +2826,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         inplace = _check_inplace(inplace)
         variables, coord_names, dims = dataset_merge_method(
             self, other, overwrite_vars=overwrite_vars, compat=compat,
-            join=join)
+            join=join, fill_value=fill_value)
 
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
@@ -3562,12 +3573,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _unary_op(f, keep_attrs=False):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            ds = self.coords.to_dataset()
-            for k in self.data_vars:
-                ds._variables[k] = f(self._variables[k], *args, **kwargs)
-            if keep_attrs:
-                ds._attrs = self._attrs
-            return ds
+            variables = OrderedDict()
+            for k, v in self._variables.items():
+                if k in self._coord_names:
+                    variables[k] = v
+                else:
+                    variables[k] = f(v, *args, **kwargs)
+            attrs = self._attrs if keep_attrs else None
+            return self._replace_with_new_dims(
+                variables, attrs=attrs, encoding=None)
 
         return func
 
@@ -4168,7 +4182,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError('Coordinate {} does not exist.'.format(dim))
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:
