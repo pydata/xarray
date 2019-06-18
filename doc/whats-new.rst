@@ -83,6 +83,9 @@ Bug fixes
 - Replace incorrect usages of `message` in pytest assertions 
   with `match` (:issue:`3011`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add explicit pytest markers, now required by pytest
+  (:issue:`3032`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.12.1:
 
