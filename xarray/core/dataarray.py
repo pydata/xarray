@@ -1643,7 +1643,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return ops.fillna(self, other, join="outer")
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=None, keepdims=None,
+    def reduce(self, func, dim=None, axis=None, keep_attrs=None, keepdims=False,
                **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 

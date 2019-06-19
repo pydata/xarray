@@ -3132,7 +3132,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
-    def reduce(self, func, dim=None, keep_attrs=None, keepdims=None,
+    def reduce(self, func, dim=None, keep_attrs=None, keepdims=False,
                numeric_only=False, allow_lazy=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 

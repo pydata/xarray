@@ -1334,7 +1334,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return ops.where_method(self, cond, other)
 
     def reduce(self, func, dim=None, axis=None,
-               keep_attrs=None, keepdims=None, allow_lazy=False, **kwargs):
+               keep_attrs=None, keepdims=False, allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
