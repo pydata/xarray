@@ -2826,7 +2826,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
-    def drop(self, labels, dim=None):
+    def drop(self, labels, dim=None, *, errors='raise'):
         """Drop variables or index labels from this dataset.
 
         Parameters
@@ -2836,33 +2836,41 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : None or str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the variable or index labels passed are not
+            in the dataset. If 'ignore', any given labels that are in the
+            dataset are dropped and no error is raised.
 
         Returns
         -------
         dropped : Dataset
         """
+        if errors not in ['raise', 'ignore']:
+            raise ValueError('errors must be either "raise" or "ignore"')
         if utils.is_scalar(labels):
             labels = [labels]
         if dim is None:
-            return self._drop_vars(labels)
+            return self._drop_vars(labels, errors=errors)
         else:
             try:
                 index = self.indexes[dim]
             except KeyError:
                 raise ValueError(
                     'dimension %r does not have coordinate labels' % dim)
-            new_index = index.drop(labels)
+            new_index = index.drop(labels, errors=errors)
             return self.loc[{dim: new_index}]
 
-    def _drop_vars(self, names):
-        self._assert_all_in_dataset(names)
+    def _drop_vars(self, names, errors='raise'):
+        if errors == 'raise':
+            self._assert_all_in_dataset(names)
         drop = set(names)
         variables = OrderedDict((k, v) for k, v in self._variables.items()
                                 if k not in drop)
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def drop_dims(self, drop_dims):
+    def drop_dims(self, drop_dims, *, errors='raise'):
         """Drop dimensions and associated variables from this dataset.
 
         Parameters
@@ -2875,14 +2883,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj : Dataset
             The dataset without the given dimensions (or any variables
             containing those dimensions)
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the dimensions passed are not
+            in the dataset. If 'ignore', any given dimensions that are in the
+            dataset are dropped and no error is raised.
         """
+        if errors not in ['raise', 'ignore']:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
         if utils.is_scalar(drop_dims):
             drop_dims = [drop_dims]
 
-        missing_dimensions = [d for d in drop_dims if d not in self.dims]
-        if missing_dimensions:
-            raise ValueError('Dataset does not contain the dimensions: %s'
-                             % missing_dimensions)
+        if errors == 'raise':
+            missing_dimensions = [d for d in drop_dims if d not in self.dims]
+            if missing_dimensions:
+                raise ValueError('Dataset does not contain the dimensions: %s'
+                                 % missing_dimensions)
 
         drop_vars = set(k for k, v in self._variables.items()
                         for d in v.dims if d in drop_dims)
