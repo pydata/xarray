@@ -86,7 +86,7 @@ def _infer_coords_and_dims(shape, coords, dims) -> Tuple[
         for dim, coord in zip(dims, coords):
             var = as_variable(coord, name=dim)
             var.dims = (dim,)
-            new_coords[dim] = var
+            new_coords[dim] = var.to_index_variable()
 
     sizes = dict(zip(dims, shape))
     for k, v in new_coords.items():
@@ -1541,7 +1541,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = {}
+            coords = OrderedDict()  # type: OrderedDict[Any, Variable]
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
@@ -1560,8 +1560,13 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> 'DataArray':
         return self.transpose()
 
-    def drop(self, labels: Union[Hashable, Sequence[Hashable]],
-             dim: Optional[Hashable] = None) -> 'DataArray':
+    def drop(
+        self,
+        labels: Union[Hashable, Sequence[Hashable]],
+        dim: Optional[Hashable] = None,
+        *,
+        errors: str = 'raise',
+    ) -> 'DataArray':
         """Drop coordinates or index labels from this DataArray.
 
         Parameters
@@ -1571,14 +1576,18 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : hashable, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.
-
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the coordinates or index labels passed are not
+            in the array. If 'ignore', any given labels that are in the
+            array are dropped and no error is raised.
         Returns
         -------
         dropped : DataArray
         """
         if utils.is_scalar(labels):
             labels = [labels]
-        ds = self._to_temp_dataset().drop(labels, dim)
+        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
         return self._from_temp_dataset(ds)
 
     def dropna(self, dim: Hashable, how: str = 'any',

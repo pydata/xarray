@@ -199,7 +199,7 @@ class DatasetCoordinates(AbstractCoordinates):
 
         self._data._variables = variables
         self._data._coord_names.update(new_coord_names)
-        self._data._dims = dict(dims)
+        self._data._dims = dims
         self._data._indexes = None
 
     def __delitem__(self, key):
