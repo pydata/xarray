@@ -1354,7 +1354,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-        keepdims : bool, optional
+        keepdims : bool, default False
             If True, the dimensions which are reduced are left in the result
             as dimensions of size one
         **kwargs : dict
