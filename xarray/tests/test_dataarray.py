@@ -1859,19 +1859,34 @@ class TestDataArray:
         with pytest.raises(ValueError):
             arr.drop('not found')
 
+        actual = expected.drop('not found', errors='ignore')
+        assert_identical(actual, expected)
+
         with raises_regex(ValueError, 'cannot be found'):
             arr.drop(None)
+
+        actual = expected.drop(None, errors='ignore')
+        assert_identical(actual, expected)
 
         renamed = arr.rename('foo')
         with raises_regex(ValueError, 'cannot be found'):
             renamed.drop('foo')
+
+        actual = renamed.drop('foo', errors='ignore')
+        assert_identical(actual, renamed)
 
     def test_drop_index_labels(self):
         arr = DataArray(np.random.randn(2, 3), coords={'y': [0, 1, 2]},
                         dims=['x', 'y'])
         actual = arr.drop([0, 1], dim='y')
         expected = arr[:, 2:]
-        assert_identical(expected, actual)
+        assert_identical(actual, expected)
+
+        with raises_regex((KeyError, ValueError), 'not .* in axis'):
+            actual = arr.drop([0, 1, 3], dim='y')
+
+        actual = arr.drop([0, 1, 3], dim='y', errors='ignore')
+        assert_identical(actual, expected)
 
     def test_dropna(self):
         x = np.random.randn(4, 4)
