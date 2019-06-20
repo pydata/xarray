@@ -1644,12 +1644,6 @@ class ZarrBase(CFEncodedBase):
             store = zarr.open(store_target)
             assert_identical(original, xr.open_zarr(store_target))
             assert original['time'].shape == store['time'].chunks
-        # TODO: implement that compute = False keeps zarr uninitialized
-        # with self.create_zarr_target() as store_target:
-        #     obj1.to_zarr(store_target, mode='w', compute=False)
-        #     with pytest.raises(ValueError):
-        #         assert_identical(obj1, xr.open_zarr(store_target))
-        #         print(xr.open_zarr(store_target).lon.values)
 
     def test_compressor_encoding(self):
         original = create_test_data()
@@ -1699,10 +1693,49 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store:
             delayed_obj = self.save(original, store, compute=False)
             assert isinstance(delayed_obj, Delayed)
+
+            # make sure target store has not been written to yet
+            with pytest.raises(AssertionError):
+                with self.open(store) as actual:
+                    assert_identical(original, actual)
+
             delayed_obj.compute()
 
             with self.open(store) as actual:
                 assert_identical(original, actual)
+
+    def test_to_zarr_append_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
+
+        obj1, obj2 = create_append_test_data()
+        obj1['string_var'] = encode_utf8(obj1.string_var, 2)
+        obj2['string_var'] = encode_utf8(obj2.string_var, 2)
+        obj1, obj2 = obj1.chunk(), obj2.chunk()
+
+        with self.create_zarr_target() as store:
+            delayed_obj = self.save(obj1, store, compute=False, mode='w')
+            assert isinstance(delayed_obj, Delayed)
+
+            with pytest.raises(AssertionError):
+                with self.open(store) as actual:
+                    assert_identical(obj1, actual)
+
+            delayed_obj.compute()
+
+            with self.open(store) as actual:
+                assert_identical(obj1, actual)
+
+            delayed_obj = self.save(obj2, store, compute=False, mode='a', append_dim='time')
+            assert isinstance(delayed_obj, Delayed)
+
+            with pytest.raises(AssertionError):
+                with self.open(store) as actual:
+                    assert_identical(xr.concat([obj1, obj2], dim='time'), actual)
+
+            delayed_obj.compute()
+
+            with self.open(store) as actual:
+                assert_identical(xr.concat([obj1, obj2], dim='time'), actual)
 
     def test_encoding_chunksizes(self):
         # regression test for GH2278

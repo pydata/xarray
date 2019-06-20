@@ -420,12 +420,17 @@ class ZarrStore(AbstractWritableDataStore):
                                                dtype=dtype, overwrite=True)
                         zarr_array = self.ds[name]
                         zarr_array.attrs.put(attrs)
-                        zarr_array[:] = new_coord
+                        writer.add(new_coord, zarr_array)
                     else:
                         # this is the DataArray that has append_dim as a
                         # dimension
-                        axis = dims.index(self.append_dim)
-                        zarr_array.append(v.data, axis=axis)
+                        append_axis = dims.index(self.append_dim)
+                        new_shape = list(zarr_array.shape)
+                        new_shape[append_axis] += v.shape[append_axis]
+                        new_region = [slice(None),] * len(new_shape)
+                        new_region[append_axis] = slice(zarr_array.shape[append_axis],None)
+                        zarr_array.resize(new_shape)
+                        writer.add(v.data, zarr_array, region=tuple(new_region))
             else:
                 # new variable
                 encoding = _extract_zarr_variable_encoding(
@@ -439,7 +444,7 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                             fill_value=fill_value, **encoding)
                 zarr_array.attrs.put(encoded_attrs)
-                zarr_array[...] = v.data
+                writer.add(v.data, zarr_array)
 
     def close(self):
         if self._consolidate_on_close:
