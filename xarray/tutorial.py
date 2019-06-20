@@ -104,7 +104,7 @@ def load_dataset(*args, **kwargs):
     with open_dataset(*args, **kwargs) as ds:
         return ds.load()
 
-      
+ 
 def scatter_example_dataset():
     A = DataArray(np.zeros([3, 11, 4, 4]),
                   dims=['x', 'y', 'z', 'w'],
@@ -126,4 +126,5 @@ def scatter_example_dataset():
     ds.B.attrs['units'] = 'Bunits'
 
     return ds
+
   
