@@ -64,6 +64,11 @@ Enhancements
   formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
 - Add ``.str`` accessor to DataArrays for string related manipulations.
   By `0x0L <https://github.com/0x0L>`_.
+- Add ``errors`` keyword argument to :py:meth:`Dataset.drop` and :py:meth:`Dataset.drop_dims`
+  that allows ignoring errors if a passed label or dimension is not in the dataset
+  (:issue:`2994`).
+  By `Andrew Ross <https://github.com/andrew-c-ross>`_.
+
 
 Bug fixes
 ~~~~~~~~~

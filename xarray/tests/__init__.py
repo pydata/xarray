@@ -169,21 +169,20 @@ def source_ndarray(array):
 
 # Internal versions of xarray's test functions that validate additional
 # invariants
-# TODO: add more invariant checks.
 
 def assert_equal(a, b):
     xarray.testing.assert_equal(a, b)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
 
 
 def assert_identical(a, b):
     xarray.testing.assert_identical(a, b)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
 
 
 def assert_allclose(a, b, **kwargs):
     xarray.testing.assert_allclose(a, b, **kwargs)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
