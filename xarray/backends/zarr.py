@@ -427,10 +427,14 @@ class ZarrStore(AbstractWritableDataStore):
                         append_axis = dims.index(self.append_dim)
                         new_shape = list(zarr_array.shape)
                         new_shape[append_axis] += v.shape[append_axis]
-                        new_region = [slice(None),] * len(new_shape)
-                        new_region[append_axis] = slice(zarr_array.shape[append_axis],None)
+                        new_region = [slice(None)] * len(new_shape)
+                        new_region[append_axis] = slice(
+                            zarr_array.shape[append_axis],
+                            None
+                        )
                         zarr_array.resize(new_shape)
-                        writer.add(v.data, zarr_array, region=tuple(new_region))
+                        writer.add(v.data, zarr_array,
+                                   region=tuple(new_region))
             else:
                 # new variable
                 encoding = _extract_zarr_variable_encoding(

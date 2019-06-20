@@ -1725,12 +1725,14 @@ class ZarrBase(CFEncodedBase):
             with self.open(store) as actual:
                 assert_identical(obj1, actual)
 
-            delayed_obj = self.save(obj2, store, compute=False, mode='a', append_dim='time')
+            delayed_obj = self.save(obj2, store, compute=False, mode='a',
+                                    append_dim='time')
             assert isinstance(delayed_obj, Delayed)
 
             with pytest.raises(AssertionError):
                 with self.open(store) as actual:
-                    assert_identical(xr.concat([obj1, obj2], dim='time'), actual)
+                    assert_identical(xr.concat([obj1, obj2], dim='time'),
+                                     actual)
 
             delayed_obj.compute()
 
