@@ -3724,9 +3724,13 @@ def test_rolling_wrapped_dask_nochunk(center):
 
     da_day_clim = xr.DataArray(np.arange(1, 367),
                                coords=[np.arange(1, 367)], dims='dayofyear')
-    expected = da_day_clim.rolling(dayofyear=31, center=center).mean()
-    actual = da_day_clim.chunk().rolling(dayofyear=31, center=center).mean()
-    assert_allclose(actual, expected)
+    expected = da_day_clim.rolling(dayofyear=31, center=center).mean()  # noqa
+    with pytest.raises(NotImplementedError):
+        actual = da_day_clim.chunk().rolling(  # noqa
+            dayofyear=31, center=center).mean()
+    # TODO: uncomment this assertion once we fix rolling window operations with
+    # dask (https://github.com/pydata/xarray/issues/2940)
+    # assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize('center', (True, False))

@@ -20,6 +20,13 @@ except ImportError:
 
 def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     '''wrapper to apply bottleneck moving window funcs on dask arrays'''
+
+    raise NotImplementedError(
+        'rolling operations on xarray objects backed by dask arrays have not '
+        'been implemented yet (https://github.com/pydata/xarray/issues/2940). '
+        'For now, load your arrays into memory for rolling window operations '
+        'by calling .compute().')
+
     dtype, fill_value = dtypes.maybe_promote(a.dtype)
     a = a.astype(dtype)
     # inputs for overlap
