@@ -1,7 +1,6 @@
 import functools
 import itertools
 import warnings
-from inspect import getfullargspec
 
 import numpy as np
 
@@ -30,7 +29,7 @@ def _nicetitle(coord, value, maxchar, template):
     return title
 
 
-class FacetGrid(object):
+class FacetGrid:
     """
     Initialize the matplotlib figure and FacetGrid object.
 
@@ -527,7 +526,7 @@ class FacetGrid(object):
                 # TODO: better way to verify that an artist is mappable?
                 # https://stackoverflow.com/questions/33023036/is-it-possible-to-detect-if-a-matplotlib-artist-is-a-mappable-suitable-for-use-w#33023522
                 if (maybe_mappable and
-                   hasattr(maybe_mappable, 'autoscale_None')):
+                        hasattr(maybe_mappable, 'autoscale_None')):
                     self._mappables.append(maybe_mappable)
 
         self._finalize_grid(*args[:2])
