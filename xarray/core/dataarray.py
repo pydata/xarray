@@ -1461,7 +1461,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> 'DataArray':
         return self.transpose()
 
-    def drop(self, labels, dim=None, errors='raise'):
+    def drop(self, labels, dim=None, *, errors='raise'):
         """Drop coordinates or index labels from this DataArray.
 
         Parameters

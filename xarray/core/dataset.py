@@ -2823,7 +2823,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
-    def drop(self, labels, dim=None, errors='raise'):
+    def drop(self, labels, dim=None, *, errors='raise'):
         """Drop variables or index labels from this dataset.
 
         Parameters
@@ -2867,7 +2867,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def drop_dims(self, drop_dims, errors='raise'):
+    def drop_dims(self, drop_dims, *, errors='raise'):
         """Drop dimensions and associated variables from this dataset.
 
         Parameters
