@@ -52,14 +52,15 @@ def create_test_data(seed=None):
     return obj
 
 
-def create_append_test_data():
+def create_append_test_data(seed=None):
+    rs = np.random.RandomState(seed)
     lat = [2, 1, 0]
     lon = [0, 1, 2]
     string_var = ["ae", "bc", "df"]
 
     nt1 = 3
     time1 = pd.date_range('2000-01-01', periods=nt1)
-    da1 = xr.DataArray(np.arange(3 * 3 * nt1).reshape(3, 3, nt1), coords=[lat,
+    da1 = xr.DataArray(rs.rand(3, 3, nt1), coords=[lat,
                        lon, time1], dims=['lat', 'lon', 'time'])
     ds1 = da1.to_dataset(name='da')
     ds1['string_var'] = xr.DataArray(string_var, coords=[time1], dims=['time'])
