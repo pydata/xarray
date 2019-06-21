@@ -169,11 +169,11 @@ def _dsplot(plotfunc):
     hue: str, optional
         Variable by which to color scattered points
     hue_style: str, optional
-        Hue style. Can be either 'discrete' or 'continuous'.
+        Can be either 'discrete' (legend) or 'continuous' (color bar).
     markersize: str, optional (scatter only)
         Variably by which to vary size of scattered points
     size_norm: optional
-        Either None or Norm instance to normalize the 'markersize' variable.
+        Either None or 'Norm' instance to normalize the 'markersize' variable.
     add_guide: bool, optional
         Add a guide that depends on hue_style
             - for "discrete", build a legend.
