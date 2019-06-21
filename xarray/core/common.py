@@ -619,7 +619,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def rolling_exp(
         self,
-        window: Optional[Mapping[str, int]] = None,
+        window: Optional[Mapping[Hashable, int]] = None,
         window_type: str = 'span',
         **dim_kwargs
     ):
