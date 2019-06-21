@@ -107,7 +107,7 @@ def calculate_dimensions(variables: Mapping[Hashable, Variable]
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = OrderedDict()  # type: OrderedDict[Hashable, int]
+    dims = {}  # type: Dict[Hashable, int]
     last_used = {}
     scalar_vars = set(k for k, v in variables.items() if not v.dims)
     for k, var in variables.items():
