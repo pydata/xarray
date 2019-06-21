@@ -339,7 +339,7 @@ class FacetGrid:
     def add_legend(self, **kwargs):
         figlegend = self.fig.legend(
             handles=self._mappables[-1],
-            labels=list(self._hue_var),
+            labels=list(self._hue_var.values),
             title=self._hue_label,
             loc="center right", **kwargs)
 
