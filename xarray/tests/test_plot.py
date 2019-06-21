@@ -775,13 +775,14 @@ class TestDiscreteColorMap:
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
-        for extend, levels, vmin, vmax in [('neither', 7, None, None),
-                                           ('neither', 7, None, 20),
-                                           ('both', 7, 4, 8),
-                                           ('min', 10, 4, 15)]:
+        for extend, levels, vmin, vmax, cmap in [
+                ('neither', 7, None, None, None),
+                ('neither', 7, None, 20, mpl.cm.RdBu),
+                ('both', 7, 4, 8, None),
+                ('min', 10, 4, 15, None)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(
-                    levels=levels, vmin=vmin, vmax=vmax)
+                    levels=levels, vmin=vmin, vmax=vmax, cmap=cmap)
                 assert levels >= \
                     len(primitive.norm.boundaries) - 1
                 if vmax is None:
