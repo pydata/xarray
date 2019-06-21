@@ -87,6 +87,7 @@ class ImplementsDatasetReduce:
 class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable.
     """
+
     def __bool__(self: Any) -> bool:
         return bool(self.values)
 
@@ -616,11 +617,40 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
-    def rolling_exp(self, dim=None, window_type='span', **dim_kwargs):
+    def rolling_exp(
+        self,
+        window: Optional[Mapping[str, int]] = None,
+        window_type: str = 'span',
+        **dim_kwargs
+    ):
+        """
+        Exponentially-weighted moving window.
+        Similar to EWM in pandas
 
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling_exp')
+        Parameters
+        ----------
+        window : A single mapping from a dimension name to window value, 
+                 optional
+            dim : str
+                Name of the dimension to create the rolling exponential window
+                along (e.g., `time`).
+            window : int
+                Size of the moving window. The type of this is specified in
+                `window_type`
+        window_type : str, one of ['span', 'com', 'halflife', 'alpha'],
+                      default 'span'
+            The format of the previously supplied window. Each is a simple
+            numerical transformation of the others. Described in detail:
+            https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+        **dim_kwargs : optional
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwargs must be provided.
 
-        return self._rolling_exp_cls(self, dim, window_type)
+        [docstring copied from RollingExp object]
+        """
+        window = either_dict_or_kwargs(window, dim_kwargs, 'rolling_exp')
+
+        return self._rolling_exp_cls(self, window, window_type)
 
     def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
                 boundary: str = 'exact',

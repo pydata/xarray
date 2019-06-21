@@ -18,7 +18,7 @@ def move_exp_nanmean(array, *, axis, alpha):
     if axis == ():
         return array.astype(np.float64)
     else:
-        return numbagg.moving.move_exp_nanmean(
+        return numbagg.move_exp_nanmean(
             array, axis=axis, alpha=alpha)
 
 
@@ -66,7 +66,7 @@ class RollingExp(object):
     ----------
     obj : Dataset or DataArray
         Object to window.
-    windows : A mapping from a dimension name to window value
+    windows : A single mapping from a single dimension name to window value
         dim : str
             Name of the dimension to create the rolling exponential window
             along (e.g., `time`).
