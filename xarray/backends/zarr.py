@@ -259,7 +259,6 @@ class ZarrStore(AbstractWritableDataStore):
         self._group = self.ds.path
         self._consolidate_on_close = consolidate_on_close
         self.append_dim = None
-        self.chunk_dim = None
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
@@ -407,34 +406,19 @@ class ZarrStore(AbstractWritableDataStore):
                         'did you forget to call to_zarr with append_dim '
                         'argument?')
                 if self.append_dim in dims:
-                    if len(dims) == 1 and self.chunk_dim is not None:
-                        # this is the coordinate along which to append
-                        prev_coord = zarr_array[:]
-                        attrs = zarr_array.attrs.asdict()
-                        dtype = zarr_array.dtype
-                        fill_value = zarr_array.fill_value
-                        new_coord = np.hstack((prev_coord, v.data))
-                        self.ds.create_dataset(name, shape=new_coord.shape,
-                                               chunks=self.chunk_dim,
-                                               fill_value=fill_value,
-                                               dtype=dtype, overwrite=True)
-                        zarr_array = self.ds[name]
-                        zarr_array.attrs.put(attrs)
-                        writer.add(new_coord, zarr_array)
-                    else:
-                        # this is the DataArray that has append_dim as a
-                        # dimension
-                        append_axis = dims.index(self.append_dim)
-                        new_shape = list(zarr_array.shape)
-                        new_shape[append_axis] += v.shape[append_axis]
-                        new_region = [slice(None)] * len(new_shape)
-                        new_region[append_axis] = slice(
-                            zarr_array.shape[append_axis],
-                            None
-                        )
-                        zarr_array.resize(new_shape)
-                        writer.add(v.data, zarr_array,
-                                   region=tuple(new_region))
+                    # this is the DataArray that has append_dim as a
+                    # dimension
+                    append_axis = dims.index(self.append_dim)
+                    new_shape = list(zarr_array.shape)
+                    new_shape[append_axis] += v.shape[append_axis]
+                    new_region = [slice(None)] * len(new_shape)
+                    new_region[append_axis] = slice(
+                        zarr_array.shape[append_axis],
+                        None
+                    )
+                    zarr_array.resize(new_shape)
+                    writer.add(v.data, zarr_array,
+                               region=tuple(new_region))
             else:
                 # new variable
                 encoding = _extract_zarr_variable_encoding(

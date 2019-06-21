@@ -1634,16 +1634,6 @@ class ZarrBase(CFEncodedBase):
             obj2.to_zarr(store_target, mode='a', append_dim='time')
             original = xr.concat([obj1, obj2], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
-        # check chunk size of the append_dim coordinate when chunk_dim is set
-        with self.create_zarr_target() as store_target:
-            obj1.to_zarr(store_target, mode='w')
-            obj2.to_zarr(store_target, mode='a', append_dim='time',
-                         chunk_dim=original['time'].shape)
-            original = xr.concat([obj1, obj2], dim='time')
-            import zarr
-            store = zarr.open(store_target)
-            assert_identical(original, xr.open_zarr(store_target))
-            assert original['time'].shape == store['time'].chunks
 
     def test_compressor_encoding(self):
         original = create_test_data()

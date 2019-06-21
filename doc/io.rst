@@ -611,10 +611,6 @@ of ``np.number`` or ``np.string_``. It as well needs to be taken into account,
 that the size of the ``np.string_`` in the first chunk sets the maximum
 string size for all following ones. To encode the data consider using
 :py:func:`~xarray.core.api.encode_utf8`.
-Optionally, you can also pass ``chunk_dim`` to set the chunk size of the
-appended dimension's coordinate. If you don't, this coordinate will keep the
-same chunk size as before appending, which could be too small if this is e.g. a
-1-D array (typically, the time coordinate).
 
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`~xarray.open_zarr` method:

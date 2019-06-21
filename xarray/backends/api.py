@@ -1031,8 +1031,7 @@ def _validate_datatypes_for_zarr_append(dataset):
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None, compute=True, consolidated=False, append_dim=None,
-            chunk_dim=None):
+            encoding=None, compute=True, consolidated=False, append_dim=None):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -1055,7 +1054,6 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
                                            group=group,
                                            consolidate_on_close=consolidated)
     zstore.append_dim = append_dim
-    zstore.chunk_dim = chunk_dim
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)
