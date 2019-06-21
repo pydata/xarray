@@ -75,8 +75,6 @@ Bug fixes
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
-- Fix facetgrid colormap bug when ``extend=True``. (:issue:`2932`)
-  By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
 - Increased support for `missing_value` (:issue:`2871`)
