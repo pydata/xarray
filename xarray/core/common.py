@@ -629,7 +629,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        window : A single mapping from a dimension name to window value, 
+        window : A single mapping from a dimension name to window value,
                  optional
             dim : str
                 Name of the dimension to create the rolling exponential window
