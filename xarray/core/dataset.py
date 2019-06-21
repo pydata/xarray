@@ -100,8 +100,9 @@ def _get_virtual_variable(variables, key: str,
     return ref_name, var_name, virtual_var
 
 
-def calculate_dimensions(variables: Mapping[Hashable, Variable]
-                         ) -> 'OrderedDict[Hashable, int]':
+def calculate_dimensions(
+    variables: Mapping[Hashable, Variable]
+    ) -> 'Dict[Hashable, int]':
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
@@ -796,7 +797,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         variables: 'OrderedDict[Hashable, Variable]',
         coord_names: set = None,
-        dims: 'Optional[OrderedDict[Hashable, int]]' = None,
+        dims: 'Optional[Dict[Hashable, int]]' = None,
         attrs: 'Optional[OrderedDict]' = __default,
         inplace: bool = False,
     ) -> 'Dataset':
