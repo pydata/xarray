@@ -5,9 +5,8 @@ import warnings
 from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
-from typing import (Any, Callable, Dict, Hashable, Iterator, List, Mapping,
-                    MutableMapping, MutableSet, Optional, Sequence, Set, Tuple,
-                    TypeVar, Union)
+from typing import (Any, Dict, Hashable, Iterator, List, Mapping, Optional,
+                    Sequence, Set, Tuple, Union)
 
 import numpy as np
 import pandas as pd
@@ -37,6 +36,10 @@ try:
     from .pycompat import Mapping  # noqa: F811
 except ImportError:
     pass
+try:
+    from typing import DefaultDict
+except ImportError:
+    pass
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -49,7 +52,7 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-def _get_virtual_variable(variables, key,
+def _get_virtual_variable(variables, key: str,
                           level_vars: Optional[Mapping] = None,
                           dim_sizes: Optional[Mapping] = None,
                           ) -> Tuple[Hashable, Hashable, Variable]:
@@ -127,8 +130,7 @@ def merge_indexes(indexes: Mapping[Hashable,
                   variables: Mapping[Hashable, Variable],
                   coord_names: Set[Hashable],
                   append: bool = False
-                  ) -> Tuple[MutableMapping[Hashable, Variable],
-                             MutableSet[Hashable]]:
+                  ) -> 'Tuple[OrderedDict[Hashable, Variable], Set[Hashable]]':
     """Merge variables into multi-indexes.
 
     Not public API. Used in Dataset and DataArray set_index
@@ -199,8 +201,7 @@ def split_indexes(dims_or_levels: Union[Hashable, Sequence[Hashable]],
                   coord_names: Set[Hashable],
                   level_coords: Mapping[Hashable, Hashable],
                   drop: bool = False,
-                  ) -> Tuple[MutableMapping[Hashable, Variable],
-                             MutableSet[Hashable]]:
+                  ) -> 'Tuple[OrderedDict[Hashable, Variable], Set[Hashable]]':
     """Extract (multi-)indexes (levels) as variables.
 
     Not public API. Used in Dataset and DataArray reset_index
@@ -211,7 +212,7 @@ def split_indexes(dims_or_levels: Union[Hashable, Sequence[Hashable]],
         dims_or_levels = [dims_or_levels]
 
     dim_levels \
-        = defaultdict(list)  # type: MutableMapping[Hashable, List[Hashable]]
+        = defaultdict(list)  # type: DefaultDict[Hashable, List[Hashable]]
     dims = []
     for k in dims_or_levels:
         if k in level_coords:
@@ -220,7 +221,7 @@ def split_indexes(dims_or_levels: Union[Hashable, Sequence[Hashable]],
             dims.append(k)
 
     vars_to_replace = {}
-    vars_to_create = OrderedDict()  # type: MutableMapping[Hashable, Variable]
+    vars_to_create = OrderedDict()  # type: OrderedDict[Hashable, Variable]
     vars_to_remove = []
 
     for d in dims:
@@ -244,7 +245,7 @@ def split_indexes(dims_or_levels: Union[Hashable, Sequence[Hashable]],
                 idx = index.get_level_values(lev)
                 vars_to_create[idx.name] = Variable(d, idx)
 
-    new_variables = dict(variables)
+    new_variables = OrderedDict(variables)
     for v in set(vars_to_remove):
         del new_variables[v]
     new_variables.update(vars_to_replace)
@@ -401,7 +402,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         self._variables = \
             OrderedDict()  # type: OrderedDict[Hashable, Variable]
-        self._coord_names = set()  # type: MutableSet[Hashable]
+        self._coord_names = set()  # type: Set[Hashable]
         self._dims = {}  # type: Dict[Hashable, int]
         self._attrs = None  # type: Optional[OrderedDict]
         self._file_obj = None
@@ -409,8 +410,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             data_vars = {}
         if coords is None:
             coords = {}
-        if data_vars is not None or coords is not None:
-            self._set_init_vars_and_dims(data_vars, coords, compat)
+        self._set_init_vars_and_dims(data_vars, coords, compat)
 
         # TODO(shoyer): expose indexes as a public argument in __init__
         self._indexes = None  # type: Optional[OrderedDict[Hashable, pd.Index]]
@@ -462,7 +462,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> MutableMapping[Hashable, Any]:
+    def attrs(self) -> 'OrderedDict[Hashable, Any]':
         """Dictionary of global attributes on this dataset
         """
         if self._attrs is None:
@@ -733,7 +733,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _replace(  # type: ignore
         self,
         variables: 'OrderedDict[Hashable, Variable]' = None,
-        coord_names: Optional[MutableSet[Hashable]] = None,
+        coord_names: Optional[Set[Hashable]] = None,
         dims: Dict[Any, int] = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Hashable, pd.Index]]' = __default,
@@ -766,7 +766,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if variables is None:
                 variables = self._variables.copy()
             if coord_names is None:
-                coord_names = copy.copy(self._coord_names)
+                coord_names = self._coord_names.copy()
             if dims is None:
                 dims = self._dims.copy()
             if attrs is self.__default:
