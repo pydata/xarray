@@ -343,6 +343,7 @@ class FacetGrid:
             title=self._hue_label,
             loc="center right", **kwargs)
 
+        self.figlegend = figlegend
         # Draw the plot to set the bounding boxes correctly
         self.fig.draw(self.fig.canvas.get_renderer())
 

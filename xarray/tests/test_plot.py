@@ -1750,6 +1750,19 @@ class TestFacetGrid4d(PlotTestCase):
 
 
 @pytest.mark.filterwarnings('ignore:tight_layout cannot')
+class TestFacetedLinePlotsLegend(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.darray = xr.tutorial.scatter_example_dataset()
+
+    def test_legend_labels(self):
+        fg = self.darray.A.plot.line(col='x', row='w', hue='z')
+        all_legend_labels = [t.get_text() for t in fg.figlegend.texts]
+        # labels in legend should be ['0', '1', '2', '3']
+        assert sorted(all_legend_labels) == ['0', '1', '2', '3']
+
+
+@pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetedLinePlots(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
