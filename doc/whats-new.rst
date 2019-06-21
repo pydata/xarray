@@ -21,6 +21,12 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+
+- netCDF chunksizes are now only dropped when original_shape is different,
+  not when it isn't found. (:issue:`2207`)
+  By `Karel van de Plassche <https://github.com/Karel-van-de-Plassche>`_.
+- Enable `@` operator for DataArray. This is equivalent to :py:meth:`DataArray.dot`
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add ``fill_value`` argument for reindex, align, and merge operations
   to enable custom fill values. (:issue:`2876`)
   By `Zach Griffith <https://github.com/zdgriffith>`_.
@@ -59,10 +65,29 @@ Enhancements
   To avoid FutureWarnings switch to using `combine_manual` or `combine_auto`,
   (or set the `combine` argument in `open_mfdataset`). (:issue:`2159`)
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Better warning message when supplying invalid objects to ``xr.merge``
+  (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
+- Added ``strftime`` method to ``.dt`` accessor, making it simpler to hand a
+  datetime ``DataArray`` to other code expecting formatted dates and times.
+  (:issue:`2090`). By `Alan Brammer <https://github.com/abrammer>`_ and
+  `Ryan May <https://github.com/dopplershift>`_.
+- Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports a
+  :py:meth:`~xarray.CFTimeIndex.strftime` method to return an index of string
+  formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
+- Add ``.str`` accessor to DataArrays for string related manipulations.
+  By `0x0L <https://github.com/0x0L>`_.
+- Add ``errors`` keyword argument to :py:meth:`Dataset.drop` and :py:meth:`Dataset.drop_dims`
+  that allows ignoring errors if a passed label or dimension is not in the dataset
+  (:issue:`2994`).
+  By `Andrew Ross <https://github.com/andrew-c-ross>`_.
+
 
 Bug fixes
 ~~~~~~~~~
 
+- NetCDF4 output: variables with unlimited dimensions must be chunked (not
+  contiguous) on output. (:issue:`1849`)
+  By `James McCreight <https://github.com/jmccreight>`_.
 - indexing with an empty list creates an object with zero-length axis (:issue:`2882`)
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
@@ -71,7 +96,17 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
-- Removed usages of `pytest.config`, which is deprecated (:issue:`2988`:)
+- Increased support for `missing_value` (:issue:`2871`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Removed usages of `pytest.config`, which is deprecated (:issue:`2988`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fixed performance issues with cftime installed (:issue:`3000`)
+  By `0x0L <https://github.com/0x0L>`_.
+- Replace incorrect usages of `message` in pytest assertions 
+  with `match` (:issue:`3011`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add explicit pytest markers, now required by pytest
+  (:issue:`3032`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.12.1:

@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (
-    Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union, Sequence)
+    Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -35,8 +35,7 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import TYPE_CHECKING, dask_array_type
 from .utils import (
     Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
-    either_dict_or_kwargs, ensure_us_time_resolution, hashable, is_dict_like,
-    maybe_wrap_array)
+    either_dict_or_kwargs, hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
@@ -101,7 +100,7 @@ def calculate_dimensions(variables):
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = OrderedDict()
+    dims = {}
     last_used = {}
     scalar_vars = set(k for k, v in variables.items() if not v.dims)
     for k, var in variables.items():
@@ -693,7 +692,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @classmethod
     def _from_vars_and_coord_names(cls, variables, coord_names, attrs=None):
-        dims = dict(calculate_dimensions(variables))
+        dims = calculate_dimensions(variables)
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
     # TODO(shoyer): renable type checking on this signature when pytype has a
@@ -754,18 +753,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names: set = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Any, pd.Index]]' = __default,
+        encoding: Optional[dict] = __default,
         inplace: bool = False,
     ) -> T:
         """Replace variables with recalculated dimensions."""
-        dims = dict(calculate_dimensions(variables))
+        dims = calculate_dimensions(variables)
         return self._replace(
-            variables, coord_names, dims, attrs, indexes, inplace=inplace)
+            variables, coord_names, dims, attrs, indexes, encoding,
+            inplace=inplace)
 
     def _replace_vars_and_dims(  # type: ignore
         self: T,
         variables: 'OrderedDict[Any, Variable]' = None,
         coord_names: set = None,
-        dims: 'OrderedDict[Any, int]' = None,
+        dims: Dict[Any, int] = None,
         attrs: 'Optional[OrderedDict]' = __default,
         inplace: bool = False,
     ) -> T:
@@ -1081,6 +1082,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         del self._variables[key]
         self._coord_names.discard(key)
+        self._dims = calculate_dimensions(self._variables)
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
@@ -2470,7 +2472,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             else:
                 # If dims includes a label of a non-dimension coordinate,
                 # it will be promoted to a 1D coordinate with a single value.
-                variables[k] = v.set_dims(k)
+                variables[k] = v.set_dims(k).to_index_variable()
 
         new_dims = self._dims.copy()
         new_dims.update(dim)
@@ -2824,7 +2826,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
-    def drop(self, labels, dim=None):
+    def drop(self, labels, dim=None, *, errors='raise'):
         """Drop variables or index labels from this dataset.
 
         Parameters
@@ -2834,33 +2836,41 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : None or str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the variable or index labels passed are not
+            in the dataset. If 'ignore', any given labels that are in the
+            dataset are dropped and no error is raised.
 
         Returns
         -------
         dropped : Dataset
         """
+        if errors not in ['raise', 'ignore']:
+            raise ValueError('errors must be either "raise" or "ignore"')
         if utils.is_scalar(labels):
             labels = [labels]
         if dim is None:
-            return self._drop_vars(labels)
+            return self._drop_vars(labels, errors=errors)
         else:
             try:
                 index = self.indexes[dim]
             except KeyError:
                 raise ValueError(
                     'dimension %r does not have coordinate labels' % dim)
-            new_index = index.drop(labels)
+            new_index = index.drop(labels, errors=errors)
             return self.loc[{dim: new_index}]
 
-    def _drop_vars(self, names):
-        self._assert_all_in_dataset(names)
+    def _drop_vars(self, names, errors='raise'):
+        if errors == 'raise':
+            self._assert_all_in_dataset(names)
         drop = set(names)
         variables = OrderedDict((k, v) for k, v in self._variables.items()
                                 if k not in drop)
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def drop_dims(self, drop_dims):
+    def drop_dims(self, drop_dims, *, errors='raise'):
         """Drop dimensions and associated variables from this dataset.
 
         Parameters
@@ -2873,14 +2883,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj : Dataset
             The dataset without the given dimensions (or any variables
             containing those dimensions)
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the dimensions passed are not
+            in the dataset. If 'ignore', any given dimensions that are in the
+            dataset are dropped and no error is raised.
         """
+        if errors not in ['raise', 'ignore']:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
         if utils.is_scalar(drop_dims):
             drop_dims = [drop_dims]
 
-        missing_dimensions = [d for d in drop_dims if d not in self.dims]
-        if missing_dimensions:
-            raise ValueError('Dataset does not contain the dimensions: %s'
-                             % missing_dimensions)
+        if errors == 'raise':
+            missing_dimensions = [d for d in drop_dims if d not in self.dims]
+            if missing_dimensions:
+                raise ValueError('Dataset does not contain the dimensions: %s'
+                                 % missing_dimensions)
 
         drop_vars = set(k for k, v in self._variables.items()
                         for d in v.dims if d in drop_dims)
@@ -3557,12 +3576,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _unary_op(f, keep_attrs=False):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            ds = self.coords.to_dataset()
-            for k in self.data_vars:
-                ds._variables[k] = f(self._variables[k], *args, **kwargs)
-            if keep_attrs:
-                ds._attrs = self._attrs
-            return ds
+            variables = OrderedDict()
+            for k, v in self._variables.items():
+                if k in self._coord_names:
+                    variables[k] = v
+                else:
+                    variables[k] = f(v, *args, **kwargs)
+            attrs = self._attrs if keep_attrs else None
+            return self._replace_with_new_dims(
+                variables, attrs=attrs, encoding=None)
 
         return func
 
@@ -4145,7 +4167,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError('Coordinate {} does not exist.'.format(dim))
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:

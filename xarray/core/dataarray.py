@@ -2,6 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,8 @@ import pandas as pd
 from ..plot.plot import _PlotMethods
 from . import (
     computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
-from .accessors import DatetimeAccessor
+from .accessor_dt import DatetimeAccessor
+from .accessor_str import StringAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
@@ -66,7 +68,7 @@ def _infer_coords_and_dims(shape, coords, dims):
         for dim, coord in zip(dims, coords):
             var = as_variable(coord, name=dim)
             var.dims = (dim,)
-            new_coords[dim] = var
+            new_coords[dim] = var.to_index_variable()
 
     sizes = dict(zip(dims, shape))
     for k, v in new_coords.items():
@@ -162,6 +164,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)
+    str = property(StringAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None, indexes=None, fastpath=False):
@@ -1349,7 +1352,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
-                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
 
         See also
@@ -1392,7 +1395,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> stacked = arr.stack(z=('x', 'y'))
         >>> stacked.indexes['z']
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
-                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
         >>> roundtripped = stacked.unstack()
         >>> arr.identical(roundtripped)
@@ -1440,7 +1443,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = {}
+            coords = OrderedDict()  # type: OrderedDict[Any, Variable]
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
@@ -1459,7 +1462,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> 'DataArray':
         return self.transpose()
 
-    def drop(self, labels, dim=None):
+    def drop(self, labels, dim=None, *, errors='raise'):
         """Drop coordinates or index labels from this DataArray.
 
         Parameters
@@ -1469,14 +1472,18 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.
-
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the coordinates or index labels passed are not
+            in the array. If 'ignore', any given labels that are in the
+            array are dropped and no error is raised.
         Returns
         -------
         dropped : DataArray
         """
         if utils.is_scalar(labels):
             labels = [labels]
-        ds = self._to_temp_dataset().drop(labels, dim)
+        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
         return self._from_temp_dataset(ds)
 
     def dropna(self, dim, how='any', thresh=None):
@@ -1746,8 +1753,9 @@ class DataArray(AbstractArray, DataWithCoords):
         result : MaskedArray
             Masked where invalid values (nan or inf) occur.
         """
-        isnull = pd.isnull(self.values)
-        return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
+        values = self.values  # only compute lazy arrays once
+        isnull = pd.isnull(values)
+        return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
     def to_netcdf(self, *args, **kwargs):
         """Write DataArray contents to a netCDF file.
@@ -2013,6 +2021,14 @@ class DataArray(AbstractArray, DataWithCoords):
     def __array_wrap__(self, obj, context=None):
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
+
+    def __matmul__(self, obj):
+        return self.dot(obj)
+
+    def __rmatmul__(self, other):
+        # currently somewhat duplicative, as only other DataArrays are
+        # compatible with matmul
+        return computation.dot(other, self)
 
     @staticmethod
     def _unary_op(f):

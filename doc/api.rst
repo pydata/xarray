@@ -327,6 +327,7 @@ Computation
    DataArray.quantile
    DataArray.differentiate
    DataArray.integrate
+   DataArray.str
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -559,6 +560,15 @@ Resample objects also implement the GroupBy interface
    core.resample.DatasetResample.interpolate
    core.resample.DatasetResample.nearest
    core.resample.DatasetResample.pad
+
+Accessors
+=========
+
+.. autosummary::
+   :toctree: generated/
+
+   core.accessor_dt.DatetimeAccessor
+   core.accessor_str.StringAccessor
 
 Custom Indexes
 ==============

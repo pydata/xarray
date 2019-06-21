@@ -14,10 +14,9 @@ from xarray.plot.utils import (
     import_seaborn, label_from_attrs)
 
 from . import (
-    assert_array_equal, assert_equal, raises_regex, requires_cftime,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn,
-    requires_nc_time_axis)
-from . import has_nc_time_axis
+    assert_array_equal, assert_equal, has_nc_time_axis, raises_regex,
+    requires_cftime, requires_matplotlib, requires_matplotlib2,
+    requires_nc_time_axis, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -210,7 +209,8 @@ class TestPlot(PlotTestCase):
         hdl = da.plot.line(x='lon', hue='y')
         assert len(hdl) == 4
 
-        with pytest.raises(ValueError, message='If x or y are 2D '):
+        with pytest.raises(
+                ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x='lon', hue='lat')
 
     def test_2d_before_squeeze(self):

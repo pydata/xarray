@@ -7,9 +7,9 @@ import pandas as pd
 
 from .dataarray import DataArray
 from .dataset import Dataset
+from .concat import concat
 from . import dtypes
 from .merge import merge
-from .concat import concat
 
 
 def _infer_concat_order_from_positions(datasets):
@@ -583,7 +583,7 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     Dataset.merge
     """
 
-    basic_msg = """In xarray version 0.14 `auto_combine` will be deprecated."""
+    basic_msg = """In xarray version 0.13 `auto_combine` will be deprecated."""
     warnings.warn(basic_msg, FutureWarning, stacklevel=2)
 
     if concat_dim == '_not_supplied':

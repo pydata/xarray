@@ -2,15 +2,15 @@ import contextlib
 import itertools
 import math
 import os.path
-from pathlib import Path
 import pickle
 import shutil
 import sys
 import tempfile
-from typing import Optional
 import warnings
 from contextlib import ExitStack
 from io import BytesIO
+from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -18,26 +18,26 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
-    save_mfdataset, load_dataset, load_dataarray)
+    DataArray, Dataset, backends, load_dataarray, load_dataset, open_dataarray,
+    open_dataset, open_mfdataset, save_mfdataset)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
+from xarray.coding.variables import SerializationWarning
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
-from xarray.coding.variables import SerializationWarning
 
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
     has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cfgrib,
-    requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
-    requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
-    requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
-    requires_zarr, requires_h5fileobj)
-from .test_coding_times import (_STANDARD_CALENDARS, _NON_STANDARD_CALENDARS,
-                                _ALL_CALENDARS)
+    requires_cftime, requires_dask, requires_h5fileobj, requires_h5netcdf,
+    requires_netCDF4, requires_pathlib, requires_pseudonetcdf, requires_pydap,
+    requires_pynio, requires_rasterio, requires_scipy,
+    requires_scipy_or_netCDF4, requires_zarr)
+from .test_coding_times import (
+    _ALL_CALENDARS, _NON_STANDARD_CALENDARS, _STANDARD_CALENDARS)
 from .test_dataset import create_test_data
 
 try:
@@ -1133,6 +1133,18 @@ class NetCDF4Base(CFEncodedBase):
             assert actual.x.encoding['shuffle']
 
         assert ds.x.encoding == {}
+
+    def test_keep_chunksizes_if_no_original_shape(self):
+        ds = Dataset({'x': [1, 2, 3]})
+        chunksizes = (2, )
+        ds.variables['x'].encoding = {
+            'chunksizes': chunksizes
+        }
+
+        with self.roundtrip(ds) as actual:
+            assert_identical(ds, actual)
+            assert_array_equal(ds['x'].encoding['chunksizes'],
+                               actual['x'].encoding['chunksizes'])
 
     def test_encoding_chunksizes_unlimited(self):
         # regression test for GH1225
@@ -3617,6 +3629,11 @@ class TestEncodingInvalid:
         var = xr.Variable(('x',), [1, 2, 3], {}, {'shuffle': True})
         encoding = _extract_nc4_variable_encoding(var, raise_on_invalid=True)
         assert {'shuffle': True} == encoding
+
+        # Variables with unlim dims must be chunked on output.
+        var = xr.Variable(('x',), [1, 2, 3], {}, {'contiguous': True})
+        encoding = _extract_nc4_variable_encoding(var, unlimited_dims=('x',))
+        assert {} == encoding
 
     def test_extract_h5nc_encoding(self):
         # not supported with h5netcdf (yet)
