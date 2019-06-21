@@ -537,7 +537,7 @@ Rolling objects
    core.rolling.DatasetRolling
    core.rolling.DatasetRolling.construct
    core.rolling.DatasetRolling.reduce
-   core.rolling_exp.DatasetRollingExp
+   core.rolling_exp.RollingExp
 
 Resample objects
 ================

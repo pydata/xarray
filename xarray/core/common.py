@@ -557,7 +557,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
                 min_periods: Optional[int] = None, center: bool = False,
-                **dim_kwargs: int):
+                **window_kwargs: int):
         """
         Rolling window object.
 
@@ -572,9 +572,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **dim_kwargs : optional
+        **window_kwargs : optional
             The keyword arguments form of ``dim``.
-            One of dim or dim_kwargs must be provided.
+            One of dim or window_kwargs must be provided.
 
         Returns
         -------
@@ -613,7 +613,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """  # noqa
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
+        dim = either_dict_or_kwargs(dim, window_kwargs, 'rolling')
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
@@ -621,7 +621,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self,
         window: Optional[Mapping[Hashable, int]] = None,
         window_type: str = 'span',
-        **dim_kwargs
+        **window_kwargs
     ):
         """
         Exponentially-weighted moving window.
@@ -642,13 +642,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             The format of the previously supplied window. Each is a simple
             numerical transformation of the others. Described in detail:
             https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
-        **dim_kwargs : optional
-            The keyword arguments form of ``dim``.
-            One of dim or dim_kwargs must be provided.
+        **window_kwargs : optional
+            The keyword arguments form of ``window``.
+            One of window or window_kwargs must be provided.
 
         [docstring copied from RollingExp object]
         """
-        window = either_dict_or_kwargs(window, dim_kwargs, 'rolling_exp')
+        window = either_dict_or_kwargs(window, window_kwargs, 'rolling_exp')
 
         return self._rolling_exp_cls(self, window, window_type)
 
@@ -656,7 +656,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 boundary: str = 'exact',
                 side: Union[str, Mapping[Hashable, str]] = 'left',
                 coord_func: str = 'mean',
-                **dim_kwargs: int):
+                **window_kwargs: int):
         """
         Coarsen object.
 
@@ -710,7 +710,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        dim = either_dict_or_kwargs(dim, window_kwargs, 'coarsen')
         return self._coarsen_cls(
             self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
