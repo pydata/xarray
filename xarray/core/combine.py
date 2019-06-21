@@ -585,7 +585,7 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
 
     message = """In xarray version 0.14 `auto_combine` will be deprecated."""
 
-    if concat_dim is '_not_supplied':
+    if concat_dim == '_not_supplied':
         concat_dim = _CONCAT_DIM_DEFAULT
     else:
         message += dedent("""\
@@ -668,10 +668,7 @@ def _requires_concat_and_merge(datasets):
     sorted_datasets = sorted(datasets, key=vars_as_keys)
     grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
 
-    if len(list(grouped_by_vars)) > 1:
-        return True
-    else:
-        return False
+    return len(list(grouped_by_vars)) > 1
 
 
 def _old_auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
