@@ -1384,20 +1384,23 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         else:
             removed_axes = (range(self.ndim) if axis is None
                             else np.atleast_1d(axis) % self.ndim)
-            dims = [adim for n, adim in enumerate(self.dims)
-                    if n not in removed_axes]
+            if keepdims:
+                # Insert np.newaxis for removed dims
+                slices = tuple(np.newaxis if i in removed_axes else
+                               slice(None, None) for i in range(self.ndim))
+                if getattr(data, 'shape', None) is None:
+                    # Reduce has produced a scalar value, not an array-like
+                    data = np.asanyarray(data)[slices]
+                else:
+                    data = data[slices]
+                dims = self.dims
+            else:
+                dims = [adim for n, adim in enumerate(self.dims)
+                        if n not in removed_axes]
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
-
-        if keepdims:
-            slices = [slice(None, None) for d in dims]
-            for i, d in enumerate(self.dims):
-                if d not in dims:
-                    dims.insert(i, d)
-                    slices.insert(i, np.newaxis)
-            data = data[tuple(slices)]
 
         return Variable(dims, data, attrs=attrs)
 
