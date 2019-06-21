@@ -102,7 +102,7 @@ def _get_virtual_variable(variables, key: str,
 
 def calculate_dimensions(
     variables: Mapping[Hashable, Variable]
-    ) -> 'Dict[Hashable, int]':
+) -> 'Dict[Hashable, int]':
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
@@ -3619,8 +3619,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 else:
                     variables[k] = f(v, *args, **kwargs)
             attrs = self._attrs if keep_attrs else None
-            return self._replace_with_new_dims(
-                variables, attrs=attrs, encoding=None)
+            return self._replace_with_new_dims(variables, attrs=attrs)
 
         return func
 
