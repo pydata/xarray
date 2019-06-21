@@ -1555,6 +1555,25 @@ class TestVariable(VariableSubclassobjects):
                          Variable(v.dims, np.mean(self.d, axis=(1, 0),
                                   keepdims=True)))
 
+    @requires_dask
+    def test_reduce_keepdims_dask(self):
+        import dask.array
+        v = Variable(['x', 'y'], self.d).chunk()
+
+        actual = v.mean(keepdims=True)
+        assert isinstance(actual.data, dask.array.Array)
+
+        expected = Variable(v.dims, np.mean(self.d, keepdims=True))
+        assert_identical(actual, expected)
+
+        actual = v.mean(dim='y', keepdims=True)
+        assert isinstance(actual.data, dask.array.Array)
+
+        expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
+        assert_identical(actual, expected)
+
+
+
     def test_reduce_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}
 
