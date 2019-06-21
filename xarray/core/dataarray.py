@@ -1558,13 +1558,11 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> 'DataArray':
         return self.transpose()
 
-    def drop(
-        self,
-        labels: Union[Hashable, Sequence[Hashable]],
-        dim: Optional[Hashable] = None,
-        *,
-        errors: str = 'raise',
-    ) -> 'DataArray':
+    def drop(self,
+             labels: Union[Hashable, Sequence[Hashable]],
+             dim: Optional[Hashable] = None,
+             *,
+             errors: str = 'raise') -> 'DataArray':
         """Drop coordinates or index labels from this DataArray.
 
         Parameters
