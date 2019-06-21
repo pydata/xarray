@@ -620,6 +620,8 @@ class TestCombineAuto:
 
 @pytest.mark.filterwarnings("ignore:In xarray version 0.14 `auto_combine` "
                             "will be deprecated")
+@pytest.mark.filterwarnings("ignore:Also `open_mfdataset` will no longer")
+@pytest.mark.filterwarnings("ignore:The datasets supplied")
 class TestAutoCombineOldAPI:
     """
     Set of tests which check that old 1-dimensional auto_combine behaviour is

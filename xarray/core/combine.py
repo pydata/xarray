@@ -583,12 +583,14 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     Dataset.merge
     """
 
-    message = """In xarray version 0.14 `auto_combine` will be deprecated."""
+    basic_msg = """In xarray version 0.14 `auto_combine` will be deprecated."""
+    warnings.warn(basic_msg, FutureWarning, stacklevel=2)
 
     if concat_dim == '_not_supplied':
         concat_dim = _CONCAT_DIM_DEFAULT
+        message = ''
     else:
-        message += dedent("""\
+        message = dedent("""\
         Also `open_mfdataset` will no longer accept a `concat_dim` argument.
         To get equivalent behaviour from now on please use the new
         `combine_manual` function instead (or the `combine='manual'` option to
@@ -637,25 +639,16 @@ def _dimension_coords_exist(datasets):
     sorted_datasets = sorted(datasets, key=vars_as_keys)
     grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
 
-    # Perform the multidimensional combine on each group of data variables
-    # before merging back together
-    concatenated_grouped_by_data_vars = []
+    # Simulates performing the multidimensional combine on each group of data
+    # variables before merging back together
     try:
         for vars, datasets_with_same_vars in grouped_by_vars:
             _infer_concat_order_from_coords(list(datasets_with_same_vars))
         return True
-    except ValueError as err:
-        no_dimension_coords_errs = ["Every dimension needs a coordinate",
-                                    "neither monotonically increasing nor",
-                                    "Cannot handle size zero",
-                                    "Could not find any dimension coordinates"]
-        if any(message in str(err) for message in no_dimension_coords_errs):
-            # The ValueError just means that the datasets don't have
-            # global dimension coordinates
-            return False
-        else:
-            # There is a different problem
-            raise err
+    except ValueError:
+        # ValueError means datasets don't have global dimension coordinates
+        # Or something else went wrong in trying to determine them
+        return False
 
 
 def _requires_concat_and_merge(datasets):
