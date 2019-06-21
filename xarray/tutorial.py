@@ -126,4 +126,3 @@ def scatter_example_dataset():
     ds.B.attrs['units'] = 'Bunits'
 
     return ds
-
