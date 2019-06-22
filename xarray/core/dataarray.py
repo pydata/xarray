@@ -1462,7 +1462,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> 'DataArray':
         return self.transpose()
 
-    def drop(self, labels, dim=None):
+    def drop(self, labels, dim=None, *, errors='raise'):
         """Drop coordinates or index labels from this DataArray.
 
         Parameters
@@ -1472,14 +1472,18 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.
-
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the coordinates or index labels passed are not
+            in the array. If 'ignore', any given labels that are in the
+            array are dropped and no error is raised.
         Returns
         -------
         dropped : DataArray
         """
         if utils.is_scalar(labels):
             labels = [labels]
-        ds = self._to_temp_dataset().drop(labels, dim)
+        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
         return self._from_temp_dataset(ds)
 
     def dropna(self, dim, how='any', thresh=None):
