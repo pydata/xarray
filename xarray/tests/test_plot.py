@@ -8,6 +8,7 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray
+from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
@@ -537,25 +538,6 @@ class TestDetermineCmapParams:
             cmap_params = _determine_cmap_params(self.data)
             assert cmap_params['cmap'] == 'magma'
 
-    def test_do_nothing_if_provided_cmap(self):
-        cmap_list = [
-            mpl.colors.LinearSegmentedColormap.from_list('name', ['r', 'g']),
-            mpl.colors.ListedColormap(['r', 'g', 'b'])
-        ]
-
-        # can't parametrize with mpl objects when mpl is absent
-        for cmap in cmap_list:
-            cmap_params = _determine_cmap_params(self.data,
-                                                 cmap=cmap,
-                                                 levels=7)
-            assert cmap_params['cmap'] is cmap
-
-    def test_do_something_if_provided_str_cmap(self):
-        cmap = 'RdBu_r'
-        cmap_params = _determine_cmap_params(self.data, cmap=cmap, levels=7)
-        assert cmap_params['cmap'] is not cmap
-        assert isinstance(cmap_params['cmap'], mpl.colors.ListedColormap)
-
     def test_cmap_sequential_explicit_option(self):
         with xr.set_options(cmap_sequential=mpl.cm.magma):
             cmap_params = _determine_cmap_params(self.data)
@@ -775,13 +757,14 @@ class TestDiscreteColorMap:
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
-        for extend, levels, vmin, vmax in [('neither', 7, None, None),
-                                           ('neither', 7, None, 20),
-                                           ('both', 7, 4, 8),
-                                           ('min', 10, 4, 15)]:
+        for extend, levels, vmin, vmax, cmap in [
+                ('neither', 7, None, None, None),
+                ('neither', 7, None, 20, mpl.cm.RdBu),
+                ('both', 7, 4, 8, None),
+                ('min', 10, 4, 15, None)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(
-                    levels=levels, vmin=vmin, vmax=vmax)
+                    levels=levels, vmin=vmin, vmax=vmax, cmap=cmap)
                 assert levels >= \
                     len(primitive.norm.boundaries) - 1
                 if vmax is None:
