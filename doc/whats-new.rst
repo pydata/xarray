@@ -48,6 +48,8 @@ Enhancements
   helpful for avoiding file-lock errors when trying to write to files opened
   using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Better warning message when supplying invalid objects to ``xr.merge``
+  (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
 - Added ``strftime`` method to ``.dt`` accessor, making it simpler to hand a
   datetime ``DataArray`` to other code expecting formatted dates and times.
   (:issue:`2090`). By `Alan Brammer <https://github.com/abrammer>`_ and
@@ -55,6 +57,13 @@ Enhancements
 - Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports a
   :py:meth:`~xarray.CFTimeIndex.strftime` method to return an index of string
   formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
+- Add ``.str`` accessor to DataArrays for string related manipulations.
+  By `0x0L <https://github.com/0x0L>`_.
+- Add ``errors`` keyword argument to :py:meth:`Dataset.drop` and :py:meth:`Dataset.drop_dims`
+  that allows ignoring errors if a passed label or dimension is not in the dataset
+  (:issue:`2994`).
+  By `Andrew Ross <https://github.com/andrew-c-ross>`_.
+
 
 Bug fixes
 ~~~~~~~~~
@@ -70,7 +79,17 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
-- Removed usages of `pytest.config`, which is deprecated (:issue:`2988`:)
+- Increased support for `missing_value` (:issue:`2871`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Removed usages of `pytest.config`, which is deprecated (:issue:`2988`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fixed performance issues with cftime installed (:issue:`3000`)
+  By `0x0L <https://github.com/0x0L>`_.
+- Replace incorrect usages of `message` in pytest assertions 
+  with `match` (:issue:`3011`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add explicit pytest markers, now required by pytest
+  (:issue:`3032`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.12.1:

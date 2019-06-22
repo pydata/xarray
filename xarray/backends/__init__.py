@@ -3,16 +3,16 @@
 DataStores provide a uniform interface for saving and loading data in different
 formats. They should not be used directly, but rather through Dataset objects.
 """
-from .common import AbstractDataStore
-from .file_manager import FileManager, CachingFileManager, DummyFileManager
 from .cfgrib_ import CfGribDataStore
+from .common import AbstractDataStore
+from .file_manager import CachingFileManager, DummyFileManager, FileManager
+from .h5netcdf_ import H5NetCDFStore
 from .memory import InMemoryDataStore
 from .netCDF4_ import NetCDF4DataStore
+from .pseudonetcdf_ import PseudoNetCDFDataStore
 from .pydap_ import PydapDataStore
 from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
-from .h5netcdf_ import H5NetCDFStore
-from .pseudonetcdf_ import PseudoNetCDFDataStore
 from .zarr import ZarrStore
 
 __all__ = [

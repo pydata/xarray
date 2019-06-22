@@ -14,8 +14,8 @@ from xarray.core.combine import (
     _infer_tile_ids_from_nested_list, _new_tile_id)
 
 from . import (
-    InaccessibleArray, assert_array_equal,
-    assert_equal, assert_identical, raises_regex, requires_dask)
+    InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
+    raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 

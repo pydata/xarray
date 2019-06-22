@@ -22,8 +22,8 @@ from xarray.core.pycompat import integer_types
 from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
-    raises_regex, requires_bottleneck, requires_dask, requires_scipy,
-    source_ndarray, requires_cftime)
+    raises_regex, requires_bottleneck, requires_cftime, requires_dask,
+    requires_scipy, source_ndarray)
 
 try:
     import dask.array as da
@@ -1897,6 +1897,15 @@ class TestDataset:
         with raises_regex(ValueError, 'cannot be found'):
             data.drop('not_found_here')
 
+        actual = data.drop('not_found_here', errors='ignore')
+        assert_identical(data, actual)
+
+        actual = data.drop(['not_found_here'], errors='ignore')
+        assert_identical(data, actual)
+
+        actual = data.drop(['time', 'not_found_here'], errors='ignore')
+        assert_identical(expected, actual)
+
     def test_drop_index_labels(self):
         data = Dataset({'A': (['x', 'y'], np.random.randn(2, 3)),
                         'x': ['a', 'b']})
@@ -1914,6 +1923,16 @@ class TestDataset:
         with pytest.raises((ValueError, KeyError)):
             # not contained in axis
             data.drop(['c'], dim='x')
+
+        actual = data.drop(['c'], dim='x', errors='ignore')
+        assert_identical(data, actual)
+
+        with pytest.raises(ValueError):
+            data.drop(['c'], dim='x', errors='wrong_value')
+
+        actual = data.drop(['a', 'b', 'c'], 'x', errors='ignore')
+        expected = data.isel(x=slice(0, 0))
+        assert_identical(expected, actual)
 
         with raises_regex(
                 ValueError, 'does not have coordinate labels'):
@@ -1938,6 +1957,22 @@ class TestDataset:
 
         with pytest.raises((ValueError, KeyError)):
             data.drop_dims('z')  # not a dimension
+
+        with pytest.raises((ValueError, KeyError)):
+            data.drop_dims(None)
+
+        actual = data.drop_dims('z', errors='ignore')
+        assert_identical(data, actual)
+
+        actual = data.drop_dims(None, errors='ignore')
+        assert_identical(data, actual)
+
+        with pytest.raises(ValueError):
+            actual = data.drop_dims('z', errors='wrong_value')
+
+        actual = data.drop_dims(['x', 'y', 'z'], errors='ignore')
+        expected = data.drop(['A', 'B', 'x'])
+        assert_identical(expected, actual)
 
     def test_copy(self):
         data = create_test_data()
@@ -2266,7 +2301,7 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             ds.set_index(x=mindex.names, inplace=True)
             assert_identical(ds, expected)
 
@@ -2286,7 +2321,7 @@ class TestDataset:
         obj = ds.reset_index('x')
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             ds.reset_index('x', inplace=True)
             assert_identical(ds, expected)
 
@@ -2299,7 +2334,7 @@ class TestDataset:
         reindexed = ds.reorder_levels(x=['level_2', 'level_1'])
         assert_identical(reindexed, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             ds.reorder_levels(x=['level_2', 'level_1'], inplace=True)
             assert_identical(ds, expected)
 
@@ -2438,7 +2473,7 @@ class TestDataset:
         assert actual_result is actual
         assert_identical(expected, actual)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             actual = data.update(data, inplace=False)
             expected = data
             assert actual is not expected
@@ -2814,6 +2849,11 @@ class TestDataset:
         del data['numbers']
         assert set(data.variables) == all_items - set(['var1', 'numbers'])
         assert 'numbers' not in data.coords
+
+        expected = Dataset()
+        actual = Dataset({'y': ('x', [1, 2])})
+        del actual['y']
+        assert_identical(expected, actual)
 
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
@@ -4678,7 +4718,7 @@ def test_dataset_constructor_aligns_to_explicit_coords(
 
 
 def test_error_message_on_set_supplied():
-    with pytest.raises(TypeError, message='has invalid type set'):
+    with pytest.raises(TypeError, match="has invalid type <class 'set'>"):
         xr.Dataset(dict(date=[1, 2, 3], sec={4}))
 
 
@@ -4688,7 +4728,7 @@ def test_error_message_on_set_supplied():
 def test_constructor_raises_with_invalid_coords(unaligned_coords):
 
     with pytest.raises(ValueError,
-                       message='not a subset of the DataArray dimensions'):
+                       match='not a subset of the DataArray dimensions'):
         xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
 
 
@@ -4819,9 +4859,9 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
 
     func_name = 'move_{0}'.format(name)
     actual = getattr(rolling_obj, name)()
-    if key is 'z1':  # z1 does not depend on 'Time' axis. Stored as it is.
+    if key == 'z1':  # z1 does not depend on 'Time' axis. Stored as it is.
         expected = ds[key]
-    elif key is 'z2':
+    elif key == 'z2':
         expected = getattr(bn, func_name)(ds[key].values, window=7, axis=0,
                                           min_count=min_periods)
     assert_array_equal(actual[key].values, expected)

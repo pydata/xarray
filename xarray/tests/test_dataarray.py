@@ -1,9 +1,9 @@
 import pickle
+import sys
 import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
-import sys
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast)
-from xarray.coding.times import CFDatetimeCoder, _import_cftime
+from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import ALL_DIMS, full_like
@@ -1177,7 +1177,7 @@ class TestDataArray:
                              dims=['x', 'y'], name='foo')
         assert_identical(actual, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             with raises_regex(ValueError, 'cannot reset coord'):
                 data = data.reset_coords(inplace=True)
         with raises_regex(ValueError, 'cannot be found'):
@@ -1258,18 +1258,6 @@ class TestDataArray:
         with raises_regex(
                 ValueError, 'different size for unlabeled'):
             foo.reindex_like(bar)
-
-    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
-    def test_reindex_fill_value(self, fill_value):
-        foo = DataArray([10, 20], dims='y', coords={'y': [0, 1]})
-        bar = DataArray([10, 20, 30], dims='y', coords={'y': [0, 1, 2]})
-        if fill_value == dtypes.NA:
-            # if we supply the default, we expect the missing value for a
-            # float array
-            fill_value = np.nan
-        actual = x.reindex_like(bar, fill_value=fill_value)
-        expected = DataArray([10, 20, fill_value], coords=[('y', [0, 1, 2])])
-        assert_identical(expected, actual)
 
     @pytest.mark.filterwarnings('ignore:Indexer has dimensions')
     def test_reindex_regressions(self):
@@ -1540,7 +1528,7 @@ class TestDataArray:
         obj = self.mda.reorder_levels(x=['level_2', 'level_1'])
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             array = self.mda.copy()
             array.reorder_levels(x=['level_2', 'level_1'], inplace=True)
             assert_identical(array, expected)
@@ -1644,8 +1632,8 @@ class TestDataArray:
         assert (a + a.rename(None)).name is None
         assert (a + a.rename('bar')).name is None
         assert (a + a).name == 'foo'
-        assert (+a['x']).name is 'x'
-        assert (a['x'] + 0).name is 'x'
+        assert (+a['x']).name == 'x'
+        assert (a['x'] + 0).name == 'x'
         assert (a + a['x']).name is None
 
     def test_math_with_coords(self):
@@ -1760,6 +1748,16 @@ class TestDataArray:
         orig = DataArray([[0, 1], [2, 3]], dims=['x', 'y'], attrs={'foo': 2})
         assert_identical(orig, orig.unstack())
 
+        # test GH3000
+        a = orig[:0, :1].stack(dim=('x', 'y')).dim.to_index()
+        if pd.__version__ < '0.24.0':
+            b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])],
+                              labels=[[], []], names=['x', 'y'])
+        else:
+            b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])],
+                              codes=[[], []], names=['x', 'y'])
+        pd.util.testing.assert_index_equal(a, b)
+
         actual = orig.stack(z=['x', 'y']).unstack('z').drop(['x', 'y'])
         assert_identical(orig, actual)
 
@@ -1861,19 +1859,34 @@ class TestDataArray:
         with pytest.raises(ValueError):
             arr.drop('not found')
 
+        actual = expected.drop('not found', errors='ignore')
+        assert_identical(actual, expected)
+
         with raises_regex(ValueError, 'cannot be found'):
             arr.drop(None)
+
+        actual = expected.drop(None, errors='ignore')
+        assert_identical(actual, expected)
 
         renamed = arr.rename('foo')
         with raises_regex(ValueError, 'cannot be found'):
             renamed.drop('foo')
+
+        actual = renamed.drop('foo', errors='ignore')
+        assert_identical(actual, renamed)
 
     def test_drop_index_labels(self):
         arr = DataArray(np.random.randn(2, 3), coords={'y': [0, 1, 2]},
                         dims=['x', 'y'])
         actual = arr.drop([0, 1], dim='y')
         expected = arr[:, 2:]
-        assert_identical(expected, actual)
+        assert_identical(actual, expected)
+
+        with raises_regex((KeyError, ValueError), 'not .* in axis'):
+            actual = arr.drop([0, 1, 3], dim='y')
+
+        actual = arr.drop([0, 1, 3], dim='y', errors='ignore')
+        assert_identical(actual, expected)
 
     def test_dropna(self):
         x = np.random.randn(4, 4)
