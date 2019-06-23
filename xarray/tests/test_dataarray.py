@@ -3725,6 +3725,9 @@ def test_rolling_wrapped_dask_nochunk(center):
     da_day_clim = xr.DataArray(np.arange(1, 367),
                                coords=[np.arange(1, 367)], dims='dayofyear')
     expected = da_day_clim.rolling(dayofyear=31, center=center).mean()  # noqa
+    actual = da_day_clim.chunk().rolling(  # noqa
+        dayofyear=31, center=center).mean()
+    print(actual)
     with pytest.raises(NotImplementedError):
         actual = da_day_clim.chunk().rolling(  # noqa
             dayofyear=31, center=center).mean()
