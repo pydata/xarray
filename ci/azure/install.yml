@@ -2,12 +2,11 @@ parameters:
   env_file: ci/requirements-$(conda_env).yml
 
 steps:
-- displayName: Add conda to PATH
-  # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
+- # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
   bash: |
     echo "##vso[task.prependpath]$CONDA/bin"
+  displayName: Add conda to PATH
   # condition: eq(variables['Agent.OS'], 'Linux')
-
 # - displayName: Add conda to PATH (OS X)
 #   bash: |
 #     echo "##vso[task.prependpath]$CONDA/bin"
@@ -18,15 +17,15 @@ steps:
 #   powershell: |
 #     Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
 #   condition: eq(variables['Agent.OS'], 'Windows_NT')
-- displayName: Install dependencies
-  bash: |
+- bash: |
     conda env create -n test_env --file $ENV_FILE
-- displayName: Install xarray
-  bash: |
+  displayName: Install dependencies
+- bash: |
     source activate test_env
     pip install --no-deps -e .
-- displayName: Version info
-  bash: |
+  displayName: Install xarray
+- bash: |
     source activate test_env
     conda list
     python xarray/util/print_versions.py
+  displayName: Version info

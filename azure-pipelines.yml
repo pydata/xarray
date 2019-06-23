@@ -57,14 +57,14 @@ jobs:
     vmImage: 'ubuntu-16.04'
   steps:
   - template: ci/azure/install.yml
-  - displayName: flake8 lint checks
-    bash: |
+  - bash: |
       source activate test_env
       flake8
-  - displayName: mypy type checks
-    bash: |
+    displayName: flake8 lint checks
+  - bash: |
       source activate test_env
       mypy .
+    displayName: mypy type checks
     # allow mypy failures until we have a nice way of displaying results in
     # pull requests
     continueOnError: 'true'
@@ -76,11 +76,11 @@ jobs:
   - template: ci/azure/install.yml
     parameters:
       env_file: doc/requirements.yml
-  - displayName: Build HTML docs
-    bash: |
+  - bash: |
       conda activate test_env
       cd doc
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
+    displayName: Build HTML docs
 
 - job: Linux-Hypothesis
   variables:
@@ -89,10 +89,10 @@ jobs:
     vmImage: 'ubuntu-16.04'
   steps:
   - template: ci/azure/install.yml
-  - displayName: Property based tests
-    bash: |
+  - bash: |
       conda activate test_env
       pytest properties
+    displayName: Property based tests
 
 - job: Linux-AllowedFailures
   strategy:
