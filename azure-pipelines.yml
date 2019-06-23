@@ -1,0 +1,61 @@
+trigger:
+- master
+
+pr:
+  - master
+
+strategy:
+  matrix:
+    py35-min:
+      image_name: ubuntu-latest
+      conda_env: py35-min
+    py36:
+      image_name: ubuntu-latest
+      conda_env: py36
+    py37:
+      image_name: ubuntu-latest
+      conda_env: py37
+    py36-rasterio:
+      image_name: ubuntu-latest
+      conda_env: py36-rasterio
+    py36-dask-dev:
+      image_name: ubuntu-latest
+      conda_env: py36-dask-dev
+    py36-zarr-dev:
+      image_name: ubuntu-latest
+      conda_env: py36-zarr-dev
+    py36-hypothesis:
+      image_name: ubuntu-latest
+      conda_env: py36-hypothesis
+
+pool:
+  vmImage: $(imageName)
+
+steps:
+- bash: echo "##vso[task.prependpath]$CONDA/bin"
+  displayName: Add conda to PATH
+
+- script: |
+    conda env create -n test_env --file ci/requirements-$CONDA_ENV.yml;
+  displayName: Install dependencies
+
+- script: |
+    source activate test_env
+  displayName: Activate environment
+
+- script: |
+    pip install --no-deps -e .
+  displayName: Install xarray
+
+- script: |
+    conda list
+  displayName: Conda info
+
+- script: |
+    python xarray/util/print_versions.py
+  displayName: xarray.show_versions()
+
+- script: |
+    python -OO -c "import xarray"
+    pytest xarray --cov=xarray --cov-config ci/.coveragerc --cov-report
+  displayName: Run tests
