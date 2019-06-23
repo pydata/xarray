@@ -61,7 +61,7 @@ jobs:
   pool:
     vmImage: 'vs2017-win2016'
   variables:
-    conda_activate: call activate test_env 
+    conda_activate: source activate test_env 
   steps:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
     displayName: Add conda to PATH
