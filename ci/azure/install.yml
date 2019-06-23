@@ -2,21 +2,20 @@ parameters:
   env_file: ci/requirements-$CONDA_ENV.yml
 
 steps:
-- # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
+- displayName: Add conda to PATH (Linux)
   bash: |
     echo "##vso[task.prependpath]$CONDA/bin"
-  displayName: Add conda to PATH
-  # condition: eq(variables['Agent.OS'], 'Linux')
-# - displayName: Add conda to PATH (OS X)
-#   bash: |
-#     echo "##vso[task.prependpath]$CONDA/bin"
-#     sudo chown -R $USER $CONDA
-#   condition: eq(variables['Agent.OS'], 'Darwin')
-
-# - displayName: Add conda to PATH (Windows)
-#   powershell: |
-#     Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
-#   condition: eq(variables['Agent.OS'], 'Windows_NT')
+  condition: eq(variables['Agent.OS'], 'Linux')
+- displayName: Add conda to PATH (OS X)
+  bash: |
+    echo "##vso[task.prependpath]$CONDA/bin"
+    sudo chown -R $USER $CONDA
+  condition: eq(variables['Agent.OS'], 'Darwin')
+- displayName: Add conda to PATH (Windows)
+  powershell: |
+    Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+  condition: eq(variables['Agent.OS'], 'Windows_NT')
 - bash: |
     conda env create -n test_env --file ${{ parameters.env_file }}
   displayName: Install dependencies
