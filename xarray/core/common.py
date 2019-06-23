@@ -627,6 +627,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Exponentially-weighted moving window.
         Similar to EWM in pandas
 
+        Requires the optional Numbagg dependency.
+
         Parameters
         ----------
         window : A single mapping from a dimension name to window value,
@@ -646,7 +648,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             The keyword arguments form of ``window``.
             One of window or window_kwargs must be provided.
 
-        [docstring copied from RollingExp object]
+        See Also
+        --------
+        core.rolling_exp.RollingExp
         """
         window = either_dict_or_kwargs(window, window_kwargs, 'rolling_exp')
 
