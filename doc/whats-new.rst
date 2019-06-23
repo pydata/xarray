@@ -70,6 +70,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Rolling operations on xarray objects containing dask arrays could silently
+  compute the incorrect result or use large amounts of memory (:issue:`2940`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - NetCDF4 output: variables with unlimited dimensions must be chunked (not
   contiguous) on output. (:issue:`1849`)
   By `James McCreight <https://github.com/jmccreight>`_.
