@@ -22,6 +22,8 @@ Enhancements
 ~~~~~~~~~~~~
 
 
+- Add ``keepdims`` argument for reduce operations (:issue:`2170`)
+  By `Scott Wales <https://github.com/ScottWales>`_.
 - netCDF chunksizes are now only dropped when original_shape is different,
   not when it isn't found. (:issue:`2207`)
   By `Karel van de Plassche <https://github.com/Karel-van-de-Plassche>`_.
@@ -59,6 +61,11 @@ Enhancements
   formatted datetimes. By `Alan Brammer <https://github.com/abrammer>`_.
 - Add ``.str`` accessor to DataArrays for string related manipulations.
   By `0x0L <https://github.com/0x0L>`_.
+- Add ``errors`` keyword argument to :py:meth:`Dataset.drop` and :py:meth:`Dataset.drop_dims`
+  that allows ignoring errors if a passed label or dimension is not in the dataset
+  (:issue:`2994`).
+  By `Andrew Ross <https://github.com/andrew-c-ross>`_.
+
 
 Bug fixes
 ~~~~~~~~~
@@ -70,8 +77,6 @@ Bug fixes
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
-- Fix facetgrid colormap bug when ``extend=True``. (:issue:`2932`)
-  By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
 - Increased support for `missing_value` (:issue:`2871`)

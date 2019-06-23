@@ -1889,6 +1889,15 @@ class TestDataset:
         with raises_regex(ValueError, 'cannot be found'):
             data.drop('not_found_here')
 
+        actual = data.drop('not_found_here', errors='ignore')
+        assert_identical(data, actual)
+
+        actual = data.drop(['not_found_here'], errors='ignore')
+        assert_identical(data, actual)
+
+        actual = data.drop(['time', 'not_found_here'], errors='ignore')
+        assert_identical(expected, actual)
+
     def test_drop_index_labels(self):
         data = Dataset({'A': (['x', 'y'], np.random.randn(2, 3)),
                         'x': ['a', 'b']})
@@ -1906,6 +1915,16 @@ class TestDataset:
         with pytest.raises((ValueError, KeyError)):
             # not contained in axis
             data.drop(['c'], dim='x')
+
+        actual = data.drop(['c'], dim='x', errors='ignore')
+        assert_identical(data, actual)
+
+        with pytest.raises(ValueError):
+            data.drop(['c'], dim='x', errors='wrong_value')
+
+        actual = data.drop(['a', 'b', 'c'], 'x', errors='ignore')
+        expected = data.isel(x=slice(0, 0))
+        assert_identical(expected, actual)
 
         with raises_regex(
                 ValueError, 'does not have coordinate labels'):
@@ -1930,6 +1949,22 @@ class TestDataset:
 
         with pytest.raises((ValueError, KeyError)):
             data.drop_dims('z')  # not a dimension
+
+        with pytest.raises((ValueError, KeyError)):
+            data.drop_dims(None)
+
+        actual = data.drop_dims('z', errors='ignore')
+        assert_identical(data, actual)
+
+        actual = data.drop_dims(None, errors='ignore')
+        assert_identical(data, actual)
+
+        with pytest.raises(ValueError):
+            actual = data.drop_dims('z', errors='wrong_value')
+
+        actual = data.drop_dims(['x', 'y', 'z'], errors='ignore')
+        expected = data.drop(['A', 'B', 'x'])
+        assert_identical(expected, actual)
 
     def test_copy(self):
         data = create_test_data()
@@ -2751,6 +2786,11 @@ class TestDataset:
         del data['numbers']
         assert set(data.variables) == all_items - set(['var1', 'numbers'])
         assert 'numbers' not in data.coords
+
+        expected = Dataset()
+        actual = Dataset({'y': ('x', [1, 2])})
+        del actual['y']
+        assert_identical(expected, actual)
 
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
@@ -3857,6 +3897,25 @@ class TestDataset:
 
         with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
             ds.reduce(total_sum, dim='x')
+
+    def test_reduce_keepdims(self):
+        ds = Dataset({'a': (['x', 'y'], [[0, 1, 2, 3, 4]])},
+                     coords={'y': [0, 1, 2, 3, 4], 'x': [0],
+                             'lat': (['x', 'y'], [[0, 1, 2, 3, 4]]),
+                             'c': -999.0})
+
+        # Shape should match behaviour of numpy reductions with keepdims=True
+        # Coordinates involved in the reduction should be removed
+        actual = ds.mean(keepdims=True)
+        expected = Dataset({'a': (['x', 'y'], np.mean(ds.a, keepdims=True))},
+                           coords={'c': ds.c})
+        assert_identical(expected, actual)
+
+        actual = ds.mean('x', keepdims=True)
+        expected = Dataset({'a': (['x', 'y'],
+                                  np.mean(ds.a, axis=0, keepdims=True))},
+                           coords={'y': ds.y, 'c': ds.c})
+        assert_identical(expected, actual)
 
     def test_quantile(self):
 
