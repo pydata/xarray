@@ -29,7 +29,7 @@ strategy:
       conda_env: py36-hypothesis
 
 pool:
-  vmImage: $(imageName)
+  vmImage: $(image_name)
 
 steps:
 - bash: echo "##vso[task.prependpath]$CONDA/bin"
