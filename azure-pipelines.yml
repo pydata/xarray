@@ -24,8 +24,7 @@ jobs:
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
-  - template: ci/azure/install.yml
-  - template: ci/azure/run-tests.yml
+  - template: ci/azure/unit-tests.yml
 
 - job: macOS
   strategy:
@@ -37,8 +36,7 @@ jobs:
   pool:
     vmImage: 'macOS-10.13'
   steps:
-  - template: ci/azure/install.yml
-  - template: ci/azure/run-tests.yml
+  - template: ci/azure/unit-tests.yml
 
 - job: Windows
   strategy:
@@ -50,8 +48,7 @@ jobs:
   pool:
     vmImage: 'vs2017-win2016'
   steps:
-  - template: ci/azure/install.yml
-  - template: ci/azure/run-tests.yml
+  - template: ci/azure/unit-tests.yml
 
 - job: CodeChecks
   variables:
@@ -61,7 +58,17 @@ jobs:
     vmImage: 'ubuntu-16.04'
   steps:
   - template: ci/azure/install.yml
-  - template: ci/azure/run-checks.yml
+  - displayName: flake8 lint checks
+    bash: |
+      source activate test_env
+      flake8
+  - displayName: mypy type checks
+    bash: |
+      source activate test_env
+      mypy .
+    # allow mypy failures until we have a nice way of displaying results in
+    # pull requests
+    continueOnError: 'true'
 
 - job: Docs
   pool:
@@ -70,7 +77,7 @@ jobs:
   - template: ci/azure/install.yml
     parameters:
       env_file: doc/requirements.yml
-  - displayName: Build docs
+  - displayName: Build HTML docs
     bash: |
       conda activate test_env
       cd doc
@@ -83,18 +90,21 @@ jobs:
     vmImage: 'ubuntu-16.04'
   steps:
   - template: ci/azure/install.yml
-  - bash: |
-    conda activate test_env
-    pytest properties
+  - displayName: Property based tests
+    bash: |
+      conda activate test_env
+      pytest properties
 
 - job: Linux-AllowedFailures
   strategy:
     matrix:
       py36-pandas-dev:
         conda_env: py36-pandas-dev
+      py36-flakey:
+        conda_env: py36
+        pytest_extra_flags: --run-flaky --run-network-tests
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
-  - template: ci/azure/install.yml
-  - template: ci/azure/run-tests.yml
+  - template: ci/azure/unit-tests.yml
   continueOnError: 'true'

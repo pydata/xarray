@@ -2,34 +2,29 @@ parameters:
   env_file: ci/requirements-$(conda_env).yml
 
 steps:
-
-# Adapted from:
-# https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
-- displayName: Add conda to PATH (Linux)
+- displayName: Add conda to PATH
+  # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
   bash: |
     echo "##vso[task.prependpath]$CONDA/bin"
-  condition: eq(variables['Agent.OS'], 'Linux')
+  # condition: eq(variables['Agent.OS'], 'Linux')
 
-- displayName: Add conda to PATH (OS X)
-  bash: |
-    echo "##vso[task.prependpath]$CONDA/bin"
-    sudo chown -R $USER $CONDA
-  condition: eq(variables['Agent.OS'], 'Darwin')
+# - displayName: Add conda to PATH (OS X)
+#   bash: |
+#     echo "##vso[task.prependpath]$CONDA/bin"
+#     sudo chown -R $USER $CONDA
+#   condition: eq(variables['Agent.OS'], 'Darwin')
 
-- displayName: Add conda to PATH (Windows)
-  powershell: |
-    Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
-  condition: eq(variables['Agent.OS'], 'Windows_NT')
-
+# - displayName: Add conda to PATH (Windows)
+#   powershell: |
+#     Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+#   condition: eq(variables['Agent.OS'], 'Windows_NT')
 - displayName: Install dependencies
   bash: |
     conda env create -n test_env --file $ENV_FILE
-
 - displayName: Install xarray
   bash: |
     source activate test_env
     pip install --no-deps -e .
-
 - displayName: Version info
   bash: |
     source activate test_env

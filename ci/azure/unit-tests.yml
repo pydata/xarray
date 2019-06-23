@@ -1,0 +1,10 @@
+\steps:
+- template: ci/azure/install.yml
+- displayName: Import xarray
+  bash: |
+    source activate test_env
+    python -OO -c "import xarray"
+- displayName: Run tests
+  bash: |
+    source activate test_env
+    pytest xarray
