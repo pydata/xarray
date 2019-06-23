@@ -8,9 +8,9 @@ steps:
     source activate test_env
     pytest xarray --junitxml=junit/test-results.xml
   displayName: Run tests
-# - task: PublishTestResults@2
-#   condition: succeededOrFailed()
-#   inputs:
-#     testResultsFiles: '**/test-*.xml'
-#     failTaskOnFailedTests: true
-#     testRunTitle: 'Publish test results for Python $(PYTHON_VERSION) $(BITS)-bit $(TEST_MODE) Windows'
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFiles: '**/test-*.xml'
+    failTaskOnFailedTests: true
+    testRunTitle: 'Test results for Python $CONDA_ENV $PYTEST_EXTRA_FLAGS'
