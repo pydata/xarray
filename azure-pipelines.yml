@@ -20,12 +20,8 @@ jobs:
         conda_env: py36-dask-dev
       py36-zarr-dev:
         conda_env: py36-zarr-dev
-      py36-hypothesis:
-        conda_env: py36-hypothesis
   pool:
     vmImage: 'ubuntu-16.04'
-  variables:
-    conda_activate: source activate test_env 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
@@ -41,8 +37,6 @@ jobs:
         conda_env: py37
   pool:
     vmImage: 'macOS-10.13'
-  variables:
-    conda_activate: source activate test_env 
   steps:
   - bash: |
       echo "##vso[task.prependpath]$CONDA/bin"
@@ -60,8 +54,6 @@ jobs:
         conda_env: py37
   pool:
     vmImage: 'vs2017-win2016'
-  variables:
-    conda_activate: source activate test_env 
   steps:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
     displayName: Add conda to PATH

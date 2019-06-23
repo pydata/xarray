@@ -1,6 +1,6 @@
 steps:
 - bash: |
-    $(conda_activate)
+    source activate test_env
     python -OO -c "import xarray"
     pytest xarray
   displayName: Run tests

@@ -5,12 +5,12 @@ steps:
   displayName: Install dependencies
 
 - bash: |
-    $(conda_activate)
+    source activate test_env
     pip install --no-deps -e .
   displayName: Install xarray
 
 - bash: |
-    $(conda_activate)
+    source activate test_env
     conda list
     python xarray/util/print_versions.py
   displayName: Version info
