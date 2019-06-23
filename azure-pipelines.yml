@@ -1,61 +1,60 @@
 trigger:
-- master
+  - master
 
 pr:
   - master
 
-strategy:
+jobs:
+- job: Linux
   matrix:
     py35-min:
-      image_name: ubuntu-latest
       conda_env: py35-min
     py36:
-      image_name: ubuntu-latest
       conda_env: py36
     py37:
-      image_name: ubuntu-latest
       conda_env: py37
     py36-rasterio:
-      image_name: ubuntu-latest
       conda_env: py36-rasterio
     py36-dask-dev:
-      image_name: ubuntu-latest
       conda_env: py36-dask-dev
     py36-zarr-dev:
-      image_name: ubuntu-latest
       conda_env: py36-zarr-dev
     py36-hypothesis:
-      image_name: ubuntu-latest
       conda_env: py36-hypothesis
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+  - template: ci/azure/install.yml
+  - template: ci/azure/run-tests.yml
 
-pool:
-  vmImage: $(image_name)
+- job: macOS
+  matrix:
+    py35-min:
+      conda_env: py35-min
+    py37:
+      conda_env: py37
+  pool:
+    vmImage: 'macOS-10.13'
+  steps:
+  - bash: |
+      echo "##vso[task.prependpath]$CONDA/bin"
+      sudo chown -R $USER $CONDA
+    displayName: Add conda to PATH
+  - template: ci/azure/install.yml
+  - template: ci/azure/run-tests.yml
 
-steps:
-- bash: echo "##vso[task.prependpath]$CONDA/bin"
-  displayName: Add conda to PATH
-
-- script: |
-    conda env create -n test_env --file ci/requirements-$CONDA_ENV.yml;
-  displayName: Install dependencies
-
-- script: |
-    source activate test_env
-  displayName: Activate environment
-
-- script: |
-    pip install --no-deps -e .
-  displayName: Install xarray
-
-- script: |
-    conda list
-  displayName: Conda info
-
-- script: |
-    python xarray/util/print_versions.py
-  displayName: xarray.show_versions()
-
-- script: |
-    python -OO -c "import xarray"
-    pytest xarray --cov=xarray --cov-config ci/.coveragerc --cov-report
-  displayName: Run tests
+- job: Windows
+  matrix:
+    py35-min:
+      conda_env: py35-min
+    py37:
+      conda_env: py37
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+    displayName: Add conda to PATH
+  - template: ci/azure/install.yml
+  - template: ci/azure/run-tests.yml
