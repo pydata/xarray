@@ -6,21 +6,22 @@ pr:
 
 jobs:
 - job: Linux
-  matrix:
-    py35-min:
-      conda_env: py35-min
-    py36:
-      conda_env: py36
-    py37:
-      conda_env: py37
-    py36-rasterio:
-      conda_env: py36-rasterio
-    py36-dask-dev:
-      conda_env: py36-dask-dev
-    py36-zarr-dev:
-      conda_env: py36-zarr-dev
-    py36-hypothesis:
-      conda_env: py36-hypothesis
+  strategy:
+    matrix:
+      py35-min:
+        conda_env: py35-min
+      py36:
+        conda_env: py36
+      py37:
+        conda_env: py37
+      py36-rasterio:
+        conda_env: py36-rasterio
+      py36-dask-dev:
+        conda_env: py36-dask-dev
+      py36-zarr-dev:
+        conda_env: py36-zarr-dev
+      py36-hypothesis:
+        conda_env: py36-hypothesis
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
@@ -30,11 +31,12 @@ jobs:
   - template: ci/azure/run-tests.yml
 
 - job: macOS
-  matrix:
-    py35-min:
-      conda_env: py35-min
-    py37:
-      conda_env: py37
+  strategy:
+    matrix:
+      py35-min:
+        conda_env: py35-min
+      py37:
+        conda_env: py37
   pool:
     vmImage: 'macOS-10.13'
   steps:
@@ -46,11 +48,12 @@ jobs:
   - template: ci/azure/run-tests.yml
 
 - job: Windows
-  matrix:
-    py35-min:
-      conda_env: py35-min
-    py37:
-      conda_env: py37
+  strategy:
+    matrix:
+      py35-min:
+        conda_env: py35-min
+      py37:
+        conda_env: py37
   pool:
     vmImage: 'vs2017-win2016'
   steps:
