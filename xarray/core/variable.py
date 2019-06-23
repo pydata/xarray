@@ -1334,7 +1334,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return ops.where_method(self, cond, other)
 
     def reduce(self, func, dim=None, axis=None,
-               keep_attrs=None, allow_lazy=False, **kwargs):
+               keep_attrs=None, keepdims=False, allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1354,6 +1354,9 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        keepdims : bool, default False
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1381,8 +1384,19 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         else:
             removed_axes = (range(self.ndim) if axis is None
                             else np.atleast_1d(axis) % self.ndim)
-            dims = [adim for n, adim in enumerate(self.dims)
-                    if n not in removed_axes]
+            if keepdims:
+                # Insert np.newaxis for removed dims
+                slices = tuple(np.newaxis if i in removed_axes else
+                               slice(None, None) for i in range(self.ndim))
+                if getattr(data, 'shape', None) is None:
+                    # Reduce has produced a scalar value, not an array-like
+                    data = np.asanyarray(data)[slices]
+                else:
+                    data = data[slices]
+                dims = self.dims
+            else:
+                dims = [adim for n, adim in enumerate(self.dims)
+                        if n not in removed_axes]
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)

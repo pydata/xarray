@@ -22,6 +22,8 @@ Enhancements
 ~~~~~~~~~~~~
 
 
+- Add ``keepdims`` argument for reduce operations (:issue:`2170`)
+  By `Scott Wales <https://github.com/ScottWales>`_.
 - netCDF chunksizes are now only dropped when original_shape is different,
   not when it isn't found. (:issue:`2207`)
   By `Karel van de Plassche <https://github.com/Karel-van-de-Plassche>`_.
