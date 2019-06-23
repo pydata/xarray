@@ -3152,8 +3152,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
-    def reduce(self, func, dim=None, keep_attrs=None, numeric_only=False,
-               allow_lazy=False, **kwargs):
+    def reduce(self, func, dim=None, keep_attrs=None, keepdims=False,
+               numeric_only=False, allow_lazy=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
@@ -3169,6 +3169,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        keepdims : bool, default False
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one. Coordinates that use these dimensions
+            are removed.
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
         **kwargs : dict
@@ -3218,6 +3222,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         reduce_dims = None
                     variables[name] = var.reduce(func, dim=reduce_dims,
                                                  keep_attrs=keep_attrs,
+                                                 keepdims=keepdims,
                                                  allow_lazy=allow_lazy,
                                                  **kwargs)
 
