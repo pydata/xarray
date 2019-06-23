@@ -1,5 +1,5 @@
 steps:
-- template: ci/azure/install.yml
+- template: install.yml
 - bash: |
     source activate test_env
     python -OO -c "import xarray"
