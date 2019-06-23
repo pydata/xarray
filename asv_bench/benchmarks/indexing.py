@@ -58,7 +58,7 @@ vectorized_assignment_values = {
 }
 
 
-class Base(object):
+class Base:
     def setup(self, key):
         self.ds = xr.Dataset(
             {'var1': (('x', 'y'), randn((nx, ny), frac_nan=0.1)),

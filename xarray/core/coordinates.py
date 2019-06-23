@@ -193,7 +193,7 @@ class DatasetCoordinates(AbstractCoordinates):
 
         self._data._variables = variables
         self._data._coord_names.update(new_coord_names)
-        self._data._dims = dict(dims)
+        self._data._dims = dims
         self._data._indexes = None
 
     def __delitem__(self, key):
@@ -258,7 +258,7 @@ class DataArrayCoordinates(AbstractCoordinates):
         return self._data._ipython_key_completions_()
 
 
-class LevelCoordinatesSource(object):
+class LevelCoordinatesSource:
     """Iterator for MultiIndex level coordinates.
 
     Used for attribute style lookup with AttrAccessMixin. Not returned directly

@@ -26,7 +26,7 @@ from . import (
     raises_regex, requires_dask, source_ndarray)
 
 
-class VariableSubclassobjects(object):
+class VariableSubclassobjects:
     def test_properties(self):
         data = 0.5 * np.arange(10)
         v = self.cls(['time'], data, {'foo': 'bar'})
@@ -195,7 +195,7 @@ class VariableSubclassobjects(object):
 
     def test_index_0d_object(self):
 
-        class HashableItemWrapper(object):
+        class HashableItemWrapper:
             def __init__(self, item):
                 self.item = item
 
@@ -1540,6 +1540,42 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
+    def test_reduce_keepdims(self):
+        v = Variable(['x', 'y'], self.d)
+
+        assert_identical(v.mean(keepdims=True),
+                         Variable(v.dims, np.mean(self.d, keepdims=True)))
+        assert_identical(v.mean(dim='x', keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=0,
+                                  keepdims=True)))
+        assert_identical(v.mean(dim='y', keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=1,
+                                  keepdims=True)))
+        assert_identical(v.mean(dim=['y', 'x'], keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=(1, 0),
+                                  keepdims=True)))
+
+        v = Variable([], 1.0)
+        assert_identical(v.mean(keepdims=True),
+                         Variable([], np.mean(v.data, keepdims=True)))
+
+    @requires_dask
+    def test_reduce_keepdims_dask(self):
+        import dask.array
+        v = Variable(['x', 'y'], self.d).chunk()
+
+        actual = v.mean(keepdims=True)
+        assert isinstance(actual.data, dask.array.Array)
+
+        expected = Variable(v.dims, np.mean(self.d, keepdims=True))
+        assert_identical(actual, expected)
+
+        actual = v.mean(dim='y', keepdims=True)
+        assert isinstance(actual.data, dask.array.Array)
+
+        expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
+        assert_identical(actual, expected)
+
     def test_reduce_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}
 
@@ -1892,7 +1928,7 @@ class TestIndexVariable(VariableSubclassobjects):
         super(TestIndexVariable, self).test_coarsen_2d()
 
 
-class TestAsCompatibleData(object):
+class TestAsCompatibleData:
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
         for t in types:
@@ -2033,7 +2069,7 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
-class TestBackendIndexing(object):
+class TestBackendIndexing:
     """    Make sure all the array wrappers can be indexed. """
 
     @pytest.fixture(autouse=True)

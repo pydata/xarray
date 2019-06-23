@@ -8,7 +8,7 @@ import xarray as xr
 from xarray.coding.cftimeindex import (
     CFTimeIndex, _parse_array_of_cftime_strings, _parse_iso8601_with_reso,
     _parsed_string_to_bounds, assert_all_valid_date_type, parse_iso8601)
-from xarray.tests import assert_array_equal, assert_allclose, assert_identical
+from xarray.tests import assert_array_equal, assert_identical
 
 from . import (
     has_cftime, has_cftime_1_0_2_1, has_cftime_or_netCDF4, raises_regex,
@@ -783,6 +783,17 @@ def test_parse_array_of_cftime_strings():
     expected = np.array(DatetimeNoLeap(2000, 1, 1))
     result = _parse_array_of_cftime_strings(strings, DatetimeNoLeap)
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('calendar', _ALL_CALENDARS)
+def test_strftime_of_cftime_array(calendar):
+    date_format = '%Y%m%d%H%M'
+    cf_values = xr.cftime_range('2000', periods=5, calendar=calendar)
+    dt_values = pd.date_range('2000', periods=5)
+    expected = dt_values.strftime(date_format)
+    result = cf_values.strftime(date_format)
+    assert result.equals(expected)
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')

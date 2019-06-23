@@ -4,7 +4,6 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
 
 import xarray as xr
 import xarray.plot as xplt
@@ -16,10 +15,9 @@ from xarray.plot.utils import (
     import_seaborn, label_from_attrs)
 
 from . import (
-    assert_array_equal, assert_equal, raises_regex, requires_cftime,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn,
-    requires_nc_time_axis)
-from . import has_nc_time_axis
+    assert_array_equal, assert_equal, has_nc_time_axis, raises_regex,
+    requires_cftime, requires_matplotlib, requires_matplotlib2,
+    requires_nc_time_axis, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -65,7 +63,7 @@ def easy_array(shape, start=0, stop=1):
 
 
 @requires_matplotlib
-class PlotTestCase(object):
+class PlotTestCase:
     @pytest.fixture(autouse=True)
     def setup(self):
         yield
@@ -212,7 +210,8 @@ class TestPlot(PlotTestCase):
         hdl = da.plot.line(x='lon', hue='y')
         assert len(hdl) == 4
 
-        with pytest.raises(ValueError, message='If x or y are 2D '):
+        with pytest.raises(
+                ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x='lon', hue='lat')
 
     def test_2d_before_squeeze(self):
@@ -512,7 +511,7 @@ class TestPlotHistogram(PlotTestCase):
 
 
 @requires_matplotlib
-class TestDetermineCmapParams(object):
+class TestDetermineCmapParams:
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.data = np.linspace(0, 1, num=100)
@@ -706,7 +705,7 @@ class TestDetermineCmapParams(object):
 
 
 @requires_matplotlib
-class TestDiscreteColorMap(object):
+class TestDiscreteColorMap:
     @pytest.fixture(autouse=True)
     def setUp(self):
         x = np.arange(start=0, stop=10, step=2)
@@ -758,13 +757,14 @@ class TestDiscreteColorMap(object):
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
-        for extend, levels, vmin, vmax in [('neither', 7, None, None),
-                                           ('neither', 7, None, 20),
-                                           ('both', 7, 4, 8),
-                                           ('min', 10, 4, 15)]:
+        for extend, levels, vmin, vmax, cmap in [
+                ('neither', 7, None, None, None),
+                ('neither', 7, None, 20, mpl.cm.RdBu),
+                ('both', 7, 4, 8, None),
+                ('min', 10, 4, 15, None)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(
-                    levels=levels, vmin=vmin, vmax=vmax)
+                    levels=levels, vmin=vmin, vmax=vmax, cmap=cmap)
                 assert levels >= \
                     len(primitive.norm.boundaries) - 1
                 if vmax is None:
@@ -793,7 +793,7 @@ class TestDiscreteColorMap(object):
         np.testing.assert_allclose(primitive.levels, norm.boundaries)
 
 
-class Common2dMixin(object):
+class Common2dMixin:
     """
     Common tests for 2d plotting go here.
 
@@ -1185,7 +1185,8 @@ class Common2dMixin(object):
 
     def test_2d_coord_with_interval(self):
         for dim in self.darray.dims:
-            gp = self.darray.groupby_bins(dim, range(15)).mean(dim)
+            gp = self.darray.groupby_bins(
+                dim, range(15), restore_coord_dims=True).mean(dim)
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 getattr(gp.plot, kind)()
 
@@ -1907,7 +1908,7 @@ test_da_list = [DataArray(easy_array((10, ))),
 
 
 @requires_matplotlib
-class TestAxesKwargs(object):
+class TestAxesKwargs:
     @pytest.mark.parametrize('da', test_da_list)
     @pytest.mark.parametrize('xincrease', [True, False])
     def test_xincrease_kwarg(self, da, xincrease):

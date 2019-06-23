@@ -2,15 +2,15 @@ import contextlib
 import itertools
 import math
 import os.path
-from pathlib import Path
 import pickle
 import shutil
 import sys
 import tempfile
-from typing import Optional
 import warnings
 from contextlib import ExitStack
 from io import BytesIO
+from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -18,26 +18,26 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
-    save_mfdataset)
+    DataArray, Dataset, backends, load_dataarray, load_dataset, open_dataarray,
+    open_dataset, open_mfdataset, save_mfdataset)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
+from xarray.coding.variables import SerializationWarning
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
-from xarray.coding.variables import SerializationWarning
 
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
     has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cfgrib,
-    requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
-    requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
-    requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
-    requires_zarr, requires_h5fileobj)
-from .test_coding_times import (_STANDARD_CALENDARS, _NON_STANDARD_CALENDARS,
-                                _ALL_CALENDARS)
+    requires_cftime, requires_dask, requires_h5fileobj, requires_h5netcdf,
+    requires_netCDF4, requires_pathlib, requires_pseudonetcdf, requires_pydap,
+    requires_pynio, requires_rasterio, requires_scipy,
+    requires_scipy_or_netCDF4, requires_zarr)
+from .test_coding_times import (
+    _ALL_CALENDARS, _NON_STANDARD_CALENDARS, _STANDARD_CALENDARS)
 from .test_dataset import create_test_data
 
 try:
@@ -141,13 +141,13 @@ def create_boolean_data():
     return Dataset({'x': ('t', [True, False, False, True], attributes)})
 
 
-class TestCommon(object):
+class TestCommon:
     def test_robust_getitem(self):
 
         class UnreliableArrayFailure(Exception):
             pass
 
-        class UnreliableArray(object):
+        class UnreliableArray:
             def __init__(self, array, failures=1):
                 self.array = array
                 self.failures = failures
@@ -168,11 +168,11 @@ class TestCommon(object):
         assert actual == 0
 
 
-class NetCDF3Only(object):
+class NetCDF3Only:
     pass
 
 
-class DatasetIOBase(object):
+class DatasetIOBase:
     engine = None  # type: Optional[str]
     file_format = None  # type: Optional[str]
 
@@ -1133,6 +1133,18 @@ class NetCDF4Base(CFEncodedBase):
             assert actual.x.encoding['shuffle']
 
         assert ds.x.encoding == {}
+
+    def test_keep_chunksizes_if_no_original_shape(self):
+        ds = Dataset({'x': [1, 2, 3]})
+        chunksizes = (2, )
+        ds.variables['x'].encoding = {
+            'chunksizes': chunksizes
+        }
+
+        with self.roundtrip(ds) as actual:
+            assert_identical(ds, actual)
+            assert_array_equal(ds['x'].encoding['chunksizes'],
+                               actual['x'].encoding['chunksizes'])
 
     def test_encoding_chunksizes_unlimited(self):
         # regression test for GH1225
@@ -2196,7 +2208,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
 
 
 @requires_scipy_or_netCDF4
-class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
+class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     coord_name = 'lon'
     var_name = 'v1'
 
@@ -2641,10 +2653,27 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(actual, original)
 
+    def test_load_dataset(self):
+        with create_tmp_file() as tmp:
+            original = Dataset({'foo': ('x', np.random.randn(10))})
+            original.to_netcdf(tmp)
+            ds = load_dataset(tmp)
+            # this would fail if we used open_dataset instead of load_dataset
+            ds.to_netcdf(tmp)
+
+    def test_load_dataarray(self):
+        with create_tmp_file() as tmp:
+            original = Dataset({'foo': ('x', np.random.randn(10))})
+            original.to_netcdf(tmp)
+            ds = load_dataarray(tmp)
+            # this would fail if we used open_dataarray instead of
+            # load_dataarray
+            ds.to_netcdf(tmp)
+
 
 @requires_scipy_or_netCDF4
 @requires_pydap
-class TestPydap(object):
+class TestPydap:
     def convert_to_pydap_dataset(self, original):
         from pydap.model import GridType, BaseType, DatasetType
         ds = DatasetType('bears', **original.attrs)
@@ -2777,7 +2806,7 @@ class TestPyNio(ScipyWriteBase):
 
 
 @requires_cfgrib
-class TestCfGrib(object):
+class TestCfGrib:
 
     def test_read(self):
         expected = {'number': 2, 'time': 3, 'isobaricInhPa': 2, 'latitude': 3,
@@ -2800,7 +2829,7 @@ class TestCfGrib(object):
 
 @requires_pseudonetcdf
 @pytest.mark.filterwarnings('ignore:IOAPI_ISPH is assumed to be 6370000')
-class TestPseudoNetCDFFormat(object):
+class TestPseudoNetCDFFormat:
 
     def open(self, path, **kwargs):
         return open_dataset(path, engine='pseudonetcdf', **kwargs)
@@ -3063,7 +3092,7 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
 
 
 @requires_rasterio
-class TestRasterio(object):
+class TestRasterio:
 
     @requires_scipy_or_netCDF4
     def test_serialization(self):
@@ -3492,7 +3521,7 @@ class TestRasterio(object):
                         assert_equal(expected_val, actual_val)
 
 
-class TestEncodingInvalid(object):
+class TestEncodingInvalid:
 
     def test_extract_nc4_variable_encoding(self):
         var = xr.Variable(('x',), [1, 2, 3], {}, {'foo': 'bar'})
@@ -3508,6 +3537,11 @@ class TestEncodingInvalid(object):
         encoding = _extract_nc4_variable_encoding(var, raise_on_invalid=True)
         assert {'shuffle': True} == encoding
 
+        # Variables with unlim dims must be chunked on output.
+        var = xr.Variable(('x',), [1, 2, 3], {}, {'contiguous': True})
+        encoding = _extract_nc4_variable_encoding(var, unlimited_dims=('x',))
+        assert {} == encoding
+
     def test_extract_h5nc_encoding(self):
         # not supported with h5netcdf (yet)
         var = xr.Variable(('x',), [1, 2, 3], {},
@@ -3521,7 +3555,7 @@ class MiscObject:
 
 
 @requires_netCDF4
-class TestValidateAttrs(object):
+class TestValidateAttrs:
     def test_validating_attrs(self):
         def new_dataset():
             return Dataset({'data': ('y', np.arange(10.0))},
@@ -3611,7 +3645,7 @@ class TestValidateAttrs(object):
 
 
 @requires_scipy_or_netCDF4
-class TestDataArrayToNetCDF(object):
+class TestDataArrayToNetCDF:
 
     def test_dataarray_to_netcdf_no_name(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)))

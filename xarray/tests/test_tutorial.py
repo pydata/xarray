@@ -9,7 +9,7 @@ from . import assert_identical, network
 
 
 @network
-class TestLoadDataset(object):
+class TestLoadDataset:
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.testfile = 'tiny'
