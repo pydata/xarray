@@ -3,18 +3,18 @@ parameters:
 
 steps:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
-- displayName: Add conda to PATH (Linux)
-  bash: |
+- bash: |
     echo "##vso[task.prependpath]$CONDA/bin"
+  displayName: Add conda to PATH (Linux)
   condition: eq(variables['Agent.OS'], 'Linux')
-- displayName: Add conda to PATH (OS X)
-  bash: |
+- bash: |
     echo "##vso[task.prependpath]$CONDA/bin"
     sudo chown -R $USER $CONDA
+  displayName: Add conda to PATH (OS X)
   condition: eq(variables['Agent.OS'], 'Darwin')
-- displayName: Add conda to PATH (Windows)
-  powershell: |
+- powershell: |
     Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+  displayName: Add conda to PATH (Windows)
   condition: eq(variables['Agent.OS'], 'Windows_NT')
 - bash: |
     conda env create -n test_env --file ${{ parameters.env_file }}
