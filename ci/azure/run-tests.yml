@@ -1,6 +1,6 @@
 steps:
 - bash: |
-    conda activate test_env
+    $(conda_activate)
     python -OO -c "import xarray"
     pytest xarray --cov=xarray --cov-config ci/.coveragerc --cov-report
   displayName: Run tests

@@ -1,20 +1,16 @@
 steps:
 
 - bash: |
-    conda init bash
-  displayName: Setup conda
-
-- bash: |
     conda env create -n test_env --file ci/requirements-$CONDA_ENV.yml
   displayName: Install dependencies
 
 - bash: |
-    conda activate test_env
+    $(conda_activate)
     pip install --no-deps -e .
   displayName: Install xarray
 
 - bash: |
-    conda activate test_env
+    $(conda_activate)
     conda list
     python xarray/util/print_versions.py
   displayName: Version info
