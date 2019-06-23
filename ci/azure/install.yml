@@ -18,6 +18,7 @@ steps:
 #     Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
 #   condition: eq(variables['Agent.OS'], 'Windows_NT')
 - bash: |
+    echo $ENV_FILE
     conda env create -n test_env --file $ENV_FILE
   displayName: Install dependencies
 - bash: |
