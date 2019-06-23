@@ -52,8 +52,7 @@ jobs:
 
 - job: CodeChecks
   variables:
-    py37:
-      conda_env: py37
+    conda_env: py37
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
