@@ -82,7 +82,7 @@ jobs:
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs
 
-- job: Linux-Hypothesis
+- job: LinuxHypothesis
   variables:
     conda_env: py36-hypothesis
   pool:
@@ -94,7 +94,7 @@ jobs:
       pytest properties
     displayName: Property based tests
 
-- job: Linux-AllowedFailures
+- job: LinuxAllowedFailures
   strategy:
     matrix:
       py36-pandas-dev:
