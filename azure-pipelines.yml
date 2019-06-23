@@ -5,6 +5,7 @@ pr:
   - master
 
 jobs:
+
 - job: Linux
   strategy:
     matrix:
@@ -52,7 +53,6 @@ jobs:
   - template: ci/azure/install.yml
   - template: ci/azure/run-tests.yml
 
-jobs:
 - job: CodeChecks
   variables:
     py37:
@@ -63,7 +63,6 @@ jobs:
   - template: ci/azure/install.yml
   - template: ci/azure/run-checks.yml
 
-jobs:
 - job: Docs
   pool:
     vmImage: 'ubuntu-16.04'
@@ -77,7 +76,17 @@ jobs:
       cd doc
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
 
-jobs:
+- job: Linux-Hypothesis
+  variables:
+    conda_env: py36-hypothesis
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - template: ci/azure/install.yml
+  - bash: |
+    conda activate test_env
+    pytest properties
+
 - job: Linux-AllowedFailures
   strategy:
     matrix:
@@ -89,15 +98,3 @@ jobs:
   - template: ci/azure/install.yml
   - template: ci/azure/run-tests.yml
   continueOnError: 'true'
-
-jobs:
-- job: Hypothesis
-  variables:
-    conda_env: py36-hypothesis
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/install.yml
-  - bash: |
-    conda activate test_env
-    pytest properties
