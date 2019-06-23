@@ -1,5 +1,5 @@
 parameters:
-  env_file: ci/requirements-$(conda_env).yml
+  env_file: ci/requirements-$CONDA_ENV.yml
 
 steps:
 - # https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
@@ -18,7 +18,7 @@ steps:
 #     Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
 #   condition: eq(variables['Agent.OS'], 'Windows_NT')
 - bash: |
-    conda env create -n test_env --file $(ENV_FILE)
+    conda env create -n test_env --file $ENV_FILE
   displayName: Install dependencies
 - bash: |
     source activate test_env
