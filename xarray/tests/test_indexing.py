@@ -505,11 +505,18 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support):
 
 
 def test_implicit_indexing_adapter():
-    array = np.arange(10)
+    array = np.arange(10, dtype=np.int64)
     implicit = indexing.ImplicitToExplicitIndexingAdapter(
         indexing.NumpyIndexingAdapter(array), indexing.BasicIndexer)
     np.testing.assert_array_equal(array, np.asarray(implicit))
     np.testing.assert_array_equal(array, implicit[:])
+
+
+def test_implicit_indexing_adapter_copy_on_write():
+    array = np.arange(10, dtype=np.int64)
+    implicit = indexing.ImplicitToExplicitIndexingAdapter(
+        indexing.CopyOnWriteArray(array))
+    assert isinstance(implicit[:], indexing.ImplicitToExplicitIndexingAdapter)
 
 
 def test_outer_indexer_consistency_with_broadcast_indexes_vectorized():

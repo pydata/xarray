@@ -453,7 +453,13 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
-        return self.array[self.indexer_cls(key)]
+        result = self.array[self.indexer_cls(key)]
+        if isinstance(result, ExplicitlyIndexed):
+            return type(self)(result, self.indexer_cls)
+        else:
+            # Sometimes explicitly indexed arrays return NumPy arrays or
+            # scalars.
+            return result
 
 
 class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
