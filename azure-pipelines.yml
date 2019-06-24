@@ -32,7 +32,7 @@ jobs:
       py35-min:
         conda_env: py35-min
       py37:
-        conda_env: py37
+        conda_env: py36
   pool:
     vmImage: 'macOS-10.13'
   steps:
@@ -44,7 +44,7 @@ jobs:
       py35-min:
         conda_env: py35-min
       py37:
-        conda_env: py37
+        conda_env: py36
   pool:
     vmImage: 'vs2017-win2016'
   steps:
@@ -77,7 +77,7 @@ jobs:
     parameters:
       env_file: doc/requirements.yml
   - bash: |
-      conda activate test_env
+      source activate test_env
       cd doc
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs
@@ -90,7 +90,7 @@ jobs:
   steps:
   - template: ci/azure/install.yml
   - bash: |
-      conda activate test_env
+      source activate test_env
       pytest properties
     displayName: Property based tests
 
