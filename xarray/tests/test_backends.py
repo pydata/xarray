@@ -1635,6 +1635,12 @@ class ZarrBase(CFEncodedBase):
             original = xr.concat([obj1, obj2], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
+        # check failure when append_dim not set
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                obj1.to_zarr(store_target, mode='w')
+                obj2.to_zarr(store_target, mode='a')
+
     def test_compressor_encoding(self):
         original = create_test_data()
         # specify a custom compressor

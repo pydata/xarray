@@ -165,8 +165,7 @@ class ArrayWriter:
         if isinstance(source, dask_array_type):
             self.sources.append(source)
             self.targets.append(target)
-            if region:
-                self.regions.append(region)
+            self.regions.append(region)
         else:
             if region:
                 target[region] = source
@@ -189,6 +188,7 @@ class ArrayWriter:
                                      flush=True, regions=regions)
             self.sources = []
             self.targets = []
+            self.regions = []
             return delayed_store
 
 

@@ -402,9 +402,9 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_array = self.ds[name]
                 if self.append_dim is None:
                     raise ValueError(
-                        'dimension being appended is unknown; '
-                        'did you forget to call to_zarr with append_dim '
-                        'argument?')
+                        "variable '{}' already exists, but append_dim "
+                        "was not set".format(name)
+                    )
                 if self.append_dim in dims:
                     # this is the DataArray that has append_dim as a
                     # dimension
