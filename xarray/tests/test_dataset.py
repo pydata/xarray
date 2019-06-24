@@ -23,7 +23,7 @@ from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_cftime, requires_dask,
-    requires_scipy, source_ndarray)
+    requires_numbagg, requires_scipy, source_ndarray)
 
 try:
     import dask.array as da
@@ -3898,6 +3898,25 @@ class TestDataset:
         with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
             ds.reduce(total_sum, dim='x')
 
+    def test_reduce_keepdims(self):
+        ds = Dataset({'a': (['x', 'y'], [[0, 1, 2, 3, 4]])},
+                     coords={'y': [0, 1, 2, 3, 4], 'x': [0],
+                             'lat': (['x', 'y'], [[0, 1, 2, 3, 4]]),
+                             'c': -999.0})
+
+        # Shape should match behaviour of numpy reductions with keepdims=True
+        # Coordinates involved in the reduction should be removed
+        actual = ds.mean(keepdims=True)
+        expected = Dataset({'a': (['x', 'y'], np.mean(ds.a, keepdims=True))},
+                           coords={'c': ds.c})
+        assert_identical(expected, actual)
+
+        actual = ds.mean('x', keepdims=True)
+        expected = Dataset({'a': (['x', 'y'],
+                                  np.mean(ds.a, axis=0, keepdims=True))},
+                           coords={'y': ds.y, 'c': ds.c})
+        assert_identical(expected, actual)
+
     def test_quantile(self):
 
         ds = create_test_data(seed=123)
@@ -4807,6 +4826,13 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     rolling_obj = ds.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, ds['time'])
+
+
+@requires_numbagg
+def test_rolling_exp(ds):
+
+    result = ds.rolling_exp(time=10, window_type='span').mean()
+    assert isinstance(result, Dataset)
 
 
 @pytest.mark.parametrize('center', (True, False))

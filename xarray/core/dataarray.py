@@ -302,8 +302,14 @@ class DataArray(AbstractArray, DataWithCoords):
             self, variable: Variable,
             name: Union[str, None, utils.ReprObject] = __default
     ) -> 'DataArray':
-        if variable.dims == self.dims:
+        if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
+        elif variable.dims == self.dims:
+            # Shape has changed (e.g. from reduce(..., keepdims=True)
+            new_sizes = dict(zip(self.dims, variable.shape))
+            coords = OrderedDict((k, v) for k, v in self._coords.items()
+                                 if v.shape == tuple(new_sizes[d]
+                                                     for d in v.dims))
         else:
             allowed_dims = set(variable.dims)
             coords = OrderedDict((k, v) for k, v in self._coords.items()
@@ -1748,6 +1754,7 @@ class DataArray(AbstractArray, DataWithCoords):
                dim: Union[None, Hashable, Sequence[Hashable]] = None,
                axis: Union[None, int, Sequence[int]] = None,
                keep_attrs: Optional[bool] = None,
+               keepdims: bool = False,
                **kwargs: Any) -> 'DataArray':
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -1768,6 +1775,10 @@ class DataArray(AbstractArray, DataWithCoords):
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        keepdims : bool, default False
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one. Coordinates that use these dimensions
+            are removed.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1777,7 +1788,9 @@ class DataArray(AbstractArray, DataWithCoords):
             DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-        var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
+
+        var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims,
+                                   **kwargs)
         return self._replace_maybe_drop_dims(var)
 
     def to_pandas(self) -> Union[

@@ -45,6 +45,8 @@ For accelerating xarray
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
   (1.1 or later)
+- `numbagg <https://github.com/shoyer/numbagg>`_: for exponential rolling
+  window operations
 
 For parallel computing
 ~~~~~~~~~~~~~~~~~~~~~~
