@@ -8,7 +8,7 @@ steps:
     source activate test_env
     pytest xarray --junitxml=junit/test-results.xml \
     --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
-    --cov-report=html $EXTRA_FLAGS
+    --cov-report=html --cov-append $EXTRA_FLAGS
   displayName: Run tests
 - task: PublishCodeCoverageResults@1
   inputs:
