@@ -23,7 +23,7 @@ from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_cftime, requires_dask,
-    requires_scipy, source_ndarray)
+    requires_numbagg, requires_scipy, source_ndarray)
 
 try:
     import dask.array as da
@@ -4826,6 +4826,13 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     rolling_obj = ds.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, ds['time'])
+
+
+@requires_numbagg
+def test_rolling_exp(ds):
+
+    result = ds.rolling_exp(time=10, window_type='span').mean()
+    assert isinstance(result, Dataset)
 
 
 @pytest.mark.parametrize('center', (True, False))

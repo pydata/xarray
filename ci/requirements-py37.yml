@@ -30,3 +30,4 @@ dependencies:
   - pydap
   - pip:
     - mypy==0.650
+    - numbagg
