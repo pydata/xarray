@@ -1540,6 +1540,42 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
+    def test_reduce_keepdims(self):
+        v = Variable(['x', 'y'], self.d)
+
+        assert_identical(v.mean(keepdims=True),
+                         Variable(v.dims, np.mean(self.d, keepdims=True)))
+        assert_identical(v.mean(dim='x', keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=0,
+                                  keepdims=True)))
+        assert_identical(v.mean(dim='y', keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=1,
+                                  keepdims=True)))
+        assert_identical(v.mean(dim=['y', 'x'], keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=(1, 0),
+                                  keepdims=True)))
+
+        v = Variable([], 1.0)
+        assert_identical(v.mean(keepdims=True),
+                         Variable([], np.mean(v.data, keepdims=True)))
+
+    @requires_dask
+    def test_reduce_keepdims_dask(self):
+        import dask.array
+        v = Variable(['x', 'y'], self.d).chunk()
+
+        actual = v.mean(keepdims=True)
+        assert isinstance(actual.data, dask.array.Array)
+
+        expected = Variable(v.dims, np.mean(self.d, keepdims=True))
+        assert_identical(actual, expected)
+
+        actual = v.mean(dim='y', keepdims=True)
+        assert isinstance(actual.data, dask.array.Array)
+
+        expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
+        assert_identical(actual, expected)
+
     def test_reduce_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}
 

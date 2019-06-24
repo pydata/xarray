@@ -1859,19 +1859,34 @@ class TestDataArray:
         with pytest.raises(ValueError):
             arr.drop('not found')
 
+        actual = expected.drop('not found', errors='ignore')
+        assert_identical(actual, expected)
+
         with raises_regex(ValueError, 'cannot be found'):
             arr.drop(None)
+
+        actual = expected.drop(None, errors='ignore')
+        assert_identical(actual, expected)
 
         renamed = arr.rename('foo')
         with raises_regex(ValueError, 'cannot be found'):
             renamed.drop('foo')
+
+        actual = renamed.drop('foo', errors='ignore')
+        assert_identical(actual, renamed)
 
     def test_drop_index_labels(self):
         arr = DataArray(np.random.randn(2, 3), coords={'y': [0, 1, 2]},
                         dims=['x', 'y'])
         actual = arr.drop([0, 1], dim='y')
         expected = arr[:, 2:]
-        assert_identical(expected, actual)
+        assert_identical(actual, expected)
+
+        with raises_regex((KeyError, ValueError), 'not .* in axis'):
+            actual = arr.drop([0, 1, 3], dim='y')
+
+        actual = arr.drop([0, 1, 3], dim='y', errors='ignore')
+        assert_identical(actual, expected)
 
     def test_dropna(self):
         x = np.random.randn(4, 4)
@@ -1974,6 +1989,44 @@ class TestDataArray:
         actual = orig.mean(dim='x', skipna=True)
         expected = DataArray(orig.values.astype(int),
                              dims=['x', 'y']).mean('x')
+        assert_equal(actual, expected)
+
+    def test_reduce_keepdims(self):
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        # Mean on all axes loses non-constant coordinates
+        actual = orig.mean(keepdims=True)
+        expected = DataArray(orig.data.mean(keepdims=True), dims=orig.dims,
+                             coords={k: v for k, v in coords.items()
+                                     if k in ['c']})
+        assert_equal(actual, expected)
+
+        assert actual.sizes['x'] == 1
+        assert actual.sizes['y'] == 1
+
+        # Mean on specific axes loses coordinates not involving that axis
+        actual = orig.mean('y', keepdims=True)
+        expected = DataArray(orig.data.mean(axis=1, keepdims=True),
+                             dims=orig.dims,
+                             coords={k: v for k, v in coords.items()
+                                     if k not in ['y', 'lat']})
+        assert_equal(actual, expected)
+
+    @requires_bottleneck
+    def test_reduce_keepdims_bottleneck(self):
+        import bottleneck
+
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        # Bottleneck does not have its own keepdims implementation
+        actual = orig.reduce(bottleneck.nanmean, keepdims=True)
+        expected = orig.mean(keepdims=True)
         assert_equal(actual, expected)
 
     def test_reduce_dtype(self):

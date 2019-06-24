@@ -2,6 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -67,7 +68,7 @@ def _infer_coords_and_dims(shape, coords, dims):
         for dim, coord in zip(dims, coords):
             var = as_variable(coord, name=dim)
             var.dims = (dim,)
-            new_coords[dim] = var
+            new_coords[dim] = var.to_index_variable()
 
     sizes = dict(zip(dims, shape))
     for k, v in new_coords.items():
@@ -258,8 +259,14 @@ class DataArray(AbstractArray, DataWithCoords):
         return type(self)(variable, coords, name=name, fastpath=True)
 
     def _replace_maybe_drop_dims(self, variable, name=__default):
-        if variable.dims == self.dims:
+        if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
+        elif variable.dims == self.dims:
+            # Shape has changed (e.g. from reduce(..., keepdims=True)
+            new_sizes = dict(zip(self.dims, variable.shape))
+            coords = OrderedDict((k, v) for k, v in self._coords.items()
+                                 if v.shape == tuple(new_sizes[d]
+                                                     for d in v.dims))
         else:
             allowed_dims = set(variable.dims)
             coords = OrderedDict((k, v) for k, v in self._coords.items()
@@ -1442,7 +1449,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = {}
+            coords = OrderedDict()  # type: OrderedDict[Any, Variable]
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
@@ -1461,7 +1468,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> 'DataArray':
         return self.transpose()
 
-    def drop(self, labels, dim=None):
+    def drop(self, labels, dim=None, *, errors='raise'):
         """Drop coordinates or index labels from this DataArray.
 
         Parameters
@@ -1471,14 +1478,18 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.
-
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the coordinates or index labels passed are not
+            in the array. If 'ignore', any given labels that are in the
+            array are dropped and no error is raised.
         Returns
         -------
         dropped : DataArray
         """
         if utils.is_scalar(labels):
             labels = [labels]
-        ds = self._to_temp_dataset().drop(labels, dim)
+        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
         return self._from_temp_dataset(ds)
 
     def dropna(self, dim, how='any', thresh=None):
@@ -1637,7 +1648,8 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return ops.fillna(self, other, join="outer")
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=None, **kwargs):
+    def reduce(self, func, dim=None, axis=None, keep_attrs=None,
+               keepdims=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1657,6 +1669,10 @@ class DataArray(AbstractArray, DataWithCoords):
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        keepdims : bool, default False
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one. Coordinates that use these dimensions
+            are removed.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1667,7 +1683,8 @@ class DataArray(AbstractArray, DataWithCoords):
             summarized data and the indicated dimension(s) removed.
         """
 
-        var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
+        var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims,
+                                   **kwargs)
         return self._replace_maybe_drop_dims(var)
 
     def to_pandas(self):
