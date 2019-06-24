@@ -21,7 +21,8 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-
+- New :py:meth:`~xarray.GroupBy.quantile` method. (:issue:`3018`)
+  By `David Huard <https://github.com/huard>`_.
 - Add ``keepdims`` argument for reduce operations (:issue:`2170`)
   By `Scott Wales <https://github.com/ScottWales>`_.
 - netCDF chunksizes are now only dropped when original_shape is different,
@@ -90,7 +91,7 @@ Bug fixes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Fixed performance issues with cftime installed (:issue:`3000`)
   By `0x0L <https://github.com/0x0L>`_.
-- Replace incorrect usages of `message` in pytest assertions 
+- Replace incorrect usages of `message` in pytest assertions
   with `match` (:issue:`3011`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add explicit pytest markers, now required by pytest
