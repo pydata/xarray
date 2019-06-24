@@ -1,8 +1,9 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
-from typing import (Any, Callable, Hashable, Iterable, Iterator, List, Mapping,
-                    MutableMapping, Optional, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, Hashable, Iterable, Iterator, List, Mapping, MutableMapping,
+    Optional, Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -11,8 +12,8 @@ from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type
+from .rolling_exp import RollingExp
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
-
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
@@ -86,6 +87,7 @@ class ImplementsDatasetReduce:
 class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable.
     """
+
     def __bool__(self: Any) -> bool:
         return bool(self.values)
 
@@ -248,6 +250,8 @@ def get_squeeze_dims(xarray_obj,
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
+
+    _rolling_exp_cls = RollingExp
 
     def squeeze(self, dim: Union[Hashable, Iterable[Hashable], None] = None,
                 drop: bool = False,
@@ -441,7 +445,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze: bool = True):
+    def groupby(self, group, squeeze: bool = True,
+                restore_coord_dims: Optional[bool] = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -453,6 +458,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
 
         Returns
         -------
@@ -485,11 +493,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
         """  # noqa
-        return self._groupby_cls(self, group, squeeze=squeeze)
+        return self._groupby_cls(self, group, squeeze=squeeze,
+                                 restore_coord_dims=restore_coord_dims)
 
     def groupby_bins(self, group, bins, right: bool = True, labels=None,
                      precision: int = 3, include_lowest: bool = False,
-                     squeeze: bool = True):
+                     squeeze: bool = True,
+                     restore_coord_dims: Optional[bool] = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -522,6 +532,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
 
         Returns
         -------
@@ -536,13 +549,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                 restore_coord_dims=restore_coord_dims,
                                  cut_kwargs={'right': right, 'labels': labels,
                                              'precision': precision,
-                                             'include_lowest': include_lowest})
+                                             'include_lowest':
+                                                 include_lowest})
 
     def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
                 min_periods: Optional[int] = None, center: bool = False,
-                **dim_kwargs: int):
+                **window_kwargs: int):
         """
         Rolling window object.
 
@@ -557,9 +572,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **dim_kwargs : optional
+        **window_kwargs : optional
             The keyword arguments form of ``dim``.
-            One of dim or dim_kwargs must be provided.
+            One of dim or window_kwargs must be provided.
 
         Returns
         -------
@@ -598,15 +613,54 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """  # noqa
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
+        dim = either_dict_or_kwargs(dim, window_kwargs, 'rolling')
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
+
+    def rolling_exp(
+        self,
+        window: Optional[Mapping[Hashable, int]] = None,
+        window_type: str = 'span',
+        **window_kwargs
+    ):
+        """
+        Exponentially-weighted moving window.
+        Similar to EWM in pandas
+
+        Requires the optional Numbagg dependency.
+
+        Parameters
+        ----------
+        window : A single mapping from a dimension name to window value,
+                 optional
+            dim : str
+                Name of the dimension to create the rolling exponential window
+                along (e.g., `time`).
+            window : int
+                Size of the moving window. The type of this is specified in
+                `window_type`
+        window_type : str, one of ['span', 'com', 'halflife', 'alpha'],
+                      default 'span'
+            The format of the previously supplied window. Each is a simple
+            numerical transformation of the others. Described in detail:
+            https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+        **window_kwargs : optional
+            The keyword arguments form of ``window``.
+            One of window or window_kwargs must be provided.
+
+        See Also
+        --------
+        core.rolling_exp.RollingExp
+        """
+        window = either_dict_or_kwargs(window, window_kwargs, 'rolling_exp')
+
+        return self._rolling_exp_cls(self, window, window_type)
 
     def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
                 boundary: str = 'exact',
                 side: Union[str, Mapping[Hashable, str]] = 'left',
                 coord_func: str = 'mean',
-                **dim_kwargs: int):
+                **window_kwargs: int):
         """
         Coarsen object.
 
@@ -660,7 +714,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        dim = either_dict_or_kwargs(dim, window_kwargs, 'coarsen')
         return self._coarsen_cls(
             self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
@@ -669,7 +723,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                  skipna=None, closed: Optional[str] = None,
                  label: Optional[str] = None,
                  base: int = 0, keep_attrs: Optional[bool] = None,
-                 loffset=None,
+                 loffset=None, restore_coord_dims: Optional[bool] = None,
                  **indexer_kwargs: str):
         """Returns a Resample object for performing resampling operations.
 
@@ -697,6 +751,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
         **indexer_kwargs : {dim: freq}
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
@@ -786,7 +843,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                           dims=dim_coord.dims, name=RESAMPLE_DIM)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
-                                       resample_dim=RESAMPLE_DIM)
+                                       resample_dim=RESAMPLE_DIM,
+                                       restore_coord_dims=restore_coord_dims)
 
         return resampler
 

@@ -8,16 +8,16 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray
+from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
     import_seaborn, label_from_attrs)
 
 from . import (
-    assert_array_equal, assert_equal, raises_regex, requires_cftime,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn,
-    requires_nc_time_axis)
-from . import has_nc_time_axis
+    assert_array_equal, assert_equal, has_nc_time_axis, raises_regex,
+    requires_cftime, requires_matplotlib, requires_matplotlib2,
+    requires_nc_time_axis, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -210,7 +210,8 @@ class TestPlot(PlotTestCase):
         hdl = da.plot.line(x='lon', hue='y')
         assert len(hdl) == 4
 
-        with pytest.raises(ValueError, message='If x or y are 2D '):
+        with pytest.raises(
+                ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x='lon', hue='lat')
 
     def test_2d_before_squeeze(self):
@@ -537,25 +538,6 @@ class TestDetermineCmapParams:
             cmap_params = _determine_cmap_params(self.data)
             assert cmap_params['cmap'] == 'magma'
 
-    def test_do_nothing_if_provided_cmap(self):
-        cmap_list = [
-            mpl.colors.LinearSegmentedColormap.from_list('name', ['r', 'g']),
-            mpl.colors.ListedColormap(['r', 'g', 'b'])
-        ]
-
-        # can't parametrize with mpl objects when mpl is absent
-        for cmap in cmap_list:
-            cmap_params = _determine_cmap_params(self.data,
-                                                 cmap=cmap,
-                                                 levels=7)
-            assert cmap_params['cmap'] is cmap
-
-    def test_do_something_if_provided_str_cmap(self):
-        cmap = 'RdBu_r'
-        cmap_params = _determine_cmap_params(self.data, cmap=cmap, levels=7)
-        assert cmap_params['cmap'] is not cmap
-        assert isinstance(cmap_params['cmap'], mpl.colors.ListedColormap)
-
     def test_cmap_sequential_explicit_option(self):
         with xr.set_options(cmap_sequential=mpl.cm.magma):
             cmap_params = _determine_cmap_params(self.data)
@@ -775,13 +757,14 @@ class TestDiscreteColorMap:
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
-        for extend, levels, vmin, vmax in [('neither', 7, None, None),
-                                           ('neither', 7, None, 20),
-                                           ('both', 7, 4, 8),
-                                           ('min', 10, 4, 15)]:
+        for extend, levels, vmin, vmax, cmap in [
+                ('neither', 7, None, None, None),
+                ('neither', 7, None, 20, mpl.cm.RdBu),
+                ('both', 7, 4, 8, None),
+                ('min', 10, 4, 15, None)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(
-                    levels=levels, vmin=vmin, vmax=vmax)
+                    levels=levels, vmin=vmin, vmax=vmax, cmap=cmap)
                 assert levels >= \
                     len(primitive.norm.boundaries) - 1
                 if vmax is None:
@@ -1202,7 +1185,8 @@ class Common2dMixin:
 
     def test_2d_coord_with_interval(self):
         for dim in self.darray.dims:
-            gp = self.darray.groupby_bins(dim, range(15)).mean(dim)
+            gp = self.darray.groupby_bins(
+                dim, range(15), restore_coord_dims=True).mean(dim)
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 getattr(gp.plot, kind)()
 
