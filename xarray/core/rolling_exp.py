@@ -57,7 +57,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     return float(comass)
 
 
-class RollingExp(object):
+class RollingExp:
     """
     Exponentially-weighted moving window object.
     Similar to EWM in pandas
@@ -82,7 +82,6 @@ class RollingExp(object):
     -------
     RollingExp : type of input argument
     """  # noqa
-    _attributes = ['alpha', 'dim']
 
     def __init__(self, obj, windows, window_type='span'):
         self.obj = obj
