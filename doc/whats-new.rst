@@ -77,8 +77,7 @@ Bug fixes
 ~~~~~~~~~
 
 - Don't set encoding attributes on bounds variables when writing to netCDF.
-  :py:meth:`xr.open_mfdataset` sets variable encodings to that of variables
-  in first file.(:issue:`2436`, :issue:`2921`)
+  (:issue:`2921`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - NetCDF4 output: variables with unlimited dimensions must be chunked (not
   contiguous) on output. (:issue:`1849`)
