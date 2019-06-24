@@ -2,20 +2,7 @@ parameters:
   env_file: ci/requirements-$CONDA_ENV.yml
 
 steps:
-# https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/anaconda
-- bash: |
-    echo "##vso[task.prependpath]$CONDA/bin"
-  displayName: Add conda to PATH (Linux)
-  condition: eq(variables['Agent.OS'], 'Linux')
-- bash: |
-    echo "##vso[task.prependpath]$CONDA/bin"
-    sudo chown -R $USER $CONDA
-  displayName: Add conda to PATH (OS X)
-  condition: eq(variables['Agent.OS'], 'Darwin')
-- powershell: |
-    Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
-  displayName: Add conda to PATH (Windows)
-  condition: eq(variables['Agent.OS'], 'Windows_NT')
+- template: add-conda-to-path.yml
 - bash: |
     conda env create -n test_env --file ${{ parameters.env_file }}
   displayName: Install dependencies
