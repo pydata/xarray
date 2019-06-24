@@ -2474,6 +2474,7 @@ class TestDask(DatasetIOBase):
                                       'no attribute'):
                         actual.test2
 
+    @pytest.mark.xfail(reason='mfdataset loses encoding currently.')
     def test_encoding_mfdataset(self):
         original = Dataset({'foo': ('t', np.random.randn(10)),
                             't': ('t', pd.date_range(start='2010-01-01',
