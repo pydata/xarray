@@ -1023,7 +1023,7 @@ def _validate_datatypes_for_zarr_append(dataset):
         if (not np.issubdtype(var.dtype, np.number)
                 and not np.issubdtype(var.dtype, np.string_)):
             # and not re.match('^bytes[1-9]+$', var.dtype.name)):
-            raise ValueError('Invalid dtype for DataVariable: {} '
+            raise ValueError('Invalid dtype for data variable: {} '
                              'dtype must be a subtype of number or '
                              'a fixed sized string'.format(var))
     for k in dataset.data_vars.values():
