@@ -16,6 +16,7 @@ matrix:
   - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
+  - env: CONDA_ENV=py36-dask-dev
   - env: CONDA_ENV=py36-pandas-dev
   - env: CONDA_ENV=py36-rasterio
   - env: CONDA_ENV=py36-zarr-dev
@@ -25,7 +26,6 @@ matrix:
   - env: CONDA_ENV=py36-hypothesis
 
   allow_failures:
-  - env: CONDA_ENV=py36-dask-dev
   - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"

@@ -148,6 +148,7 @@ Computation
    Dataset.groupby
    Dataset.groupby_bins
    Dataset.rolling
+   Dataset.rolling_exp
    Dataset.coarsen
    Dataset.resample
    Dataset.diff
@@ -189,6 +190,7 @@ Computation
 :py:attr:`~core.groupby.DatasetGroupBy.last`
 :py:attr:`~core.groupby.DatasetGroupBy.fillna`
 :py:attr:`~core.groupby.DatasetGroupBy.where`
+:py:attr:`~core.groupby.DatasetGroupBy.quantile`
 
 Reshaping and reorganizing
 --------------------------
@@ -315,6 +317,7 @@ Computation
    DataArray.groupby
    DataArray.groupby_bins
    DataArray.rolling
+   DataArray.rolling_exp
    DataArray.coarsen
    DataArray.dt
    DataArray.resample
@@ -360,7 +363,7 @@ Computation
 :py:attr:`~core.groupby.DataArrayGroupBy.last`
 :py:attr:`~core.groupby.DataArrayGroupBy.fillna`
 :py:attr:`~core.groupby.DataArrayGroupBy.where`
-
+:py:attr:`~core.groupby.DataArrayGroupBy.quantile`
 
 Reshaping and reorganizing
 --------------------------
@@ -535,6 +538,7 @@ Rolling objects
    core.rolling.DatasetRolling
    core.rolling.DatasetRolling.construct
    core.rolling.DatasetRolling.reduce
+   core.rolling_exp.RollingExp
 
 Resample objects
 ================
