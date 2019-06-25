@@ -632,7 +632,7 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         if you want to stack a collection of 2D arrays along a third dimension.
         Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation along a particular dimension.
-    combine : {'nested', 'manual'}, optional
+    combine : {'by_coords', 'nested'}, optional
         Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is 
         used to combine all the data. If this argument is not provided, 
         `xarray.auto_combine` is used, but in the future this behavior will 
