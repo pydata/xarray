@@ -2212,6 +2212,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return ds.interp(numeric_coords, method, assume_sorted, kwargs)
 
     # Helper methods for rename()
+    def _rename_var_dims_only(self, name_dict):
+        variables = OrderedDict()
+        coord_names = set()
+        for k, v in self.variables.items():
+            dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
+            var = v.copy(deep=False)
+            var.dims = dims
+            variables[k] = var
+        return variables
+
+    def _rename_vars_only(self, name_dict):
+        variables = OrderedDict()
+        coord_names = set()
+        for k, v in self.variables.items():
+            name = name_dict.get(k, k)
+            var = v.copy(deep=False)
+            if name in variables:
+                raise ValueError('the new name %r conflicts' % (name,))
+            variables[name] = var
+            if k in self._coord_names:
+                coord_names.add(name)
+        return variables, coord_names
+
     def _rename_vars(self, name_dict):
         variables = OrderedDict()
         coord_names = set()
@@ -2251,7 +2274,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes = self._rename_indexes(name_dict)
         return variables, coord_names, dims, indexes
 
-    def rename(self, name_dict=None, inplace=None, **names):
+    def rename(self, name_dict=None, **names):
         """Returns a new object with renamed variables and dimensions.
 
         Parameters
@@ -2259,9 +2282,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         name_dict : dict-like, optional
             Dictionary whose keys are current variable or dimension names and
             whose values are the desired names.
-        inplace : bool, optional
-            If True, rename variables and dimensions in-place. Otherwise,
-            return a new dataset object.
         **names, optional
             Keyword form of ``name_dict``.
             One of name_dict or names must be provided.
@@ -2278,8 +2298,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.rename_dims
         DataArray.rename
         """
-
-        inplace = _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
         for k, v in name_dict.items():
             if k not in self and k not in self.dims:
@@ -2289,10 +2307,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables, coord_names, dims, indexes = self._rename_all(
             name_dict=name_dict)
         return self._replace(variables, coord_names, dims=dims,
-                             indexes=indexes, inplace=inplace)
+                             indexes=indexes)
 
 
-    def rename_dims(self, name_dict=None, inplace=None, **names):
+    def rename_dims(self, name_dict=None, **names):
         """Returns a new object with renamed dimensions only.
 
         Parameters
@@ -2300,9 +2318,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         name_dict : dict-like, optional
             Dictionary whose keys are current dimension names and
             whose values are the desired names.
-        inplace : bool, optional
-            If True, rename imensions in-place. Otherwise,
-            return a new dataset object.
         **names, optional
             Keyword form of ``name_dict``.
             One of name_dict or names must be provided.
@@ -2319,7 +2334,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.rename_vars
         DataArray.rename
         """
-        inplace = _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
         for k, v in name_dict.items():
             if k not in self.dims:
@@ -2327,21 +2341,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                                  "dimension in this dataset" % k)
 
         dims = self._rename_dims(name_dict)
+        variables = self._rename_var_dims_only(name_dict) 
         indexes = self._rename_indexes(name_dict)
-        return self._replace(dims=dims, indexes=indexes, inplace=inplace)
+        return self._replace(variables, dims=dims, indexes=indexes)
 
 
-    def rename_vars(self, name_dict=None, inplace=None, **names):
-        """Returns a new object with renamed variables and coordinates
+    def rename_vars(self, name_dict=None, **names):
+        """Returns a new object with renamed variables including coordinates
 
         Parameters
         ----------
         name_dict : dict-like, optional
             Dictionary whose keys are current variable or coordinate names and
             whose values are the desired names.
-        inplace : bool, optional
-            If True, rename variables and dimensions in-place. Otherwise,
-            return a new dataset object.
         **names, optional
             Keyword form of ``name_dict``.
             One of name_dict or names must be provided.
@@ -2349,7 +2361,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         renamed : Dataset
-            Dataset with renamed variables and coordinates
+            Dataset with renamed variables including coordinates
 
         See Also
         --------
@@ -2358,15 +2370,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.rename_dims
         DataArray.rename
         """
-
-        inplace = _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
         for k, v in name_dict.items():
             if k not in self:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable or coordinate in this dataset" % k)
-        variables, coord_names = self._rename_vars(name_dict)
-        return self._replace(variables, coord_names, inplace=inplace)
+        variables, coord_names = self._rename_vars_only(name_dict)
+        return self._replace(variables, coord_names)
 
 
     def swap_dims(self, dims_dict, inplace=None):
