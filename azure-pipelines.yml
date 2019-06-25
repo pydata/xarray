@@ -109,6 +109,8 @@ stages:
 
 - stage: Coverage
   - job: Coverage
+    pool:
+      vmImage: 'ubuntu-16.04'
     steps:
     - task: PublishCodeCoverageResults@1
       inputs:
