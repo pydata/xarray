@@ -338,14 +338,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _coarsen_cls = rolling.DatasetCoarsen
     _resample_cls = resample.DatasetResample
 
-    def __init__(self,
-                 data_vars: Optional[Mapping[Hashable, Union[
-                     'DataArray', Variable,
-                     Tuple[Hashable, Any],
-                     Tuple[Tuple[Hashable, ...], Any]]]] = None,
-                 coords: Optional[Mapping[Hashable, Any]] = None,
-                 attrs: Optional[Mapping] = None,
-                 compat=None):
+    def __init__(
+        self,
+        # could make a VariableArgs to use more generally
+        data_vars: Optional[Mapping[Hashable, Union[
+            'DataArray',
+            Variable,
+            Tuple[Hashable, Any],
+            Tuple[Sequence],
+            Tuple[Tuple[Hashable, ...], Any],
+        ]]] = None,
+        coords: Optional[Mapping[Hashable, Any]] = None,
+        attrs: Optional[Mapping] = None,
+        compat=None,
+    ):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 

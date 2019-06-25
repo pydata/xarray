@@ -185,19 +185,23 @@ class DataArray(AbstractArray, DataWithCoords):
 
     dt = property(DatetimeAccessor)
 
-    def __init__(self, data: Any,
-                 coords: Union[
-                     Sequence[Tuple],
-                     Mapping[Hashable, Any],
-                     None,
-                 ] = None,
-                 dims: Union[Hashable, Sequence[Hashable], None] = None,
-                 name: Optional[Hashable] = None,
-                 attrs: Optional[Mapping] = None,
-                 # deprecated parameters
-                 encoding=None,
-                 # internal parameters
-                 indexes=None, fastpath: bool = False):
+    def __init__(
+        self,
+        data: Any,
+        coords: Union[
+            Sequence[Tuple],
+            Mapping[Hashable, Any],
+            None,
+        ] = None,
+        dims: Union[Hashable, Sequence[Hashable], None] = None,
+        name: Optional[Hashable] = None,
+        attrs: Optional[Mapping] = None,
+        # deprecated parameters
+        encoding=None,
+        # internal parameters
+        indexes=None,
+        fastpath: bool = False,
+    ):
         """
         Parameters
         ----------
