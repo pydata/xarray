@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
 def _infer_coords_and_dims(
         shape, coords, dims
-) -> 'Tuple[OrderedDict[Hashable, Variable], Tuple[Hashable, ...]]':
+) -> 'Tuple[OrderedDict[Any, Variable], Tuple[Hashable, ...]]':
     """All the logic for creating a new DataArray"""
 
     if (coords is not None and not utils.is_dict_like(coords) and
@@ -77,7 +77,7 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError('dimension %s is not a string' % d)
 
-    new_coords = OrderedDict()  # type: OrderedDict[Hashable, Variable]
+    new_coords = OrderedDict()  # type: OrderedDict[Any, Variable]
 
     if utils.is_dict_like(coords):
         for k, v in coords.items():
@@ -273,7 +273,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # These fully describe a DataArray
         self._variable = variable  # type: Variable
         assert isinstance(coords, OrderedDict)
-        self._coords = coords  # type: OrderedDict[Hashable, Variable]
+        self._coords = coords  # type: OrderedDict[Any, Variable]
         self._name = name  # type: Optional[str]
 
         # TODO(shoyer): document this argument, once it becomes part of the
@@ -326,7 +326,7 @@ class DataArray(AbstractArray, DataWithCoords):
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
-        dim_names = {}  # type: Dict[Hashable, str]
+        dim_names = {}  # type: Dict[Any, str]
         for dim, idx in indexes.items():
             if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
                 dim_names[dim] = idx.name
@@ -505,11 +505,11 @@ class DataArray(AbstractArray, DataWithCoords):
             return dict(zip(self.dims, key))
 
     @property
-    def _level_coords(self) -> 'OrderedDict[Hashable, Hashable]':
+    def _level_coords(self) -> 'OrderedDict[Any, Hashable]':
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
-        level_coords = OrderedDict()  # type: OrderedDict[Hashable, Hashable]
+        level_coords = OrderedDict()  # type: OrderedDict[Any, Hashable]
 
         for cname, var in self._coords.items():
             if var.ndim == 1 and isinstance(var, IndexVariable):
@@ -579,7 +579,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return _LocIndexer(self)
 
     @property
-    def attrs(self) -> 'OrderedDict[Hashable, Any]':
+    def attrs(self) -> 'OrderedDict[Any, Any]':
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
@@ -589,7 +589,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self.variable.attrs = value  # type: ignore
 
     @property
-    def encoding(self) -> 'OrderedDict[Hashable, Any]':
+    def encoding(self) -> 'OrderedDict[Any, Any]':
         """Dictionary of format-specific settings for how this array should be
         serialized."""
         return self.variable.encoding

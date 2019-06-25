@@ -711,7 +711,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> 'OrderedDict[Hashable, Any]':
+    def attrs(self) -> 'OrderedDict[Any, Any]':
         """Dictionary of local attributes on this variable.
         """
         if self._attrs is None:
