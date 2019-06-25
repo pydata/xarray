@@ -109,6 +109,7 @@ stages:
 
 - stage: Coverage
   - job: Coverage
+    steps:
     - task: PublishCodeCoverageResults@1
       inputs:
         codeCoverageTool: Cobertura
