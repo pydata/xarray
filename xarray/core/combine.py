@@ -216,8 +216,8 @@ def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
         except ValueError as err:
             if "encountered unexpected variable" in str(err):
                 raise ValueError("These objects cannot be combined using only "
-                                 "xarray.combine_manual, instead either use "
-                                 "xarray.combine_auto, or do it manually "
+                                 "xarray.combine_nested, instead either use "
+                                 "xarray.combine_by_coords, or do it manually "
                                  "with xarray.concat, xarray.merge and "
                                  "xarray.align")
             else:
@@ -233,7 +233,7 @@ def _new_tile_id(single_id_ds_pair):
     return tile_id[1:]
 
 
-def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids,
+def _nested_combine(datasets, concat_dims, compat, data_vars, coords, ids,
                     fill_value=dtypes.NA):
 
     if len(datasets) == 0:
@@ -259,7 +259,7 @@ def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids,
     return combined
 
 
-def combine_manual(datasets, concat_dim, compat='no_conflicts',
+def combine_nested(datasets, concat_dim, compat='no_conflicts',
                    data_vars='all', coords='different', fill_value=dtypes.NA):
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
@@ -335,7 +335,7 @@ def combine_manual(datasets, concat_dim, compat='no_conflicts',
       precipitation     (x, y) float64 5.904 2.453 3.404 ...
 
     >>> ds_grid = [[x1y1, x1y2], [x2y1, x2y2]]
-    >>> combined = xr.combine_manual(ds_grid, concat_dim=['x', 'y'])
+    >>> combined = xr.combine_nested(ds_grid, concat_dim=['x', 'y'])
     <xarray.Dataset>
     Dimensions:         (x: 4, y: 4)
     Dimensions without coordinates: x, y
@@ -364,7 +364,7 @@ def combine_manual(datasets, concat_dim, compat='no_conflicts',
       precipitation     (t) float64 5.904 2.453 3.404 ...
 
     >>> ds_grid = [[t1temp, t1precip], [t2temp, t2precip]]
-    >>> combined = xr.combine_manual(ds_grid, concat_dim=['t', None])
+    >>> combined = xr.combine_nested(ds_grid, concat_dim=['t', None])
     <xarray.Dataset>
     Dimensions:         (t: 10)
     Dimensions without coordinates: t
@@ -382,7 +382,7 @@ def combine_manual(datasets, concat_dim, compat='no_conflicts',
         concat_dim = [concat_dim]
 
     # The IDs argument tells _manual_combine that datasets aren't yet sorted
-    return _manual_combine(datasets, concat_dims=concat_dim, compat=compat,
+    return _nested_combine(datasets, concat_dims=concat_dim, compat=compat,
                            data_vars=data_vars, coords=coords, ids=False,
                            fill_value=fill_value)
 
@@ -391,8 +391,8 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-def combine_auto(datasets, compat='no_conflicts', data_vars='all',
-                 coords='different', fill_value=dtypes.NA):
+def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
+                      coords='different', fill_value=dtypes.NA):
     """
     Attempt to auto-magically combine the given datasets into one by using
     dimension coordinates.
@@ -449,14 +449,14 @@ def combine_auto(datasets, compat='no_conflicts', data_vars='all',
     --------
     concat
     merge
-    combine_manual
+    combine_nested
 
     Examples
     --------
 
     Combining two datasets using their common dimension coordinates. Notice
     they are concatenated based on the values in their dimension coordinates,
-    not on their position in the list passed to `combine_auto`.
+    not on their position in the list passed to `combine_by_coords`.
 
     >>> x1
     <xarray.Dataset>
@@ -474,7 +474,7 @@ def combine_auto(datasets, compat='no_conflicts', data_vars='all',
     Data variables:
         temperature     (x) float64 6.97 8.13 7.42 ...
 
-    >>> combined = xr.combine_auto([x2, x1])
+    >>> combined = xr.combine_by_coords([x2, x1])
     <xarray.Dataset>
     Dimensions:         (x: 6)
     Coords:
@@ -528,8 +528,8 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     """
     Attempt to auto-magically combine the given datasets into one.
 
-    This entire function is deprecated in favour of ``combine_manual`` and
-    ``combine_auto``.
+    This entire function is deprecated in favour of ``combine_nested`` and
+    ``combine_by_coords``.
 
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
@@ -593,33 +593,33 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         message = dedent("""\
         Also `open_mfdataset` will no longer accept a `concat_dim` argument.
         To get equivalent behaviour from now on please use the new
-        `combine_manual` function instead (or the `combine='manual'` option to
+        `combine_nested` function instead (or the `combine='nested'` option to
         `open_mfdataset`).""")
 
     if _dimension_coords_exist(datasets):
         message += dedent("""\
         The datasets supplied have global dimension coordinates. You may want
-        to use the new `combine_auto` function (or the `combine='auto'` option
+        to use the new `combine_by_coords` function (or the `combine='by_coords'` option
         to `open_mfdataset` to order the datasets before concatenation.
         Alternatively, to continue concatenating based on the order the
-        datasets are supplied in in future, please use the new `combine_manual`
-        function (or the `combine='manual'` option to open_mfdataset).""")
+        datasets are supplied in in future, please use the new `combine_nested`
+        function (or the `combine='nested'` option to open_mfdataset).""")
     else:
         message += dedent("""\
         The datasets supplied do not have global dimension coordinates. In
         future, to continue concatenating without supplying dimension
-        coordinates, please use the new `combine_manual` function (or the
-        `combine='manual'` option to open_mfdataset.""")
+        coordinates, please use the new `combine_nested` function (or the
+        `combine='nested'` option to open_mfdataset.""")
 
     if _requires_concat_and_merge(datasets):
         manual_dims = [concat_dim].append(None)
         message += dedent("""\
         The datasets supplied require both concatenation and merging. From
         xarray version 0.14 this will operation will require either using the
-        new `combine_manual` function (or the `combine='manual'` option to
+        new `combine_nested` function (or the `combine='nested'` option to
         open_mfdataset), with a nested list structure such that you can combine
         along the dimensions {}. Alternatively if your datasets have global
-        dimension coordinates then you can use the new `combine_auto` function.
+        dimension coordinates then you can use the new `combine_by_coords` function.
         """.format(manual_dims))
 
     warnings.warn(message, FutureWarning, stacklevel=2)
