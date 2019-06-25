@@ -76,6 +76,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Don't set encoding attributes on bounds variables when writing to netCDF.
+  (:issue:`2921`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - NetCDF4 output: variables with unlimited dimensions must be chunked (not
   contiguous) on output. (:issue:`1849`)
   By `James McCreight <https://github.com/jmccreight>`_.
