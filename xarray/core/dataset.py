@@ -2274,7 +2274,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         Dataset.swap_dims
-        Dataset.rename_coords
+        Dataset.rename_vars
         Dataset.rename_dims
         DataArray.rename
         """
@@ -2316,7 +2316,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         Dataset.swap_dims
         Dataset.rename
-        Dataset.rename_coords
+        Dataset.rename_vars
         DataArray.rename
         """
         inplace = _check_inplace(inplace)
