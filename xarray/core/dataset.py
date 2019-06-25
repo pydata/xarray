@@ -2331,7 +2331,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(dims=dims, indexes=indexes, inplace=inplace)
 
 
-    def rename_coords(self, name_dict=None, inplace=None, **names):
+    def rename_vars(self, name_dict=None, inplace=None, **names):
         """Returns a new object with renamed variables and coordinates
 
         Parameters
