@@ -340,11 +340,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def __init__(
         self,
-        # could make a VariableArgs to use more generally
+        # could make a VariableArgs to use more generally, and refine these
+        # categories
         data_vars: Optional[Mapping[Hashable, Union[
             'DataArray',
             Variable,
             Tuple[Hashable, Any],
+            Tuple[Tuple],
             Tuple[Sequence],
             Tuple[Tuple[Hashable, ...], Any],
         ]]] = None,
