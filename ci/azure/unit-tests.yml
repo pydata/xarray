@@ -14,11 +14,6 @@ steps:
     source activate test_env
     COVERALLS_REPO_TOKEN=$(coverallsToken) COVERALLS_PARALLEL=true coveralls
   displayName: Upload coverage to coveralls
-- task: PublishCodeCoverageResults@1
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
-    reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
 - task: PublishTestResults@2
   condition: succeededOrFailed()
   inputs:

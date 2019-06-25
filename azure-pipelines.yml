@@ -107,8 +107,14 @@ stages:
     - template: ci/azure/unit-tests.yml
     continueOnError: 'true'
 
-- stage: Finalize test coverage
-  steps:
-  - bash: |
-    curl -k https://coveralls.io/webhook?repo_token=$(coverallsToken) \
-    -d "payload[build_num]=$(Build.BuildId)&payload[status]=done"
+- stage: Coverage
+  - job: Coverage
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+    - bash: |
+        curl -k https://coveralls.io/webhook?repo_token=$(coverallsToken) \
+        -d "payload[build_num]=$(Build.BuildId)&payload[status]=done"
+      displayName: Upload to coveralls
