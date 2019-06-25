@@ -345,8 +345,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         data_vars: Optional[Mapping[Hashable, Union[
             'DataArray',
             Variable,
+            Tuple,
             Tuple[Hashable, Any],
-            Tuple[Tuple],
             Tuple[Sequence],
             Tuple[Tuple[Hashable, ...], Any],
         ]]] = None,
