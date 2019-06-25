@@ -351,7 +351,7 @@ class ZarrStore(AbstractWritableDataStore):
         if len(existing_variables) > 0:
             # there are variables to append
             # their encoding must be the same as in the store
-            ds = open_zarr(self.ds.store, auto_chunk=False)
+            ds = open_zarr(self.ds.store, chunks=None)
             variables_with_encoding = OrderedDict()
             for vn in existing_variables:
                 variables_with_encoding[vn] = variables[vn]
