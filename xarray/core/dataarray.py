@@ -23,7 +23,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .pycompat import TYPE_CHECKING
 from .options import OPTIONS
-from .utils import _check_inplace, either_dict_or_kwargs
+from .utils import _check_inplace, either_dict_or_kwargs, ReprObject
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -135,7 +135,7 @@ class _LocIndexer:
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
-_THIS_ARRAY = utils.ReprObject('<this-array>')
+_THIS_ARRAY = ReprObject('<this-array>')
 
 
 class DataArray(AbstractArray, DataWithCoords):
@@ -181,16 +181,18 @@ class DataArray(AbstractArray, DataWithCoords):
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
+    __default = ReprObject('<default>')
+
     dt = property(DatetimeAccessor)
 
     def __init__(self, data: Any,
                  coords: Union[
                      Sequence[Tuple[Hashable, Any]],
                      Mapping[Hashable, Any],
-                     None
+                     None,
                  ] = None,
                  dims: Union[Hashable, Sequence[Hashable], None] = None,
-                 name: Optional[str] = None,
+                 name: Optional[Hashable] = None,
                  attrs: Optional[Mapping] = None,
                  # deprecated parameters
                  encoding=None,
@@ -210,7 +212,10 @@ class DataArray(AbstractArray, DataWithCoords):
             The following notations are accepted:
 
             - mapping {dimension name: array-like}
-            - sequence of tuples (dimension name, array-like)
+            - sequence of tuples that are valid arguments for xarray.Variable()
+              - (dims, data)
+              - (dims, data, attrs)
+              - (dims, data, attrs, encoding)
 
             Additionally, it is possible to define a coord whose name
             does not match the dimension name, or a coord based on multiple
@@ -274,7 +279,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self._variable = variable  # type: Variable
         assert isinstance(coords, OrderedDict)
         self._coords = coords  # type: OrderedDict[Any, Variable]
-        self._name = name  # type: Optional[str]
+        self._name = name  # type: Optional[Hashable]
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
@@ -284,23 +289,21 @@ class DataArray(AbstractArray, DataWithCoords):
 
         self._initialized = True  # type: bool
 
-    __default = utils.ReprObject('__default')
-
     def _replace(self, variable: Optional[Variable] = None,
                  coords=None,
-                 name: Union[str, None, utils.ReprObject] = __default
+                 name: Optional[Hashable] = None,
                  ) -> 'DataArray':
         if variable is None:
             variable = self.variable
         if coords is None:
             coords = self._coords
-        if isinstance(name, utils.ReprObject):
+        if name is None:
             name = self.name
         return type(self)(variable, coords, name=name, fastpath=True)
 
     def _replace_maybe_drop_dims(
             self, variable: Variable,
-            name: Union[str, None, utils.ReprObject] = __default
+            name: Optional[Hashable] = __default
     ) -> 'DataArray':
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
@@ -338,9 +341,11 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._to_dataset_whole(name=_THIS_ARRAY,
                                       shallow_copy=False)
 
-    def _from_temp_dataset(self, dataset: Dataset,
-                           name: Union[str, utils.ReprObject] = __default
-                           ) -> 'DataArray':
+    def _from_temp_dataset(
+        self,
+        dataset: Dataset,
+        name: Union[Hashable, ReprObject] = __default
+    ) -> 'DataArray':
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
         return self._replace(variable, coords, name)
@@ -361,7 +366,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return Dataset(variables, coords, self.attrs)
 
     def _to_dataset_whole(
-            self, name: Union[Hashable, None, utils.ReprObject] = None,
+            self,
+            name: Union[Hashable, ReprObject, None] = None,
             shallow_copy: bool = True) -> Dataset:
         if name is None:
             name = self.name
@@ -416,13 +422,13 @@ class DataArray(AbstractArray, DataWithCoords):
             return self._to_dataset_whole(name)
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> Optional[Hashable]:
         """The name of this array.
         """
         return self._name
 
     @name.setter
-    def name(self, value: Optional[str]) -> None:
+    def name(self, value: Optional[Hashable]) -> None:
         self._name = value
 
     @property
@@ -1167,7 +1173,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict: Union[
-               None, str, Mapping[Hashable, Hashable]] = None,
+               Hashable, Mapping[Hashable, Hashable]] = None,
                **names: Hashable) -> 'DataArray':
         """Returns a new DataArray with renamed coordinates or a new name.
 
@@ -1200,8 +1206,8 @@ class DataArray(AbstractArray, DataWithCoords):
             dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset)
         else:
-            new_name_or_name_dict = cast(Optional[str],
-                                         new_name_or_name_dict)
+            new_name_or_name_dict = cast(
+                Optional[Hashable], new_name_or_name_dict)
             return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> 'DataArray':
@@ -1823,7 +1829,10 @@ class DataArray(AbstractArray, DataWithCoords):
         indexes = [self.get_index(dim) for dim in self.dims]
         return constructor(self.values, *indexes)
 
-    def to_dataframe(self, name: Optional[str] = None) -> pd.DataFrame:
+    def to_dataframe(
+        self,
+        name: Optional[Hashable] = None,
+    ) -> pd.DataFrame:
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
         The DataFrame is indexed by the Cartesian product of index coordinates
@@ -2085,7 +2094,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     __default_name = object()
 
-    def _result_name(self, other: Any = None) -> Optional[str]:
+    def _result_name(self, other: Any = None) -> Optional[Hashable]:
         # use the same naming heuristics as pandas:
         # https://github.com/ContinuumIO/blaze/issues/458#issuecomment-51936356
         other_name = getattr(other, 'name', self.__default_name)

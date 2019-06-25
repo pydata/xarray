@@ -1873,7 +1873,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             dim_name = dim
             dim_coord = None  # type: ignore
 
-        _ = list(non_indexed_dims)
         reordered = self.transpose(
             *list(indexer_dims), *list(non_indexed_dims))
 
