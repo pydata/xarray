@@ -10,6 +10,7 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
+from .npcompat import DTypeLike
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
@@ -100,8 +101,7 @@ class AbstractArray(ImplementsArrayReduce):
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: Union[str, np.dtype, None] = None
-                  ) -> np.ndarray:
+    def __array__(self: Any, dtype: Optional[DTypeLike] = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
@@ -997,7 +997,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self.close()
 
 
-def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
+def full_like(other, fill_value, dtype: Optional[DTypeLike] = None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -1038,7 +1038,7 @@ def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
 
 
 def _full_like_variable(other, fill_value,
-                        dtype: Union[str, np.dtype, None] = None):
+                        dtype: Optional[DTypeLike] = None):
     """Inner function of full_like, where other must be a variable
     """
     from .variable import Variable
@@ -1055,19 +1055,19 @@ def _full_like_variable(other, fill_value,
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype: Union[str, np.dtype, None] = None):
+def zeros_like(other, dtype: Optional[DTypeLike] = None):
     """Shorthand for full_like(other, 0, dtype)
     """
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype: Union[str, np.dtype, None] = None):
+def ones_like(other, dtype: Optional[DTypeLike] = None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)
 
 
-def is_np_datetime_like(dtype: Union[str, np.dtype]) -> bool:
+def is_np_datetime_like(dtype: DTypeLike) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types
     """
     return (np.issubdtype(dtype, np.datetime64) or

@@ -56,6 +56,23 @@ Enhancements
   helpful for avoiding file-lock errors when trying to write to files opened
   using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Combining datasets along N dimensions:
+  Datasets can now be combined along any number of dimensions,
+  instead of just a one-dimensional list of datasets.
+
+  The new ``combine_manual`` will accept the datasets as a a nested
+  list-of-lists, and combine by applying a series of concat and merge
+  operations. The new ``combine_auto`` will instead use the dimension
+  coordinates of the datasets to order them.
+
+  ``open_mfdataset`` can use either ``combine_manual`` or ``combine_auto`` to
+  combine datasets along multiple dimensions, by specifying the argument
+  `combine='manual'` or `combine='auto'`.
+
+  This means that the original function ``auto_combine`` is being deprecated.
+  To avoid FutureWarnings switch to using `combine_manual` or `combine_auto`,
+  (or set the `combine` argument in `open_mfdataset`). (:issue:`2159`)
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Better warning message when supplying invalid objects to ``xr.merge``
   (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
 - Added ``strftime`` method to ``.dt`` accessor, making it simpler to hand a
@@ -71,11 +88,18 @@ Enhancements
   that allows ignoring errors if a passed label or dimension is not in the dataset
   (:issue:`2994`).
   By `Andrew Ross <https://github.com/andrew-c-ross>`_.
+- Argument and return types are added to most methods on ``DataArray`` and ``Dataset``,
+  allowing static type checking both within xarray and external libraries.
+  Type checking with ``mypy`` is enabled in CI (though not required yet).
+  By `Guido Imperiale <https://github.com/crusaderky>`_ and `Maximilian Roos <https://github.com/max-sixty>`_. 
 
 
 Bug fixes
 ~~~~~~~~~
 
+- Don't set encoding attributes on bounds variables when writing to netCDF.
+  (:issue:`2921`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - NetCDF4 output: variables with unlimited dimensions must be chunked (not
   contiguous) on output. (:issue:`1849`)
   By `James McCreight <https://github.com/jmccreight>`_.
@@ -200,6 +224,10 @@ Other enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Resampling of standard and non-standard calendars indexed by
+  :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
   ``nearest``. (:issue:`2695`)
   By `Hauke Schulz <https://github.com/observingClouds>`_.
