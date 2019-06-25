@@ -3,6 +3,7 @@ import itertools
 import typing
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -870,6 +871,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         -------
         chunked : xarray.Variable
         """
+        import dask
         import dask.array as da
 
         if utils.is_dict_like(chunks):
@@ -892,7 +894,17 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             # https://github.com/dask/dask/issues/2883
             data = indexing.ImplicitToExplicitIndexingAdapter(
                 data, indexing.OuterIndexer)
-            data = da.from_array(data, chunks, name=name, lock=lock)
+
+            # For now, assume that all arrays that we wrap with dask (including
+            # our lazily loaded backend array classes) should use NumPy array
+            # operations.
+            if LooseVersion(dask.__version__) > '1.2.2':
+                kwargs = dict(meta=np.ndarray)
+            else:
+                kwargs = dict()
+
+            data = da.from_array(
+                data, chunks, name=name, lock=lock, **kwargs)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,
                           fastpath=True)
