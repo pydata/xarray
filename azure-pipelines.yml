@@ -108,6 +108,7 @@ stages:
     continueOnError: 'true'
 
 - stage: Coverage
+  jobs:
   - job: Coverage
     pool:
       vmImage: 'ubuntu-16.04'
