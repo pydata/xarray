@@ -179,13 +179,9 @@ class ArrayWriter:
             # for any discernable difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
-            if not self.regions:
-                regions = None
-            else:
-                regions = self.regions
             delayed_store = da.store(self.sources, self.targets,
                                      lock=self.lock, compute=compute,
-                                     flush=True, regions=regions)
+                                     flush=True, regions=self.regions)
             self.sources = []
             self.targets = []
             self.regions = []
