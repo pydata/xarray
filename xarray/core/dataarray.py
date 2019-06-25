@@ -289,21 +289,24 @@ class DataArray(AbstractArray, DataWithCoords):
 
         self._initialized = True  # type: bool
 
-    def _replace(self, variable: Optional[Variable] = None,
-                 coords=None,
-                 name: Optional[Hashable] = None,
-                 ) -> 'DataArray':
+    def _replace(
+        self,
+        variable: Optional[Variable] = None,
+        coords=None,
+        name: Union[Hashable, None, ReprObject] = __default,
+    ) -> 'DataArray':
         if variable is None:
             variable = self.variable
         if coords is None:
             coords = self._coords
-        if name is None:
-            name = self.name
+        if name is self.__default:
+            name = cast(Optional[Hashable], self.name)
         return type(self)(variable, coords, name=name, fastpath=True)
 
     def _replace_maybe_drop_dims(
-            self, variable: Variable,
-            name: Optional[Hashable] = __default
+            self, 
+            variable: Variable,
+            name: Union[str, None, utils.ReprObject] = __default
     ) -> 'DataArray':
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
@@ -367,8 +370,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def _to_dataset_whole(
             self,
-            name: Union[Hashable, ReprObject, None] = None,
-            shallow_copy: bool = True) -> Dataset:
+            name: Optional[Hashable] = None,
+            shallow_copy: bool = True
+    ) -> Dataset:
         if name is None:
             name = self.name
         if name is None:
@@ -1172,9 +1176,12 @@ class DataArray(AbstractArray, DataWithCoords):
             other, method=method, kwargs=kwargs, assume_sorted=assume_sorted)
         return self._from_temp_dataset(ds)
 
-    def rename(self, new_name_or_name_dict: Union[
-               Hashable, Mapping[Hashable, Hashable]] = None,
-               **names: Hashable) -> 'DataArray':
+    def rename(
+        self,
+        new_name_or_name_dict:
+            Optional[Union[Hashable, Mapping[Hashable, Hashable]]] = None,
+        **names: Hashable
+    ) -> 'DataArray':
         """Returns a new DataArray with renamed coordinates or a new name.
 
         Parameters
@@ -1206,8 +1213,7 @@ class DataArray(AbstractArray, DataWithCoords):
             dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset)
         else:
-            new_name_or_name_dict = cast(
-                Optional[Hashable], new_name_or_name_dict)
+            new_name_or_name_dict = cast(Hashable, new_name_or_name_dict)
             return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> 'DataArray':
