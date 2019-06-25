@@ -10,6 +10,10 @@ steps:
     --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
     --cov-append $EXTRA_FLAGS
   displayName: Run tests
+- bash: |
+    source activate test_env
+    COVERALLS_REPO_TOKEN=$(coverallsToken) COVERALLS_PARALLEL=true coveralls
+  displayName: Upload coverage to coveralls
 - task: PublishCodeCoverageResults@1
   inputs:
     codeCoverageTool: Cobertura
