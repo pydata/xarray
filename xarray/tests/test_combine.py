@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from xarray import (DataArray, Dataset, concat, combine_by_coords,
-    combine_nested)
+                    combine_nested)
 from xarray import auto_combine
 from xarray.core import dtypes
 from xarray.core.combine import (
