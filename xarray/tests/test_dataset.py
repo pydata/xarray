@@ -409,7 +409,7 @@ class TestDataset:
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
         assert isinstance(ds.dims.mapping, utils.SortedKeysDict)
-        assert type(ds.dims.mapping.mapping) is dict  # noqa
+        assert isinstance(ds.dims.mapping.mapping, dict)  # noqa
 
         assert list(ds) == list(ds.data_vars)
         assert list(ds.keys()) == list(ds.data_vars)
@@ -2061,7 +2061,7 @@ class TestDataset:
             assert_equal(Variable(dims, v.values, v.attrs),
                          renamed[k].variable.to_base_variable())
             assert v.encoding == renamed[k].encoding
-            assert type(v) == type(renamed.variables[k])  # noqa: E721
+            assert isinstance(v, type(renamed.variables[k]))  # noqa: E721
 
         assert 'var1' not in renamed
         assert 'dim2' not in renamed
@@ -2112,16 +2112,20 @@ class TestDataset:
         assert_array_equal(data['t.dayofyear'], [1, 2, 3])
 
     def test_rename_dims(self):
-        original = Dataset({'x':('x',[0,1,2]),'y':('x',[10,11,12]),'z':42})
-        expected = Dataset({'x':('x_new',[0,1,2]),'y':('x_new',[10,11,12]),'z':42})
-        name_dict = {'x':'x_new'}
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x': ('x_new', [0, 1, 2]), 'y': ('x_new', [10, 11, 12]), 'z': 42})
+        name_dict = {'x': 'x_new'}
         actual = original.rename_dims(name_dict)
         assert_identical(expected, actual)
 
     def test_rename_vars(self):
-        original = Dataset({'x':('x',[0,1,2]),'y':('x',[10,11,12]),'z':42})
-        expected = Dataset({'x_new':('x',[0,1,2]),'y':('x',[10,11,12]),'z':42})
-        name_dict = {'x':'x_new'}
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x_new': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        name_dict = {'x': 'x_new'}
         actual = original.rename_vars(name_dict)
         assert_identical(expected, actual)
 
