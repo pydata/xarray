@@ -300,7 +300,7 @@ class DataArray(AbstractArray, DataWithCoords):
         if coords is None:
             coords = self._coords
         if name is self.__default:
-            name = cast(Optional[Hashable], self.name)
+            name = self.name
         return type(self)(variable, coords, name=name, fastpath=True)
 
     def _replace_maybe_drop_dims(
@@ -322,8 +322,10 @@ class DataArray(AbstractArray, DataWithCoords):
                                  if set(v.dims) <= allowed_dims)
         return self._replace(variable, coords, name)
 
-    def _replace_indexes(self, indexes: Mapping[Hashable, Any]
-                         ) -> 'DataArray':
+    def _replace_indexes(
+        self,
+        indexes: Mapping[Hashable, Any]
+    ) -> 'DataArray':
         if not len(indexes):
             return self
         coords = self._coords.copy()
@@ -392,8 +394,11 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset = Dataset._from_vars_and_coord_names(variables, coord_names)
         return dataset
 
-    def to_dataset(self, dim: Optional[Hashable] = None,
-                   name: Optional[Hashable] = None) -> Dataset:
+    def to_dataset(
+        self,
+        dim: Optional[Hashable] = None,
+        name: Optional[Hashable] = None,
+    ) -> Dataset:
         """Convert a DataArray to a Dataset.
 
         Parameters
@@ -762,8 +767,11 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
 
-    def copy(self, deep: bool = True, data: Optional[Any] = None
-             ) -> 'DataArray':
+    def copy(
+        self,
+        deep: bool = True,
+        data: Optional[Any] = None,
+    ) -> 'DataArray':
         """Returns a copy of this array.
 
         If `deep=True`, a deep copy is made of the data array.
@@ -898,9 +906,12 @@ class DataArray(AbstractArray, DataWithCoords):
                                            token=token, lock=lock)
         return self._from_temp_dataset(ds)
 
-    def isel(self, indexers: Optional[Mapping[Hashable, Any]] = None,
-             drop: bool = False, **indexers_kwargs: Any
-             ) -> 'DataArray':
+    def isel(
+        self,
+        indexers: Optional[Mapping[Hashable, Any]] = None,
+        drop: bool = False,
+        **indexers_kwargs: Any
+    ) -> 'DataArray':
         """Return a new DataArray whose data is given by integer indexing
         along the specified dimension(s).
 
@@ -913,9 +924,14 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().isel(drop=drop, indexers=indexers)
         return self._from_temp_dataset(ds)
 
-    def sel(self, indexers: Optional[Mapping[Hashable, Any]] = None,
-            method: Optional[str] = None, tolerance=None, drop: bool = False,
-            **indexers_kwargs: Any) -> 'DataArray':
+    def sel(
+        self,
+        indexers: Optional[Mapping[Hashable, Any]] = None,
+        method: Optional[str] = None,
+        tolerance=None,
+        drop: bool = False,
+        **indexers_kwargs: Any
+    ) -> 'DataArray':
         """Return a new DataArray whose data is given by selecting index
         labels along the specified dimension(s).
 

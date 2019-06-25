@@ -126,12 +126,12 @@ def calculate_dimensions(
     return dims
 
 
-def merge_indexes(indexes: Mapping[Hashable,
-                                   Union[Hashable, Sequence[Hashable]]],
-                  variables: Mapping[Hashable, Variable],
-                  coord_names: Set[Hashable],
-                  append: bool = False
-                  ) -> 'Tuple[OrderedDict[Any, Variable], Set[Hashable]]':
+def merge_indexes(
+    indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]],
+    variables: Mapping[Hashable, Variable],
+    coord_names: Set[Hashable],
+    append: bool = False
+) -> 'Tuple[OrderedDict[Any, Variable], Set[Hashable]]':
     """Merge variables into multi-indexes.
 
     Not public API. Used in Dataset and DataArray set_index
@@ -197,12 +197,13 @@ def merge_indexes(indexes: Mapping[Hashable,
     return new_variables, new_coord_names
 
 
-def split_indexes(dims_or_levels: Union[Hashable, Sequence[Hashable]],
-                  variables: Mapping[Hashable, Variable],
-                  coord_names: Set[Hashable],
-                  level_coords: Mapping[Hashable, Hashable],
-                  drop: bool = False,
-                  ) -> 'Tuple[OrderedDict[Any, Variable], Set[Hashable]]':
+def split_indexes(
+    dims_or_levels: Union[Hashable, Sequence[Hashable]],
+    variables: Mapping[Hashable, Variable],
+    coord_names: Set[Hashable],
+    level_coords: Mapping[Hashable, Hashable],
+    drop: bool = False,
+) -> 'Tuple[OrderedDict[Any, Variable], Set[Hashable]]':
     """Extract (multi-)indexes (levels) as variables.
 
     Not public API. Used in Dataset and DataArray reset_index
