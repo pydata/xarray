@@ -88,6 +88,10 @@ Enhancements
   that allows ignoring errors if a passed label or dimension is not in the dataset
   (:issue:`2994`).
   By `Andrew Ross <https://github.com/andrew-c-ross>`_.
+- Argument and return types are added to most methods on ``DataArray`` and ``Dataset``,
+  allowing static type checking both within xarray and external libraries.
+  Type checking with ``mypy`` is enabled in CI (though not required yet).
+  By `Guido Imperiale <https://github.com/crusaderky>`_ and `Maximilian Roos <https://github.com/max-sixty>`_. 
 
 
 Bug fixes

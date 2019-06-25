@@ -1,9 +1,9 @@
 import functools
 import operator
 from collections import defaultdict
-from collections.abc import Hashable
 from contextlib import suppress
 from datetime import timedelta
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
@@ -152,7 +152,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
         else:
             for k, v in label.items():
                 # index should be an item (i.e. Hashable) not an array-like
-                if not isinstance(v, Hashable):
+                if isinstance(v, Sequence) and not isinstance(v, str):
                     raise ValueError('Vectorized selection is not '
                                      'available along level variable: ' + k)
             indexer, new_index = index.get_loc_level(
