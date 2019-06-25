@@ -74,6 +74,7 @@ has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
 has_np113, requires_np113 = _importorskip('numpy', minversion='1.13.0')
 has_iris, requires_iris = _importorskip('iris')
 has_cfgrib, requires_cfgrib = _importorskip('cfgrib')
+has_numbagg, requires_numbagg = _importorskip('numbagg')
 
 # some special cases
 has_h5netcdf07, requires_h5netcdf07 = _importorskip('h5netcdf',
@@ -168,21 +169,20 @@ def source_ndarray(array):
 
 # Internal versions of xarray's test functions that validate additional
 # invariants
-# TODO: add more invariant checks.
 
 def assert_equal(a, b):
     xarray.testing.assert_equal(a, b)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
 
 
 def assert_identical(a, b):
     xarray.testing.assert_identical(a, b)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
 
 
 def assert_allclose(a, b, **kwargs):
     xarray.testing.assert_allclose(a, b, **kwargs)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
