@@ -4,103 +4,111 @@ trigger:
 pr:
   - master
 
-jobs:
+stages:
+- stage: CI
+  jobs:
 
-- job: Linux
-  strategy:
-    matrix:
-      py35-min:
-        conda_env: py35-min
-      py36:
-        conda_env: py36
-      py37:
-        conda_env: py37
-      py36-dask-dev:
-        conda_env: py36-dask-dev
-      py36-zarr-dev:
-        conda_env: py36-zarr-dev
-      # TODO: add numpy-dev to the test-matrix
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/unit-tests.yml
+  - job: Linux
+    strategy:
+      matrix:
+        py35-min:
+          conda_env: py35-min
+        py36:
+          conda_env: py36
+        py37:
+          conda_env: py37
+        py36-dask-dev:
+          conda_env: py36-dask-dev
+        py36-zarr-dev:
+          conda_env: py36-zarr-dev
+        # TODO: add numpy-dev to the test-matrix
+    pool:
+      vmImage: 'ubuntu-16.04'
+    steps:
+    - template: ci/azure/unit-tests.yml
 
-- job: MacOSX
-  strategy:
-    matrix:
-      py36:
-        conda_env: py36
-  pool:
-    vmImage: 'macOS-10.13'
-  steps:
-  - template: ci/azure/unit-tests.yml
+  - job: MacOSX
+    strategy:
+      matrix:
+        py36:
+          conda_env: py36
+    pool:
+      vmImage: 'macOS-10.13'
+    steps:
+    - template: ci/azure/unit-tests.yml
 
-- job: Windows
-  strategy:
-    matrix:
-      py36:
-        conda_env: py36-windows
-      py37:
-        conda_env: py37-windows
-  pool:
-    vmImage: 'vs2017-win2016'
-  steps:
-  - template: ci/azure/unit-tests.yml
+  - job: Windows
+    strategy:
+      matrix:
+        py36:
+          conda_env: py36-windows
+        py37:
+          conda_env: py37-windows
+    pool:
+      vmImage: 'vs2017-win2016'
+    steps:
+    - template: ci/azure/unit-tests.yml
 
-- job: CodeChecks
-  variables:
-    conda_env: py37
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/install.yml
-  - bash: |
-      source activate test_env
-      flake8
-    displayName: flake8 lint checks
-  - bash: |
-      source activate test_env
-      mypy .
-    displayName: mypy type checks
-    # allow mypy failures until we have a nice way of displaying results in
-    # pull requests
+  - job: CodeChecks
+    variables:
+      conda_env: py37
+    pool:
+      vmImage: 'ubuntu-16.04'
+    steps:
+    - template: ci/azure/install.yml
+    - bash: |
+        source activate test_env
+        flake8
+      displayName: flake8 lint checks
+    - bash: |
+        source activate test_env
+        mypy .
+      displayName: mypy type checks
+      # allow mypy failures until we have a nice way of displaying results in
+      # pull requests
+      continueOnError: 'true'
+
+  - job: Docs
+    pool:
+      vmImage: 'ubuntu-16.04'
+    steps:
+    - template: ci/azure/install.yml
+      parameters:
+        env_file: doc/environment.yml
+    - bash: |
+        source activate test_env
+        cd doc
+        sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
+      displayName: Build HTML docs
+
+  - job: LinuxHypothesis
+    variables:
+      conda_env: py36-hypothesis
+    pool:
+      vmImage: 'ubuntu-16.04'
+    steps:
+    - template: ci/azure/install.yml
+    - bash: |
+        source activate test_env
+        pytest properties
+      displayName: Property based tests
+
+  - job: LinuxAllowedFailures
+    strategy:
+      matrix:
+        py36-pandas-dev:
+          conda_env: py36-pandas-dev
+        py36-flakey:
+          conda_env: py36
+          pytest_extra_flags: --run-flaky --run-network-tests
+    pool:
+      vmImage: 'ubuntu-16.04'
+    steps:
+    - template: ci/azure/unit-tests.yml
     continueOnError: 'true'
 
-- job: Docs
-  pool:
-    vmImage: 'ubuntu-16.04'
+- stage: Finalize test coverage
   steps:
-  - template: ci/azure/install.yml
-    parameters:
-      env_file: doc/environment.yml
   - bash: |
-      source activate test_env
-      cd doc
-      sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
-    displayName: Build HTML docs
-
-- job: LinuxHypothesis
-  variables:
-    conda_env: py36-hypothesis
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/install.yml
-  - bash: |
-      source activate test_env
-      pytest properties
-    displayName: Property based tests
-
-- job: LinuxAllowedFailures
-  strategy:
-    matrix:
-      py36-pandas-dev:
-        conda_env: py36-pandas-dev
-      py36-flakey:
-        conda_env: py36
-        pytest_extra_flags: --run-flaky --run-network-tests
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/unit-tests.yml
-  continueOnError: 'true'
+    curl -k https://coveralls.io/webhook?repo_token=$(coverallsToken) \
+    -d "payload[build_num]=$(Build.BuildId)&payload[status]=done"
