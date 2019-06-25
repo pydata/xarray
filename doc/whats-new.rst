@@ -189,6 +189,10 @@ Other enhancements
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Added append capability to the zarr store.
+  By `Jendrik Jördening <https://github.com/jendrikjoe>`_,
+  `David Brochart <https://github.com/davidbrochart>`_,
+  `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Shikhar Goenka<https://github.com/shikharsg>`_.
 - Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
   ``nearest``. (:issue:`2695`)
   By `Hauke Schulz <https://github.com/observingClouds>`_.

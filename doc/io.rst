@@ -606,6 +606,25 @@ store, add ``mode='w'`` when invoking ``to_zarr``.
 
 It is also possible to append to an existing store. For that, add ``mode='a'``
 and set ``append_dim`` to the name of the dimension along which to append.
+
+.. ipython:: python
+   :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds1 = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5, 2))},
+                     coords={'x': [10, 20, 30, 40],
+                             'y': [1,2,3,4,5],
+                             't': pd.date_range('2001-01-01', periods=2)})
+    ds1.to_zarr('path/to/directory.zarr')
+    ds2 = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5, 2))},
+                     coords={'x': [10, 20, 30, 40],
+                             'y': [1,2,3,4,5],
+                             't': pd.date_range('2001-01-03', periods=2)})
+    ds2.to_zarr('path/to/directory.zarr', mode='a', append_dim='time')
+
 It is necessary that the data only contains types which are either a subclass
 of ``np.number`` or ``np.string_``. It as well needs to be taken into account,
 that the size of the ``np.string_`` in the first chunk sets the maximum
