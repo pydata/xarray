@@ -1,9 +1,9 @@
 import functools
 import itertools
-import typing
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
+from typing import Any, Hashable, Mapping, MutableMapping, Union
 
 import numpy as np
 import pandas as pd
@@ -16,14 +16,10 @@ from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
 from .options import _get_keep_attrs
-from .pycompat import TYPE_CHECKING, dask_array_type, integer_types
+from .pycompat import dask_array_type, integer_types
 from .utils import (
     OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
-
-if TYPE_CHECKING:
-    from typing import Tuple, Type, Union
-
 
 try:
     import dask.array as da
@@ -715,7 +711,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         indexable[index_tuple] = value
 
     @property
-    def attrs(self):
+    def attrs(self) -> 'OrderedDict[Any, Any]':
         """Dictionary of local attributes on this variable.
         """
         if self._attrs is None:
@@ -723,7 +719,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value):
+    def attrs(self, value: Mapping[Hashable, Any]) -> None:
         self._attrs = OrderedDict(value)
 
     @property

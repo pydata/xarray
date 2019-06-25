@@ -1,6 +1,7 @@
 import collections.abc
 from collections import OrderedDict
 from contextlib import contextmanager
+from typing import Hashable, Iterable, Iterator, Union
 
 import pandas as pd
 
@@ -9,6 +10,11 @@ from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
+from .pycompat import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
@@ -258,21 +264,20 @@ class DataArrayCoordinates(AbstractCoordinates):
         return self._data._ipython_key_completions_()
 
 
-class LevelCoordinatesSource:
+class LevelCoordinatesSource(Iterable[Hashable]):
     """Iterator for MultiIndex level coordinates.
 
     Used for attribute style lookup with AttrAccessMixin. Not returned directly
     by any public methods.
     """
-
-    def __init__(self, data_object):
+    def __init__(self, data_object: 'Union[DataArray, Dataset]'):
         self._data = data_object
 
     def __getitem__(self, key):
         # not necessary -- everything here can already be found in coords.
-        raise KeyError
+        raise KeyError()
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Hashable]:
         return iter(self._data._level_coords)
 
 
