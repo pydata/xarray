@@ -187,7 +187,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __init__(self, data: Any,
                  coords: Union[
-                     Sequence[Tuple[Hashable, Any]],
+                     Sequence[Tuple],
                      Mapping[Hashable, Any],
                      None,
                  ] = None,
@@ -304,7 +304,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return type(self)(variable, coords, name=name, fastpath=True)
 
     def _replace_maybe_drop_dims(
-            self, 
+            self,
             variable: Variable,
             name: Union[str, None, utils.ReprObject] = __default
     ) -> 'DataArray':
