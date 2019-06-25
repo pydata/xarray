@@ -2278,7 +2278,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.rename_dims
         DataArray.rename
         """
-        
+
         inplace = _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
         for k, v in name_dict.items():
@@ -2358,7 +2358,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.rename_dims
         DataArray.rename
         """
-        
+
         inplace = _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
         for k, v in name_dict.items():
