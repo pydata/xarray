@@ -770,19 +770,19 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
 
     # Combine all datasets, closing them in case of a ValueError
     try:
-        if combine is '_old_auto':
+        if combine == '_old_auto':
             # Use the old auto_combine for now
             # Remove this after deprecation cycle from #2616 is complete
             combined = auto_combine(datasets, concat_dim=concat_dim,
                                     compat=compat, data_vars=data_vars,
                                     coords=coords)
-        elif combine is 'manual':
+        elif combine == 'manual':
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _manual_combine(datasets, concat_dims=concat_dim,
                                        compat=compat, data_vars=data_vars,
                                        coords=coords, ids=ids)
-        elif combine is 'auto':
+        elif combine == 'auto':
             # Redo ordering from coordinates, ignoring how they were ordered
             # previously
             combined = combine_auto(datasets, compat=compat,
