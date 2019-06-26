@@ -60,17 +60,17 @@ Enhancements
   Datasets can now be combined along any number of dimensions,
   instead of just a one-dimensional list of datasets.
 
-  The new ``combine_manual`` will accept the datasets as a a nested
+  The new ``combine_nested`` will accept the datasets as a nested
   list-of-lists, and combine by applying a series of concat and merge
-  operations. The new ``combine_auto`` will instead use the dimension
+  operations. The new ``combine_by_coords`` will instead use the dimension
   coordinates of the datasets to order them.
 
-  ``open_mfdataset`` can use either ``combine_manual`` or ``combine_auto`` to
+  ``open_mfdataset`` can use either ``combine_nested`` or ``combine_by_coords`` to
   combine datasets along multiple dimensions, by specifying the argument
-  `combine='manual'` or `combine='auto'`.
+  `combine='nested'` or `combine='by_coords'`.
 
   This means that the original function ``auto_combine`` is being deprecated.
-  To avoid FutureWarnings switch to using `combine_manual` or `combine_auto`,
+  To avoid FutureWarnings switch to using `combine_nested` or `combine_by_coords`,
   (or set the `combine` argument in `open_mfdataset`). (:issue:`2159`)
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Better warning message when supplying invalid objects to ``xr.merge``

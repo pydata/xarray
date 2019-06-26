@@ -996,6 +996,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
+    def __getitem__(self, value):
+        # implementations of this class should implement this method
+        raise NotImplementedError
+
 
 def full_like(other, fill_value, dtype: Optional[DTypeLike] = None):
     """Return a new object with the same shape and type as a given object.
