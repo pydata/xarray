@@ -2342,7 +2342,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.rename
         """
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
-        for  in name_dict.items():
+        for k in name_dict.items():
             if k not in self and k not in self.dims:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable or dimension in this dataset" % k)
@@ -2387,7 +2387,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes = self._rename_indexes(name_dict)
         return self._replace(variables, dims=dims, indexes=indexes)
 
-    def rename_vars(self, name_dict=None, **names):
+    def rename_var(self, name_dict=None, **names):
         """Returns a new object with renamed variables including coordinates
 
         Parameters
