@@ -2256,19 +2256,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return ds.interp(numeric_coords, method, assume_sorted, kwargs)
 
     # Helper methods for rename()
-    def _rename_var_dims_helper(name_dict, v):
+    def _rename_var_dims_helper(self, name_dict, v):
         dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
         var = v.copy(deep=False)
         var.dims = dims
         return var
 
-    def _rename_var_dims_only(self, name_dict):
-        variables = OrderedDict()
-        for k, v in self.variables.items():
-            variables[k] = _rename_var_dims_helper(name_dict, v)
-        return variables
-
-    def _rename_vars_helper(name_dict, var):
+    def _rename_vars_helper(self, name_dict, var):
         name = name_dict.get(k, k)
         if name in variables:
             raise ValueError('the new name %r conflicts' % (name,))
@@ -2276,6 +2270,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if k in self._coord_names:
             coord_names.add(name)
         return variables, coord_names
+
+    def _rename_var_dims_only(self, name_dict):
+        variables = OrderedDict()
+        for k, v in self.variables.items():
+            variables[k] = _rename_var_dims_helper(name_dict, v)
+        return variables
 
     def _rename_vars_only(self, name_dict):
         variables = OrderedDict()
