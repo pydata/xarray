@@ -1,9 +1,9 @@
 import pickle
+import sys
 import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
-import sys
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast)
-from xarray.coding.times import CFDatetimeCoder, _import_cftime
+from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import ALL_DIMS, full_like
@@ -20,7 +20,7 @@ from xarray.tests import (
     LooseVersion, ReturnItem, assert_allclose, assert_array_equal,
     assert_equal, assert_identical, raises_regex, requires_bottleneck,
     requires_cftime, requires_dask, requires_iris, requires_np113,
-    requires_scipy, source_ndarray)
+    requires_numbagg, requires_scipy, source_ndarray)
 
 
 class TestDataArray:
@@ -1177,7 +1177,7 @@ class TestDataArray:
                              dims=['x', 'y'], name='foo')
         assert_identical(actual, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             with raises_regex(ValueError, 'cannot reset coord'):
                 data = data.reset_coords(inplace=True)
         with raises_regex(ValueError, 'cannot be found'):
@@ -1259,18 +1259,6 @@ class TestDataArray:
                 ValueError, 'different size for unlabeled'):
             foo.reindex_like(bar)
 
-    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
-    def test_reindex_fill_value(self, fill_value):
-        foo = DataArray([10, 20], dims='y', coords={'y': [0, 1]})
-        bar = DataArray([10, 20, 30], dims='y', coords={'y': [0, 1, 2]})
-        if fill_value == dtypes.NA:
-            # if we supply the default, we expect the missing value for a
-            # float array
-            fill_value = np.nan
-        actual = x.reindex_like(bar, fill_value=fill_value)
-        expected = DataArray([10, 20, fill_value], coords=[('y', [0, 1, 2])])
-        assert_identical(expected, actual)
-
     @pytest.mark.filterwarnings('ignore:Indexer has dimensions')
     def test_reindex_regressions(self):
         # regression test for #279
@@ -1336,7 +1324,7 @@ class TestDataArray:
                           coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
 
-        with raises_regex(TypeError, 'dim should be str or'):
+        with raises_regex(TypeError, 'dim should be hashable or'):
             array.expand_dims(0)
         with raises_regex(ValueError, 'lengths of dim and axis'):
             # dims and axis argument should be the same length
@@ -1540,7 +1528,7 @@ class TestDataArray:
         obj = self.mda.reorder_levels(x=['level_2', 'level_1'])
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, message='The inplace argument'):
+        with pytest.warns(FutureWarning, match='The inplace argument'):
             array = self.mda.copy()
             array.reorder_levels(x=['level_2', 'level_1'], inplace=True)
             assert_identical(array, expected)
@@ -1644,8 +1632,8 @@ class TestDataArray:
         assert (a + a.rename(None)).name is None
         assert (a + a.rename('bar')).name is None
         assert (a + a).name == 'foo'
-        assert (+a['x']).name is 'x'
-        assert (a['x'] + 0).name is 'x'
+        assert (+a['x']).name == 'x'
+        assert (a['x'] + 0).name == 'x'
         assert (a + a['x']).name is None
 
     def test_math_with_coords(self):
@@ -1762,8 +1750,12 @@ class TestDataArray:
 
         # test GH3000
         a = orig[:0, :1].stack(dim=('x', 'y')).dim.to_index()
-        b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                          labels=[[], []], names=['x', 'y'])
+        if pd.__version__ < '0.24.0':
+            b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])],
+                              labels=[[], []], names=['x', 'y'])
+        else:
+            b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])],
+                              codes=[[], []], names=['x', 'y'])
         pd.util.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=['x', 'y']).unstack('z').drop(['x', 'y'])
@@ -1867,19 +1859,34 @@ class TestDataArray:
         with pytest.raises(ValueError):
             arr.drop('not found')
 
+        actual = expected.drop('not found', errors='ignore')
+        assert_identical(actual, expected)
+
         with raises_regex(ValueError, 'cannot be found'):
             arr.drop(None)
+
+        actual = expected.drop(None, errors='ignore')
+        assert_identical(actual, expected)
 
         renamed = arr.rename('foo')
         with raises_regex(ValueError, 'cannot be found'):
             renamed.drop('foo')
+
+        actual = renamed.drop('foo', errors='ignore')
+        assert_identical(actual, renamed)
 
     def test_drop_index_labels(self):
         arr = DataArray(np.random.randn(2, 3), coords={'y': [0, 1, 2]},
                         dims=['x', 'y'])
         actual = arr.drop([0, 1], dim='y')
         expected = arr[:, 2:]
-        assert_identical(expected, actual)
+        assert_identical(actual, expected)
+
+        with raises_regex((KeyError, ValueError), 'not .* in axis'):
+            actual = arr.drop([0, 1, 3], dim='y')
+
+        actual = arr.drop([0, 1, 3], dim='y', errors='ignore')
+        assert_identical(actual, expected)
 
     def test_dropna(self):
         x = np.random.randn(4, 4)
@@ -1982,6 +1989,44 @@ class TestDataArray:
         actual = orig.mean(dim='x', skipna=True)
         expected = DataArray(orig.values.astype(int),
                              dims=['x', 'y']).mean('x')
+        assert_equal(actual, expected)
+
+    def test_reduce_keepdims(self):
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        # Mean on all axes loses non-constant coordinates
+        actual = orig.mean(keepdims=True)
+        expected = DataArray(orig.data.mean(keepdims=True), dims=orig.dims,
+                             coords={k: v for k, v in coords.items()
+                                     if k in ['c']})
+        assert_equal(actual, expected)
+
+        assert actual.sizes['x'] == 1
+        assert actual.sizes['y'] == 1
+
+        # Mean on specific axes loses coordinates not involving that axis
+        actual = orig.mean('y', keepdims=True)
+        expected = DataArray(orig.data.mean(axis=1, keepdims=True),
+                             dims=orig.dims,
+                             coords={k: v for k, v in coords.items()
+                                     if k not in ['y', 'lat']})
+        assert_equal(actual, expected)
+
+    @requires_bottleneck
+    def test_reduce_keepdims_bottleneck(self):
+        import bottleneck
+
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        # Bottleneck does not have its own keepdims implementation
+        actual = orig.reduce(bottleneck.nanmean, keepdims=True)
+        expected = orig.mean(keepdims=True)
         assert_equal(actual, expected)
 
     def test_reduce_dtype(self):
@@ -3912,14 +3957,14 @@ class TestIrisConversion:
             assert coord.var_name == original_coord.name
             assert_array_equal(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord) ==
-                    original.get_axis_num(
+            assert (actual.coord_dims(coord)
+                    == original.get_axis_num(
                         original.coords[coord.var_name].dims))
 
-        assert (actual.coord('distance2').attributes['foo'] ==
-                original.coords['distance2'].attrs['foo'])
-        assert (actual.coord('distance').units ==
-                cf_units.Unit(original.coords['distance'].units))
+        assert (actual.coord('distance2').attributes['foo']
+                == original.coords['distance2'].attrs['foo'])
+        assert (actual.coord('distance').units
+                == cf_units.Unit(original.coords['distance'].units))
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
@@ -3977,14 +4022,14 @@ class TestIrisConversion:
             assert coord.var_name == original_coord.name
             assert_array_equal(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord) ==
-                    original.get_axis_num(
+            assert (actual.coord_dims(coord)
+                    == original.get_axis_num(
                         original.coords[coord.var_name].dims))
 
         assert (actual.coord('distance2').attributes['foo'] == original.coords[
             'distance2'].attrs['foo'])
-        assert (actual.coord('distance').units ==
-                cf_units.Unit(original.coords['distance'].units))
+        assert (actual.coord('distance').units
+                == cf_units.Unit(original.coords['distance'].units))
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
@@ -4080,3 +4125,30 @@ class TestIrisConversion:
         expected = Cube(data, aux_coords_and_dims=[
             (AuxCoord(coord_values, var_name='space'), 0)])
         assert result == expected
+
+
+@requires_numbagg
+@pytest.mark.parametrize('dim', ['time', 'x'])
+@pytest.mark.parametrize('window_type, window', [
+    ['span', 5],
+    ['alpha', 0.5],
+    ['com', 0.5],
+    ['halflife', 5],
+])
+def test_rolling_exp(da, dim, window_type, window):
+    da = da.isel(a=0)
+    da = da.where(da > 0.2)
+
+    result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
+    assert isinstance(result, DataArray)
+
+    pandas_array = da.to_pandas()
+    assert pandas_array.index.name == 'time'
+    if dim == 'x':
+        pandas_array = pandas_array.T
+    expected = (
+        xr.DataArray(pandas_array.ewm(**{window_type: window}).mean())
+        .transpose(*da.dims)
+    )
+
+    assert_allclose(expected.variable, result.variable)

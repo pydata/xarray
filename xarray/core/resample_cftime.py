@@ -36,13 +36,15 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from ..coding.cftimeindex import CFTimeIndex
-from ..coding.cftime_offsets import (cftime_range, normalize_date,
-                                     Day, MonthEnd, QuarterEnd, YearEnd,
-                                     CFTIME_TICKS, to_offset)
 import datetime
+
 import numpy as np
 import pandas as pd
+
+from ..coding.cftime_offsets import (
+    CFTIME_TICKS, Day, MonthEnd, QuarterEnd, YearEnd, cftime_range,
+    normalize_date, to_offset)
+from ..coding.cftimeindex import CFTimeIndex
 
 
 class CFTimeGrouper:
