@@ -599,11 +599,11 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     if _dimension_coords_exist(datasets):
         message += dedent("""\
         The datasets supplied have global dimension coordinates. You may want
-        to use the new `combine_by_coords` function (or the 
-        `combine='by_coords'` option to `open_mfdataset` to order the datasets 
-        before concatenation. Alternatively, to continue concatenating based 
-        on the order the datasets are supplied in in future, please use the 
-        new `combine_nested` function (or the `combine='nested'` option to 
+        to use the new `combine_by_coords` function (or the
+        `combine='by_coords'` option to `open_mfdataset` to order the datasets
+        before concatenation. Alternatively, to continue concatenating based
+        on the order the datasets are supplied in in future, please use the
+        new `combine_nested` function (or the `combine='nested'` option to
         open_mfdataset).""")
     else:
         message += dedent("""\
@@ -620,7 +620,7 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         new `combine_nested` function (or the `combine='nested'` option to
         open_mfdataset), with a nested list structure such that you can combine
         along the dimensions {}. Alternatively if your datasets have global
-        dimension coordinates then you can use the new `combine_by_coords` 
+        dimension coordinates then you can use the new `combine_by_coords`
         function.""".format(manual_dims))
 
     warnings.warn(message, FutureWarning, stacklevel=2)
