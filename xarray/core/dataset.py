@@ -2256,41 +2256,41 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return ds.interp(numeric_coords, method, assume_sorted, kwargs)
 
     # Helper methods for rename()
+    def _rename_var_dims_helper(name_dict, v):
+        dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
+        var = v.copy(deep=False)
+        var.dims = dims
+        return var
+
     def _rename_var_dims_only(self, name_dict):
         variables = OrderedDict()
         for k, v in self.variables.items():
-            dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
-            var = v.copy(deep=False)
-            var.dims = dims
-            variables[k] = var
+            variables[k] = _rename_var_dims_helper(name_dict, v)
         return variables
+
+    def _rename_vars_helper(name_dict, var):
+        name = name_dict.get(k, k)
+        if name in variables:
+            raise ValueError('the new name %r conflicts' % (name,))
+        variables[name] = var
+        if k in self._coord_names:
+            coord_names.add(name)
+        return variables, coord_names
 
     def _rename_vars_only(self, name_dict):
         variables = OrderedDict()
         coord_names = set()
         for k, v in self.variables.items():
-            name = name_dict.get(k, k)
             var = v.copy(deep=False)
-            if name in variables:
-                raise ValueError('the new name %r conflicts' % (name,))
-            variables[name] = var
-            if k in self._coord_names:
-                coord_names.add(name)
+            variables, coord_names = _rename_vars_helper(name_dict, var)
         return variables, coord_names
 
     def _rename_vars(self, name_dict):
         variables = OrderedDict()
         coord_names = set()
         for k, v in self.variables.items():
-            name = name_dict.get(k, k)
-            dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
-            var = v.copy(deep=False)
-            var.dims = dims
-            if name in variables:
-                raise ValueError('the new name %r conflicts' % (name,))
-            variables[name] = var
-            if k in self._coord_names:
-                coord_names.add(name)
+            var = _rename_var_dims_helper(name_dict, v)
+            variables, coord_names = _rename_vars_helper(name_dict, var)
         return variables, coord_names
 
     def _rename_dims(self, name_dict):
@@ -2342,7 +2342,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.rename
         """
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
-        for k, v in name_dict.items():
+        for  in name_dict.items():
             if k not in self and k not in self.dims:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable or dimension in this dataset" % k)
@@ -2377,7 +2377,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.rename
         """
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
-        for k, v in name_dict.items():
+        for k in name_dict.items():
             if k not in self.dims:
                 raise ValueError("cannot rename %r because it is not a "
                                  "dimension in this dataset" % k)
@@ -2412,7 +2412,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.rename
         """
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
-        for k, v in name_dict.items():
+        for k in name_dict.items():
             if k not in self:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable or coordinate in this dataset" % k)

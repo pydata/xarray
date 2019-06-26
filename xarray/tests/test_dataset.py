@@ -2119,6 +2119,8 @@ class TestDataset:
         name_dict = {'x': 'x_new'}
         actual = original.rename_dims(name_dict)
         assert_identical(expected, actual)
+        actual_2 = original.rename_dims(**name_dict)
+        assert_identical(expected, actual_2)
 
     def test_rename_vars(self):
         original = Dataset(
@@ -2128,6 +2130,8 @@ class TestDataset:
         name_dict = {'x': 'x_new'}
         actual = original.rename_vars(name_dict)
         assert_identical(expected, actual)
+        actual_2 = original.rename_vars(**name_dict)
+        assert_identical(expected, actual_2)
 
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
