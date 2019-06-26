@@ -60,7 +60,7 @@ Enhancements
   Datasets can now be combined along any number of dimensions,
   instead of just a one-dimensional list of datasets.
 
-  The new ``combine_nested`` will accept the datasets as a a nested
+  The new ``combine_nested`` will accept the datasets as a nested
   list-of-lists, and combine by applying a series of concat and merge
   operations. The new ``combine_by_coords`` will instead use the dimension
   coordinates of the datasets to order them.
