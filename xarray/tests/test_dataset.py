@@ -2116,18 +2116,18 @@ class TestDataset:
             {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
         expected = Dataset(
             {'x': ('x_new', [0, 1, 2]), 'y': ('x_new', [10, 11, 12]), 'z': 42})
-        name_dict = {'x': 'x_new'}
-        actual = original.rename_dims(name_dict)
+        dims_dict = {'x': 'x_new','y':'y_new'}
+        actual = original.rename_dims(dims_dict)
         assert_identical(expected, actual)
-        actual_2 = original.rename_dims(**name_dict)
+        actual_2 = original.rename_dims(**dims_dict)
         assert_identical(expected, actual_2)
 
     def test_rename_vars(self):
         original = Dataset(
             {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
         expected = Dataset(
-            {'x_new': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
-        name_dict = {'x': 'x_new'}
+            {'x_new': ('x', [0, 1, 2]), 'y_new': ('x', [10, 11, 12]), 'z': 42})
+        name_dict = {'x': 'x_new','y':'y_new'}
         actual = original.rename_vars(name_dict)
         assert_identical(expected, actual)
         actual_2 = original.rename_vars(**name_dict)
