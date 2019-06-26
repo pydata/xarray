@@ -9,7 +9,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from .. import Dataset, DataArray, backends, conventions
+from .. import Dataset, DataArray, backends, conventions, coding
 from ..core import indexing
 from .. import auto_combine
 from ..core.combine import (combine_auto, _manual_combine,
@@ -1031,8 +1031,7 @@ def _validate_datatypes_for_zarr_append(dataset):
     """DataArray.name and Dataset keys must be a string or None"""
     def check_dtype(var):
         if (not np.issubdtype(var.dtype, np.number)
-                and not np.issubdtype(var.dtype, np.string_)
-                and not np.issubdtype(var.dtype, np.unicode_)
+                and not coding.strings.is_unicode_dtype(var.dtype)
                 and not var.dtype == object):
             # and not re.match('^bytes[1-9]+$', var.dtype.name)):
             raise ValueError('Invalid dtype for data variable: {} '

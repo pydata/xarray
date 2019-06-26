@@ -429,7 +429,7 @@ class ZarrStore(AbstractWritableDataStore):
                 for k2, v2 in attrs.items():
                     encoded_attrs[k2] = self.encode_attribute(v2)
 
-                if dtype == object:
+                if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
                 zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                             fill_value=fill_value, **encoding)
