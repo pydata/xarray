@@ -56,7 +56,9 @@ def create_append_test_data(seed=None):
     rs = np.random.RandomState(seed)
     lat = [2, 1, 0]
     lon = [0, 1, 2]
-    string_var = ["ae", "bc", "df"]
+    string_var = np.array(["ae", "bc", "df"], dtype=object)
+    string_var_to_append = np.array(['asdf', 'asdfg'], dtype=object)
+    unicode_var = ["áó", "áó", "áó"]
 
     nt1 = 3
     time1 = pd.date_range('2000-01-01', periods=nt1)
@@ -64,14 +66,18 @@ def create_append_test_data(seed=None):
                        lon, time1], dims=['lat', 'lon', 'time'])
     ds1 = da1.to_dataset(name='da')
     ds1['string_var'] = xr.DataArray(string_var, coords=[time1], dims=['time'])
+    ds1['unicode_var'] = xr.DataArray(unicode_var, coords=[time1],
+                                      dims=['time']).astype(np.unicode_)
 
     nt2 = 2
     time2 = pd.date_range('2000-02-01', periods=nt2)
     da2 = xr.DataArray((np.arange(3 * 3 * nt2) + 100).reshape(3, 3, nt2),
                        coords=[lat, lon, time2], dims=['lat', 'lon', 'time'])
     ds2 = da2.to_dataset(name='da')
-    ds2['string_var'] = xr.DataArray(string_var[:nt2],
+    ds2['string_var'] = xr.DataArray(string_var_to_append,
                                      coords=[time2], dims=['time'])
+    ds2['unicode_var'] = xr.DataArray(unicode_var[:nt2], coords=[time2],
+                                      dims=['time']).astype(np.unicode_)
 
     assert all(objp.data.flags.writeable for objp in ds1.variables.values())
     assert all(objp.data.flags.writeable for objp in ds2.variables.values())

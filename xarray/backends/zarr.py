@@ -213,7 +213,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     # zarr allows unicode, but not variable-length strings, so it's both
     # simpler and more compact to always encode as UTF-8 explicitly.
     # TODO: allow toggling this explicitly via dtype in encoding.
-    coder = coding.strings.EncodedStringCoder(allows_unicode=False)
+    coder = coding.strings.EncodedStringCoder(allows_unicode=True)
     var = coder.encode(var, name=name)
     var = coding.strings.ensure_fixed_length_bytes(var)
 
@@ -429,6 +429,8 @@ class ZarrStore(AbstractWritableDataStore):
                 for k2, v2 in attrs.items():
                     encoded_attrs[k2] = self.encode_attribute(v2)
 
+                if dtype == object:
+                    dtype = str
                 zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                             fill_value=fill_value, **encoding)
                 zarr_array.attrs.put(encoded_attrs)

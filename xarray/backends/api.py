@@ -19,7 +19,6 @@ from ..core.variable import Variable
 from .common import ArrayWriter
 from .locks import _get_scheduler
 from ..coding.variables import safe_setitem, unpack_for_encoding
-from ..coding.strings import encode_string_array
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -1028,24 +1027,18 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                              for w, s in zip(writes, stores)])
 
 
-def encode_utf8(var, string_max_length):
-    dims, data, attrs, encoding = unpack_for_encoding(var)
-    missing = pd.isnull(data)
-    data[missing] = ""
-    data = encode_string_array(data, 'utf-8')
-    data = data.astype(np.dtype("S{}".format(string_max_length * 2)))
-    return Variable(dims, data, attrs, encoding)
-
-
 def _validate_datatypes_for_zarr_append(dataset):
     """DataArray.name and Dataset keys must be a string or None"""
     def check_dtype(var):
         if (not np.issubdtype(var.dtype, np.number)
-                and not np.issubdtype(var.dtype, np.string_)):
+                and not np.issubdtype(var.dtype, np.string_)
+                and not np.issubdtype(var.dtype, np.unicode_)
+                and not var.dtype == object):
             # and not re.match('^bytes[1-9]+$', var.dtype.name)):
             raise ValueError('Invalid dtype for data variable: {} '
-                             'dtype must be a subtype of number or '
-                             'a fixed sized string'.format(var))
+                             'dtype must be a subtype of number, '
+                             'a fixed sized string, a fixed size '
+                             'unicode string or an object'.format(var))
     for k in dataset.data_vars.values():
         check_dtype(k)
 

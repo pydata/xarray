@@ -20,7 +20,6 @@ import xarray as xr
 from xarray import (
     DataArray, Dataset, backends, load_dataarray, load_dataset, open_dataarray,
     open_dataset, open_mfdataset, save_mfdataset)
-from xarray.backends.api import encode_utf8
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
@@ -1621,14 +1620,6 @@ class ZarrBase(CFEncodedBase):
         # check append mode for append write
         obj1, obj2 = create_append_test_data()
 
-        with pytest.raises(ValueError):
-            # check failure when having non-fixed-sized strings
-            with self.create_zarr_target() as store_target:
-                obj1.to_zarr(store_target, mode='a')
-
-        # encode strings to fixed sized arrays
-        obj1['string_var'] = encode_utf8(obj1.string_var, 2)
-        obj2['string_var'] = encode_utf8(obj2.string_var, 2)
         with self.create_zarr_target() as store_target:
             obj1.to_zarr(store_target, mode='w')
             obj2.to_zarr(store_target, mode='a', append_dim='time')
@@ -1704,8 +1695,6 @@ class ZarrBase(CFEncodedBase):
         from dask.delayed import Delayed
 
         obj1, obj2 = create_append_test_data()
-        obj1['string_var'] = encode_utf8(obj1.string_var, 2)
-        obj2['string_var'] = encode_utf8(obj2.string_var, 2)
         obj1, obj2 = obj1.chunk(), obj2.chunk()
 
         with self.create_zarr_target() as store:
