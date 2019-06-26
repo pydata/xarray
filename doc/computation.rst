@@ -160,7 +160,7 @@ object:
 
 Aggregation results are assigned the coordinate at the end of each window by
 default, but can be centered by passing ``center=True`` when constructing the
- ``Rolling`` object:
+``Rolling`` object:
 
 .. ipython:: python
 

@@ -8,7 +8,7 @@ del get_versions
 from .core.alignment import align, broadcast, broadcast_arrays
 from .core.common import full_like, zeros_like, ones_like
 from .core.concat import concat
-from .core.combine import combine_auto, combine_manual, auto_combine
+from .core.combine import combine_by_coords, combine_nested, auto_combine
 from .core.computation import apply_ufunc, dot, where
 from .core.extensions import (register_dataarray_accessor,
                               register_dataset_accessor)
