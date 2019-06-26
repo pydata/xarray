@@ -31,4 +31,4 @@ dependencies:
   - pydap
   - lxml
   - pip:
-    - mypy==0.660
+    - mypy==0.711
