@@ -35,6 +35,7 @@ pip-log.txt
 .tox
 nosetests.xml
 .cache
+.dmypy.json
 .mypy_cache
 .ropeproject/
 .tags*
