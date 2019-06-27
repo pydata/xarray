@@ -59,6 +59,12 @@ Enhancements
 - Combining datasets along N dimensions:
   Datasets can now be combined along any number of dimensions,
   instead of just a one-dimensional list of datasets.
+- Renaming variables and dimensions independently:
+  Datasets with coordinate dimensions can now have only their dimension 
+  (using rename_dim) or only their coordinate (using rename_vars) renamed 
+  instead of the rename function applyingto both. (:issue:`3026`)
+  By `Julia Kent <https://github.com/jukent>`_.
+
 
   The new ``combine_manual`` will accept the datasets as a a nested
   list-of-lists, and combine by applying a series of concat and merge
