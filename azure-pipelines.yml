@@ -24,7 +24,7 @@ jobs:
         pytest_extra_flags: --run-flaky --run-network-tests
         allow_failure: true
       # TODO: add numpy-dev to the test-matrix
-  continueOnError: $(allow_failure)
+  continueOnError: ${{ variables['allow_failure'] }}
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
