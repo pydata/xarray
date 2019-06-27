@@ -790,8 +790,8 @@ Combining multiple files
 NetCDF files are often encountered in collections, e.g., with different files
 corresponding to different model runs. xarray can straightforwardly combine such
 files into a single Dataset by making use of :py:func:`~xarray.concat`,
-:py:func:`~xarray.merge`, :py:func:`~xarray.combine_manual` and
-:py:func:`~xarray.combine_auto`. For details on the difference between these
+:py:func:`~xarray.merge`, :py:func:`~xarray.combine_nested` and
+:py:func:`~xarray.combine_by_coords`. For details on the difference between these
 functions see :ref:`combining data`.
 
 .. note::
