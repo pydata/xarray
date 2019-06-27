@@ -1617,20 +1617,26 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
             assert_identical(original, actual)
 
-        # check append mode for append write
-        obj1, obj2 = create_append_test_data()
+        ds, ds_to_append, ds_with_new_var = create_append_test_data()
 
+        # check append mode for append write
         with self.create_zarr_target() as store_target:
-            obj1.to_zarr(store_target, mode='w')
-            obj2.to_zarr(store_target, mode='a', append_dim='time')
-            original = xr.concat([obj1, obj2], dim='time')
+            ds.to_zarr(store_target, mode='w')
+            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            original = xr.concat([ds, ds_to_append], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
         # check failure when append_dim not set
         with pytest.raises(ValueError):
             with self.create_zarr_target() as store_target:
-                obj1.to_zarr(store_target, mode='w')
-                obj2.to_zarr(store_target, mode='a')
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='a')
+
+        # check append mode for new variable
+        with self.create_zarr_target() as store_target:
+            xr.concat([ds, ds_to_append], dim='time').to_zarr(store_target,
+                                                              mode='w')
+            ds_with_new_var.to_zarr(store_target, mode='a')
 
     def test_compressor_encoding(self):
         original = create_test_data()
@@ -1694,35 +1700,36 @@ class ZarrBase(CFEncodedBase):
     def test_to_zarr_append_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
-        obj1, obj2 = create_append_test_data()
-        obj1, obj2 = obj1.chunk(), obj2.chunk()
+        ds, ds_to_append, ds_with_new_var = create_append_test_data()
+        ds, ds_to_append = ds.chunk(), ds_to_append.chunk()
 
         with self.create_zarr_target() as store:
-            delayed_obj = self.save(obj1, store, compute=False, mode='w')
+            delayed_obj = self.save(ds, store, compute=False, mode='w')
             assert isinstance(delayed_obj, Delayed)
 
             with pytest.raises(AssertionError):
                 with self.open(store) as actual:
-                    assert_identical(obj1, actual)
+                    assert_identical(ds, actual)
 
             delayed_obj.compute()
 
             with self.open(store) as actual:
-                assert_identical(obj1, actual)
+                assert_identical(ds, actual)
 
-            delayed_obj = self.save(obj2, store, compute=False, mode='a',
-                                    append_dim='time')
+            delayed_obj = self.save(ds_to_append, store, compute=False,
+                                    mode='a', append_dim='time')
             assert isinstance(delayed_obj, Delayed)
 
             with pytest.raises(AssertionError):
                 with self.open(store) as actual:
-                    assert_identical(xr.concat([obj1, obj2], dim='time'),
+                    assert_identical(xr.concat([ds, ds_to_append], dim='time'),
                                      actual)
 
             delayed_obj.compute()
 
             with self.open(store) as actual:
-                assert_identical(xr.concat([obj1, obj2], dim='time'), actual)
+                assert_identical(xr.concat([ds, ds_to_append], dim='time'),
+                                 actual)
 
     def test_encoding_chunksizes(self):
         # regression test for GH2278

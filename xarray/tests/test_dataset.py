@@ -54,34 +54,54 @@ def create_test_data(seed=None):
 
 def create_append_test_data(seed=None):
     rs = np.random.RandomState(seed)
+
     lat = [2, 1, 0]
     lon = [0, 1, 2]
+    nt1 = 3
+    nt2 = 2
+    time1 = pd.date_range('2000-01-01', periods=nt1)
+    time2 = pd.date_range('2000-02-01', periods=nt2)
     string_var = np.array(["ae", "bc", "df"], dtype=object)
     string_var_to_append = np.array(['asdf', 'asdfg'], dtype=object)
     unicode_var = ["áó", "áó", "áó"]
 
-    nt1 = 3
-    time1 = pd.date_range('2000-01-01', periods=nt1)
-    da1 = xr.DataArray(rs.rand(3, 3, nt1), coords=[lat,
-                       lon, time1], dims=['lat', 'lon', 'time'])
-    ds1 = da1.to_dataset(name='da')
-    ds1['string_var'] = xr.DataArray(string_var, coords=[time1], dims=['time'])
-    ds1['unicode_var'] = xr.DataArray(unicode_var, coords=[time1],
-                                      dims=['time']).astype(np.unicode_)
+    ds = xr.Dataset(
+        data_vars={
+            'da': xr.DataArray(rs.rand(3, 3, nt1), coords=[lat, lon, time1],
+                               dims=['lat', 'lon', 'time']),
+            'string_var': xr.DataArray(string_var, coords=[time1],
+                                       dims=['time']),
+            'unicode_var': xr.DataArray(unicode_var, coords=[time1],
+                                        dims=['time']).astype(np.unicode_)
+        }
+    )
 
-    nt2 = 2
-    time2 = pd.date_range('2000-02-01', periods=nt2)
-    da2 = xr.DataArray((np.arange(3 * 3 * nt2) + 100).reshape(3, 3, nt2),
-                       coords=[lat, lon, time2], dims=['lat', 'lon', 'time'])
-    ds2 = da2.to_dataset(name='da')
-    ds2['string_var'] = xr.DataArray(string_var_to_append,
-                                     coords=[time2], dims=['time'])
-    ds2['unicode_var'] = xr.DataArray(unicode_var[:nt2], coords=[time2],
-                                      dims=['time']).astype(np.unicode_)
+    ds_to_append = xr.Dataset(
+        data_vars={
+            'da': xr.DataArray(rs.rand(3, 3, nt2), coords=[lat, lon, time2],
+                               dims=['lat', 'lon', 'time']),
+            'string_var': xr.DataArray(string_var_to_append, coords=[time2],
+                                       dims=['time']),
+            'unicode_var': xr.DataArray(unicode_var[:nt2], coords=[time2],
+                                        dims=['time']).astype(np.unicode_)
+        }
+    )
 
-    assert all(objp.data.flags.writeable for objp in ds1.variables.values())
-    assert all(objp.data.flags.writeable for objp in ds2.variables.values())
-    return ds1, ds2
+    ds_with_new_var = xr.Dataset(
+        data_vars={
+            'new_var': xr.DataArray(
+                rs.rand(3, 3, nt1 + nt2),
+                coords=[lat, lon, time1.append(time2)],
+                dims=['lat', 'lon', 'time']
+            ),
+        }
+    )
+
+    assert all(objp.data.flags.writeable for objp in ds.variables.values())
+    assert all(
+        objp.data.flags.writeable for objp in ds_to_append.variables.values()
+    )
+    return ds, ds_to_append, ds_with_new_var
 
 
 def create_test_multiindex():
