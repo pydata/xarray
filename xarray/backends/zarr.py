@@ -400,10 +400,6 @@ class ZarrStore(AbstractWritableDataStore):
                 v.encoding = {}
             if name in self.ds:
                 zarr_array = self.ds[name]
-                """
-                If variable is a dimension of an existing array
-                append_dim does not need to be specified
-                """
                 if self.append_dim in dims:
                     # this is the DataArray that has append_dim as a
                     # dimension
