@@ -107,6 +107,8 @@ Bug fixes
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Fixed max, min exception when applied to a multiIndex (:issue:`2923`)
+  By `Ian Castleden <https://github.com/arabidopsis>`_
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
 - Increased support for `missing_value` (:issue:`2871`)
