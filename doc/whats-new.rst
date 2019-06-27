@@ -25,7 +25,7 @@ Enhancements
   By `David Huard <https://github.com/huard>`_.
 - Add ``keepdims`` argument for reduce operations (:issue:`2170`)
   By `Scott Wales <https://github.com/ScottWales>`_.
-- Add ``scales``, ``offsets``, ``units``, ``descriptions`` and ``mask_flag_enums``
+- Add ``scales``, ``offsets``, ``units`` and ``descriptions``
   attributes to :py:class:`~xarray.DataArray` returned by
   :py:func:`~xarray.open_rasterio`. (:issue:`3013`)
   By `Erle Carrara <https://github.com/ecarrara>`_.
