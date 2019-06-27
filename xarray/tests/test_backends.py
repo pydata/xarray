@@ -1636,7 +1636,8 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(ValueError):
             with self.create_zarr_target() as store_target:
                 ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a', append_dim='notvalid')
+                ds_to_append.to_zarr(store_target, mode='a',
+                                     append_dim='notvalid')
 
         # check append mode for new variable
         with self.create_zarr_target() as store_target:
