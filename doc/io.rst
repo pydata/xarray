@@ -766,7 +766,10 @@ Combining multiple files
 
 NetCDF files are often encountered in collections, e.g., with different files
 corresponding to different model runs. xarray can straightforwardly combine such
-files into a single Dataset by making use of :py:func:`~xarray.concat`.
+files into a single Dataset by making use of :py:func:`~xarray.concat`,
+:py:func:`~xarray.merge`, :py:func:`~xarray.combine_nested` and
+:py:func:`~xarray.combine_by_coords`. For details on the difference between these
+functions see :ref:`combining data`.
 
 .. note::
 
@@ -779,7 +782,8 @@ files into a single Dataset by making use of :py:func:`~xarray.concat`.
     This function automatically concatenates and merges multiple files into a
     single xarray dataset.
     It is the recommended way to open multiple files with xarray.
-    For more details, see :ref:`dask.io` and a `blog post`_ by Stephan Hoyer.
+    For more details, see :ref:`combining.multi`, :ref:`dask.io` and a
+    `blog post`_ by Stephan Hoyer.
 
 .. _dask: http://dask.pydata.org
 .. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
