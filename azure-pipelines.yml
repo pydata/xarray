@@ -4,6 +4,9 @@ trigger:
 pr:
   - master
 
+variables:
+  pytest_extra_flags: ''
+
 jobs:
 
 - job: Linux

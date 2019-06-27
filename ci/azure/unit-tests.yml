@@ -20,4 +20,4 @@ steps:
   inputs:
     testResultsFiles: '**/test-*.xml'
     failTaskOnFailedTests: true
-    testRunTitle: 'Test results for Python $CONDA_ENV $PYTEST_EXTRA_FLAGS'
+    testRunTitle: 'Test results for Python $(conda_env) $(pytest_extra_flags)'
