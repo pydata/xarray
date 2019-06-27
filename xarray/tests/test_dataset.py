@@ -2116,6 +2116,7 @@ class TestDataset:
             {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
         expected = Dataset(
             {'x': ('x_new', [0, 1, 2]), 'y': ('x_new', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x')
         dims_dict = {'x': 'x_new'}
         actual = original.rename_dims(dims_dict)
         assert_identical(expected, actual)
@@ -2127,6 +2128,7 @@ class TestDataset:
             {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
         expected = Dataset(
             {'x_new': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x_new')
         name_dict = {'x': 'x_new'}
         actual = original.rename_vars(name_dict)
         assert_identical(expected, actual)
