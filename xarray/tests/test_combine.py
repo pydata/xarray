@@ -344,7 +344,7 @@ class TestManualCombine:
     @pytest.mark.xfail
     def test_manual_concat_too_many_dims_at_once(self):
         objs = [Dataset({'x': [0], 'y': [1]}), Dataset({'y': [0], 'x': [1]})]
-        with pytest.raises(ValueError, "not equal across datasets"):
+        with pytest.raises(ValueError, match="not equal across datasets"):
             combine_nested(objs, concat_dim='x', coords='minimal')
 
     def test_manual_concat_along_new_dim(self):
