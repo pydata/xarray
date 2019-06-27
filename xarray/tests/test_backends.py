@@ -3235,7 +3235,6 @@ class TestRasterio:
                 assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
                 assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
                 assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
-                assert rioda.attrs['mask_flags'] == [1, 1, 1]
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3263,7 +3262,6 @@ class TestRasterio:
                 assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
                 assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
                 assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
-                assert rioda.attrs['mask_flags'] == [1, 1, 1]
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -3286,7 +3284,6 @@ class TestRasterio:
                 assert_allclose(rioda, expected)
                 assert rioda.attrs['scales'] == (1.0,)
                 assert rioda.attrs['offsets'] == (0.0,)
-                assert rioda.attrs['mask_flags'] == [8]
                 assert isinstance(rioda.attrs['descriptions'], tuple)
                 assert isinstance(rioda.attrs['units'], tuple)
                 assert isinstance(rioda.attrs['crs'], str)
