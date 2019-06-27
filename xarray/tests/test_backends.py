@@ -775,9 +775,7 @@ class CFEncodedBase(DatasetIOBase):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            encoded_dtype = actual.x.encoding['dtype']
-            # On OS X, dtype sometimes switches endianness for unclear reasons
-            assert str(encoded_dtype)[-2:] == 'f4'
+            assert actual.x.encoding['dtype'] == 'f4'
         assert ds.x.encoding == {}
 
         kwargs = dict(encoding={'x': {'foo': 'bar'}})
@@ -869,7 +867,9 @@ class CFEncodedBase(DatasetIOBase):
         ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            assert actual.x.encoding['dtype'] == 'f4'
+            encoded_dtype = actual.x.encoding['dtype']
+            # On OS X, dtype sometimes switches endianness for unclear reasons
+            assert encoded_dtype.kind == 'f' and encoded_dtype.itemsize == 4
         assert ds.x.encoding == {}
 
     def test_append_write(self):
