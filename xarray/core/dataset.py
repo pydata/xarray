@@ -2302,6 +2302,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         name_dict : dict-like, optional
             Dictionary whose keys are current variable or dimension names and
             whose values are the desired names.
+        inplace : bool, optional
+            If True, rename variables and dimensions in-place. Otherwise,
+            return a new dataset object.
         **names, optional
             Keyword form of ``name_dict``.
             One of name_dict or names must be provided.
@@ -2328,7 +2331,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables, coord_names, dims, indexes = self._rename_all(
             name_dict=name_dict, dims_dict=name_dict)
         return self._replace(variables, coord_names, dims=dims,
-                             indexes=indexes)
+                             indexes=indexes, inplace=inplace)
 
     def rename_dims(self, dims_dict=None, **dims):
         """Returns a new object with renamed dimensions only.
