@@ -1043,6 +1043,25 @@ def _validate_datatypes_for_zarr_append(dataset):
         check_dtype(k)
 
 
+def _validate_append_dim(ds_to_append, store, append_dim, **open_kwargs):
+    try:
+        ds = backends.zarr.open_zarr(store, **open_kwargs)
+    except ValueError:  # store empty
+        return
+    if append_dim:
+        if append_dim not in ds.dims:
+            raise ValueError(
+                "{} not a valid dimension in the Dataset".format(append_dim)
+            )
+    for data_var in ds_to_append:
+        if data_var in ds:
+            if append_dim is None:
+                raise ValueError(
+                    "variable '{}' already exists, but append_dim "
+                    "was not set".format(data_var)
+                )
+
+
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
             encoding=None, compute=True, consolidated=False, append_dim=None):
     """This function creates an appropriate datastore for writing a dataset to
@@ -1061,6 +1080,8 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     if mode == "a":
         _validate_datatypes_for_zarr_append(dataset)
+        _validate_append_dim(dataset, store, append_dim,
+                             consolidated=consolidated, group=group)
 
     zstore = backends.ZarrStore.open_group(store=store, mode=mode,
                                            synchronizer=synchronizer,

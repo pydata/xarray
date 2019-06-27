@@ -368,19 +368,6 @@ class ZarrStore(AbstractWritableDataStore):
     def sync(self):
         pass
 
-    def _new_variable_dimensions(self, variables):
-        """
-        Returns a list of all existing dimensions that
-        belong to new variables
-        """
-        new_var_dims = list()
-        for vn, v in variables.items():
-            if _encode_variable_name(vn) not in self.ds:
-                for dim in v.dims:
-                    if _encode_variable_name(dim) in self.ds:
-                        new_var_dims.append(dim)
-        return new_var_dims
-
     def set_variables(self, variables, check_encoding_set, writer,
                       unlimited_dims=None):
         """
@@ -400,8 +387,6 @@ class ZarrStore(AbstractWritableDataStore):
             dimensions.
         """
 
-        new_variable_dimensions = self._new_variable_dimensions(variables)
-
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -419,12 +404,6 @@ class ZarrStore(AbstractWritableDataStore):
                 If variable is a dimension of an existing array
                 append_dim does not need to be specified
                 """
-                if name not in new_variable_dimensions:
-                    if self.append_dim is None:
-                        raise ValueError(
-                            "variable '{}' already exists, but append_dim "
-                            "was not set".format(name)
-                        )
                 if self.append_dim in dims:
                     # this is the DataArray that has append_dim as a
                     # dimension

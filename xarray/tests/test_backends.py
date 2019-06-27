@@ -1632,11 +1632,20 @@ class ZarrBase(CFEncodedBase):
                 ds.to_zarr(store_target, mode='w')
                 ds_to_append.to_zarr(store_target, mode='a')
 
+        # check failure when append_dim not valid
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='a', append_dim='notvalid')
+
         # check append mode for new variable
         with self.create_zarr_target() as store_target:
             xr.concat([ds, ds_to_append], dim='time').to_zarr(store_target,
                                                               mode='w')
             ds_with_new_var.to_zarr(store_target, mode='a')
+            combined = xr.concat([ds, ds_to_append], dim='time')
+            combined['new_var'] = ds_with_new_var['new_var']
+            assert_identical(combined, xr.open_zarr(store_target))
 
     def test_compressor_encoding(self):
         original = create_test_data()
