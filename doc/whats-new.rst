@@ -79,8 +79,6 @@ Bug fixes
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 - Fixed max, min exception when applied to a multiIndex (:issue:`2923`)
   By `Ian Castleden <https://github.com/arabidopsis>`_
-- Fix facetgrid colormap bug when ``extend=True``. (:issue:`2932`)
-  By `Deepak Cherian <https://github.com/dcherian`_.
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
 - Increased support for `missing_value` (:issue:`2871`)
