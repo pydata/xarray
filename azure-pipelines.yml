@@ -1,11 +1,6 @@
-trigger:
-  - master
-
-pr:
-  - master
-
 variables:
   pytest_extra_flags: ''
+  allow_failure: false
 
 jobs:
 
@@ -22,7 +17,14 @@ jobs:
         conda_env: py36-dask-dev
       py36-zarr-dev:
         conda_env: py36-zarr-dev
+      py36-pandas-dev:
+        conda_env: py36-pandas-dev
+      py36-flakey:
+        conda_env: py36
+        pytest_extra_flags: --run-flaky --run-network-tests
+        allow_failure: true
       # TODO: add numpy-dev to the test-matrix
+  continueOnError: $(allow_failure)
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
@@ -67,7 +69,7 @@ jobs:
     displayName: mypy type checks
     # allow mypy failures until we have a nice way of displaying results in
     # pull requests
-    continueOnError: 'true'
+    continueOnError: true
 
 - job: Docs
   pool:
@@ -93,17 +95,3 @@ jobs:
       source activate test_env
       pytest properties
     displayName: Property based tests
-
-- job: LinuxAllowedFailures
-  strategy:
-    matrix:
-      py36-pandas-dev:
-        conda_env: py36-pandas-dev
-      py36-flakey:
-        conda_env: py36
-        pytest_extra_flags: --run-flaky --run-network-tests
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/unit-tests.yml
-  continueOnError: 'true'

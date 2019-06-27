@@ -19,6 +19,7 @@ steps:
 - bash: |
     source activate test_env
     COVERALLS_REPO_TOKEN=$(coverallsToken) COVERALLS_PARALLEL=true coveralls
+  condition: succeededOrFailed()
   displayName: Upload coverage to coveralls
 
 - task: PublishTestResults@2
