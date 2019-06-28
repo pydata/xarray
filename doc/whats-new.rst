@@ -97,6 +97,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Rolling operations on xarray objects containing dask arrays could silently
+  compute the incorrect result or use large amounts of memory (:issue:`2940`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Don't set encoding attributes on bounds variables when writing to netCDF.
   (:issue:`2921`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
