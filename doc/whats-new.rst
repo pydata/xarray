@@ -126,6 +126,9 @@ Bug fixes
 - Add explicit pytest markers, now required by pytest
   (:issue:`3032`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix to ensure that xarray can still be imported with pandas 0.25, which will
+  remove `pd.Panel`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.1:
 
