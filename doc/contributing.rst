@@ -400,8 +400,9 @@ individual failed tests. This is an example of a green build.
 
 .. note::
 
-   Each time you push to your PR branch, a new run of the tests will be triggered on the CI.
-   Tests for any older commits on the same branch will be automatically cancelled.
+   Each time you push to your PR branch, a new run of the tests will be
+   triggered on the CI. If they haven't already finished, tests for any older
+   commits on the same branch will be automatically cancelled.
 
 .. _contributing.tdd:
 
