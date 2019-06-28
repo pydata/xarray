@@ -2686,6 +2686,13 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().integrate(dim, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    @property
+    def flat(self):
+        import itertools
+        gen = itertools.product(*(range(n) for n in self.shape))
+        for indices in gen:
+            yield self.__getitem__(indices)
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names  # noqa
     str = property(StringAccessor)
