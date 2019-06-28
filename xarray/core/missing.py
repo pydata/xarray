@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Iterable
 from functools import partial
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 import numpy as np
 import pandas as pd
@@ -18,12 +18,8 @@ class BaseInterpolator:
     '''gerneric interpolator class for normalizing interpolation methods'''
     cons_kwargs = {}  # type: Dict[str, Any]
     call_kwargs = {}  # type: Dict[str, Any]
-    f = None
-    method = None
-
-    def __init__(self, xi, yi, method=None, **kwargs):
-        self.method = method
-        self.call_kwargs = kwargs
+    f = None  # type: Callable
+    method = None  # type: str
 
     def __call__(self, x):
         return self.f(x, **self.call_kwargs)

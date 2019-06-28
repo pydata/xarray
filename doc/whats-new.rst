@@ -21,7 +21,8 @@ v0.12.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-
+- New :py:meth:`~xarray.GroupBy.quantile` method. (:issue:`3018`)
+  By `David Huard <https://github.com/huard>`_.
 - Add ``keepdims`` argument for reduce operations (:issue:`2170`)
   By `Scott Wales <https://github.com/ScottWales>`_.
 - netCDF chunksizes are now only dropped when original_shape is different,
@@ -32,6 +33,11 @@ Enhancements
 - Add ``fill_value`` argument for reindex, align, and merge operations
   to enable custom fill values. (:issue:`2876`)
   By `Zach Griffith <https://github.com/zdgriffith>`_.
+- :py:meth:`~xarray.DataArray.rolling_exp` and
+  :py:meth:`~xarray.Dataset.rolling_exp` added, similar to pandas' 
+  ``pd.DataFrame.ewm`` method. Calling ``.mean`` on the resulting object 
+  will return an exponentially weighted moving average.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Character arrays' character dimension name decoding and encoding handled by
   ``var.encoding['char_dim_name']`` (:issue:`2895`)
   By `James McCreight <https://github.com/jmccreight>`_.
@@ -50,6 +56,23 @@ Enhancements
   helpful for avoiding file-lock errors when trying to write to files opened
   using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Combining datasets along N dimensions:
+  Datasets can now be combined along any number of dimensions,
+  instead of just a one-dimensional list of datasets.
+
+  The new ``combine_nested`` will accept the datasets as a nested
+  list-of-lists, and combine by applying a series of concat and merge
+  operations. The new ``combine_by_coords`` will instead use the dimension
+  coordinates of the datasets to order them.
+
+  ``open_mfdataset`` can use either ``combine_nested`` or ``combine_by_coords`` to
+  combine datasets along multiple dimensions, by specifying the argument
+  `combine='nested'` or `combine='by_coords'`.
+
+  This means that the original function ``auto_combine`` is being deprecated.
+  To avoid FutureWarnings switch to using `combine_nested` or `combine_by_coords`,
+  (or set the `combine` argument in `open_mfdataset`). (:issue:`2159`)
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Better warning message when supplying invalid objects to ``xr.merge``
   (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
 - Added ``strftime`` method to ``.dt`` accessor, making it simpler to hand a
@@ -65,6 +88,10 @@ Enhancements
   that allows ignoring errors if a passed label or dimension is not in the dataset
   (:issue:`2994`).
   By `Andrew Ross <https://github.com/andrew-c-ross>`_.
+- Argument and return types are added to most methods on ``DataArray`` and ``Dataset``,
+  allowing static type checking both within xarray and external libraries.
+  Type checking with ``mypy`` is enabled in CI (though not required yet).
+  By `Guido Imperiale <https://github.com/crusaderky>`_ and `Maximilian Roos <https://github.com/max-sixty>`_. 
 
 
 Bug fixes
@@ -73,6 +100,9 @@ Bug fixes
 - Rolling operations on xarray objects containing dask arrays could silently
   compute the incorrect result or use large amounts of memory (:issue:`2940`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Don't set encoding attributes on bounds variables when writing to netCDF.
+  (:issue:`2921`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - NetCDF4 output: variables with unlimited dimensions must be chunked (not
   contiguous) on output. (:issue:`1849`)
   By `James McCreight <https://github.com/jmccreight>`_.
@@ -80,6 +110,8 @@ Bug fixes
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Fixed max, min exception when applied to a multiIndex (:issue:`2923`)
+  By `Ian Castleden <https://github.com/arabidopsis>`_
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
 - Increased support for `missing_value` (:issue:`2871`)
@@ -88,7 +120,7 @@ Bug fixes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Fixed performance issues with cftime installed (:issue:`3000`)
   By `0x0L <https://github.com/0x0L>`_.
-- Replace incorrect usages of `message` in pytest assertions 
+- Replace incorrect usages of `message` in pytest assertions
   with `match` (:issue:`3011`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add explicit pytest markers, now required by pytest
@@ -191,11 +223,16 @@ Other enhancements
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+  
 - :py:func:`xarray.testing.assert_equal` and
   :py:func:`xarray.testing.assert_identical` now provide a more detailed
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Resampling of standard and non-standard calendars indexed by
+  :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
+  By `Jwen Fai Low <https://github.com/jwenfai>`_ and
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
   ``nearest``. (:issue:`2695`)
   By `Hauke Schulz <https://github.com/observingClouds>`_.
@@ -740,7 +777,7 @@ Enhancements
   arguments in ``data_vars`` to indexes set explicitly in ``coords``,
   where previously an error would be raised.
   (:issue:`674`)
-  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
   (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
@@ -748,12 +785,12 @@ Enhancements
   of supplying `kwargs`. This allows for more robust behavior
   of dimension names which conflict with other keyword names, or are
   not strings.
-  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - :py:meth:`~DataArray.rename` now supports supplying ``**kwargs``, as an
   alternative to the existing approach of supplying a ``dict`` as the
   first argument.
-  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
   aggregation over multiple dimensions at the same time. This is the default
@@ -918,7 +955,7 @@ Enhancements
   which test each value in the array for whether it is contained in the
   supplied list, returning a bool array. See :ref:`selecting values with isin`
   for full details. Similar to the ``np.isin`` function.
-  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
   object (:issue:`1993`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -2113,7 +2150,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 - New documentation on :ref:`panel transition`. By
-  `Maximilian Roos <https://github.com/maximilianr>`_.
+  `Maximilian Roos <https://github.com/max-sixty>`_.
 - New ``Dataset`` and ``DataArray`` methods :py:meth:`~xarray.Dataset.to_dict`
   and :py:meth:`~xarray.Dataset.from_dict` to allow easy conversion between
   dictionaries and xarray objects (:issue:`432`). See
@@ -2134,9 +2171,9 @@ Bug fixes
   (:issue:`953`). By `Stephan Hoyer <https://github.com/shoyer>`_.
 - ``Dataset.__dir__()`` (i.e. the method python calls to get autocomplete
   options) failed if one of the dataset's keys was not a string (:issue:`852`).
-  By `Maximilian Roos <https://github.com/maximilianr>`_.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - ``Dataset`` constructor can now take arbitrary objects as values
-  (:issue:`647`). By `Maximilian Roos <https://github.com/maximilianr>`_.
+  (:issue:`647`). By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Clarified ``copy`` argument for :py:meth:`~xarray.DataArray.reindex` and
   :py:func:`~xarray.align`, which now consistently always return new xarray
   objects (:issue:`927`).

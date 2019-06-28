@@ -20,7 +20,7 @@ from xarray.tests import (
     LooseVersion, ReturnItem, assert_allclose, assert_array_equal,
     assert_equal, assert_identical, raises_regex, requires_bottleneck,
     requires_cftime, requires_dask, requires_iris, requires_np113,
-    requires_scipy, source_ndarray)
+    requires_numbagg, requires_scipy, source_ndarray)
 
 
 class TestDataArray:
@@ -1324,7 +1324,7 @@ class TestDataArray:
                           coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
 
-        with raises_regex(TypeError, 'dim should be str or'):
+        with raises_regex(TypeError, 'dim should be hashable or'):
             array.expand_dims(0)
         with raises_regex(ValueError, 'lengths of dim and axis'):
             # dims and axis argument should be the same length
@@ -3956,14 +3956,14 @@ class TestIrisConversion:
             assert coord.var_name == original_coord.name
             assert_array_equal(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord) ==
-                    original.get_axis_num(
+            assert (actual.coord_dims(coord)
+                    == original.get_axis_num(
                         original.coords[coord.var_name].dims))
 
-        assert (actual.coord('distance2').attributes['foo'] ==
-                original.coords['distance2'].attrs['foo'])
-        assert (actual.coord('distance').units ==
-                cf_units.Unit(original.coords['distance'].units))
+        assert (actual.coord('distance2').attributes['foo']
+                == original.coords['distance2'].attrs['foo'])
+        assert (actual.coord('distance').units
+                == cf_units.Unit(original.coords['distance'].units))
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
@@ -4021,14 +4021,14 @@ class TestIrisConversion:
             assert coord.var_name == original_coord.name
             assert_array_equal(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord) ==
-                    original.get_axis_num(
+            assert (actual.coord_dims(coord)
+                    == original.get_axis_num(
                         original.coords[coord.var_name].dims))
 
         assert (actual.coord('distance2').attributes['foo'] == original.coords[
             'distance2'].attrs['foo'])
-        assert (actual.coord('distance').units ==
-                cf_units.Unit(original.coords['distance'].units))
+        assert (actual.coord('distance').units
+                == cf_units.Unit(original.coords['distance'].units))
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
@@ -4124,3 +4124,30 @@ class TestIrisConversion:
         expected = Cube(data, aux_coords_and_dims=[
             (AuxCoord(coord_values, var_name='space'), 0)])
         assert result == expected
+
+
+@requires_numbagg
+@pytest.mark.parametrize('dim', ['time', 'x'])
+@pytest.mark.parametrize('window_type, window', [
+    ['span', 5],
+    ['alpha', 0.5],
+    ['com', 0.5],
+    ['halflife', 5],
+])
+def test_rolling_exp(da, dim, window_type, window):
+    da = da.isel(a=0)
+    da = da.where(da > 0.2)
+
+    result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
+    assert isinstance(result, DataArray)
+
+    pandas_array = da.to_pandas()
+    assert pandas_array.index.name == 'time'
+    if dim == 'x':
+        pandas_array = pandas_array.T
+    expected = (
+        xr.DataArray(pandas_array.ewm(**{window_type: window}).mean())
+        .transpose(*da.dims)
+    )
+
+    assert_allclose(expected.variable, result.variable)
