@@ -3,11 +3,13 @@ steps:
 - ${{ if eq(variables['Agent.OS'], 'Linux') }}:
     bash: |
       echo "##vso[task.prependpath]$CONDA/bin"
-  ${{ if eq(variables['Agent.OS'], 'Darwin') }}:
+    displayName: Add conda to PATH
+- ${{ if eq(variables['Agent.OS'], 'Darwin') }}:
     bash: |
       echo "##vso[task.prependpath]$CONDA/bin"
       sudo chown -R $USER $CONDA
-  ${{ if eq(variables['Agent.OS'], 'Windows_NT') }}:
+    displayName: Add conda to PATH
+- ${{ if eq(variables['Agent.OS'], 'Windows_NT') }}:
     powershell: |
       Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
-  displayName: Add conda to PATH
+    displayName: Add conda to PATH
