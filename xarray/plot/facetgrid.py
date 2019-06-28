@@ -8,7 +8,6 @@ from ..core.formatting import format_item
 from .utils import (
     _infer_xy_labels, _process_cmap_cbar_kwargs, import_matplotlib_pyplot,
     label_from_attrs)
-import xarray as xr
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
 _FONTSIZE = 'small'
@@ -338,7 +337,7 @@ class FacetGrid:
             self._finalized = True
 
     def add_legend(self, **kwargs):
-        if isinstance(self._hue_var, xr.DataArray):
+        if hasattr(self._hue_var, 'values'):
             labels = self._hue_var.values
         else:
             labels = self._hue_var
