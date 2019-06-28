@@ -8,6 +8,6 @@ steps:
       echo "##vso[task.prependpath]$CONDA/bin"
       sudo chown -R $USER $CONDA
   ${{ if eq(variables['Agent.OS'], 'Windows_NT') }}:
-     powershell: |
-       Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+    powershell: |
+      Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
   displayName: Add conda to PATH
