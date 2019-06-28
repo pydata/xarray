@@ -16,12 +16,6 @@ steps:
   # TODO: publish coverage results to Azure, once we can merge them across
   # multiple jobs: https://stackoverflow.com/questions/56776185
 
-- bash: |
-    source activate test_env
-    COVERALLS_REPO_TOKEN=$(coverallsToken) COVERALLS_PARALLEL=true coveralls
-  condition: succeededOrFailed()
-  displayName: Upload coverage to coveralls
-
 - task: PublishTestResults@2
   condition: succeededOrFailed()
   inputs:
