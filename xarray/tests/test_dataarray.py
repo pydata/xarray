@@ -3710,15 +3710,14 @@ def test_rolling_properties(da):
     assert rolling_obj.obj.get_axis_num('time') == 1
 
     # catching invalid args
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='exactly one dim/window should'):
         da.rolling(time=7, x=2)
-    assert 'exactly one dim/window should' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='window must be > 0'):
         da.rolling(time=-2)
-    assert 'window must be > 0' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError, match='min_periods must be greater than zero'
+    ):
         da.rolling(time=2, min_periods=0)
-    assert 'min_periods must be greater than zero' in str(exception)
 
 
 @pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max',

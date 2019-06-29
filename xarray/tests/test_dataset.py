@@ -4788,18 +4788,16 @@ def test_coarsen_coords_cftime():
 
 def test_rolling_properties(ds):
     # catching invalid args
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='exactly one dim/window should'):
         ds.rolling(time=7, x=2)
-    assert 'exactly one dim/window should' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='window must be > 0'):
         ds.rolling(time=-2)
-    assert 'window must be > 0' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError, match='min_periods must be greater than zero'
+    ):
         ds.rolling(time=2, min_periods=0)
-    assert 'min_periods must be greater than zero' in str(exception)
-    with pytest.raises(KeyError) as exception:
+    with pytest.raises(KeyError, match='time2'):
         ds.rolling(time2=2)
-    assert 'time2' in str(exception)
 
 
 @pytest.mark.parametrize('name',
