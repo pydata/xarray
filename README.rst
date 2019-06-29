@@ -3,8 +3,8 @@ xarray: N-D labeled arrays and datasets
 
 .. image:: https://travis-ci.org/pydata/xarray.svg?branch=master
    :target: https://travis-ci.org/pydata/xarray
-.. image:: https://ci.appveyor.com/api/projects/status/github/pydata/xarray?svg=true&passingText=passing&failingText=failing&pendingText=pending
-   :target: https://ci.appveyor.com/project/shoyer/xray
+.. image:: https://dev.azure.com/xarray/xarray/_apis/build/status/pydata.xarray?branchName=master
+   :target: https://dev.azure.com/xarray/xarray/_build/latest?definitionId=1&branchName=master
 .. image:: https://coveralls.io/repos/pydata/xarray/badge.svg
    :target: https://coveralls.io/r/pydata/xarray
 .. image:: https://readthedocs.org/projects/xray/badge/?version=latest

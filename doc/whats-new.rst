@@ -97,6 +97,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Rolling operations on xarray objects containing dask arrays could silently
+  compute the incorrect result or use large amounts of memory (:issue:`2940`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Don't set encoding attributes on bounds variables when writing to netCDF.
   (:issue:`2921`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
@@ -107,6 +110,8 @@ Bug fixes
   By `Mayeul d'Avezac <https://github.com/mdavezac>`_.
 - Return correct count for scalar datetime64 arrays (:issue:`2770`)
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- Fixed max, min exception when applied to a multiIndex (:issue:`2923`)
+  By `Ian Castleden <https://github.com/arabidopsis>`_
 - A deep copy deep-copies the coords (:issue:`1463`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
 - Increased support for `missing_value` (:issue:`2871`)
@@ -115,12 +120,9 @@ Bug fixes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Fixed performance issues with cftime installed (:issue:`3000`)
   By `0x0L <https://github.com/0x0L>`_.
-- Replace incorrect usages of `message` in pytest assertions
-  with `match` (:issue:`3011`)
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Add explicit pytest markers, now required by pytest
-  (:issue:`3032`).
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Test suite fixes for newer versions of pytest (:issue:`3011`, :issue:`3032`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+  and `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.1:
 
