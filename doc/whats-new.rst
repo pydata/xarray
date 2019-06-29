@@ -226,6 +226,11 @@ Other enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Added append capability to the zarr store.
+  By `Jendrik Jördening <https://github.com/jendrikjoe>`_,
+  `David Brochart <https://github.com/davidbrochart>`_,
+  `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Shikhar Goenka<https://github.com/shikharsg>`_.
 - Resampling of standard and non-standard calendars indexed by
   :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
   By `Jwen Fai Low <https://github.com/jwenfai>`_ and

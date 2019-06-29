@@ -4,17 +4,21 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
+import re
 
 import numpy as np
+import pandas as pd
 
-from .. import Dataset, DataArray, backends, conventions
+from .. import Dataset, DataArray, backends, conventions, coding
 from ..core import indexing
 from .. import auto_combine
 from ..core.combine import (combine_by_coords, _nested_combine,
                             _infer_concat_order_from_positions)
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from ..core.variable import Variable
 from .common import ArrayWriter
 from .locks import _get_scheduler
+from ..coding.variables import safe_setitem, unpack_for_encoding
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -1024,8 +1028,48 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                              for w, s in zip(writes, stores)])
 
 
+def _validate_datatypes_for_zarr_append(dataset):
+    """DataArray.name and Dataset keys must be a string or None"""
+    def check_dtype(var):
+        if (not np.issubdtype(var.dtype, np.number)
+                and not coding.strings.is_unicode_dtype(var.dtype)
+                and not var.dtype == object):
+            # and not re.match('^bytes[1-9]+$', var.dtype.name)):
+            raise ValueError('Invalid dtype for data variable: {} '
+                             'dtype must be a subtype of number, '
+                             'a fixed sized string, a fixed size '
+                             'unicode string or an object'.format(var))
+    for k in dataset.data_vars.values():
+        check_dtype(k)
+
+
+def _validate_append_dim_and_encoding(ds_to_append, store, append_dim,
+                                      encoding, **open_kwargs):
+    try:
+        ds = backends.zarr.open_zarr(store, **open_kwargs)
+    except ValueError:  # store empty
+        return
+    if append_dim:
+        if append_dim not in ds.dims:
+            raise ValueError(
+                "{} not a valid dimension in the Dataset".format(append_dim)
+            )
+    for data_var in ds_to_append:
+        if data_var in ds:
+            if append_dim is None:
+                raise ValueError(
+                    "variable '{}' already exists, but append_dim "
+                    "was not set".format(data_var)
+                )
+            if data_var in encoding.keys():
+                raise ValueError(
+                    "variable '{}' already exists, but encoding was"
+                    "provided".format(data_var)
+                )
+
+
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None, compute=True, consolidated=False):
+            encoding=None, compute=True, consolidated=False, append_dim=None):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -1040,11 +1084,18 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
+    if mode == "a":
+        _validate_datatypes_for_zarr_append(dataset)
+        _validate_append_dim_and_encoding(dataset, store, append_dim,
+                                          group=group,
+                                          consolidated=consolidated,
+                                          encoding=encoding)
+
     zstore = backends.ZarrStore.open_group(store=store, mode=mode,
                                            synchronizer=synchronizer,
                                            group=group,
                                            consolidate_on_close=consolidated)
-
+    zstore.append_dim = append_dim
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)

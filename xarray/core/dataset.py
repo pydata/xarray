@@ -1365,7 +1365,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                          compute=compute)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
-                encoding=None, compute=True, consolidated=False):
+                encoding=None, compute=True, consolidated=False,
+                append_dim=None):
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1376,9 +1377,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         store : MutableMapping or str, optional
             Store or path to directory in file system.
-        mode : {'w', 'w-'}
+        mode : {'w', 'w-', 'a'}
             Persistence mode: 'w' means create (overwrite if exists);
-            'w-' means create (fail if exists).
+            'w-' means create (fail if exists);
+            'a' means append (create if does not exist).
         synchronizer : object, optional
             Array synchronizer
         group : str, obtional
@@ -1393,6 +1395,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
+        append_dim: str, optional
+            If mode='a', the dimension on which the data will be appended.
 
         References
         ----------
@@ -1400,14 +1404,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if encoding is None:
             encoding = {}
-        if mode not in ['w', 'w-']:
-            # TODO: figure out how to handle 'r+' and 'a'
-            raise ValueError("The only supported options for mode are 'w' "
-                             "and 'w-'.")
+        if mode not in ['w', 'w-', 'a']:
+            # TODO: figure out how to handle 'r+'
+            raise ValueError("The only supported options for mode are 'w',"
+                             "'w-' and 'a'.")
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
                        group=group, encoding=encoding, compute=compute,
-                       consolidated=consolidated)
+                       consolidated=consolidated, append_dim=append_dim)
 
     def __repr__(self):
         return formatting.dataset_repr(self)
