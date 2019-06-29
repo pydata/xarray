@@ -1043,7 +1043,8 @@ def _validate_datatypes_for_zarr_append(dataset):
         check_dtype(k)
 
 
-def _validate_append_dim(ds_to_append, store, append_dim, **open_kwargs):
+def _validate_append_dim_and_encoding(ds_to_append, store, append_dim,
+                                      encoding, **open_kwargs):
     try:
         ds = backends.zarr.open_zarr(store, **open_kwargs)
     except ValueError:  # store empty
@@ -1059,6 +1060,11 @@ def _validate_append_dim(ds_to_append, store, append_dim, **open_kwargs):
                 raise ValueError(
                     "variable '{}' already exists, but append_dim "
                     "was not set".format(data_var)
+                )
+            if data_var in encoding.keys():
+                raise ValueError(
+                    "variable '{}' already exists, but encoding was"
+                    "provided".format(data_var)
                 )
 
 
@@ -1080,8 +1086,10 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     if mode == "a":
         _validate_datatypes_for_zarr_append(dataset)
-        _validate_append_dim(dataset, store, append_dim,
-                             consolidated=consolidated, group=group)
+        _validate_append_dim_and_encoding(dataset, store, append_dim,
+                                          group=group,
+                                          consolidated=consolidated,
+                                          encoding=encoding)
 
     zstore = backends.ZarrStore.open_group(store=store, mode=mode,
                                            synchronizer=synchronizer,

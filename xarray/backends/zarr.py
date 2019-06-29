@@ -354,7 +354,7 @@ class ZarrStore(AbstractWritableDataStore):
             ds = open_zarr(self.ds.store, chunks=None)
             variables_with_encoding = OrderedDict()
             for vn in existing_variables:
-                variables_with_encoding[vn] = variables[vn]
+                variables_with_encoding[vn] = variables[vn].copy(deep=False)
                 variables_with_encoding[vn].encoding = ds[vn].encoding
             variables_with_encoding, _ = self.encode(variables_with_encoding,
                                                      {})

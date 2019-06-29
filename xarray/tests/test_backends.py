@@ -1617,7 +1617,7 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
             assert_identical(original, actual)
 
-        ds, ds_to_append, ds_with_new_var = create_append_test_data()
+        ds, ds_to_append, _ = create_append_test_data()
 
         # check append mode for append write
         with self.create_zarr_target() as store_target:
@@ -1625,28 +1625,6 @@ class ZarrBase(CFEncodedBase):
             ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
             original = xr.concat([ds, ds_to_append], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
-
-        # check failure when append_dim not set
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a')
-
-        # check failure when append_dim not valid
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a',
-                                     append_dim='notvalid')
-
-        # check append mode for new variable
-        with self.create_zarr_target() as store_target:
-            xr.concat([ds, ds_to_append], dim='time').to_zarr(store_target,
-                                                              mode='w')
-            ds_with_new_var.to_zarr(store_target, mode='a')
-            combined = xr.concat([ds, ds_to_append], dim='time')
-            combined['new_var'] = ds_with_new_var['new_var']
-            assert_identical(combined, xr.open_zarr(store_target))
 
     def test_compressor_encoding(self):
         original = create_test_data()
@@ -1676,17 +1654,82 @@ class ZarrBase(CFEncodedBase):
     def test_dataset_caching(self):
         super(CFEncodedBase, self).test_dataset_caching()
 
-    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_write(self):
-        super(CFEncodedBase, self).test_append_write()
+        ds, ds_to_append, _ = create_append_test_data()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode='w')
+            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            original = xr.concat([ds, ds_to_append], dim='time')
+            assert_identical(original, xr.open_zarr(store_target))
 
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_overwrite_values(self):
         super(CFEncodedBase, self).test_append_overwrite_values()
 
-    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_with_invalid_dim_raises(self):
-        super(CFEncodedBase, self).test_append_with_invalid_dim_raises()
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when append_dim not valid
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='a',
+                                     append_dim='notvalid')
+
+    def test_append_with_append_dim_not_set_raises(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when append_dim not set
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='a')
+
+    def test_append_with_existing_encoding_raises(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when providing encoding to existing variable
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='a',
+                                     append_dim='time',
+                                     encoding={'da': {'compressor': None}})
+
+    def test_check_encoding_is_consistent_after_append(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check encoding consistency
+        with self.create_zarr_target() as store_target:
+            import zarr
+            compressor = zarr.Blosc()
+            encoding = {'da': {'compressor': compressor}}
+            ds.to_zarr(store_target, mode='w', encoding=encoding)
+            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            actual_ds = xr.open_zarr(store_target)
+            actual_encoding = actual_ds['da'].encoding['compressor']
+            assert actual_encoding.get_config() == compressor.get_config()
+            assert_identical(
+                xr.open_zarr(store_target).compute(),
+                xr.concat([ds, ds_to_append], dim='time')
+            )
+
+    def test_append_with_new_variable(self):
+
+        ds, ds_to_append, ds_with_new_var = create_append_test_data()
+
+        # check append mode for new variable
+        with self.create_zarr_target() as store_target:
+            xr.concat([ds, ds_to_append], dim='time').to_zarr(store_target,
+                                                              mode='w')
+            ds_with_new_var.to_zarr(store_target, mode='a')
+            combined = xr.concat([ds, ds_to_append], dim='time')
+            combined['new_var'] = ds_with_new_var['new_var']
+            assert_identical(combined, xr.open_zarr(store_target))
 
     def test_to_zarr_compute_false_roundtrip(self):
         from dask.delayed import Delayed
@@ -1710,7 +1753,7 @@ class ZarrBase(CFEncodedBase):
     def test_to_zarr_append_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
-        ds, ds_to_append, ds_with_new_var = create_append_test_data()
+        ds, ds_to_append, _ = create_append_test_data()
         ds, ds_to_append = ds.chunk(), ds_to_append.chunk()
 
         with self.create_zarr_target() as store:
