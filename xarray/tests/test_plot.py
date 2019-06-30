@@ -1036,7 +1036,7 @@ class Common2dMixin:
         alltxt = text_in_fig()
         assert 'MyLabel' in alltxt
         assert 'testvar' not in alltxt
-        # you can use mapping types as well
+        # you can use anything accepted by the dict constructor as well
         self.plotmethod(
             add_colorbar=True, cbar_kwargs=(('label', 'MyLabel'), ))
         alltxt = text_in_fig()

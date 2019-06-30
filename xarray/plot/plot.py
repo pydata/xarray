@@ -615,7 +615,7 @@ def _plot2d(plotfunc):
         _ensure_plottable(xplt, yplt)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, locals(), zval.data)
+            plotfunc, zval.data, **locals())
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
@@ -656,7 +656,7 @@ def _plot2d(plotfunc):
             cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
                                  cmap_params)
 
-        elif (cbar_ax is not None or cbar_kwargs):
+        elif cbar_ax is not None or cbar_kwargs:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")

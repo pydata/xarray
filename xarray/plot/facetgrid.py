@@ -222,12 +222,15 @@ class FacetGrid:
             raise ValueError('cbar_ax not supported by FacetGrid.')
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            func, kwargs, self.data.values)
+            func, self.data.values, **kwargs)
 
         self._cmap_extend = cmap_params.get('extend')
 
         # Order is important
-        func_kwargs = kwargs.copy()
+        func_kwargs = {
+            k: v for k, v in kwargs.items()
+            if k not in {'cmap', 'colors', 'cbar_kwargs', 'levels'}
+        }
         func_kwargs.update(cmap_params)
         func_kwargs.update({'add_colorbar': False, 'add_labels': False})
 
