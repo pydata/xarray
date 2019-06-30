@@ -48,9 +48,10 @@ It is particularly tailored to working with netCDF_ files, which were the
 source of xarray's data model, and integrates tightly with dask_ for parallel
 computing.
 
-.. _NumPy: http://www.numpy.org/
-.. _pandas: http://pandas.pydata.org
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _NumPy: https://www.numpy.org
+.. _pandas: https://pandas.pydata.org
+.. _dask: https://dask.org
+.. _netCDF: https://www.unidata.ucar.edu/software/netcdf
 
 Why xarray?
 -----------

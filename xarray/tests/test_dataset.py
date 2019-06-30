@@ -52,6 +52,58 @@ def create_test_data(seed=None):
     return obj
 
 
+def create_append_test_data(seed=None):
+    rs = np.random.RandomState(seed)
+
+    lat = [2, 1, 0]
+    lon = [0, 1, 2]
+    nt1 = 3
+    nt2 = 2
+    time1 = pd.date_range('2000-01-01', periods=nt1)
+    time2 = pd.date_range('2000-02-01', periods=nt2)
+    string_var = np.array(["ae", "bc", "df"], dtype=object)
+    string_var_to_append = np.array(['asdf', 'asdfg'], dtype=object)
+    unicode_var = ["áó", "áó", "áó"]
+
+    ds = xr.Dataset(
+        data_vars={
+            'da': xr.DataArray(rs.rand(3, 3, nt1), coords=[lat, lon, time1],
+                               dims=['lat', 'lon', 'time']),
+            'string_var': xr.DataArray(string_var, coords=[time1],
+                                       dims=['time']),
+            'unicode_var': xr.DataArray(unicode_var, coords=[time1],
+                                        dims=['time']).astype(np.unicode_)
+        }
+    )
+
+    ds_to_append = xr.Dataset(
+        data_vars={
+            'da': xr.DataArray(rs.rand(3, 3, nt2), coords=[lat, lon, time2],
+                               dims=['lat', 'lon', 'time']),
+            'string_var': xr.DataArray(string_var_to_append, coords=[time2],
+                                       dims=['time']),
+            'unicode_var': xr.DataArray(unicode_var[:nt2], coords=[time2],
+                                        dims=['time']).astype(np.unicode_)
+        }
+    )
+
+    ds_with_new_var = xr.Dataset(
+        data_vars={
+            'new_var': xr.DataArray(
+                rs.rand(3, 3, nt1 + nt2),
+                coords=[lat, lon, time1.append(time2)],
+                dims=['lat', 'lon', 'time']
+            ),
+        }
+    )
+
+    assert all(objp.data.flags.writeable for objp in ds.variables.values())
+    assert all(
+        objp.data.flags.writeable for objp in ds_to_append.variables.values()
+    )
+    return ds, ds_to_append, ds_with_new_var
+
+
 def create_test_multiindex():
     mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                         names=('level_1', 'level_2'))
@@ -4788,18 +4840,16 @@ def test_coarsen_coords_cftime():
 
 def test_rolling_properties(ds):
     # catching invalid args
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='exactly one dim/window should'):
         ds.rolling(time=7, x=2)
-    assert 'exactly one dim/window should' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='window must be > 0'):
         ds.rolling(time=-2)
-    assert 'window must be > 0' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError, match='min_periods must be greater than zero'
+    ):
         ds.rolling(time=2, min_periods=0)
-    assert 'min_periods must be greater than zero' in str(exception)
-    with pytest.raises(KeyError) as exception:
+    with pytest.raises(KeyError, match='time2'):
         ds.rolling(time2=2)
-    assert 'time2' in str(exception)
 
 
 @pytest.mark.parametrize('name',
