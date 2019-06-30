@@ -264,7 +264,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data.index, data.columns]
                 elif isinstance(data, (pd.Index, IndexVariable)):
                     coords = [data]
-                elif isinstance(data, pd.Panel):
+                elif hasattr(pd, 'Panel') and isinstance(data, pd.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
@@ -1825,8 +1825,7 @@ class DataArray(AbstractArray, DataWithCoords):
                                    **kwargs)
         return self._replace_maybe_drop_dims(var)
 
-    def to_pandas(self) -> Union[
-            'DataArray', pd.Series, pd.DataFrame, pd.Panel]:
+    def to_pandas(self) -> Union['DataArray', pd.Series, pd.DataFrame]:
         """Convert this array into a pandas object with the same shape.
 
         The type of the returned object depends on the number of DataArray
@@ -1845,8 +1844,9 @@ class DataArray(AbstractArray, DataWithCoords):
         # attributes that correspond to their indexes into a separate module?
         constructors = {0: lambda x: x,
                         1: pd.Series,
-                        2: pd.DataFrame,
-                        3: pd.Panel}
+                        2: pd.DataFrame}
+        if hasattr(pd, 'Panel'):
+            constructors[3] = pd.Panel
         try:
             constructor = constructors[self.ndim]
         except KeyError:

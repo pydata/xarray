@@ -15,7 +15,9 @@ if TYPE_CHECKING:
     from .dataset import Dataset
 
 
-PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
+PANDAS_TYPES = (
+    (pd.Series, pd.DataFrame) + (pd.Panel,) if hasattr(pd, 'Panel') else ()
+)
 
 _VALID_COMPAT = Frozen({'identical': 0,
                         'equals': 1,
