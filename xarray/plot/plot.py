@@ -342,7 +342,9 @@ def step(darray, *args, where='pre', linestyle=None, ls=None, **kwargs):
     return line(darray, *args, linestyle=linestyle, **kwargs)
 
 
-def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
+def hist(darray, figsize=None, size=None, aspect=None, ax=None,
+         xincrease=None, yincrease=None, xscale=None, yscale=None,
+         xticks=None, yticks=None, xlim=None, ylim=None, **kwargs):
     """
     Histogram of DataArray
 
@@ -371,15 +373,6 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     """
     ax = get_axis(figsize, size, aspect, ax)
-
-    xincrease = kwargs.pop('xincrease', None)  # default needs to be None
-    yincrease = kwargs.pop('yincrease', None)
-    xscale = kwargs.pop('xscale', None)  # default needs to be None
-    yscale = kwargs.pop('yscale', None)
-    xticks = kwargs.pop('xticks', None)
-    yticks = kwargs.pop('yticks', None)
-    xlim = kwargs.pop('xlim', None)
-    ylim = kwargs.pop('ylim', None)
 
     no_nan = np.ravel(darray.values)
     no_nan = no_nan[pd.notnull(no_nan)]
