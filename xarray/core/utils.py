@@ -28,7 +28,7 @@ V = TypeVar('V')
 T = TypeVar('T')
 
 
-def _check_inplace(inplace: bool, default: bool = False) -> bool:
+def _check_inplace(inplace: Optional[bool], default: bool = False) -> bool:
     if inplace is None:
         inplace = default
     else:

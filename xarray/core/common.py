@@ -10,8 +10,10 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
+from .npcompat import DTypeLike
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type
+from .rolling_exp import RollingExp
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
@@ -86,6 +88,7 @@ class ImplementsDatasetReduce:
 class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable.
     """
+
     def __bool__(self: Any) -> bool:
         return bool(self.values)
 
@@ -98,8 +101,7 @@ class AbstractArray(ImplementsArrayReduce):
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: Union[str, np.dtype, None] = None
-                  ) -> np.ndarray:
+    def __array__(self: Any, dtype: Optional[DTypeLike] = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
@@ -248,6 +250,8 @@ def get_squeeze_dims(xarray_obj,
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
+
+    _rolling_exp_cls = RollingExp
 
     def squeeze(self, dim: Union[Hashable, Iterable[Hashable], None] = None,
                 drop: bool = False,
@@ -553,7 +557,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
                 min_periods: Optional[int] = None, center: bool = False,
-                **dim_kwargs: int):
+                **window_kwargs: int):
         """
         Rolling window object.
 
@@ -568,9 +572,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **dim_kwargs : optional
+        **window_kwargs : optional
             The keyword arguments form of ``dim``.
-            One of dim or dim_kwargs must be provided.
+            One of dim or window_kwargs must be provided.
 
         Returns
         -------
@@ -609,15 +613,54 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """  # noqa
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
+        dim = either_dict_or_kwargs(dim, window_kwargs, 'rolling')
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
+
+    def rolling_exp(
+        self,
+        window: Optional[Mapping[Hashable, int]] = None,
+        window_type: str = 'span',
+        **window_kwargs
+    ):
+        """
+        Exponentially-weighted moving window.
+        Similar to EWM in pandas
+
+        Requires the optional Numbagg dependency.
+
+        Parameters
+        ----------
+        window : A single mapping from a dimension name to window value,
+                 optional
+            dim : str
+                Name of the dimension to create the rolling exponential window
+                along (e.g., `time`).
+            window : int
+                Size of the moving window. The type of this is specified in
+                `window_type`
+        window_type : str, one of ['span', 'com', 'halflife', 'alpha'],
+                      default 'span'
+            The format of the previously supplied window. Each is a simple
+            numerical transformation of the others. Described in detail:
+            https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+        **window_kwargs : optional
+            The keyword arguments form of ``window``.
+            One of window or window_kwargs must be provided.
+
+        See Also
+        --------
+        core.rolling_exp.RollingExp
+        """
+        window = either_dict_or_kwargs(window, window_kwargs, 'rolling_exp')
+
+        return self._rolling_exp_cls(self, window, window_type)
 
     def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
                 boundary: str = 'exact',
                 side: Union[str, Mapping[Hashable, str]] = 'left',
                 coord_func: str = 'mean',
-                **dim_kwargs: int):
+                **window_kwargs: int):
         """
         Coarsen object.
 
@@ -671,7 +714,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        dim = either_dict_or_kwargs(dim, window_kwargs, 'coarsen')
         return self._coarsen_cls(
             self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
@@ -953,8 +996,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
+    def __getitem__(self, value):
+        # implementations of this class should implement this method
+        raise NotImplementedError
 
-def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
+
+def full_like(other, fill_value, dtype: Optional[DTypeLike] = None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -995,7 +1042,7 @@ def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
 
 
 def _full_like_variable(other, fill_value,
-                        dtype: Union[str, np.dtype, None] = None):
+                        dtype: Optional[DTypeLike] = None):
     """Inner function of full_like, where other must be a variable
     """
     from .variable import Variable
@@ -1012,19 +1059,19 @@ def _full_like_variable(other, fill_value,
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype: Union[str, np.dtype, None] = None):
+def zeros_like(other, dtype: Optional[DTypeLike] = None):
     """Shorthand for full_like(other, 0, dtype)
     """
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype: Union[str, np.dtype, None] = None):
+def ones_like(other, dtype: Optional[DTypeLike] = None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)
 
 
-def is_np_datetime_like(dtype: Union[str, np.dtype]) -> bool:
+def is_np_datetime_like(dtype: DTypeLike) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types
     """
     return (np.issubdtype(dtype, np.datetime64) or

@@ -1,4 +1,5 @@
 from distutils.version import LooseVersion
+from typing import Union
 
 import numpy as np
 
@@ -281,3 +282,8 @@ else:
             return outvals[0]
         else:
             return outvals
+
+# Type annotations stubs. See also / to be replaced by:
+# https://github.com/numpy/numpy/issues/7370
+# https://github.com/numpy/numpy-stubs/
+DTypeLike = Union[np.dtype, str]
