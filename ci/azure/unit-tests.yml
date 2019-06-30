@@ -13,6 +13,12 @@ steps:
     --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml $EXTRA_FLAGS
   displayName: Run tests
 
+- script: |
+    bash <(curl https://codecov.io/bash)
+  displayName: Upload coverage to codecov.io
+  env:
+    CODECOV_TOKEN: $(codecov.token)
+
   # TODO: publish coverage results to Azure, once we can merge them across
   # multiple jobs: https://stackoverflow.com/questions/56776185
 
