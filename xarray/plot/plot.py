@@ -555,9 +555,9 @@ def _plot2d(plotfunc):
         # Handle facetgrids first
         if row or col:
             allargs = locals().copy()
-            allargs.pop('imshow_rgb')
+            del allargs['darray']
+            del allargs['imshow_rgb']
             allargs.update(allargs.pop('kwargs'))
-            allargs.pop('darray')
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind='dataarray', **allargs)
