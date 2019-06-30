@@ -13,7 +13,7 @@ steps:
     --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml $EXTRA_FLAGS
   displayName: Run tests
 
-- script: |
+- bash: |
     bash <(curl https://codecov.io/bash)
   displayName: Upload coverage to codecov.io
   env:
