@@ -264,7 +264,7 @@ class FacetGrid:
                 subset = self.data.loc[d]
                 mappable = func(subset, x=x, y=y, ax=ax,
                                 hue=hue, add_legend=False, _labels=False,
-                **kwargs)
+                                **kwargs)
                 self._mappables.append(mappable)
 
         _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
