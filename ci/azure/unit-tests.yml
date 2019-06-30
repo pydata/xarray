@@ -14,7 +14,7 @@ steps:
   displayName: Run tests
 
 - bash: |
-    bash <(curl https://codecov.io/bash) -t $(codecov.token)
+    bash <(curl https://codecov.io/bash) -t $(codecovToken)
   displayName: Upload coverage to codecov.io
 
   # TODO: publish coverage results to Azure, once we can merge them across
