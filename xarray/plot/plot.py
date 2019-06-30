@@ -239,6 +239,10 @@ def line(darray, *args, row=None, col=None, figsize=None, aspect=None,
                          'Passed DataArray has {ndims} '
                          'dimensions'.format(ndims=ndims))
 
+    # Ensures consistency with .plot method
+    if args is ():
+        args = kwargs.pop('args', ())
+
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
         _infer_line_data(darray, x, y, hue)
