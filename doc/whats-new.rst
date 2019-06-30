@@ -24,6 +24,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fix to ensure that xarray can still be imported with pandas 0.25, which will
+  remove `pd.Panel`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.12.2:
 
 v0.12.2 (29 June 2019)
@@ -164,6 +168,12 @@ Bug fixes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Fixed performance issues with cftime installed (:issue:`3000`)
   By `0x0L <https://github.com/0x0L>`_.
+- Replace incorrect usages of `message` in pytest assertions
+  with `match` (:issue:`3011`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add explicit pytest markers, now required by pytest
+  (:issue:`3032`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Test suite fixes for newer versions of pytest (:issue:`3011`, :issue:`3032`).
   By `Maximilian Roos <https://github.com/max-sixty>`_
   and `Stephan Hoyer <https://github.com/shoyer>`_.
