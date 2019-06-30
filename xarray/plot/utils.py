@@ -651,7 +651,8 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
 
 def _process_cmap_cbar_kwargs(
         func, data, cmap=None, colors=None,
-        cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
+        cbar_kwargs: Union[Iterable[Tuple[str, Any]],
+                           Mapping[str, Any]] = None,
         levels=None, **kwargs):
     """
     Parameters
