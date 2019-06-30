@@ -391,7 +391,7 @@ def reindex_variables(
     return reindexed, new_indexes
 
 
-def broadcast(*args, **kwargs):
+def broadcast(*args, exclude=None):
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
 
@@ -466,13 +466,8 @@ def broadcast(*args, **kwargs):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    exclude = kwargs.pop('exclude', None)
     if exclude is None:
         exclude = set()
-    if kwargs:
-        raise TypeError('broadcast() got unexpected keyword arguments: %s'
-                        % list(kwargs))
-
     args = align(*args, join='outer', copy=False, exclude=exclude)
 
     common_coords = OrderedDict()

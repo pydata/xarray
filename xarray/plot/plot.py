@@ -178,7 +178,10 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
 
 # This function signature should not change so that it can use
 # matplotlib format strings
-def line(darray, *args, **kwargs):
+def line(darray, *args, row=None, col=None, figsize=None, aspect=None,
+         size=None, ax=None, hue=None, x=None, y=None, xincrease=None,
+         yincrease=None, xscale=None, yscale=None, xticks=None, yticks=None,
+         xlim=None, ylim=None, add_legend=True, _labels=True, **kwargs):
     """
     Line plot of DataArray index against values
 
@@ -222,12 +225,8 @@ def line(darray, *args, **kwargs):
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
-
     """
-
     # Handle facetgrids first
-    row = kwargs.pop('row', None)
-    col = kwargs.pop('col', None)
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
@@ -241,23 +240,6 @@ def line(darray, *args, **kwargs):
                          'dimensions'.format(ndims=ndims))
 
     # Ensures consistency with .plot method
-    figsize = kwargs.pop('figsize', None)
-    aspect = kwargs.pop('aspect', None)
-    size = kwargs.pop('size', None)
-    ax = kwargs.pop('ax', None)
-    hue = kwargs.pop('hue', None)
-    x = kwargs.pop('x', None)
-    y = kwargs.pop('y', None)
-    xincrease = kwargs.pop('xincrease', None)  # default needs to be None
-    yincrease = kwargs.pop('yincrease', None)
-    xscale = kwargs.pop('xscale', None)  # default needs to be None
-    yscale = kwargs.pop('yscale', None)
-    xticks = kwargs.pop('xticks', None)
-    yticks = kwargs.pop('yticks', None)
-    xlim = kwargs.pop('xlim', None)
-    ylim = kwargs.pop('ylim', None)
-    add_legend = kwargs.pop('add_legend', True)
-    _labels = kwargs.pop('_labels', True)
     if args is ():
         args = kwargs.pop('args', ())
 
@@ -277,7 +259,7 @@ def line(darray, *args, **kwargs):
                                    .replace('steps-post', '')
                                    .replace('steps-mid', ''))
             if kwargs['linestyle'] == '':
-                kwargs.pop('linestyle')
+                del kwargs['linestyle']
         else:
             xplt_val = _interval_to_mid_points(xplt.values)
             yplt_val = yplt.values
@@ -319,7 +301,7 @@ def line(darray, *args, **kwargs):
     return primitive
 
 
-def step(darray, *args, **kwargs):
+def step(darray, *args, where='pre', linestyle=None, ls=None, **kwargs):
     """
     Step plot of DataArray index against values
 
@@ -343,20 +325,21 @@ def step(darray, *args, **kwargs):
 
     *args, **kwargs : optional
         Additional arguments following :py:func:`xarray.plot.line`
-
     """
-    if ('ls' in kwargs.keys()) and ('linestyle' not in kwargs.keys()):
-        kwargs['linestyle'] = kwargs.pop('ls')
-
-    where = kwargs.pop('where', 'pre')
-
-    if where not in ('pre', 'post', 'mid'):
+    if where not in {'pre', 'post', 'mid'}:
         raise ValueError("'where' argument to step must be "
                          "'pre', 'post' or 'mid'")
 
-    kwargs['linestyle'] = 'steps-' + where + kwargs.get('linestyle', '')
+    if ls is not None:
+        if linestyle is None:
+            linestyle = ls
+        else:
+            raise TypeError('ls and linestyle are mutually exclusive')
+    if linestyle is None:
+        linestyle = ''
+    linestyle = 'steps-' + where + linestyle
 
-    return line(darray, *args, **kwargs)
+    return line(darray, *args, linestyle=linestyle, **kwargs)
 
 
 def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):

@@ -37,7 +37,7 @@ class NumpyInterpolator(BaseInterpolator):
     numpy.interp
     '''
 
-    def __init__(self, xi, yi, method='linear', fill_value=None, **kwargs):
+    def __init__(self, xi, yi, method='linear', fill_value=None, period=None):
 
         if method != 'linear':
             raise ValueError(
@@ -45,15 +45,10 @@ class NumpyInterpolator(BaseInterpolator):
 
         self.method = method
         self.f = np.interp
-        self.cons_kwargs = kwargs
-        self.call_kwargs = {'period': self.cons_kwargs.pop('period', None)}
+        self.call_kwargs = {'period': period}
 
         self._xi = xi
         self._yi = yi
-
-        if self.cons_kwargs:
-            raise ValueError(
-                'received invalid kwargs: %r' % self.cons_kwargs.keys())
 
         if fill_value is None:
             self._left = np.nan

@@ -251,24 +251,21 @@ class FacetGrid:
 
         return self
 
-    def map_dataarray_line(self, func, x, y, **kwargs):
+    def map_dataarray_line(self, func, x, y, hue, add_legend=True,
+                           _labels=None, **kwargs):
         from .plot import _infer_line_data
-
-        add_legend = kwargs.pop('add_legend', True)
-        kwargs['add_legend'] = False
-        func_kwargs = kwargs.copy()
-        func_kwargs['_labels'] = False
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
+                mappable = func(subset, x=x, y=y, ax=ax,
+                                hue=hue, add_legend=False, _labels=False,
+                **kwargs)
                 self._mappables.append(mappable)
 
         _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
-            darray=self.data.loc[self.name_dicts.flat[0]],
-            x=x, y=y, hue=func_kwargs['hue'])
+            darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y, hue=hue)
 
         self._hue_var = hueplt
         self._hue_label = huelabel
