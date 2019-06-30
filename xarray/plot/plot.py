@@ -239,9 +239,11 @@ def line(darray, *args, row=None, col=None, figsize=None, aspect=None,
                          'Passed DataArray has {ndims} '
                          'dimensions'.format(ndims=ndims))
 
-    # Ensures consistency with .plot method
+    # The allargs dict passed to _easy_facetgrid above contains args
     if args is ():
         args = kwargs.pop('args', ())
+    else:
+        assert 'args' not in kwargs
 
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
