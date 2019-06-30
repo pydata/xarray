@@ -44,6 +44,7 @@ class NumpyInterpolator(BaseInterpolator):
 
         self.method = method
         self.f = np.interp
+        self.cons_kwargs = {}
         self.call_kwargs = {'period': period}
 
         self._xi = xi
