@@ -41,12 +41,11 @@ class PseudoNetCDFDataStore(AbstractDataStore):
     """Store for accessing datasets via PseudoNetCDF
     """
     @classmethod
-    def open(cls, filename, lock=None, **format_kwds):
+    def open(cls, filename, lock=None, mode=None, **format_kwargs):
         from PseudoNetCDF import pncopen
 
-        keywords = dict(kwargs=format_kwds)
+        keywords = {'kwargs': format_kwargs}
         # only include mode if explicitly passed
-        mode = format_kwds.pop('mode', None)
         if mode is not None:
             keywords['mode'] = mode
 

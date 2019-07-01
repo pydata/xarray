@@ -399,8 +399,8 @@ class DatasetIOBase:
     def test_roundtrip_numpy_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
-        kwds = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
-        with self.roundtrip(expected, save_kwargs=kwds) as actual:
+        kwargs = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
+        with self.roundtrip(expected, save_kwargs=kwargs) as actual:
             assert_identical(expected, actual)
             assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
@@ -412,7 +412,7 @@ class DatasetIOBase:
         for date_type in date_types.values():
             times = [date_type(1, 1, 1), date_type(1, 1, 2)]
             expected = Dataset({'t': ('t', times), 't0': times[0]})
-            kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
+            kwargs = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
             expected_decoded_t = np.array(times)
             expected_decoded_t0 = np.array([date_type(1, 1, 1)])
             expected_calendar = times[0].calendar
@@ -422,7 +422,7 @@ class DatasetIOBase:
                     warnings.filterwarnings(
                         'ignore', 'Unable to decode time axis')
 
-                with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                with self.roundtrip(expected, save_kwargs=kwargs) as actual:
                     abs_diff = abs(actual.t.values - expected_decoded_t)
                     assert (abs_diff <= np.timedelta64(1, 's')).all()
                     assert (actual.t.encoding['units']
@@ -2453,7 +2453,7 @@ class TestDask(DatasetIOBase):
 
     def test_roundtrip_numpy_datetime_data(self):
         # Override method in DatasetIOBase - remove not applicable
-        # save_kwds
+        # save_kwargs
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
         with self.roundtrip(expected) as actual:
@@ -2461,7 +2461,7 @@ class TestDask(DatasetIOBase):
 
     def test_roundtrip_cftime_datetime_data(self):
         # Override method in DatasetIOBase - remove not applicable
-        # save_kwds
+        # save_kwargs
         from .test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()

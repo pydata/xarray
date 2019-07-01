@@ -1,7 +1,6 @@
 import warnings
-from collections.abc import Iterable
 from functools import partial
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Sequence
 
 import numpy as np
 import pandas as pd
@@ -15,9 +14,10 @@ from .variable import Variable, broadcast_variables
 
 
 class BaseInterpolator:
-    '''gerneric interpolator class for normalizing interpolation methods'''
-    cons_kwargs = {}  # type: Dict[str, Any]
-    call_kwargs = {}  # type: Dict[str, Any]
+    """Generic interpolator class for normalizing interpolation methods
+    """
+    cons_kwargs = None  # type: Dict[str, Any]
+    call_kwargs = None  # type: Dict[str, Any]
     f = None  # type: Callable
     method = None  # type: str
 
@@ -30,14 +30,13 @@ class BaseInterpolator:
 
 
 class NumpyInterpolator(BaseInterpolator):
-    '''One-dimensional linear interpolation.
+    """One-dimensional linear interpolation.
 
     See Also
     --------
     numpy.interp
-    '''
-
-    def __init__(self, xi, yi, method='linear', fill_value=None, **kwargs):
+    """
+    def __init__(self, xi, yi, method='linear', fill_value=None, period=None):
 
         if method != 'linear':
             raise ValueError(
@@ -45,20 +44,16 @@ class NumpyInterpolator(BaseInterpolator):
 
         self.method = method
         self.f = np.interp
-        self.cons_kwargs = kwargs
-        self.call_kwargs = {'period': self.cons_kwargs.pop('period', None)}
+        self.cons_kwargs = {}
+        self.call_kwargs = {'period': period}
 
         self._xi = xi
         self._yi = yi
 
-        if self.cons_kwargs:
-            raise ValueError(
-                'received invalid kwargs: %r' % self.cons_kwargs.keys())
-
         if fill_value is None:
             self._left = np.nan
             self._right = np.nan
-        elif isinstance(fill_value, Iterable) and len(fill_value) == 2:
+        elif isinstance(fill_value, Sequence) and len(fill_value) == 2:
             self._left = fill_value[0]
             self._right = fill_value[1]
         elif is_scalar(fill_value):
@@ -73,15 +68,15 @@ class NumpyInterpolator(BaseInterpolator):
 
 
 class ScipyInterpolator(BaseInterpolator):
-    '''Interpolate a 1-D function using Scipy interp1d
+    """Interpolate a 1-D function using Scipy interp1d
 
     See Also
     --------
     scipy.interpolate.interp1d
-    '''
-
+    """
     def __init__(self, xi, yi, method=None, fill_value=None,
-                 assume_sorted=True, copy=False, bounds_error=False, **kwargs):
+                 assume_sorted=True, copy=False, bounds_error=False,
+                 order=None, **kwargs):
         from scipy.interpolate import interp1d
 
         if method is None:
@@ -89,9 +84,9 @@ class ScipyInterpolator(BaseInterpolator):
                              'valid scipy.inter1d method (kind)')
 
         if method == 'polynomial':
-            method = kwargs.pop('order', None)
-            if method is None:
+            if order is None:
                 raise ValueError('order is required when method=polynomial')
+            method = order
 
         self.method = method
 
@@ -99,7 +94,7 @@ class ScipyInterpolator(BaseInterpolator):
         self.call_kwargs = {}
 
         if fill_value is None and method == 'linear':
-            fill_value = kwargs.pop('fill_value', (np.nan, np.nan))
+            fill_value = np.nan, np.nan
         elif fill_value is None:
             fill_value = np.nan
 
@@ -109,15 +104,14 @@ class ScipyInterpolator(BaseInterpolator):
 
 
 class SplineInterpolator(BaseInterpolator):
-    '''One-dimensional smoothing spline fit to a given set of data points.
+    """One-dimensional smoothing spline fit to a given set of data points.
 
     See Also
     --------
     scipy.interpolate.UnivariateSpline
-    '''
-
+    """
     def __init__(self, xi, yi, method='spline', fill_value=None, order=3,
-                 **kwargs):
+                 nu=0, ext=None, **kwargs):
         from scipy.interpolate import UnivariateSpline
 
         if method != 'spline':
@@ -126,8 +120,7 @@ class SplineInterpolator(BaseInterpolator):
 
         self.method = method
         self.cons_kwargs = kwargs
-        self.call_kwargs['nu'] = kwargs.pop('nu', 0)
-        self.call_kwargs['ext'] = kwargs.pop('ext', None)
+        self.call_kwargs = {'nu': nu, 'ext': ext}
 
         if fill_value is not None:
             raise ValueError('SplineInterpolator does not support fill_value')
@@ -136,8 +129,8 @@ class SplineInterpolator(BaseInterpolator):
 
 
 def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
-    '''wrapper for datasets'''
-
+    """Wrapper for datasets
+    """
     ds = type(self)(coords=self.coords, attrs=self.attrs)
 
     for name, var in self.data_vars.items():
@@ -149,7 +142,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
+def get_clean_interp_index(arr, dim, use_coordinate=True):
     '''get index to use for x values in interpolation.
 
     If use_coordinate is True, the coordinate that shares the name of the
@@ -189,8 +182,8 @@ def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
 
 def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
               **kwargs):
-    '''Interpolate values according to different methods.'''
-
+    """Interpolate values according to different methods.
+    """
     if dim is None:
         raise NotImplementedError('dim is a required argument')
 
@@ -198,8 +191,7 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
         valids = _get_valid_fill_mask(self, dim, limit)
 
     # method
-    index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate,
-                                   **kwargs)
+    index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
