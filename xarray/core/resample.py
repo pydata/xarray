@@ -154,15 +154,15 @@ class DataArrayResample(DataArrayGroupBy, Resample):
     specified dimension
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
 
-        self._dim = kwargs.pop('dim', None)
-        self._resample_dim = kwargs.pop('resample_dim', None)
-
-        if self._dim == self._resample_dim:
+        if dim == resample_dim:
             raise ValueError("Proxy resampling dimension ('{}') "
                              "cannot have the same name as actual dimension "
-                             "('{}')! ".format(self._resample_dim, self._dim))
+                             "('{}')! ".format(resample_dim, dim))
+        self._dim = dim
+        self._resample_dim = resample_dim
+
         super(DataArrayResample, self).__init__(*args, **kwargs)
 
     def apply(self, func, shortcut=False, args=(), **kwargs):
@@ -227,18 +227,18 @@ class DatasetResample(DatasetGroupBy, Resample):
     """DatasetGroupBy object specialized to resampling a specified dimension
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
 
-        self._dim = kwargs.pop('dim', None)
-        self._resample_dim = kwargs.pop('resample_dim', None)
-
-        if self._dim == self._resample_dim:
+        if dim == resample_dim:
             raise ValueError("Proxy resampling dimension ('{}') "
                              "cannot have the same name as actual dimension "
-                             "('{}')! ".format(self._resample_dim, self._dim))
+                             "('{}')! ".format(resample_dim, dim))
+        self._dim = dim
+        self._resample_dim = resample_dim
+
         super(DatasetResample, self).__init__(*args, **kwargs)
 
-    def apply(self, func, args=(), **kwargs):
+    def apply(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function over each Dataset in the groups generated for
         resampling  and concatenate them together into a new Dataset.
 
@@ -267,7 +267,7 @@ class DatasetResample(DatasetGroupBy, Resample):
         applied : Dataset or DataArray
             The result of splitting, applying and combining this dataset.
         """
-        kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
+        # ignore shortcut if set (for now)
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 

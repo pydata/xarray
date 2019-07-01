@@ -604,6 +604,29 @@ store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
+It is also possible to append to an existing store. For that, add ``mode='a'``
+and set ``append_dim`` to the name of the dimension along which to append.
+
+.. ipython:: python
+   :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds1 = xr.Dataset({'foo': (('x', 'y', 't'), np.random.rand(4, 5, 2))},
+                     coords={'x': [10, 20, 30, 40],
+                             'y': [1,2,3,4,5],
+                             't': pd.date_range('2001-01-01', periods=2)})
+    ds1.to_zarr('path/to/directory.zarr')
+    ds2 = xr.Dataset({'foo': (('x', 'y', 't'), np.random.rand(4, 5, 2))},
+                     coords={'x': [10, 20, 30, 40],
+                             'y': [1,2,3,4,5],
+                             't': pd.date_range('2001-01-03', periods=2)})
+    ds2.to_zarr('path/to/directory.zarr', mode='a', append_dim='t')
+
+To store variable length strings use ``dtype=object``.
+
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`~xarray.open_zarr` method:
 
@@ -767,8 +790,8 @@ Combining multiple files
 NetCDF files are often encountered in collections, e.g., with different files
 corresponding to different model runs. xarray can straightforwardly combine such
 files into a single Dataset by making use of :py:func:`~xarray.concat`,
-:py:func:`~xarray.merge`, :py:func:`~xarray.combine_manual` and
-:py:func:`~xarray.combine_auto`. For details on the difference between these
+:py:func:`~xarray.merge`, :py:func:`~xarray.combine_nested` and
+:py:func:`~xarray.combine_by_coords`. For details on the difference between these
 functions see :ref:`combining data`.
 
 .. note::

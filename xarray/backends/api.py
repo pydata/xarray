@@ -4,17 +4,21 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
+import re
 
 import numpy as np
+import pandas as pd
 
-from .. import Dataset, DataArray, backends, conventions
+from .. import Dataset, DataArray, backends, conventions, coding
 from ..core import indexing
 from .. import auto_combine
-from ..core.combine import (combine_auto, _manual_combine,
+from ..core.combine import (combine_by_coords, _nested_combine,
                             _infer_concat_order_from_positions)
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from ..core.variable import Variable
 from .common import ArrayWriter
 from .locks import _get_scheduler
+from ..coding.variables import safe_setitem, unpack_for_encoding
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -599,15 +603,16 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
                    **kwargs):
     """Open multiple files as a single dataset.
 
-    If combine='auto' then the function `combine_auto` is used to combine the
-    datasets into one before returning the result, and if combine='manual' then
-    `combine_manual` is used. The filepaths must be structured according to
-    which combining function is used, the details of which are given in the
-    documentation for ``combine_auto`` and ``combine_manual``.
-    By default the old (now deprecated) ``auto_combine`` will be used, please 
-    specify either ``combine='auto'`` or ``combine='manual'`` in future.
-    Requires dask to be installed. See documentation for details on dask [1].
-    Attributes from the first dataset file are used for the combined dataset.
+    If combine='by_coords' then the function ``combine_by_coords`` is used to 
+    combine the datasets into one before returning the result, and if 
+    combine='nested' then ``combine_nested`` is used. The filepaths must be 
+    structured according to which combining function is used, the details of 
+    which are given in the documentation for ``combine_by_coords`` and 
+    ``combine_nested``. By default the old (now deprecated) ``auto_combine`` 
+    will be used, please specify either ``combine='by_coords'`` or 
+    ``combine='nested'`` in future. Requires dask to be installed. See 
+    documentation for details on dask [1]. Attributes from the first dataset 
+    file are used for the combined dataset.
 
     Parameters
     ----------
@@ -631,11 +636,11 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         if you want to stack a collection of 2D arrays along a third dimension.
         Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation along a particular dimension.
-    combine : {'auto', 'manual'}, optional
-        Whether ``xarray.auto_combine`` or ``xarray.manual_combine`` is used to
-        combine all the data. If this argument is not provided, 
+    combine : {'by_coords', 'nested'}, optional
+        Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is 
+        used to combine all the data. If this argument is not provided, 
         `xarray.auto_combine` is used, but in the future this behavior will 
-        switch to use `xarray.combine_auto`.
+        switch to use `xarray.combine_by_coords` by default.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
@@ -706,8 +711,8 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
 
     See Also
     --------
-    combine_auto
-    combine_manual
+    combine_by_coords
+    combine_nested
     auto_combine
     open_dataset
 
@@ -730,13 +735,13 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
     if not paths:
         raise IOError('no files to open')
 
-    # If combine='auto' then this is unnecessary, but quick.
-    # If combine='manual' then this creates a flat list which is easier to
+    # If combine='by_coords' then this is unnecessary, but quick.
+    # If combine='nested' then this creates a flat list which is easier to
     # iterate over, while saving the originally-supplied structure as "ids"
-    if combine == 'manual':
+    if combine == 'nested':
         if str(concat_dim) == '_not_supplied':
             raise ValueError("Must supply concat_dim when using "
-                             "combine='manual'")
+                             "combine='nested'")
         else:
             if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
                 concat_dim = [concat_dim]
@@ -776,17 +781,17 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
             combined = auto_combine(datasets, concat_dim=concat_dim,
                                     compat=compat, data_vars=data_vars,
                                     coords=coords)
-        elif combine == 'manual':
+        elif combine == 'nested':
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
-            combined = _manual_combine(datasets, concat_dims=concat_dim,
+            combined = _nested_combine(datasets, concat_dims=concat_dim,
                                        compat=compat, data_vars=data_vars,
                                        coords=coords, ids=ids)
-        elif combine == 'auto':
+        elif combine == 'by_coords':
             # Redo ordering from coordinates, ignoring how they were ordered
             # previously
-            combined = combine_auto(datasets, compat=compat,
-                                    data_vars=data_vars, coords=coords)
+            combined = combine_by_coords(datasets, compat=compat,
+                                         data_vars=data_vars, coords=coords)
         else:
             raise ValueError("{} is an invalid option for the keyword argument"
                              " ``combine``".format(combine))
@@ -1023,8 +1028,48 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                              for w, s in zip(writes, stores)])
 
 
+def _validate_datatypes_for_zarr_append(dataset):
+    """DataArray.name and Dataset keys must be a string or None"""
+    def check_dtype(var):
+        if (not np.issubdtype(var.dtype, np.number)
+                and not coding.strings.is_unicode_dtype(var.dtype)
+                and not var.dtype == object):
+            # and not re.match('^bytes[1-9]+$', var.dtype.name)):
+            raise ValueError('Invalid dtype for data variable: {} '
+                             'dtype must be a subtype of number, '
+                             'a fixed sized string, a fixed size '
+                             'unicode string or an object'.format(var))
+    for k in dataset.data_vars.values():
+        check_dtype(k)
+
+
+def _validate_append_dim_and_encoding(ds_to_append, store, append_dim,
+                                      encoding, **open_kwargs):
+    try:
+        ds = backends.zarr.open_zarr(store, **open_kwargs)
+    except ValueError:  # store empty
+        return
+    if append_dim:
+        if append_dim not in ds.dims:
+            raise ValueError(
+                "{} not a valid dimension in the Dataset".format(append_dim)
+            )
+    for data_var in ds_to_append:
+        if data_var in ds:
+            if append_dim is None:
+                raise ValueError(
+                    "variable '{}' already exists, but append_dim "
+                    "was not set".format(data_var)
+                )
+            if data_var in encoding.keys():
+                raise ValueError(
+                    "variable '{}' already exists, but encoding was"
+                    "provided".format(data_var)
+                )
+
+
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None, compute=True, consolidated=False):
+            encoding=None, compute=True, consolidated=False, append_dim=None):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -1039,11 +1084,18 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
+    if mode == "a":
+        _validate_datatypes_for_zarr_append(dataset)
+        _validate_append_dim_and_encoding(dataset, store, append_dim,
+                                          group=group,
+                                          consolidated=consolidated,
+                                          encoding=encoding)
+
     zstore = backends.ZarrStore.open_group(store=store, mode=mode,
                                            synchronizer=synchronizer,
                                            group=group,
                                            consolidate_on_close=consolidated)
-
+    zstore.append_dim = append_dim
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)

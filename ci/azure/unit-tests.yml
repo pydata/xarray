@@ -1,0 +1,28 @@
+steps:
+
+- template: install.yml
+
+- bash: |
+    source activate test_env
+    python -OO -c "import xarray"
+  displayName: Import xarray
+
+- bash: |
+    source activate test_env
+    pytest xarray --junitxml=junit/test-results.xml \
+    --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml $EXTRA_FLAGS
+  displayName: Run tests
+
+- bash: |
+    bash <(curl https://codecov.io/bash) -t 688f4d53-31bb-49b5-8370-4ce6f792cf3d
+  displayName: Upload coverage to codecov.io
+
+  # TODO: publish coverage results to Azure, once we can merge them across
+  # multiple jobs: https://stackoverflow.com/questions/56776185
+
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFiles: '**/test-*.xml'
+    failTaskOnFailedTests: true
+    testRunTitle: 'Test results for Python $(conda_env) $(pytest_extra_flags)'
