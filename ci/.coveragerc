@@ -1,3 +1,4 @@
 [report]
 omit =
     xarray/tests/*
+    xarray/_version.py
