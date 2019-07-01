@@ -21,6 +21,12 @@ v0.12.3 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Renaming variables and dimensions independently:
+  Datasets with coordinate dimensions can now have only their dimension 
+  (using rename_dim) or only their coordinate (using rename_vars) renamed 
+  instead of the rename function applyingto both. (:issue:`3026`)
+  By `Julia Kent <https://github.com/jukent>`_.
+  
 Bug fixes
 ~~~~~~~~~
 
@@ -85,12 +91,6 @@ New functions/methods
   By `Guido Imperiale <https://github.com/crusaderky>`_
   and `Maximilian Roos <https://github.com/max-sixty>`_.
 
-- Renaming variables and dimensions independently:
-  Datasets with coordinate dimensions can now have only their dimension 
-  (using rename_dim) or only their coordinate (using rename_vars) renamed 
-  instead of the rename function applyingto both. (:issue:`3026`)
-  By `Julia Kent <https://github.com/jukent>`_.
-
 Enhancements to existing functionality
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -110,30 +110,6 @@ Enhancements to existing functionality
   By `Peter Hausamann <http://github.com/phausamann>`_.
 - Clean up Python 2 compatibility in code (:issue:`2950`)
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-- Implement ``load_dataset()`` and ``load_dataarray()`` as alternatives to
-  ``open_dataset()`` and ``open_dataarray()`` to open, load into memory,
-  and close files, returning the Dataset or DataArray. These functions are
-  helpful for avoiding file-lock errors when trying to write to files opened
-  using ``open_dataset()`` or ``open_dataarray()``. (:issue:`2887`)
-  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
-- Combining datasets along N dimensions:
-  Datasets can now be combined along any number of dimensions,
-  instead of just a one-dimensional list of datasets.
-
-  The new ``combine_manual`` will accept the datasets as a a nested
-  list-of-lists, and combine by applying a series of concat and merge
-  operations. The new ``combine_auto`` will instead use the dimension
-  coordinates of the datasets to order them.
-
-  ``open_mfdataset`` can use either ``combine_manual`` or ``combine_auto`` to
-  combine datasets along multiple dimensions, by specifying the argument
-  `combine='manual'` or `combine='auto'`.
-
-  This means that the original function ``auto_combine`` is being deprecated.
-  To avoid FutureWarnings switch to using `combine_manual` or `combine_auto`,
-  (or set the `combine` argument in `open_mfdataset`). (:issue:`2159`)
-  By `Tom Nicholas <http://github.com/TomNicholas>`_.
-  
 - Better warning message when supplying invalid objects to ``xr.merge``
   (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
 - Add ``errors`` keyword argument to :py:meth:`Dataset.drop` and :py:meth:`Dataset.drop_dims`
