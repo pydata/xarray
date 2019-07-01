@@ -85,6 +85,12 @@ New functions/methods
   By `Guido Imperiale <https://github.com/crusaderky>`_
   and `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- Renaming variables and dimensions independently:
+  Datasets with coordinate dimensions can now have only their dimension 
+  (using rename_dim) or only their coordinate (using rename_vars) renamed 
+  instead of the rename function applyingto both. (:issue:`3026`)
+  By `Julia Kent <https://github.com/jukent>`_.
+
 Enhancements to existing functionality
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -102,12 +108,7 @@ Enhancements to existing functionality
   accept a keyword argument ``restore_coord_dims`` which keeps the order
   of the dimensions of multi-dimensional coordinates intact (:issue:`1856`).
   By `Peter Hausamann <http://github.com/phausamann>`_.
-  - Renaming variables and dimensions independently:
-  Datasets with coordinate dimensions can now have only their dimension 
-  (using rename_dim) or only their coordinate (using rename_vars) renamed 
-  instead of the rename function applyingto both. (:issue:`3026`)
-  By `Julia Kent <https://github.com/jukent>`_.
-  - Clean up Python 2 compatibility in code (:issue:`2950`)
+- Clean up Python 2 compatibility in code (:issue:`2950`)
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Implement ``load_dataset()`` and ``load_dataarray()`` as alternatives to
   ``open_dataset()`` and ``open_dataarray()`` to open, load into memory,
