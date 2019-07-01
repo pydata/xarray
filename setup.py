@@ -10,7 +10,7 @@ AUTHOR = 'xarray Developers'
 AUTHOR_EMAIL = 'xarray@googlegroups.com'
 URL = 'https://github.com/pydata/xarray'
 CLASSIFIERS = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'License :: OSI Approved :: Apache Software License',
     'Operating System :: OS Independent',
     'Intended Audience :: Science/Research',
@@ -27,8 +27,6 @@ INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 SETUP_REQUIRES = ['pytest-runner >= 4.2'] if needs_pytest else []
 TESTS_REQUIRE = ['pytest >= 2.7.1']
-if sys.version_info[0] < 3:
-    TESTS_REQUIRE.append('mock')
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
