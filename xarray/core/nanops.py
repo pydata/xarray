@@ -133,7 +133,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
         return result
 
 
-def _nanmean_ddof_object(ddof, value, axis=None, **kwargs):
+def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """ In house nanmean. ddof argument will be used in _nanvar method """
     from .duck_array_ops import (count, fillna, _dask_or_eager_func,
                                  where_method)
@@ -142,7 +142,6 @@ def _nanmean_ddof_object(ddof, value, axis=None, **kwargs):
     value = fillna(value, 0)
     # As dtype inference is impossible for object dtype, we assume float
     # https://github.com/dask/dask/issues/3162
-    dtype = kwargs.pop('dtype', None)
     if dtype is None and value.dtype.kind == 'O':
         dtype = value.dtype if value.dtype.kind in ['cf'] else float
 
@@ -165,14 +164,12 @@ def nanmedian(a, axis=None, out=None):
     return _dask_or_eager_func('nanmedian', eager_module=nputils)(a, axis=axis)
 
 
-def _nanvar_object(value, axis=None, **kwargs):
-    ddof = kwargs.pop('ddof', 0)
-    kwargs_mean = kwargs.copy()
-    kwargs_mean.pop('keepdims', None)
+def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):
     value_mean = _nanmean_ddof_object(ddof=0, value=value, axis=axis,
-                                      keepdims=True, **kwargs_mean)
+                                      keepdims=True, **kwargs)
     squared = (value.astype(value_mean.dtype) - value_mean)**2
-    return _nanmean_ddof_object(ddof, squared, axis=axis, **kwargs)
+    return _nanmean_ddof_object(ddof, squared, axis=axis,
+                                keepdims=keepdims, **kwargs)
 
 
 def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
