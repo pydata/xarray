@@ -2728,8 +2728,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     "dimensions {}.".format(dims)
                 )
 
-
-
         def f(val):
             # ensure square output
 
