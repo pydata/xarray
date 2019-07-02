@@ -2174,6 +2174,11 @@ class TestDataset:
         assert_identical(expected, actual)
         actual_2 = original.rename_dims(**dims_dict)
         assert_identical(expected, actual_2)
+        
+        #Test to raise ValueError
+        dims_dict_bad = {'x_bad':'x_new'}
+        with pytest.raises(ValueError):
+            failed = original.rename_dims(dims_dict_bad)
 
     def test_rename_vars(self):
         original = Dataset(
@@ -2186,6 +2191,11 @@ class TestDataset:
         assert_identical(expected, actual)
         actual_2 = original.rename_vars(**name_dict)
         assert_identical(expected, actual_2)
+
+        #Test to raise ValueError
+        names_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            failed = original.rename_vars(names_dict_bad)
 
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
