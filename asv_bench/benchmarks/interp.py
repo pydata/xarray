@@ -50,5 +50,5 @@ class Interpolation:
 class InterpolationDask(Interpolation):
     def setup(self, *args, **kwargs):
         requires_dask()
-        super(InterpolationDask, self).setup(**kwargs)
+        super().setup(**kwargs)
         self.ds = self.ds.chunk({'t': 50})

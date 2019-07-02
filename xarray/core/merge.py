@@ -110,7 +110,7 @@ class OrderedDefaultDict(OrderedDict):
     # beware: does not pickle or copy properly
     def __init__(self, default_factory):
         self.default_factory = default_factory
-        super(OrderedDefaultDict, self).__init__()
+        super().__init__()
 
     def __missing__(self, key):
         self[key] = default = self.default_factory()

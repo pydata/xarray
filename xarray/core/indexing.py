@@ -352,7 +352,7 @@ class BasicIndexer(ExplicitIndexer):
                                 .format(type(self).__name__, k))
             new_key.append(k)
 
-        super(BasicIndexer, self).__init__(new_key)
+        super().__init__(new_key)
 
 
 class OuterIndexer(ExplicitIndexer):
@@ -388,7 +388,7 @@ class OuterIndexer(ExplicitIndexer):
                                 .format(type(self).__name__, k))
             new_key.append(k)
 
-        super(OuterIndexer, self).__init__(new_key)
+        super().__init__(new_key)
 
 
 class VectorizedIndexer(ExplicitIndexer):
@@ -427,7 +427,7 @@ class VectorizedIndexer(ExplicitIndexer):
                                 .format(type(self).__name__, k))
             new_key.append(k)
 
-        super(VectorizedIndexer, self).__init__(new_key)
+        super().__init__(new_key)
 
 
 class ExplicitlyIndexed:

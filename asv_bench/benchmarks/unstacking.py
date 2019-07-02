@@ -22,5 +22,5 @@ class Unstacking:
 class UnstackingDask(Unstacking):
     def setup(self, *args, **kwargs):
         requires_dask()
-        super(UnstackingDask, self).setup(**kwargs)
+        super().setup(**kwargs)
         self.ds = self.ds.chunk({'flat_dim': 50})

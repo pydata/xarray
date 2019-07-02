@@ -1656,7 +1656,7 @@ class ZarrBase(CFEncodedBase):
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
-        super(CFEncodedBase, self).test_dataset_caching()
+        super().test_dataset_caching()
 
     def test_append_write(self):
         ds, ds_to_append, _ = create_append_test_data()
@@ -1668,7 +1668,7 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_overwrite_values(self):
-        super(CFEncodedBase, self).test_append_overwrite_values()
+        super().test_append_overwrite_values()
 
     def test_append_with_invalid_dim_raises(self):
 
@@ -1825,13 +1825,13 @@ class ScipyWriteBase(CFEncodedBase, NetCDF3Only):
         import scipy
         if scipy.__version__ == '1.0.1':
             pytest.xfail('https://github.com/scipy/scipy/issues/8625')
-        super(ScipyWriteBase, self).test_append_write()
+        super().test_append_write()
 
     def test_append_overwrite_values(self):
         import scipy
         if scipy.__version__ == '1.0.1':
             pytest.xfail('https://github.com/scipy/scipy/issues/8625')
-        super(ScipyWriteBase, self).test_append_overwrite_values()
+        super().test_append_overwrite_values()
 
 
 @requires_scipy

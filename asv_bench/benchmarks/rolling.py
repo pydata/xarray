@@ -63,6 +63,6 @@ class Rolling:
 class RollingDask(Rolling):
     def setup(self, *args, **kwargs):
         requires_dask()
-        super(RollingDask, self).setup(**kwargs)
+        super().setup(**kwargs)
         self.ds = self.ds.chunk({'x': 100, 'y': 50, 't': 50})
         self.da_long = self.da_long.chunk({'x': 10000})
