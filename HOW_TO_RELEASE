@@ -5,8 +5,15 @@ Time required: about an hour.
  1. Ensure your master branch is synced to upstream:
        git pull upstream master
  2. Look over whats-new.rst and the docs. Make sure "What's New" is complete
-    (check the date!) and add a brief summary note describing the release at the
-    top.
+    (check the date!) and consider adding a brief summary note describing the
+    release at the top.
+    Things to watch out for:
+    - Important new features should be highlighted towards the top.
+    - Function/method references should include links to the API docs.
+    - Sometimes notes get added in the wrong section of whats-new, typically
+      due to a bad merge. Check for these before a release by using git diff,
+      e.g., ``git diff v0.X.Y whats-new.rst`` where 0.X.Y is the previous
+      release.
  3. If you have any doubts, run the full test suite one final time!
       py.test
  4. On the master branch, commit the release in git:

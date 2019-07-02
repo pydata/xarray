@@ -158,14 +158,19 @@ class ArrayWriter:
     def __init__(self, lock=None):
         self.sources = []
         self.targets = []
+        self.regions = []
         self.lock = lock
 
-    def add(self, source, target):
+    def add(self, source, target, region=None):
         if isinstance(source, dask_array_type):
             self.sources.append(source)
             self.targets.append(target)
+            self.regions.append(region)
         else:
-            target[...] = source
+            if region:
+                target[region] = source
+            else:
+                target[...] = source
 
     def sync(self, compute=True):
         if self.sources:
@@ -173,11 +178,13 @@ class ArrayWriter:
             # TODO: consider wrapping targets with dask.delayed, if this makes
             # for any discernable difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
+
             delayed_store = da.store(self.sources, self.targets,
                                      lock=self.lock, compute=compute,
-                                     flush=True)
+                                     flush=True, regions=self.regions)
             self.sources = []
             self.targets = []
+            self.regions = []
             return delayed_store
 
 

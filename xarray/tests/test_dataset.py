@@ -23,7 +23,7 @@ from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_cftime, requires_dask,
-    requires_scipy, source_ndarray)
+    requires_numbagg, requires_scipy, source_ndarray)
 
 try:
     import dask.array as da
@@ -50,6 +50,58 @@ def create_test_data(seed=None):
     obj.encoding = {'foo': 'bar'}
     assert all(obj.data.flags.writeable for obj in obj.variables.values())
     return obj
+
+
+def create_append_test_data(seed=None):
+    rs = np.random.RandomState(seed)
+
+    lat = [2, 1, 0]
+    lon = [0, 1, 2]
+    nt1 = 3
+    nt2 = 2
+    time1 = pd.date_range('2000-01-01', periods=nt1)
+    time2 = pd.date_range('2000-02-01', periods=nt2)
+    string_var = np.array(["ae", "bc", "df"], dtype=object)
+    string_var_to_append = np.array(['asdf', 'asdfg'], dtype=object)
+    unicode_var = ["áó", "áó", "áó"]
+
+    ds = xr.Dataset(
+        data_vars={
+            'da': xr.DataArray(rs.rand(3, 3, nt1), coords=[lat, lon, time1],
+                               dims=['lat', 'lon', 'time']),
+            'string_var': xr.DataArray(string_var, coords=[time1],
+                                       dims=['time']),
+            'unicode_var': xr.DataArray(unicode_var, coords=[time1],
+                                        dims=['time']).astype(np.unicode_)
+        }
+    )
+
+    ds_to_append = xr.Dataset(
+        data_vars={
+            'da': xr.DataArray(rs.rand(3, 3, nt2), coords=[lat, lon, time2],
+                               dims=['lat', 'lon', 'time']),
+            'string_var': xr.DataArray(string_var_to_append, coords=[time2],
+                                       dims=['time']),
+            'unicode_var': xr.DataArray(unicode_var[:nt2], coords=[time2],
+                                        dims=['time']).astype(np.unicode_)
+        }
+    )
+
+    ds_with_new_var = xr.Dataset(
+        data_vars={
+            'new_var': xr.DataArray(
+                rs.rand(3, 3, nt1 + nt2),
+                coords=[lat, lon, time1.append(time2)],
+                dims=['lat', 'lon', 'time']
+            ),
+        }
+    )
+
+    assert all(objp.data.flags.writeable for objp in ds.variables.values())
+    assert all(
+        objp.data.flags.writeable for objp in ds_to_append.variables.values()
+    )
+    return ds, ds_to_append, ds_with_new_var
 
 
 def create_test_multiindex():
@@ -3961,6 +4013,25 @@ class TestDataset:
         with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
             ds.reduce(total_sum, dim='x')
 
+    def test_reduce_keepdims(self):
+        ds = Dataset({'a': (['x', 'y'], [[0, 1, 2, 3, 4]])},
+                     coords={'y': [0, 1, 2, 3, 4], 'x': [0],
+                             'lat': (['x', 'y'], [[0, 1, 2, 3, 4]]),
+                             'c': -999.0})
+
+        # Shape should match behaviour of numpy reductions with keepdims=True
+        # Coordinates involved in the reduction should be removed
+        actual = ds.mean(keepdims=True)
+        expected = Dataset({'a': (['x', 'y'], np.mean(ds.a, keepdims=True))},
+                           coords={'c': ds.c})
+        assert_identical(expected, actual)
+
+        actual = ds.mean('x', keepdims=True)
+        expected = Dataset({'a': (['x', 'y'],
+                                  np.mean(ds.a, axis=0, keepdims=True))},
+                           coords={'y': ds.y, 'c': ds.c})
+        assert_identical(expected, actual)
+
     def test_quantile(self):
 
         ds = create_test_data(seed=123)
@@ -4832,18 +4903,16 @@ def test_coarsen_coords_cftime():
 
 def test_rolling_properties(ds):
     # catching invalid args
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='exactly one dim/window should'):
         ds.rolling(time=7, x=2)
-    assert 'exactly one dim/window should' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='window must be > 0'):
         ds.rolling(time=-2)
-    assert 'window must be > 0' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError, match='min_periods must be greater than zero'
+    ):
         ds.rolling(time=2, min_periods=0)
-    assert 'min_periods must be greater than zero' in str(exception)
-    with pytest.raises(KeyError) as exception:
+    with pytest.raises(KeyError, match='time2'):
         ds.rolling(time2=2)
-    assert 'time2' in str(exception)
 
 
 @pytest.mark.parametrize('name',
@@ -4870,6 +4939,13 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     rolling_obj = ds.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, ds['time'])
+
+
+@requires_numbagg
+def test_rolling_exp(ds):
+
+    result = ds.rolling_exp(time=10, window_type='span').mean()
+    assert isinstance(result, Dataset)
 
 
 @pytest.mark.parametrize('center', (True, False))
