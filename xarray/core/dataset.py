@@ -2724,8 +2724,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             dims_include_sample_dims = set(sample_dims) <= set(dims)
             if not dims_include_sample_dims:
                 raise ValueError(
-                    "All DataArrays must share the dims: {}. ".format(dims)
+                    "All variables in the dataset must contain the "
+                    "dimensions {}.".format(dims)
                 )
+
+
 
         def f(val):
             # ensure square output
@@ -2746,22 +2749,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # concatenate the arrays
         Xs = [f(self[key]) for key in self.data_vars]
-        dataset = xr.concat(Xs, dim=new_dim)
+        data_array = xr.concat(Xs, dim=new_dim)
 
         # coerce the levels of the MultiIndex to have the same type as the
         # input dimensions. This code is messy, so it might be better to just
         # input a dummy value for the singleton dimension.
-        idx = dataset.indexes[new_dim]
+        idx = data_array.indexes[new_dim]
         levels = [idx.levels[0]]\
             + [level.astype(self[level.name].dtype)
                for level in idx.levels[1:]]
         new_idx = idx.set_levels(levels)
-        dataset[new_dim] = IndexVariable(new_dim, new_idx)
+        data_array[new_dim] = IndexVariable(new_dim, new_idx)
 
         if name is not None:
-            dataset.name = name
+            data_array.name = name
 
-        return dataset
+        return data_array
 
     def _unstack_once(self, dim):
         index = self.get_index(dim)
