@@ -2792,7 +2792,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     .stack(**{new_dim: (variable_dim,) + stacking_dims}))
 
         # concatenate the arrays
-        stackable_vars = [ensure_stackable(self[key]) for key in self.data_vars]
+        stackable_vars = [ensure_stackable(self[key])
+                          for key in self.data_vars]
         data_array = xr.concat(stackable_vars, dim=new_dim)
 
         # coerce the levels of the MultiIndex to have the same type as the
