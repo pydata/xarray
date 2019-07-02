@@ -118,7 +118,6 @@ def _check_shape_tile_ids(combined_tile_ids):
     # Check all tuples are the same length
     # i.e. check that all lists are nested to the same depth
     nesting_depths = [len(tile_id) for tile_id in tile_ids]
-    print(nesting_depths)
     if not nesting_depths:
         nesting_depths = [0]
     if not set(nesting_depths) == {nesting_depths[0]}:
