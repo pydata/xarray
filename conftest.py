@@ -10,6 +10,7 @@ def pytest_addoption(parser):
     parser.addoption("--run-network-tests", action="store_true",
                      help="runs tests requiring a network connection")
 
+
 def pytest_runtest_setup(item):
     # based on https://stackoverflow.com/questions/47559524
     if 'flaky' in item.keywords and not item.config.getoption("--run-flaky"):
