@@ -18,6 +18,12 @@ What's New
 v0.12.3 (unreleased)
 --------------------
 
+New functions/methods
+~~~~~~~~~~~~~~~~~~~~~
+
+- New methods for reshaping Datasets of variables with different dimensions
+  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -189,8 +195,6 @@ Enhancements
 - Allow ``expand_dims`` method to support inserting/broadcasting dimensions
   with size > 1. (:issue:`2710`)
   By `Martin Pletcher <https://github.com/pletchm>`_.
-- New methods for reshaping Datasets of variables with different dimensions
-  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
 
 Bug fixes
 ~~~~~~~~~

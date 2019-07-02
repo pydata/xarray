@@ -2753,7 +2753,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             a        (x, y) int64 0 1 2 3 4 5
             b        (x) int64 6 7
 
-        >>> data.to_stacked_array("z", ['x'])
+        >>> data.to_stacked_array("z", sample_dims=['x'])
         <xarray.DataArray (x: 2, z: 4)>
         array([[0, 1, 2, 6],
             [3, 4, 5, 7]])
@@ -2776,12 +2776,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     "dimensions {}.".format(dims)
                 )
 
-        def f(val):
-            # ensure square output
-
+        def ensure_stackable(val):
             assign_coords = {variable_dim: val.name}
             for dim in stacking_dims:
-                if (dim not in val.dims):
+                if dim not in val.dims:
                     assign_coords[dim] = None
 
             expand_dims = set(stacking_dims).difference(set(val.dims))
@@ -2789,21 +2787,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             # must be list for .expand_dims
             expand_dims = list(expand_dims)
 
-            return val.assign_coords(**assign_coords) \
-                .expand_dims(expand_dims) \
-                .stack(**{new_dim: (variable_dim,) + stacking_dims})
+            return (val.assign_coords(**assign_coords)
+                    .expand_dims(expand_dims)
+                    .stack(**{new_dim: (variable_dim,) + stacking_dims}))
 
         # concatenate the arrays
-        Xs = [f(self[key]) for key in self.data_vars]
-        data_array = xr.concat(Xs, dim=new_dim)
+        stackable_vars = [ensure_stackable(self[key]) for key in self.data_vars]
+        data_array = xr.concat(stackable_vars, dim=new_dim)
 
         # coerce the levels of the MultiIndex to have the same type as the
         # input dimensions. This code is messy, so it might be better to just
         # input a dummy value for the singleton dimension.
         idx = data_array.indexes[new_dim]
-        levels = [idx.levels[0]]\
-            + [level.astype(self[level.name].dtype)
-               for level in idx.levels[1:]]
+        levels = ([idx.levels[0]]
+                  + [level.astype(self[level.name].dtype)
+                     for level in idx.levels[1:]])
         new_idx = idx.set_levels(levels)
         data_array[new_dim] = IndexVariable(new_dim, new_idx)
 
