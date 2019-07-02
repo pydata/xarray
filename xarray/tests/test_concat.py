@@ -12,7 +12,7 @@ from . import (
 from .test_dataset import create_test_data
 
 
-class TestConcatDataset(object):
+class TestConcatDataset:
     def test_concat(self):
         # TODO: simplify and split this test case
 
@@ -247,7 +247,7 @@ class TestConcatDataset(object):
         assert_identical(actual, expected)
 
 
-class TestConcatDataArray(object):
+class TestConcatDataArray:
     def test_concat(self):
         ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 3))),
                       'bar': (['x', 'y'], np.random.random((2, 3)))},

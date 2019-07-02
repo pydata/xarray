@@ -64,7 +64,8 @@ class CachingFileManager(FileManager):
 
     """
 
-    def __init__(self, opener, *args, **keywords):
+    def __init__(self, opener, *args, mode=_DEFAULT_MODE, kwargs=None,
+                 lock=None, cache=None, ref_counts=None):
         """Initialize a FileManager.
 
         The cache and ref_counts arguments exist solely to facilitate
@@ -102,17 +103,6 @@ class CachingFileManager(FileManager):
             Optional dict to use for keeping track the number of references to
             the same file.
         """
-        # TODO: replace with real keyword arguments when we drop Python 2
-        # support
-        mode = keywords.pop('mode', _DEFAULT_MODE)
-        kwargs = keywords.pop('kwargs', None)
-        lock = keywords.pop('lock', None)
-        cache = keywords.pop('cache', FILE_CACHE)
-        ref_counts = keywords.pop('ref_counts', REF_COUNTS)
-        if keywords:
-            raise TypeError('FileManager() got unexpected keyword arguments: '
-                            '%s' % list(keywords))
-
         self._opener = opener
         self._args = args
         self._mode = mode
@@ -122,12 +112,16 @@ class CachingFileManager(FileManager):
         self._lock = threading.Lock() if self._default_lock else lock
 
         # cache[self._key] stores the file associated with this object.
+        if cache is None:
+            cache = FILE_CACHE
         self._cache = cache
         self._key = self._make_key()
 
         # ref_counts[self._key] stores the number of CachingFileManager objects
         # in memory referencing this same file. We use this to know if we can
         # close a file when the manager is deallocated.
+        if ref_counts is None:
+            ref_counts = REF_COUNTS
         self._ref_counter = _RefCounter(ref_counts)
         self._ref_counter.increment(self._key)
 

@@ -11,7 +11,9 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
+  - pytest-cov
   - pytest-env
+  - coveralls
   - numpy>=1.12
   - pandas>=0.19
   - scipy
@@ -19,3 +21,5 @@ dependencies:
   - toolz
   - rasterio
   - zarr
+  - pip:
+    - pytest-azurepipelines

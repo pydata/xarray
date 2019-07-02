@@ -23,5 +23,6 @@ dependencies:
   - zarr
   - pseudonetcdf>=3.0.1
   - pip:
+    - pytest-azurepipelines
     - git+https://github.com/dask/dask.git
     - git+https://github.com/dask/distributed.git
