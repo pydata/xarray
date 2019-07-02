@@ -31,4 +31,5 @@ dependencies:
   - pydap
   - lxml
   - pip:
+    - pytest-azurepipelines
     - mypy==0.711
