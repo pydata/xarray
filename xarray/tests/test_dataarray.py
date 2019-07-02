@@ -1798,6 +1798,12 @@ class TestDataArray:
         expected = DataArray(orig.to_pandas().stack(), dims='z')
         assert_identical(expected, actual)
 
+    def test_to_unstacked_dataset_raises_value_error(self):
+        data = DataArray([0, 1], dims='x', coords={'x': [0, 1]})
+        with pytest.raises(
+                ValueError, match="'x' is not a stacked coordinate"):
+            data.to_unstacked_dataset('x', 0)
+
     def test_transpose(self):
         da = DataArray(np.random.randn(3, 4, 5), dims=('x', 'y', 'z'),
                        coords={'x': range(3), 'y': range(4), 'z': range(5),
