@@ -87,6 +87,8 @@ Dataset contents
    Dataset.pipe
    Dataset.merge
    Dataset.rename
+   Dataset.rename_vars
+   Dataset.rename_dims
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop

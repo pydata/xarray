@@ -2162,6 +2162,40 @@ class TestDataset:
         # check virtual variables
         assert_array_equal(data['t.dayofyear'], [1, 2, 3])
 
+    def test_rename_dims(self):
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x': ('x_new', [0, 1, 2]), 'y': ('x_new', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x')
+        dims_dict = {'x': 'x_new'}
+        actual = original.rename_dims(dims_dict)
+        assert_identical(expected, actual)
+        actual_2 = original.rename_dims(**dims_dict)
+        assert_identical(expected, actual_2)
+
+        # Test to raise ValueError
+        dims_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            original.rename_dims(dims_dict_bad)
+
+    def test_rename_vars(self):
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x_new': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x_new')
+        name_dict = {'x': 'x_new'}
+        actual = original.rename_vars(name_dict)
+        assert_identical(expected, actual)
+        actual_2 = original.rename_vars(**name_dict)
+        assert_identical(expected, actual_2)
+
+        # Test to raise ValueError
+        names_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            original.rename_vars(names_dict_bad)
+
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
         expected = Dataset({'z': 42},
