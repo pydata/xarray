@@ -112,12 +112,11 @@ def create_test_multiindex():
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def __init__(self):
-        super(InaccessibleVariableDataStore, self).__init__()
+        super().__init__()
         self._indexvars = set()
 
     def store(self, variables, *args, **kwargs):
-        super(InaccessibleVariableDataStore, self).store(
-            variables, *args, **kwargs)
+        super().store(variables, *args, **kwargs)
         for k, v in variables.items():
             if isinstance(v, IndexVariable):
                 self._indexvars.add(k)
