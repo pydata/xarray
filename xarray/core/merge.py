@@ -15,7 +15,9 @@ if TYPE_CHECKING:
     from .dataset import Dataset
 
 
-PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
+PANDAS_TYPES = (
+    (pd.Series, pd.DataFrame) + (pd.Panel,) if hasattr(pd, 'Panel') else ()
+)
 
 _VALID_COMPAT = Frozen({'identical': 0,
                         'equals': 1,
@@ -108,7 +110,7 @@ class OrderedDefaultDict(OrderedDict):
     # beware: does not pickle or copy properly
     def __init__(self, default_factory):
         self.default_factory = default_factory
-        super(OrderedDefaultDict, self).__init__()
+        super().__init__()
 
     def __missing__(self, key):
         self[key] = default = self.default_factory()

@@ -1840,8 +1840,7 @@ class IndexVariable(Variable):
     """
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
-        super(IndexVariable, self).__init__(dims, data, attrs, encoding,
-                                            fastpath)
+        super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -1959,7 +1958,7 @@ class IndexVariable(Variable):
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
         if equiv is not None:
-            return super(IndexVariable, self).equals(other, equiv)
+            return super().equals(other, equiv)
 
         # otherwise use the native index equals, rather than looking at _data
         other = getattr(other, 'variable', other)

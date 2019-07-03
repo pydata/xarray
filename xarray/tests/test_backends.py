@@ -38,7 +38,7 @@ from . import (
     requires_scipy_or_netCDF4, requires_zarr)
 from .test_coding_times import (
     _ALL_CALENDARS, _NON_STANDARD_CALENDARS, _STANDARD_CALENDARS)
-from .test_dataset import create_test_data
+from .test_dataset import create_test_data, create_append_test_data
 
 try:
     import netCDF4 as nc4
@@ -399,8 +399,8 @@ class DatasetIOBase:
     def test_roundtrip_numpy_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
-        kwds = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
-        with self.roundtrip(expected, save_kwargs=kwds) as actual:
+        kwargs = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
+        with self.roundtrip(expected, save_kwargs=kwargs) as actual:
             assert_identical(expected, actual)
             assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
@@ -412,7 +412,7 @@ class DatasetIOBase:
         for date_type in date_types.values():
             times = [date_type(1, 1, 1), date_type(1, 1, 2)]
             expected = Dataset({'t': ('t', times), 't0': times[0]})
-            kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
+            kwargs = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
             expected_decoded_t = np.array(times)
             expected_decoded_t0 = np.array([date_type(1, 1, 1)])
             expected_calendar = times[0].calendar
@@ -422,7 +422,7 @@ class DatasetIOBase:
                     warnings.filterwarnings(
                         'ignore', 'Unable to decode time axis')
 
-                with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                with self.roundtrip(expected, save_kwargs=kwargs) as actual:
                     abs_diff = abs(actual.t.values - expected_decoded_t)
                     assert (abs_diff <= np.timedelta64(1, 's')).all()
                     assert (actual.t.encoding['units']
@@ -775,7 +775,9 @@ class CFEncodedBase(DatasetIOBase):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            assert actual.x.encoding['dtype'] == 'f4'
+            encoded_dtype = actual.x.encoding['dtype']
+            # On OS X, dtype sometimes switches endianness for unclear reasons
+            assert encoded_dtype.kind == 'f' and encoded_dtype.itemsize == 4
         assert ds.x.encoding == {}
 
         kwargs = dict(encoding={'x': {'foo': 'bar'}})
@@ -867,7 +869,9 @@ class CFEncodedBase(DatasetIOBase):
         ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            assert actual.x.encoding['dtype'] == 'f4'
+            encoded_dtype = actual.x.encoding['dtype']
+            # On OS X, dtype sometimes switches endianness for unclear reasons
+            assert encoded_dtype.kind == 'f' and encoded_dtype.itemsize == 4
         assert ds.x.encoding == {}
 
     def test_append_write(self):
@@ -1613,11 +1617,18 @@ class ZarrBase(CFEncodedBase):
                 with pytest.raises(ValueError):
                     self.save(original, store, mode='w-')
 
-        # check that we can't use other persistence modes
-        # TODO: reconsider whether other persistence modes should be supported
-        with pytest.raises(ValueError):
-            with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
-                pass
+        # check append mode for normal write
+        with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
+            assert_identical(original, actual)
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check append mode for append write
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode='w')
+            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            original = xr.concat([ds, ds_to_append], dim='time')
+            assert_identical(original, xr.open_zarr(store_target))
 
     def test_compressor_encoding(self):
         original = create_test_data()
@@ -1645,19 +1656,84 @@ class ZarrBase(CFEncodedBase):
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
-        super(CFEncodedBase, self).test_dataset_caching()
+        super().test_dataset_caching()
 
-    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_write(self):
-        super(CFEncodedBase, self).test_append_write()
+        ds, ds_to_append, _ = create_append_test_data()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode='w')
+            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            original = xr.concat([ds, ds_to_append], dim='time')
+            assert_identical(original, xr.open_zarr(store_target))
 
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_overwrite_values(self):
-        super(CFEncodedBase, self).test_append_overwrite_values()
+        super().test_append_overwrite_values()
 
-    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_with_invalid_dim_raises(self):
-        super(CFEncodedBase, self).test_append_with_invalid_dim_raises()
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when append_dim not valid
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='a',
+                                     append_dim='notvalid')
+
+    def test_append_with_append_dim_not_set_raises(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when append_dim not set
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='a')
+
+    def test_append_with_existing_encoding_raises(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when providing encoding to existing variable
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='a',
+                                     append_dim='time',
+                                     encoding={'da': {'compressor': None}})
+
+    def test_check_encoding_is_consistent_after_append(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check encoding consistency
+        with self.create_zarr_target() as store_target:
+            import zarr
+            compressor = zarr.Blosc()
+            encoding = {'da': {'compressor': compressor}}
+            ds.to_zarr(store_target, mode='w', encoding=encoding)
+            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            actual_ds = xr.open_zarr(store_target)
+            actual_encoding = actual_ds['da'].encoding['compressor']
+            assert actual_encoding.get_config() == compressor.get_config()
+            assert_identical(
+                xr.open_zarr(store_target).compute(),
+                xr.concat([ds, ds_to_append], dim='time')
+            )
+
+    def test_append_with_new_variable(self):
+
+        ds, ds_to_append, ds_with_new_var = create_append_test_data()
+
+        # check append mode for new variable
+        with self.create_zarr_target() as store_target:
+            xr.concat([ds, ds_to_append], dim='time').to_zarr(store_target,
+                                                              mode='w')
+            ds_with_new_var.to_zarr(store_target, mode='a')
+            combined = xr.concat([ds, ds_to_append], dim='time')
+            combined['new_var'] = ds_with_new_var['new_var']
+            assert_identical(combined, xr.open_zarr(store_target))
 
     def test_to_zarr_compute_false_roundtrip(self):
         from dask.delayed import Delayed
@@ -1667,10 +1743,50 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store:
             delayed_obj = self.save(original, store, compute=False)
             assert isinstance(delayed_obj, Delayed)
+
+            # make sure target store has not been written to yet
+            with pytest.raises(AssertionError):
+                with self.open(store) as actual:
+                    assert_identical(original, actual)
+
             delayed_obj.compute()
 
             with self.open(store) as actual:
                 assert_identical(original, actual)
+
+    def test_to_zarr_append_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
+
+        ds, ds_to_append, _ = create_append_test_data()
+        ds, ds_to_append = ds.chunk(), ds_to_append.chunk()
+
+        with self.create_zarr_target() as store:
+            delayed_obj = self.save(ds, store, compute=False, mode='w')
+            assert isinstance(delayed_obj, Delayed)
+
+            with pytest.raises(AssertionError):
+                with self.open(store) as actual:
+                    assert_identical(ds, actual)
+
+            delayed_obj.compute()
+
+            with self.open(store) as actual:
+                assert_identical(ds, actual)
+
+            delayed_obj = self.save(ds_to_append, store, compute=False,
+                                    mode='a', append_dim='time')
+            assert isinstance(delayed_obj, Delayed)
+
+            with pytest.raises(AssertionError):
+                with self.open(store) as actual:
+                    assert_identical(xr.concat([ds, ds_to_append], dim='time'),
+                                     actual)
+
+            delayed_obj.compute()
+
+            with self.open(store) as actual:
+                assert_identical(xr.concat([ds, ds_to_append], dim='time'),
+                                 actual)
 
     def test_encoding_chunksizes(self):
         # regression test for GH2278
@@ -1709,13 +1825,13 @@ class ScipyWriteBase(CFEncodedBase, NetCDF3Only):
         import scipy
         if scipy.__version__ == '1.0.1':
             pytest.xfail('https://github.com/scipy/scipy/issues/8625')
-        super(ScipyWriteBase, self).test_append_write()
+        super().test_append_write()
 
     def test_append_overwrite_values(self):
         import scipy
         if scipy.__version__ == '1.0.1':
             pytest.xfail('https://github.com/scipy/scipy/issues/8625')
-        super(ScipyWriteBase, self).test_append_overwrite_values()
+        super().test_append_overwrite_values()
 
 
 @requires_scipy
@@ -2339,7 +2455,7 @@ class TestDask(DatasetIOBase):
 
     def test_roundtrip_numpy_datetime_data(self):
         # Override method in DatasetIOBase - remove not applicable
-        # save_kwds
+        # save_kwargs
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
         with self.roundtrip(expected) as actual:
@@ -2347,7 +2463,7 @@ class TestDask(DatasetIOBase):
 
     def test_roundtrip_cftime_datetime_data(self):
         # Override method in DatasetIOBase - remove not applicable
-        # save_kwds
+        # save_kwargs
         from .test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()

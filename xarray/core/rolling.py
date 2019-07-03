@@ -1,3 +1,4 @@
+import functools
 import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
@@ -6,10 +7,29 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
-from .ops import (
-    bn, has_bottleneck, inject_bottleneck_rolling_methods,
-    inject_coarsen_methods, inject_datasetrolling_methods)
+from .ops import inject_coarsen_methods
 from .pycompat import dask_array_type
+
+try:
+    import bottleneck
+except ImportError:
+    # use numpy methods instead
+    bottleneck = None
+
+
+_ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
+Reduce this object's data windows by applying `{name}` along its dimension.
+
+Parameters
+----------
+**kwargs : dict
+    Additional keyword arguments passed on to `{name}`.
+
+Returns
+-------
+reduced : same type as caller
+    New object with `{name}` applied along its rolling dimnension.
+"""
 
 
 class Rolling:
@@ -51,8 +71,8 @@ class Rolling:
         rolling : type of input argument
         """
 
-        if (has_bottleneck and
-                (LooseVersion(bn.__version__) < LooseVersion('1.0'))):
+        if (bottleneck is not None and
+                (LooseVersion(bottleneck.__version__) < LooseVersion('1.0'))):
             warnings.warn('xarray requires bottleneck version of 1.0 or '
                           'greater for rolling operations. Rolling '
                           'aggregation methods will use numpy instead'
@@ -94,6 +114,34 @@ class Rolling:
     def __len__(self):
         return self.obj.sizes[self.dim]
 
+    def _reduce_method(name):
+        array_agg_func = getattr(duck_array_ops, name)
+        bottleneck_move_func = getattr(bottleneck, 'move_' + name, None)
+
+        def method(self, **kwargs):
+            return self._numpy_or_bottleneck_reduce(
+                array_agg_func, bottleneck_move_func, **kwargs)
+        method.__name__ = name
+        method.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=name)
+        return method
+
+    argmax = _reduce_method('argmax')
+    argmin = _reduce_method('argmin')
+    max = _reduce_method('max')
+    min = _reduce_method('min')
+    mean = _reduce_method('mean')
+    prod = _reduce_method('prod')
+    sum = _reduce_method('sum')
+    std = _reduce_method('std')
+    var = _reduce_method('var')
+    median = _reduce_method('median')
+
+    def count(self):
+        rolling_count = self._counts()
+        enough_periods = rolling_count >= self._min_periods
+        return rolling_count.where(enough_periods)
+    count.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name='count')
+
 
 class DataArrayRolling(Rolling):
     def __init__(self, obj, windows, min_periods=None, center=False):
@@ -130,7 +178,7 @@ class DataArrayRolling(Rolling):
         Dataset.rolling
         Dataset.groupby
         """
-        super(DataArrayRolling, self).__init__(
+        super().__init__(
             obj, windows, min_periods=min_periods, center=center)
 
         self.window_labels = self.obj[self.dim]
@@ -257,71 +305,65 @@ class DataArrayRolling(Rolling):
                   .sum(dim=rolling_dim, skipna=False))
         return counts
 
-    @classmethod
-    def _reduce_method(cls, func):
-        """
-        Methods to return a wrapped function for any function `func` for
-        numpy methods.
-        """
+    def _bottleneck_reduce(self, func, **kwargs):
+        from .dataarray import DataArray
 
-        def wrapped_func(self, **kwargs):
-            return self.reduce(func, **kwargs)
-        return wrapped_func
+        # bottleneck doesn't allow min_count to be 0, although it should
+        # work the same as if min_count = 1
+        if self.min_periods is not None and self.min_periods == 0:
+            min_count = 1
+        else:
+            min_count = self.min_periods
 
-    @classmethod
-    def _bottleneck_reduce(cls, func):
-        """
-        Methods to return a wrapped function for any function `func` for
-        bottoleneck method, except for `median`.
-        """
+        axis = self.obj.get_axis_num(self.dim)
 
-        def wrapped_func(self, **kwargs):
-            from .dataarray import DataArray
-
-            # bottleneck doesn't allow min_count to be 0, although it should
-            # work the same as if min_count = 1
-            if self.min_periods is not None and self.min_periods == 0:
-                min_count = 1
-            else:
-                min_count = self.min_periods
-
-            axis = self.obj.get_axis_num(self.dim)
-
-            padded = self.obj.variable
-            if self.center:
-                if (LooseVersion(np.__version__) < LooseVersion('1.13') and
-                        self.obj.dtype.kind == 'b'):
-                    # with numpy < 1.13 bottleneck cannot handle np.nan-Boolean
-                    # mixed array correctly. We cast boolean array to float.
-                    padded = padded.astype(float)
-
-                if isinstance(padded.data, dask_array_type):
-                    # Workaround to make the padded chunk size is larger than
-                    # self.window-1
-                    shift = - (self.window + 1) // 2
-                    offset = (self.window - 1) // 2
-                    valid = (slice(None), ) * axis + (
-                        slice(offset, offset + self.obj.shape[axis]), )
-                else:
-                    shift = (-self.window // 2) + 1
-                    valid = (slice(None), ) * axis + (slice(-shift, None), )
-                padded = padded.pad_with_fill_value({self.dim: (0, -shift)})
+        padded = self.obj.variable
+        if self.center:
+            if (LooseVersion(np.__version__) < LooseVersion('1.13') and
+                    self.obj.dtype.kind == 'b'):
+                # with numpy < 1.13 bottleneck cannot handle np.nan-Boolean
+                # mixed array correctly. We cast boolean array to float.
+                padded = padded.astype(float)
 
             if isinstance(padded.data, dask_array_type):
-                values = dask_rolling_wrapper(func, padded,
-                                              window=self.window,
-                                              min_count=min_count,
-                                              axis=axis)
+                # Workaround to make the padded chunk size is larger than
+                # self.window-1
+                shift = - (self.window + 1) // 2
+                offset = (self.window - 1) // 2
+                valid = (slice(None), ) * axis + (
+                    slice(offset, offset + self.obj.shape[axis]), )
             else:
-                values = func(padded.data, window=self.window,
-                              min_count=min_count, axis=axis)
+                shift = (-self.window // 2) + 1
+                valid = (slice(None), ) * axis + (slice(-shift, None), )
+            padded = padded.pad_with_fill_value({self.dim: (0, -shift)})
 
-            if self.center:
-                values = values[valid]
-            result = DataArray(values, self.obj.coords)
+        if isinstance(padded.data, dask_array_type):
+            raise AssertionError('should not be reachable')
+            values = dask_rolling_wrapper(func, padded.data,
+                                          window=self.window,
+                                          min_count=min_count,
+                                          axis=axis)
+        else:
+            values = func(padded.data, window=self.window,
+                          min_count=min_count, axis=axis)
 
-            return result
-        return wrapped_func
+        if self.center:
+            values = values[valid]
+        result = DataArray(values, self.obj.coords)
+
+        return result
+
+    def _numpy_or_bottleneck_reduce(
+        self, array_agg_func, bottleneck_move_func, **kwargs
+    ):
+        if (bottleneck_move_func is not None and
+                not isinstance(self.obj.data, dask_array_type)):
+            # TODO: renable bottleneck with dask after the issues
+            # underlying https://github.com/pydata/xarray/issues/2940 are
+            # fixed.
+            return self._bottleneck_reduce(bottleneck_move_func, **kwargs)
+        else:
+            return self.reduce(array_agg_func, **kwargs)
 
 
 class DatasetRolling(Rolling):
@@ -359,7 +401,7 @@ class DatasetRolling(Rolling):
         Dataset.groupby
         DataArray.groupby
         """
-        super(DatasetRolling, self).__init__(obj, windows, min_periods, center)
+        super().__init__(obj, windows, min_periods, center)
         if self.dim not in self.obj.dims:
             raise KeyError(self.dim)
         # Keep each Rolling object as an OrderedDict
@@ -369,6 +411,16 @@ class DatasetRolling(Rolling):
             if self.dim in da.dims:
                 self.rollings[key] = DataArrayRolling(
                     da, windows, min_periods, center)
+
+    def _dataset_implementation(self, func, **kwargs):
+        from .dataset import Dataset
+        reduced = OrderedDict()
+        for key, da in self.obj.data_vars.items():
+            if self.dim in da.dims:
+                reduced[key] = func(self.rollings[key], **kwargs)
+            else:
+                reduced[key] = self.obj[key]
+        return Dataset(reduced, coords=self.obj.coords)
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some
@@ -388,43 +440,20 @@ class DatasetRolling(Rolling):
         reduced : DataArray
             Array with summarized data.
         """
-        from .dataset import Dataset
-        reduced = OrderedDict()
-        for key, da in self.obj.data_vars.items():
-            if self.dim in da.dims:
-                reduced[key] = self.rollings[key].reduce(func, **kwargs)
-            else:
-                reduced[key] = self.obj[key]
-        return Dataset(reduced, coords=self.obj.coords)
+        return self._dataset_implementation(
+            functools.partial(DataArrayRolling.reduce, func=func), **kwargs)
 
     def _counts(self):
-        from .dataset import Dataset
-        reduced = OrderedDict()
-        for key, da in self.obj.data_vars.items():
-            if self.dim in da.dims:
-                reduced[key] = self.rollings[key]._counts()
-            else:
-                reduced[key] = self.obj[key]
-        return Dataset(reduced, coords=self.obj.coords)
+        return self._dataset_implementation(DataArrayRolling._counts)
 
-    @classmethod
-    def _reduce_method(cls, func):
-        """
-        Return a wrapped function for injecting numpy and bottoleneck methods.
-        see ops.inject_datasetrolling_methods
-        """
-
-        def wrapped_func(self, **kwargs):
-            from .dataset import Dataset
-            reduced = OrderedDict()
-            for key, da in self.obj.data_vars.items():
-                if self.dim in da.dims:
-                    reduced[key] = getattr(self.rollings[key],
-                                           func.__name__)(**kwargs)
-                else:
-                    reduced[key] = self.obj[key]
-            return Dataset(reduced, coords=self.obj.coords)
-        return wrapped_func
+    def _numpy_or_bottleneck_reduce(
+        self, array_agg_func, bottleneck_move_func, **kwargs
+    ):
+        return self._dataset_implementation(
+            functools.partial(DataArrayRolling._numpy_or_bottleneck_reduce,
+                              array_agg_func=array_agg_func,
+                              bottleneck_move_func=bottleneck_move_func),
+            **kwargs)
 
     def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
         """
@@ -572,7 +601,5 @@ class DatasetCoarsen(Coarsen):
         return wrapped_func
 
 
-inject_bottleneck_rolling_methods(DataArrayRolling)
-inject_datasetrolling_methods(DatasetRolling)
 inject_coarsen_methods(DataArrayCoarsen)
 inject_coarsen_methods(DatasetCoarsen)
