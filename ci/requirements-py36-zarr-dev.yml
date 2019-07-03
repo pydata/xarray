@@ -19,4 +19,5 @@ dependencies:
   - toolz
   - bottleneck
   - pip:
+    - pytest-azurepipelines
     - git+https://github.com/zarr-developers/zarr.git

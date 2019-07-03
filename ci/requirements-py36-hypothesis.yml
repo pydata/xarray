@@ -25,3 +25,5 @@ dependencies:
   - zarr
   - pydap
   - lxml
+  - pip:
+    - pytest-azurepipelines

@@ -9,8 +9,9 @@ steps:
 
 - bash: |
     source activate test_env
-    pytest xarray -v --junitxml=junit/test-results.xml \
-    --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml $EXTRA_FLAGS
+    pytest xarray --junitxml=junit/test-results.xml \
+    --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
+    --cov-report=html $EXTRA_FLAGS
   displayName: Run tests
 
 - bash: |

@@ -642,7 +642,7 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
                         "apply_ufunc with dask='parallelized' consists of "
                         'multiple chunks, but is also a core dimension. To '
                         'fix, rechunk into a single dask array chunk along '
-                        'this dimension, i.e., ``.rechunk({})``, but beware '
+                        'this dimension, i.e., ``.chunk({})``, but beware '
                         'that this may significantly increase memory usage.'
                         .format(dim, n, {dim: -1}))
 

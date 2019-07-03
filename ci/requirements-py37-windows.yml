@@ -22,3 +22,5 @@ dependencies:
   - toolz
   - rasterio
   - zarr
+  - pip:
+    - pytest-azurepipelines
