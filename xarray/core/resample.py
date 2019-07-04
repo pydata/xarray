@@ -163,7 +163,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         self._dim = dim
         self._resample_dim = resample_dim
 
-        super(DataArrayResample, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def apply(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
@@ -204,7 +204,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         applied : DataArray or DataArray
             The result of splitting, applying and combining this array.
         """
-        combined = super(DataArrayResample, self).apply(
+        combined = super().apply(
             func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
@@ -236,7 +236,7 @@ class DatasetResample(DatasetGroupBy, Resample):
         self._dim = dim
         self._resample_dim = resample_dim
 
-        super(DatasetResample, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function over each Dataset in the groups generated for
@@ -301,7 +301,7 @@ class DatasetResample(DatasetGroupBy, Resample):
         if dim == DEFAULT_DIMS:
             dim = None
 
-        return super(DatasetResample, self).reduce(
+        return super().reduce(
             func, dim, keep_attrs, **kwargs)
 
 

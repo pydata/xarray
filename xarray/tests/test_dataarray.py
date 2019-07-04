@@ -313,7 +313,7 @@ class TestDataArray:
         actual = DataArray(series)
         assert_equal(expected[0].reset_coords('x', drop=True), actual)
 
-        if hasattr(pd, 'Panel'):
+        if LooseVersion(pd.__version__) < '0.25.0':
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', r'\W*Panel is deprecated')
                 panel = pd.Panel({0: frame})
@@ -2971,7 +2971,7 @@ class TestDataArray:
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
-            if len(shape) > 2 and not hasattr(pd, 'Panel'):
+            if len(shape) > 2 and not LooseVersion(pd.__version__) < '0.25.0':
                 continue
             dims = list('abc')[:len(shape)]
             da = DataArray(np.random.randn(*shape), dims=dims)

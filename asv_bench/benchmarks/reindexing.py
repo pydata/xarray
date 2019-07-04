@@ -40,5 +40,5 @@ class Reindex:
 class ReindexDask(Reindex):
     def setup(self):
         requires_dask()
-        super(ReindexDask, self).setup()
+        super().setup()
         self.ds = self.ds.chunk({'time': 100})

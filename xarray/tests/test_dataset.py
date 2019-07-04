@@ -20,7 +20,7 @@ from xarray.core.common import duck_array_ops, full_like
 from xarray.core.pycompat import integer_types
 
 from . import (
-    InaccessibleArray, UnexpectedDataAccess, assert_allclose,
+    LooseVersion, InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_cftime, requires_dask,
     requires_numbagg, requires_scipy, source_ndarray)
@@ -112,12 +112,11 @@ def create_test_multiindex():
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def __init__(self):
-        super(InaccessibleVariableDataStore, self).__init__()
+        super().__init__()
         self._indexvars = set()
 
     def store(self, variables, *args, **kwargs):
-        super(InaccessibleVariableDataStore, self).store(
-            variables, *args, **kwargs)
+        super().store(variables, *args, **kwargs)
         for k, v in variables.items():
             if isinstance(v, IndexVariable):
                 self._indexvars.add(k)
@@ -390,7 +389,7 @@ class TestDataset:
             DataArray(np.random.rand(4, 3), dims=['a', 'b']),  # df
         ]
 
-        if hasattr(pd, 'Panel'):
+        if LooseVersion(pd.__version__) < '0.25.0':
             das.append(
                 DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']))
 
@@ -2162,6 +2161,40 @@ class TestDataset:
         assert data.dims == {'y': 3, 't': 3}
         # check virtual variables
         assert_array_equal(data['t.dayofyear'], [1, 2, 3])
+
+    def test_rename_dims(self):
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x': ('x_new', [0, 1, 2]), 'y': ('x_new', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x')
+        dims_dict = {'x': 'x_new'}
+        actual = original.rename_dims(dims_dict)
+        assert_identical(expected, actual)
+        actual_2 = original.rename_dims(**dims_dict)
+        assert_identical(expected, actual_2)
+
+        # Test to raise ValueError
+        dims_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            original.rename_dims(dims_dict_bad)
+
+    def test_rename_vars(self):
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x_new': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x_new')
+        name_dict = {'x': 'x_new'}
+        actual = original.rename_vars(name_dict)
+        assert_identical(expected, actual)
+        actual_2 = original.rename_vars(**name_dict)
+        assert_identical(expected, actual_2)
+
+        # Test to raise ValueError
+        names_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            original.rename_vars(names_dict_bad)
 
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
