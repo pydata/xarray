@@ -13,7 +13,7 @@ steps:
   - bash: |
       source activate test_env
       pytest xarray \
-      --test-run-title="$(conda_env) $(pytest_extra_flags)"
+      --test-run-title="$(conda_env) $(pytest_extra_flags)" \
       --junitxml=junit/test-results.xml \
       --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
       $(pytest_extra_flags)
@@ -22,7 +22,7 @@ steps:
   - script: |
       source activate test_env
       pytest xarray \
-      --test-run-title="$(conda_env) $(pytest_extra_flags)"
+      --test-run-title="$(conda_env) $(pytest_extra_flags)" \
       --junitxml=junit/test-results.xml \
       --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
       $(pytest_extra_flags)
