@@ -1553,7 +1553,7 @@ class DataArray(AbstractArray, DataWithCoords):
         level : int or str
             The MultiIndex level to expand to a dataset along. Can either be
             the integer index of the level or its name.
-        label : int, optional
+        label : int, default 0
             Label of the level to expand dataset along. Overrides the label
             argument if given.
 
@@ -1601,7 +1601,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # pull variables out of datarray
         data_dict = OrderedDict()
         for k in variables:
-            data_dict[k] = self.sel(**{variable_dim: k}).squeeze(drop=True)
+            data_dict[k] = self.sel({variable_dim: k}).squeeze(drop=True)
 
         # unstacked dataset
         return Dataset(data_dict)

@@ -2789,7 +2789,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             return (val.assign_coords(**assign_coords)
                     .expand_dims(expand_dims)
-                    .stack(**{new_dim: (variable_dim,) + stacking_dims}))
+                    .stack({new_dim: (variable_dim,) + stacking_dims}))
 
         # concatenate the arrays
         stackable_vars = [ensure_stackable(self[key])
