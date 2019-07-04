@@ -20,7 +20,7 @@ from xarray.core.common import duck_array_ops, full_like
 from xarray.core.pycompat import integer_types
 
 from . import (
-    InaccessibleArray, UnexpectedDataAccess, assert_allclose,
+    LooseVersion, InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_cftime, requires_dask,
     requires_numbagg, requires_scipy, source_ndarray)
@@ -389,7 +389,7 @@ class TestDataset:
             DataArray(np.random.rand(4, 3), dims=['a', 'b']),  # df
         ]
 
-        if hasattr(pd, 'Panel'):
+        if LooseVersion(pd.__version__) < '0.25.0':
             das.append(
                 DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']))
 
