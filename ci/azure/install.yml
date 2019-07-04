@@ -6,6 +6,10 @@ steps:
 - template: add-conda-to-path.yml
 
 - bash: |
+    conda update conda
+  displayName: Update conda
+
+- bash: |
     conda env create -n test_env --file ${{ parameters.env_file }}
   displayName: Install dependencies
 
