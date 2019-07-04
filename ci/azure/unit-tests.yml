@@ -9,25 +9,14 @@ steps:
 
 # Work around for allowed test failures:
 # https://github.com/microsoft/azure-pipelines-tasks/issues/9302
-- ${{ if not(variables.allow_failure) }}:
-  - bash: |
-      source activate test_env
-      pytest xarray \
-      --test-run-title="$(conda_env) $(pytest_extra_flags)" \
-      --junitxml=junit/test-results.xml \
-      --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
-      $(pytest_extra_flags)
-    displayName: Run tests
-- ${{ if variables.allow_failure }}:
-  - script: |
-      source activate test_env
-      pytest xarray \
-      --test-run-title="$(conda_env) $(pytest_extra_flags)" \
-      --junitxml=junit/test-results.xml \
-      --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
-      $(pytest_extra_flags)
-      exit 0
-    displayName: Run tests
+- bash: |
+    source activate test_env
+    pytest xarray \
+    --test-run-title="$(conda_env) $(pytest_extra_flags)" \
+    --junitxml=junit/test-results.xml \
+    --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
+    $(pytest_extra_flags) || $ALLOW_FAILURE == "true"
+  displayName: Run tests
 
 - bash: |
     bash <(curl https://codecov.io/bash) -t 688f4d53-31bb-49b5-8370-4ce6f792cf3d
