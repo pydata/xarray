@@ -9,7 +9,7 @@ steps:
 
 # Work around for allowed test failures:
 # https://github.com/microsoft/azure-pipelines-tasks/issues/9302
-- ${{ if not(eq(variables.allow_failure, 'true')) }}:
+- ${{ if not(variables.allow_failure) }}:
   - bash: |
       source activate test_env
       pytest xarray \
@@ -18,7 +18,7 @@ steps:
       --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
       $(pytest_extra_flags)
     displayName: Run tests
-- ${{ if eq(variables.allow_failure, 'true') }}:
+- ${{ if variables.allow_failure }}:
   - script: |
       source activate test_env
       pytest xarray \
