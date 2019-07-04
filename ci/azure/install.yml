@@ -6,6 +6,7 @@ steps:
 - template: add-conda-to-path.yml
 
 - bash: |
+    source activate base
     conda update conda --yes
   displayName: Update conda
 
