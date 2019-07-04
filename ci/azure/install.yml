@@ -1,5 +1,5 @@
 parameters:
-  env_file: ci/requirements-$CONDA_ENV.yml
+  env_file: ci/requirements/$CONDA_ENV.yml
 
 steps:
 

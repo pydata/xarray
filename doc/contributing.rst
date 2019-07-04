@@ -151,7 +151,7 @@ We'll now kick off a two-step process:
 .. code-block:: none
 
    # Create and activate the build environment
-   conda env create -f ci/requirements-py36.yml
+   conda env create -f ci/requirements/py36.yml
    conda activate test_env
 
    # or with older versions of Anaconda:
@@ -383,14 +383,13 @@ method signatures and add deprecation warnings where needed.
 Testing With Continuous Integration
 -----------------------------------
 
-The *xarray* test suite will run automatically on `Travis-CI <https://travis-ci.org/>`__,
-and `Azure Pipelines <https://azure.microsoft.com/en-us/services/devops/pipelines//>`__,
-continuous integration services, once your pull request is submitted. However,
+The *xarray* test suite runs automatically the
+`Azure Pipelines <https://azure.microsoft.com/en-us/services/devops/pipelines//>`__,
+continuous integration service, once your pull request is submitted. However,
 if you wish to run the test suite on a branch prior to submitting the pull
-request, then the continuous integration services need to be hooked to your
-GitHub repository. Instructions are here for `Travis-CI
-<http://about.travis-ci.org/docs/user/getting-started/>`__, and
-`Azure Pipelines <https://docs.microsoft.com/en-us/azure/devops/pipelines/>`__.
+request, then Azure Pipelines
+`needs to be configured <https://docs.microsoft.com/en-us/azure/devops/pipelines/>`_
+for your GitHub repository.
 
 A pull-request will be considered for merging when you have an all 'green' build. If any
 tests are failing, then you will get a red 'X', where you can click through to see the
