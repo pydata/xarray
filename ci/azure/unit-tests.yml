@@ -15,7 +15,7 @@ steps:
     --test-run-title="$(conda_env) $(pytest_extra_flags)" \
     --junitxml=junit/test-results.xml \
     --cov=xarray --cov-config=ci/.coveragerc --cov-report=xml \
-    $(pytest_extra_flags) || $ALLOW_FAILURE == "true"
+    $(pytest_extra_flags) || exit $ALLOW_FAILURE == "true"
   displayName: Run tests
 
 - bash: |
