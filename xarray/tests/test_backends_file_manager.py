@@ -208,3 +208,27 @@ def test_file_manager_read(tmpdir, file_cache):
 def test_file_manager_invalid_kwargs():
     with pytest.raises(TypeError):
         CachingFileManager(open, 'dummy', mode='w', invalid=True)
+
+
+def test_file_manager_acquire_with_cache_info(tmpdir, file_cache):
+    path = str(tmpdir.join('testing.txt'))
+
+    with open(path, 'w') as f:
+        f.write('foobar')
+
+    manager = CachingFileManager(open, path, cache=file_cache)
+    f, cached = manager.acquire_with_cache_info()
+    assert f.read() == 'foobar'
+    assert not cached
+
+    f, cached = manager.acquire_with_cache_info()
+    f.seek(0)
+    assert f.read() == 'foobar'
+    assert cached
+    manager.close()
+
+    manager = CachingFileManager(open, path, cache=file_cache)
+    f, cached = manager.acquire_with_cache_info()
+    assert f.read() == 'foobar'
+    assert not cached
+    manager.close()

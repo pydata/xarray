@@ -178,9 +178,9 @@ class CachingFileManager(FileManager):
                     # ensure file doesn't get overriden when opened again
                     self._mode = 'a'
                 self._cache[self._key] = file
-                return file, True
-            else:
                 return file, False
+            else:
+                return file, True
 
     def close(self, needs_lock=True):
         """Explicitly close any associated file object (if necessary)."""
