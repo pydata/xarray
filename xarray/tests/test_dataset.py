@@ -1560,6 +1560,21 @@ class TestDataset:
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
                          mdata.sel(one='a', two=1))
 
+    def test_broadcast_like(self):
+        original1 = DataArray(np.random.randn(5),
+                              [('x', range(5))], name='a').to_dataset()
+
+        original2 = DataArray(np.random.randn(6),
+                              [('y', range(6))], name='b')
+
+        expected1, expected2 = broadcast(original1, original2)
+
+        assert_identical(original1.broadcast_like(original2),
+                         expected1.transpose('y', 'x'))
+
+        assert_identical(original2.broadcast_like(original1),
+                         expected2)
+
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])

@@ -23,6 +23,8 @@ New functions/methods
 
 - New methods for reshaping Datasets of variables with different dimensions
   (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
+- Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Enhancements
 ~~~~~~~~~~~~

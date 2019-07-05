@@ -15,7 +15,7 @@ import xarray as xr
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from . import (alignment, dtypes, duck_array_ops, formatting, groupby,
                indexing, ops, pdcompat, resample, rolling, utils)
-from .alignment import align
+from .alignment import align, broadcast
 from .common import (ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
                      _contains_datetime_like_objects)
 from .coordinates import (DatasetCoordinates, LevelCoordinatesSource,
@@ -1977,6 +1977,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self, indexers, method=method, tolerance=tolerance
         )
         return self.isel_points(dim=dim, **pos_indexers)
+
+    def broadcast_like(self, other: Union['Dataset', 'DataArray']) -> 'Dataset':
+        """Broadcast this DataArray against another Dataset or DataArray.
+        This is equivalent to xr.broadcast(other, self)[1]
+
+        Parameters
+        ----------
+        other : Dataset or DataArray
+            Object against which to broadcast this array.
+        """
+
+        return broadcast(other, self)[1]
 
     def reindex_like(self, other, method=None, tolerance=None, copy=True,
                      fill_value=dtypes.NA):

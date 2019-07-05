@@ -1239,6 +1239,21 @@ class TestDataArray:
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
 
+    def test_broadcast_like(self):
+        original1 = DataArray(np.random.randn(5),
+                              [('x', range(5))])
+
+        original2 = DataArray(np.random.randn(6),
+                              [('y', range(6))])
+
+        expected1, expected2 = broadcast(original1, original2)
+
+        assert_identical(original1.broadcast_like(original2),
+                         expected1.transpose('y', 'x'))
+
+        assert_identical(original2.broadcast_like(original1),
+                         expected2)
+
     def test_reindex_like(self):
         foo = DataArray(np.random.randn(5, 6),
                         [('x', range(5)), ('y', range(6))])

@@ -13,7 +13,7 @@ from . import (
     computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
-from .alignment import align, reindex_like_indexers
+from .alignment import align, broadcast, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
@@ -985,6 +985,18 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().sel_points(
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
+
+    def broadcast_like(self, other: Union['DataArray', Dataset]) -> 'DataArray':
+        """Broadcast this DataArray against another Dataset or DataArray.
+        This is equivalent to xr.broadcast(other, self)[1]
+
+        Parameters
+        ----------
+        other : Dataset or DataArray
+            Object against which to broadcast this array.
+        """
+
+        return broadcast(other, self)[1]
 
     def reindex_like(self, other: Union['DataArray', Dataset],
                      method: Optional[str] = None, tolerance=None,
