@@ -18,11 +18,27 @@ What's New
 v0.12.3 (unreleased)
 --------------------
 
+New functions/methods
+~~~~~~~~~~~~~~~~~~~~~
+
+- New methods for reshaping Datasets of variables with different dimensions
+  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
+- Renaming variables and dimensions independently:
+  Datasets with coordinate dimensions can now have only their dimension 
+  (using rename_dim) or only their coordinate (using rename_vars) renamed 
+  instead of the rename function applyingto both. (:issue:`3026`)
+  By `Julia Kent <https://github.com/jukent>`_.
+  
 Bug fixes
 ~~~~~~~~~
+
+- Fix to ensure that xarray can still be imported with pandas 0.25, which will
+  remove `pd.Panel`.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.2:
 
@@ -98,6 +114,8 @@ Enhancements to existing functionality
   accept a keyword argument ``restore_coord_dims`` which keeps the order
   of the dimensions of multi-dimensional coordinates intact (:issue:`1856`).
   By `Peter Hausamann <http://github.com/phausamann>`_.
+- Clean up Python 2 compatibility in code (:issue:`2950`)
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Better warning message when supplying invalid objects to ``xr.merge``
   (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
 - Add ``errors`` keyword argument to :py:meth:`Dataset.drop` and :py:meth:`Dataset.drop_dims`
@@ -164,6 +182,12 @@ Bug fixes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Fixed performance issues with cftime installed (:issue:`3000`)
   By `0x0L <https://github.com/0x0L>`_.
+- Replace incorrect usages of `message` in pytest assertions
+  with `match` (:issue:`3011`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add explicit pytest markers, now required by pytest
+  (:issue:`3032`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Test suite fixes for newer versions of pytest (:issue:`3011`, :issue:`3032`).
   By `Maximilian Roos <https://github.com/max-sixty>`_
   and `Stephan Hoyer <https://github.com/shoyer>`_.

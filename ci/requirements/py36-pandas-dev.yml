@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python=3.6
   - cftime
+  - cython
   - dask
   - distributed
   - h5py
@@ -14,11 +15,10 @@ dependencies:
   - pytest-cov
   - pytest-env
   - coveralls
+  - flake8
   - numpy>=1.12
-  - pandas>=0.19
   - scipy
-  - seaborn
   - toolz
-  - rasterio>=1.0
-  - bottleneck
-  - pydap
+  - pip:
+    - pytest-azurepipelines
+    - git+https://github.com/pydata/pandas.git

@@ -313,7 +313,7 @@ class TestDataArray:
         actual = DataArray(series)
         assert_equal(expected[0].reset_coords('x', drop=True), actual)
 
-        if hasattr(pd, 'Panel'):
+        if LooseVersion(pd.__version__) < '0.25.0':
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', r'\W*Panel is deprecated')
                 panel = pd.Panel({0: frame})
@@ -1798,6 +1798,12 @@ class TestDataArray:
         expected = DataArray(orig.to_pandas().stack(), dims='z')
         assert_identical(expected, actual)
 
+    def test_to_unstacked_dataset_raises_value_error(self):
+        data = DataArray([0, 1], dims='x', coords={'x': [0, 1]})
+        with pytest.raises(
+                ValueError, match="'x' is not a stacked coordinate"):
+            data.to_unstacked_dataset('x', 0)
+
     def test_transpose(self):
         da = DataArray(np.random.randn(3, 4, 5), dims=('x', 'y', 'z'),
                        coords={'x': range(3), 'y': range(4), 'z': range(5),
@@ -2971,7 +2977,7 @@ class TestDataArray:
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
-            if len(shape) > 2 and not hasattr(pd, 'Panel'):
+            if len(shape) > 2 and not LooseVersion(pd.__version__) < '0.25.0':
                 continue
             dims = list('abc')[:len(shape)]
             da = DataArray(np.random.randn(*shape), dims=dims)

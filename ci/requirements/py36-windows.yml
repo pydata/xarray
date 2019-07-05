@@ -4,6 +4,8 @@ channels:
 dependencies:
   - python=3.6
   - cftime
+  - dask
+  - distributed
   - h5py
   - h5netcdf
   - matplotlib
@@ -12,16 +14,12 @@ dependencies:
   - pytest-cov
   - pytest-env
   - coveralls
-  - flake8
   - numpy>=1.12
   - pandas>=0.19
   - scipy
   - seaborn
   - toolz
   - rasterio
-  - bottleneck
   - zarr
-  - pseudonetcdf>=3.0.1
   - pip:
-    - git+https://github.com/dask/dask.git
-    - git+https://github.com/dask/distributed.git
+    - pytest-azurepipelines

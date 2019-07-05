@@ -24,7 +24,6 @@ jobs:
         pytest_extra_flags: --run-flaky --run-network-tests
         allow_failure: true
       # TODO: add numpy-dev to the test-matrix
-  continueOnError: ${{ variables['allow_failure'] }}
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
@@ -52,7 +51,17 @@ jobs:
   steps:
   - template: ci/azure/unit-tests.yml
 
-- job: CodeChecks
+- job: Lint
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - task: UsePythonVersion@0
+  - bash: python -m pip install flake8
+    displayName: Install flake8
+  - bash: flake8
+    displayName: flake8 lint checks
+
+- job: TypeChecking
   variables:
     conda_env: py37
   pool:
@@ -61,15 +70,8 @@ jobs:
   - template: ci/azure/install.yml
   - bash: |
       source activate test_env
-      flake8
-    displayName: flake8 lint checks
-  - bash: |
-      source activate test_env
-      mypy .
+      mypy . || exit 0
     displayName: mypy type checks
-    # allow mypy failures until we have a nice way of displaying results in
-    # pull requests
-    continueOnError: true
 
 - job: Docs
   pool:

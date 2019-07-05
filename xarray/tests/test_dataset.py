@@ -20,7 +20,7 @@ from xarray.core.common import duck_array_ops, full_like
 from xarray.core.pycompat import integer_types
 
 from . import (
-    InaccessibleArray, UnexpectedDataAccess, assert_allclose,
+    LooseVersion, InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_cftime, requires_dask,
     requires_numbagg, requires_scipy, source_ndarray)
@@ -110,14 +110,21 @@ def create_test_multiindex():
     return Dataset({}, {'x': mindex})
 
 
+def create_test_stacked_array():
+    x = DataArray(pd.Index(np.r_[:10], name='x'))
+    y = DataArray(pd.Index(np.r_[:20], name='y'))
+    a = x * y
+    b = x * y * y
+    return a, b
+
+
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def __init__(self):
-        super(InaccessibleVariableDataStore, self).__init__()
+        super().__init__()
         self._indexvars = set()
 
     def store(self, variables, *args, **kwargs):
-        super(InaccessibleVariableDataStore, self).store(
-            variables, *args, **kwargs)
+        super().store(variables, *args, **kwargs)
         for k, v in variables.items():
             if isinstance(v, IndexVariable):
                 self._indexvars.add(k)
@@ -390,7 +397,7 @@ class TestDataset:
             DataArray(np.random.rand(4, 3), dims=['a', 'b']),  # df
         ]
 
-        if hasattr(pd, 'Panel'):
+        if LooseVersion(pd.__version__) < '0.25.0':
             das.append(
                 DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']))
 
@@ -2163,6 +2170,40 @@ class TestDataset:
         # check virtual variables
         assert_array_equal(data['t.dayofyear'], [1, 2, 3])
 
+    def test_rename_dims(self):
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x': ('x_new', [0, 1, 2]), 'y': ('x_new', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x')
+        dims_dict = {'x': 'x_new'}
+        actual = original.rename_dims(dims_dict)
+        assert_identical(expected, actual)
+        actual_2 = original.rename_dims(**dims_dict)
+        assert_identical(expected, actual_2)
+
+        # Test to raise ValueError
+        dims_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            original.rename_dims(dims_dict_bad)
+
+    def test_rename_vars(self):
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x_new': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x_new')
+        name_dict = {'x': 'x_new'}
+        actual = original.rename_vars(name_dict)
+        assert_identical(expected, actual)
+        actual_2 = original.rename_vars(**name_dict)
+        assert_identical(expected, actual_2)
+
+        # Test to raise ValueError
+        names_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            original.rename_vars(names_dict_bad)
+
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
         expected = Dataset({'z': 42},
@@ -2448,6 +2489,61 @@ class TestDataset:
         stacked = ds[['b']].stack(z=['x', 'y'])
         actual = stacked.isel(z=slice(None, None, -1)).unstack('z')
         assert actual.identical(ds[['b']])
+
+    def test_to_stacked_array_invalid_sample_dims(self):
+        data = xr.Dataset(
+            data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
+                       'b': ('x', [6, 7])},
+            coords={'y': ['u', 'v', 'w']}
+        )
+        with pytest.raises(ValueError):
+            data.to_stacked_array("features", sample_dims=['y'])
+
+    def test_to_stacked_array_name(self):
+        name = 'adf9d'
+
+        # make a two dimensional dataset
+        a, b = create_test_stacked_array()
+        D = xr.Dataset({'a': a, 'b': b})
+        sample_dims = ['x']
+
+        y = D.to_stacked_array('features', sample_dims, name=name)
+        assert y.name == name
+
+    def test_to_stacked_array_dtype_dims(self):
+        # make a two dimensional dataset
+        a, b = create_test_stacked_array()
+        D = xr.Dataset({'a': a, 'b': b})
+        sample_dims = ['x']
+        y = D.to_stacked_array('features', sample_dims)
+        assert y.indexes['features'].levels[1].dtype == D.y.dtype
+        assert y.dims == ('x', 'features')
+
+    def test_to_stacked_array_to_unstacked_dataset(self):
+        # make a two dimensional dataset
+        a, b = create_test_stacked_array()
+        D = xr.Dataset({'a': a, 'b': b})
+        sample_dims = ['x']
+        y = D.to_stacked_array('features', sample_dims)\
+            .transpose("x", "features")
+
+        x = y.to_unstacked_dataset("features")
+        assert_identical(D, x)
+
+        # test on just one sample
+        x0 = y[0].to_unstacked_dataset("features")
+        d0 = D.isel(x=0)
+        assert_identical(d0, x0)
+
+    def test_to_stacked_array_to_unstacked_dataset_different_dimension(self):
+        # test when variables have different dimensionality
+        a, b = create_test_stacked_array()
+        sample_dims = ['x']
+        D = xr.Dataset({'a': a, 'b': b.isel(y=0)})
+
+        y = D.to_stacked_array('features', sample_dims)
+        x = y.to_unstacked_dataset('features')
+        assert_identical(D, x)
 
     def test_update(self):
         data = create_test_data(seed=0)
