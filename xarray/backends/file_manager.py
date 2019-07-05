@@ -31,6 +31,10 @@ class FileManager:
         """Acquire the file object from this manager."""
         raise NotImplementedError
 
+    def acquire_with_cache_info(self, needs_lock=True):
+        """Acquire a file, and a boolean indicating if it was already open."""
+        raise NotImplementedError
+
     def close(self, needs_lock=True):
         """Close the file object associated with this manager, if needed."""
         raise NotImplementedError
@@ -143,7 +147,7 @@ class CachingFileManager(FileManager):
             yield
 
     def acquire(self, needs_lock=True):
-        """Acquiring a file object from the manager.
+        """Acquire a file object from the manager.
 
         A new file is only opened if it has expired from the
         least-recently-used cache.
@@ -156,6 +160,11 @@ class CachingFileManager(FileManager):
         -------
         An open file object, as returned by ``opener(*args, **kwargs)``.
         """
+        file, _ = self.acquire_with_cache_info(needs_lock)
+        return file
+
+    def acquire_with_cache_info(self, needs_lock=True):
+        """Acquire a file, returning the file and whether it was cached."""
         with self._optional_lock(needs_lock):
             try:
                 file = self._cache[self._key]
@@ -169,7 +178,9 @@ class CachingFileManager(FileManager):
                     # ensure file doesn't get overriden when opened again
                     self._mode = 'a'
                 self._cache[self._key] = file
-        return file
+                return file, True
+            else:
+                return file, False
 
     def close(self, needs_lock=True):
         """Explicitly close any associated file object (if necessary)."""
@@ -274,6 +285,10 @@ class DummyFileManager(FileManager):
     """
     def __init__(self, value):
         self._value = value
+
+    def acquire_with_cache_info(self, needs_lock=True):
+        del needs_lock  # ignored
+        return self._value, True
 
     def acquire(self, needs_lock=True):
         del needs_lock  # ignored

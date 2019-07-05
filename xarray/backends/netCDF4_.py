@@ -12,7 +12,7 @@ from ..coding.variables import pop_to
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
-    BackendArray, WritableCFDataStore, find_root, robust_getitem)
+    BackendArray, WritableCFDataStore, find_root_and_group, robust_getitem)
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import (
     HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock)
@@ -52,12 +52,18 @@ class BaseNetCDF4Array(BackendArray):
             if self.datastore.autoclose:
                 self.datastore.close(needs_lock=False)
 
-    def get_array(self, needs_lock=True):
-        ds = self.datastore._manager.acquire(needs_lock).value
-        return ds.variables[self.variable_name]
-
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
+
+    def get_array(self, needs_lock=True):
+        ds = self.datastore._acquire(needs_lock)
+        variable = ds.variables[self.variable_name]
+        variable.set_auto_maskandscale(False)
+        # only added in netCDF4-python v1.2.8
+        with suppress(AttributeError):
+            variable.set_auto_chartostring(False)
+        return variable
+
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.OUTER,
@@ -235,48 +241,6 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
     return encoding
 
 
-class GroupWrapper:
-    """Wrap netCDF4.Group objects so closing them closes the root group."""
-
-    def __init__(self, value):
-        self.value = value
-
-    def close(self):
-        # netCDF4 only allows closing the root group
-        find_root(self.value).close()
-
-
-def _open_netcdf4_group(filename, lock, mode, group=None, **kwargs):
-    import netCDF4 as nc4
-
-    ds = nc4.Dataset(filename, mode=mode, **kwargs)
-
-    with close_on_error(ds):
-        ds = _nc4_require_group(ds, group, mode)
-
-    _disable_auto_decode_group(ds)
-
-    return GroupWrapper(ds)
-
-
-def _disable_auto_decode_variable(var):
-    """Disable automatic decoding on a netCDF4.Variable.
-
-    We handle these types of decoding ourselves.
-    """
-    var.set_auto_maskandscale(False)
-
-    # only added in netCDF4-python v1.2.8
-    with suppress(AttributeError):
-        var.set_auto_chartostring(False)
-
-
-def _disable_auto_decode_group(ds):
-    """Disable automatic decoding on all variables in a netCDF4.Group."""
-    for var in ds.variables.values():
-        _disable_auto_decode_variable(var)
-
-
 def _is_list_of_strings(value):
     if (np.asarray(value).dtype.kind in ['U', 'S'] and
             np.asarray(value).size > 1):
@@ -308,14 +272,24 @@ class NetCDF4DataStore(WritableCFDataStore):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
 
-    def __init__(self, manager, lock=NETCDF4_PYTHON_LOCK, autoclose=False):
+    def __init__(self, manager, group=None, mode=None,
+                 lock=NETCDF4_PYTHON_LOCK, autoclose=False):
         import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
-            _disable_auto_decode_group(manager)
-            manager = DummyFileManager(GroupWrapper(manager))
+            if group is None:
+                root, group = find_root_and_group(manager)
+            else:
+                if not type(manager) is netCDF4.Dataset:
+                    raise ValueError(
+                        'must supply a root netCDF4.Dataset if the group '
+                        'argument is provided')
+                root = manager
+            manager = DummyFileManager(root)
 
         self._manager = manager
+        self._group = group
+        self._mode = mode
         self.format = self.ds.data_model
         self._filename = self.ds.filepath()
         self.is_remote = is_remote_uri(self._filename)
@@ -353,15 +327,26 @@ class NetCDF4DataStore(WritableCFDataStore):
                     base_lock = NETCDFC_LOCK
                 lock = combine_locks([base_lock, get_write_lock(filename)])
 
+        kwargs = dict(clobber=clobber, diskless=diskless, persist=persist,
+                      format=format)
         manager = CachingFileManager(
-            _open_netcdf4_group, filename, lock, mode=mode,
-            kwargs=dict(group=group, clobber=clobber, diskless=diskless,
-                        persist=persist, format=format))
-        return cls(manager, lock=lock, autoclose=autoclose)
+            netCDF4.Dataset, filename, mode=mode, kwargs=kwargs)
+        return cls(manager, group=group, mode=mode, lock=lock,
+                   autoclose=autoclose)
+
+    def _acquire(self, needs_lock=True):
+        root, cached = self._manager.acquire_with_cache_info(needs_lock)
+        try:
+            ds = _nc4_require_group(root, self._group, self._mode)
+        except Exception:
+            if not cached:
+                self._manager.close()
+            raise
+        return ds
 
     @property
     def ds(self):
-        return self._manager.acquire().value
+        return self._acquire()
 
     def open_store_variable(self, name, var):
         dimensions = var.dimensions
@@ -471,7 +456,6 @@ class NetCDF4DataStore(WritableCFDataStore):
                 least_significant_digit=encoding.get(
                     'least_significant_digit'),
                 fill_value=fill_value)
-            _disable_auto_decode_variable(nc4_var)
 
         for k, v in attrs.items():
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
