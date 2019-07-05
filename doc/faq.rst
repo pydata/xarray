@@ -229,3 +229,22 @@ would certainly appreciate it. We recommend two citations.
                  doi    = {10.5281/zenodo.59499},
                  url    = {https://doi.org/10.5281/zenodo.59499}
                 }
+
+.. _public api:
+
+What parts of xarray are considered public API?
+-----------------------------------------------
+
+As a rule, only functions/methods documented in our :ref:`api` are considered
+part of xarray's public API. Everything else (in particular, everything in
+``xarray.core`` that is not also exposed in the top level ``xarray`` namespace)
+is considered a private implementation detail that may change at any time.
+
+Objects that exist to facilitate xarray's fluent interface on ``DataArray`` and
+``Dataset`` objects are a special case. For convenience, we document them in
+the API docs, but only their methods and the ``DataArray``/``Dataset``
+methods/properties to construct them (e.g., ``.plot()``, ``.groupby()``,
+``.str``) are considered public API. Constructors and other details of the
+internal classes used to implemented them (i.e.,
+``xarray.plot.plotting._PlotMethods``, ``xarray.core.groupby.DataArrayGroupBy``,
+``xarray.core.accessor_str.StringAccessor``) are not.

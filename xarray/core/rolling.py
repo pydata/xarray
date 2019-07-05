@@ -178,7 +178,7 @@ class DataArrayRolling(Rolling):
         Dataset.rolling
         Dataset.groupby
         """
-        super(DataArrayRolling, self).__init__(
+        super().__init__(
             obj, windows, min_periods=min_periods, center=center)
 
         self.window_labels = self.obj[self.dim]
@@ -401,7 +401,7 @@ class DatasetRolling(Rolling):
         Dataset.groupby
         DataArray.groupby
         """
-        super(DatasetRolling, self).__init__(obj, windows, min_periods, center)
+        super().__init__(obj, windows, min_periods, center)
         if self.dim not in self.obj.dims:
             raise KeyError(self.dim)
         # Keep each Rolling object as an OrderedDict

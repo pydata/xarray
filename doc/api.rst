@@ -8,6 +8,8 @@ This page provides an auto-generated summary of xarray's API. For more details
 and examples, refer to the relevant chapters in the main part of the
 documentation.
 
+See also: :ref:`public api`_.
+
 Top-level functions
 ===================
 
@@ -87,6 +89,8 @@ Dataset contents
    Dataset.pipe
    Dataset.merge
    Dataset.rename
+   Dataset.rename_vars
+   Dataset.rename_dims
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop
@@ -204,6 +208,7 @@ Reshaping and reorganizing
    Dataset.transpose
    Dataset.stack
    Dataset.unstack
+   Dataset.to_stacked_array
    Dataset.shift
    Dataset.roll
    Dataset.sortby
@@ -377,6 +382,7 @@ Reshaping and reorganizing
    DataArray.transpose
    DataArray.stack
    DataArray.unstack
+   DataArray.to_unstacked_dataset
    DataArray.shift
    DataArray.roll
    DataArray.sortby
