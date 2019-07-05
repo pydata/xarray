@@ -2767,6 +2767,119 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._stack_once(dims, new_dim)
         return result
 
+    def to_stacked_array(self, new_dim, sample_dims, variable_dim='variable',
+                         name=None):
+        """Combine variables of differing dimensionality into a DataArray
+        without broadcasting.
+
+        This method is similar to Dataset.to_array but does not broadcast the
+        variables.
+
+        Parameters
+        ----------
+        new_dim : str
+            Name of the new stacked coordinate
+        sample_dims : Sequence[str]
+            Dimensions that **will not** be stacked. Each array in the dataset
+            must share these dimensions. For machine learning applications,
+            these define the dimensions over which samples are drawn.
+        variable_dim : str, optional
+            Name of the level in the stacked coordinate which corresponds to
+            the variables.
+        name : str, optional
+            Name of the new data array.
+
+        Returns
+        -------
+        stacked : DataArray
+            DataArray with the specified dimensions and data variables
+            stacked together. The stacked coordinate is named ``new_dim``
+            and represented by a MultiIndex object with a level containing the
+            data variable names. The name of this level is controlled using
+            the ``variable_dim`` argument.
+
+        See Also
+        --------
+        Dataset.to_array
+        Dataset.stack
+        DataArray.to_unstacked_dataset
+
+        Examples
+        --------
+        >>> data = Dataset(
+        ...     data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
+        ...                'b': ('x', [6, 7])},
+        ...     coords={'y': ['u', 'v', 'w']}
+        ... )
+
+        >>> data
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+        * y        (y) <U1 'u' 'v' 'w'
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x, y) int64 0 1 2 3 4 5
+            b        (x) int64 6 7
+
+        >>> data.to_stacked_array("z", sample_dims=['x'])
+        <xarray.DataArray (x: 2, z: 4)>
+        array([[0, 1, 2, 6],
+            [3, 4, 5, 7]])
+        Coordinates:
+        * z         (z) MultiIndex
+        - variable  (z) object 'a' 'a' 'a' 'b'
+        - y         (z) object 'u' 'v' 'w' nan
+        Dimensions without coordinates: x
+
+        """
+        stacking_dims = tuple(dim for dim in self.dims
+                              if dim not in sample_dims)
+
+        for variable in self:
+            dims = self[variable].dims
+            dims_include_sample_dims = set(sample_dims) <= set(dims)
+            if not dims_include_sample_dims:
+                raise ValueError(
+                    "All variables in the dataset must contain the "
+                    "dimensions {}.".format(dims)
+                )
+
+        def ensure_stackable(val):
+            assign_coords = {variable_dim: val.name}
+            for dim in stacking_dims:
+                if dim not in val.dims:
+                    assign_coords[dim] = None
+
+            expand_dims = set(stacking_dims).difference(set(val.dims))
+            expand_dims.add(variable_dim)
+            # must be list for .expand_dims
+            expand_dims = list(expand_dims)
+
+            return (val.assign_coords(**assign_coords)
+                    .expand_dims(expand_dims)
+                    .stack({new_dim: (variable_dim,) + stacking_dims}))
+
+        # concatenate the arrays
+        stackable_vars = [ensure_stackable(self[key])
+                          for key in self.data_vars]
+        data_array = xr.concat(stackable_vars, dim=new_dim)
+
+        # coerce the levels of the MultiIndex to have the same type as the
+        # input dimensions. This code is messy, so it might be better to just
+        # input a dummy value for the singleton dimension.
+        idx = data_array.indexes[new_dim]
+        levels = ([idx.levels[0]]
+                  + [level.astype(self[level.name].dtype)
+                     for level in idx.levels[1:]])
+        new_idx = idx.set_levels(levels)
+        data_array[new_dim] = IndexVariable(new_dim, new_idx)
+
+        if name is not None:
+            data_array.name = name
+
+        return data_array
+
     def _unstack_once(self, dim):
         index = self.get_index(dim)
         # GH2619. For MultiIndex, we need to call remove_unused.
