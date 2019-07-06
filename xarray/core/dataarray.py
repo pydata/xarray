@@ -986,7 +986,8 @@ class DataArray(AbstractArray, DataWithCoords):
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
 
-    def broadcast_like(self, other: Union['DataArray', Dataset]) -> 'DataArray':
+    def broadcast_like(self,
+                       other: Union['DataArray', Dataset]) -> 'DataArray':
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
 
