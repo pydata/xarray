@@ -1979,7 +1979,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self.isel_points(dim=dim, **pos_indexers)
 
     def broadcast_like(self,
-                       other: Union['Dataset', 'DataArray'])-> 'Dataset':
+                       other: Union['Dataset', 'DataArray']) -> 'Dataset':
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
 
