@@ -193,6 +193,7 @@ class TestDataset:
         assert len(repr(data)) < 1000
 
     def test_repr_multiindex(self):
+        assert False
         data = create_test_multiindex()
         expected = dedent("""\
         <xarray.Dataset>
