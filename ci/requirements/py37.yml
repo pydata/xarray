@@ -30,6 +30,5 @@ dependencies:
   - lxml
   - pydap
   - pip:
-    - pytest-azurepipelines
     - mypy==0.650
     - numbagg
