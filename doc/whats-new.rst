@@ -36,10 +36,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix to ensure that xarray can still be imported with pandas 0.25, which will
-  remove `pd.Panel`.
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-- Fixes for NumPy 1.17 with Dask (2.0+) and Pydap.
+- Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.2:
