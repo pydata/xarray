@@ -16,6 +16,7 @@ steps:
 
 - bash: |
     source activate test_env
+    conda info -a
     conda list
     python xarray/util/print_versions.py
   displayName: Version info
