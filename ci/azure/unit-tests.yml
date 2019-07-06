@@ -29,5 +29,5 @@ steps:
   condition: succeededOrFailed()
   inputs:
     testResultsFiles: '**/test-*.xml'
-    failTaskOnFailedTests: true
+    failTaskOnFailedTests: false
     testRunTitle: '$(conda_env) $(pytest_extra_flags)'
