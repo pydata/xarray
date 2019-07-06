@@ -3,6 +3,3 @@ branch = True
 omit =
     xarray/tests/*
     xarray/_version.py
-
-[xml]
-output = coverage.xml
