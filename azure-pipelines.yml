@@ -39,8 +39,6 @@ jobs:
 - job: Windows
   strategy:
     matrix:
-      py36:
-        conda_env: py36-windows
       py37:
         conda_env: py37-windows
   pool:
