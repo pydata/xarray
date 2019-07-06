@@ -4,10 +4,10 @@ dependencies:
   - pytest
   - flake8
   - mock
+  - pip
   - numpy=1.12
   - pandas=0.19
   - pip:
     - pytest-env
     - pytest-cov
-    - pytest-azurepipelines
     - coveralls

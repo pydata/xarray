@@ -22,5 +22,3 @@ dependencies:
   - rasterio>=1.0
   - bottleneck
   - pydap
-  - pip:
-    - pytest-azurepipelines

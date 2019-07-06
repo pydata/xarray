@@ -20,5 +20,4 @@ dependencies:
   - scipy
   - toolz
   - pip:
-    - pytest-azurepipelines
     - git+https://github.com/pydata/pandas.git
