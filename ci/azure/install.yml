@@ -17,7 +17,7 @@ steps:
             pandas \
             scipy
         pip install \
-            --no-deps
+            --no-deps \
             --upgrade \
             git+https://github.com/dask/dask \
             git+https://github.com/dask/distributed \
