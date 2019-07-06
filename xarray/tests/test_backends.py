@@ -2909,6 +2909,8 @@ class TestOpenMFDataSetDeprecation:
 
 @requires_scipy_or_netCDF4
 @requires_pydap
+@pytest.mark.filterwarnings(
+    'ignore:The binary mode of fromstring is deprecated')
 class TestPydap:
     def convert_to_pydap_dataset(self, original):
         from pydap.model import GridType, BaseType, DatasetType
@@ -2976,9 +2978,9 @@ class TestPydap:
         with self.create_datasets() as (actual, expected):
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
-                actual = open_dataset(tmp_file)
-                actual['bears'] = actual['bears'].astype(str)
-                assert_equal(actual, expected)
+                with open_dataset(tmp_file) as actual2:
+                    actual2['bears'] = actual2['bears'].astype(str)
+                    assert_equal(actual2, expected)
 
     @requires_dask
     def test_dask(self):
