@@ -6,24 +6,31 @@ steps:
 - template: add-conda-to-path.yml
 
 - bash: |
+    conda update -n base -c defaults conda
+  displayName: Update conda
+
+- bash: |
     conda env create -n test_env --file ${{ parameters.env_file }}
-    if [[ "$UPSTREAM_DEV" = "true" ]]; then
-        conda uninstall --force numpy matplotlib pandas scipy
-        pip install -f https://7933911d6844c6c53a7d-47bd50c35cd79bd838daf386af554a83.ssl.cf2.rackcdn.com \
-            --no-deps \
-            --pre \
-            numpy \
-            matplotlib \
-            pandas \
-            scipy
-        pip install \
-            --no-deps \
-            --upgrade \
-            git+https://github.com/dask/dask \
-            git+https://github.com/dask/distributed \
-            git+https://github.com/zarr-developers/zarr
-    fi
-  displayName: Install dependencies
+  displayName: Install conda dependencies
+
+- bash: |
+    source activate test_env
+    conda uninstall --force numpy matplotlib pandas scipy
+    pip install -f https://7933911d6844c6c53a7d-47bd50c35cd79bd838daf386af554a83.ssl.cf2.rackcdn.com \
+        --no-deps \
+        --pre \
+        numpy \
+        matplotlib \
+        pandas \
+        scipy
+    pip install \
+        --no-deps \
+        --upgrade \
+        git+https://github.com/dask/dask \
+        git+https://github.com/dask/distributed \
+        git+https://github.com/zarr-developers/zarr
+  condition: eq(variables['UPSTREAM_DEV'], 'true')
+  displayName: Install upstream dev dependencies
 
 - bash: |
     source activate test_env

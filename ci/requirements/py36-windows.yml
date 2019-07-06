@@ -16,6 +16,7 @@ dependencies:
   - coveralls
   - numpy>=1.12
   - pandas>=0.19
+  - pip
   - scipy
   - seaborn
   - toolz
