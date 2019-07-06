@@ -13,7 +13,6 @@ from typing import (
 import numpy as np
 
 from . import duck_array_ops, utils
-from .dask_array_compat import blockwise
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
 from .pycompat import TYPE_CHECKING, dask_array_type
@@ -605,6 +604,7 @@ def apply_variable_ufunc(
 def _apply_blockwise(func, args, input_dims, output_dims, signature,
                      output_dtypes, output_sizes=None):
     import dask.array as da
+    from .dask_array_compat import blockwise
 
     if signature.num_outputs > 1:
         raise NotImplementedError('multiple outputs from apply_ufunc not yet '
