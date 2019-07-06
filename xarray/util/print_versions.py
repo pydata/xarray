@@ -143,5 +143,4 @@ def show_versions(file=sys.stdout):
 
 
 if __name__ == '__main__':
-    import PseudoNetCDF
     show_versions()
