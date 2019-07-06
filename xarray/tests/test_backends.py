@@ -306,6 +306,8 @@ class DatasetIOBase:
             assert_identical(expected, computed)
 
     def test_pickle(self):
+        if not has_dask:
+            pytest.xfail('pickling requires dask for SerializableLock')
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
@@ -317,6 +319,8 @@ class DatasetIOBase:
 
     @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self):
+        if not has_dask:
+            pytest.xfail('pickling requires dask for SerializableLock')
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
@@ -1967,6 +1971,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
         # there's no specific store to test here
         pass
 
+    @requires_scipy
     def test_engine(self):
         data = create_test_data()
         with raises_regex(ValueError, 'unrecognized engine'):
@@ -2291,14 +2296,12 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
+@requires_dask
 def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
                                   file_cache_maxsize):
 
     # skip certain combinations
     skip_if_not_engine(readengine)
-
-    if not has_dask and parallel:
-        pytest.skip('parallel requires dask')
 
     if ON_WINDOWS:
         pytest.skip('Skipping on Windows')
@@ -2325,6 +2328,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
 
 
 @requires_scipy_or_netCDF4
+@requires_dask
 class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     coord_name = 'lon'
     var_name = 'v1'
@@ -2850,6 +2854,7 @@ class TestDask(DatasetIOBase):
 
 
 @requires_scipy_or_netCDF4
+@requires_dask
 class TestOpenMFDataSetDeprecation:
     """
     Set of tests to check that FutureWarnings are correctly raised until the
@@ -3919,6 +3924,7 @@ class TestDataArrayToNetCDF:
             with open_dataarray(tmp, drop_variables=['y']) as loaded:
                 assert_identical(expected, loaded)
 
+    @requires_scipy
     def test_dataarray_to_netcdf_return_bytes(self):
         # regression test for GH1410
         data = xr.DataArray([1, 2, 3])
