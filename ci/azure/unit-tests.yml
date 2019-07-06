@@ -30,4 +30,4 @@ steps:
   inputs:
     testResultsFiles: '**/test-*.xml'
     failTaskOnFailedTests: false
-    testRunTitle: '$(conda_env) $(pytest_extra_flags)'
+    testRunTitle: '$(Agent.JobName)'

@@ -57,6 +57,10 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
         raise NotImplementedError(msg % func_name)
 
 
+# switch to use dask.array / __array_function__ version when dask supports it:
+# https://github.com/dask/dask/pull/4822
+moveaxis = npcompat.moveaxis
+
 around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
 notnull = _dask_or_eager_func('notnull', eager_module=pd)

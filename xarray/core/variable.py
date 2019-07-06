@@ -632,7 +632,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         dims, indexer, new_order = self._broadcast_indexes(key)
         data = as_indexable(self._data)[indexer]
         if new_order:
-            data = np.moveaxis(data, range(len(new_order)), new_order)
+            data = duck_array_ops.moveaxis(
+                data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self, dims, data):
@@ -676,7 +677,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             data = np.broadcast_to(fill_value, getattr(mask, 'shape', ()))
 
         if new_order:
-            data = np.moveaxis(data, range(len(new_order)), new_order)
+            data = duck_array_ops.moveaxis(
+                data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def __setitem__(self, key, value):
@@ -705,7 +707,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) +
                           (Ellipsis,)]
-            value = np.moveaxis(value, new_order, range(len(new_order)))
+            value = duck_array_ops.moveaxis(
+                value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
         indexable[index_tuple] = value

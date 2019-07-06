@@ -1,6 +1,7 @@
 variables:
   pytest_extra_flags: ''
   allow_failure: false
+  upstream_dev: false
 
 jobs:
 
@@ -13,17 +14,13 @@ jobs:
         conda_env: py36
       py37:
         conda_env: py37
-      py36-dask-dev:
-        conda_env: py36-dask-dev
-      py36-zarr-dev:
-        conda_env: py36-zarr-dev
-      py36-pandas-dev:
-        conda_env: py36-pandas-dev
+      py37-upstream-dev:
+        conda_env: py37
+        upstream_dev: true
       py36-flakey:
         conda_env: py36
         pytest_extra_flags: --run-flaky --run-network-tests
         allow_failure: true
-      # TODO: add numpy-dev to the test-matrix
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
@@ -42,8 +39,6 @@ jobs:
 - job: Windows
   strategy:
     matrix:
-      py36:
-        conda_env: py36-windows
       py37:
         conda_env: py37-windows
   pool:

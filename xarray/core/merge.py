@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 
 import pandas as pd
 
-from . import dtypes
+from . import dtypes, pdcompat
 from .alignment import deep_align
 from .pycompat import TYPE_CHECKING
 from .utils import Frozen
@@ -15,9 +15,7 @@ if TYPE_CHECKING:
     from .dataset import Dataset
 
 
-PANDAS_TYPES = (
-    (pd.Series, pd.DataFrame) + (pd.Panel,) if hasattr(pd, 'Panel') else ()
-)
+PANDAS_TYPES = (pd.Series, pd.DataFrame, pdcompat.Panel)
 
 _VALID_COMPAT = Frozen({'identical': 0,
                         'equals': 1,

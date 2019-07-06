@@ -2,6 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from distutils.version import LooseVersion
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Union, cast)
 
@@ -10,7 +11,8 @@ import pandas as pd
 
 from ..plot.plot import _PlotMethods
 from . import (
-    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
+    computation, dtypes, groupby, indexing, ops, pdcompat, resample, rolling,
+    utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
 from .alignment import align, reindex_like_indexers
@@ -264,7 +266,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data.index, data.columns]
                 elif isinstance(data, (pd.Index, IndexVariable)):
                     coords = [data]
-                elif hasattr(pd, 'Panel') and isinstance(data, pd.Panel):
+                elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
@@ -1910,9 +1912,8 @@ class DataArray(AbstractArray, DataWithCoords):
         # attributes that correspond to their indexes into a separate module?
         constructors = {0: lambda x: x,
                         1: pd.Series,
-                        2: pd.DataFrame}
-        if hasattr(pd, 'Panel'):
-            constructors[3] = pd.Panel
+                        2: pd.DataFrame,
+                        3: pdcompat.Panel}
         try:
             constructor = constructors[self.ndim]
         except KeyError:
