@@ -19,10 +19,3 @@ def pytest_runtest_setup(item):
             and not item.config.getoption("--run-network-tests")):
         pytest.skip("set --run-network-tests to run test requiring an "
                     "internet connection")
-
-
-def pytest_configure(config):
-    # override hard-coded setting from pytest-azurepipelines
-    # https://github.com/tonybaloney/pytest-azurepipelines/blob/e696810ba8aa39f56261a50f7589af16f306412d/pytest_azurepipelines.py#L49
-    if config.pluginmanager.has_plugin("pytest_cov"):
-        config.option.cov_report["xml"] = "coverage.xml"
