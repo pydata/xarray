@@ -6,7 +6,7 @@ from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
 from typing import (Any, Dict, Hashable, Iterable, Iterator, List,
-                    Mapping, Optional, Sequence, Set, Tuple, Union)
+                    Mapping, Optional, Sequence, Set, Tuple, Union, cast)
 
 import numpy as np
 import pandas as pd
@@ -56,7 +56,7 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-def _get_virtual_variable(variables, key: str,
+def _get_virtual_variable(variables, key: Hashable,
                           level_vars: Optional[Mapping] = None,
                           dim_sizes: Optional[Mapping] = None,
                           ) -> Tuple[Hashable, Hashable, Variable]:
@@ -279,7 +279,7 @@ def as_dataset(obj: Any) -> 'Dataset':
     return obj
 
 
-class DataVariables(Mapping[Hashable, 'DataArray']):
+class DataVariables(Mapping[Hashable, 'Union[DataArray, Dataset]']):
     def __init__(self, dataset: 'Dataset'):
         self._dataset = dataset
 
@@ -836,7 +836,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj = self._replace(variables, indexes=new_indexes)
 
         # switch from dimension to level names, if necessary
-        dim_names = {}
+        dim_names = {}  # type: Dict[Hashable, str]
         for dim, idx in indexes.items():
             if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
                 dim_names[dim] = idx.name
@@ -969,7 +969,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
-        level_coords = OrderedDict()
+        level_coords = OrderedDict()  # type: OrderedDict[str, Hashable]
         for name, index in self.indexes.items():
             if isinstance(index, pd.MultiIndex):
                 level_names = index.names
@@ -1099,7 +1099,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Indexing with a list of names will return a new ``Dataset`` object.
         """
         if utils.is_dict_like(key):
-            return self.isel(**key)
+            return self.isel(**cast(Mapping, key))
 
         if hashable(key):
             return self._construct_dataarray(key)
@@ -1140,7 +1140,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # some stores (e.g., scipy) do not seem to preserve order, so don't
         # require matching order for equality
-        def compat(x: 'Dataset', y: 'Dataset') -> bool:
+        def compat(x: Variable, y: Variable) -> bool:
             return getattr(x, compat_str)(y)
 
         return (self._coord_names == other._coord_names and

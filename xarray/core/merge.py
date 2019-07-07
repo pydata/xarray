@@ -402,13 +402,17 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
                 'by the xarray data model.' % coord_name)
 
 
-def merge_core(objs,
-               compat='broadcast_equals',
-               join='outer',
-               priority_arg=None,
-               explicit_coords=None,
-               indexes=None,
-               fill_value=dtypes.NA):
+def merge_core(
+    objs,
+    compat='broadcast_equals',
+    join='outer',
+    priority_arg=None,
+    explicit_coords=None,
+    indexes=None,
+    fill_value=dtypes.NA
+) -> Tuple['OrderedDict[Hashable, Variable]',
+           Set[Hashable],
+           Dict[Hashable, int]]:
     """Core logic for merging labeled objects.
 
     This is not public API.
@@ -588,7 +592,9 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
 def dataset_update_method(
     dataset: 'Dataset',
     other: 'Union[Dataset, Mapping[Hashable, DataArray]]'
-) -> 'Dataset':
+) -> Tuple['OrderedDict[Hashable, Variable]',
+           Set[Hashable],
+           Dict[Hashable, int]]:
     """Guts of the Dataset.update method.
 
     This drops a duplicated coordinates from `other` if `other` is not an
