@@ -122,7 +122,7 @@ class AbstractDataStore(Mapping):
         return variables, attributes
 
     @property
-    def variables(self):
+    def variables(self):  # pragma: no cover
         warnings.warn('The ``variables`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
@@ -130,7 +130,7 @@ class AbstractDataStore(Mapping):
         return variables
 
     @property
-    def attrs(self):
+    def attrs(self):  # pragma: no cover
         warnings.warn('The ``attrs`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
@@ -138,7 +138,7 @@ class AbstractDataStore(Mapping):
         return attrs
 
     @property
-    def dimensions(self):
+    def dimensions(self):  # pragma: no cover
         warnings.warn('The ``dimensions`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
