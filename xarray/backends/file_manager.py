@@ -306,6 +306,7 @@ class DummyFileManager(FileManager):
         del needs_lock  # ignored
         return self._value
 
+    @contextlib.contextmanager
     def acquire_context(self, needs_lock=True):
         del needs_lock
         yield self._value
