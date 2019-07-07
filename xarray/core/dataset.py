@@ -5,8 +5,8 @@ import warnings
 from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
-from typing import (Any, Dict, Hashable, Iterator, List, Mapping, Optional,
-                    Sequence, Set, Tuple, Union)
+from typing import (Any, Dict, Hashable, Iterable, Iterator, List,
+                    Mapping, Optional, Sequence, Set, Tuple, Union)
 
 import numpy as np
 import pandas as pd
@@ -45,6 +45,7 @@ except ImportError:
     pass
 
 if TYPE_CHECKING:
+    from ..backends import AbstractDataStore
     from .dataarray import DataArray
 
 
@@ -293,7 +294,7 @@ class DataVariables(Mapping[Hashable, 'DataArray']):
         return (key in self._dataset._variables
                 and key not in self._dataset._coord_names)
 
-    def __getitem__(self, key) -> 'DataArray':
+    def __getitem__(self, key) -> 'Union[DataArray, Dataset]':
         if key not in self._dataset._coord_names:
             return self._dataset[key]
         else:
@@ -823,7 +824,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(
             variables, coord_names, dims, attrs, indexes=None, inplace=inplace)
 
-    def _overwrite_indexes(self, indexes):
+    def _overwrite_indexes(self, indexes: Mapping[Any, pd.Index]) -> 'Dataset':
         if not indexes:
             return self
 
@@ -964,7 +965,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables, attrs=attrs)
 
     @property
-    def _level_coords(self):
+    def _level_coords(self) -> 'OrderedDict[str, Hashable]':
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
@@ -976,7 +977,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
-    def _copy_listed(self, names) -> 'Dataset':
+    def _copy_listed(self, names: Iterable[Hashable]) -> 'Dataset':
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
         """
@@ -1011,7 +1012,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return self._replace(variables, coord_names, dims, indexes=indexes)
 
-    def _construct_dataarray(self, name) -> 'DataArray':
+    def _construct_dataarray(self, name: Hashable) -> 'DataArray':
         """Construct a DataArray by indexing this dataset
         """
         from .dataarray import DataArray
@@ -1038,38 +1039,40 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return DataArray(variable, coords, name=name, indexes=indexes,
                          fastpath=True)
 
-    def __copy__(self):
+    def __copy__(self) -> 'Dataset':
         return self.copy(deep=False)
 
-    def __deepcopy__(self, memo=None):
+    def __deepcopy__(self, memo=None) -> 'Dataset':
         # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
 
     @property
-    def _attr_sources(self):
-        """List of places to look-up items for attribute-style access"""
+    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
+        """List of places to look-up items for attribute-style access
+        """
         return self._item_sources + [self.attrs]
 
     @property
-    def _item_sources(self):
-        """List of places to look-up items for key-completion"""
+    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
+        """List of places to look-up items for key-completion
+        """
         return [self.data_vars, self.coords, {d: self[d] for d in self.dims},
                 LevelCoordinatesSource(self)]
 
-    def __contains__(self, key):
+    def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
         'key' is an array in the dataset or not.
         """
         return key in self._variables
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data_vars)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return bool(self.data_vars)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Hashable]:
         return iter(self.data_vars)
 
     def __array__(self, dtype=None):
@@ -1079,17 +1082,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         'invoking the `to_array()` method.')
 
     @property
-    def nbytes(self):
+    def nbytes(self) -> int:
         return sum(v.nbytes for v in self.variables.values())
 
     @property
-    def loc(self):
+    def loc(self) -> _LocIndexer:
         """Attribute for location based indexing. Only supports __getitem__,
         and only when the key is a dict of the form {dim: labels}.
         """
         return _LocIndexer(self)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: object) -> 'Union[DataArray, Dataset]':
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
@@ -1103,7 +1106,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             return self._copy_listed(np.asarray(key))
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Hashable, value) -> None:
         """Add an array to this dataset.
 
         If value is a `DataArray`, call its `select_vars()` method, rename it
@@ -1120,7 +1123,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         self.update({key: value})
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset.
         """
         del self._variables[key]
@@ -1131,19 +1134,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     # https://github.com/python/mypy/issues/4266
     __hash__ = None  # type: ignore
 
-    def _all_compat(self, other, compat_str):
-        """Helper function for equals and identical"""
+    def _all_compat(self, other: 'Dataset', compat_str: str) -> bool:
+        """Helper function for equals and identical
+        """
 
         # some stores (e.g., scipy) do not seem to preserve order, so don't
         # require matching order for equality
-        def compat(x, y):
+        def compat(x: 'Dataset', y: 'Dataset') -> bool:
             return getattr(x, compat_str)(y)
 
         return (self._coord_names == other._coord_names and
                 utils.dict_equiv(self._variables, other._variables,
                                  compat=compat))
 
-    def broadcast_equals(self, other):
+    def broadcast_equals(self, other: 'Dataset') -> bool:
         """Two Datasets are broadcast equal if they are equal after
         broadcasting all variables against each other.
 
@@ -1161,7 +1165,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         except (TypeError, AttributeError):
             return False
 
-    def equals(self, other):
+    def equals(self, other: 'Dataset') -> bool:
         """Two Datasets are equal if they have matching variables and
         coordinates, all of which are equal.
 
@@ -1181,7 +1185,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         except (TypeError, AttributeError):
             return False
 
-    def identical(self, other):
+    def identical(self, other: 'Dataset') -> bool:
         """Like equals, but also checks all dataset attributes and the
         attributes on all variables and coordinates.
 
@@ -1205,24 +1209,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return Indexes(self._indexes)
 
     @property
-    def coords(self):
+    def coords(self) -> DatasetCoordinates:
         """Dictionary of xarray.DataArray objects corresponding to coordinate
         variables
         """
         return DatasetCoordinates(self)
 
     @property
-    def data_vars(self):
+    def data_vars(self) -> DataVariables:
         """Dictionary of DataArray objects corresponding to data variables
         """
         return DataVariables(self)
 
-    def set_coords(self, names, inplace=None):
+    def set_coords(
+        self,
+        names: 'Union[Hashable, Iterable[Hashable]]',
+        inplace: bool = None
+    ) -> 'Dataset':
         """Given names of one or more variables, set them as coordinates
 
         Parameters
         ----------
-        names : str or list of str
+        names : hashable or iterable of hashables
             Name(s) of variables in this dataset to convert into coordinates.
         inplace : bool, optional
             If True, modify this dataset inplace. Otherwise, create a new
@@ -1241,19 +1249,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # nb. check in self._variables, not self.data_vars to insure that the
         # operation is idempotent
         inplace = _check_inplace(inplace)
-        if isinstance(names, str):
+        if isinstance(names, str) or not isinstance(names, Iterable):
             names = [names]
+        else:
+            names = list(names)
         self._assert_all_in_dataset(names)
         obj = self if inplace else self.copy()
         obj._coord_names.update(names)
         return obj
 
-    def reset_coords(self, names=None, drop=False, inplace=None):
+    def reset_coords(
+        self,
+        names: 'Union[Hashable, Iterable[Hashable], None]' = None,
+        drop: bool = False,
+        inplace: bool = None
+    ) -> 'Dataset':
         """Given names of coordinates, reset them to become variables
 
         Parameters
         ----------
-        names : str or list of str, optional
+        names : hashable or iterable of hashables, optional
             Name(s) of non-index coordinates in this dataset to reset into
             variables. By default, all non-index coordinates are reset.
         drop : bool, optional
@@ -1271,8 +1286,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if names is None:
             names = self._coord_names - set(self.dims)
         else:
-            if isinstance(names, str):
+            if isinstance(names, str) or not isinstance(names, Iterable):
                 names = [names]
+            else:
+                names = list(names)
             self._assert_all_in_dataset(names)
             bad_coords = set(names) & set(self.dims)
             if bad_coords:
@@ -1286,12 +1303,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store, **kwargs):
-        """Store dataset contents to a backends.*DataStore object."""
+    def dump_to_store(self, store: 'AbstractDataStore', **kwargs) -> None:
+        """Store dataset contents to a backends.*DataStore object.
+        """
         from ..backends.api import dump_to_store
         # TODO: rename and/or cleanup this method to make it more consistent
         # with to_netcdf()
-        return dump_to_store(self, store, **kwargs)
+        dump_to_store(self, store, **kwargs)
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
                   engine=None, encoding=None, unlimited_dims=None,
@@ -2974,7 +2992,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._unstack_once(dim)
         return result
 
-    def update(self, other, inplace=None):
+    def update(
+        self,
+        other: 'Union[Dataset, Mapping[Hashable, DataArray]]',
+        inplace: bool = None
+    ) -> 'Dataset':
         """Update this dataset's variables with those from another dataset.
 
         Parameters

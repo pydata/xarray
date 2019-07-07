@@ -1,6 +1,6 @@
-import copy
 from collections import OrderedDict
-from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
+from typing import (Any, Dict, Hashable, List, Mapping, Optional, Set, Tuple,
+                    Union)
 
 import pandas as pd
 
@@ -12,6 +12,7 @@ from .variable import (
     Variable, as_variable, assert_unique_multiindex_level_names)
 
 if TYPE_CHECKING:
+    from .dataarray import DataArray
     from .dataset import Dataset
 
 
@@ -584,7 +585,10 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
                       fill_value=fill_value)
 
 
-def dataset_update_method(dataset, other):
+def dataset_update_method(
+    dataset: 'Dataset',
+    other: 'Union[Dataset, Mapping[Hashable, DataArray]]'
+) -> 'Dataset':
     """Guts of the Dataset.update method.
 
     This drops a duplicated coordinates from `other` if `other` is not an
