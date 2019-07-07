@@ -31,8 +31,13 @@ class FileManager:
         """Acquire the file object from this manager."""
         raise NotImplementedError
 
-    def acquire_with_cache_info(self, needs_lock=True):
-        """Acquire a file, and a boolean indicating if it was already open."""
+    def acquire_context(self, needs_lock=True):
+        """Context manager for acquiring a file. Yields a file object.
+
+        The context manager unwinds any actions taken as part of acquisition
+        (i.e., removes it from any cache) if an exception is raised from the
+        context. It *does not* automatically close the file.
+        """
         raise NotImplementedError
 
     def close(self, needs_lock=True):
@@ -160,10 +165,21 @@ class CachingFileManager(FileManager):
         -------
         An open file object, as returned by ``opener(*args, **kwargs)``.
         """
-        file, _ = self.acquire_with_cache_info(needs_lock)
+        file, _ = self._acquire_with_cache_info(needs_lock)
         return file
 
-    def acquire_with_cache_info(self, needs_lock=True):
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock=True):
+        """Context manager for acquiring a file."""
+        file, cached = self._acquire_with_cache_info(needs_lock)
+        try:
+            yield file
+        except Exception:
+            if not cached:
+                self.close(needs_lock)
+            raise
+
+    def _acquire_with_cache_info(self, needs_lock=True):
         """Acquire a file, returning the file and whether it was cached."""
         with self._optional_lock(needs_lock):
             try:
@@ -286,13 +302,13 @@ class DummyFileManager(FileManager):
     def __init__(self, value):
         self._value = value
 
-    def acquire_with_cache_info(self, needs_lock=True):
-        del needs_lock  # ignored
-        return self._value, True
-
     def acquire(self, needs_lock=True):
         del needs_lock  # ignored
         return self._value
+
+    def acquire_context(self, needs_lock=True):
+        del needs_lock
+        yield self._value
 
     def close(self, needs_lock=True):
         del needs_lock  # ignored

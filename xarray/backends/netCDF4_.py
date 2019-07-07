@@ -335,13 +335,8 @@ class NetCDF4DataStore(WritableCFDataStore):
                    autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
-        root, cached = self._manager.acquire_with_cache_info(needs_lock)
-        try:
+        with self._manager.acquire_context(needs_lock) as root:
             ds = _nc4_require_group(root, self._group, self._mode)
-        except Exception:
-            if not cached:
-                self._manager.close()
-            raise
         return ds
 
     @property

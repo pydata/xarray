@@ -210,25 +210,32 @@ def test_file_manager_invalid_kwargs():
         CachingFileManager(open, 'dummy', mode='w', invalid=True)
 
 
-def test_file_manager_acquire_with_cache_info(tmpdir, file_cache):
+def test_file_manager_acquire_context(tmpdir, file_cache):
     path = str(tmpdir.join('testing.txt'))
 
     with open(path, 'w') as f:
         f.write('foobar')
 
-    manager = CachingFileManager(open, path, cache=file_cache)
-    f, cached = manager.acquire_with_cache_info()
-    assert f.read() == 'foobar'
-    assert not cached
-
-    f, cached = manager.acquire_with_cache_info()
-    f.seek(0)
-    assert f.read() == 'foobar'
-    assert cached
-    manager.close()
+    class AcquisitionError(Exception):
+        pass
 
     manager = CachingFileManager(open, path, cache=file_cache)
-    f, cached = manager.acquire_with_cache_info()
-    assert f.read() == 'foobar'
-    assert not cached
+    try:
+        with manager.acquire_context() as f:
+            assert f.read() == 'foobar'
+            raise AcquisitionError
+    except AcquisitionError:
+        assert not file_cache  # file was *not* already open
+
+    with manager.acquire_context() as f:
+        assert f.read() == 'foobar'
+
+    try:
+        with manager.acquire_context() as f:
+            f.seek(0)
+            assert f.read() == 'foobar'
+            raise AcquisitionError
+    except AcquisitionError:
+        assert file_cache  # file *was* already open
+
     manager.close()

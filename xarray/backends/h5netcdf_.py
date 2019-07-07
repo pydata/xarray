@@ -92,13 +92,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def _acquire(self, needs_lock=True):
         root, cached = self._manager.acquire_with_cache_info(needs_lock)
-        try:
+        with self._manager.acquire_context(needs_lock) as root:
             ds = _nc4_require_group(root, self._group, self._mode,
                                     create_group=_h5netcdf_create_group)
-        except Exception:
-            if not cached:
-                self._manager.close()
-            raise
         return ds
 
     @property
