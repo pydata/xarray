@@ -36,8 +36,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix to ensure that xarray can still be imported with pandas 0.25, which will
-  remove `pd.Panel`.
+- Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix HDF5 error that could arise when reading multiple groups from a file at
   once (:issue:`2954`).

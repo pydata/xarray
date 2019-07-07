@@ -306,6 +306,8 @@ class DatasetIOBase:
             assert_identical(expected, computed)
 
     def test_pickle(self):
+        if not has_dask:
+            pytest.xfail('pickling requires dask for SerializableLock')
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
@@ -317,6 +319,8 @@ class DatasetIOBase:
 
     @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self):
+        if not has_dask:
+            pytest.xfail('pickling requires dask for SerializableLock')
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
@@ -1990,6 +1994,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
         # there's no specific store to test here
         pass
 
+    @requires_scipy
     def test_engine(self):
         data = create_test_data()
         with raises_regex(ValueError, 'unrecognized engine'):
@@ -2314,14 +2319,12 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
+@requires_dask
 def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
                                   file_cache_maxsize):
 
     # skip certain combinations
     skip_if_not_engine(readengine)
-
-    if not has_dask and parallel:
-        pytest.skip('parallel requires dask')
 
     if ON_WINDOWS:
         pytest.skip('Skipping on Windows')
@@ -2348,6 +2351,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
 
 
 @requires_scipy_or_netCDF4
+@requires_dask
 class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     coord_name = 'lon'
     var_name = 'v1'
@@ -2873,6 +2877,7 @@ class TestDask(DatasetIOBase):
 
 
 @requires_scipy_or_netCDF4
+@requires_dask
 class TestOpenMFDataSetDeprecation:
     """
     Set of tests to check that FutureWarnings are correctly raised until the
@@ -2927,6 +2932,8 @@ class TestOpenMFDataSetDeprecation:
 
 @requires_scipy_or_netCDF4
 @requires_pydap
+@pytest.mark.filterwarnings(
+    'ignore:The binary mode of fromstring is deprecated')
 class TestPydap:
     def convert_to_pydap_dataset(self, original):
         from pydap.model import GridType, BaseType, DatasetType
@@ -2994,9 +3001,9 @@ class TestPydap:
         with self.create_datasets() as (actual, expected):
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
-                actual = open_dataset(tmp_file)
-                actual['bears'] = actual['bears'].astype(str)
-                assert_equal(actual, expected)
+                with open_dataset(tmp_file) as actual2:
+                    actual2['bears'] = actual2['bears'].astype(str)
+                    assert_equal(actual2, expected)
 
     @requires_dask
     def test_dask(self):
@@ -3942,6 +3949,7 @@ class TestDataArrayToNetCDF:
             with open_dataarray(tmp, drop_variables=['y']) as loaded:
                 assert_identical(expected, loaded)
 
+    @requires_scipy
     def test_dataarray_to_netcdf_return_bytes(self):
         # regression test for GH1410
         data = xr.DataArray([1, 2, 3])
