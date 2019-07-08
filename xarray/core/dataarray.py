@@ -13,7 +13,9 @@ from . import (
     computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
-from .alignment import align, broadcast, reindex_like_indexers
+from .alignment import (align, _broadcast_helper,
+                        _get_broadcast_dims_map_common_coords,
+                        reindex_like_indexers)
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
@@ -987,7 +989,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def broadcast_like(self,
-                       other: Union['DataArray', Dataset]) -> 'DataArray':
+                       other: Union['DataArray', Dataset],
+                       exclude=None) -> 'DataArray':
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
 
@@ -995,9 +998,18 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         other : Dataset or DataArray
             Object against which to broadcast this array.
+        exclude : sequence of str, optional
+            Dimensions that must not be broadcasted
         """
 
-        return broadcast(other, self)[1]
+        if exclude is None:
+            exclude = set()
+        args = align(other, self, join='outer', copy=False, exclude=exclude)
+
+        dims_map, common_coords = _get_broadcast_dims_map_common_coords(
+            args, exclude)
+
+        return _broadcast_helper(self, exclude, dims_map, common_coords)
 
     def reindex_like(self, other: Union['DataArray', Dataset],
                      method: Optional[str] = None, tolerance=None,
