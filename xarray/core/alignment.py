@@ -520,8 +520,8 @@ def broadcast(*args, exclude=None):
         exclude = set()
     args = align(*args, join='outer', copy=False, exclude=exclude)
 
-    dims_map, common_coords = _get_broadcast_dims_map_common_coords(args,
-                                                                    exclude)
+    dims_map, common_coords = _get_broadcast_dims_map_common_coords(
+        args, exclude)
     result = []
     for arg in args:
         result.append(_broadcast_helper(arg, exclude, dims_map, common_coords))
