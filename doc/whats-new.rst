@@ -38,6 +38,8 @@ Bug fixes
 
 - Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix summaries for multiindex coordinates (:issue:`3079`).
+  By `Jonas Hörsch <https://github.com/coroa>`_.
 
 .. _whats-new.0.12.2:
 
