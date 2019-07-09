@@ -8,7 +8,9 @@ dependencies:
   - distributed
   - h5py
   - h5netcdf
-  - matplotlib=3.0  # for https://github.com/barronh/pseudonetcdf/issues/69
+  # pin matplotlib for now, to ensure that we have at least one CI job
+  # testing pseudonetcdf: https://github.com/barronh/pseudonetcdf/issues/69
+  - matplotlib=3.0
   - netcdf4
   - pytest
   - pytest-cov
