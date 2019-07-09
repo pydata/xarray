@@ -220,22 +220,20 @@ def test_file_manager_acquire_context(tmpdir, file_cache):
         pass
 
     manager = CachingFileManager(open, path, cache=file_cache)
-    try:
+    with pytest.raises(AcquisitionError):
         with manager.acquire_context() as f:
             assert f.read() == 'foobar'
             raise AcquisitionError
-    except AcquisitionError:
-        assert not file_cache  # file was *not* already open
+    assert not file_cache  # file was *not* already open
 
     with manager.acquire_context() as f:
         assert f.read() == 'foobar'
 
-    try:
+    with pytest.raises(AcquisitionError):
         with manager.acquire_context() as f:
             f.seek(0)
             assert f.read() == 'foobar'
             raise AcquisitionError
-    except AcquisitionError:
-        assert file_cache  # file *was* already open
+    assert file_cache  # file *was* already open
 
     manager.close()
