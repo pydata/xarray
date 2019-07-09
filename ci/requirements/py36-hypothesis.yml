@@ -3,7 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
-  - cftime
   - dask
   - distributed
   - h5py
@@ -14,22 +13,16 @@ dependencies:
   - pytest-cov
   - pytest-env
   - coveralls
+  - hypothesis
   - flake8
   - numpy>=1.12
   - pandas>=0.19
+  - pip
   - scipy
   - seaborn
   - toolz
   - rasterio
   - bottleneck
   - zarr
-  - pseudonetcdf>=3.0.1
-  - cfgrib>=0.9.2
-  - cdms2
-  - pynio
-  - iris>=1.10
   - pydap
   - lxml
-  - pip:
-    - pytest-azurepipelines
-    - mypy==0.711

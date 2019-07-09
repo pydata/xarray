@@ -2,6 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from distutils.version import LooseVersion
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Union, cast)
 
@@ -10,7 +11,8 @@ import pandas as pd
 
 from ..plot.plot import _PlotMethods
 from . import (
-    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
+    computation, dtypes, groupby, indexing, ops, pdcompat, resample, rolling,
+    utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
 from .alignment import align, reindex_like_indexers
@@ -264,7 +266,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data.index, data.columns]
                 elif isinstance(data, (pd.Index, IndexVariable)):
                     coords = [data]
-                elif hasattr(pd, 'Panel') and isinstance(data, pd.Panel):
+                elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
@@ -576,13 +578,13 @@ class DataArray(AbstractArray, DataWithCoords):
         del self.coords[key]
 
     @property
-    def _attr_sources(self) -> List[Iterable[Hashable]]:
+    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
         """List of places to look-up items for attribute-style access
         """
         return self._item_sources + [self.attrs]
 
     @property
-    def _item_sources(self) -> List[Iterable[Hashable]]:
+    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
         """List of places to look-up items for key-completion
         """
         return [self.coords, {d: self.coords[d] for d in self.dims},
@@ -1540,6 +1542,72 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
+    def to_unstacked_dataset(self, dim, level=0):
+        """Unstack DataArray expanding to Dataset along a given level of a
+        stacked coordinate.
+
+        This is the inverse operation of Dataset.to_stacked_array.
+
+        Parameters
+        ----------
+        dim : str
+            Name of existing dimension to unstack
+        level : int or str
+            The MultiIndex level to expand to a dataset along. Can either be
+            the integer index of the level or its name.
+        label : int, default 0
+            Label of the level to expand dataset along. Overrides the label
+            argument if given.
+
+        Returns
+        -------
+        unstacked: Dataset
+
+        Examples
+        --------
+        >>> import xarray as xr
+        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> data = xr.Dataset({'a': arr, 'b': arr.isel(y=0)})
+        >>> data
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+          * y        (y) int64 0 1 2
+        Data variables:
+            a        (x, y) int64 0 1 2 3 4 5
+            b        (x) int64 0 3
+        >>> stacked = data.to_stacked_array("z", ['y'])
+        >>> stacked.indexes['z']
+        MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
+                labels=[[0, 0, 0, 1], [0, 1, 2, -1]],
+                names=['variable', 'y'])
+        >>> roundtripped = stacked.to_unstacked_dataset(dim='z')
+        >>> data.identical(roundtripped)
+        True
+
+        See Also
+        --------
+        Dataset.to_stacked_array
+        """
+
+        idx = self.indexes[dim]
+        if not isinstance(idx, pd.MultiIndex):
+            raise ValueError("'{}' is not a stacked coordinate".format(dim))
+
+        level_number = idx._get_level_number(level)
+        variables = idx.levels[level_number]
+        variable_dim = idx.names[level_number]
+
+        # pull variables out of datarray
+        data_dict = OrderedDict()
+        for k in variables:
+            data_dict[k] = self.sel({variable_dim: k}).squeeze(drop=True)
+
+        # unstacked dataset
+        return Dataset(data_dict)
+
     def transpose(self,
                   *dims: Hashable,
                   transpose_coords: Optional[bool] = None) -> 'DataArray':
@@ -1844,9 +1912,8 @@ class DataArray(AbstractArray, DataWithCoords):
         # attributes that correspond to their indexes into a separate module?
         constructors = {0: lambda x: x,
                         1: pd.Series,
-                        2: pd.DataFrame}
-        if hasattr(pd, 'Panel'):
-            constructors[3] = pd.Panel
+                        2: pd.DataFrame,
+                        3: pdcompat.Panel}
         try:
             constructor = constructors[self.ndim]
         except KeyError:

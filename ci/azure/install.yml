@@ -1,5 +1,5 @@
 parameters:
-  env_file: ci/requirements-$CONDA_ENV.yml
+  env_file: ci/requirements/$CONDA_ENV.yml
 
 steps:
 
@@ -7,7 +7,26 @@ steps:
 
 - bash: |
     conda env create -n test_env --file ${{ parameters.env_file }}
-  displayName: Install dependencies
+  displayName: Install conda dependencies
+
+- bash: |
+    source activate test_env
+    pip install -f https://7933911d6844c6c53a7d-47bd50c35cd79bd838daf386af554a83.ssl.cf2.rackcdn.com \
+        --no-deps \
+        --pre \
+        --upgrade \
+        numpy \
+        matplotlib \
+        pandas \
+        scipy
+    pip install \
+        --no-deps \
+        --upgrade \
+        git+https://github.com/dask/dask \
+        git+https://github.com/dask/distributed \
+        git+https://github.com/zarr-developers/zarr
+  condition: eq(variables['UPSTREAM_DEV'], 'true')
+  displayName: Install upstream dev dependencies
 
 - bash: |
     source activate test_env
@@ -16,6 +35,7 @@ steps:
 
 - bash: |
     source activate test_env
+    conda info -a
     conda list
     python xarray/util/print_versions.py
   displayName: Version info

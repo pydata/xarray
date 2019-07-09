@@ -18,6 +18,12 @@ What's New
 v0.12.3 (unreleased)
 --------------------
 
+New functions/methods
+~~~~~~~~~~~~~~~~~~~~~
+
+- New methods for reshaping Datasets of variables with different dimensions
+  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -30,8 +36,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix to ensure that xarray can still be imported with pandas 0.25, which will
-  remove `pd.Panel`.
+- Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.2:
