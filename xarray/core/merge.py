@@ -199,7 +199,7 @@ def expand_variable_dicts(
     an input's values. The values of each ordered dictionary are all
     xarray.Variable objects.
     """
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
 
     var_dicts = []
@@ -245,7 +245,7 @@ def determine_coords(list_of_variable_dicts):
         All variable found in the input should appear in either the set of
         coordinate or non-coordinate names.
     """
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
 
     coord_names = set()  # type: set
@@ -280,8 +280,8 @@ def coerce_pandas_values(objects):
     List of Dataset or OrderedDict objects. Any inputs or values in the inputs
     that were pandas objects have been converted into native xarray objects.
     """
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
-    from .dataarray import DataArray
 
     out = []
     for obj in objects:
@@ -535,7 +535,7 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     --------
     concat
     """  # noqa
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
 
     dict_like_objects = list()
@@ -609,8 +609,8 @@ def dataset_update_method(
     `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
     GH2180).
     """
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
-    from .dataarray import DataArray
 
     if not isinstance(other, Dataset):
         other = OrderedDict(other)
