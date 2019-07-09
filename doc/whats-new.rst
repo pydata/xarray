@@ -32,7 +32,12 @@ Enhancements
   (using rename_dim) or only their coordinate (using rename_vars) renamed 
   instead of the rename function applyingto both. (:issue:`3026`)
   By `Julia Kent <https://github.com/jukent>`_.
-  
+
+- Add ``scales``, ``offsets``, ``units`` and ``descriptions``
+  attributes to :py:class:`~xarray.DataArray` returned by
+  :py:func:`~xarray.open_rasterio`. (:issue:`3013`)
+  By `Erle Carrara <https://github.com/ecarrara>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -101,14 +106,6 @@ Enhancements to existing functionality
 
 - Add ``keepdims`` argument for reduce operations (:issue:`2170`)
   By `Scott Wales <https://github.com/ScottWales>`_.
-- Add ``scales``, ``offsets``, ``units`` and ``descriptions``
-  attributes to :py:class:`~xarray.DataArray` returned by
-  :py:func:`~xarray.open_rasterio`. (:issue:`3013`)
-  By `Erle Carrara <https://github.com/ecarrara>`_.
-- netCDF chunksizes are now only dropped when original_shape is different,
-  not when it isn't found. (:issue:`2207`)
-  By `Karel van de Plassche <https://github.com/Karel-van-de-Plassche>`_.
-- Enable `@` operator for DataArray. This is equivalent to :py:meth:`DataArray.dot`
 - Enable ``@`` operator for DataArray. This is equivalent to :py:meth:`DataArray.dot`
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add ``fill_value`` argument for reindex, align, and merge operations
