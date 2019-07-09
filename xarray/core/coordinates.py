@@ -1,7 +1,7 @@
 import collections.abc
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Hashable, Iterable, Iterator, Union
+from typing import Any, Hashable, Mapping, Iterator, Union
 
 import pandas as pd
 
@@ -264,7 +264,7 @@ class DataArrayCoordinates(AbstractCoordinates):
         return self._data._ipython_key_completions_()
 
 
-class LevelCoordinatesSource(Iterable[Hashable]):
+class LevelCoordinatesSource(Mapping[Hashable, Any]):
     """Iterator for MultiIndex level coordinates.
 
     Used for attribute style lookup with AttrAccessMixin. Not returned directly
@@ -279,6 +279,9 @@ class LevelCoordinatesSource(Iterable[Hashable]):
 
     def __iter__(self) -> Iterator[Hashable]:
         return iter(self._data._level_coords)
+
+    def __len__(self) -> int:
+        return len(self._data._level_coords)
 
 
 def assert_coordinate_consistent(obj, coords):
