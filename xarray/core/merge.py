@@ -1,6 +1,6 @@
 from collections import OrderedDict
-from typing import (Any, Dict, Hashable, List, Mapping, Optional, Set, Tuple,
-                    Union)
+from typing import (Any, Dict, Hashable, List, Mapping, Optional, Sequence,
+                    Set, Tuple, Union)
 
 import pandas as pd
 
@@ -591,7 +591,15 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
 
 def dataset_update_method(
     dataset: 'Dataset',
-    other: 'Union[Dataset, Mapping[Hashable, DataArray]]'
+    other: Union[
+        'Dataset',
+        Mapping[Hashable, Union[
+            'DataArray',
+            Variable,
+            Tuple[Hashable, Any],
+            Tuple[Sequence[Hashable], Any],
+        ]],
+    ],
 ) -> Tuple['OrderedDict[Hashable, Variable]',
            Set[Hashable],
            Dict[Hashable, int]]:

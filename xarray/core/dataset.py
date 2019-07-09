@@ -349,10 +349,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         data_vars: Optional[Mapping[Hashable, Union[
             'DataArray',
             Variable,
-            Tuple,
             Tuple[Hashable, Any],
-            Tuple[Sequence],
-            Tuple[Tuple[Hashable, ...], Any],
+            Tuple[Sequence[Hashable], Any],
         ]]] = None,
         coords: Optional[Mapping[Hashable, Any]] = None,
         attrs: Optional[Mapping] = None,
@@ -2994,7 +2992,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def update(
         self,
-        other: 'Union[Dataset, Mapping[Hashable, DataArray]]',
+        other: Union[
+            'Dataset',
+            Mapping[Hashable, Union[
+                'DataArray',
+                Variable,
+                Tuple[Hashable, Any],
+                Tuple[Sequence[Hashable], Any],
+            ]],
+        ],
         inplace: bool = None
     ) -> 'Dataset':
         """Update this dataset's variables with those from another dataset.
@@ -3002,7 +3008,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         other : Dataset or castable to Dataset
-            Dataset or variables with which to update this dataset.
+            Variables with which to update this dataset. One of:
+
+            - Dataset
+            - mapping {var name: DataArray}
+            - mapping {var name: Variable}
+            - mapping {var name: (dimension name, array-like)}
+            - mapping {var name: (tuple of dimension names, array-like)}
+
         inplace : bool, optional
             If True, merge the other dataset into this dataset in-place.
             Otherwise, return a new dataset object.
