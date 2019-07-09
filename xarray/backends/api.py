@@ -4,21 +4,29 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
-import re
+from typing import Callable, Dict, Hashable, Iterable, Mapping, Tuple, Union
 
 import numpy as np
-import pandas as pd
 
 from .. import Dataset, DataArray, backends, conventions, coding
 from ..core import indexing
 from .. import auto_combine
-from ..core.combine import (combine_by_coords, _nested_combine,
-                            _infer_concat_order_from_positions)
+from ..core.combine import (
+    combine_by_coords,
+    _nested_combine,
+    _infer_concat_order_from_positions
+)
+from ..core.pycompat import TYPE_CHECKING
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
-from ..core.variable import Variable
-from .common import ArrayWriter
+from .common import ArrayWriter, AbstractDataStore
 from .locks import _get_scheduler
-from ..coding.variables import safe_setitem, unpack_for_encoding
+
+if TYPE_CHECKING:
+    try:
+        from dask.delayed import Delayed
+    except ImportError:
+        Delayed = None
+
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -406,7 +414,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     if isinstance(filename_or_obj, Path):
         filename_or_obj = str(filename_or_obj)
 
-    if isinstance(filename_or_obj, backends.AbstractDataStore):
+    if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
 
     elif isinstance(filename_or_obj, str):
@@ -805,14 +813,25 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
     return combined
 
 
-WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
-                    'scipy': backends.ScipyDataStore,
-                    'h5netcdf': backends.H5NetCDFStore}
+WRITEABLE_STORES = {
+    'netcdf4': backends.NetCDF4DataStore.open,
+    'scipy': backends.ScipyDataStore,
+    'h5netcdf': backends.H5NetCDFStore
+}  # type: Dict[str, Callable]
 
 
-def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=None, encoding=None, unlimited_dims=None, compute=True,
-              multifile=False):
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file=None,
+    mode: str = 'w',
+    format: str = None,
+    group: str = None,
+    engine: str = None,
+    encoding: Mapping = None,
+    unlimited_dims: Iterable[Hashable] = None,
+    compute: bool = True,
+    multifile: bool = False
+) -> Union[Tuple[ArrayWriter, AbstractDataStore], bytes, 'Delayed', None]:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -872,8 +891,12 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
-    if isinstance(unlimited_dims, str):
-        unlimited_dims = [unlimited_dims]
+    if unlimited_dims is not None:
+        if (isinstance(unlimited_dims, str)
+                or not isinstance(unlimited_dims, Iterable)):
+            unlimited_dims = [unlimited_dims]
+        else:
+            unlimited_dims = list(unlimited_dims)
 
     writer = ArrayWriter()
 
@@ -902,6 +925,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     if not compute:
         import dask
         return dask.delayed(_finalize_store)(writes, store)
+    return None
 
 
 def dump_to_store(dataset, store, writer=None, encoder=None,

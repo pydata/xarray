@@ -47,6 +47,10 @@ except ImportError:
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore
     from .dataarray import DataArray
+    try:
+        from dask.delayed import Delayed
+    except ImportError:
+        Delayed = None
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -1309,9 +1313,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # with to_netcdf()
         dump_to_store(self, store, **kwargs)
 
-    def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding=None, unlimited_dims=None,
-                  compute=True):
+    def to_netcdf(
+        self,
+        path=None,
+        mode: str = 'w',
+        format: str = None,
+        group: str = None,
+        engine: str = None,
+        encoding: Mapping = None,
+        unlimited_dims: Iterable[Hashable] = None,
+        compute: bool = True,
+    ) -> Union[bytes, 'Delayed', None]:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -1366,7 +1378,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             This allows using any compression plugin installed in the HDF5
             library, e.g. LZF.
 
-        unlimited_dims : sequence of str, optional
+        unlimited_dims : iterable of hashable, optional
             Dimension(s) that should be serialized as unlimited dimensions.
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
