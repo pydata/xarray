@@ -29,13 +29,13 @@ New functions/methods
   as described in :ref:`reshape.stacking_different`.
   By `Noah Brenowitz <https://github.com/nbren12>`_.
 
-Enhancements
-~~~~~~~~~~~~
-
 - Support for renaming ``Dataset`` variables and dimensions independently
   with :py:meth:`~Dataset.rename_vars` and :py:meth:`~Dataset.rename_dims`
   (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
+
+Enhancements
+~~~~~~~~~~~~
 
 - Add ``scales``, ``offsets``, ``units`` and ``descriptions``
   attributes to :py:class:`~xarray.DataArray` returned by
