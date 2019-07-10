@@ -32,7 +32,12 @@ Enhancements
   (using rename_dim) or only their coordinate (using rename_vars) renamed 
   instead of the rename function applying to both. (:issue:`3026`)
   By `Julia Kent <https://github.com/jukent>`_.
-  
+
+- Add ``scales``, ``offsets``, ``units`` and ``descriptions``
+  attributes to :py:class:`~xarray.DataArray` returned by
+  :py:func:`~xarray.open_rasterio`. (:issue:`3013`)
+  By `Erle Carrara <https://github.com/ecarrara>`_.
+
 Bug fixes
 ~~~~~~~~~
 
