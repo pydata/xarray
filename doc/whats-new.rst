@@ -15,22 +15,26 @@ What's New
 
 .. _whats-new.0.12.3:
 
-v0.12.3 (unreleased)
---------------------
+v0.12.3 (10 July 2019)
+----------------------
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
-- New methods for reshaping Datasets of variables with different dimensions
-  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
+- New methods :py:meth:`Dataset.to_stacked_array` and
+  :py:meth:`DataArray.to_unstacked_dataset` for reshaping Datasets of variables
+  with different dimensions
+  (:issue:`1317`).
+  This is useful for feeding data from xarray into machine learning models,
+  as described in :ref:`reshape.stacking_different`.
+  By `Noah Brenowitz <https://github.com/nbren12>`_.
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Renaming variables and dimensions independently:
-  Datasets with coordinate dimensions can now have only their dimension 
-  (using rename_dim) or only their coordinate (using rename_vars) renamed 
-  instead of the rename function applying to both. (:issue:`3026`)
+- Support for renaming ``Dataset`` variables and dimensions independently
+  with :py:meth:`~Dataset.rename_vars` and :py:meth:`~Dataset.rename_dims`
+  (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
 
 - Add ``scales``, ``offsets``, ``units`` and ``descriptions``
