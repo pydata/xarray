@@ -44,6 +44,9 @@ Bug fixes
 - Resolved deprecation warnings from newer versions of matplotlib and dask.
 - Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix HDF5 error that could arise when reading multiple groups from a file at
+  once (:issue:`2954`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.2:
 

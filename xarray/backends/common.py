@@ -31,13 +31,14 @@ def _decode_variable_name(name):
     return name
 
 
-def find_root(ds):
-    """
-    Helper function to find the root of a netcdf or h5netcdf dataset.
-    """
+def find_root_and_group(ds):
+    """Find the root and group name of a netCDF4/h5netcdf dataset."""
+    hierarchy = ()
     while ds.parent is not None:
+        hierarchy = (ds.name,) + hierarchy
         ds = ds.parent
-    return ds
+    group = '/' + '/'.join(hierarchy)
+    return ds, group
 
 
 def robust_getitem(array, key, catch=Exception, max_retries=6,

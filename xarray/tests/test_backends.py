@@ -1205,18 +1205,6 @@ class NetCDF4Base(CFEncodedBase):
                 expected = Dataset({'x': ((), 123)})
                 assert_identical(expected, ds)
 
-    def test_already_open_dataset(self):
-        with create_tmp_file() as tmp_file:
-            with nc4.Dataset(tmp_file, mode='w') as nc:
-                v = nc.createVariable('x', 'int')
-                v[...] = 42
-
-            nc = nc4.Dataset(tmp_file, mode='r')
-            store = backends.NetCDF4DataStore(nc)
-            with open_dataset(store) as ds:
-                expected = Dataset({'x': ((), 42)})
-                assert_identical(expected, ds)
-
     def test_read_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
@@ -1317,6 +1305,41 @@ class TestNetCDF4Data(NetCDF4Base):
             with pytest.warns(FutureWarning):
                 with self.open(tmp_file, autoclose=True) as actual:
                     assert_identical(data, actual)
+
+    def test_already_open_dataset(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                v = nc.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc)
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+    def test_already_open_dataset_group(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                group = nc.createGroup('g')
+                v = group.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc.groups['g'])
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc, group='g')
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+            with nc4.Dataset(tmp_file, mode='r') as nc:
+                with pytest.raises(ValueError, match='must supply a root'):
+                    backends.NetCDF4DataStore(nc.groups['g'], group='g')
 
 
 @requires_netCDF4

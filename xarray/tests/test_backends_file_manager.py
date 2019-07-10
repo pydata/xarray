@@ -208,3 +208,32 @@ def test_file_manager_read(tmpdir, file_cache):
 def test_file_manager_invalid_kwargs():
     with pytest.raises(TypeError):
         CachingFileManager(open, 'dummy', mode='w', invalid=True)
+
+
+def test_file_manager_acquire_context(tmpdir, file_cache):
+    path = str(tmpdir.join('testing.txt'))
+
+    with open(path, 'w') as f:
+        f.write('foobar')
+
+    class AcquisitionError(Exception):
+        pass
+
+    manager = CachingFileManager(open, path, cache=file_cache)
+    with pytest.raises(AcquisitionError):
+        with manager.acquire_context() as f:
+            assert f.read() == 'foobar'
+            raise AcquisitionError
+    assert not file_cache  # file was *not* already open
+
+    with manager.acquire_context() as f:
+        assert f.read() == 'foobar'
+
+    with pytest.raises(AcquisitionError):
+        with manager.acquire_context() as f:
+            f.seek(0)
+            assert f.read() == 'foobar'
+            raise AcquisitionError
+    assert file_cache  # file *was* already open
+
+    manager.close()

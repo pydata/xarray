@@ -31,6 +31,15 @@ class FileManager:
         """Acquire the file object from this manager."""
         raise NotImplementedError
 
+    def acquire_context(self, needs_lock=True):
+        """Context manager for acquiring a file. Yields a file object.
+
+        The context manager unwinds any actions taken as part of acquisition
+        (i.e., removes it from any cache) if an exception is raised from the
+        context. It *does not* automatically close the file.
+        """
+        raise NotImplementedError
+
     def close(self, needs_lock=True):
         """Close the file object associated with this manager, if needed."""
         raise NotImplementedError
@@ -143,7 +152,7 @@ class CachingFileManager(FileManager):
             yield
 
     def acquire(self, needs_lock=True):
-        """Acquiring a file object from the manager.
+        """Acquire a file object from the manager.
 
         A new file is only opened if it has expired from the
         least-recently-used cache.
@@ -156,6 +165,22 @@ class CachingFileManager(FileManager):
         -------
         An open file object, as returned by ``opener(*args, **kwargs)``.
         """
+        file, _ = self._acquire_with_cache_info(needs_lock)
+        return file
+
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock=True):
+        """Context manager for acquiring a file."""
+        file, cached = self._acquire_with_cache_info(needs_lock)
+        try:
+            yield file
+        except Exception:
+            if not cached:
+                self.close(needs_lock)
+            raise
+
+    def _acquire_with_cache_info(self, needs_lock=True):
+        """Acquire a file, returning the file and whether it was cached."""
         with self._optional_lock(needs_lock):
             try:
                 file = self._cache[self._key]
@@ -169,7 +194,9 @@ class CachingFileManager(FileManager):
                     # ensure file doesn't get overriden when opened again
                     self._mode = 'a'
                 self._cache[self._key] = file
-        return file
+                return file, False
+            else:
+                return file, True
 
     def close(self, needs_lock=True):
         """Explicitly close any associated file object (if necessary)."""
@@ -278,6 +305,11 @@ class DummyFileManager(FileManager):
     def acquire(self, needs_lock=True):
         del needs_lock  # ignored
         return self._value
+
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock=True):
+        del needs_lock
+        yield self._value
 
     def close(self, needs_lock=True):
         del needs_lock  # ignored
