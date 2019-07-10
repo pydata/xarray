@@ -578,13 +578,13 @@ class DataArray(AbstractArray, DataWithCoords):
         del self.coords[key]
 
     @property
-    def _attr_sources(self) -> List[Iterable[Hashable]]:
+    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
         """List of places to look-up items for attribute-style access
         """
         return self._item_sources + [self.attrs]
 
     @property
-    def _item_sources(self) -> List[Iterable[Hashable]]:
+    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
         """List of places to look-up items for key-completion
         """
         return [self.coords, {d: self.coords[d] for d in self.dims},

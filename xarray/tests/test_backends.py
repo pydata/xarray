@@ -1205,18 +1205,6 @@ class NetCDF4Base(CFEncodedBase):
                 expected = Dataset({'x': ((), 123)})
                 assert_identical(expected, ds)
 
-    def test_already_open_dataset(self):
-        with create_tmp_file() as tmp_file:
-            with nc4.Dataset(tmp_file, mode='w') as nc:
-                v = nc.createVariable('x', 'int')
-                v[...] = 42
-
-            nc = nc4.Dataset(tmp_file, mode='r')
-            store = backends.NetCDF4DataStore(nc)
-            with open_dataset(store) as ds:
-                expected = Dataset({'x': ((), 42)})
-                assert_identical(expected, ds)
-
     def test_read_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
@@ -1317,6 +1305,41 @@ class TestNetCDF4Data(NetCDF4Base):
             with pytest.warns(FutureWarning):
                 with self.open(tmp_file, autoclose=True) as actual:
                     assert_identical(data, actual)
+
+    def test_already_open_dataset(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                v = nc.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc)
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+    def test_already_open_dataset_group(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                group = nc.createGroup('g')
+                v = group.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc.groups['g'])
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc, group='g')
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+            with nc4.Dataset(tmp_file, mode='r') as nc:
+                with pytest.raises(ValueError, match='must supply a root'):
+                    backends.NetCDF4DataStore(nc.groups['g'], group='g')
 
 
 @requires_netCDF4
@@ -1426,6 +1449,7 @@ class ZarrBase(CFEncodedBase):
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
 
+    @pytest.mark.filterwarnings('ignore:Specified Dask chunks')
     def test_manual_chunk(self):
         original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
 
@@ -3285,7 +3309,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                        transform_args=[5000, 80000, 1000, 2000.],
                        crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
                             'proj': 'utm', 'zone': 18},
-                       open_kwargs=None):
+                       open_kwargs=None,
+                       additional_attrs=None):
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
@@ -3308,6 +3333,11 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
             *data_shape)
         if transform is None:
             transform = from_origin(*transform_args)
+        if additional_attrs is None:
+            additional_attrs = {
+                'descriptions': tuple('d{}'.format(n + 1) for n in range(nz)),
+                'units': tuple('u{}'.format(n + 1) for n in range(nz)),
+            }
         with rasterio.open(
                 tmp_file, 'w',
                 driver='GTiff', height=ny, width=nx, count=nz,
@@ -3315,6 +3345,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                 transform=transform,
                 dtype=rasterio.float32,
                 **open_kwargs) as s:
+            for attr, val in additional_attrs.items():
+                setattr(s, attr, val)
             s.write(data, **write_kwargs)
             dx, dy = s.res[0], -s.res[1]
 
@@ -3334,7 +3366,7 @@ class TestRasterio:
 
     @requires_scipy_or_netCDF4
     def test_serialization(self):
-        with create_tmp_geotiff() as (tmp_file, expected):
+        with create_tmp_geotiff(additional_attrs={}) as (tmp_file, expected):
             # Write it to a netcdf and read again (roundtrip)
             with xr.open_rasterio(tmp_file) as rioda:
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:
@@ -3346,6 +3378,10 @@ class TestRasterio:
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
+                assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
+                assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3369,6 +3405,10 @@ class TestRasterio:
                 assert 'x' not in rioda.coords
                 assert 'y' not in rioda.coords
                 assert 'crs' not in rioda.attrs
+                assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
+                assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -3389,6 +3429,10 @@ class TestRasterio:
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
+                assert rioda.attrs['scales'] == (1.0,)
+                assert rioda.attrs['offsets'] == (0.0,)
+                assert isinstance(rioda.attrs['descriptions'], tuple)
+                assert isinstance(rioda.attrs['units'], tuple)
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3417,6 +3461,8 @@ class TestRasterio:
                         tmp_file, 'w',
                         driver='GTiff', height=ny, width=nx, count=nz,
                         dtype=rasterio.float32) as s:
+                    s.descriptions = ('nx', 'ny', 'nz')
+                    s.units = ('cm', 'm', 'km')
                     s.write(data)
 
                 # Tests
@@ -3428,6 +3474,10 @@ class TestRasterio:
                                              })
                 with xr.open_rasterio(tmp_file) as rioda:
                     assert_allclose(rioda, expected)
+                    assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                    assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                    assert rioda.attrs['descriptions'] == ('nx', 'ny', 'nz')
+                    assert rioda.attrs['units'] == ('cm', 'm', 'km')
                     assert isinstance(rioda.attrs['res'], tuple)
                     assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                     assert isinstance(rioda.attrs['transform'], tuple)

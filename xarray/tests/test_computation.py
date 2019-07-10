@@ -684,7 +684,10 @@ def test_apply_dask_parallelized_errors():
                     output_core_dims=[('y',)])
 
 
+# it's currently impossible to silence these warnings from inside dask.array:
+# https://github.com/dask/dask/issues/3245
 @requires_dask
+@pytest.mark.filterwarnings('ignore:Mean of empty slice')
 def test_apply_dask_multiple_inputs():
     import dask.array as da
 
