@@ -30,12 +30,13 @@ Enhancements
 - Renaming variables and dimensions independently:
   Datasets with coordinate dimensions can now have only their dimension 
   (using rename_dim) or only their coordinate (using rename_vars) renamed 
-  instead of the rename function applyingto both. (:issue:`3026`)
+  instead of the rename function applying to both. (:issue:`3026`)
   By `Julia Kent <https://github.com/jukent>`_.
   
 Bug fixes
 ~~~~~~~~~
 
+- Resolved deprecation warnings from newer versions of matplotlib and dask.
 - Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix HDF5 error that could arise when reading multiple groups from a file at

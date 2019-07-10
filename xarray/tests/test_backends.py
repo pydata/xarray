@@ -1449,6 +1449,7 @@ class ZarrBase(CFEncodedBase):
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
 
+    @pytest.mark.filterwarnings('ignore:Specified Dask chunks')
     def test_manual_chunk(self):
         original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
 
