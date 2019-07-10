@@ -33,12 +33,12 @@ class VariableCoder:
     variables in the underlying store.
     """
 
-    def encode(self, variable, name=None):
+    def encode(self, variable, name=None):  # pragma: no cover
         # type: (Variable, Any) -> Variable
         """Convert an encoded variable to a decoded variable."""
         raise NotImplementedError
 
-    def decode(self, variable, name=None):
+    def decode(self, variable, name=None):  # pragma: no cover
         # type: (Variable, Any) -> Variable
         """Convert an decoded variable to a encoded variable."""
         raise NotImplementedError

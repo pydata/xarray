@@ -4,6 +4,13 @@ import dask.array as da
 import numpy as np
 from dask import __version__ as dask_version
 
+
+try:
+    blockwise = da.blockwise
+except AttributeError:
+    blockwise = da.atop
+
+
 try:
     from dask.array import isin
 except ImportError:  # pragma: no cover
@@ -20,13 +27,13 @@ except ImportError:  # pragma: no cover
         test_elements = da.asarray(test_elements)
         element_axes = tuple(range(element.ndim))
         test_axes = tuple(i + element.ndim for i in range(test_elements.ndim))
-        mapped = da.atop(_isin_kernel, element_axes + test_axes,
-                         element, element_axes,
-                         test_elements, test_axes,
-                         adjust_chunks={axis: lambda _: 1
-                                        for axis in test_axes},
-                         dtype=bool,
-                         assume_unique=assume_unique)
+        mapped = blockwise(_isin_kernel, element_axes + test_axes,
+                           element, element_axes,
+                           test_elements, test_axes,
+                           adjust_chunks={axis: lambda _: 1
+                                          for axis in test_axes},
+                           dtype=bool,
+                           assume_unique=assume_unique)
         result = mapped.any(axis=test_axes)
         if invert:
             result = ~result

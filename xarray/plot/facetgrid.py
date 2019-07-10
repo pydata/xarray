@@ -445,7 +445,7 @@ class FacetGrid:
             ax.yaxis.set_major_locator(y_major_locator)
             for tick in itertools.chain(ax.xaxis.get_major_ticks(),
                                         ax.yaxis.get_major_ticks()):
-                tick.label.set_fontsize(fontsize)
+                tick.label1.set_fontsize(fontsize)
 
         return self
 
