@@ -64,6 +64,22 @@ class TestDataArray:
           - level_2  (x) int64 1 2 1 2""")
         assert expected == repr(self.mda)
 
+    def test_repr_multiindex_long(self):
+        mindex_long = pd.MultiIndex.from_product(
+            [['a', 'b', 'c', 'd'], [1, 2, 3, 4, 5, 6, 7, 8]],
+            names=('level_1', 'level_2'))
+        mda_long = DataArray(list(range(32)),
+                             coords={'x': mindex_long}, dims='x')
+        expected = dedent("""\
+        <xarray.DataArray (x: 32)>
+        array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+               18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+        Coordinates:
+          * x        (x) MultiIndex
+          - level_1  (x) object 'a' 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+          - level_2  (x) int64 1 2 3 4 5 6 7 8 1 2 3 4 5 6 ... 4 5 6 7 8 1 2 3 4 5 6 7 8""")  # noqa: E501
+        assert expected == repr(mda_long)
+
     def test_properties(self):
         assert_equal(self.dv.variable, self.v)
         assert_array_equal(self.dv.values, self.v.values)

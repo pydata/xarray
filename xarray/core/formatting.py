@@ -235,10 +235,9 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 
 
 def _summarize_coord_levels(coord, col_width, marker='-'):
-    relevant_coord = coord[:30]
     return '\n'.join(
         [summarize_variable(lname,
-                            relevant_coord.get_level_variable(lname),
+                            coord.get_level_variable(lname),
                             col_width, marker=marker)
          for lname in coord.level_names])
 
