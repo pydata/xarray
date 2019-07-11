@@ -36,6 +36,12 @@ from .utils import (Frozen, SortedKeysDict, _check_inplace,
                     maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
+# Support for Python 3.5.2
+try:
+    from .pycompat import Mapping  # noqa: F811
+except ImportError:
+    pass
+
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
