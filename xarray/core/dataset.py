@@ -5,8 +5,10 @@ import warnings
 from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
+from pathlib import Path
 from typing import (Any, Dict, Hashable, Iterable, Iterator, List,
-                    Mapping, Optional, Sequence, Set, Tuple, Union, cast)
+                    Mapping, MutableMapping, Optional, Sequence, Set, Tuple,
+                    Union, cast)
 
 import numpy as np
 import pandas as pd
@@ -45,8 +47,12 @@ except ImportError:
     pass
 
 if TYPE_CHECKING:
-    from ..backends import AbstractDataStore
+    from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
+    try:
+        from dask.delayed import Delayed
+    except ImportError:
+        Delayed = None
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -1309,9 +1315,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # with to_netcdf()
         dump_to_store(self, store, **kwargs)
 
-    def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding=None, unlimited_dims=None,
-                  compute=True):
+    def to_netcdf(
+        self,
+        path=None,
+        mode: str = 'w',
+        format: str = None,
+        group: str = None,
+        engine: str = None,
+        encoding: Mapping = None,
+        unlimited_dims: Iterable[Hashable] = None,
+        compute: bool = True,
+    ) -> Union[bytes, 'Delayed', None]:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -1366,7 +1380,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             This allows using any compression plugin installed in the HDF5
             library, e.g. LZF.
 
-        unlimited_dims : sequence of str, optional
+        unlimited_dims : iterable of hashable, optional
             Dimension(s) that should be serialized as unlimited dimensions.
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
@@ -1383,9 +1397,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                          unlimited_dims=unlimited_dims,
                          compute=compute)
 
-    def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
-                encoding=None, compute=True, consolidated=False,
-                append_dim=None):
+    def to_zarr(
+        self,
+        store: Union[MutableMapping, str, Path] = None,
+        mode: str = 'w-',
+        synchronizer=None,
+        group: str = None,
+        encoding: Mapping = None,
+        compute: bool = True,
+        consolidated: bool = False,
+        append_dim: Hashable = None
+    ) -> 'ZarrStore':
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1394,7 +1416,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        store : MutableMapping or str, optional
+        store : MutableMapping, str or Path, optional
             Store or path to directory in file system.
         mode : {'w', 'w-', 'a'}
             Persistence mode: 'w' means create (overwrite if exists);
@@ -1402,7 +1424,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             'a' means append (create if does not exist).
         synchronizer : object, optional
             Array synchronizer
-        group : str, obtional
+        group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
@@ -1414,7 +1436,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
-        append_dim: str, optional
+        append_dim: hashable, optional
             If mode='a', the dimension on which the data will be appended.
 
         References
@@ -1432,10 +1454,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                        group=group, encoding=encoding, compute=compute,
                        consolidated=consolidated, append_dim=append_dim)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return formatting.dataset_repr(self)
 
-    def info(self, buf=None):
+    def info(self, buf=None) -> None:
         """
         Concise summary of a Dataset variables and attributes.
 
@@ -1448,7 +1470,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         pandas.DataFrame.assign
         ncdump: netCDF's ncdump
         """
-
         if buf is None:  # pragma: no cover
             buf = sys.stdout
 
@@ -1473,11 +1494,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         buf.write('\n'.join(lines))
 
     @property
-    def chunks(self):
+    def chunks(self) -> Mapping[Hashable, Tuple[int, ...]]:
         """Block dimensions for this dataset's data or None if it's not a dask
         array.
         """
-        chunks = {}
+        chunks = {}  # type: Dict[Hashable, Tuple[int, ...]]
         for v in self.variables.values():
             if v.chunks is not None:
                 for dim, c in zip(v.dims, v.chunks):
@@ -1486,8 +1507,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     chunks[dim] = c
         return Frozen(SortedKeysDict(chunks))
 
-    def chunk(self, chunks=None, name_prefix='xarray-', token=None,
-              lock=False):
+    def chunk(
+        self,
+        chunks: Union[
+            None,
+            Number,
+            Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]]
+        ] = None,
+        name_prefix: str = 'xarray-',
+        token: str = None,
+        lock: bool = False
+    ) -> 'Dataset':
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
 
@@ -1500,7 +1530,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        chunks : int or dict, optional
+        chunks : int or mapping, optional
             Chunk sizes along each dimension, e.g., ``5`` or
             ``{'x': 5, 'y': 5}``.
         name_prefix : str, optional
@@ -1526,7 +1556,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             chunks = dict.fromkeys(self.dims, chunks)
 
         if chunks is not None:
-            bad_dims = [d for d in chunks if d not in self.dims]
+            bad_dims = chunks.keys() - self.dims.keys()
             if bad_dims:
                 raise ValueError('some chunks keys are not dimensions on this '
                                  'object: %s' % bad_dims)
