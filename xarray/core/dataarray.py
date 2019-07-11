@@ -2,7 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
-from distutils.version import LooseVersion
+from numbers import Number
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Union, cast)
 
@@ -871,13 +871,19 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return self.variable.chunks
 
-    def chunk(self, chunks: Union[
-        None, int, Tuple[int, ...], Tuple[Tuple[int, ...], ...],
-        Mapping[Hashable, Union[None, int, Tuple[int, ...]]],
-    ] = None,
-            name_prefix: str = 'xarray-',
-            token: Optional[str] = None,
-            lock: bool = False) -> 'DataArray':
+    def chunk(
+        self,
+        chunks: Union[
+            None,
+            Number,
+            Tuple[Number, ...],
+            Tuple[Tuple[Number, ...], ...],
+            Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
+        ] = None,
+        name_prefix: str = 'xarray-',
+        token: Optional[str] = None,
+        lock: bool = False
+    ) -> 'DataArray':
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -890,7 +896,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        chunks : int, tuple or dict, optional
+        chunks : int, tuple or mapping, optional
             Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
             ``{'x': 5, 'y': 5}``.
         name_prefix : str, optional
@@ -905,7 +911,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         chunked : xarray.DataArray
         """
-        if isinstance(chunks, (list, tuple)):
+        if isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
 
         ds = self._to_temp_dataset().chunk(chunks, name_prefix=name_prefix,
