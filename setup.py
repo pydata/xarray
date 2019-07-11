@@ -22,7 +22,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-PYTHON_REQUIRES = '>=3.5'
+PYTHON_REQUIRES = '>=3.5.2'
 INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 SETUP_REQUIRES = ['pytest-runner >= 4.2'] if needs_pytest else []
