@@ -791,7 +791,7 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
             In xarray version 0.13 the default behaviour of `open_mfdataset`
             will change. To retain the existing behavior, pass
             combine='nested'. To use future default behavior, pass
-            combine='by_coords'. See 
+            combine='by_coords'. See
             http://xarray.pydata.org/en/stable/combining.html#combining-multi
             """)
             warnings.warn(basic_msg, FutureWarning, stacklevel=2)
