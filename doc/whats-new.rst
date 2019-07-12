@@ -30,6 +30,9 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
+  It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Bug fixes
 ~~~~~~~~~
 
