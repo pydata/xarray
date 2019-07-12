@@ -5,6 +5,7 @@ from io import BytesIO
 from numbers import Number
 from pathlib import Path
 from typing import Callable, Dict, Hashable, Iterable, Mapping, Tuple, Union
+from textwrap import dedent
 
 import numpy as np
 
@@ -786,9 +787,18 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         if combine == '_old_auto':
             # Use the old auto_combine for now
             # Remove this after deprecation cycle from #2616 is complete
+            basic_msg = dedent("""\
+            In xarray version 0.13 the default behaviour of `open_mfdataset`
+            will change. To retain the existing behavior, pass
+            combine='nested'. To use future default behavior, pass
+            combine='by_coords'. See 
+            http://xarray.pydata.org/en/stable/combining.html#combining-multi
+            """)
+            warnings.warn(basic_msg, FutureWarning, stacklevel=2)
+
             combined = auto_combine(datasets, concat_dim=concat_dim,
                                     compat=compat, data_vars=data_vars,
-                                    coords=coords)
+                                    coords=coords, from_openmfds=True)
         elif combine == 'nested':
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
