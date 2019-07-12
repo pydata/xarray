@@ -408,6 +408,7 @@ def test_ffill_limit():
     result = da.ffill('time', limit=1)
     expected = xr.DataArray(
         [0, 0, np.nan, np.nan, np.nan, 3, 4, 5, 5, 6, 7], dims='time')
+    assert_array_equal(result, expected)
 
 
 def test_interpolate_dataset(ds):
