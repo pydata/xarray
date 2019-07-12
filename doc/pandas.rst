@@ -151,10 +151,11 @@ However, you will need to set dimension names explicitly, either with the
 Transitioning from pandas.Panel to xarray
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:py:class:`~pandas.Panel`, pandas' data structure for 3D arrays, has always
+``Panel``, pandas' data structure for 3D arrays, has always
 been a second class data structure compared to the Series and DataFrame. To
 allow pandas developers to focus more on its core functionality built around
-the DataFrame, pandas plans to eventually deprecate Panel.
+the DataFrame, pandas has deprecated ``Panel``. It will be removed in pandas
+0.25.
 
 xarray has most of ``Panel``'s features, a more explicit API (particularly around
 indexing), and the ability to scale to >3 dimensions with the same interface.
@@ -172,28 +173,41 @@ So you can represent a Panel, in two ways:
 Let's take a look:
 
 .. ipython:: python
-    :okwarning:
 
-    panel = pd.Panel(np.random.rand(2, 3, 4), items=list('ab'), major_axis=list('mno'),
-                     minor_axis=pd.date_range(start='2000', periods=4, name='date'))
-    panel
+    data = np.random.RandomState(0).rand(2, 3, 4)
+    items = list('ab')
+    major_axis = list('mno')
+    minor_axis = pd.date_range(start='2000', periods=4, name='date')
 
-As a DataArray:
+With old versions of pandas (prior to 0.25), this could stored in a ``Panel``:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: pd.Panel(data, items, major_axis, minor_axis)
+    Out[1]:
+    <class 'pandas.core.panel.Panel'>
+    Dimensions: 2 (items) x 3 (major_axis) x 4 (minor_axis)
+    Items axis: a to b
+    Major_axis axis: m to o
+    Minor_axis axis: 2000-01-01 00:00:00 to 2000-01-04 00:00:00
+
+To put this data in a ``DataArray``, write:
 
 .. ipython:: python
 
-    # or equivalently, with Panel.to_xarray()
-    xr.DataArray(panel)
+    array = xr.DataArray(data, [items, major_axis, minor_axis])
+    array
 
 As you can see, there are three dimensions (each is also a coordinate). Two of
-the axes of the panel were unnamed, so have been assigned ``dim_0`` and
-``dim_1`` respectively, while the third retains its name ``date``.
+the axes of were unnamed, so have been assigned ``dim_0`` and ``dim_1``
+respectively, while the third retains its name ``date``.
 
-As a Dataset:
+You can also easily convert this data into ``Dataset``:
 
 .. ipython:: python
 
-    xr.Dataset(panel)
+    array.to_dataset(dim='dim_0')
 
 Here, there are two data variables, each representing a DataFrame on panel's
 ``items`` axis, and labelled as such. Each variable is a 2D array of the

@@ -7,7 +7,7 @@ import xarray as xr
 from . import requires_dask
 
 
-class Reindex(object):
+class Reindex:
     def setup(self):
         data = np.random.RandomState(0).randn(1000, 100, 100)
         self.ds = xr.Dataset({'temperature': (('time', 'x', 'y'), data)},
@@ -40,5 +40,5 @@ class Reindex(object):
 class ReindexDask(Reindex):
     def setup(self):
         requires_dask()
-        super(ReindexDask, self).setup()
+        super().setup()
         self.ds = self.ds.chunk({'time': 100})

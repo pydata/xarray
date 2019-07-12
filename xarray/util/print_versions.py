@@ -1,8 +1,4 @@
-'''utility functions for printing version information
-
-
-see pandas/pandas/util/_print_versions.py'''
-
+"""Utility functions for printing version information."""
 import codecs
 import importlib
 import locale
@@ -78,7 +74,7 @@ def netcdf_and_hdf5_versions():
     return [('libhdf5', libhdf5_version), ('libnetcdf', libnetcdf_version)]
 
 
-def show_versions(as_json=False):
+def show_versions(file=sys.stdout):
     sys_info = get_sys_info()
 
     sys_info.extend(netcdf_and_hdf5_versions())
@@ -98,7 +94,7 @@ def show_versions(as_json=False):
         ("zarr", lambda mod: mod.__version__),
         ("cftime", lambda mod: mod.__version__),
         ("nc_time_axis", lambda mod: mod.__version__),
-        ("PseudonetCDF", lambda mod: mod.__version__),
+        ("PseudoNetCDF", lambda mod: mod.__version__),
         ("rasterio", lambda mod: mod.__version__),
         ("cfgrib", lambda mod: mod.__version__),
         ("iris", lambda mod: mod.__version__),
@@ -108,6 +104,7 @@ def show_versions(as_json=False):
         ("matplotlib", lambda mod: mod.__version__),
         ("cartopy", lambda mod: mod.__version__),
         ("seaborn", lambda mod: mod.__version__),
+        ("numbagg", lambda mod: mod.__version__),
         # xarray setup/test
         ("setuptools", lambda mod: mod.__version__),
         ("pip", lambda mod: mod.__version__),
@@ -134,49 +131,16 @@ def show_versions(as_json=False):
             except Exception:
                 deps_blob.append((modname, 'installed'))
 
-    if (as_json):
-        try:
-            import json
-        except Exception:
-            import simplejson as json
+    print("\nINSTALLED VERSIONS", file=file)
+    print("------------------", file=file)
 
-        j = dict(system=dict(sys_info), dependencies=dict(deps_blob))
+    for k, stat in sys_info:
+        print("%s: %s" % (k, stat), file=file)
 
-        if as_json is True:
-            print(j)
-        else:
-            with codecs.open(as_json, "wb", encoding='utf8') as f:
-                json.dump(j, f, indent=2)
-
-    else:
-
-        print("\nINSTALLED VERSIONS")
-        print("------------------")
-
-        for k, stat in sys_info:
-            print("%s: %s" % (k, stat))
-
-        print("")
-        for k, stat in deps_blob:
-            print("%s: %s" % (k, stat))
+    print("", file=file)
+    for k, stat in deps_blob:
+        print("%s: %s" % (k, stat), file=file)
 
 
-def main():
-    from optparse import OptionParser
-    parser = OptionParser()
-    parser.add_option("-j", "--json", metavar="FILE", nargs=1,
-                      help="Save output as JSON into file, pass in "
-                      "'-' to output to stdout")
-
-    (options, args) = parser.parse_args()
-
-    if options.json == "-":
-        options.json = True
-
-    show_versions(as_json=options.json)
-
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == '__main__':
+    show_versions()

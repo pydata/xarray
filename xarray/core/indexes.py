@@ -1,6 +1,6 @@
 import collections.abc
 from collections import OrderedDict
-from typing import Any, Iterable, Mapping, Optional, Tuple, Union
+from typing import Any, Hashable, Iterable, Mapping, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -59,6 +59,7 @@ def default_indexes(
 
 
 def isel_variable_and_index(
+    name: Hashable,
     variable: Variable,
     index: pd.Index,
     indexers: Mapping[Any, Union[slice, Variable]],
@@ -75,8 +76,8 @@ def isel_variable_and_index(
 
     new_variable = variable.isel(indexers)
 
-    if new_variable.ndim != 1:
-        # can't preserve a index if result is not 0D
+    if new_variable.dims != (name,):
+        # can't preserve a index if result has new dimensions
         return new_variable, None
 
     # we need to compute the new index
@@ -86,3 +87,12 @@ def isel_variable_and_index(
         indexer = indexer.data
     new_index = index[indexer]
     return new_variable, new_index
+
+
+def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
+    """Roll an pandas.Index."""
+    count %= index.shape[0]
+    if count != 0:
+        return index[-count:].append(index[:-count])
+    else:
+        return index[:]

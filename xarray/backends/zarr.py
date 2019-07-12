@@ -1,3 +1,4 @@
+import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
 
@@ -7,7 +8,8 @@ from .. import Variable, coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
-from .common import AbstractWritableDataStore, BackendArray
+from .common import AbstractWritableDataStore, BackendArray, \
+    _encode_variable_name
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -211,7 +213,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     # zarr allows unicode, but not variable-length strings, so it's both
     # simpler and more compact to always encode as UTF-8 explicitly.
     # TODO: allow toggling this explicitly via dtype in encoding.
-    coder = coding.strings.EncodedStringCoder(allows_unicode=False)
+    coder = coding.strings.EncodedStringCoder(allows_unicode=True)
     var = coder.encode(var, name=name)
     var = coding.strings.ensure_fixed_length_bytes(var)
 
@@ -256,6 +258,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
         self._consolidate_on_close = consolidate_on_close
+        self.append_dim = None
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
@@ -312,39 +315,121 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return _encode_zarr_attr_value(a)
 
-    def prepare_variable(self, name, variable, check_encoding=False,
-                         unlimited_dims=None):
+    def store(self, variables, attributes, check_encoding_set=frozenset(),
+              writer=None, unlimited_dims=None):
+        """
+        Top level method for putting data on this store, this method:
+          - encodes variables/attributes
+          - sets dimensions
+          - sets variables
 
-        attrs = variable.attrs.copy()
-        dims = variable.dims
-        dtype = variable.dtype
-        shape = variable.shape
+        Parameters
+        ----------
+        variables : dict-like
+            Dictionary of key/value (variable name / xr.Variable) pairs
+        attributes : dict-like
+            Dictionary of key/value (attribute name / attribute) pairs
+        check_encoding_set : list-like
+            List of variables that should be checked for invalid encoding
+            values
+        writer : ArrayWriter
+        unlimited_dims : list-like
+            List of dimension names that should be treated as unlimited
+            dimensions.
+            dimension on which the zarray will be appended
+            only needed in append mode
+        """
 
-        fill_value = attrs.pop('_FillValue', None)
-        if variable.encoding == {'_FillValue': None} and fill_value is None:
-            variable.encoding = {}
+        existing_variables = set([vn for vn in variables
+                                 if _encode_variable_name(vn) in self.ds])
+        new_variables = set(variables) - existing_variables
+        variables_without_encoding = OrderedDict([(vn, variables[vn])
+                                                 for vn in new_variables])
+        variables_encoded, attributes = self.encode(
+            variables_without_encoding, attributes)
 
-        encoding = _extract_zarr_variable_encoding(
-            variable, raise_on_invalid=check_encoding)
+        if len(existing_variables) > 0:
+            # there are variables to append
+            # their encoding must be the same as in the store
+            ds = open_zarr(self.ds.store, chunks=None)
+            variables_with_encoding = OrderedDict()
+            for vn in existing_variables:
+                variables_with_encoding[vn] = variables[vn].copy(deep=False)
+                variables_with_encoding[vn].encoding = ds[vn].encoding
+            variables_with_encoding, _ = self.encode(variables_with_encoding,
+                                                     {})
+            variables_encoded.update(variables_with_encoding)
 
-        encoded_attrs = OrderedDict()
-        # the magic for storing the hidden dimension data
-        encoded_attrs[_DIMENSION_KEY] = dims
-        for k, v in attrs.items():
-            encoded_attrs[k] = self.encode_attribute(v)
-
-        zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
-                                    fill_value=fill_value, **encoding)
-        zarr_array.attrs.put(encoded_attrs)
-
-        return zarr_array, variable.data
-
-    def store(self, variables, attributes, *args, **kwargs):
-        AbstractWritableDataStore.store(self, variables, attributes,
-                                        *args, **kwargs)
+        self.set_attributes(attributes)
+        self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
+        self.set_variables(variables_encoded, check_encoding_set, writer,
+                           unlimited_dims=unlimited_dims)
 
     def sync(self):
         pass
+
+    def set_variables(self, variables, check_encoding_set, writer,
+                      unlimited_dims=None):
+        """
+        This provides a centralized method to set the variables on the data
+        store.
+
+        Parameters
+        ----------
+        variables : dict-like
+            Dictionary of key/value (variable name / xr.Variable) pairs
+        check_encoding_set : list-like
+            List of variables that should be checked for invalid encoding
+            values
+        writer :
+        unlimited_dims : list-like
+            List of dimension names that should be treated as unlimited
+            dimensions.
+        """
+
+        for vn, v in variables.items():
+            name = _encode_variable_name(vn)
+            check = vn in check_encoding_set
+            attrs = v.attrs.copy()
+            dims = v.dims
+            dtype = v.dtype
+            shape = v.shape
+
+            fill_value = attrs.pop('_FillValue', None)
+            if v.encoding == {'_FillValue': None} and fill_value is None:
+                v.encoding = {}
+            if name in self.ds:
+                zarr_array = self.ds[name]
+                if self.append_dim in dims:
+                    # this is the DataArray that has append_dim as a
+                    # dimension
+                    append_axis = dims.index(self.append_dim)
+                    new_shape = list(zarr_array.shape)
+                    new_shape[append_axis] += v.shape[append_axis]
+                    new_region = [slice(None)] * len(new_shape)
+                    new_region[append_axis] = slice(
+                        zarr_array.shape[append_axis],
+                        None
+                    )
+                    zarr_array.resize(new_shape)
+                    writer.add(v.data, zarr_array,
+                               region=tuple(new_region))
+            else:
+                # new variable
+                encoding = _extract_zarr_variable_encoding(
+                    v, raise_on_invalid=check)
+                encoded_attrs = OrderedDict()
+                # the magic for storing the hidden dimension data
+                encoded_attrs[_DIMENSION_KEY] = dims
+                for k2, v2 in attrs.items():
+                    encoded_attrs[k2] = self.encode_attribute(v2)
+
+                if coding.strings.check_vlen_dtype(dtype) == str:
+                    dtype = str
+                zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
+                                            fill_value=fill_value, **encoding)
+                zarr_array.attrs.put(encoded_attrs)
+                writer.add(v.data, zarr_array)
 
     def close(self):
         if self._consolidate_on_close:
@@ -352,10 +437,11 @@ class ZarrStore(AbstractWritableDataStore):
             zarr.consolidate_metadata(self.ds.store)
 
 
-def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
+def open_zarr(store, group=None, synchronizer=None, chunks='auto',
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
-              drop_variables=None, consolidated=False):
+              drop_variables=None, consolidated=False,
+              overwrite_encoded_chunks=False, **kwargs):
     """Load and decode a dataset from a Zarr store.
 
     .. note:: Experimental
@@ -375,10 +461,15 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
         Array synchronizer provided to zarr
     group : str, obtional
         Group path. (a.k.a. `path` in zarr terminology.)
-    auto_chunk : bool, optional
-        Whether to automatically create dask chunks corresponding to each
-        variable's zarr chunks. If False, zarr array data will lazily convert
-        to numpy arrays upon access.
+    chunks : int or dict or tuple or {None, 'auto'}, optional
+        Chunk sizes along each dimension, e.g., ``5`` or
+        ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created
+        based on the variable's zarr chunks. If `chunks=None`, zarr array
+        data will lazily convert to numpy arrays upon access. This accepts
+        all the chunk specifications as Dask does.
+    overwrite_encoded_chunks: bool, optional
+        Whether to drop the zarr chunks encoded for each variable when a
+        dataset is loaded with specified chunk sizes (default: False)
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -422,6 +513,24 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
     ----------
     http://zarr.readthedocs.io/
     """
+    if 'auto_chunk' in kwargs:
+        auto_chunk = kwargs.pop('auto_chunk')
+        if auto_chunk:
+            chunks = 'auto'  # maintain backwards compatibility
+        else:
+            chunks = None
+
+        warnings.warn("auto_chunk is deprecated. Use chunks='auto' instead.",
+                      FutureWarning, stacklevel=2)
+
+    if kwargs:
+        raise TypeError("open_zarr() got unexpected keyword arguments " +
+                        ",".join(kwargs.keys()))
+
+    if not isinstance(chunks, (int, dict)):
+        if chunks != 'auto' and chunks is not None:
+            raise ValueError("chunks must be an int, dict, 'auto', or None. "
+                             "Instead found %s. " % chunks)
 
     if not decode_cf:
         mask_and_scale = False
@@ -449,21 +558,60 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
 
     # auto chunking needs to be here and not in ZarrStore because variable
     # chunks do not survive decode_cf
-    if auto_chunk:
-        # adapted from Dataset.Chunk()
-        def maybe_chunk(name, var):
-            from dask.base import tokenize
-            chunks = var.encoding.get('chunks')
-            if (var.ndim > 0) and (chunks is not None):
-                # does this cause any data to be read?
-                token2 = tokenize(name, var._data)
-                name2 = 'zarr-%s' % token2
-                return var.chunk(chunks, name=name2, lock=None)
-            else:
-                return var
-
-        variables = OrderedDict([(k, maybe_chunk(k, v))
-                                 for k, v in ds.variables.items()])
-        return ds._replace_vars_and_dims(variables)
-    else:
+    # return trivial case
+    if not chunks:
         return ds
+
+    # adapted from Dataset.Chunk()
+    if isinstance(chunks, int):
+        chunks = dict.fromkeys(ds.dims, chunks)
+
+    if isinstance(chunks, tuple) and len(chunks) == len(ds.dims):
+        chunks = dict(zip(ds.dims, chunks))
+
+    def get_chunk(name, var, chunks):
+        chunk_spec = dict(zip(var.dims, var.encoding.get('chunks')))
+
+        # Coordinate labels aren't chunked
+        if var.ndim == 1 and var.dims[0] == name:
+            return chunk_spec
+
+        if chunks == 'auto':
+            return chunk_spec
+
+        for dim in var.dims:
+            if dim in chunks:
+                spec = chunks[dim]
+                if isinstance(spec, int):
+                    spec = (spec,)
+                if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
+                    if any(s % chunk_spec[dim] for s in spec):
+                        warnings.warn("Specified Dask chunks %r would "
+                                      "separate Zarr chunk shape %r for "
+                                      "dimension %r. This significantly "
+                                      "degrades performance. Consider "
+                                      "rechunking after loading instead."
+                                      % (chunks[dim], chunk_spec[dim], dim),
+                                      stacklevel=2)
+                chunk_spec[dim] = chunks[dim]
+        return chunk_spec
+
+    def maybe_chunk(name, var, chunks):
+        from dask.base import tokenize
+
+        chunk_spec = get_chunk(name, var, chunks)
+
+        if (var.ndim > 0) and (chunk_spec is not None):
+            # does this cause any data to be read?
+            token2 = tokenize(name, var._data)
+            name2 = 'zarr-%s' % token2
+            var = var.chunk(chunk_spec, name=name2, lock=None)
+            if overwrite_encoded_chunks and var.chunks is not None:
+                var.encoding['chunks'] = tuple(x[0] for x in var.chunks)
+            return var
+        else:
+            return var
+
+    variables = OrderedDict([(k, maybe_chunk(k, v, chunks))
+                            for k, v in ds.variables.items()])
+    return ds._replace_vars_and_dims(variables)

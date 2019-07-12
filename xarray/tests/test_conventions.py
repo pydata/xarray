@@ -19,7 +19,7 @@ from . import (
 from .test_backends import CFEncodedBase
 
 
-class TestBoolTypeArray(object):
+class TestBoolTypeArray:
     def test_booltype_array(self):
         x = np.array([1, 0, 1, 1, 0], dtype='i1')
         bx = conventions.BoolTypeArray(x)
@@ -28,7 +28,7 @@ class TestBoolTypeArray(object):
                                         dtype=np.bool))
 
 
-class TestNativeEndiannessArray(object):
+class TestNativeEndiannessArray:
     def test(self):
         x = np.arange(5, dtype='>i8')
         expected = np.arange(5, dtype='int64')
@@ -67,7 +67,7 @@ def test_decode_cf_with_conflicting_fill_missing_value():
 
 
 @requires_cftime_or_netCDF4
-class TestEncodeCFVariable(object):
+class TestEncodeCFVariable:
     def test_incompatible_attributes(self):
         invalid_vars = [
             Variable(['t'], pd.date_range('2000-01-01', periods=3),
@@ -132,7 +132,7 @@ class TestEncodeCFVariable(object):
 
 
 @requires_cftime_or_netCDF4
-class TestDecodeCF(object):
+class TestDecodeCF:
     def test_dataset(self):
         original = Dataset({
             't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),

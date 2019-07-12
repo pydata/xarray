@@ -1,16 +1,14 @@
 xarray: N-D labeled arrays and datasets
 =======================================
 
-.. image:: https://travis-ci.org/pydata/xarray.svg?branch=master
-   :target: https://travis-ci.org/pydata/xarray
-.. image:: https://ci.appveyor.com/api/projects/status/github/pydata/xarray?svg=true&passingText=passing&failingText=failing&pendingText=pending
-   :target: https://ci.appveyor.com/project/shoyer/xray
-.. image:: https://coveralls.io/repos/pydata/xarray/badge.svg
-   :target: https://coveralls.io/r/pydata/xarray
+.. image:: https://dev.azure.com/xarray/xarray/_apis/build/status/pydata.xarray?branchName=master
+   :target: https://dev.azure.com/xarray/xarray/_build/latest?definitionId=1&branchName=master
+.. image:: https://codecov.io/gh/pydata/xarray/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/pydata/xarray
 .. image:: https://readthedocs.org/projects/xray/badge/?version=latest
-   :target: http://xarray.pydata.org/
-.. image:: http://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
-  :target: http://pandas.pydata.org/speed/xarray/
+   :target: https://xarray.pydata.org/
+.. image:: https://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
+  :target: https://pandas.pydata.org/speed/xarray/
 .. image:: https://img.shields.io/pypi/v/xarray.svg
    :target: https://pypi.python.org/pypi/xarray/
 
@@ -30,10 +28,10 @@ It is particularly tailored to working with netCDF_ files, which were the
 source of xarray's data model, and integrates tightly with dask_ for parallel
 computing.
 
-.. _NumPy: http://www.numpy.org
-.. _pandas: http://pandas.pydata.org
-.. _dask: http://dask.org
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _NumPy: https://www.numpy.org
+.. _pandas: https://pandas.pydata.org
+.. _dask: https://dask.org
+.. _netCDF: https://www.unidata.ucar.edu/software/netcdf
 
 Why xarray?
 -----------
@@ -66,12 +64,12 @@ powerful and concise interface. For example:
 Documentation
 -------------
 
-Learn more about xarray in its official documentation at http://xarray.pydata.org/
+Learn more about xarray in its official documentation at https://xarray.pydata.org/
 
 Contributing
 ------------
 
-You can find information about contributing to xarray at our `Contributing page <http://xarray.pydata.org/en/latest/contributing.html#>`_.
+You can find information about contributing to xarray at our `Contributing page <https://xarray.pydata.org/en/latest/contributing.html#>`_.
 
 Get in touch
 ------------
@@ -81,9 +79,9 @@ Get in touch
 - For less well defined questions or ideas, or to announce other projects of
   interest to xarray users, use the `mailing list`_.
 
-.. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
+.. _StackOverFlow: https://stackoverflow.com/questions/tagged/python-xarray
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
-.. _on GitHub: http://github.com/pydata/xarray
+.. _on GitHub: https://github.com/pydata/xarray
 
 NumFOCUS
 --------
@@ -97,7 +95,7 @@ to supporting the open source scientific computing community. If you like
 Xarray and want to support our mission, please consider making a donation_
 to support our efforts.
 
-.. _donation: https://www.flipcause.com/secure/cause_pdetails/NDE2NTU=
+.. _donation: https://numfocus.salsalabs.org/donate-to-xarray/
 
 History
 -------
@@ -120,7 +118,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+  https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,

@@ -7,7 +7,7 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops, utils
 from .arithmetic import SupportsArithmetic
-from .combine import concat
+from .concat import concat
 from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .options import _get_keep_attrs
 from .pycompat import integer_types
@@ -113,7 +113,7 @@ def _inverse_permutation_indices(positions):
     return indices
 
 
-class _DummyGroup(object):
+class _DummyGroup:
     """Class for keeping track of grouped dimensions without coordinates.
 
     Should not be user visible.
@@ -197,7 +197,7 @@ class GroupBy(SupportsArithmetic):
     """
 
     def __init__(self, obj, group, squeeze=False, grouper=None, bins=None,
-                 cut_kwargs={}):
+                 restore_coord_dims=None, cut_kwargs={}):
         """Create a GroupBy object
 
         Parameters
@@ -215,6 +215,9 @@ class GroupBy(SupportsArithmetic):
         bins : array-like, optional
             If `bins` is specified, the groups will be discretized into the
             specified bins by `pandas.cut`.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
         cut_kwargs : dict, optional
             Extra keyword arguments to pass to `pandas.cut`
 
@@ -279,6 +282,16 @@ class GroupBy(SupportsArithmetic):
                 safe_cast_to_index(group), sort=(bins is None))
             unique_coord = IndexVariable(group.name, unique_values)
 
+        if isinstance(obj, DataArray) \
+                and restore_coord_dims is None \
+                and any(obj[c].ndim > 1 for c in obj.coords):
+            warnings.warn('This DataArray contains multi-dimensional '
+                          'coordinates. In the future, the dimension order '
+                          'of these coordinates will be restored as well '
+                          'unless you specify restore_coord_dims=False.',
+                          FutureWarning, stacklevel=2)
+            restore_coord_dims = False
+
         # specification for the groupby operation
         self._obj = obj
         self._group = group
@@ -288,6 +301,7 @@ class GroupBy(SupportsArithmetic):
         self._stacked_dim = stacked_dim
         self._inserted_dims = inserted_dims
         self._full_index = full_index
+        self._restore_coord_dims = restore_coord_dims
 
         # cached attributes
         self._groups = None
@@ -508,7 +522,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             return axis
 
         new_order = sorted(stacked.dims, key=lookup_order)
-        return stacked.transpose(*new_order)
+        return stacked.transpose(
+            *new_order, transpose_coords=self._restore_coord_dims)
 
     def apply(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
@@ -519,6 +534,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         Apply uses heuristics (like `pandas.GroupBy.apply`) to figure out how
         to stack together the array. The rule is:
+
         1. If the dimension along which the group coordinate is defined is
            still in the first grouped array after applying `func`, then stack
            over this dimension.
@@ -557,7 +573,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
                    for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
 
-    def _combine(self, applied, shortcut=False):
+    def _combine(self, applied, restore_coord_dims=False, shortcut=False):
         """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
         coord, dim, positions = self._infer_concat_args(applied_example)
@@ -579,8 +595,66 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         combined = self._maybe_unstack(combined)
         return combined
 
-    def reduce(self, func, dim=None, axis=None,
-               keep_attrs=None, shortcut=True, **kwargs):
+    def quantile(self, q, dim=None, interpolation='linear', keep_attrs=None):
+        """Compute the qth quantile over each array in the groups and
+        concatenate them together into a new array.
+
+        Parameters
+        ----------
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1
+            inclusive.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+            Defaults to the grouped dimension.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+
+        Returns
+        -------
+        quantiles : Variable
+            If `q` is a single quantile, then the result
+            is a scalar. If multiple percentiles are given, first axis of
+            the result corresponds to the quantile and a quantile dimension
+            is added to the return array. The other dimensions are the
+            dimensions that remain after the reduction of the array.
+
+        See Also
+        --------
+        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        DataArray.quantile
+        """
+        if dim == DEFAULT_DIMS:
+            dim = ALL_DIMS
+            # TODO change this to dim = self._group_dim after
+            # the deprecation process
+            if self._obj.ndim > 1:
+                warnings.warn(
+                    "Default reduction dimension will be changed to the "
+                    "grouped dimension in a future version of xarray. To "
+                    "silence this warning, pass dim=xarray.ALL_DIMS "
+                    "explicitly.",
+                    FutureWarning, stacklevel=2)
+
+        out = self.apply(self._obj.__class__.quantile, shortcut=False,
+                         q=q, dim=dim, interpolation=interpolation,
+                         keep_attrs=keep_attrs)
+
+        if np.asarray(q, dtype=np.float64).ndim == 0:
+            out = out.drop('quantile')
+        return out
+
+    def reduce(self, func, dim=None, axis=None, keep_attrs=None,
+               shortcut=True, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -652,7 +726,7 @@ ops.inject_binary_ops(DataArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
-    def apply(self, func, args=(), **kwargs):
+    def apply(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function over each Dataset in the group and concatenate them
         together into a new Dataset.
 
@@ -661,6 +735,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         Apply uses heuristics (like `pandas.GroupBy.apply`) to figure out how
         to stack together the datasets. The rule is:
+
         1. If the dimension along which the group coordinate is defined is
            still in the first grouped item after applying `func`, then stack
            over this dimension.
@@ -681,7 +756,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         applied : Dataset or DataArray
             The result of splitting, applying and combining this dataset.
         """
-        kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
+        # ignore shortcut if set (for now)
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         return self._combine(applied)
 

@@ -59,7 +59,7 @@ _SETTERS = {
 def _get_keep_attrs(default):
     global_choice = OPTIONS['keep_attrs']
 
-    if global_choice is 'default':
+    if global_choice == 'default':
         return default
     elif global_choice in [True, False]:
         return global_choice
@@ -69,7 +69,7 @@ def _get_keep_attrs(default):
             " True, False or 'default'.")
 
 
-class set_options(object):
+class set_options:
     """Set options for xarray in a controlled context.
 
     Currently supported options:

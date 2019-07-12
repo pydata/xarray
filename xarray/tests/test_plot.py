@@ -4,7 +4,6 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
 
 import xarray as xr
 import xarray.plot as xplt
@@ -16,10 +15,9 @@ from xarray.plot.utils import (
     import_seaborn, label_from_attrs)
 
 from . import (
-    assert_array_equal, assert_equal, raises_regex, requires_cftime,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn,
-    requires_nc_time_axis)
-from . import has_nc_time_axis
+    assert_array_equal, assert_equal, has_nc_time_axis, raises_regex,
+    requires_cftime, requires_matplotlib, requires_matplotlib2,
+    requires_nc_time_axis, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -65,7 +63,7 @@ def easy_array(shape, start=0, stop=1):
 
 
 @requires_matplotlib
-class PlotTestCase(object):
+class PlotTestCase:
     @pytest.fixture(autouse=True)
     def setup(self):
         yield
@@ -212,7 +210,8 @@ class TestPlot(PlotTestCase):
         hdl = da.plot.line(x='lon', hue='y')
         assert len(hdl) == 4
 
-        with pytest.raises(ValueError, message='If x or y are 2D '):
+        with pytest.raises(
+                ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x='lon', hue='lat')
 
     def test_2d_before_squeeze(self):
@@ -512,7 +511,7 @@ class TestPlotHistogram(PlotTestCase):
 
 
 @requires_matplotlib
-class TestDetermineCmapParams(object):
+class TestDetermineCmapParams:
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.data = np.linspace(0, 1, num=100)
@@ -706,7 +705,7 @@ class TestDetermineCmapParams(object):
 
 
 @requires_matplotlib
-class TestDiscreteColorMap(object):
+class TestDiscreteColorMap:
     @pytest.fixture(autouse=True)
     def setUp(self):
         x = np.arange(start=0, stop=10, step=2)
@@ -758,13 +757,14 @@ class TestDiscreteColorMap(object):
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
-        for extend, levels, vmin, vmax in [('neither', 7, None, None),
-                                           ('neither', 7, None, 20),
-                                           ('both', 7, 4, 8),
-                                           ('min', 10, 4, 15)]:
+        for extend, levels, vmin, vmax, cmap in [
+                ('neither', 7, None, None, None),
+                ('neither', 7, None, 20, mpl.cm.RdBu),
+                ('both', 7, 4, 8, None),
+                ('min', 10, 4, 15, None)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(
-                    levels=levels, vmin=vmin, vmax=vmax)
+                    levels=levels, vmin=vmin, vmax=vmax, cmap=cmap)
                 assert levels >= \
                     len(primitive.norm.boundaries) - 1
                 if vmax is None:
@@ -793,7 +793,7 @@ class TestDiscreteColorMap(object):
         np.testing.assert_allclose(primitive.levels, norm.boundaries)
 
 
-class Common2dMixin(object):
+class Common2dMixin:
     """
     Common tests for 2d plotting go here.
 
@@ -1036,7 +1036,7 @@ class Common2dMixin(object):
         alltxt = text_in_fig()
         assert 'MyLabel' in alltxt
         assert 'testvar' not in alltxt
-        # you can use mapping types as well
+        # you can use anything accepted by the dict constructor as well
         self.plotmethod(
             add_colorbar=True, cbar_kwargs=(('label', 'MyLabel'), ))
         alltxt = text_in_fig()
@@ -1185,7 +1185,8 @@ class Common2dMixin(object):
 
     def test_2d_coord_with_interval(self):
         for dim in self.darray.dims:
-            gp = self.darray.groupby_bins(dim, range(15)).mean(dim)
+            gp = self.darray.groupby_bins(
+                dim, range(15), restore_coord_dims=True).mean(dim)
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 getattr(gp.plot, kind)()
 
@@ -1427,24 +1428,24 @@ class TestImshow(Common2dMixin, PlotTestCase):
             arr.plot.imshow(rgb='band')
 
     def test_normalize_rgb_imshow(self):
-        for kwds in (
+        for kwargs in (
             dict(vmin=-1), dict(vmax=2),
             dict(vmin=-1, vmax=1), dict(vmin=0, vmax=0),
             dict(vmin=0, robust=True), dict(vmax=-1, robust=True),
         ):
             da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
-            arr = da.plot.imshow(**kwds).get_array()
-            assert 0 <= arr.min() <= arr.max() <= 1, kwds
+            arr = da.plot.imshow(**kwargs).get_array()
+            assert 0 <= arr.min() <= arr.max() <= 1, kwargs
 
     def test_normalize_rgb_one_arg_error(self):
         da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
         # If passed one bound that implies all out of range, error:
-        for kwds in [dict(vmax=-1), dict(vmin=2)]:
+        for kwargs in [dict(vmax=-1), dict(vmin=2)]:
             with pytest.raises(ValueError):
-                da.plot.imshow(**kwds)
+                da.plot.imshow(**kwargs)
         # If passed two that's just moving the range, *not* an error:
-        for kwds in [dict(vmax=-1, vmin=-1.2), dict(vmin=2, vmax=2.1)]:
-            da.plot.imshow(**kwds)
+        for kwargs in [dict(vmax=-1, vmin=-1.2), dict(vmin=2, vmax=2.1)]:
+            da.plot.imshow(**kwargs)
 
     def test_imshow_rgb_values_in_valid_range(self):
         da = DataArray(np.arange(75, dtype='uint8').reshape((5, 5, 3)))
@@ -1907,7 +1908,7 @@ test_da_list = [DataArray(easy_array((10, ))),
 
 
 @requires_matplotlib
-class TestAxesKwargs(object):
+class TestAxesKwargs:
     @pytest.mark.parametrize('da', test_da_list)
     @pytest.mark.parametrize('xincrease', [True, False])
     def test_xincrease_kwarg(self, da, xincrease):

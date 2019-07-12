@@ -64,8 +64,10 @@ def _infer_line_data(darray, x, y, hue):
                 if huename in darray.dims:
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     otherdim = darray.dims[otherindex]
-                    yplt = darray.transpose(otherdim, huename)
-                    xplt = xplt.transpose(otherdim, huename)
+                    yplt = darray.transpose(
+                        otherdim, huename, transpose_coords=False)
+                    xplt = xplt.transpose(
+                        otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError('For 2D inputs, hue must be a dimension'
                                      + ' i.e. one of ' + repr(darray.dims))
@@ -79,7 +81,9 @@ def _infer_line_data(darray, x, y, hue):
             if yplt.ndim > 1:
                 if huename in darray.dims:
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    xplt = darray.transpose(otherdim, huename)
+                    otherdim = darray.dims[otherindex]
+                    xplt = darray.transpose(
+                        otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError('For 2D inputs, hue must be a dimension'
                                      + ' i.e. one of ' + repr(darray.dims))
@@ -174,7 +178,10 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
 
 # This function signature should not change so that it can use
 # matplotlib format strings
-def line(darray, *args, **kwargs):
+def line(darray, *args, row=None, col=None, figsize=None, aspect=None,
+         size=None, ax=None, hue=None, x=None, y=None, xincrease=None,
+         yincrease=None, xscale=None, yscale=None, xticks=None, yticks=None,
+         xlim=None, ylim=None, add_legend=True, _labels=True, **kwargs):
     """
     Line plot of DataArray index against values
 
@@ -218,12 +225,8 @@ def line(darray, *args, **kwargs):
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
-
     """
-
     # Handle facetgrids first
-    row = kwargs.pop('row', None)
-    col = kwargs.pop('col', None)
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
@@ -236,26 +239,11 @@ def line(darray, *args, **kwargs):
                          'Passed DataArray has {ndims} '
                          'dimensions'.format(ndims=ndims))
 
-    # Ensures consistency with .plot method
-    figsize = kwargs.pop('figsize', None)
-    aspect = kwargs.pop('aspect', None)
-    size = kwargs.pop('size', None)
-    ax = kwargs.pop('ax', None)
-    hue = kwargs.pop('hue', None)
-    x = kwargs.pop('x', None)
-    y = kwargs.pop('y', None)
-    xincrease = kwargs.pop('xincrease', None)  # default needs to be None
-    yincrease = kwargs.pop('yincrease', None)
-    xscale = kwargs.pop('xscale', None)  # default needs to be None
-    yscale = kwargs.pop('yscale', None)
-    xticks = kwargs.pop('xticks', None)
-    yticks = kwargs.pop('yticks', None)
-    xlim = kwargs.pop('xlim', None)
-    ylim = kwargs.pop('ylim', None)
-    add_legend = kwargs.pop('add_legend', True)
-    _labels = kwargs.pop('_labels', True)
+    # The allargs dict passed to _easy_facetgrid above contains args
     if args is ():
         args = kwargs.pop('args', ())
+    else:
+        assert 'args' not in kwargs
 
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
@@ -273,7 +261,7 @@ def line(darray, *args, **kwargs):
                                    .replace('steps-post', '')
                                    .replace('steps-mid', ''))
             if kwargs['linestyle'] == '':
-                kwargs.pop('linestyle')
+                del kwargs['linestyle']
         else:
             xplt_val = _interval_to_mid_points(xplt.values)
             yplt_val = yplt.values
@@ -315,7 +303,7 @@ def line(darray, *args, **kwargs):
     return primitive
 
 
-def step(darray, *args, **kwargs):
+def step(darray, *args, where='pre', linestyle=None, ls=None, **kwargs):
     """
     Step plot of DataArray index against values
 
@@ -339,23 +327,26 @@ def step(darray, *args, **kwargs):
 
     *args, **kwargs : optional
         Additional arguments following :py:func:`xarray.plot.line`
-
     """
-    if ('ls' in kwargs.keys()) and ('linestyle' not in kwargs.keys()):
-        kwargs['linestyle'] = kwargs.pop('ls')
-
-    where = kwargs.pop('where', 'pre')
-
-    if where not in ('pre', 'post', 'mid'):
+    if where not in {'pre', 'post', 'mid'}:
         raise ValueError("'where' argument to step must be "
                          "'pre', 'post' or 'mid'")
 
-    kwargs['linestyle'] = 'steps-' + where + kwargs.get('linestyle', '')
+    if ls is not None:
+        if linestyle is None:
+            linestyle = ls
+        else:
+            raise TypeError('ls and linestyle are mutually exclusive')
+    if linestyle is None:
+        linestyle = ''
+    linestyle = 'steps-' + where + linestyle
 
-    return line(darray, *args, **kwargs)
+    return line(darray, *args, linestyle=linestyle, **kwargs)
 
 
-def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
+def hist(darray, figsize=None, size=None, aspect=None, ax=None,
+         xincrease=None, yincrease=None, xscale=None, yscale=None,
+         xticks=None, yticks=None, xlim=None, ylim=None, **kwargs):
     """
     Histogram of DataArray
 
@@ -385,15 +376,6 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     """
     ax = get_axis(figsize, size, aspect, ax)
 
-    xincrease = kwargs.pop('xincrease', None)  # default needs to be None
-    yincrease = kwargs.pop('yincrease', None)
-    xscale = kwargs.pop('xscale', None)  # default needs to be None
-    yscale = kwargs.pop('yscale', None)
-    xticks = kwargs.pop('xticks', None)
-    yticks = kwargs.pop('yticks', None)
-    xlim = kwargs.pop('xlim', None)
-    ylim = kwargs.pop('ylim', None)
-
     no_nan = np.ravel(darray.values)
     no_nan = no_nan[pd.notnull(no_nan)]
 
@@ -410,7 +392,7 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
-class _PlotMethods(object):
+class _PlotMethods:
     """
     Enables use of xarray.plot functions as attributes on a DataArray.
     For example, DataArray.plot.imshow
@@ -575,9 +557,9 @@ def _plot2d(plotfunc):
         # Handle facetgrids first
         if row or col:
             allargs = locals().copy()
-            allargs.pop('imshow_rgb')
+            del allargs['darray']
+            del allargs['imshow_rgb']
             allargs.update(allargs.pop('kwargs'))
-            allargs.pop('darray')
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind='dataarray', **allargs)
@@ -614,9 +596,9 @@ def _plot2d(plotfunc):
             yx_dims = (ylab, xlab)
             dims = yx_dims + tuple(d for d in darray.dims if d not in yx_dims)
             if dims != darray.dims:
-                darray = darray.transpose(*dims)
+                darray = darray.transpose(*dims, transpose_coords=True)
         elif darray[xlab].dims[-1] == darray.dims[0]:
-            darray = darray.transpose()
+            darray = darray.transpose(transpose_coords=True)
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
@@ -628,7 +610,7 @@ def _plot2d(plotfunc):
         _ensure_plottable(xplt, yplt)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, locals(), zval.data)
+            plotfunc, zval.data, **locals())
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
@@ -669,7 +651,7 @@ def _plot2d(plotfunc):
             cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
                                  cmap_params)
 
-        elif (cbar_ax is not None or cbar_kwargs):
+        elif cbar_ax is not None or cbar_kwargs:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")

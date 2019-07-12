@@ -2,7 +2,8 @@ import functools
 import itertools
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
-from typing import Tuple, Type, Union
+from distutils.version import LooseVersion
+from typing import Any, Hashable, Mapping, MutableMapping, Union
 
 import numpy as np
 import pandas as pd
@@ -16,8 +17,9 @@ from .indexing import (
     as_indexable)
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
-from .utils import (OrderedSet, either_dict_or_kwargs,
-                    decode_numpy_dict_values, ensure_us_time_resolution)
+from .utils import (
+    OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
+    ensure_us_time_resolution)
 
 try:
     import dask.array as da
@@ -630,7 +632,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         dims, indexer, new_order = self._broadcast_indexes(key)
         data = as_indexable(self._data)[indexer]
         if new_order:
-            data = np.moveaxis(data, range(len(new_order)), new_order)
+            data = duck_array_ops.moveaxis(
+                data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self, dims, data):
@@ -674,7 +677,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             data = np.broadcast_to(fill_value, getattr(mask, 'shape', ()))
 
         if new_order:
-            data = np.moveaxis(data, range(len(new_order)), new_order)
+            data = duck_array_ops.moveaxis(
+                data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def __setitem__(self, key, value):
@@ -703,13 +707,14 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) +
                           (Ellipsis,)]
-            value = np.moveaxis(value, new_order, range(len(new_order)))
+            value = duck_array_ops.moveaxis(
+                value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
         indexable[index_tuple] = value
 
     @property
-    def attrs(self):
+    def attrs(self) -> 'OrderedDict[Any, Any]':
         """Dictionary of local attributes on this variable.
         """
         if self._attrs is None:
@@ -717,7 +722,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value):
+    def attrs(self, value: Mapping[Hashable, Any]) -> None:
         self._attrs = OrderedDict(value)
 
     @property
@@ -865,6 +870,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         -------
         chunked : xarray.Variable
         """
+        import dask
         import dask.array as da
 
         if utils.is_dict_like(chunks):
@@ -887,7 +893,17 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             # https://github.com/dask/dask/issues/2883
             data = indexing.ImplicitToExplicitIndexingAdapter(
                 data, indexing.OuterIndexer)
-            data = da.from_array(data, chunks, name=name, lock=lock)
+
+            # For now, assume that all arrays that we wrap with dask (including
+            # our lazily loaded backend array classes) should use NumPy array
+            # operations.
+            if LooseVersion(dask.__version__) > '1.2.2':
+                kwargs = dict(meta=np.ndarray)
+            else:
+                kwargs = dict()
+
+            data = da.from_array(
+                data, chunks, name=name, lock=lock, **kwargs)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,
                           fastpath=True)
@@ -1116,7 +1132,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             result = result._roll_one_dim(dim, count)
         return result
 
-    def transpose(self, *dims):
+    def transpose(self, *dims) -> 'Variable':
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1149,6 +1165,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         data = as_indexable(self._data).transpose(axes)
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
+
+    @property
+    def T(self) -> 'Variable':
+        return self.transpose()
 
     def expand_dims(self, *args):
         import warnings
@@ -1325,7 +1345,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return ops.where_method(self, cond, other)
 
     def reduce(self, func, dim=None, axis=None,
-               keep_attrs=None, allow_lazy=False, **kwargs):
+               keep_attrs=None, keepdims=False, allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1345,6 +1365,9 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        keepdims : bool, default False
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1372,8 +1395,19 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         else:
             removed_axes = (range(self.ndim) if axis is None
                             else np.atleast_1d(axis) % self.ndim)
-            dims = [adim for n, adim in enumerate(self.dims)
-                    if n not in removed_axes]
+            if keepdims:
+                # Insert np.newaxis for removed dims
+                slices = tuple(np.newaxis if i in removed_axes else
+                               slice(None, None) for i in range(self.ndim))
+                if getattr(data, 'shape', None) is None:
+                    # Reduce has produced a scalar value, not an array-like
+                    data = np.asanyarray(data)[slices]
+                else:
+                    data = data[slices]
+                dims = self.dims
+            else:
+                dims = [adim for n, adim in enumerate(self.dims)
+                        if n not in removed_axes]
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1597,7 +1631,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                             "prior to calling this method.")
 
         axis = self.get_axis_num(dim)
-        func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
+        func = bn.nanrankdata if self.dtype.kind == 'f' else bn.rankdata
         ranked = func(self.data, axis=axis)
         if pct:
             count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
@@ -1809,8 +1843,7 @@ class IndexVariable(Variable):
     """
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
-        super(IndexVariable, self).__init__(dims, data, attrs, encoding,
-                                            fastpath)
+        super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -1897,7 +1930,8 @@ class IndexVariable(Variable):
         Parameters
         ----------
         deep : bool, optional
-            Deep is always ignored.
+            Deep is ignored when data is given. Whether the data array is
+            loaded into memory and copied onto the new object. Default is True.
         data : array_like, optional
             Data to use in the new object. Must have same shape as original.
 
@@ -1908,7 +1942,14 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            data = self._data
+            if deep:
+                # self._data should be a `PandasIndexAdapter` instance at this
+                # point, which doesn't have a copy method, so make a deep copy
+                # of the underlying `pandas.MultiIndex` and create a new
+                # `PandasIndexAdapter` instance with it.
+                data = PandasIndexAdapter(self._data.array.copy(deep=True))
+            else:
+                data = self._data
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:
@@ -1920,7 +1961,7 @@ class IndexVariable(Variable):
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
         if equiv is not None:
-            return super(IndexVariable, self).equals(other, equiv)
+            return super().equals(other, equiv)
 
         # otherwise use the native index equals, rather than looking at _data
         other = getattr(other, 'variable', other)

@@ -302,16 +302,23 @@ to using encoded character arrays. Character arrays can be selected even for
 netCDF4 files by setting the ``dtype`` field in ``encoding`` to ``S1``
 (corresponding to NumPy's single-character bytes dtype).
 
-If character arrays are used, the string encoding that was used is stored on
-disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
-`adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
-At the time of this writing (October 2017), a standard convention for indicating
-string encoding for character arrays in netCDF files was
-`still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
-Technically, you can use
-`any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
-by setting the ``_Encoding`` field in ``encoding``. But
-`we don't recommend it <http://utf8everywhere.org/>`_.
+If character arrays are used:
+
+- The string encoding that was used is stored on
+  disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
+  `adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
+  At the time of this writing (October 2017), a standard convention for indicating
+  string encoding for character arrays in netCDF files was
+  `still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
+  Technically, you can use
+  `any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
+  by setting the ``_Encoding`` field in ``encoding``. But
+  `we don't recommend it <http://utf8everywhere.org/>`_.
+- The character dimension name can be specifed by the ``char_dim_name`` field of a variable's
+  ``encoding``. If this is not specified the default name for the character dimension is
+  ``'string%s' % data.shape[-1]``. When decoding character arrays from existing files, the
+  ``char_dim_name`` is added to the variables ``encoding`` to preserve if encoding happens, but
+  the field can be edited by the user.
 
 .. warning::
 
@@ -597,6 +604,29 @@ store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
+It is also possible to append to an existing store. For that, add ``mode='a'``
+and set ``append_dim`` to the name of the dimension along which to append.
+
+.. ipython:: python
+   :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds1 = xr.Dataset({'foo': (('x', 'y', 't'), np.random.rand(4, 5, 2))},
+                     coords={'x': [10, 20, 30, 40],
+                             'y': [1,2,3,4,5],
+                             't': pd.date_range('2001-01-01', periods=2)})
+    ds1.to_zarr('path/to/directory.zarr')
+    ds2 = xr.Dataset({'foo': (('x', 'y', 't'), np.random.rand(4, 5, 2))},
+                     coords={'x': [10, 20, 30, 40],
+                             'y': [1,2,3,4,5],
+                             't': pd.date_range('2001-01-03', periods=2)})
+    ds2.to_zarr('path/to/directory.zarr', mode='a', append_dim='t')
+
+To store variable length strings use ``dtype=object``.
+
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`~xarray.open_zarr` method:
 
@@ -759,7 +789,10 @@ Combining multiple files
 
 NetCDF files are often encountered in collections, e.g., with different files
 corresponding to different model runs. xarray can straightforwardly combine such
-files into a single Dataset by making use of :py:func:`~xarray.concat`.
+files into a single Dataset by making use of :py:func:`~xarray.concat`,
+:py:func:`~xarray.merge`, :py:func:`~xarray.combine_nested` and
+:py:func:`~xarray.combine_by_coords`. For details on the difference between these
+functions see :ref:`combining data`.
 
 .. note::
 
@@ -772,7 +805,8 @@ files into a single Dataset by making use of :py:func:`~xarray.concat`.
     This function automatically concatenates and merges multiple files into a
     single xarray dataset.
     It is the recommended way to open multiple files with xarray.
-    For more details, see :ref:`dask.io` and a `blog post`_ by Stephan Hoyer.
+    For more details, see :ref:`combining.multi`, :ref:`dask.io` and a
+    `blog post`_ by Stephan Hoyer.
 
 .. _dask: http://dask.pydata.org
 .. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/

@@ -120,7 +120,7 @@ def _advanced_indexer_subspaces(key):
     return mixed_positions, vindex_positions
 
 
-class NumpyVIndexAdapter(object):
+class NumpyVIndexAdapter:
     """Object that implements indexing like vindex on a np.ndarray.
 
     This is a pure Python implementation of (some of) the logic in this NumPy
@@ -204,8 +204,8 @@ def _rolling_window(a, window, axis=-1):
 
 
 def _create_bottleneck_method(name, npmodule=np):
-    def f(values, axis=None, **kwds):
-        dtype = kwds.get('dtype', None)
+    def f(values, axis=None, **kwargs):
+        dtype = kwargs.get('dtype', None)
         bn_func = getattr(bn, name, None)
 
         if (_USE_BOTTLENECK and bn_func is not None and
@@ -214,10 +214,10 @@ def _create_bottleneck_method(name, npmodule=np):
                 values.dtype.isnative and
                 (dtype is None or np.dtype(dtype) == values.dtype)):
             # bottleneck does not take care dtype, min_count
-            kwds.pop('dtype', None)
-            result = bn_func(values, axis=axis, **kwds)
+            kwargs.pop('dtype', None)
+            result = bn_func(values, axis=axis, **kwargs)
         else:
-            result = getattr(npmodule, name)(values, axis=axis, **kwds)
+            result = getattr(npmodule, name)(values, axis=axis, **kwargs)
 
         return result
 

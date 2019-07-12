@@ -1,9 +1,9 @@
 import functools
 import operator
 from collections import defaultdict
-from collections.abc import Hashable
 from contextlib import suppress
 from datetime import timedelta
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
@@ -152,7 +152,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
         else:
             for k, v in label.items():
                 # index should be an item (i.e. Hashable) not an array-like
-                if not isinstance(v, Hashable):
+                if isinstance(v, Sequence) and not isinstance(v, str):
                     raise ValueError('Vectorized selection is not '
                                      'available along level variable: ' + k)
             indexer, new_index = index.get_loc_level(
@@ -294,7 +294,7 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     return indexer
 
 
-class ExplicitIndexer(object):
+class ExplicitIndexer:
     """Base class for explicit indexer objects.
 
     ExplicitIndexer objects wrap a tuple of values given by their ``tuple``
@@ -352,7 +352,7 @@ class BasicIndexer(ExplicitIndexer):
                                 .format(type(self).__name__, k))
             new_key.append(k)
 
-        super(BasicIndexer, self).__init__(new_key)
+        super().__init__(new_key)
 
 
 class OuterIndexer(ExplicitIndexer):
@@ -388,7 +388,7 @@ class OuterIndexer(ExplicitIndexer):
                                 .format(type(self).__name__, k))
             new_key.append(k)
 
-        super(OuterIndexer, self).__init__(new_key)
+        super().__init__(new_key)
 
 
 class VectorizedIndexer(ExplicitIndexer):
@@ -427,10 +427,10 @@ class VectorizedIndexer(ExplicitIndexer):
                                 .format(type(self).__name__, k))
             new_key.append(k)
 
-        super(VectorizedIndexer, self).__init__(new_key)
+        super().__init__(new_key)
 
 
-class ExplicitlyIndexed(object):
+class ExplicitlyIndexed:
     """Mixin to mark support for Indexer subclasses in indexing."""
 
 
@@ -453,7 +453,13 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
-        return self.array[self.indexer_cls(key)]
+        result = self.array[self.indexer_cls(key)]
+        if isinstance(result, ExplicitlyIndexed):
+            return type(self)(result, self.indexer_cls)
+        else:
+            # Sometimes explicitly indexed arrays return NumPy arrays or
+            # scalars.
+            return result
 
 
 class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
@@ -740,7 +746,7 @@ def _combine_indexers(old_key, shape, new_key):
                                    np.broadcast_arrays(*old_key.tuple)))
 
 
-class IndexingSupport(object):  # could inherit from enum.Enum on Python 3
+class IndexingSupport:  # could inherit from enum.Enum on Python 3
     # for backends that support only basic indexer
     BASIC = 'BASIC'
     # for backends that support basic / outer indexer

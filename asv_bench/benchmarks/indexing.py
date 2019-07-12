@@ -58,7 +58,7 @@ vectorized_assignment_values = {
 }
 
 
-class Base(object):
+class Base:
     def setup(self, key):
         self.ds = xr.Dataset(
             {'var1': (('x', 'y'), randn((nx, ny), frac_nan=0.1)),
@@ -122,5 +122,5 @@ class Assignment(Base):
 class IndexingDask(Indexing):
     def setup(self, key):
         requires_dask()
-        super(IndexingDask, self).setup(key)
+        super().setup(key)
         self.ds = self.ds.chunk({'x': 100, 'y': 50, 't': 50})

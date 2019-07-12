@@ -6,8 +6,8 @@ import xarray as xr
 from xarray.tests import (
     assert_allclose, assert_equal, requires_cftime, requires_scipy)
 
-from . import has_dask, has_scipy
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
+from . import has_dask, has_scipy
 from .test_dataset import create_test_data
 
 try:
@@ -143,7 +143,8 @@ def test_interpolate_vectorize(use_dask):
                                     'y': da['y'],
                                     'x': ('z', xdest.values),
                                     'x2': ('z', func(da['x2'], 'x', xdest))})
-    assert_allclose(actual, expected.transpose('z', 'y'))
+    assert_allclose(actual,
+                    expected.transpose('z', 'y', transpose_coords=True))
 
     # xdest is 2d
     xdest = xr.DataArray(np.linspace(0.1, 0.9, 30).reshape(6, 5),
@@ -160,7 +161,8 @@ def test_interpolate_vectorize(use_dask):
         coords={'z': xdest['z'], 'w': xdest['w'], 'z2': xdest['z2'],
                 'y': da['y'], 'x': (('z', 'w'), xdest),
                 'x2': (('z', 'w'), func(da['x2'], 'x', xdest))})
-    assert_allclose(actual, expected.transpose('z', 'w', 'y'))
+    assert_allclose(actual,
+                    expected.transpose('z', 'w', 'y', transpose_coords=True))
 
 
 @pytest.mark.parametrize('case', [3, 4])
@@ -291,7 +293,7 @@ def test_errors(use_dask):
     if use_dask:
         da = get_example_data(3)
     else:
-        da = get_example_data(1)
+        da = get_example_data(0)
 
     result = da.interp(x=[-1, 1, 3], kwargs={'fill_value': 0.0})
     assert not np.isnan(result.values).any()
