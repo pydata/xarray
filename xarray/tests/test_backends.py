@@ -2884,6 +2884,17 @@ class TestOpenMFDataSetDeprecation:
     Set of tests to check that FutureWarnings are correctly raised until the
     deprecation cycle is complete. #2616
     """
+    def test_open_mfdataset_default(self):
+        ds1, ds2 = Dataset({'x': [0]}), Dataset({'x': [1]})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+
+                with pytest.warns(FutureWarning, match="default behaviour of"
+                                                       " `open_mfdataset`"):
+                    open_mfdataset([tmp1, tmp2])
+
     def test_open_mfdataset_with_concat_dim(self):
         ds1, ds2 = Dataset({'x': [0]}), Dataset({'x': [1]})
         with create_tmp_file() as tmp1:
