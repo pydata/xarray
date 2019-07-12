@@ -17,6 +17,7 @@ dependencies:
   - flake8
   - numpy>=1.12
   - pandas>=0.19
+  - pip
   - scipy
   - seaborn
   - toolz
@@ -25,5 +26,3 @@ dependencies:
   - zarr
   - pydap
   - lxml
-  - pip:
-    - pytest-azurepipelines

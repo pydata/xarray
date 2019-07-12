@@ -18,6 +18,7 @@ dependencies:
   - flake8
   - numpy>=1.12
   - pandas>=0.19
+  - pip
   - scipy
   - seaborn
   - toolz
@@ -29,6 +30,5 @@ dependencies:
   - lxml
   - pydap
   - pip:
-    - pytest-azurepipelines
     - mypy==0.650
     - numbagg

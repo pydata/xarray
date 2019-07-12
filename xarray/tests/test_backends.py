@@ -306,6 +306,8 @@ class DatasetIOBase:
             assert_identical(expected, computed)
 
     def test_pickle(self):
+        if not has_dask:
+            pytest.xfail('pickling requires dask for SerializableLock')
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
@@ -317,6 +319,8 @@ class DatasetIOBase:
 
     @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self):
+        if not has_dask:
+            pytest.xfail('pickling requires dask for SerializableLock')
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
@@ -1201,18 +1205,6 @@ class NetCDF4Base(CFEncodedBase):
                 expected = Dataset({'x': ((), 123)})
                 assert_identical(expected, ds)
 
-    def test_already_open_dataset(self):
-        with create_tmp_file() as tmp_file:
-            with nc4.Dataset(tmp_file, mode='w') as nc:
-                v = nc.createVariable('x', 'int')
-                v[...] = 42
-
-            nc = nc4.Dataset(tmp_file, mode='r')
-            store = backends.NetCDF4DataStore(nc)
-            with open_dataset(store) as ds:
-                expected = Dataset({'x': ((), 42)})
-                assert_identical(expected, ds)
-
     def test_read_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
@@ -1313,6 +1305,41 @@ class TestNetCDF4Data(NetCDF4Base):
             with pytest.warns(FutureWarning):
                 with self.open(tmp_file, autoclose=True) as actual:
                     assert_identical(data, actual)
+
+    def test_already_open_dataset(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                v = nc.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc)
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+    def test_already_open_dataset_group(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                group = nc.createGroup('g')
+                v = group.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc.groups['g'])
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc, group='g')
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+            with nc4.Dataset(tmp_file, mode='r') as nc:
+                with pytest.raises(ValueError, match='must supply a root'):
+                    backends.NetCDF4DataStore(nc.groups['g'], group='g')
 
 
 @requires_netCDF4
@@ -1422,6 +1449,7 @@ class ZarrBase(CFEncodedBase):
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
 
+    @pytest.mark.filterwarnings('ignore:Specified Dask chunks')
     def test_manual_chunk(self):
         original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
 
@@ -1967,6 +1995,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
         # there's no specific store to test here
         pass
 
+    @requires_scipy
     def test_engine(self):
         data = create_test_data()
         with raises_regex(ValueError, 'unrecognized engine'):
@@ -2291,14 +2320,12 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
+@requires_dask
 def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
                                   file_cache_maxsize):
 
     # skip certain combinations
     skip_if_not_engine(readengine)
-
-    if not has_dask and parallel:
-        pytest.skip('parallel requires dask')
 
     if ON_WINDOWS:
         pytest.skip('Skipping on Windows')
@@ -2325,6 +2352,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
 
 
 @requires_scipy_or_netCDF4
+@requires_dask
 class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     coord_name = 'lon'
     var_name = 'v1'
@@ -2850,6 +2878,7 @@ class TestDask(DatasetIOBase):
 
 
 @requires_scipy_or_netCDF4
+@requires_dask
 class TestOpenMFDataSetDeprecation:
     """
     Set of tests to check that FutureWarnings are correctly raised until the
@@ -2904,6 +2933,8 @@ class TestOpenMFDataSetDeprecation:
 
 @requires_scipy_or_netCDF4
 @requires_pydap
+@pytest.mark.filterwarnings(
+    'ignore:The binary mode of fromstring is deprecated')
 class TestPydap:
     def convert_to_pydap_dataset(self, original):
         from pydap.model import GridType, BaseType, DatasetType
@@ -2971,9 +3002,9 @@ class TestPydap:
         with self.create_datasets() as (actual, expected):
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
-                actual = open_dataset(tmp_file)
-                actual['bears'] = actual['bears'].astype(str)
-                assert_equal(actual, expected)
+                with open_dataset(tmp_file) as actual2:
+                    actual2['bears'] = actual2['bears'].astype(str)
+                    assert_equal(actual2, expected)
 
     @requires_dask
     def test_dask(self):
@@ -3278,7 +3309,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                        transform_args=[5000, 80000, 1000, 2000.],
                        crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
                             'proj': 'utm', 'zone': 18},
-                       open_kwargs=None):
+                       open_kwargs=None,
+                       additional_attrs=None):
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
@@ -3301,6 +3333,11 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
             *data_shape)
         if transform is None:
             transform = from_origin(*transform_args)
+        if additional_attrs is None:
+            additional_attrs = {
+                'descriptions': tuple('d{}'.format(n + 1) for n in range(nz)),
+                'units': tuple('u{}'.format(n + 1) for n in range(nz)),
+            }
         with rasterio.open(
                 tmp_file, 'w',
                 driver='GTiff', height=ny, width=nx, count=nz,
@@ -3308,6 +3345,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                 transform=transform,
                 dtype=rasterio.float32,
                 **open_kwargs) as s:
+            for attr, val in additional_attrs.items():
+                setattr(s, attr, val)
             s.write(data, **write_kwargs)
             dx, dy = s.res[0], -s.res[1]
 
@@ -3327,7 +3366,7 @@ class TestRasterio:
 
     @requires_scipy_or_netCDF4
     def test_serialization(self):
-        with create_tmp_geotiff() as (tmp_file, expected):
+        with create_tmp_geotiff(additional_attrs={}) as (tmp_file, expected):
             # Write it to a netcdf and read again (roundtrip)
             with xr.open_rasterio(tmp_file) as rioda:
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:
@@ -3339,6 +3378,10 @@ class TestRasterio:
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
+                assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
+                assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3362,6 +3405,10 @@ class TestRasterio:
                 assert 'x' not in rioda.coords
                 assert 'y' not in rioda.coords
                 assert 'crs' not in rioda.attrs
+                assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
+                assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -3382,6 +3429,10 @@ class TestRasterio:
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
+                assert rioda.attrs['scales'] == (1.0,)
+                assert rioda.attrs['offsets'] == (0.0,)
+                assert isinstance(rioda.attrs['descriptions'], tuple)
+                assert isinstance(rioda.attrs['units'], tuple)
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3410,6 +3461,8 @@ class TestRasterio:
                         tmp_file, 'w',
                         driver='GTiff', height=ny, width=nx, count=nz,
                         dtype=rasterio.float32) as s:
+                    s.descriptions = ('nx', 'ny', 'nz')
+                    s.units = ('cm', 'm', 'km')
                     s.write(data)
 
                 # Tests
@@ -3421,6 +3474,10 @@ class TestRasterio:
                                              })
                 with xr.open_rasterio(tmp_file) as rioda:
                     assert_allclose(rioda, expected)
+                    assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                    assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                    assert rioda.attrs['descriptions'] == ('nx', 'ny', 'nz')
+                    assert rioda.attrs['units'] == ('cm', 'm', 'km')
                     assert isinstance(rioda.attrs['res'], tuple)
                     assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                     assert isinstance(rioda.attrs['transform'], tuple)
@@ -3919,6 +3976,7 @@ class TestDataArrayToNetCDF:
             with open_dataarray(tmp, drop_variables=['y']) as loaded:
                 assert_identical(expected, loaded)
 
+    @requires_scipy
     def test_dataarray_to_netcdf_return_bytes(self):
         # regression test for GH1410
         data = xr.DataArray([1, 2, 3])

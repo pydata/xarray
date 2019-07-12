@@ -10,11 +10,17 @@ from .common import WritableCFDataStore
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
-    BaseNetCDF4Array, GroupWrapper, _encode_nc4_variable,
-    _extract_nc4_variable_encoding, _get_datatype, _nc4_require_group)
+    BaseNetCDF4Array, _encode_nc4_variable, _extract_nc4_variable_encoding,
+    _get_datatype, _nc4_require_group)
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
+
+    def get_array(self, needs_lock=True):
+        ds = self.datastore._acquire(needs_lock)
+        variable = ds.variables[self.variable_name]
+        return variable
+
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR,
@@ -57,26 +63,19 @@ def _h5netcdf_create_group(dataset, name):
     return dataset.create_group(name)
 
 
-def _open_h5netcdf_group(filename, mode, group):
-    import h5netcdf
-    ds = h5netcdf.File(filename, mode=mode)
-    with close_on_error(ds):
-        ds = _nc4_require_group(
-            ds, group, mode, create_group=_h5netcdf_create_group)
-    return GroupWrapper(ds)
-
-
 class H5NetCDFStore(WritableCFDataStore):
     """Store for reading and writing data via h5netcdf
     """
 
     def __init__(self, filename, mode='r', format=None, group=None,
                  lock=None, autoclose=False):
+        import h5netcdf
+
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
+
         self._manager = CachingFileManager(
-            _open_h5netcdf_group, filename, mode=mode,
-            kwargs=dict(group=group))
+            h5netcdf.File, filename, mode=mode)
 
         if lock is None:
             if mode == 'r':
@@ -84,15 +83,22 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
+        self._group = group
         self.format = format
         self._filename = filename
         self._mode = mode
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
+    def _acquire(self, needs_lock=True):
+        with self._manager.acquire_context(needs_lock) as root:
+            ds = _nc4_require_group(root, self._group, self._mode,
+                                    create_group=_h5netcdf_create_group)
+        return ds
+
     @property
     def ds(self):
-        return self._manager.acquire().value
+        return self._acquire()
 
     def open_store_variable(self, name, var):
         import h5py

@@ -13,33 +13,63 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.12.3:
+.. _whats-new.0.12.4:
 
-v0.12.3 (unreleased)
---------------------
+v0.12.4 (unreleased)
+-------------------
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
-- New methods for reshaping Datasets of variables with different dimensions
-  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
 - Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Renaming variables and dimensions independently:
-  Datasets with coordinate dimensions can now have only their dimension 
-  (using rename_dim) or only their coordinate (using rename_vars) renamed 
-  instead of the rename function applyingto both. (:issue:`3026`)
-  By `Julia Kent <https://github.com/jukent>`_.
-  
 Bug fixes
 ~~~~~~~~~
 
-- Fix to ensure that xarray can still be imported with pandas 0.25, which will
-  remove `pd.Panel`.
+.. _whats-new.0.12.3:
+
+v0.12.3 (10 July 2019)
+----------------------
+
+New functions/methods
+~~~~~~~~~~~~~~~~~~~~~
+
+- New methods :py:meth:`Dataset.to_stacked_array` and
+  :py:meth:`DataArray.to_unstacked_dataset` for reshaping Datasets of variables
+  with different dimensions
+  (:issue:`1317`).
+  This is useful for feeding data from xarray into machine learning models,
+  as described in :ref:`reshape.stacking_different`.
+  By `Noah Brenowitz <https://github.com/nbren12>`_.
+
+- Support for renaming ``Dataset`` variables and dimensions independently
+  with :py:meth:`~Dataset.rename_vars` and :py:meth:`~Dataset.rename_dims`
+  (:issue:`3026`).
+  By `Julia Kent <https://github.com/jukent>`_.
+
+
+Enhancements
+~~~~~~~~~~~~
+
+- Add ``scales``, ``offsets``, ``units`` and ``descriptions``
+  attributes to :py:class:`~xarray.DataArray` returned by
+  :py:func:`~xarray.open_rasterio`. (:issue:`3013`)
+  By `Erle Carrara <https://github.com/ecarrara>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Resolved deprecation warnings from newer versions of matplotlib and dask.
+- Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix summaries for multiindex coordinates (:issue:`3079`).
+  By `Jonas Hörsch <https://github.com/coroa>`_.
+- Fix HDF5 error that could arise when reading multiple groups from a file at
+  once (:issue:`2954`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.12.2:

@@ -2,6 +2,7 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from numbers import Number
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Union, cast)
 
@@ -10,7 +11,8 @@ import pandas as pd
 
 from ..plot.plot import _PlotMethods
 from . import (
-    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
+    computation, dtypes, groupby, indexing, ops, pdcompat, resample, rolling,
+    utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (align, _broadcast_helper,
@@ -266,7 +268,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data.index, data.columns]
                 elif isinstance(data, (pd.Index, IndexVariable)):
                     coords = [data]
-                elif hasattr(pd, 'Panel') and isinstance(data, pd.Panel):
+                elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
@@ -578,13 +580,13 @@ class DataArray(AbstractArray, DataWithCoords):
         del self.coords[key]
 
     @property
-    def _attr_sources(self) -> List[Iterable[Hashable]]:
+    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
         """List of places to look-up items for attribute-style access
         """
         return self._item_sources + [self.attrs]
 
     @property
-    def _item_sources(self) -> List[Iterable[Hashable]]:
+    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
         """List of places to look-up items for key-completion
         """
         return [self.coords, {d: self.coords[d] for d in self.dims},
@@ -871,13 +873,19 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return self.variable.chunks
 
-    def chunk(self, chunks: Union[
-        None, int, Tuple[int, ...], Tuple[Tuple[int, ...], ...],
-        Mapping[Hashable, Union[None, int, Tuple[int, ...]]],
-    ] = None,
-            name_prefix: str = 'xarray-',
-            token: Optional[str] = None,
-            lock: bool = False) -> 'DataArray':
+    def chunk(
+        self,
+        chunks: Union[
+            None,
+            Number,
+            Tuple[Number, ...],
+            Tuple[Tuple[Number, ...], ...],
+            Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
+        ] = None,
+        name_prefix: str = 'xarray-',
+        token: Optional[str] = None,
+        lock: bool = False
+    ) -> 'DataArray':
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -890,7 +898,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        chunks : int, tuple or dict, optional
+        chunks : int, tuple or mapping, optional
             Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
             ``{'x': 5, 'y': 5}``.
         name_prefix : str, optional
@@ -905,7 +913,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         chunked : xarray.DataArray
         """
-        if isinstance(chunks, (list, tuple)):
+        if isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
 
         ds = self._to_temp_dataset().chunk(chunks, name_prefix=name_prefix,
@@ -1935,9 +1943,8 @@ class DataArray(AbstractArray, DataWithCoords):
         # attributes that correspond to their indexes into a separate module?
         constructors = {0: lambda x: x,
                         1: pd.Series,
-                        2: pd.DataFrame}
-        if hasattr(pd, 'Panel'):
-            constructors[3] = pd.Panel
+                        2: pd.DataFrame,
+                        3: pdcompat.Panel}
         try:
             constructor = constructors[self.ndim]
         except KeyError:
