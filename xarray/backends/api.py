@@ -609,7 +609,7 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
                    combine='_old_auto', autoclose=None, parallel=False,
-                   **kwargs):
+                   join='outer', **kwargs):
     """Open multiple files as a single dataset.
 
     If combine='by_coords' then the function ``combine_by_coords`` is used to 
@@ -704,6 +704,8 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
+    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+        Passed on to align.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -798,18 +800,20 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
 
             combined = auto_combine(datasets, concat_dim=concat_dim,
                                     compat=compat, data_vars=data_vars,
-                                    coords=coords, from_openmfds=True)
+                                    coords=coords, join=join,
+                                    from_openmfds=True)
         elif combine == 'nested':
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(datasets, concat_dims=concat_dim,
                                        compat=compat, data_vars=data_vars,
-                                       coords=coords, ids=ids)
+                                       coords=coords, ids=ids, join=join)
         elif combine == 'by_coords':
             # Redo ordering from coordinates, ignoring how they were ordered
             # previously
             combined = combine_by_coords(datasets, compat=compat,
-                                         data_vars=data_vars, coords=coords)
+                                         data_vars=data_vars, coords=coords,
+                                         join=join)
         else:
             raise ValueError("{} is an invalid option for the keyword argument"
                              " ``combine``".format(combine))
