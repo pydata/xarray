@@ -1,6 +1,6 @@
+name: xarray-tests
 channels:
   - conda-forge
-name: xarray-tests
 dependencies:
   - python=3.5.3
   - pytest
