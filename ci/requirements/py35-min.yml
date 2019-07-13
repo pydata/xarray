@@ -1,4 +1,4 @@
-name: test_env
+name: xarray-tests
 dependencies:
   - python=3.5.0
   - pytest
