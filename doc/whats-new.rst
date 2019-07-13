@@ -35,6 +35,13 @@ v0.12.3 (10 July 2019)
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
+- The xarray package is now discoverably by mypy (although typing hints
+  coverage is not complete yet. mypy users can now remove from their setup.cfg
+  the lines::
+
+    [mypy-xarray]
+    ignore_missing_imports = True
+
 - New methods :py:meth:`Dataset.to_stacked_array` and
   :py:meth:`DataArray.to_unstacked_dataset` for reshaping Datasets of variables
   with different dimensions
