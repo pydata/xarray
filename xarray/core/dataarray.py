@@ -1272,7 +1272,7 @@ class DataArray(AbstractArray, DataWithCoords):
                                      Mapping[Hashable, Any]] = None,
                     axis=None, **dim_kwargs: Any) -> 'DataArray':
         """Return a new object with an additional axis (or axes) inserted at
-        the corresponding position in the array shape. The new object is a 
+        the corresponding position in the array shape. The new object is a
         view into the underlying array, not a copy.
 
 
