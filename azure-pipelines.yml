@@ -64,7 +64,7 @@ jobs:
   steps:
   - template: ci/azure/install.yml
   - bash: |
-      source activate test_env
+      source activate xarray-tests
       mypy . || exit 0
     displayName: mypy type checks
 
@@ -76,7 +76,7 @@ jobs:
     parameters:
       env_file: doc/environment.yml
   - bash: |
-      source activate test_env
+      source activate xarray-tests
       cd doc
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs
@@ -89,6 +89,6 @@ jobs:
   steps:
   - template: ci/azure/install.yml
   - bash: |
-      source activate test_env
+      source activate xarray-tests
       pytest properties
     displayName: Property based tests
