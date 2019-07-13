@@ -6,11 +6,11 @@ steps:
 - template: add-conda-to-path.yml
 
 - bash: |
-    conda env create -n test_env --file ${{ parameters.env_file }}
+    conda env create -n xarray-tests --file ${{ parameters.env_file }}
   displayName: Install conda dependencies
 
 - bash: |
-    source activate test_env
+    source activate xarray-tests
     pip install -f https://7933911d6844c6c53a7d-47bd50c35cd79bd838daf386af554a83.ssl.cf2.rackcdn.com \
         --no-deps \
         --pre \
@@ -29,12 +29,12 @@ steps:
   displayName: Install upstream dev dependencies
 
 - bash: |
-    source activate test_env
+    source activate xarray-tests
     pip install --no-deps -e .
   displayName: Install xarray
 
 - bash: |
-    source activate test_env
+    source activate xarray-tests
     conda info -a
     conda list
     python xarray/util/print_versions.py
