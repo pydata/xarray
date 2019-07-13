@@ -1042,8 +1042,13 @@ class DataArray(AbstractArray, DataWithCoords):
         align
         """
         indexers = reindex_like_indexers(self, other)
-        return self.reindex(method=method, tolerance=tolerance, copy=copy,
-                            fill_value=fill_value, **indexers)
+        return self.reindex(
+            indexers=indexers,
+            method=method,
+            tolerance=tolerance,
+            copy=copy,
+            fill_value=fill_value,
+        )
 
     def reindex(self, indexers: Optional[Mapping[Hashable, Any]] = None,
                 method: Optional[str] = None, tolerance=None,

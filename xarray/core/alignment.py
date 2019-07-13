@@ -3,7 +3,16 @@ import operator
 import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import suppress
-from typing import Any, Mapping, Optional, Tuple
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+    TYPE_CHECKING,
+)
 
 import numpy as np
 import pandas as pd
@@ -12,6 +21,10 @@ from . import dtypes, utils
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 def _get_joiner(join):
@@ -169,8 +182,8 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
 
     This function is not public API.
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from .dataarray import DataArray  # noqa: F811
+    from .dataset import Dataset  # noqa: F811
 
     if indexes is None:
         indexes = {}
@@ -222,7 +235,10 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
     return out
 
 
-def reindex_like_indexers(target, other):
+def reindex_like_indexers(
+    target: Union['DataArray', 'Dataset'],
+    other: Union['DataArray', 'Dataset'],
+) -> Dict[Hashable, pd.Index]:
     """Extract indexers to align target with other.
 
     Not public API.
@@ -236,7 +252,8 @@ def reindex_like_indexers(target, other):
 
     Returns
     -------
-    Dict[Any, pandas.Index] providing indexes for reindex keyword arguments.
+    Dict[Hashable, pandas.Index] providing indexes for reindex keyword
+    arguments.
 
     Raises
     ------
@@ -310,7 +327,7 @@ def reindex_variables(
     new_indexes : OrderedDict
         Dict of indexes associated with the reindexed variables.
     """
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
 
     # create variables for the new dataset
     reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
@@ -463,8 +480,8 @@ def broadcast(*args, exclude=None):
         a        (x, y) int64 1 1 2 2 3 3
         b        (x, y) int64 5 6 5 6 5 6
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from .dataarray import DataArray  # noqa: F811
+    from .dataset import Dataset  # noqa: F811
 
     if exclude is None:
         exclude = set()
