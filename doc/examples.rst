@@ -7,4 +7,4 @@ Examples
     examples/weather-data
     examples/monthly-means
     examples/multidimensional-coords
-    auto_gallery/index
+    examples/visualization_gallery
