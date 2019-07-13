@@ -179,6 +179,9 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
+    if hasattr(data, '__array_function__'):
+        return data
+
     # validate whether the data is valid data types
     data = np.asarray(data)
 
@@ -207,6 +210,8 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
+    if hasattr(data, '__array_function__'):
+        return data
     data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == 'M':

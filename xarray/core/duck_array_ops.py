@@ -76,6 +76,9 @@ def isnull(data):
         return _isnull(data)
     except TypeError:
         return np.zeros(data.shape, dtype=bool)
+    except:
+        if hasattr(data, '__array_function__'):
+            return np.isnan(data)
 
 
 transpose = _dask_or_eager_func('transpose')
@@ -121,7 +124,11 @@ masked_invalid = _dask_or_eager_func(
 
 
 def asarray(data):
-    return data if isinstance(data, dask_array_type) else np.asarray(data)
+    return (
+        data if (isinstance(data, dask_array_type)
+                    or hasattr(data, '__array_function__'))
+        else np.asarray(data)
+    )
 
 
 def as_shared_dtype(scalars_or_arrays):

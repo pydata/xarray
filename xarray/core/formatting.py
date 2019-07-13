@@ -357,7 +357,10 @@ def set_numpy_options(*args, **kwargs):
 
 
 def short_array_repr(array):
-    array = np.asarray(array)
+
+    if not hasattr(array, '__array_function__'):
+        array = np.asarray(array)
+
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
     options = {
