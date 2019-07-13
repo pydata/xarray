@@ -1280,6 +1280,30 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             result = result._stack_once(dims, new_dim)
         return result
 
+    def stack_all(self, name='stacked'):
+        """
+        Stack all existing dimensions into a single new dimension.
+
+        New dimension will be added at the end, and the corresponding
+        coordinate variables will be combined into a MultiIndex.
+
+        Parameters
+        ----------
+        name : Name of the new dimension. Optional.
+
+        Returns
+        -------
+        stacked : Variable
+            1D stacked Variable with the same attributes
+
+        See also
+        --------
+        DataArray.stack
+        DataArray.unstack
+        """
+        result = self
+        return result.stack(**{name: result.dims})
+
     def _unstack_once(self, dims, old_dim):
         new_dim_names = tuple(dims.keys())
         new_dim_sizes = tuple(dims.values())

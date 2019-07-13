@@ -1501,6 +1501,48 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().stack(dimensions, **dimensions_kwargs)
         return self._from_temp_dataset(ds)
 
+    def stack_all(self, name='stacked') -> 'DataArray':
+        """
+        Stack all existing dimensions into a single new dimension.
+
+        New dimension will be added at the end, and the corresponding
+        coordinate variables will be combined into a MultiIndex.
+
+        Parameters
+        ----------
+        name : Name of the new dimension. Optional.
+
+        Returns
+        -------
+        stacked : 1D DataArray with stacked data.
+
+        Examples
+        --------
+
+        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr
+        <xarray.DataArray (x: 2, y: 3)>
+        array([[0, 1, 2],
+               [3, 4, 5]])
+        Coordinates:
+          * x        (x) |S1 'a' 'b'
+          * y        (y) int64 0 1 2
+        >>> stacked = arr.stack_all()
+        >>> stacked.indexes['z']
+        MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
+                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   names=['x', 'y'],
+                   sortorder=0)
+
+        See also
+        --------
+        DataArray.stack
+        DataArray.unstack
+        """
+        ds = self._to_temp_dataset().stack_all()
+        return self._from_temp_dataset(ds)
+
     def unstack(self, dim: Union[Hashable, Sequence[Hashable], None] = None
                 ) -> 'DataArray':
         """
