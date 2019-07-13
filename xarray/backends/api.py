@@ -4,8 +4,9 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
-from typing import Callable, Dict, Hashable, Iterable, Mapping, Tuple, Union
 from textwrap import dedent
+from typing import (Callable, Dict, Hashable, Iterable, Mapping, Tuple, Union,
+                    TYPE_CHECKING)
 
 import numpy as np
 
@@ -17,7 +18,6 @@ from ..core.combine import (
     _nested_combine,
     _infer_concat_order_from_positions
 )
-from ..core.pycompat import TYPE_CHECKING
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter, AbstractDataStore
 from .locks import _get_scheduler

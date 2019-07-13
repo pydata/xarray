@@ -8,14 +8,14 @@ from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 from typing import (
     AbstractSet, Any, Callable, Iterable, List, Mapping, Optional, Sequence,
-    Tuple, Union)
+    Tuple, Union, TYPE_CHECKING)
 
 import numpy as np
 
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import TYPE_CHECKING, dask_array_type
+from .pycompat import dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
 

@@ -1,12 +1,11 @@
 from collections import OrderedDict
 from typing import (Any, Dict, Hashable, List, Mapping, Optional, Sequence,
-                    Set, Tuple, Union)
+                    Set, Tuple, Union, TYPE_CHECKING)
 
 import pandas as pd
 
 from . import dtypes, pdcompat
 from .alignment import deep_align
-from .pycompat import TYPE_CHECKING
 from .utils import Frozen
 from .variable import (
     Variable, as_variable, assert_unique_multiindex_level_names)

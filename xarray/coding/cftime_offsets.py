@@ -41,18 +41,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-import typing
 from datetime import timedelta
 from functools import partial
+from typing import ClassVar
 
 import numpy as np
 
-from ..core.pycompat import TYPE_CHECKING
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
-
-if TYPE_CHECKING:
-    from typing import ClassVar, Optional
 
 
 def get_date_type(calendar):

@@ -6,7 +6,7 @@ Installation
 Required dependencies
 ---------------------
 
-- Python 3.5, 3.6, or 3.7
+- Python (3.5.3 or later)
 - `numpy <http://www.numpy.org/>`__ (1.12 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.19.2 or later)
 

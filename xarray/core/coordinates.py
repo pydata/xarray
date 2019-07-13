@@ -1,7 +1,7 @@
 import collections.abc
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Any, Hashable, Mapping, Iterator, Union
+from typing import Any, Hashable, Mapping, Iterator, Union, TYPE_CHECKING
 
 import pandas as pd
 
@@ -10,7 +10,6 @@ from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
-from .pycompat import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
