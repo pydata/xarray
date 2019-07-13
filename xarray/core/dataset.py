@@ -3060,10 +3060,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
               compat='no_conflicts', join='outer', fill_value=dtypes.NA):
         """Merge the arrays of two datasets into a single dataset.
 
-        This method generally not allow for overriding data, with the exception
-        of attributes, which are ignored on the second dataset. Variables with
-        the same name are checked for conflicts via the equals or identical
-        methods.
+        This method generally does not allow for overriding data, with the
+        exception of attributes, which are ignored on the second dataset.
+        Variables with the same name are checked for conflicts via the equals
+        or identical methods.
 
         Parameters
         ----------
