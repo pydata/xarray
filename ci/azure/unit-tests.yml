@@ -3,14 +3,14 @@ steps:
 - template: install.yml
 
 - bash: |
-    source activate test_env
+    source activate xarray-tests
     python -OO -c "import xarray"
   displayName: Import xarray
 
 # Work around for allowed test failures:
 # https://github.com/microsoft/azure-pipelines-tasks/issues/9302
 - bash: |
-    source activate test_env
+    source activate xarray-tests
     pytest xarray \
     --junitxml=junit/test-results.xml \
     --cov=xarray \
