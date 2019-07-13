@@ -77,6 +77,7 @@ extensions = [
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
     "sphinx_gallery.gen_gallery",
+    "nbsphinx",
 ]
 
 extlinks = {
@@ -84,12 +85,16 @@ extlinks = {
     "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
 }
 
-sphinx_gallery_conf = {
-    "examples_dirs": "gallery",
-    "gallery_dirs": "auto_gallery",
-    "backreferences_dir": False,
-    "expected_failing_examples": list(allowed_failures),
-}
+nbsphinx_timeout = 600
+nbsphinx_execute = "always"
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+
+You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+
+.. |Binder| image:: https://mybinder.org/badge.svg
+   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+"""
 
 autosummary_generate = True
 autodoc_typehints = "none"
@@ -137,7 +142,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build"]
+exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
