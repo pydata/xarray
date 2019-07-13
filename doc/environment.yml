@@ -24,4 +24,7 @@ dependencies:
   - pillow=5.4.1
   - sphinx_rtd_theme=0.4.2
   - mock=2.0.0
+  - nbsphinx=0.4.2
+  - jupyter_client=5.3.1
+  - ipykernel=5.1.1
   - pip
