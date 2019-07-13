@@ -18,6 +18,9 @@ What's New
 v0.12.4 (unreleased)
 -------------------
 
+This release increases the minimum required Python version from 3.5.0 to 3.5.3
+(:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
