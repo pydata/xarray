@@ -607,7 +607,7 @@ class _MultiFileCloser:
 
 def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
                    compat='no_conflicts', preprocess=None, engine=None,
-                   lock=None, data_vars='all', coords='different',
+                   lock=None, data_vars='minimal', coords='different',
                    combine='_old_auto', autoclose=None, parallel=False,
                    **kwargs):
     """Open multiple files as a single dataset.
