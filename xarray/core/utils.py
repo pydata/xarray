@@ -17,11 +17,6 @@ import pandas as pd
 
 from .pycompat import dask_array_type
 
-try:  # Fix typed collections in Python 3.5.2
-    from .pycompat import Mapping, MutableMapping, MutableSet  # noqa: F811
-except ImportError:
-    pass
-
 
 K = TypeVar('K')
 V = TypeVar('V')

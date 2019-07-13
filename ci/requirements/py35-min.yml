@@ -2,7 +2,7 @@ name: test_env
 channels:
   - conda-forge
 dependencies:
-  - python=3.5.2
+  - python=3.5.3
   - pytest
   - flake8
   - mock
