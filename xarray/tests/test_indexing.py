@@ -145,11 +145,11 @@ class TestIndexers:
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
     def test_read_only_view(self):
-        arr = DataArray(np.random.rand(3,3), 
-                        coords={'x': np.arange(3), 'y': np.arange(3)}, 
-                        dims=('x', 'y'))    # Create a 2D DataArray 
-        arr = arr.expand_dims({'z': 3}, -1) # Add a new dimension 'z'
-        arr['z'] = np.arange(3)         # New coordinates to dimension 'z'
+        arr = DataArray(np.random.rand(3, 3),
+                        coords={'x': np.arange(3), 'y': np.arange(3)},
+                        dims=('x', 'y'))     # Create a 2D DataArray
+        arr = arr.expand_dims({'z': 3}, -1)  # Add a new dimension 'z'
+        arr['z'] = np.arange(3)              # New coords to dimension 'z'
         try:
             mess = "No exception?!"
             arr.loc[0, 0, 0] = 999
