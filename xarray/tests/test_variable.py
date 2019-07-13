@@ -1342,9 +1342,11 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(actual, expected)
 
     def test_stack_all(self):
-        v = Variable(['x', 'y', 'z'], [[[0, 1], [2, 3]], [[0, 1], [2, 3]]], {'foo': 'bar'})
+        data = [[[0, 1], [2, 3]], [[0, 1], [2, 3]]]
+        v = Variable(['x', 'y', 'z'], data, {'foo': 'bar'})
         actual = v.test_stack_all()
         expected = Variable('stacked', [0, 1, 2, 3, 0, 1, 2, 3], v.attrs)
+        assert_identical(actual, expected)
 
     def test_stack_errors(self):
         v = Variable(['x', 'y'], [[0, 1], [2, 3]], {'foo': 'bar'})
