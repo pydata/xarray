@@ -29,7 +29,7 @@ Bug fixes
 
 Change error message for :py:func:`~xarray.apply_ufunc` to 
 specify "an input variable" is missing dimensions rather than
-"the input variable"
+"the input variable" (:issue:`2078`).
 By `Rick Russotto <https://github.com/rdrussotto>`_.
 
 .. _whats-new.0.12.3:
