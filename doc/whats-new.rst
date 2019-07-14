@@ -27,6 +27,10 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
+- In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
+  ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
+  By `David Brochart <https://github.com/davidbrochart>`_.
+
 Bug fixes
 ~~~~~~~~~
 
