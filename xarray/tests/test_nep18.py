@@ -18,27 +18,21 @@ from xarray.core.npcompat import IS_NEP18_ACTIVE
 sparse = pytest.importorskip('sparse')
 
 
+@pytest.mark.parametrize("func", [
+    lambda s: s[5:15, 5:15],
+    lambda s: s + 1,
+    lambda s: s + s,
+    lambda s: 2 * s,
+    lambda s: np.sin(s),
+    lambda s: np.sum(s, axis=0),
+    lambda s: np.sum(s, axis=0, keepdims=True),
+    pytest.param(lambda s: s.groupby('dim_0').sum(),
+                 marks=pytest.mark.xfail)
+])
 @pytest.mark.skipif(not IS_NEP18_ACTIVE,
                     reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled")
-def test_sparse():
+def test_sparse(func):
 
     S = sparse.random((100, 100))
     A = xr.DataArray(S)
-
-    Asub = A[5:15, 5:15]
-    S[5:15, 5:15]
-
-    assert isinstance(Asub.data, sparse.SparseArray)
-    # assert np.allclose(Asub.data, Ssub)
-
-    A.sum()
-    # assert np.allclose(Asum.data, S.sum())
-
-    A.mean()
-    # assert np.allclose(Amean.data, S.mean())
-
-    A.groupby('dim_0').sum()
-    # assert np.allclose(Asum0, S.sum(axis=0))
-
-    A.groupby('dim_1').sum()
-    # assert np.allclose(Asum1, S.sum(axis=1))
+    assert isinstance(func(A).data, sparse.SparseArray)
