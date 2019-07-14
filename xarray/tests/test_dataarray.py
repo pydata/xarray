@@ -438,6 +438,15 @@ class TestDataArray:
         assert not a.broadcast_equals(c)
         assert not c.broadcast_equals(a)
 
+    def test_broadcast_like(self):
+        arr1 = DataArray(np.ones((2, 3)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b'], 'y': ['a', 'b', 'c']})
+        arr2 = DataArray(np.ones((3, 2)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b', 'c'], 'y': ['a', 'b']})
+        broad1 = xr.broadcast(arr1, arr2)[1]
+        broad2 = arr1.broadcast_like(arr2)
+        assert broad1.identical(broad2)
+
     def test_getitem(self):
         # strings pull out dataarrays
         assert_identical(self.dv, self.ds['foo'])
