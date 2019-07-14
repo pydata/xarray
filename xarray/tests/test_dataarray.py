@@ -3006,7 +3006,7 @@ class TestDataArray:
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
 
     def test_to_series_index_immutability(self):
-        # Test for mutability of Pandas series from #2949
+        # Test for immutability of Pandas series from #2949
         s = pd.Series(np.random.randn(10), name='persistent')
         array = xr.DataArray.from_series(s)
 
