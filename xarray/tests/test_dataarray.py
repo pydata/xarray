@@ -3005,6 +3005,15 @@ class TestDataArray:
         with raises_regex(ValueError, 'cannot convert'):
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
 
+    def test_to_series_index(self):
+        # Test for mutability of Pandas series from #2949
+        dates = pd.date_range('01-Jan-2019', '01-Jan-2020', name='persistent')
+        s = pd.Series(np.random.randn(dates.size), dates)
+        array = xr.DataArray.from_series(s)
+        assert array.to_series().index.name == 'persistent'
+        array.to_series().index.name = 'mutable?'
+        assert array.to_series().index.name == 'persistent'
+
     def test_to_dataframe(self):
         # regression test for #260
         arr = DataArray(np.random.randn(3, 4),
