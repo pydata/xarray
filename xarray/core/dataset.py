@@ -3135,7 +3135,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
-    def drop(self, labels, dim=None, *, errors='raise'):
+    def drop(self, labels=None, dim=None, *, errors='raise', **dim_kwargs):
         """Drop variables or index labels from this dataset.
 
         Parameters
@@ -3155,6 +3155,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         dropped : Dataset
         """
+        if len(dim_kwargs) > 0:
+            if labels is not None or dim is not None:
+                raise ValueError('cannot specify both `dim` and `labels` along'
+                                 'with keyword arguments')
+            if len(dim_kwargs) > 1:
+                raise ValueError('cannot specify multiple dimensions')
+            dim = list(dim_kwargs.keys())[0]
+            labels = list(dim_kwargs.values())
+            if utils.is_list_like(labels[0]):
+                labels = labels[0]
+
         if errors not in ['raise', 'ignore']:
             raise ValueError('errors must be either "raise" or "ignore"')
         if utils.is_scalar(labels):
