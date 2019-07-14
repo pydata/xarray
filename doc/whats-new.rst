@@ -24,6 +24,9 @@ This release increases the minimum required Python version from 3.5.0 to 3.5.3
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
+- Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -53,6 +56,7 @@ New functions/methods
   with :py:meth:`~Dataset.rename_vars` and :py:meth:`~Dataset.rename_dims`
   (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
+
 
 Enhancements
 ~~~~~~~~~~~~
