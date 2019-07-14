@@ -1187,8 +1187,9 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
     def __init__(self, array):
         if not hasattr(array, '__array_function__'):
             raise TypeError(
-                'NdArrayLikeIndexingAdapter must wrap an object that implements '
-                'the __array_function__ protocol')
+                'NdArrayLikeIndexingAdapter must wrap an object that '
+                'implements the __array_function__ protocol'
+            )
         self.array = array
 
 

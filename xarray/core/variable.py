@@ -186,10 +186,11 @@ def as_compatible_data(data, fastpath=False):
                 return data
             else:
                 raise TypeError(
-                    'Got an NumPy-like array type providing the __array_function__ '
-                    'protocol but NEP18 is not enabled. Check that numpy >= v1.16 '
-                    'and that the environment variable '
-                    '"NUMPY_EXPERIMENTAL_ARRAY_FUNCTION" is set to "1"')
+                    'Got an NumPy-like array type providing the '
+                    '__array_function__ protocol but NEP18 is not enabled. '
+                    'Check that numpy >= v1.16 and that the environment '
+                    'variable "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION" is set to '
+                    '"1"')
 
     # validate whether the data is valid data types
     data = np.asarray(data)
