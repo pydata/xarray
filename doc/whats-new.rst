@@ -27,6 +27,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed bug in :py:meth:`~DataArray.to_series` where returned Pandas ``Index``
+  was mutable (:issue:`2949`).
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
+
 .. _whats-new.0.12.3:
 
 v0.12.3 (10 July 2019)
