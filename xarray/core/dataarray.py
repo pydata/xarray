@@ -1965,7 +1965,8 @@ class DataArray(AbstractArray, DataWithCoords):
         (in the form of a :py:class:`pandas.MultiIndex`).
         """
         index = self.coords.to_index()
-        series = pd.Series(self.values.reshape(-1), index=index, name=self.name)
+        series = pd.Series(self.values.reshape(-1), index=index,
+                           name=self.name)
         series.index = series.index.copy(deep=False)
         return series
 
