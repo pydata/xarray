@@ -1334,9 +1334,13 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
-    def set_index(self, indexes: Optional[Mapping[Hashable, Any]] = None,
-                  append: bool = False, inplace: Optional[bool] = None,
-                  **indexes_kwargs: Any) -> Optional['DataArray']:
+    def set_index(
+        self,
+        indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
+        append: bool = False,
+        inplace: bool = None,
+        **indexes_kwargs: Union[Hashable, Sequence[Hashable]]
+    ) -> Optional['DataArray']:
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -1375,9 +1379,12 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace(coords=coords)
 
-    def reset_index(self, dims_or_levels: Union[Hashable, Sequence[Hashable]],
-                    drop: bool = False, inplace: Optional[bool] = None
-                    ) -> Optional['DataArray']:
+    def reset_index(
+        self,
+        dims_or_levels: Union[Hashable, Sequence[Hashable]],
+        drop: bool = False,
+        inplace: bool = None
+    ) -> Optional['DataArray']:
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
@@ -1411,12 +1418,12 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace(coords=coords)
 
-    def reorder_levels(self,
-                       dim_order: Optional[
-                           Mapping[Hashable, Sequence[int]]] = None,
-                       inplace: Optional[bool] = None,
-                       **dim_order_kwargs: Sequence[int]
-                       ) -> Optional['DataArray']:
+    def reorder_levels(
+        self,
+        dim_order: Mapping[Hashable, Sequence[int]] = None,
+        inplace: bool = None,
+        **dim_order_kwargs: Sequence[int]
+    ) -> Optional['DataArray']:
         """Rearrange index levels using input order.
 
         Parameters
@@ -1457,9 +1464,11 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace(coords=coords)
 
-    def stack(self, dimensions: Optional[
-            Mapping[Hashable, Sequence[Hashable]]] = None,
-            **dimensions_kwargs: Sequence[Hashable]) -> 'DataArray':
+    def stack(
+        self,
+        dimensions: Mapping[Hashable, Sequence[Hashable]] = None,
+        **dimensions_kwargs: Sequence[Hashable]
+    ) -> 'DataArray':
         """
         Stack any number of existing dimensions into a single new dimension.
 

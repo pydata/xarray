@@ -39,6 +39,7 @@ from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
+    from .merge import DatasetLike
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -2710,8 +2711,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_vars_and_dims(
             variables, dims=new_dims, coord_names=coord_names)
 
-    def set_index(self, indexes=None, append=False, inplace=None,
-                  **indexes_kwargs):
+    def set_index(
+        self,
+        indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
+        append: bool = False,
+        inplace: bool = None,
+        **indexes_kwargs: Union[Hashable, Sequence[Hashable]]
+    ) -> 'Dataset':
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
 
@@ -2749,7 +2755,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 
-    def reset_index(self, dims_or_levels, drop=False, inplace=None):
+    def reset_index(
+        self,
+        dims_or_levels: Union[Hashable, Sequence[Hashable]],
+        drop: bool = False,
+        inplace: bool = None,
+    ) -> 'Dataset':
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
@@ -2774,14 +2785,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.set_index
         """
         inplace = _check_inplace(inplace)
-        variables, coord_names = split_indexes(dims_or_levels, self._variables,
-                                               self._coord_names,
-                                               self._level_coords, drop=drop)
+        variables, coord_names = split_indexes(
+            dims_or_levels,
+            self._variables,
+            self._coord_names,
+            cast(Mapping[Hashable, Hashable], self._level_coords),
+            drop=drop,
+        )
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 
-    def reorder_levels(self, dim_order=None, inplace=None,
-                       **dim_order_kwargs):
+    def reorder_levels(
+        self,
+        dim_order: Mapping[Hashable, Sequence[int]] = None,
+        inplace: bool = None,
+        **dim_order_kwargs: Sequence[int]
+    ) -> 'Dataset':
         """Rearrange index levels using input order.
 
         Parameters
@@ -2854,7 +2873,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes)
 
-    def stack(self, dimensions=None, **dimensions_kwargs):
+    def stack(
+        self,
+        dimensions: Mapping[Hashable, Sequence[Hashable]] = None,
+        **dimensions_kwargs: Sequence[Hashable]
+    ) -> 'Dataset':
         """
         Stack any number of existing dimensions into a single new dimension.
 
@@ -2886,8 +2909,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._stack_once(dims, new_dim)
         return result
 
-    def to_stacked_array(self, new_dim, sample_dims, variable_dim='variable',
-                         name=None):
+    def to_stacked_array(
+        self,
+        new_dim: Hashable,
+        sample_dims: Sequence[Hashable],
+        variable_dim: str = 'variable',
+        name: Hashable = None
+    ) -> 'DataArray':
         """Combine variables of differing dimensionality into a DataArray
         without broadcasting.
 
@@ -2896,9 +2924,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        new_dim : str
+        new_dim : Hashable
             Name of the new stacked coordinate
-        sample_dims : Sequence[str]
+        sample_dims : Sequence[Hashable]
             Dimensions that **will not** be stacked. Each array in the dataset
             must share these dimensions. For machine learning applications,
             these define the dimensions over which samples are drawn.
@@ -2999,7 +3027,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once(self, dim):
+    def _unstack_once(self, dim: Hashable) -> 'Dataset':
         index = self.get_index(dim)
         # GH2619. For MultiIndex, we need to call remove_unused.
         if LooseVersion(pd.__version__) >= "0.20":
@@ -3018,7 +3046,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
 
-        variables = OrderedDict()
+        variables = OrderedDict()  # type: OrderedDict[Hashable, Variable]
         indexes = OrderedDict(
             (k, v) for k, v in self.indexes.items() if k != dim)
 
@@ -3039,7 +3067,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes)
 
-    def unstack(self, dim=None):
+    def unstack(
+        self,
+        dim: Union[Hashable, Iterable[Hashable]] = None
+    ) -> 'Dataset':
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -3048,7 +3079,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dim : str or sequence of str, optional
+        dim : Hashable or iterable of Hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
 
@@ -3061,12 +3092,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         Dataset.stack
         """
-
         if dim is None:
-            dims = [d for d in self.dims if isinstance(self.get_index(d),
-                                                       pd.MultiIndex)]
+            dims = [
+                d for d in self.dims
+                if isinstance(self.get_index(d), pd.MultiIndex)
+            ]
         else:
-            dims = [dim] if isinstance(dim, str) else dim
+            if isinstance(dim, str) or not isinstance(dim, Iterable):
+                dims = [dim]
+            else:
+                dims = list(dim)
 
             missing_dims = [d for d in dims if d not in self.dims]
             if missing_dims:
@@ -3084,19 +3119,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._unstack_once(dim)
         return result
 
-    def update(
-        self,
-        other: Union[
-            'Dataset',
-            Mapping[Hashable, Union[
-                'DataArray',
-                Variable,
-                Tuple[Hashable, Any],
-                Tuple[Sequence[Hashable], Any],
-            ]],
-        ],
-        inplace: bool = None
-    ) -> 'Dataset':
+    def update(self, other: 'DatasetLike', inplace: bool = None) -> 'Dataset':
         """Update this dataset's variables with those from another dataset.
 
         Parameters
@@ -3131,8 +3154,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
 
-    def merge(self, other, inplace=None, overwrite_vars=frozenset(),
-              compat='no_conflicts', join='outer', fill_value=dtypes.NA):
+    def merge(
+        self,
+        other: 'DatasetLike',
+        inplace: bool = None,
+        overwrite_vars: Union[Hashable, Iterable[Hashable]] = frozenset(),
+        compat: str = 'no_conflicts',
+        join: str = 'outer',
+        fill_value: Any = dtypes.NA
+    ) -> 'Dataset':
         """Merge the arrays of two datasets into a single dataset.
 
         This method generally does not allow for overriding data, with the
@@ -3147,7 +3177,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         inplace : bool, optional
             If True, merge the other dataset into this dataset in-place.
             Otherwise, return a new dataset object.
-        overwrite_vars : str or sequence, optional
+        overwrite_vars : Hashable or iterable of Hashable, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
         compat : {'broadcast_equals', 'equals', 'identical',
