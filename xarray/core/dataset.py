@@ -6,9 +6,9 @@ from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
 from pathlib import Path
-from typing import (Any, Dict, Hashable, Iterable, Iterator, List,
+from typing import (Any, DefaultDict, Dict, Hashable, Iterable, Iterator, List,
                     Mapping, MutableMapping, Optional, Sequence, Set, Tuple,
-                    Union, cast)
+                    Union, cast, TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
@@ -30,21 +30,11 @@ from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
     merge_variables)
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import TYPE_CHECKING, dask_array_type
+from .pycompat import dask_array_type
 from .utils import (Frozen, SortedKeysDict, _check_inplace,
                     decode_numpy_dict_values, either_dict_or_kwargs, hashable,
                     maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
-
-# Support for Python 3.5.0 ~ 3.5.1
-try:
-    from .pycompat import Mapping  # noqa: F811
-except ImportError:
-    pass
-try:
-    from typing import DefaultDict
-except ImportError:
-    pass
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -223,8 +213,7 @@ def split_indexes(
             not isinstance(dims_or_levels, Sequence)):
         dims_or_levels = [dims_or_levels]
 
-    dim_levels \
-        = defaultdict(list)  # type: DefaultDict[Any, List[Hashable]]
+    dim_levels = defaultdict(list)  # type: DefaultDict[Any, List[Hashable]]
     dims = []
     for k in dims_or_levels:
         if k in level_coords:
@@ -2516,7 +2505,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def expand_dims(self, dim=None, axis=None, **dim_kwargs):
         """Return a new object with an additional axis (or axes) inserted at
-        the corresponding position in the array shape.
+        the corresponding position in the array shape.  The new object is a
+        view into the underlying array, not a copy.
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
@@ -3071,10 +3061,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
               compat='no_conflicts', join='outer', fill_value=dtypes.NA):
         """Merge the arrays of two datasets into a single dataset.
 
-        This method generally not allow for overriding data, with the exception
-        of attributes, which are ignored on the second dataset. Variables with
-        the same name are checked for conflicts via the equals or identical
-        methods.
+        This method generally does not allow for overriding data, with the
+        exception of attributes, which are ignored on the second dataset.
+        Variables with the same name are checked for conflicts via the equals
+        or identical methods.
 
         Parameters
         ----------

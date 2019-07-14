@@ -4,7 +4,7 @@ import warnings
 from collections import OrderedDict
 from numbers import Number
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
-                    Optional, Sequence, Tuple, Union, cast)
+                    Optional, Sequence, Tuple, Union, cast, TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,6 @@ from .coordinates import (
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
-from .pycompat import TYPE_CHECKING
 from .options import OPTIONS
 from .utils import _check_inplace, either_dict_or_kwargs, ReprObject
 from .variable import (
@@ -1272,7 +1271,9 @@ class DataArray(AbstractArray, DataWithCoords):
                                      Mapping[Hashable, Any]] = None,
                     axis=None, **dim_kwargs: Any) -> 'DataArray':
         """Return a new object with an additional axis (or axes) inserted at
-        the corresponding position in the array shape.
+        the corresponding position in the array shape. The new object is a
+        view into the underlying array, not a copy.
+
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
