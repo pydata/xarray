@@ -1255,20 +1255,29 @@ class TestDataArray:
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
 
+    def test_broadcast_like_naive(self):
+        arr1 = DataArray(np.ones((2, 3)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b'], 'y': ['a', 'b', 'c']})
+        arr2 = DataArray(np.ones((3, 2)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b', 'c'], 'y': ['a', 'b']})
+        orig1, orig2 = broadcast(arr1, arr2)
+        new1 = arr2.broadcast_like_naive(arr1)
+        new2 = arr1.broadcast_like_naive(arr2)
+      
+        assert orig1.identical(new1)
+        assert orig2.identical(new2)
+
     def test_broadcast_like(self):
-        original1 = DataArray(np.random.randn(5),
-                              [('x', range(5))])
-
-        original2 = DataArray(np.random.randn(6),
-                              [('y', range(6))])
-
-        expected1, expected2 = broadcast(original1, original2)
-
-        assert_identical(original1.broadcast_like(original2),
-                         expected1.transpose('y', 'x'))
-
-        assert_identical(original2.broadcast_like(original1),
-                         expected2)
+        arr1 = DataArray(np.ones((2, 3)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b'], 'y': ['a', 'b', 'c']})
+        arr2 = DataArray(np.ones((3, 2)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b', 'c'], 'y': ['a', 'b']})
+        orig1, orig2 = broadcast(arr1, arr2)
+        new1 = arr2.broadcast_like(arr1)
+        new2 = arr1.broadcast_like(arr2)
+      
+        assert orig1.identical(new1)
+        assert orig2.identical(new2)
 
     def test_reindex_like(self):
         foo = DataArray(np.random.randn(5, 6),

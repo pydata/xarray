@@ -15,7 +15,7 @@ from . import (
     utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
-from .alignment import (align, _broadcast_helper,
+from .alignment import (align, broadcast, _broadcast_helper,
                         _get_broadcast_dims_map_common_coords,
                         reindex_like_indexers)
 from .common import AbstractArray, DataWithCoords
@@ -995,20 +995,67 @@ class DataArray(AbstractArray, DataWithCoords):
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
 
+    def broadcast_like_naive(self,
+                       other: Union['DataArray', Dataset],
+                       exclude=None) -> 'DataArray':
+        return broadcast(self, other)[1]
+
     def broadcast_like(self,
                        other: Union['DataArray', Dataset],
                        exclude=None) -> 'DataArray':
-        """Broadcast this DataArray against another Dataset or DataArray.
+        """Broadcast a DataArray to the shape of another DataArray or Dataset
+
         This is equivalent to xr.broadcast(other, self)[1]
+
+        xarray objects are broadcast against each other in arithmetic
+        operations, so this method is not be necessary for most uses.
+
+        If no change is needed, the input data is returned to the output
+        without being copied.
+
+        If new coords are added by the broadcast, their values are
+        NaN filled.
 
         Parameters
         ----------
         other : Dataset or DataArray
             Object against which to broadcast this array.
+
         exclude : sequence of str, optional
             Dimensions that must not be broadcasted
-        """
 
+        Returns
+        -------
+        new_da: xr.DataArray
+
+        Examples
+        --------
+
+        >>> arr1
+        <xarray.DataArray (x: 2, y: 3)>
+        array([[0.824093, 0.769792, 0.571621],
+               [0.310378, 0.480418, 0.062015]])
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+          * y        (y) <U1 'a' 'b' 'c'
+        >>> arr2
+        <xarray.DataArray (x: 3, y: 2)>
+        array([[0.852992, 0.106589],
+               [0.087549, 0.563304],
+               [0.675744, 0.285752]])
+        Coordinates:
+          * x        (x) <U1 'a' 'b' 'c'
+          * y        (y) <U1 'a' 'b'
+        >>> arr1.broadcast_like(arr2)
+        <xarray.DataArray (x: 3, y: 3)>
+        array([[0.852992, 0.106589,      nan],
+               [0.087549, 0.563304,      nan],
+               [0.675744, 0.285752,      nan]])
+        Coordinates:
+          * x        (x) object 'a' 'b' 'c'
+          * y        (y) object 'a' 'b' 'c'
+
+        """
         if exclude is None:
             exclude = set()
         args = align(other, self, join='outer', copy=False, exclude=exclude)

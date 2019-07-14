@@ -25,7 +25,8 @@ New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
 - Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
+  <http://github.com/DavidMertz>`_.
 
 Enhancements
 ~~~~~~~~~~~~
