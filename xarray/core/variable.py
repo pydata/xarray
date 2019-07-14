@@ -17,6 +17,7 @@ from .indexing import (
     as_indexable)
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
+from .npcompat import IS_NEP18_ACTIVE
 from .utils import (
     OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
@@ -179,8 +180,16 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
-    if hasattr(data, '__array_function__'):
-        return data
+    if not isinstance(data, np.ndarray):
+        if hasattr(data, '__array_function__'):
+            if IS_NEP18_ACTIVE:
+                return data
+            else:
+                raise TypeError(
+                    'Got an NumPy-like array type providing the __array_function__ '
+                    'protocol but NEP18 is not enabled. Check that numpy >= v1.16 '
+                    'and that the environment variable '
+                    '"NUMPY_EXPERIMENTAL_ARRAY_FUNCTION" is set to "1"')
 
     # validate whether the data is valid data types
     data = np.asarray(data)
@@ -210,8 +219,6 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    if hasattr(data, '__array_function__'):
-        return data
     data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == 'M':
@@ -293,7 +300,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
     @property
     def data(self):
-        if isinstance(self._data, dask_array_type):
+        if hasattr(self._data, '__array_function__'):
             return self._data
         else:
             return self.values
