@@ -36,6 +36,7 @@ arm_xfail = pytest.mark.xfail(platform.machine() == 'aarch64' or
                               'arm' in platform.machine(),
                               reason='expected failure on ARM')
 
+
 def _importorskip(modname, minversion=None):
     try:
         mod = importlib.import_module(modname)

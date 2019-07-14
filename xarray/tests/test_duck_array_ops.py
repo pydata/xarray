@@ -251,6 +251,7 @@ def assert_dask_array(da, dask):
     if dask and da.ndim > 0:
         assert isinstance(da.data, dask_array_type)
 
+
 @arm_xfail
 @pytest.mark.parametrize('dask', [False, True])
 def test_datetime_reduce(dask):
