@@ -30,6 +30,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Improved error handling and documentation for `.expand_dims()` 
+  read-only view.
+
 .. _whats-new.0.12.3:
 
 v0.12.3 (10 July 2019)

@@ -2505,7 +2505,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def expand_dims(self, dim=None, axis=None, **dim_kwargs):
         """Return a new object with an additional axis (or axes) inserted at
-        the corresponding position in the array shape.
+        the corresponding position in the array shape.  The new object is a
+        view into the underlying array, not a copy.
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
