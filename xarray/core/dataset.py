@@ -17,7 +17,8 @@ import xarray as xr
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from . import (alignment, dtypes, duck_array_ops, formatting, groupby,
                indexing, ops, pdcompat, resample, rolling, utils)
-from .alignment import align
+from .alignment import (align, _broadcast_helper,
+                        _get_broadcast_dims_map_common_coords)
 from .common import (ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
                      _contains_datetime_like_objects)
 from .coordinates import (DatasetCoordinates, LevelCoordinatesSource,
@@ -2015,6 +2016,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self, indexers, method=method, tolerance=tolerance
         )
         return self.isel_points(dim=dim, **pos_indexers)
+
+    def broadcast_like(self,
+                       other: Union['Dataset', 'DataArray'],
+                       exclude=None) -> 'Dataset':
+        """Broadcast this DataArray against another Dataset or DataArray.
+        This is equivalent to xr.broadcast(other, self)[1]
+
+        Parameters
+        ----------
+        other : Dataset or DataArray
+            Object against which to broadcast this array.
+        exclude : sequence of str, optional
+            Dimensions that must not be broadcasted
+
+        """
+
+        if exclude is None:
+            exclude = set()
+        args = align(other, self, join='outer', copy=False, exclude=exclude)
+
+        dims_map, common_coords = _get_broadcast_dims_map_common_coords(
+            args, exclude)
+
+        return _broadcast_helper(self, exclude, dims_map, common_coords)
 
     def reindex_like(self, other, method=None, tolerance=None, copy=True,
                      fill_value=dtypes.NA):
