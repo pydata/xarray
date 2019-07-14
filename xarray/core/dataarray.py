@@ -996,8 +996,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def broadcast_like_naive(self,
-                       other: Union['DataArray', Dataset],
-                       exclude=None) -> 'DataArray':
+                             other: Union['DataArray', Dataset],
+                             exclude=None) -> 'DataArray':
         return broadcast(self, other)[1]
 
     def broadcast_like(self,

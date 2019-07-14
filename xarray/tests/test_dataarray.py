@@ -1263,7 +1263,7 @@ class TestDataArray:
         orig1, orig2 = broadcast(arr1, arr2)
         new1 = arr2.broadcast_like_naive(arr1)
         new2 = arr1.broadcast_like_naive(arr2)
-      
+ 
         assert orig1.identical(new1)
         assert orig2.identical(new2)
 
@@ -1275,7 +1275,7 @@ class TestDataArray:
         orig1, orig2 = broadcast(arr1, arr2)
         new1 = arr2.broadcast_like(arr1)
         new2 = arr1.broadcast_like(arr2)
-      
+
         assert orig1.identical(new1)
         assert orig2.identical(new2)
 
