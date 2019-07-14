@@ -1411,6 +1411,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
             'a' means append (create if does not exist).
+            When ``append_dim`` is set, ``mode`` can be omitted as it is
+            internally set to ``'a'``.
         synchronizer : object, optional
             Array synchronizer
         group : str, optional
@@ -1426,7 +1428,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
         append_dim: hashable, optional
-            If mode='a', the dimension on which the data will be appended.
+            If set, the dimension on which the data will be appended.
 
         References
         ----------

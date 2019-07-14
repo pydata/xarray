@@ -1118,7 +1118,8 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    if mode == "a":
+    if (mode == 'a') or (append_dim is not None):
+        mode = 'a'
         _validate_datatypes_for_zarr_append(dataset)
         _validate_append_dim_and_encoding(dataset, store, append_dim,
                                           group=group,
