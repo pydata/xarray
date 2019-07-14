@@ -3005,11 +3005,28 @@ class TestDataArray:
         with raises_regex(ValueError, 'cannot convert'):
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
 
-    def test_to_series_index(self):
+    def test_to_series_index_immutability(self):
         # Test for mutability of Pandas series from #2949
-        dates = pd.date_range('01-Jan-2019', '01-Jan-2020', name='persistent')
-        s = pd.Series(np.random.randn(dates.size), dates)
+        s = pd.Series(np.random.randn(10), name='persistent')
         array = xr.DataArray.from_series(s)
+
+        # Test `index.data`
+        with pytest.raises(AttributeError):
+            array.to_series().index.data = np.random.randn(10)
+
+        # Test `index.dtype`
+        with pytest.raises(AttributeError):
+            array.to_series().index.dtype = np.float64
+
+        # Test `index.copy`
+        assert callable(array.to_series().index.copy)
+        array.to_series().index.copy = 'mutable?'
+        assert callable(array.to_series().index.copy)
+
+        # Test `index.name`
+        dates = pd.date_range('01-Jan-2019', '01-Jan-2020', name='persistent')
+        series = pd.Series(np.random.randn(dates.size), dates)
+        array = xr.DataArray.from_series(series)
         assert array.to_series().index.name == 'persistent'
         array.to_series().index.name = 'mutable?'
         assert array.to_series().index.name == 'persistent'
