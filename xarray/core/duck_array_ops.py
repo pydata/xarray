@@ -63,19 +63,49 @@ moveaxis = npcompat.moveaxis
 
 around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
-notnull = _dask_or_eager_func('notnull', eager_module=pd)
-_isnull = _dask_or_eager_func('isnull', eager_module=pd)
+
+if hasattr(np, 'isnat'):
+    # numpy 1.13
+    isnat = _dask_or_eager_func('isnat')
+else:
+    isnat = _dask_or_eager_func('isnull', eager_module=pd)
+isnan = _dask_or_eager_func('isnan')
+zeros_like = _dask_or_eager_func('zeros_like')
+
+
+pandas_isnull = _dask_or_eager_func('isnull', eager_module=pd)
 
 
 def isnull(data):
-    # GH837, GH861
-    # isnull fcn from pandas will throw TypeError when run on numpy structured
-    # array therefore for dims that are np structured arrays we assume all
-    # data is present
-    try:
-        return _isnull(data)
-    except TypeError:
-        return np.zeros(data.shape, dtype=bool)
+    data = asarray(data)
+    scalar_type = data.dtype.type
+    if issubclass(scalar_type, (np.datetime64, np.timedelta64)):
+        # datetime types use NaT for null
+        # note: must check timedelta64 before integers, because currently
+        # timedelta64 inherits from np.integer
+        return isnat(data)
+    elif issubclass(scalar_type, np.inexact):
+        # float types use NaN for null
+        return isnan(data)
+    elif issubclass(
+        scalar_type, (np.bool_, np.integer, np.character, np.void)
+    ):
+        # these types cannot represent missing values
+        return zeros_like(data, dtype=bool)
+    else:
+        # at this point, array should have dtype=object
+        if isinstance(data, (np.ndarray, dask_array_type)):
+            return pandas_isnull(data)
+        else:
+            # Not reachable yet, but intended for use with other duck array
+            # types. For full consistency with pandas, we should accept None as
+            # a null value as well as NaN, but it isn't clear how to do this
+            # with duck typing.
+            return data != data
+
+
+def notnull(data):
+    return ~isnull(data)
 
 
 transpose = _dask_or_eager_func('transpose')
