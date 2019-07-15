@@ -1177,7 +1177,15 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def __setitem__(self, key, value):
         array, key = self._indexing_array_and_key(key)
-        array[key] = value
+        try:
+            array[key] = value
+        except ValueError:
+            # More informative exception if read-only view
+            if not array.flags.writeable and not array.flags.owndata:
+                raise ValueError("Assignment destination is a view.  "
+                                 "Do you want to .copy() array first?")
+            else:
+                raise
 
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
