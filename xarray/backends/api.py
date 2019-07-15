@@ -705,7 +705,7 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        Passed on to align.
+        How to combine objects with different indexes.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 

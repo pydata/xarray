@@ -66,7 +66,8 @@ def concat(objs, dim=None, data_vars='all', coords='different',
     fill_value : scalar, optional
         Value to use for newly missing values
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes.
+        How to combine objects with different indexes
+        (excluding index along 'dim').
     indexers, mode, concat_over : deprecated
 
     Returns
