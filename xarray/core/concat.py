@@ -79,7 +79,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
     merge
     auto_combine
     """
-    # TODO: add join and ignore_index arguments copied from pandas.concat
+    # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
     # dimension already exists
     from .dataset import Dataset
