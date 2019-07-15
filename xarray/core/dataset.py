@@ -2034,7 +2034,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def broadcast_like(self,
                        other: Union['Dataset', 'DataArray'],
-                       exclude=None) -> 'Dataset':
+                       exclude: Iterable[Hashable] = None) -> 'Dataset':
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
 
@@ -2042,13 +2042,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         other : Dataset or DataArray
             Object against which to broadcast this array.
-        exclude : sequence of str, optional
+        exclude : iterable of hashable, optional
             Dimensions that must not be broadcasted
 
         """
-
         if exclude is None:
             exclude = set()
+        else:
+            exclude = set(exclude)
         args = align(other, self, join='outer', copy=False, exclude=exclude)
 
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(
