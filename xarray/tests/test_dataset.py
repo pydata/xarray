@@ -3460,7 +3460,8 @@ class TestDataset:
         del expected_no_data['coords']['t']['data']
         del expected_no_data['data_vars']['a']['data']
         del expected_no_data['data_vars']['b']['data']
-        expected_no_data['coords']['t'].update({'dtype': '<U1',
+        endiantype = '<U1' if sys.byteorder == 'little' else '>U1'
+        expected_no_data['coords']['t'].update({'dtype': endiantype,
                                                 'shape': (10,)})
         expected_no_data['data_vars']['a'].update({'dtype': 'float64',
                                                    'shape': (10,)})
