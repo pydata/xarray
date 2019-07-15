@@ -7,7 +7,6 @@ from typing import (
     List,
     Mapping,
     MutableMapping,
-    Optional,
     Sequence,
     Set,
     Tuple,
@@ -144,11 +143,10 @@ class OrderedDefaultDict(OrderedDict):
 
 
 def merge_variables(
-        list_of_variables_dicts,  # type: List[Mapping[Any, Variable]]
-        priority_vars=None,       # type: Optional[Mapping[Any, Variable]]
-        compat='minimal',         # type: str
-):
-    # type: (...) -> OrderedDict[Any, Variable]
+        list_of_variables_dicts: List[Mapping[Any, Variable]],
+        priority_vars: Mapping[Any, Variable] = None,
+        compat: str = 'minimal',
+) -> 'OrderedDict[Any, Variable]':
     """Merge dicts of variables, while resolving conflicts appropriately.
 
     Parameters

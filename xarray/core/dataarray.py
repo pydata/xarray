@@ -197,8 +197,8 @@ class DataArray(AbstractArray, DataWithCoords):
             None,
         ] = None,
         dims: Union[Hashable, Sequence[Hashable], None] = None,
-        name: Optional[Hashable] = None,
-        attrs: Optional[Mapping] = None,
+        name: Hashable = None,
+        attrs: Mapping = None,
         # deprecated parameters
         encoding=None,
         # internal parameters
@@ -298,7 +298,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def _replace(
         self,
-        variable: Optional[Variable] = None,
+        variable: Variable = None,
         coords=None,
         name: Union[Hashable, None, ReprObject] = __default,
     ) -> 'DataArray':
@@ -379,7 +379,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def _to_dataset_whole(
             self,
-            name: Optional[Hashable] = None,
+            name: Hashable = None,
             shallow_copy: bool = True
     ) -> Dataset:
         if name is None:
@@ -403,8 +403,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def to_dataset(
         self,
-        dim: Optional[Hashable] = None,
-        name: Optional[Hashable] = None,
+        dim: Hashable = None,
+        name: Hashable = None,
     ) -> Dataset:
         """Convert a DataArray to a Dataset.
 
@@ -636,7 +636,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def reset_coords(self,
                      names: Union[Iterable[Hashable], Hashable, None] = None,
-                     drop: bool = False, inplace: Optional[bool] = None
+                     drop: bool = False, inplace: bool = None
                      ) -> Union[None, 'DataArray', Dataset]:
         """Given names of coordinates, reset them to become variables.
 
@@ -777,7 +777,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def copy(
         self,
         deep: bool = True,
-        data: Optional[Any] = None,
+        data: Any = None,
     ) -> 'DataArray':
         """Returns a copy of this array.
 
@@ -882,7 +882,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
         ] = None,
         name_prefix: str = 'xarray-',
-        token: Optional[str] = None,
+        token: str = None,
         lock: bool = False
     ) -> 'DataArray':
         """Coerce this array's data into a dask arrays with the given chunks.
@@ -921,7 +921,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def isel(
         self,
-        indexers: Optional[Mapping[Hashable, Any]] = None,
+        indexers: Mapping[Hashable, Any] = None,
         drop: bool = False,
         **indexers_kwargs: Any
     ) -> 'DataArray':
@@ -939,8 +939,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def sel(
         self,
-        indexers: Optional[Mapping[Hashable, Any]] = None,
-        method: Optional[str] = None,
+        indexers: Mapping[Hashable, Any] = None,
+        method: str = None,
         tolerance=None,
         drop: bool = False,
         **indexers_kwargs: Any
@@ -1020,7 +1020,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return _broadcast_helper(self, exclude, dims_map, common_coords)
 
     def reindex_like(self, other: Union['DataArray', Dataset],
-                     method: Optional[str] = None, tolerance=None,
+                     method: str = None, tolerance=None,
                      copy: bool = True, fill_value=dtypes.NA) -> 'DataArray':
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
@@ -1075,8 +1075,8 @@ class DataArray(AbstractArray, DataWithCoords):
             fill_value=fill_value,
         )
 
-    def reindex(self, indexers: Optional[Mapping[Hashable, Any]] = None,
-                method: Optional[str] = None, tolerance=None,
+    def reindex(self, indexers: Mapping[Hashable, Any] = None,
+                method: str = None, tolerance=None,
                 copy: bool = True, fill_value=dtypes.NA, **indexers_kwargs: Any
                 ) -> 'DataArray':
         """Conform this object onto the indexes of another object, filling in
@@ -1131,9 +1131,9 @@ class DataArray(AbstractArray, DataWithCoords):
             fill_value=fill_value)
         return self._from_temp_dataset(ds)
 
-    def interp(self, coords: Optional[Mapping[Hashable, Any]] = None,
+    def interp(self, coords: Mapping[Hashable, Any] = None,
                method: str = 'linear', assume_sorted: bool = False,
-               kwargs: Optional[Mapping[str, Any]] = None,
+               kwargs: Mapping[str, Any] = None,
                **coords_kwargs: Any) -> 'DataArray':
         """ Multidimensional interpolation of variables.
 
@@ -1188,7 +1188,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def interp_like(self, other: Union['DataArray', Dataset],
                     method: str = 'linear', assume_sorted: bool = False,
-                    kwargs: Optional[Mapping[str, Any]] = None) -> 'DataArray':
+                    kwargs: Mapping[str, Any] = None) -> 'DataArray':
         """Interpolate this object onto the coordinates of another object,
         filling out of range values with NaN.
 
@@ -1237,7 +1237,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def rename(
         self,
         new_name_or_name_dict:
-            Optional[Union[Hashable, Mapping[Hashable, Hashable]]] = None,
+            Union[Hashable, Mapping[Hashable, Hashable]] = None,
         **names: Hashable
     ) -> 'DataArray':
         """Returns a new DataArray with renamed coordinates or a new name.
@@ -1657,7 +1657,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def transpose(self,
                   *dims: Hashable,
-                  transpose_coords: Optional[bool] = None) -> 'DataArray':
+                  transpose_coords: bool = None) -> 'DataArray':
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1713,7 +1713,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def drop(self,
              labels: Union[Hashable, Sequence[Hashable]],
-             dim: Optional[Hashable] = None,
+             dim: Hashable = None,
              *,
              errors: str = 'raise') -> 'DataArray':
         """Drop coordinates or index labels from this DataArray.
@@ -1740,7 +1740,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def dropna(self, dim: Hashable, how: str = 'any',
-               thresh: Optional[int] = None) -> 'DataArray':
+               thresh: int = None) -> 'DataArray':
         """Returns a new array with dropped labels for missing values along
         the provided dimension.
 
@@ -1788,7 +1788,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return out
 
     def interpolate_na(self, dim=None, method: str = 'linear',
-                       limit: Optional[int] = None,
+                       limit: int = None,
                        use_coordinate: Union[bool, str] = True,
                        **kwargs: Any) -> 'DataArray':
         """Interpolate values according to different methods.
@@ -1833,7 +1833,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return interp_na(self, dim=dim, method=method, limit=limit,
                          use_coordinate=use_coordinate, **kwargs)
 
-    def ffill(self, dim: Hashable, limit: Optional[int] = None) -> 'DataArray':
+    def ffill(self, dim: Hashable, limit: int = None) -> 'DataArray':
         """Fill NaN values by propogating values forward
 
         *Requires bottleneck.*
@@ -1856,7 +1856,7 @@ class DataArray(AbstractArray, DataWithCoords):
         from .missing import ffill
         return ffill(self, dim, limit=limit)
 
-    def bfill(self, dim: Hashable, limit: Optional[int] = None) -> 'DataArray':
+    def bfill(self, dim: Hashable, limit: int = None) -> 'DataArray':
         """Fill NaN values by propogating values backward
 
         *Requires bottleneck.*
@@ -1900,7 +1900,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def reduce(self, func: Callable[..., Any],
                dim: Union[None, Hashable, Sequence[Hashable]] = None,
                axis: Union[None, int, Sequence[int]] = None,
-               keep_attrs: Optional[bool] = None,
+               keep_attrs: bool = None,
                keepdims: bool = False,
                **kwargs: Any) -> 'DataArray':
         """Reduce this array by applying `func` along some dimension(s).
@@ -1971,7 +1971,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def to_dataframe(
         self,
-        name: Optional[Hashable] = None,
+        name: Hashable = None,
     ) -> pd.DataFrame:
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
@@ -2269,7 +2269,7 @@ class DataArray(AbstractArray, DataWithCoords):
     @staticmethod
     def _binary_op(f: Callable[..., Any],
                    reflexive: bool = False,
-                   join: Optional[str] = None,  # see xarray.align
+                   join: str = None,  # see xarray.align
                    **ignored_kwargs
                    ) -> Callable[..., 'DataArray']:
         @functools.wraps(f)
@@ -2403,7 +2403,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
 
-    def shift(self, shifts: Optional[Mapping[Hashable, int]] = None,
+    def shift(self, shifts: Mapping[Hashable, int] = None,
               fill_value: Any = dtypes.NA, **shifts_kwargs: int
               ) -> 'DataArray':
         """Shift this array by an offset along one or more dimensions.
@@ -2448,8 +2448,8 @@ class DataArray(AbstractArray, DataWithCoords):
             shifts=shifts, fill_value=fill_value, **shifts_kwargs)
         return self._replace(variable=variable)
 
-    def roll(self, shifts: Optional[Mapping[Hashable, int]] = None,
-             roll_coords: Optional[bool] = None,
+    def roll(self, shifts: Mapping[Hashable, int] = None,
+             roll_coords: bool = None,
              **shifts_kwargs: int) -> 'DataArray':
         """Roll this array by an offset along one or more dimensions.
 
@@ -2609,7 +2609,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def quantile(self, q: Any,
                  dim: Union[Hashable, Sequence[Hashable], None] = None,
                  interpolation: str = 'linear',
-                 keep_attrs: Optional[bool] = None) -> 'DataArray':
+                 keep_attrs: bool = None) -> 'DataArray':
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -2697,7 +2697,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def differentiate(self, coord: Hashable, edge_order: int = 1,
-                      datetime_unit: Optional[str] = None) -> 'DataArray':
+                      datetime_unit: str = None) -> 'DataArray':
         """ Differentiate the array with the second order accurate central
         differences.
 
@@ -2753,7 +2753,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def integrate(self, dim: Union[Hashable, Sequence[Hashable]],
-                  datetime_unit: Optional[str] = None) -> 'DataArray':
+                  datetime_unit: str = None) -> 'DataArray':
         """ integrate the array with the trapezoidal rule.
 
         .. note::

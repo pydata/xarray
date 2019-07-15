@@ -55,8 +55,8 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
 
 
 def _get_virtual_variable(variables, key: Hashable,
-                          level_vars: Optional[Mapping] = None,
-                          dim_sizes: Optional[Mapping] = None,
+                          level_vars: Mapping = None,
+                          dim_sizes: Mapping = None,
                           ) -> Tuple[Hashable, Hashable, Variable]:
     """Get a virtual variable (e.g., 'time.year' or a MultiIndex level)
     from a dict of xarray.Variable objects (if possible)
@@ -343,14 +343,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         # could make a VariableArgs to use more generally, and refine these
         # categories
-        data_vars: Optional[Mapping[Hashable, Union[
+        data_vars: Mapping[Hashable, Union[
             'DataArray',
             Variable,
             Tuple[Hashable, Any],
             Tuple[Sequence[Hashable], Any],
-        ]]] = None,
-        coords: Optional[Mapping[Hashable, Any]] = None,
-        attrs: Optional[Mapping] = None,
+        ]] = None,
+        coords: Mapping[Hashable, Any] = None,
+        attrs: Mapping = None,
         compat=None,
     ):
         """To load data from a file or file-like object, use the `open_dataset`
@@ -742,7 +742,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _replace(  # type: ignore
         self,
         variables: 'OrderedDict[Any, Variable]' = None,
-        coord_names: Optional[Set[Hashable]] = None,
+        coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
         attrs: 'Optional[OrderedDict]' = __default,
         indexes: 'Optional[OrderedDict[Any, pd.Index]]' = __default,
@@ -792,8 +792,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         variables: 'OrderedDict[Any, Variable]',
         coord_names: set = None,
-        attrs: 'Optional[OrderedDict]' = __default,
-        indexes: 'Optional[OrderedDict[Any, pd.Index]]' = __default,
+        attrs: 'OrderedDict' = __default,
+        indexes: 'OrderedDict[Any, pd.Index]' = __default,
         inplace: bool = False,
     ) -> 'Dataset':
         """Replace variables with recalculated dimensions."""
@@ -805,8 +805,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         variables: 'OrderedDict[Any, Variable]',
         coord_names: set = None,
-        dims: 'Optional[Dict[Any, int]]' = None,
-        attrs: 'Optional[OrderedDict]' = __default,
+        dims: Dict[Any, int] = None,
+        attrs: 'OrderedDict' = __default,
         inplace: bool = False,
     ) -> 'Dataset':
         """Deprecated version of _replace_with_new_dims().
@@ -1759,8 +1759,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def sel(
         self,
         indexers: Mapping[Hashable, Any] = None,
-        method: Optional[str] = None,
-        tolerance: Optional[Number] = None,
+        method: str = None,
+        tolerance: Number = None,
         drop: bool = False,
         **indexers_kwargs: Any
     ) -> 'Dataset':
@@ -1970,8 +1970,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             dset.coords[dim_name] = dim_coord
         return dset
 
-    def sel_points(self, dim: Any = 'points', method: Optional[str] = None,
-                   tolerance: Optional[Number] = None,
+    def sel_points(self, dim: Any = 'points', method: str = None,
+                   tolerance: Number = None,
                    **indexers: Any):
         """Returns a new dataset with each array indexed pointwise by tick
         labels along the specified dimension(s).
@@ -2057,8 +2057,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return _broadcast_helper(self, exclude, dims_map, common_coords)
 
-    def reindex_like(self, other, method=None, tolerance=None, copy=True,
-                     fill_value=dtypes.NA):
+    def reindex_like(
+            self,
+            other: Union['Dataset', 'DataArray'],
+            method: str = None,
+            tolerance: Number = None,
+            copy: bool = True,
+            fill_value: Any = dtypes.NA
+    ) -> 'Dataset':
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
 
@@ -2110,8 +2116,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def reindex(
         self,
         indexers: Mapping[Hashable, Any] = None,
-        method: Optional[str] = None,
-        tolerance: Optional[Number] = None,
+        method: str = None,
+        tolerance: Number = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         **indexers_kwargs: Any
