@@ -1267,10 +1267,8 @@ class TestDataArray:
         assert orig1.identical(new1)
         assert orig2.identical(new2)
 
-        orig3 = DataArray(np.random.randn(5),
-                              [('x', range(5))])
-        orig4 = DataArray(np.random.randn(6),
-                              [('y', range(6))])
+        orig3 = DataArray(np.random.randn(5), [('x', range(5))])
+        orig4 = DataArray(np.random.randn(6), [('y', range(6))])
         new3, new4 = broadcast(orig3, orig4)
 
         assert_identical(orig3.broadcast_like(orig4), new3.transpose('y', 'x'))
