@@ -424,8 +424,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 
 def _broadcast_helper(arg, exclude, dims_map, common_coords):
 
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from .dataarray import DataArray  # noqa: F811
+    from .dataset import Dataset  # noqa: F811
 
     def _set_dims(var):
         # Add excluded dims to a copy of dims_map
