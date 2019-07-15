@@ -995,11 +995,6 @@ class DataArray(AbstractArray, DataWithCoords):
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
 
-    def broadcast_like_naive(self,
-                             other: Union['DataArray', Dataset],
-                             exclude=None) -> 'DataArray':
-        return broadcast(self, other)[1]
-
     def broadcast_like(self,
                        other: Union['DataArray', Dataset],
                        exclude=None) -> 'DataArray':
@@ -1033,28 +1028,27 @@ class DataArray(AbstractArray, DataWithCoords):
 
         >>> arr1
         <xarray.DataArray (x: 2, y: 3)>
-        array([[0.824093, 0.769792, 0.571621],
-               [0.310378, 0.480418, 0.062015]])
+        array([[0.840235, 0.215216, 0.77917 ],
+               [0.726351, 0.543824, 0.875115]])
         Coordinates:
           * x        (x) <U1 'a' 'b'
           * y        (y) <U1 'a' 'b' 'c'
         >>> arr2
         <xarray.DataArray (x: 3, y: 2)>
-        array([[0.852992, 0.106589],
-               [0.087549, 0.563304],
-               [0.675744, 0.285752]])
+        array([[0.612611, 0.125753],
+               [0.853181, 0.948818],
+               [0.180885, 0.33363 ]])
         Coordinates:
           * x        (x) <U1 'a' 'b' 'c'
           * y        (y) <U1 'a' 'b'
         >>> arr1.broadcast_like(arr2)
         <xarray.DataArray (x: 3, y: 3)>
-        array([[0.852992, 0.106589,      nan],
-               [0.087549, 0.563304,      nan],
-               [0.675744, 0.285752,      nan]])
+        array([[0.840235, 0.215216, 0.77917 ],
+               [0.726351, 0.543824, 0.875115],
+               [     nan,      nan,      nan]])
         Coordinates:
           * x        (x) object 'a' 'b' 'c'
           * y        (y) object 'a' 'b' 'c'
-
         """
         if exclude is None:
             exclude = set()

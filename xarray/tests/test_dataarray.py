@@ -1255,26 +1255,14 @@ class TestDataArray:
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
 
-    def test_broadcast_like_naive(self):
-        arr1 = DataArray(np.ones((2, 3)), dims=['x', 'y'],
-                         coords={'x': ['a', 'b'], 'y': ['a', 'b', 'c']})
-        arr2 = DataArray(np.ones((3, 2)), dims=['x', 'y'],
-                         coords={'x': ['a', 'b', 'c'], 'y': ['a', 'b']})
-        orig1, orig2 = broadcast(arr1, arr2)
-        new1 = arr2.broadcast_like_naive(arr1)
-        new2 = arr1.broadcast_like_naive(arr2)
-
-        assert orig1.identical(new1)
-        assert orig2.identical(new2)
-
     def test_broadcast_like(self):
         arr1 = DataArray(np.ones((2, 3)), dims=['x', 'y'],
                          coords={'x': ['a', 'b'], 'y': ['a', 'b', 'c']})
         arr2 = DataArray(np.ones((3, 2)), dims=['x', 'y'],
                          coords={'x': ['a', 'b', 'c'], 'y': ['a', 'b']})
         orig1, orig2 = broadcast(arr1, arr2)
-        new1 = arr2.broadcast_like(arr1)
-        new2 = arr1.broadcast_like(arr2)
+        new1 = arr1.broadcast_like(arr2)
+        new2 = arr2.broadcast_like(arr1)
 
         assert orig1.identical(new1)
         assert orig2.identical(new2)
