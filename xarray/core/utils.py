@@ -17,11 +17,6 @@ import pandas as pd
 
 from .pycompat import dask_array_type
 
-try:  # Fix typed collections in Python 3.5.0~3.5.2
-    from .pycompat import Mapping, MutableMapping, MutableSet  # noqa: F811
-except ImportError:
-    pass
-
 
 K = TypeVar('K')
 V = TypeVar('V')
@@ -319,18 +314,7 @@ def ordered_dict_intersection(first_dict: Mapping[K, V],
     return new_dict
 
 
-class SingleSlotPickleMixin:
-    """Mixin class to add the ability to pickle objects whose state is defined
-    by a single __slots__ attribute. Only necessary under Python 2.
-    """
-    def __getstate__(self):
-        return getattr(self, self.__slots__[0])
-
-    def __setstate__(self, state):
-        setattr(self, self.__slots__[0], state)
-
-
-class Frozen(Mapping[K, V], SingleSlotPickleMixin):
+class Frozen(Mapping[K, V]):
     """Wrapper around an object implementing the mapping interface to make it
     immutable. If you really want to modify the mapping, the mutable version is
     saved under the `mapping` attribute.
@@ -360,7 +344,7 @@ def FrozenOrderedDict(*args, **kwargs) -> Frozen:
     return Frozen(OrderedDict(*args, **kwargs))
 
 
-class SortedKeysDict(MutableMapping[K, V], SingleSlotPickleMixin):
+class SortedKeysDict(MutableMapping[K, V]):
     """An wrapper for dictionary-like objects that always iterates over its
     items in sorted order by key but is otherwise equivalent to the underlying
     mapping.

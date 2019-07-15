@@ -1,6 +1,7 @@
 import re
 import warnings
 from datetime import datetime
+from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -198,21 +199,32 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
     return dates.reshape(num_dates.shape)
 
 
+def to_timedelta_unboxed(value, **kwargs):
+    if LooseVersion(pd.__version__) < '0.25.0':
+        result = pd.to_timedelta(value, **kwargs, box=False)
+    else:
+        result = pd.to_timedelta(value, **kwargs).to_numpy()
+    assert result.dtype == 'timedelta64[ns]'
+    return result
+
+
+def to_datetime_unboxed(value, **kwargs):
+    if LooseVersion(pd.__version__) < '0.25.0':
+        result = pd.to_datetime(value, **kwargs, box=False)
+    else:
+        result = pd.to_datetime(value, **kwargs).to_numpy()
+    assert result.dtype == 'datetime64[ns]'
+    return result
+
+
 def decode_cf_timedelta(num_timedeltas, units):
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64[ns] array.
     """
     num_timedeltas = np.asarray(num_timedeltas)
     units = _netcdf_to_numpy_timeunit(units)
-
-    shape = num_timedeltas.shape
-    num_timedeltas = num_timedeltas.ravel()
-
-    result = pd.to_timedelta(num_timedeltas, unit=units, box=False)
-    # NaT is returned unboxed with wrong units; this should be fixed in pandas
-    if result.dtype != 'timedelta64[ns]':
-        result = result.astype('timedelta64[ns]')
-    return result.reshape(shape)
+    result = to_timedelta_unboxed(num_timedeltas.ravel(), unit=units)
+    return result.reshape(num_timedeltas.shape)
 
 
 def _infer_time_units_from_diff(unique_timedeltas):
@@ -241,7 +253,7 @@ def infer_datetime_units(dates):
     """
     dates = np.asarray(dates).ravel()
     if np.asarray(dates).dtype == 'datetime64[ns]':
-        dates = pd.to_datetime(dates, box=False)
+        dates = to_datetime_unboxed(dates)
         dates = dates[pd.notnull(dates)]
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
         reference_date = pd.Timestamp(reference_date)
@@ -252,7 +264,7 @@ def infer_datetime_units(dates):
     if unique_timedeltas.dtype == np.dtype('O'):
         # Convert to np.timedelta64 objects using pandas to work around a
         # NumPy casting bug: https://github.com/numpy/numpy/issues/11096
-        unique_timedeltas = pd.to_timedelta(unique_timedeltas, box=False)
+        unique_timedeltas = to_timedelta_unboxed(unique_timedeltas)
     units = _infer_time_units_from_diff(unique_timedeltas)
     return '%s since %s' % (units, reference_date)
 
@@ -271,7 +283,7 @@ def infer_timedelta_units(deltas):
     {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
     divide all unique time deltas in `deltas`)
     """
-    deltas = pd.to_timedelta(np.asarray(deltas).ravel(), box=False)
+    deltas = to_timedelta_unboxed(np.asarray(deltas).ravel())
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
     units = _infer_time_units_from_diff(unique_timedeltas)
     return units

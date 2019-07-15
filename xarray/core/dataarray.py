@@ -2,18 +2,22 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict
+from numbers import Number
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
-                    Optional, Sequence, Tuple, Union, cast)
+                    Optional, Sequence, Tuple, Union, cast, TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
 
 from ..plot.plot import _PlotMethods
 from . import (
-    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
+    computation, dtypes, groupby, indexing, ops, pdcompat, resample, rolling,
+    utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
-from .alignment import align, reindex_like_indexers
+from .alignment import (align, _broadcast_helper,
+                        _get_broadcast_dims_map_common_coords,
+                        reindex_like_indexers)
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
@@ -21,7 +25,6 @@ from .coordinates import (
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
-from .pycompat import TYPE_CHECKING
 from .options import OPTIONS
 from .utils import _check_inplace, either_dict_or_kwargs, ReprObject
 from .variable import (
@@ -264,7 +267,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data.index, data.columns]
                 elif isinstance(data, (pd.Index, IndexVariable)):
                     coords = [data]
-                elif hasattr(pd, 'Panel') and isinstance(data, pd.Panel):
+                elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
@@ -576,13 +579,13 @@ class DataArray(AbstractArray, DataWithCoords):
         del self.coords[key]
 
     @property
-    def _attr_sources(self) -> List[Iterable[Hashable]]:
+    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
         """List of places to look-up items for attribute-style access
         """
         return self._item_sources + [self.attrs]
 
     @property
-    def _item_sources(self) -> List[Iterable[Hashable]]:
+    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
         """List of places to look-up items for key-completion
         """
         return [self.coords, {d: self.coords[d] for d in self.dims},
@@ -869,13 +872,19 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return self.variable.chunks
 
-    def chunk(self, chunks: Union[
-        None, int, Tuple[int, ...], Tuple[Tuple[int, ...], ...],
-        Mapping[Hashable, Union[None, int, Tuple[int, ...]]],
-    ] = None,
-            name_prefix: str = 'xarray-',
-            token: Optional[str] = None,
-            lock: bool = False) -> 'DataArray':
+    def chunk(
+        self,
+        chunks: Union[
+            None,
+            Number,
+            Tuple[Number, ...],
+            Tuple[Tuple[Number, ...], ...],
+            Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
+        ] = None,
+        name_prefix: str = 'xarray-',
+        token: Optional[str] = None,
+        lock: bool = False
+    ) -> 'DataArray':
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -888,7 +897,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        chunks : int, tuple or dict, optional
+        chunks : int, tuple or mapping, optional
             Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
             ``{'x': 5, 'y': 5}``.
         name_prefix : str, optional
@@ -903,7 +912,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         chunked : xarray.DataArray
         """
-        if isinstance(chunks, (list, tuple)):
+        if isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
 
         ds = self._to_temp_dataset().chunk(chunks, name_prefix=name_prefix,
@@ -985,6 +994,29 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().sel_points(
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
+
+    def broadcast_like(self,
+                       other: Union['DataArray', Dataset],
+                       exclude=None) -> 'DataArray':
+        """Broadcast this DataArray against another Dataset or DataArray.
+        This is equivalent to xr.broadcast(other, self)[1]
+
+        Parameters
+        ----------
+        other : Dataset or DataArray
+            Object against which to broadcast this array.
+        exclude : sequence of str, optional
+            Dimensions that must not be broadcasted
+        """
+
+        if exclude is None:
+            exclude = set()
+        args = align(other, self, join='outer', copy=False, exclude=exclude)
+
+        dims_map, common_coords = _get_broadcast_dims_map_common_coords(
+            args, exclude)
+
+        return _broadcast_helper(self, exclude, dims_map, common_coords)
 
     def reindex_like(self, other: Union['DataArray', Dataset],
                      method: Optional[str] = None, tolerance=None,
@@ -1264,7 +1296,9 @@ class DataArray(AbstractArray, DataWithCoords):
                                      Mapping[Hashable, Any]] = None,
                     axis=None, **dim_kwargs: Any) -> 'DataArray':
         """Return a new object with an additional axis (or axes) inserted at
-        the corresponding position in the array shape.
+        the corresponding position in the array shape. The new object is a
+        view into the underlying array, not a copy.
+
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
@@ -1910,9 +1944,8 @@ class DataArray(AbstractArray, DataWithCoords):
         # attributes that correspond to their indexes into a separate module?
         constructors = {0: lambda x: x,
                         1: pd.Series,
-                        2: pd.DataFrame}
-        if hasattr(pd, 'Panel'):
-            constructors[3] = pd.Panel
+                        2: pd.DataFrame,
+                        3: pdcompat.Panel}
         try:
             constructor = constructors[self.ndim]
         except KeyError:

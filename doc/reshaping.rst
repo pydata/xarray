@@ -133,6 +133,8 @@ pandas, it does not automatically drop missing values. Compare:
 We departed from pandas's behavior here because predictable shapes for new
 array dimensions is necessary for :ref:`dask`.
 
+.. _reshape.stacking_different:
+
 Stacking different variables together
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

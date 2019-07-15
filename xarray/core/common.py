@@ -161,13 +161,15 @@ class AttrAccessMixin:
     _initialized = False
 
     @property
-    def _attr_sources(self):
-        """List of places to look-up items for attribute-style access"""
+    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
+        """List of places to look-up items for attribute-style access
+        """
         return []
 
     @property
-    def _item_sources(self):
-        """List of places to look-up items for key-autocompletion """
+    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
+        """List of places to look-up items for key-autocompletion
+        """
         return []
 
     def __getattr__(self, name: str) -> Any:

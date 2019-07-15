@@ -1,4 +1,4 @@
-name: test_env
+name: xarray-tests
 channels:
   - conda-forge
 dependencies:
@@ -17,10 +17,9 @@ dependencies:
   - coveralls
   - numpy>=1.12
   - pandas>=0.19
+  - pip
   - scipy
   - seaborn
   - toolz
   - rasterio
   - zarr
-  - pip:
-    - pytest-azurepipelines

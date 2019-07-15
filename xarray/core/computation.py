@@ -8,14 +8,14 @@ from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 from typing import (
     AbstractSet, Any, Callable, Iterable, List, Mapping, Optional, Sequence,
-    Tuple, Union)
+    Tuple, Union, TYPE_CHECKING)
 
 import numpy as np
 
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import TYPE_CHECKING, dask_array_type
+from .pycompat import dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
 
@@ -553,7 +553,7 @@ def apply_variable_ufunc(
             numpy_func = func
 
             def func(*arrays):
-                return _apply_with_dask_atop(
+                return _apply_blockwise(
                     numpy_func, arrays, input_dims, output_dims,
                     signature, output_dtypes, output_sizes)
         elif dask == 'allowed':
@@ -601,9 +601,10 @@ def apply_variable_ufunc(
         return tuple(output)
 
 
-def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
-                          output_dtypes, output_sizes=None):
+def _apply_blockwise(func, args, input_dims, output_dims, signature,
+                     output_dtypes, output_sizes=None):
     import dask.array as da
+    from .dask_array_compat import blockwise
 
     if signature.num_outputs > 1:
         raise NotImplementedError('multiple outputs from apply_ufunc not yet '
@@ -648,15 +649,15 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
 
     (out_ind,) = output_dims
 
-    atop_args = []
+    blockwise_args = []
     for arg, dims in zip(args, input_dims):
         # skip leading dimensions that are implicitly added by broadcasting
         ndim = getattr(arg, 'ndim', 0)
         trimmed_dims = dims[-ndim:] if ndim else ()
-        atop_args.extend([arg, trimmed_dims])
+        blockwise_args.extend([arg, trimmed_dims])
 
-    return da.atop(func, out_ind, *atop_args, dtype=dtype, concatenate=True,
-                   new_axes=output_sizes)
+    return blockwise(func, out_ind, *blockwise_args, dtype=dtype,
+                     concatenate=True, new_axes=output_sizes)
 
 
 def apply_array_ufunc(func, *args, dask='forbidden'):
