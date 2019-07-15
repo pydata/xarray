@@ -15,7 +15,7 @@ from . import (
     utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
-from .alignment import (align, broadcast, _broadcast_helper,
+from .alignment import (align, _broadcast_helper,
                         _get_broadcast_dims_map_common_coords,
                         reindex_like_indexers)
 from .common import AbstractArray, DataWithCoords
