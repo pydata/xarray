@@ -35,6 +35,11 @@ Bug fixes
 
 - Improved error handling and documentation for `.expand_dims()` 
   read-only view.
+- Fix tests for big-endian systems (:issue:`3125`).
+  By `Graham Inggs <https://github.com/ginggs>`_.
+- XFAIL several tests which are expected to fail on ARM systems
+  due to a ``datetime`` issue in NumPy (:issue:`2334`).
+  By `Graham Inggs <https://github.com/ginggs>`_.
 
 .. _whats-new.0.12.3:
 
