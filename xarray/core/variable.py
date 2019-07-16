@@ -1302,7 +1302,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         DataArray.unstack
         """
         result = self
-        return result.stack(**{name: result.dims})
+        return self.stack({name: self.dims})
 
     def _unstack_once(self, dims, old_dim):
         new_dim_names = tuple(dims.keys())
