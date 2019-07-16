@@ -3026,9 +3026,9 @@ class TestDataArray:
 
     def test_index_immutability(self):
         # Test for immutability of Pandas index from #2949
-        index   = pd.Index(list('abcdefghij'), name='persistent')
-        series  = pd.Series(np.random.randn(10), index)
-        array   = xr.DataArray.from_series(series)
+        index = pd.Index(list('abcdefghij'), name='persistent')
+        series = pd.Series(np.random.randn(10), index)
+        array = xr.DataArray.from_series(series)
         dataset = xr.Dataset({'myvar': array})
 
         # Utility function that allows us to consistently many different paths
