@@ -1389,7 +1389,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def to_zarr(
         self,
         store: Union[MutableMapping, str, Path] = None,
-        mode: str = 'w-',
+        mode: str = None,
         synchronizer=None,
         group: str = None,
         encoding: Mapping = None,
@@ -1436,7 +1436,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if encoding is None:
             encoding = {}
-        if mode not in ['w', 'w-', 'a']:
+        if mode not in ['w', 'w-', 'a', None]:
             # TODO: figure out how to handle 'r+'
             raise ValueError("The only supported options for mode are 'w',"
                              "'w-' and 'a'.")

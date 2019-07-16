@@ -1102,7 +1102,7 @@ def _validate_append_dim_and_encoding(ds_to_append, store, append_dim,
                 )
 
 
-def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
+def to_zarr(dataset, store=None, mode=None, synchronizer=None, group=None,
             encoding=None, compute=True, consolidated=False, append_dim=None):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1119,12 +1119,20 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_attrs(dataset)
 
     if (mode == 'a') or (append_dim is not None):
-        mode = 'a'
+        if mode is None:
+            mode = 'a'
+        elif mode != 'a':
+            raise ValueError(
+                "append_dim was set along with mode='{}', either set "
+                "mode='a' or don't set it.".format(mode)
+                    )
         _validate_datatypes_for_zarr_append(dataset)
         _validate_append_dim_and_encoding(dataset, store, append_dim,
                                           group=group,
                                           consolidated=consolidated,
                                           encoding=encoding)
+    elif mode is None:
+        mode = 'w-'
 
     zstore = backends.ZarrStore.open_group(store=store, mode=mode,
                                            synchronizer=synchronizer,
