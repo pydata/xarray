@@ -3035,11 +3035,11 @@ class TestDataArray:
         # to accessing the index.
         def test_index(get_index):
             # Test `index.data`
-            with pytest.raises(AttributeError):
+            with pytest.raises(Exception):
                 get_index().data = np.random.randn(10)
 
             # Test `index.dtype`
-            with pytest.raises(AttributeError):
+            with pytest.raises(Exception):
                 get_index().dtype = np.float64
 
             # Test `index.copy`
