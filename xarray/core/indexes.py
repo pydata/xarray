@@ -30,7 +30,10 @@ class Indexes(collections.abc.Mapping):
         return key in self._indexes
 
     def __getitem__(self, key):
-        return self._indexes[key]
+        index = self._indexes[key]
+        # Issue 2949: Pandas indexes have mutable names, but we want to return
+        # immutable views.
+        return index.copy(deep=False)
 
     def __repr__(self):
         return formatting.indexes_repr(self)

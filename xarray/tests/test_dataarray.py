@@ -3020,31 +3020,37 @@ class TestDataArray:
         with raises_regex(ValueError, 'cannot convert'):
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
 
-    def test_to_series_index_immutability(self):
-        # Test for immutability of Pandas series from #2949
-        s = pd.Series(np.random.randn(10), name='persistent')
-        array = xr.DataArray.from_series(s)
-
-        # Test `index.data`
-        with pytest.raises(AttributeError):
-            array.to_series().index.data = np.random.randn(10)
-
-        # Test `index.dtype`
-        with pytest.raises(AttributeError):
-            array.to_series().index.dtype = np.float64
-
-        # Test `index.copy`
-        assert callable(array.to_series().index.copy)
-        array.to_series().index.copy = 'mutable?'
-        assert callable(array.to_series().index.copy)
-
-        # Test `index.name`
-        dates = pd.date_range('01-Jan-2019', '01-Jan-2020', name='persistent')
-        series = pd.Series(np.random.randn(dates.size), dates)
+    def test_index_immutability(self):
+        # Test for immutability of Pandas index from #2949
+        index = pd.Index(list('abcdefghij'), name='persistent')
+        series = pd.Series(np.random.randn(10), index)
         array = xr.DataArray.from_series(series)
-        assert array.to_series().index.name == 'persistent'
-        array.to_series().index.name = 'mutable?'
-        assert array.to_series().index.name == 'persistent'
+
+        # Utility function that allows us to consistently test several common
+        # methods for accessing an index.
+        def test_index(getter):
+            # Test `index.data`
+            with pytest.raises(AttributeError):
+                getter().data = np.random.randn(10)
+
+            # Test `index.dtype`
+            with pytest.raises(AttributeError):
+                getter().dtype = np.float64
+
+            # Test `index.copy`
+            assert callable(getter().copy)
+            getter().copy = 'mutable?'
+            assert callable(getter().copy)
+
+            # Test `index.name`
+            assert getter().name == 'persistent'
+            getter().name = 'mutable?'
+            assert getter().name == 'persistent'
+
+        test_index(lambda: array.get_index('persistent'))
+        test_index(lambda: array.to_index())
+        test_index(lambda: array.to_series().index)
+        test_index(lambda: array.indexes['persistent'])
 
     def test_to_dataframe(self):
         # regression test for #260

@@ -1991,10 +1991,7 @@ class DataArray(AbstractArray, DataWithCoords):
         (in the form of a :py:class:`pandas.MultiIndex`).
         """
         index = self.coords.to_index()
-        series = pd.Series(self.values.reshape(-1), index=index,
-                           name=self.name)
-        series.index = series.index.copy(deep=False)
-        return series
+        return pd.Series(self.values.reshape(-1), index=index, name=self.name)
 
     def to_masked_array(self, copy: bool = True) -> np.ma.MaskedArray:
         """Convert this array into a numpy.ma.MaskedArray

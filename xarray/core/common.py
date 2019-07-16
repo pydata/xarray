@@ -292,10 +292,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             raise KeyError(key)
 
         try:
-            return self.indexes[key]
+            index = self.indexes[key]
         except KeyError:
             # need to ensure dtype=int64 in case range is empty on Python 2
-            return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
+            index = pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
+        # Issue 2949: Pandas indexes have mutable names, but we want to return
+        # immutable views.
+        return index.copy(deep=False)
 
     def _calc_assign_results(self, kwargs: Mapping[str, T]
                              ) -> MutableMapping[str, T]:
