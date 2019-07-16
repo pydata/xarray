@@ -1118,21 +1118,12 @@ def to_zarr(dataset, store=None, mode=None, synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    if (mode == 'a') or (append_dim is not None):
-        if mode is None:
-            mode = 'a'
-        elif mode != 'a':
-            raise ValueError(
-                "append_dim was set along with mode='{}', either set "
-                "mode='a' or don't set it.".format(mode)
-                )
+    if mode == 'a':
         _validate_datatypes_for_zarr_append(dataset)
         _validate_append_dim_and_encoding(dataset, store, append_dim,
                                           group=group,
                                           consolidated=consolidated,
                                           encoding=encoding)
-    elif mode is None:
-        mode = 'w-'
 
     zstore = backends.ZarrStore.open_group(store=store, mode=mode,
                                            synchronizer=synchronizer,

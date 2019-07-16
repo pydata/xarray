@@ -1407,12 +1407,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system.
-        mode : {'w', 'w-', 'a'}
+        mode : {'w', 'w-', 'a', None}
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
             'a' means append (create if does not exist).
-            When ``append_dim`` is set, ``mode`` can be omitted as it is
-            internally set to ``'a'``.
+            If ``append_dim`` is set, ``mode`` can be omitted as it is
+            internally set to ``'a'``. Otherwise, ``mode`` will default to
+            `w-` if not set.
         synchronizer : object, optional
             Array synchronizer
         group : str, optional
@@ -1436,7 +1437,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if encoding is None:
             encoding = {}
-        if mode not in ['w', 'w-', 'a', None]:
+        if (mode == 'a') or (append_dim is not None):
+            if mode is None:
+                mode = 'a'
+            elif mode != 'a':
+                raise ValueError(
+                    "append_dim was set along with mode='{}', either set "
+                    "mode='a' or don't set it.".format(mode)
+                    )
+        elif mode is None:
+            mode = 'w-'
+        if mode not in ['w', 'w-', 'a']:
             # TODO: figure out how to handle 'r+'
             raise ValueError("The only supported options for mode are 'w',"
                              "'w-' and 'a'.")
