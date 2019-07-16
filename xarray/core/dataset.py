@@ -1444,7 +1444,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 raise ValueError(
                     "append_dim was set along with mode='{}', either set "
                     "mode='a' or don't set it.".format(mode)
-                    )
+                )
         elif mode is None:
             mode = 'w-'
         if mode not in ['w', 'w-', 'a']:
