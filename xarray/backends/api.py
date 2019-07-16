@@ -1125,7 +1125,7 @@ def to_zarr(dataset, store=None, mode=None, synchronizer=None, group=None,
             raise ValueError(
                 "append_dim was set along with mode='{}', either set "
                 "mode='a' or don't set it.".format(mode)
-                    )
+                )
         _validate_datatypes_for_zarr_append(dataset)
         _validate_append_dim_and_encoding(dataset, store, append_dim,
                                           group=group,
