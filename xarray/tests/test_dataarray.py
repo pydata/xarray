@@ -3022,35 +3022,44 @@ class TestDataArray:
 
     def test_index_immutability(self):
         # Test for immutability of Pandas index from #2949
-        index = pd.Index(list('abcdefghij'), name='persistent')
-        series = pd.Series(np.random.randn(10), index)
-        array = xr.DataArray.from_series(series)
+        index   = pd.Index(list('abcdefghij'), name='persistent')
+        series  = pd.Series(np.random.randn(10), index)
+        array   = xr.DataArray.from_series(series)
+        dataset = xr.Dataset({'myvar': array})
 
-        # Utility function that allows us to consistently test several common
-        # methods for accessing an index.
-        def test_index(getter):
+        # Utility function that allows us to consistently many different paths
+        # to accessing the index.
+        def test_index(get_index):
             # Test `index.data`
             with pytest.raises(AttributeError):
-                getter().data = np.random.randn(10)
+                get_index().data = np.random.randn(10)
 
             # Test `index.dtype`
             with pytest.raises(AttributeError):
-                getter().dtype = np.float64
+                get_index().dtype = np.float64
 
             # Test `index.copy`
-            assert callable(getter().copy)
-            getter().copy = 'mutable?'
-            assert callable(getter().copy)
+            assert callable(get_index().copy)
+            get_index().copy = 'mutable?'
+            assert callable(get_index().copy)
 
             # Test `index.name`
-            assert getter().name == 'persistent'
-            getter().name = 'mutable?'
-            assert getter().name == 'persistent'
+            assert get_index().name == 'persistent'
+            get_index().name = 'mutable?'
+            assert get_index().name == 'persistent'
 
         test_index(lambda: array.get_index('persistent'))
         test_index(lambda: array.to_index())
+        test_index(lambda: array['persistent'].to_index())
         test_index(lambda: array.to_series().index)
         test_index(lambda: array.indexes['persistent'])
+
+        test_index(lambda: dataset.get_index('persistent'))
+        test_index(lambda: dataset['myvar'].to_index())
+        test_index(lambda: dataset['myvar']['persistent'].to_index())
+        test_index(lambda: dataset['myvar'].to_series().index)
+        test_index(lambda: dataset['myvar'].indexes['persistent'])
+        test_index(lambda: dataset.indexes['persistent'])
 
     def test_to_dataframe(self):
         # regression test for #260
