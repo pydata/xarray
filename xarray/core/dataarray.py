@@ -1510,7 +1510,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        name : Name of the new dimension. Optional.
+        name : str, optional.
+            Name of the new dimension.
 
         Returns
         -------
