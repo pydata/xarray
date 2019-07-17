@@ -1508,9 +1508,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims
-                    and (self._data is other._data or
-                     equiv(self.data, other.data)))
+            return (
+                self.dims == other.dims and
+                (self._data is other._data or equiv(self.data, other.data))
+            )
         except (TypeError, AttributeError):
             return False
 
