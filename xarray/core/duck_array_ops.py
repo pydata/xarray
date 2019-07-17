@@ -147,6 +147,8 @@ def as_shared_dtype(scalars_or_arrays):
 def as_like_arrays(*data):
     if all(isinstance(d, dask_array_type) for d in data):
         return data
+    elif all(hasattr(d, '__array_function__') for d in data):
+        return data
     else:
         return tuple(np.asarray(d) for d in data)
 

@@ -818,7 +818,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 data = indexing.MemoryCachedArray(data.array)
 
             if deep:
-                if isinstance(data, dask_array_type):
+                if (hasattr(data, '__array_function__') or
+                    isinstance(data, dask_array_type)):
                     data = data.copy()
                 elif not isinstance(data, PandasIndexAdapter):
                     # pandas.Index is immutable
