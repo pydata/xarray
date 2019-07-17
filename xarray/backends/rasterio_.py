@@ -313,12 +313,12 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     if hasattr(riods, 'units') and any(riods.units):
         # A list of units string for each dataset band
         attrs['units'] = riods.units
-    if hasattr(riods, 'colormap') and any(riods.colormap):
+    if hasattr(riods, 'colormap'):
         # A dict containing the colormap for a band
         attrs['colormap'] = riods.colormap(1)
     if hasattr(riods, 'colorinterp') and any(riods.colorinterp):
         # A tuple of the band's colorinterp property
-        attrs['colorinterp'] = riods.colorinterpi
+        attrs['colorinterp'] = riods.colorinterp
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
