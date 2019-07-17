@@ -57,6 +57,8 @@ def test_sparse(func):
     assert isinstance(func(A).data, sparse.SparseArray)
 
 
+@pytest.mark.skipif(not IS_NEP18_ACTIVE,
+                    reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled")
 class TestSparseVariable:
     @pytest.fixture(autouse=True)
     def setUp(self):
