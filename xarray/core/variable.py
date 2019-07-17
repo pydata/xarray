@@ -718,8 +718,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         if new_order:
             value = duck_array_ops.asarray(value)
-            value = value[(len(dims) - value.ndim) * (np.newaxis,) +
-                          (Ellipsis,)]
+            value = value[(len(dims) - value.ndim) * (np.newaxis,)
+                          + (Ellipsis,)]
             value = duck_array_ops.moveaxis(
                 value, new_order, range(len(new_order)))
 
@@ -818,8 +818,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 data = indexing.MemoryCachedArray(data.array)
 
             if deep:
-                if (hasattr(data, '__array_function__') or
-                    isinstance(data, dask_array_type)):
+                if (hasattr(data, '__array_function__')
+                        or isinstance(data, dask_array_type)):
                     data = data.copy()
                 elif not isinstance(data, PandasIndexAdapter):
                     # pandas.Index is immutable
@@ -1508,8 +1508,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims and
-                    (self._data is other._data or
+            return (self.dims == other.dims
+                    and (self._data is other._data or
                      equiv(self.data, other.data)))
         except (TypeError, AttributeError):
             return False
@@ -1531,8 +1531,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """Like equals, but also checks attributes.
         """
         try:
-            return (utils.dict_equiv(self.attrs, other.attrs) and
-                    self.equals(other))
+            return (utils.dict_equiv(self.attrs, other.attrs)
+                    and self.equals(other))
         except (TypeError, AttributeError):
             return False
 
@@ -1980,8 +1980,8 @@ class IndexVariable(Variable):
         # otherwise use the native index equals, rather than looking at _data
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims and
-                    self._data_equals(other))
+            return (self.dims == other.dims
+                    and self._data_equals(other))
         except (TypeError, AttributeError):
             return False
 

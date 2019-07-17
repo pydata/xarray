@@ -13,6 +13,7 @@ import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.tests import mock
 from xarray.core.npcompat import IS_NEP18_ACTIVE
+from sparse.utils import assert_eq
 
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_frame_equal,
@@ -24,7 +25,6 @@ def xfail(param):
 
 
 sparse = pytest.importorskip('sparse')
-from sparse.utils import assert_eq
 
 
 @pytest.mark.parametrize("func", [
@@ -102,7 +102,7 @@ class TestSparseVariable:
     def test_binary_op(self):
         assert_eq((2 * self.var).data, 2 * self.data)
         assert_eq((self.var + self.var).data, self.data + self.data)
-        #assert_eq((self.var[0] + self.var).data, self.data[0] + self.data)
+        # assert_eq((self.var[0] + self.var).data, self.data[0] + self.data)
 
     # def test_repr(self):
     #     pass
