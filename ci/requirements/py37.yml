@@ -21,6 +21,7 @@ dependencies:
   - pip
   - scipy
   - seaborn
+  - sparse
   - toolz
   - rasterio
   - bottleneck
