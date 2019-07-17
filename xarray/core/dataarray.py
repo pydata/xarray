@@ -268,6 +268,10 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data]
                 elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
+                elif (hasattr(data, '__array_function__') and
+                      not isinstance(data, DataWithCoords)):
+                    coords = None
+
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
             if name is None:
