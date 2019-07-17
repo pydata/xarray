@@ -213,7 +213,7 @@ def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
     if concat_dim is not None:
         try:
             combined = concat(datasets, dim=concat_dim, data_vars=data_vars,
-                              coords=coords, fill_value=fill_value)
+                              coords=coords, fill_value=fill_value, join=join)
         except ValueError as err:
             if "encountered unexpected variable" in str(err):
                 raise ValueError("These objects cannot be combined using only "
@@ -506,7 +506,7 @@ def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
         # Concatenate along all of concat_dims one by one to create single ds
         concatenated = _combine_nd(combined_ids, concat_dims=concat_dims,
                                    data_vars=data_vars, coords=coords,
-                                   fill_value=fill_value)
+                                   fill_value=fill_value, join=join)
 
         # Check the overall coordinates are monotonically increasing
         for dim in concatenated.dims:
@@ -520,7 +520,7 @@ def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
         concatenated_grouped_by_data_vars.append(concatenated)
 
     return merge(concatenated_grouped_by_data_vars, compat=compat,
-                 fill_value=fill_value)
+                 fill_value=fill_value, join=join)
 
 
 # Everything beyond here is only needed until the deprecation cycle in #2616
