@@ -63,7 +63,7 @@ jobs:
   - task: UsePythonVersion@0
   - bash: python -m pip install black
     displayName: Install black
-  - bash: black .
+  - bash: black --check .
     displayName: black formatting check
 
 - job: TypeChecking
