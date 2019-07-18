@@ -35,7 +35,7 @@ from . import (
     requires_cftime, requires_dask, requires_h5fileobj, requires_h5netcdf,
     requires_netCDF4, requires_pathlib, requires_pseudonetcdf, requires_pydap,
     requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr)
+    requires_scipy_or_netCDF4, requires_zarr, arm_xfail)
 from .test_coding_times import (
     _ALL_CALENDARS, _NON_STANDARD_CALENDARS, _STANDARD_CALENDARS)
 from .test_dataset import create_test_data, create_append_test_data
@@ -400,6 +400,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
             assert actual['x'].encoding['_Encoding'] == 'ascii'
 
+    @arm_xfail
     def test_roundtrip_numpy_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
