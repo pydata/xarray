@@ -55,6 +55,10 @@ jobs:
     displayName: Install flake8
   - bash: flake8
     displayName: flake8 lint checks
+  - bash: python -m pip install black
+    displayName: Install black
+  - bash: black .
+    displayName: black formatting check
 
 - job: TypeChecking
   variables:
