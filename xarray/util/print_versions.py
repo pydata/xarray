@@ -80,7 +80,7 @@ def show_versions(file=sys.stdout):
     try:
         sys_info.extend(netcdf_and_hdf5_versions())
     except Exception as e:
-        print(f"Error collecting netcdf / hdf5 version: {e}")
+        print("Error collecting netcdf / hdf5 version: {}".format(e))
 
     deps = [
         # (MODULE_NAME, f(mod) -> mod version)
