@@ -340,22 +340,23 @@ do not make sudden changes to the code that could have the potential to break
 a lot of user code as a result, that is, we need it to be as *backwards compatible*
 as possible to avoid mass breakages.
 
-Python (PEP8)
-~~~~~~~~~~~~~
+Code Formatting
+~~~~~~~~~~~~~~~
 
-*xarray* uses the `PEP8 <http://www.python.org/dev/peps/pep-0008/>`_ standard.
-There are several tools to ensure you abide by this standard. Here are *some* of
-the more common ``PEP8`` issues:
+Xarray uses `Black <https://black.readthedocs.io/en/stable/>`_ and
+`Flake8 <http://flake8.pycqa.org/en/latest/>`_ to ensure a consistent code
+format throughout the project. ``black`` and ``flake8`` can be installed with
+``pip``::
 
-  - we restrict line-length to 79 characters to promote readability
-  - passing arguments should have spaces after commas, e.g. ``foo(arg1, arg2, kw1='bar')``
+   pip install black flake8
 
-:ref:`Continuous Integration <contributing.ci>` will run
-the `flake8 <http://flake8.pycqa.org/en/latest/>`_ tool
-and report any stylistic errors in your code. Therefore, it is helpful before
-submitting code to run the check yourself:
+and then run from the root of the Xarray repository::
 
+   black .
    flake8
+
+to auto-format your code. Additionally, many editors have plugins that will
+apply ``black`` as you edit files.
 
 Other recommended but optional tools for checking code quality (not currently
 enforced in CI):
@@ -367,8 +368,20 @@ enforced in CI):
   incorrectly sorted imports. ``isort -y`` will automatically fix them. See
   also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
 
-Note that your code editor probably supports extensions that can show results
-of these checks inline as you type.
+Optionally, you may wish to setup `pre-commit hooks <https://pre-commit.com/>`_
+to automatically run ``black`` and ``flake8`` when you make a git commit. This
+can be done by installing ``pre-commit``::
+
+   pip install pre-commit
+
+and then running::
+
+   pre-commit install
+
+from the root of the Xarray repository. Now ``black`` and ``flake8`` will be run
+each time you commit changes. You can skip these checks with
+``git commit --no-verify``.
+
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
