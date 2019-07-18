@@ -260,7 +260,8 @@ class DataArray(AbstractArray, DataWithCoords):
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
 
-                if isinstance(data, DataWithCoords):
+                if isinstance(data, DataArray):
+                    coords = data.coords
                     coords = getattr(data, 'coords', None)
 
                 if isinstance(data, pd.Series):
