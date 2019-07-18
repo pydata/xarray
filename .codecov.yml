@@ -13,7 +13,4 @@ coverage:
     patch: false
     changes: false
 
-comment:
-  layout: "header, diff"
-  behavior: default
-  require_changes: no
+comment: off
