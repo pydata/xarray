@@ -1,3 +1,4 @@
+from sparse.utils import assert_eq
 import pickle
 from collections import OrderedDict
 from contextlib import suppress
@@ -19,7 +20,6 @@ from . import (
     assert_identical, raises_regex)
 
 sparse = pytest.importorskip('sparse')
-from sparse.utils import assert_eq
 
 
 def xfail(param, **kwargs):
@@ -124,7 +124,8 @@ class TestSparseVariable:
         assert_eq(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
 
     @pytest.mark.xfail(
-        reason="can't concat: 'filler' is ndarray and 'trimmed_data' is sparse")
+        reason="can't concat: 'filler' is ndarray and 'trimmed_data' "
+               "is sparse")
     def test_shift(self):
         v1 = xr.Variable(('x', 'y'), self.data.todense())
         v2 = xr.Variable(('x', 'y'), self.data)
@@ -146,8 +147,8 @@ class TestSparseVariable:
         })
 
         A2 = xr.DataArray(self.data, dims=['x', 'y'], coords={
-            'x': np.arange(1, S.shape[0]+1),
-            'y': np.arange(1, S.shape[1]+1)
+            'x': np.arange(1, S.shape[0] + 1),
+            'y': np.arange(1, S.shape[1] + 1)
         })
 
         B1, B2 = xr.align(A1, A2, join='inner')
@@ -173,8 +174,40 @@ class TestSparseDataArrayAndDataset:
 
     def test_values(self):
         a = xr.DataArray(sparse.COO.from_numpy([1, 2]))
-        with raises_regex(RuntimeError, 'Cannot convert a sparse array to dense'):
+        with raises_regex(RuntimeError,
+                          'Cannot convert a sparse array to dense'):
             a.values
+
+    def test_align(self):
+        a1 = xr.DataArray(
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=['x'],
+            coords={'x': ['a', 'b', 'c', 'd']})
+        b1 = xr.DataArray(
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=['x'],
+            coords={'x': ['a', 'b', 'd', 'e']})
+        a2, b2 = xr.align(a1, b1)
+        assert isinstance(a2.data, sparse.SparseArray)
+        assert isinstance(b2.data, sparse.SparseArray)
+        assert np.all(a2.coords['x'].data == ['a', 'b', 'd'])
+        assert np.all(b2.coords['x'].data == ['a', 'b', 'd'])
+
+    @pytest.mark.xfail(reason="fill value leads to sparse-dense operation")
+    def test_align_outer(self):
+        a1 = xr.DataArray(
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=['x'],
+            coords={'x': ['a', 'b', 'c', 'd']})
+        b1 = xr.DataArray(
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=['x'],
+            coords={'x': ['a', 'b', 'd', 'e']})
+        a2, b2 = xr.align(a1, b1, join='outer')
+        assert isinstance(a2.data, sparse.SparseArray)
+        assert isinstance(b2.data, sparse.SparseArray)
+        assert np.all(a2.coords['x'].data == ['a', 'b', 'c', 'd'])
+        assert np.all(b2.coords['x'].data == ['a', 'b', 'c', 'd'])
 
     def test_concat(self):
         ds1 = xr.Dataset(data_vars={'d': self.sp_xr})
@@ -254,6 +287,13 @@ class TestSparseDataArrayAndDataset:
         ds2 = pickle.loads(pickle.dumps(ds1))
         assert_identical(ds1, ds2)
 
+    @pytest.mark.xfail
+    def test_sparse_coords(self):
+        xr.DataArray(
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=['x'],
+            coords={'x': sparse.COO.from_numpy([1, 2, 3, 4])})
+
     @pytest.mark.xfail(reason="No implementation of np.einsum")
     def test_dot(self):
         a1 = self.xp_xr.dot(self.xp_xr[0])
@@ -273,8 +313,8 @@ class TestSparseDataArrayAndDataset:
     def test_groupby_first(self):
         x = self.sp_xr.copy()
         x.coords['ab'] = ('x', ['a', 'a', 'b', 'b'])
-        m1 = x1.groupby('ab').first()
-        m2 = x1.groupby('ab').first(skipna=False)
+        x.groupby('ab').first()
+        x.groupby('ab').first(skipna=False)
 
     @pytest.mark.xfail
     def test_reindex(self):
@@ -297,12 +337,12 @@ class TestSparseDataArrayAndDataset:
     def test_where(self):
         a = np.arange(10)
         cond = a > 3
-        expected = xr.DataArray(a).where(cond)
+        xr.DataArray(a).where(cond)
 
         s = sparse.COO.from_numpy(a)
         cond = s > 3
-        sel = xr.DataArray(s).where(cond)
+        xr.DataArray(s).where(cond)
 
         x = xr.DataArray(s)
         cond = x > 3
-        sel = x.where(cond)
+        x.where(cond)
