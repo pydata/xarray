@@ -68,7 +68,7 @@ def netcdf_and_hdf5_versions():
     except ImportError:
         try:
             import h5py
-            libhdf5_version = h5py.__hdf5libversion__
+            libhdf5_version = h5py.version.hdf5_version
         except ImportError:
             pass
     return [('libhdf5', libhdf5_version), ('libnetcdf', libnetcdf_version)]
@@ -77,7 +77,10 @@ def netcdf_and_hdf5_versions():
 def show_versions(file=sys.stdout):
     sys_info = get_sys_info()
 
-    sys_info.extend(netcdf_and_hdf5_versions())
+    try:
+        sys_info.extend(netcdf_and_hdf5_versions())
+    except Exception as e:
+        print("Error collecting netcdf / hdf5 version: {}".format(e))
 
     deps = [
         # (MODULE_NAME, f(mod) -> mod version)
