@@ -1256,19 +1256,23 @@ class TestDataArray:
         assert_identical(actual, expected)
 
     def test_broadcast_like(self):
-        original1 = DataArray(np.random.randn(5),
-                              [('x', range(5))])
+        arr1 = DataArray(np.ones((2, 3)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b'], 'y': ['a', 'b', 'c']})
+        arr2 = DataArray(np.ones((3, 2)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b', 'c'], 'y': ['a', 'b']})
+        orig1, orig2 = broadcast(arr1, arr2)
+        new1 = arr1.broadcast_like(arr2)
+        new2 = arr2.broadcast_like(arr1)
 
-        original2 = DataArray(np.random.randn(6),
-                              [('y', range(6))])
+        assert orig1.identical(new1)
+        assert orig2.identical(new2)
 
-        expected1, expected2 = broadcast(original1, original2)
+        orig3 = DataArray(np.random.randn(5), [('x', range(5))])
+        orig4 = DataArray(np.random.randn(6), [('y', range(6))])
+        new3, new4 = broadcast(orig3, orig4)
 
-        assert_identical(original1.broadcast_like(original2),
-                         expected1.transpose('y', 'x'))
-
-        assert_identical(original2.broadcast_like(original1),
-                         expected2)
+        assert_identical(orig3.broadcast_like(orig4), new3.transpose('y', 'x'))
+        assert_identical(orig4.broadcast_like(orig3), new4)
 
     def test_reindex_like(self):
         foo = DataArray(np.random.randn(5, 6),
@@ -3140,7 +3144,9 @@ class TestDataArray:
         expected_no_data = expected.copy()
         del expected_no_data['data']
         del expected_no_data['coords']['x']['data']
-        expected_no_data['coords']['x'].update({'dtype': '<U1', 'shape': (2,)})
+        endiantype = '<U1' if sys.byteorder == 'little' else '>U1'
+        expected_no_data['coords']['x'].update({'dtype': endiantype,
+                                                'shape': (2,)})
         expected_no_data.update({'dtype': 'float64', 'shape': (2, 3)})
         actual_no_data = array.to_dict(data=False)
         assert expected_no_data == actual_no_data

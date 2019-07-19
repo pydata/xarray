@@ -999,7 +999,17 @@ class DataArray(AbstractArray, DataWithCoords):
                        other: Union['DataArray', Dataset],
                        exclude: Iterable[Hashable] = None) -> 'DataArray':
         """Broadcast this DataArray against another Dataset or DataArray.
+
         This is equivalent to xr.broadcast(other, self)[1]
+
+        xarray objects are broadcast against each other in arithmetic
+        operations, so this method is not be necessary for most uses.
+
+        If no change is needed, the input data is returned to the output
+        without being copied.
+
+        If new coords are added by the broadcast, their values are
+        NaN filled.
 
         Parameters
         ----------
@@ -1007,6 +1017,37 @@ class DataArray(AbstractArray, DataWithCoords):
             Object against which to broadcast this array.
         exclude : iterable of hashable, optional
             Dimensions that must not be broadcasted
+
+        Returns
+        -------
+        new_da: xr.DataArray
+
+        Examples
+        --------
+
+        >>> arr1
+        <xarray.DataArray (x: 2, y: 3)>
+        array([[0.840235, 0.215216, 0.77917 ],
+               [0.726351, 0.543824, 0.875115]])
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+          * y        (y) <U1 'a' 'b' 'c'
+        >>> arr2
+        <xarray.DataArray (x: 3, y: 2)>
+        array([[0.612611, 0.125753],
+               [0.853181, 0.948818],
+               [0.180885, 0.33363 ]])
+        Coordinates:
+          * x        (x) <U1 'a' 'b' 'c'
+          * y        (y) <U1 'a' 'b'
+        >>> arr1.broadcast_like(arr2)
+        <xarray.DataArray (x: 3, y: 3)>
+        array([[0.840235, 0.215216, 0.77917 ],
+               [0.726351, 0.543824, 0.875115],
+               [     nan,      nan,      nan]])
+        Coordinates:
+          * x        (x) object 'a' 'b' 'c'
+          * y        (y) object 'a' 'b' 'c'
         """
         if exclude is None:
             exclude = set()
@@ -1017,7 +1058,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(
             args, exclude)
 
-        return _broadcast_helper(self, exclude, dims_map, common_coords)
+        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
     def reindex_like(self, other: Union['DataArray', Dataset],
                      method: str = None, tolerance=None,

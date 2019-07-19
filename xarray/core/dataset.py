@@ -2055,7 +2055,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(
             args, exclude)
 
-        return _broadcast_helper(self, exclude, dims_map, common_coords)
+        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
     def reindex_like(
             self,
