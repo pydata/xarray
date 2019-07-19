@@ -262,9 +262,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
                 if isinstance(data, DataArray):
                     coords = data.coords
-                    coords = getattr(data, 'coords', None)
-
-                if isinstance(data, pd.Series):
+                elif isinstance(data, pd.Series):
                     coords = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coords = [data.index, data.columns]
