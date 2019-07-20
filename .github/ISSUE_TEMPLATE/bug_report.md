@@ -1,6 +1,6 @@
 ---
 name: Bug report / Feature request
-about: ''
+about: 'Post a problem or idea'
 title: ''
 labels: ''
 assignees: ''
