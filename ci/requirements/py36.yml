@@ -6,7 +6,7 @@ dependencies:
   - cftime
   - dask
   - distributed
-  - h5py
+  - h5py>2.8.0
   - h5netcdf
   - matplotlib
   - netcdf4
@@ -25,7 +25,7 @@ dependencies:
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
-  - cfgrib>=0.9.2
+  - cfgrib>=0.9.7
   - cdms2
   - pynio
   - iris>=1.10
