@@ -21,11 +21,11 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  - rasterio
+  - rasterio==1.0.23
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
-  - cfgrib>0.9.7
+  - cfgrib==0.9.7
   - cdms2
   - pynio
   - iris>=1.10
