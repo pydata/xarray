@@ -501,7 +501,7 @@ def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
                                    fill_value=fill_value)
 
         # Check the overall coordinates are monotonically increasing
-        for dim in concatenated.dims:
+        for dim in concat_dims:
             if dim in concatenated:
                 indexes = concatenated.indexes.get(dim)
                 if not (indexes.is_monotonic_increasing
