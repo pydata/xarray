@@ -1814,8 +1814,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.sel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'sel')
+        casted_indexers = self._maybe_cast_floats(indexers)
         pos_indexers, new_indexes = remap_label_indexers(
-            self, indexers=indexers, method=method, tolerance=tolerance)
+            self, indexers=casted_indexers, method=method, tolerance=tolerance)
         result = self.isel(indexers=pos_indexers, drop=drop)
         return result._overwrite_indexes(new_indexes)
 
@@ -2321,6 +2322,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             # reindex instead.
             ds = self.reindex(object_coords)
         return ds.interp(numeric_coords, method, assume_sorted, kwargs)
+
+    # Helper method for sel()
+    def _maybe_cast_floats(self, indexers):
+        """ Cast float labels passed to sel() method to the float
+        types of the corresponding coordinates"""
+        from .dataarray import DataArray
+        casted_indexers = indexers.copy()
+        for k, v in indexers.items():
+            coords_var = self.coords[k].values
+            if isinstance(indexers[k], (slice, DataArray, Variable)):
+                pass
+            elif (isinstance(coords_var, np.ndarray) and
+                  coords_var.dtype.kind == 'f'):
+                casting_type = getattr(coords_var.dtype, "type")
+                casted_indexers[k] = casting_type(indexers[k])
+        return casted_indexers
 
     # Helper methods for rename()
     def _rename_vars(self, name_dict, dims_dict):

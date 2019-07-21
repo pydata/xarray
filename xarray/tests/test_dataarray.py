@@ -817,6 +817,16 @@ class TestDataArray:
         result = array.sel(delta=slice(array.delta[0], array.delta[-1]))
         assert_equal(result, array)
 
+    def test_sel_float32(self):
+        float_values = [0., 0.111, 0.222, 0.333]
+        coord_values = np.asarray(float_values, dtype='float32')
+        data_values = np.arange(4)
+        array = DataArray(data_values, [('float32_coord', coord_values)])
+        expected = DataArray(data_values[1:3], [('float32_coord',
+                                                 coord_values[1:3])])
+        actual = array.sel(float32_coord=float_values[1:3])
+        assert_equal(expected, actual)
+
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims='x')
         assert_identical(array[0], array.sel(x=0))
