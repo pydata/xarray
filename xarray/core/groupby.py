@@ -232,6 +232,9 @@ class GroupBy(SupportsArithmetic):
                 raise TypeError('`group` must be an xarray.DataArray or the '
                                 'name of an xarray variable or dimension')
             group = obj[group]
+            if len(group) == 0:
+                raise ValueError("Group must not be empty")
+
             if group.name not in obj.coords and group.name in obj.dims:
                 # DummyGroups should not appear on groupby results
                 group = _DummyGroup(obj, group.name, group.coords)
