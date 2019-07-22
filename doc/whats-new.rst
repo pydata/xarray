@@ -83,6 +83,8 @@ Bug fixes
 - Fix HDF5 error that could arise when reading multiple groups from a file at
   once (:issue:`2954`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Better error when using groupby on an empty DataArray (:issue:`3037`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 
 .. _whats-new.0.12.2:
 
