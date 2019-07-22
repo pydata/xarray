@@ -233,7 +233,7 @@ class GroupBy(SupportsArithmetic):
                                 'name of an xarray variable or dimension')
             group = obj[group]
             if len(group) == 0:
-                raise ValueError("Group must not be empty")
+                raise ValueError("{} must not be empty".format(group.name))
 
             if group.name not in obj.coords and group.name in obj.dims:
                 # DummyGroups should not appear on groupby results
