@@ -1348,6 +1348,14 @@ class TestDataArray:
         renamed_kwargs = self.dv.x.rename(x='z').rename('z')
         assert_identical(renamed, renamed_kwargs)
 
+    def test_init_value(self):
+        expected = DataArray(np.full((3, 4), 3), dims=[
+                             'x', 'y'], coords=[range(3), range(4)])
+        actual = DataArray(3, dims=['x', 'y'], coords=[range(3), range(4)])
+        assert_identical(expected, actual)
+        with raises_regex(ValueError, 'cannot initialize array'):
+            DataArray(5)
+
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
         expected = DataArray(array.values, {'y': list('abc')}, dims='y')
