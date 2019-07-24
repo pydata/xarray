@@ -115,6 +115,28 @@ def _infer_coords_and_dims(
     return new_coords, dims
 
 
+def _check_data_shape(data, coords, dims):
+    if data.size == 1 and coords is not None:
+        if utils.is_dict_like(coords):
+            if dims is None:
+                data_shp = tuple(as_compatible_data(
+                    v).size for k, v in coords.items())
+            else:
+                data_shp = tuple(as_compatible_data(
+                    v).size for k, v in coords.items() if k in dims)
+        else:
+            data_shp = tuple(as_compatible_data(
+                coord).size for coord in coords)
+        if all(shp_val == 1 for shp_val in data_shp):
+            data = data
+        elif any(data_shp):
+            if data == None:
+                data = np.empty(data_shp)
+            else:
+                data = np.full(data_shp, data)
+    return data
+
+
 class _LocIndexer:
     def __init__(self, data_array: 'DataArray'):
         self.data_array = data_array
@@ -269,10 +291,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data]
                 elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
-                elif isinstance(data, (float, int)):
-                    raise ValueError('cannot initialize array '
-                                     'with value %r if dimension coordinates '
-                                     'are not specified' % (data))
+
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
             if name is None:
@@ -281,12 +300,9 @@ class DataArray(AbstractArray, DataWithCoords):
                 attrs = getattr(data, 'attrs', None)
             if encoding is None:
                 encoding = getattr(data, 'encoding', None)
-            if data is None:
-                data = np.empty(tuple(len(coord) for coord in coords))
-            elif isinstance(data, (float, int)):
-                data = np.full(tuple(len(coord) for coord in coords), data)
 
             data = as_compatible_data(data)
+            data = _check_data_shape(data, coords, dims)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
 
