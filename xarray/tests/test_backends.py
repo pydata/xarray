@@ -35,7 +35,7 @@ from . import (
     requires_cftime, requires_dask, requires_h5fileobj, requires_h5netcdf,
     requires_netCDF4, requires_pathlib, requires_pseudonetcdf, requires_pydap,
     requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr)
+    requires_scipy_or_netCDF4, requires_zarr, arm_xfail)
 from .test_coding_times import (
     _ALL_CALENDARS, _NON_STANDARD_CALENDARS, _STANDARD_CALENDARS)
 from .test_dataset import create_test_data, create_append_test_data
@@ -400,6 +400,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
             assert actual['x'].encoding['_Encoding'] == 'ascii'
 
+    @arm_xfail
     def test_roundtrip_numpy_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
@@ -2884,6 +2885,17 @@ class TestOpenMFDataSetDeprecation:
     Set of tests to check that FutureWarnings are correctly raised until the
     deprecation cycle is complete. #2616
     """
+    def test_open_mfdataset_default(self):
+        ds1, ds2 = Dataset({'x': [0]}), Dataset({'x': [1]})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+
+                with pytest.warns(FutureWarning, match="default behaviour of"
+                                                       " `open_mfdataset`"):
+                    open_mfdataset([tmp1, tmp2])
+
     def test_open_mfdataset_with_concat_dim(self):
         ds1, ds2 = Dataset({'x': [0]}), Dataset({'x': [1]})
         with create_tmp_file() as tmp1:

@@ -154,7 +154,7 @@ Transitioning from pandas.Panel to xarray
 ``Panel``, pandas' data structure for 3D arrays, has always
 been a second class data structure compared to the Series and DataFrame. To
 allow pandas developers to focus more on its core functionality built around
-the DataFrame, panads has deprecated ``Panel``. It will be removed in pandas
+the DataFrame, pandas has deprecated ``Panel``. It will be removed in pandas
 0.25.
 
 xarray has most of ``Panel``'s features, a more explicit API (particularly around

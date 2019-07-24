@@ -105,6 +105,14 @@ def test_ds_groupby_apply_func_args():
     assert_identical(expected, actual)
 
 
+def test_da_groupby_empty():
+
+    empty_array = xr.DataArray([], dims='dim')
+
+    with pytest.raises(ValueError):
+        empty_array.groupby('dim')
+
+
 def test_da_groupby_quantile():
 
     array = xr.DataArray([1, 2, 3, 4, 5, 6],

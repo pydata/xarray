@@ -18,8 +18,15 @@ What's New
 v0.12.4 (unreleased)
 -------------------
 
+This release increases the minimum required Python version from 3.5.0 to 3.5.3
+(:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
+
+- Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
+  <http://github.com/DavidMertz>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -30,6 +37,14 @@ Bug fixes
   unicode indices to dtype=object (:issue:`3094`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+
+- Improved error handling and documentation for `.expand_dims()` 
+  read-only view.
+- Fix tests for big-endian systems (:issue:`3125`).
+  By `Graham Inggs <https://github.com/ginggs>`_.
+- XFAIL several tests which are expected to fail on ARM systems
+  due to a ``datetime`` issue in NumPy (:issue:`2334`).
+  By `Graham Inggs <https://github.com/ginggs>`_.
 
 .. _whats-new.0.12.3:
 
@@ -52,6 +67,7 @@ New functions/methods
   (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
 
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -71,6 +87,8 @@ Bug fixes
 - Fix HDF5 error that could arise when reading multiple groups from a file at
   once (:issue:`2954`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Better error message when using groupby on an empty DataArray (:issue:`3037`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 
 .. _whats-new.0.12.2:
 
