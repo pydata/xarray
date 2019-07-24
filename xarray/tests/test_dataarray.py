@@ -1353,8 +1353,6 @@ class TestDataArray:
                              'x', 'y'], coords=[range(3), range(4)])
         actual = DataArray(3, dims=['x', 'y'], coords=[range(3), range(4)])
         assert_identical(expected, actual)
-        with raises_regex(ValueError, 'cannot initialize array'):
-            DataArray(5)
 
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
