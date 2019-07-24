@@ -36,9 +36,7 @@ Bug fixes
 - Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
   unicode indices to dtype=object (:issue:`3094`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-
-
-- Improved error handling and documentation for `.expand_dims()` 
+- Improved error handling and documentation for `.expand_dims()`
   read-only view.
 - Fix tests for big-endian systems (:issue:`3125`).
   By `Graham Inggs <https://github.com/ginggs>`_.
