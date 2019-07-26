@@ -6,9 +6,9 @@ from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
 from pathlib import Path
-from typing import (Any, Dict, Hashable, Iterable, Iterator, List,
+from typing import (Any, DefaultDict, Dict, Hashable, Iterable, Iterator, List,
                     Mapping, MutableMapping, Optional, Sequence, Set, Tuple,
-                    Union, cast)
+                    Union, cast, TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,8 @@ import xarray as xr
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from . import (alignment, dtypes, duck_array_ops, formatting, groupby,
                indexing, ops, pdcompat, resample, rolling, utils)
-from .alignment import align
+from .alignment import (align, _broadcast_helper,
+                        _get_broadcast_dims_map_common_coords)
 from .common import (ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
                      _contains_datetime_like_objects)
 from .coordinates import (DatasetCoordinates, LevelCoordinatesSource,
@@ -30,21 +31,11 @@ from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
     merge_variables)
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import TYPE_CHECKING, dask_array_type
+from .pycompat import dask_array_type
 from .utils import (Frozen, SortedKeysDict, _check_inplace,
                     decode_numpy_dict_values, either_dict_or_kwargs, hashable,
                     maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
-
-# Support for Python 3.5.0 ~ 3.5.1
-try:
-    from .pycompat import Mapping  # noqa: F811
-except ImportError:
-    pass
-try:
-    from typing import DefaultDict
-except ImportError:
-    pass
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -223,8 +214,7 @@ def split_indexes(
             not isinstance(dims_or_levels, Sequence)):
         dims_or_levels = [dims_or_levels]
 
-    dim_levels \
-        = defaultdict(list)  # type: DefaultDict[Any, List[Hashable]]
+    dim_levels = defaultdict(list)  # type: DefaultDict[Any, List[Hashable]]
     dims = []
     for k in dims_or_levels:
         if k in level_coords:
@@ -2027,6 +2017,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         return self.isel_points(dim=dim, **pos_indexers)
 
+    def broadcast_like(self,
+                       other: Union['Dataset', 'DataArray'],
+                       exclude=None) -> 'Dataset':
+        """Broadcast this DataArray against another Dataset or DataArray.
+        This is equivalent to xr.broadcast(other, self)[1]
+
+        Parameters
+        ----------
+        other : Dataset or DataArray
+            Object against which to broadcast this array.
+        exclude : sequence of str, optional
+            Dimensions that must not be broadcasted
+
+        """
+
+        if exclude is None:
+            exclude = set()
+        args = align(other, self, join='outer', copy=False, exclude=exclude)
+
+        dims_map, common_coords = _get_broadcast_dims_map_common_coords(
+            args, exclude)
+
+        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
+
     def reindex_like(self, other, method=None, tolerance=None, copy=True,
                      fill_value=dtypes.NA):
         """Conform this object onto the indexes of another object, filling in
@@ -2516,7 +2530,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def expand_dims(self, dim=None, axis=None, **dim_kwargs):
         """Return a new object with an additional axis (or axes) inserted at
-        the corresponding position in the array shape.
+        the corresponding position in the array shape.  The new object is a
+        view into the underlying array, not a copy.
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
