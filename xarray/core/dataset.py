@@ -1814,9 +1814,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.sel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'sel')
-        casted_indexers = self._maybe_cast_floats(indexers)
+        casting_keys = self._get_casting_keys(indexers.keys())
+        from .dataarray import DataArray
+        for k in casting_keys:
+            if isinstance(indexers[k], (slice, DataArray, Variable)):
+                pass
+            else:
+                casting_type = getattr(self.coords[k].values.dtype, "type")
+                indexers[k] = casting_type(indexers[k])
+
         pos_indexers, new_indexes = remap_label_indexers(
-            self, indexers=casted_indexers, method=method, tolerance=tolerance)
+            self, indexers=indexers, method=method, tolerance=tolerance)
         result = self.isel(indexers=pos_indexers, drop=drop)
         return result._overwrite_indexes(new_indexes)
 
@@ -2324,20 +2332,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return ds.interp(numeric_coords, method, assume_sorted, kwargs)
 
     # Helper method for sel()
-    def _maybe_cast_floats(self, indexers):
-        """ Cast float labels passed to sel() method to the float
-        types of the corresponding coordinates"""
-        from .dataarray import DataArray
-        casted_indexers = indexers.copy()
-        for k, v in indexers.items():
+    def _get_casting_keys(self, indexers_keys):
+        casting_keys = []
+        coords_keys = self.coords.keys()
+        common_keys = list(set(indexers_keys) & set(coords_keys))
+        for k in common_keys:
             coords_var = self.coords[k].values
-            if isinstance(indexers[k], (slice, DataArray, Variable)):
-                pass
-            elif (isinstance(coords_var, np.ndarray) and
-                  coords_var.dtype.kind == 'f'):
-                casting_type = getattr(coords_var.dtype, "type")
-                casted_indexers[k] = casting_type(indexers[k])
-        return casted_indexers
+            if (isinstance(coords_var, np.ndarray) and
+                    coords_var.dtype.kind == 'f'):
+                casting_keys.append(k)
+        return casting_keys
 
     # Helper methods for rename()
     def _rename_vars(self, name_dict, dims_dict):
