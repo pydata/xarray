@@ -88,6 +88,17 @@ Learn more
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
 """  # noqa
 
+ENTRY_POINTS = {
+    'xarray.backends': [
+        'netcdf4 = xarray.backends:NetCDF4DataStore.open',
+        'scipy = xarray.backends:ScipyDataStore',
+        'pydap = xarray.backends:PydapDataStore.open',
+        'h5netcdf = xarray.backends:H5NetCDFStore',
+        'pynio = xarray.backends:NioDataStore',
+        'pseudonetcdf = xarray.backends:PseudoNetCDFDataStore.open',
+        'cfgrib = xarray.backends:CfGribDataStore',
+    ]
+}
 
 setup(name=DISTNAME,
       version=versioneer.get_version(),
@@ -104,4 +115,5 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       packages=find_packages(),
-      package_data={'xarray': ['tests/data/*']})
+      package_data={'xarray': ['tests/data/*']},
+      entry_points=ENTRY_POINTS)

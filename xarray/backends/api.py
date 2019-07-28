@@ -129,6 +129,17 @@ def _get_default_engine(path, allow_remote=False):
     return engine
 
 
+def _get_backend_cls(engine):
+    import entrypoints
+    try:
+        return entrypoints.get_single('xarray.backends', engine).load()
+    except entrypoints.NoSuchEntryPoint:
+        all_entrypoints = entrypoints.get_group_named('xarray.backends')
+        raise ValueError('unrecognized engine for open_dataset: {}\n'
+                         'must be one of: {}'
+                         .format(engine, list(all_entrypoints.keys())))
+
+
 def _normalize_path(path):
     if is_remote_uri(path):
         return path
@@ -352,12 +363,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     --------
     open_mfdataset
     """
-    engines = [None, 'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio',
-               'cfgrib', 'pseudonetcdf']
-    if engine not in engines:
-        raise ValueError('unrecognized engine for open_dataset: {}\n'
-                         'must be one of: {}'
-                         .format(engine, engines))
 
     if autoclose is not None:
         warnings.warn(
@@ -382,6 +387,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if backend_kwargs is None:
         backend_kwargs = {}
+    extra_kwargs = {}
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -417,44 +423,27 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
-
-    elif isinstance(filename_or_obj, str):
-        filename_or_obj = _normalize_path(filename_or_obj)
-
-        if engine is None:
-            engine = _get_default_engine(filename_or_obj,
-                                         allow_remote=True)
-        if engine == 'netcdf4':
-            store = backends.NetCDF4DataStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs)
-        elif engine == 'scipy':
-            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == 'pydap':
-            store = backends.PydapDataStore.open(
-                filename_or_obj, **backend_kwargs)
-        elif engine == 'h5netcdf':
-            store = backends.H5NetCDFStore(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs)
-        elif engine == 'pynio':
-            store = backends.NioDataStore(
-                filename_or_obj, lock=lock, **backend_kwargs)
-        elif engine == 'pseudonetcdf':
-            store = backends.PseudoNetCDFDataStore.open(
-                filename_or_obj, lock=lock, **backend_kwargs)
-        elif engine == 'cfgrib':
-            store = backends.CfGribDataStore(
-                filename_or_obj, lock=lock, **backend_kwargs)
-
     else:
-        if engine not in [None, 'scipy', 'h5netcdf']:
-            raise ValueError("can only read bytes or file-like objects "
-                             "with engine='scipy' or 'h5netcdf'")
-        engine = _get_engine_from_magic_number(filename_or_obj)
-        if engine == 'scipy':
-            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == 'h5netcdf':
-            store = backends.H5NetCDFStore(filename_or_obj, group=group,
-                                           lock=lock, **backend_kwargs)
+        if isinstance(filename_or_obj, str):
+            filename_or_obj = _normalize_path(filename_or_obj)
+
+            if engine is None:
+                engine = _get_default_engine(filename_or_obj, allow_remote=True)
+
+        else:
+            if engine not in [None, 'scipy', 'h5netcdf']:
+                raise ValueError("can only read bytes or file-like objects "
+                                "with engine='scipy' or 'h5netcdf'")
+            engine = _get_engine_from_magic_number(filename_or_obj)
+
+        if engine in ['netcdf4', 'h5netcdf']:
+            extra_kwargs['group'] = group
+            extra_kwargs['lock'] = lock
+        elif engine in ['pynio', 'pseudonetcdf', 'cfgrib']:
+            extra_kwargs['lock'] = lock
+
+        opener = _get_backend_cls(engine)
+        store = opener(filename_or_obj, **backend_kwargs, **extra_kwargs)
 
     with close_on_error(store):
         ds = maybe_decode_store(store)
