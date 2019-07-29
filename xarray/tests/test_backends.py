@@ -1655,7 +1655,7 @@ class ZarrBase(CFEncodedBase):
         # check append mode for append write
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode='w')
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             original = xr.concat([ds, ds_to_append], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
@@ -1691,7 +1691,7 @@ class ZarrBase(CFEncodedBase):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode='w')
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             original = xr.concat([ds, ds_to_append], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
@@ -1707,8 +1707,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(ValueError):
             with self.create_zarr_target() as store_target:
                 ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a',
-                                     append_dim='notvalid')
+                ds_to_append.to_zarr(store_target, append_dim='notvalid')
 
     def test_append_with_append_dim_not_set_raises(self):
 
@@ -1720,6 +1719,17 @@ class ZarrBase(CFEncodedBase):
                 ds.to_zarr(store_target, mode='w')
                 ds_to_append.to_zarr(store_target, mode='a')
 
+    def test_append_with_mode_not_a_raises(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when append_dim is set and mode != 'a'
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='w',
+                                     append_dim='time')
+
     def test_append_with_existing_encoding_raises(self):
 
         ds, ds_to_append, _ = create_append_test_data()
@@ -1728,8 +1738,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(ValueError):
             with self.create_zarr_target() as store_target:
                 ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a',
-                                     append_dim='time',
+                ds_to_append.to_zarr(store_target, append_dim='time',
                                      encoding={'da': {'compressor': None}})
 
     def test_check_encoding_is_consistent_after_append(self):
@@ -1742,7 +1751,7 @@ class ZarrBase(CFEncodedBase):
             compressor = zarr.Blosc()
             encoding = {'da': {'compressor': compressor}}
             ds.to_zarr(store_target, mode='w', encoding=encoding)
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             actual_ds = xr.open_zarr(store_target)
             actual_encoding = actual_ds['da'].encoding['compressor']
             assert actual_encoding.get_config() == compressor.get_config()
@@ -1803,7 +1812,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(ds, actual)
 
             delayed_obj = self.save(ds_to_append, store, compute=False,
-                                    mode='a', append_dim='time')
+                                    append_dim='time')
             assert isinstance(delayed_obj, Delayed)
 
             with pytest.raises(AssertionError):
