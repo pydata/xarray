@@ -428,12 +428,13 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             filename_or_obj = _normalize_path(filename_or_obj)
 
             if engine is None:
-                engine = _get_default_engine(filename_or_obj, allow_remote=True)
+                engine = _get_default_engine(filename_or_obj,
+                                             allow_remote=True)
 
         else:
             if engine not in [None, 'scipy', 'h5netcdf']:
                 raise ValueError("can only read bytes or file-like objects "
-                                "with engine='scipy' or 'h5netcdf'")
+                                 "with engine='scipy' or 'h5netcdf'")
             engine = _get_engine_from_magic_number(filename_or_obj)
 
         if engine in ['netcdf4', 'h5netcdf']:

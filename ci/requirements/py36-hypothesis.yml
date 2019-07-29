@@ -26,3 +26,4 @@ dependencies:
   - zarr
   - pydap
   - lxml
+  - entrypoints

@@ -33,5 +33,6 @@ dependencies:
   - iris>=1.10
   - pydap
   - lxml
+  - entrypoints
   - pip:
     - mypy==0.711
