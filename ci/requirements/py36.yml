@@ -8,9 +8,7 @@ dependencies:
   - distributed
   - h5py
   - h5netcdf
-  # pin matplotlib for now, to ensure that we have at least one CI job
-  # testing pseudonetcdf: https://github.com/barronh/pseudonetcdf/issues/69
-  - matplotlib=3.0
+  - matplotlib
   - netcdf4
   - pytest
   - pytest-cov
@@ -29,7 +27,9 @@ dependencies:
   - pseudonetcdf>=3.0.1
   - cfgrib>=0.9.2
   - cdms2
-  - pynio
+  # Disabled due to conflicting dependencies:
+  # https://github.com/pydata/xarray/issues/3154
+  # - pynio
   - iris>=1.10
   - pydap
   - lxml

@@ -1390,7 +1390,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def to_zarr(
         self,
         store: Union[MutableMapping, str, Path] = None,
-        mode: str = 'w-',
+        mode: str = None,
         synchronizer=None,
         group: str = None,
         encoding: Mapping = None,
@@ -1408,10 +1408,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system.
-        mode : {'w', 'w-', 'a'}
+        mode : {'w', 'w-', 'a', None}
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
             'a' means append (create if does not exist).
+            If ``append_dim`` is set, ``mode`` can be omitted as it is
+            internally set to ``'a'``. Otherwise, ``mode`` will default to
+            `w-` if not set.
         synchronizer : object, optional
             Array synchronizer
         group : str, optional
@@ -1427,7 +1430,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
         append_dim: hashable, optional
-            If mode='a', the dimension on which the data will be appended.
+            If set, the dimension on which the data will be appended.
 
         References
         ----------
@@ -1435,6 +1438,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if encoding is None:
             encoding = {}
+        if (mode == 'a') or (append_dim is not None):
+            if mode is None:
+                mode = 'a'
+            elif mode != 'a':
+                raise ValueError(
+                    "append_dim was set along with mode='{}', either set "
+                    "mode='a' or don't set it.".format(mode)
+                )
+        elif mode is None:
+            mode = 'w-'
         if mode not in ['w', 'w-', 'a']:
             # TODO: figure out how to handle 'r+'
             raise ValueError("The only supported options for mode are 'w',"
@@ -2039,7 +2052,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(
             args, exclude)
 
-        return _broadcast_helper(self, exclude, dims_map, common_coords)
+        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
     def reindex_like(self, other, method=None, tolerance=None, copy=True,
                      fill_value=dtypes.NA):
