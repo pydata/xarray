@@ -45,6 +45,9 @@ Bug fixes
 - XFAIL several tests which are expected to fail on ARM systems
   due to a ``datetime`` issue in NumPy (:issue:`2334`).
   By `Graham Inggs <https://github.com/ginggs>`_.
+- Fixed bug in ``combine_by_coords()`` causing a `ValueError` if the input had
+  an unused dimension with coordinates which were not monotonic (:issue`3150`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 .. _whats-new.0.12.3:
 
