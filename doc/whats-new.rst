@@ -28,6 +28,15 @@ New functions/methods
   By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
   <http://github.com/DavidMertz>`_.
 
+- The xarray package is now discoverably by mypy (although typing hints
+  coverage is not complete yet). mypy users can now remove from their setup.cfg
+  the lines::
+
+    [mypy-xarray]
+    ignore_missing_imports = True
+
+   By `Guido Imperiale <https://github.com/crusaderky>`_
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -69,7 +78,6 @@ New functions/methods
   with :py:meth:`~Dataset.rename_vars` and :py:meth:`~Dataset.rename_dims`
   (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
-
 
 Enhancements
 ~~~~~~~~~~~~
