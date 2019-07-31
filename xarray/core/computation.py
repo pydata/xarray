@@ -683,7 +683,7 @@ def apply_array_ufunc(func, *args, dask='forbidden'):
 def apply_ufunc(
     func: Callable,
     *args: Any,
-    input_core_dims: Optional[Sequence[Sequence]] = None,
+    input_core_dims: Sequence[Sequence] = None,
     output_core_dims: Optional[Sequence[Sequence]] = ((),),
     exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
@@ -693,8 +693,8 @@ def apply_ufunc(
     keep_attrs: bool = False,
     kwargs: Mapping = None,
     dask: str = 'forbidden',
-    output_dtypes: Optional[Sequence] = None,
-    output_sizes: Optional[Mapping[Any, int]] = None
+    output_dtypes: Sequence = None,
+    output_sizes: Mapping[Any, int] = None
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 

@@ -1,6 +1,18 @@
 from collections import OrderedDict
-from typing import (Any, Dict, Hashable, List, Mapping, Optional, Sequence,
-                    Set, Tuple, Union, TYPE_CHECKING)
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    TYPE_CHECKING
+)
 
 import pandas as pd
 
@@ -13,6 +25,21 @@ from .variable import (
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
+
+    DatasetLikeValue = Union[
+        DataArray,
+        Variable,
+        Tuple[Hashable, Any],
+        Tuple[Sequence[Hashable], Any],
+    ]
+    DatasetLike = Union[Dataset, Mapping[Hashable, DatasetLikeValue]]
+    """Any object type that can be used on the rhs of Dataset.update,
+    Dataset.merge, etc.
+    """
+    MutableDatasetLike = Union[
+        Dataset,
+        MutableMapping[Hashable, DatasetLikeValue],
+    ]
 
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pdcompat.Panel)
@@ -116,11 +143,10 @@ class OrderedDefaultDict(OrderedDict):
 
 
 def merge_variables(
-        list_of_variables_dicts,  # type: List[Mapping[Any, Variable]]
-        priority_vars=None,       # type: Optional[Mapping[Any, Variable]]
-        compat='minimal',         # type: str
-):
-    # type: (...) -> OrderedDict[Any, Variable]
+        list_of_variables_dicts: List[Mapping[Any, Variable]],
+        priority_vars: Mapping[Any, Variable] = None,
+        compat: str = 'minimal',
+) -> 'OrderedDict[Any, Variable]':
     """Merge dicts of variables, while resolving conflicts appropriately.
 
     Parameters
@@ -228,8 +254,9 @@ def expand_variable_dicts(
     return var_dicts
 
 
-def determine_coords(list_of_variable_dicts):
-    # type: (List[Dict]) -> Tuple[Set, Set]
+def determine_coords(
+    list_of_variable_dicts: Iterable['DatasetLike']
+) -> Tuple[Set[Hashable], Set[Hashable]]:
     """Given a list of dicts with xarray object values, identify coordinates.
 
     Parameters
@@ -265,7 +292,9 @@ def determine_coords(list_of_variable_dicts):
     return coord_names, noncoord_names
 
 
-def coerce_pandas_values(objects):
+def coerce_pandas_values(
+    objects: Iterable['DatasetLike']
+) -> List['DatasetLike']:
     """Convert pandas values found in a list of labeled objects.
 
     Parameters
@@ -285,7 +314,7 @@ def coerce_pandas_values(objects):
     out = []
     for obj in objects:
         if isinstance(obj, Dataset):
-            variables = obj
+            variables = obj  # type: DatasetLike
         else:
             variables = OrderedDict()
             if isinstance(obj, PANDAS_TYPES):
@@ -555,17 +584,28 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     return merged
 
 
-def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
-                         fill_value=dtypes.NA):
-    """Guts of the Dataset.merge method."""
+def dataset_merge_method(
+    dataset: 'Dataset',
+    other: 'DatasetLike',
+    overwrite_vars: Union[Hashable, Iterable[Hashable]],
+    compat: str,
+    join: str,
+    fill_value: Any
+) -> Tuple['OrderedDict[Hashable, Variable]',
+           Set[Hashable],
+           Dict[Hashable, int]]:
+    """Guts of the Dataset.merge method.
+    """
 
     # we are locked into supporting overwrite_vars for the Dataset.merge
     # method due for backwards compatibility
     # TODO: consider deprecating it?
 
-    if isinstance(overwrite_vars, str):
-        overwrite_vars = set([overwrite_vars])
-    overwrite_vars = set(overwrite_vars)
+    if isinstance(overwrite_vars, Iterable) and not isinstance(
+            overwrite_vars, str):
+        overwrite_vars = set(overwrite_vars)
+    else:
+        overwrite_vars = {overwrite_vars}
 
     if not overwrite_vars:
         objs = [dataset, other]
@@ -574,8 +614,8 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
         objs = [dataset, other]
         priority_arg = 1
     else:
-        other_overwrite = OrderedDict()
-        other_no_overwrite = OrderedDict()
+        other_overwrite = OrderedDict()  # type: MutableDatasetLike
+        other_no_overwrite = OrderedDict()  # type: MutableDatasetLike
         for k, v in other.items():
             if k in overwrite_vars:
                 other_overwrite[k] = v
@@ -590,15 +630,7 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
 
 def dataset_update_method(
     dataset: 'Dataset',
-    other: Union[
-        'Dataset',
-        Mapping[Hashable, Union[
-            'DataArray',
-            Variable,
-            Tuple[Hashable, Any],
-            Tuple[Sequence[Hashable], Any],
-        ]],
-    ],
+    other: 'DatasetLike',
 ) -> Tuple['OrderedDict[Hashable, Variable]',
            Set[Hashable],
            Dict[Hashable, int]]:
