@@ -23,6 +23,7 @@ dependencies:
   - seaborn
   - toolz
   - rasterio
+  - boto3
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
