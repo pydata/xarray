@@ -300,7 +300,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         variable: Variable = None,
         coords=None,
-        name: Union[Hashable, None, ReprObject] = __default,
+        name: Optional[Hashable] = __default,
     ) -> 'DataArray':
         if variable is None:
             variable = self.variable
@@ -313,7 +313,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def _replace_maybe_drop_dims(
             self,
             variable: Variable,
-            name: Union[str, None, utils.ReprObject] = __default
+            name: Optional[Hashable] = __default
     ) -> 'DataArray':
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
@@ -356,7 +356,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def _from_temp_dataset(
         self,
         dataset: Dataset,
-        name: Union[Hashable, ReprObject] = __default
+        name: Hashable = __default
     ) -> 'DataArray':
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
