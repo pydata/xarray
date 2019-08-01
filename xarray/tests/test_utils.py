@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
+from typing import Hashable
 
 import numpy as np
 import pandas as pd
@@ -179,6 +180,8 @@ class TestDictionaries:
 def test_repr_object():
     obj = utils.ReprObject('foo')
     assert repr(obj) == 'foo'
+    assert isinstance(obj, Hashable)
+    assert not isinstance(obj, str)
 
 
 def test_repr_object_magic_methods():
