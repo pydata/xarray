@@ -40,6 +40,9 @@ def _get_joiner(join):
         # We cannot return a function to "align" in this case, because it needs
         # access to the dimension name to give a good error message.
         return None
+    elif join == 'override':
+        # We rewrite all indexes and then use join='left'
+        return operator.itemgetter(0)
     else:
         raise ValueError('invalid value for join: %s' % join)
 
@@ -60,7 +63,7 @@ def align(*objects, join='inner', copy=True, indexes=None, exclude=frozenset(),
     ----------
     *objects : Dataset or DataArray
         Objects to align.
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    join : {'outer', 'inner', 'left', 'right', 'exact', 'override'}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
 
@@ -70,6 +73,9 @@ def align(*objects, join='inner', copy=True, indexes=None, exclude=frozenset(),
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object. Indexes for the same dimension must have
+          the same size in all objects.
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed with
@@ -101,6 +107,20 @@ def align(*objects, join='inner', copy=True, indexes=None, exclude=frozenset(),
         # fast path for the trivial case
         obj, = objects
         return (obj.copy(deep=copy),)
+
+    if join == 'override':
+        objects = list(objects)
+        new_indexes = dict()
+        for index, obj in enumerate(objects[1:]):
+            for dim in objects[0].indexes:
+                if dim not in exclude:
+                    if obj.indexes[dim].size != objects[0].indexes[dim].size:
+                        raise ValueError("Cannot use join='override' when "
+                                         "all indexes don't have the same "
+                                         "shape.")
+                    new_indexes[dim] = objects[0].indexes[dim]
+
+            objects[index + 1] = obj._overwrite_indexes(new_indexes)
 
     all_indexes = defaultdict(list)
     unlabeled_dim_sizes = defaultdict(set)

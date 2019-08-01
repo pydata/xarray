@@ -329,7 +329,7 @@ class DataArray(AbstractArray, DataWithCoords):
                                  if set(v.dims) <= allowed_dims)
         return self._replace(variable, coords, name)
 
-    def _replace_indexes(
+    def _overwrite_indexes(
         self,
         indexes: Mapping[Hashable, Any]
     ) -> 'DataArray':

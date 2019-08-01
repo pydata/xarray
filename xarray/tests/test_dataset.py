@@ -1800,6 +1800,28 @@ class TestDataset:
         with raises_regex(ValueError, 'indexes .* not equal'):
             xr.align(left, right, join='exact')
 
+    def test_align_override(self):
+        left = xr.Dataset(coords={'x': [0, 1, 2]})
+        right = xr.Dataset(coords={'x': [0.1, 1.1, 2.1],
+                                   'y': [1, 2, 3]})
+
+        expected_right = xr.Dataset(coords={'x': [0, 1, 2],
+                                            'y': [1, 2, 3]})
+
+        new_left, new_right = xr.align(left, right, join='override')
+        assert_identical(left, new_left)
+        assert_identical(new_right, expected_right)
+
+        new_left, new_right = xr.align(left, right, exclude='x',
+                                       join='override')
+        assert_identical(left, new_left)
+        assert_identical(right, new_right)
+
+        with raises_regex(ValueError, "all indexes don't have the same shape"):
+            new_left, new_right = xr.align(left.isel(x=0).expand_dims('x'),
+                                           right,
+                                           join='override')
+
     def test_align_exclude(self):
         x = Dataset({'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'],
                                       coords={'x': [1, 2], 'y': [3, 4]})})
