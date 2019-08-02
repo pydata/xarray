@@ -315,10 +315,10 @@ class _LocIndexer:
     def __init__(self, dataset: 'Dataset'):
         self.dataset = dataset
 
-    def __getitem__(self, key: Mapping[str, Any]) -> 'Dataset':
+    def __getitem__(self, key: Mapping[Hashable, Any]) -> 'Dataset':
         if not utils.is_dict_like(key):
             raise TypeError('can only lookup dictionaries from Dataset.loc')
-        return self.dataset.sel(**key)
+        return self.dataset.sel(key)
 
 
 class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
@@ -3261,7 +3261,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
 
-    def _assert_all_in_dataset(self, names, virtual_okay=False):
+    def _assert_all_in_dataset(self, names: Iterable[Hashable],
+                               virtual_okay: bool = False) -> None:
         bad_names = set(names) - set(self._variables)
         if virtual_okay:
             bad_names -= self.virtual_variables
@@ -3269,14 +3270,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
-    def drop(self, labels, dim=None, *, errors='raise'):
+    def drop(
+        self,
+        labels: Union[Hashable, Iterable[Hashable]],
+        dim: Hashable = None,
+        *,
+        errors: str = 'raise'
+    ) -> 'Dataset':
         """Drop variables or index labels from this dataset.
 
         Parameters
         ----------
-        labels : scalar or list of scalars
-            Name(s) of variables or index labels to drop.
-        dim : None or str, optional
+        labels : hashable or iterable of hashables
+            Name(s) of variables or index labels to drop
+        dim : None or hashable, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.
         errors: {'raise', 'ignore'}, optional
@@ -3291,11 +3298,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if errors not in ['raise', 'ignore']:
             raise ValueError('errors must be either "raise" or "ignore"')
-        if utils.is_scalar(labels):
-            labels = [labels]
+
         if dim is None:
+            if isinstance(labels, str) or not isinstance(labels, Iterable):
+                labels = {labels}
+            else:
+                labels = set(labels)
+
             return self._drop_vars(labels, errors=errors)
         else:
+            if utils.is_scalar(labels):
+                labels = [labels]
+
             try:
                 index = self.indexes[dim]
             except KeyError:
@@ -3304,25 +3318,38 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             new_index = index.drop(labels, errors=errors)
             return self.loc[{dim: new_index}]
 
-    def _drop_vars(self, names, errors='raise'):
+    def _drop_vars(
+        self,
+        names: set,
+        errors: str = 'raise'
+    ) -> 'Dataset':
         if errors == 'raise':
             self._assert_all_in_dataset(names)
-        drop = set(names)
+
         variables = OrderedDict((k, v) for k, v in self._variables.items()
-                                if k not in drop)
+                                if k not in names)
         coord_names = set(k for k in self._coord_names if k in variables)
         indexes = OrderedDict((k, v) for k, v in self.indexes.items()
-                              if k not in drop)
+                              if k not in names)
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes)
 
-    def drop_dims(self, drop_dims, *, errors='raise'):
+    def drop_dims(
+        self,
+        drop_dims: Union[Hashable, Iterable[Hashable]],
+        *,
+        errors: str = 'raise'
+    ) -> 'Dataset':
         """Drop dimensions and associated variables from this dataset.
 
         Parameters
         ----------
         drop_dims : str or list
             Dimension or dimensions to drop.
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if any of the
+            dimensions passed are not in the dataset. If 'ignore', any given
+            labels that are in the dataset are dropped and no error is raised.
 
         Returns
         -------
@@ -3338,8 +3365,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if errors not in ['raise', 'ignore']:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        if utils.is_scalar(drop_dims):
+        if isinstance(drop_dims, str) or not isinstance(drop_dims, Iterable):
             drop_dims = [drop_dims]
+        else:
+            drop_dims = list(drop_dims)
 
         if errors == 'raise':
             missing_dimensions = [d for d in drop_dims if d not in self.dims]
@@ -3351,7 +3380,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         for d in v.dims if d in drop_dims)
         return self._drop_vars(drop_vars)
 
-    def transpose(self, *dims):
+    def transpose(self, *dims: Hashable) -> 'Dataset':
         """Return a new Dataset object with all array dimensions transposed.
 
         Although the order of dimensions on each array will change, the dataset
@@ -3359,7 +3388,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        *dims : str, optional
+        *dims : Hashable, optional
             By default, reverse the dimensions on each array. Otherwise,
             reorder the dimensions to this order.
 
@@ -3391,13 +3420,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ds._variables[name] = var.transpose(*var_dims)
         return ds
 
-    def dropna(self, dim, how='any', thresh=None, subset=None):
+    def dropna(
+        self,
+        dim: Hashable,
+        how: str = 'any',
+        thresh: int = None,
+        subset: Iterable[Hashable] = None
+    ):
         """Returns a new dataset with dropped labels for missing values along
         the provided dimension.
 
         Parameters
         ----------
-        dim : str
+        dim : Hashable
             Dimension along which to drop missing values. Dropping along
             multiple dimensions simultaneously is not yet supported.
         how : {'any', 'all'}, optional
@@ -3405,8 +3440,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * all : if all values are NA, drop that label
         thresh : int, default None
             If supplied, require this many non-NA values.
-        subset : sequence, optional
-            Subset of variables to check for missing values. By default, all
+        subset : iterable of hashable, optional
+            Which variables to check for missing values. By default, all
             variables in the dataset are checked.
 
         Returns
@@ -3421,7 +3456,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError('%s must be a single dataset dimension' % dim)
 
         if subset is None:
-            subset = list(self.data_vars)
+            subset = iter(self.data_vars)
 
         count = np.zeros(self.dims[dim], dtype=np.int64)
         size = 0
@@ -3430,7 +3465,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += np.asarray(array.count(dims))
+                count += np.asarray(array.count(dims))  # type: ignore
                 size += np.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
@@ -3446,7 +3481,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return self.isel({dim: mask})
 
-    def fillna(self, value):
+    def fillna(self, value: Any) -> 'Dataset':
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
