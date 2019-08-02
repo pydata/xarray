@@ -3305,8 +3305,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if isinstance(labels, str) or not isinstance(labels, Iterable):
                 labels = {labels}
             elif isinstance(labels, DataArray):
-                raise ValueError(
-                    "DataArray labels are only supported when dropping indices")
+                raise ValueError("DataArray labels are only supported when "
+                                 "dropping indices")
             else:
                 labels = set(labels)
 
