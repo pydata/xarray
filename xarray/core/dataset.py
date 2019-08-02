@@ -3272,7 +3272,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def drop(
         self,
-        labels: Union[Hashable, Iterable[Hashable]],
+        labels: Union[Hashable, Iterable[Hashable], DataArray],
         dim: Hashable = None,
         *,
         errors: str = 'raise'
@@ -3282,7 +3282,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         labels : hashable or iterable of hashables
-            Name(s) of variables or index labels to drop
+            Name(s) of variables or index labels to drop.
+            If dim is not None, it can be anything that can be cast to
+            a numpy array (e.g. a DataArray).
         dim : None or hashable, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.
@@ -3302,13 +3304,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if dim is None:
             if isinstance(labels, str) or not isinstance(labels, Iterable):
                 labels = {labels}
+            elif isinstance(labels, DataArray):
+                raise ValueError(
+                    "DataArray labels are only supported when dropping indices")
             else:
                 labels = set(labels)
 
             return self._drop_vars(labels, errors=errors)
         else:
+            # Don't cast to set, as it would harm performance when labels
+            # is a large numpy array
             if utils.is_scalar(labels):
                 labels = [labels]
+            labels = np.asarray(labels)
 
             try:
                 index = self.indexes[dim]
