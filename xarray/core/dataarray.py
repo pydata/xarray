@@ -4,7 +4,7 @@ import warnings
 from collections import OrderedDict
 from numbers import Number
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
-                    Optional, Sequence, Tuple, Union, cast)
+                    Optional, Sequence, Tuple, Union, cast, TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,9 @@ from . import (
     utils)
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
-from .alignment import align, reindex_like_indexers
+from .alignment import (align, _broadcast_helper,
+                        _get_broadcast_dims_map_common_coords,
+                        reindex_like_indexers)
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
@@ -23,7 +25,6 @@ from .coordinates import (
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
-from .pycompat import TYPE_CHECKING
 from .options import OPTIONS
 from .utils import _check_inplace, either_dict_or_kwargs, ReprObject
 from .variable import (
@@ -997,6 +998,29 @@ class DataArray(AbstractArray, DataWithCoords):
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
 
+    def broadcast_like(self,
+                       other: Union['DataArray', Dataset],
+                       exclude=None) -> 'DataArray':
+        """Broadcast this DataArray against another Dataset or DataArray.
+        This is equivalent to xr.broadcast(other, self)[1]
+
+        Parameters
+        ----------
+        other : Dataset or DataArray
+            Object against which to broadcast this array.
+        exclude : sequence of str, optional
+            Dimensions that must not be broadcasted
+        """
+
+        if exclude is None:
+            exclude = set()
+        args = align(other, self, join='outer', copy=False, exclude=exclude)
+
+        dims_map, common_coords = _get_broadcast_dims_map_common_coords(
+            args, exclude)
+
+        return _broadcast_helper(self, exclude, dims_map, common_coords)
+
     def reindex_like(self, other: Union['DataArray', Dataset],
                      method: Optional[str] = None, tolerance=None,
                      copy: bool = True, fill_value=dtypes.NA) -> 'DataArray':
@@ -1275,7 +1299,9 @@ class DataArray(AbstractArray, DataWithCoords):
                                      Mapping[Hashable, Any]] = None,
                     axis=None, **dim_kwargs: Any) -> 'DataArray':
         """Return a new object with an additional axis (or axes) inserted at
-        the corresponding position in the array shape.
+        the corresponding position in the array shape. The new object is a
+        view into the underlying array, not a copy.
+
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
