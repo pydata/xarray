@@ -83,6 +83,7 @@ sphinx_gallery_conf = {'examples_dirs': 'gallery',
                        }
 
 autosummary_generate = True
+autodoc_typehints = 'none'
 
 numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
