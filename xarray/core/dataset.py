@@ -8,7 +8,8 @@ from numbers import Number
 from pathlib import Path
 from typing import (Any, Callable, DefaultDict, Dict, Hashable, Iterable,
                     Iterator, List, Mapping, MutableMapping, Optional,
-                    Sequence, Set, Tuple, Union, cast, TYPE_CHECKING)
+                    Sequence, Set, Tuple, Union, cast, overload,
+                    TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
@@ -3270,13 +3271,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
+    # Drop variables
+    @overload
     def drop(
         self,
-        labels: Union[Hashable, Iterable[Hashable], 'DataArray'],
-        dim: Hashable = None,
+        labels: Union[Hashable, Iterable[Hashable]],
         *,
         errors: str = 'raise'
     ) -> 'Dataset':
+        ...
+
+    # Drop index labels along dimension
+    @overload  # noqa: F811
+    def drop(
+        self,
+        labels: Any,  # array-like
+        dim: Hashable,
+        *,
+        errors: str = 'raise'
+    ) -> 'Dataset':
+        ...
+
+    def drop(self, labels, dim=None, *, errors='raise'):  # noqa: F811
         """Drop variables or index labels from this dataset.
 
         Parameters
@@ -3304,9 +3320,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if dim is None:
             if isinstance(labels, str) or not isinstance(labels, Iterable):
                 labels = {labels}
-            elif isinstance(labels, DataArray):
-                raise ValueError("DataArray labels are only supported when "
-                                 "dropping indices")
             else:
                 labels = set(labels)
 
