@@ -28,8 +28,21 @@ New functions/methods
   By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
   <http://github.com/DavidMertz>`_.
 
+- The xarray package is now discoverably by mypy (although typing hints
+  coverage is not complete yet). mypy users can now remove from their setup.cfg
+  the lines::
+
+    [mypy-xarray]
+    ignore_missing_imports = True
+
+   By `Guido Imperiale <https://github.com/crusaderky>`_
+
 Enhancements
 ~~~~~~~~~~~~
+
+- In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
+  ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
+  By `David Brochart <https://github.com/davidbrochart>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -43,6 +56,9 @@ Bug fixes
 - XFAIL several tests which are expected to fail on ARM systems
   due to a ``datetime`` issue in NumPy (:issue:`2334`).
   By `Graham Inggs <https://github.com/ginggs>`_.
+- Fixed bug in ``combine_by_coords()`` causing a `ValueError` if the input had
+  an unused dimension with coordinates which were not monotonic (:issue`3150`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 .. _whats-new.0.12.3:
 
@@ -64,7 +80,6 @@ New functions/methods
   with :py:meth:`~Dataset.rename_vars` and :py:meth:`~Dataset.rename_dims`
   (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
-
 
 Enhancements
 ~~~~~~~~~~~~

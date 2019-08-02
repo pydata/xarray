@@ -1655,7 +1655,7 @@ class ZarrBase(CFEncodedBase):
         # check append mode for append write
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode='w')
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             original = xr.concat([ds, ds_to_append], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
@@ -1691,7 +1691,7 @@ class ZarrBase(CFEncodedBase):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode='w')
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             original = xr.concat([ds, ds_to_append], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
@@ -1707,8 +1707,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(ValueError):
             with self.create_zarr_target() as store_target:
                 ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a',
-                                     append_dim='notvalid')
+                ds_to_append.to_zarr(store_target, append_dim='notvalid')
 
     def test_append_with_append_dim_not_set_raises(self):
 
@@ -1720,6 +1719,17 @@ class ZarrBase(CFEncodedBase):
                 ds.to_zarr(store_target, mode='w')
                 ds_to_append.to_zarr(store_target, mode='a')
 
+    def test_append_with_mode_not_a_raises(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when append_dim is set and mode != 'a'
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='w',
+                                     append_dim='time')
+
     def test_append_with_existing_encoding_raises(self):
 
         ds, ds_to_append, _ = create_append_test_data()
@@ -1728,8 +1738,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(ValueError):
             with self.create_zarr_target() as store_target:
                 ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a',
-                                     append_dim='time',
+                ds_to_append.to_zarr(store_target, append_dim='time',
                                      encoding={'da': {'compressor': None}})
 
     def test_check_encoding_is_consistent_after_append(self):
@@ -1742,7 +1751,7 @@ class ZarrBase(CFEncodedBase):
             compressor = zarr.Blosc()
             encoding = {'da': {'compressor': compressor}}
             ds.to_zarr(store_target, mode='w', encoding=encoding)
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             actual_ds = xr.open_zarr(store_target)
             actual_encoding = actual_ds['da'].encoding['compressor']
             assert actual_encoding.get_config() == compressor.get_config()
@@ -1803,7 +1812,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(ds, actual)
 
             delayed_obj = self.save(ds_to_append, store, compute=False,
-                                    mode='a', append_dim='time')
+                                    append_dim='time')
             assert isinstance(delayed_obj, Delayed)
 
             with pytest.raises(AssertionError):
@@ -3743,7 +3752,6 @@ class TestRasterio:
                 with rasterio.vrt.WarpedVRT(src, crs='epsg:4326') as vrt:
                     expected_shape = (vrt.width, vrt.height)
                     expected_crs = vrt.crs
-                    print(expected_crs)
                     expected_res = vrt.res
                     # Value of single pixel in center of image
                     lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
@@ -3751,7 +3759,6 @@ class TestRasterio:
                     with xr.open_rasterio(vrt) as da:
                         actual_shape = (da.sizes['x'], da.sizes['y'])
                         actual_crs = da.crs
-                        print(actual_crs)
                         actual_res = da.res
                         actual_val = da.sel(dict(x=lon, y=lat),
                                             method='nearest').data
@@ -3790,35 +3797,29 @@ class TestRasterio:
 
     @network
     def test_rasterio_vrt_network(self):
+        # Make sure loading w/ rasterio give same results as xarray
         import rasterio
-
-        url = 'https://storage.googleapis.com/\
-        gcp-public-data-landsat/LC08/01/047/027/\
-        LC08_L1TP_047027_20130421_20170310_01_T1/\
-        LC08_L1TP_047027_20130421_20170310_01_T1_B4.TIF'
-        env = rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR',
-                           CPL_VSIL_CURL_USE_HEAD=False,
-                           CPL_VSIL_CURL_ALLOWED_EXTENSIONS='TIF')
-        with env:
-            with rasterio.open(url) as src:
+        # use same url that rasterio package uses in tests
+        prefix = "https://landsat-pds.s3.amazonaws.com/L8/139/045/"
+        image = "LC81390452014295LGN00/LC81390452014295LGN00_B1.TIF"
+        httpstif = prefix + image
+        with rasterio.Env(aws_unsigned=True):
+            with rasterio.open(httpstif) as src:
                 with rasterio.vrt.WarpedVRT(src, crs='epsg:4326') as vrt:
-                    expected_shape = (vrt.width, vrt.height)
-                    expected_crs = vrt.crs
+                    expected_shape = vrt.width, vrt.height
                     expected_res = vrt.res
                     # Value of single pixel in center of image
                     lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
                     expected_val = next(vrt.sample([(lon, lat)]))
                     with xr.open_rasterio(vrt) as da:
-                        actual_shape = (da.sizes['x'], da.sizes['y'])
-                        actual_crs = da.crs
+                        actual_shape = da.sizes['x'], da.sizes['y']
                         actual_res = da.res
                         actual_val = da.sel(dict(x=lon, y=lat),
                                             method='nearest').data
 
-                        assert_equal(actual_shape, expected_shape)
-                        assert_equal(actual_crs, expected_crs)
-                        assert_equal(actual_res, expected_res)
-                        assert_equal(expected_val, actual_val)
+                        assert actual_shape == expected_shape
+                        assert actual_res == expected_res
+                        assert expected_val == actual_val
 
 
 class TestEncodingInvalid:
