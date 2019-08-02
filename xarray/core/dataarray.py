@@ -1780,7 +1780,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Parameters
         ----------
         labels : hashable or sequence of hashables
-            Name(s) of coordinate variables or index labels to drop.
+            Name(s) of coordinates or index labels to drop.
+            If dim is not None, labels can be any array-like.
         dim : hashable, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.

@@ -3299,8 +3299,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         labels : hashable or iterable of hashables
             Name(s) of variables or index labels to drop.
-            If dim is not None, it can be anything that can be cast to
-            a numpy array (e.g. a DataArray).
+            If dim is not None, labels can be any array-like.
         dim : None or hashable, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.
