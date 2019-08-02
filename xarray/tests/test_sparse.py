@@ -91,16 +91,19 @@ def test_variable_property(prop):
     (do('conj'), True),
     (do('copy'), True),
     (do('count'), False),
-    (do('fillna', 0), True),
+    param(do('fillna', 0), True,
+         marks=xfail(reason='Missing implementation for np.result_type')),
     (do('get_axis_num', dim='x'), False),
     (do('isel', x=slice(2, 4)), True),
     (do('isnull'), True),
-    (do('prod'), False),
+    param(do('prod'), False,
+          marks=xfail(reason='Missing implementation for np.result_type')),
     (do('roll'), True),
     (do('round'), True),
     (do('set_dims', dims=('x', 'y', 'z')), True),
     (do('stack', dimensions={'flat': ('x', 'y')}), True),
-    (do('sum'), False),
+    param(do('sum'), False,
+          marks=xfail(reason='Missing implementation for np.result_type')),
     (do('to_base_variable'), True),
     (do('transpose'), True),
     (do('unstack', dimensions={'x': {'x1': 5, 'x2': 2}}), True),
@@ -240,6 +243,7 @@ class TestSparseVariable:
         v2 = pickle.loads(pickle.dumps(v1))
         assert_sparse_eq(v1.data, v2.data)
 
+    @pytest.mark.xfail(reason="Missing implementation for np.result_type")
     def test_missing_values(self):
         a = np.array([0, 1, np.nan, 3])
         s = COO.from_numpy(a)
@@ -290,7 +294,8 @@ def test_dataarray_property(prop):
     (do('diff', 'x'), True),
     (do('drop', 'x'), True),
     (do('expand_dims', {'z': 2}, axis=2), True),
-    (do('fillna', 0), True),
+    param(do('fillna', 0), True,
+          marks=xfail(reason='Missing implementation for np.result_type')),
     (do('get_axis_num', 'x'), False),
     (do('get_index', 'x'), False),
     # (do('groupby'), False),
@@ -300,15 +305,18 @@ def test_dataarray_property(prop):
     (do('isel', {'x': slice(0, 3), 'y': slice(2, 4)}), True),
     # (do('isel_points'), False),
     (do('isnull'), True),
-    (do('pipe', np.sum, axis=1), True),
-    (do('prod'), False),
+    param(do('pipe', np.sum, axis=1), True,
+          marks=xfail(reason='Missing implementation for np.result_type')),
+    param(do('prod'), False,
+          marks=xfail(reason='Missing implementation for np.result_type')),
     (do('reindex', {'x': [1, 2, 3]}), True),
     (do('rename', 'foo'), True),
     (do('reorder_levels'), True),
     # (do('resample'), False),
     (do('reset_coords', drop=True), True),
     (do('reset_index', 'x'), True),
-    (do('roll', x=2), True),
+    param(do('roll', x=2), True,
+          marks=xfail(reason='Missing implementation for np.result_type')),
     # (do('rolling'), False),
     # (do('rolling_exp'), False),
     (do('round'), True),
@@ -318,7 +326,8 @@ def test_dataarray_property(prop):
     (do('shift'), True),
     # (do('sortby'), False),
     (do('stack', z={'x', 'y'}), True),
-    (do('sum'), False),
+    param(do('sum'), False,
+          marks=xfail(reason='Missing implementation for np.result_type')),
     # (do('swap_dims'), True),
     (do('transpose'), True),
     param(do('argmax'), True,
@@ -447,6 +456,7 @@ class TestSparseDataArrayAndDataset:
         self.ds_xr = xr.DataArray(self.ds_ar, coords={'x': range(4)},
                                   dims=('x', 'y'), name='foo')
 
+    @pytest.mark.xfail(reason='Missing implementation for np.result_type')
     def test_to_dataset_roundtrip(self):
         x = self.sp_xr
         assert_equal(x, x.to_dataset('x').to_array('x'))
@@ -502,6 +512,7 @@ class TestSparseDataArrayAndDataset:
         assert np.all(a2.coords['x'].data == ['a', 'b', 'c', 'd'])
         assert np.all(b2.coords['x'].data == ['a', 'b', 'c', 'd'])
 
+    @pytest.mark.xfail(reason='Missing implementation for np.result_type')
     def test_concat(self):
         ds1 = xr.Dataset(data_vars={'d': self.sp_xr})
         ds2 = xr.Dataset(data_vars={'d': self.sp_xr})
