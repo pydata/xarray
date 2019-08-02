@@ -24,6 +24,11 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
+- Added example notebook demonstrating use of xarray with Regional Ocean
+  Modeling System (ROMS) ocean hydrodynamic model output.
+  (:issue:`3116`).
+  By `Robert Hetland <https://github.com/hetland>`
+
 Bug fixes
 ~~~~~~~~~
 
