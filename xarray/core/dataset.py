@@ -6,9 +6,9 @@ from collections import OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
 from pathlib import Path
-from typing import (Any, DefaultDict, Dict, Hashable, Iterable, Iterator, List,
-                    Mapping, MutableMapping, Optional, Sequence, Set, Tuple,
-                    Union, cast, TYPE_CHECKING)
+from typing import (Any, Callable, DefaultDict, Dict, Hashable, Iterable,
+                    Iterator, List, Mapping, MutableMapping, Optional,
+                    Sequence, Set, Tuple, Union, cast, TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
@@ -792,7 +792,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         variables: 'OrderedDict[Any, Variable]',
         coord_names: set = None,
-        attrs: 'OrderedDict' = __default,
+        attrs: Optional['OrderedDict'] = __default,
         indexes: 'OrderedDict[Any, pd.Index]' = __default,
         inplace: bool = False,
     ) -> 'Dataset':
@@ -3510,14 +3510,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         out = ops.fillna(self, value)
         return out
 
-    def interpolate_na(self, dim=None, method='linear', limit=None,
-                       use_coordinate=True,
-                       **kwargs):
+    def interpolate_na(
+        self,
+        dim: Hashable = None,
+        method: str = 'linear',
+        limit: int = None,
+        use_coordinate: Union[bool, Hashable] = True,
+        **kwargs: Any
+    ) -> 'Dataset':
         """Interpolate values according to different methods.
 
         Parameters
         ----------
-        dim : str
+        dim : Hashable
             Specifies the dimension along which to interpolate.
         method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
                   'polynomial', 'barycentric', 'krog', 'pchip',
@@ -3541,6 +3546,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         limit : int, default None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit.
+        kwargs : any
+            parameters passed verbatim to the underlying interplation function
 
         Returns
         -------
@@ -3559,14 +3566,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                                         **kwargs)
         return new
 
-    def ffill(self, dim, limit=None):
-        '''Fill NaN values by propogating values forward
+    def ffill(self, dim: Hashable, limit: int = None) -> 'Dataset':
+        """Fill NaN values by propogating values forward
 
         *Requires bottleneck.*
 
         Parameters
         ----------
-        dim : str
+        dim : Hashable
             Specifies the dimension along which to propagate values when
             filling.
         limit : int, default None
@@ -3578,14 +3585,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         Dataset
-        '''
+        """
         from .missing import ffill, _apply_over_vars_with_dim
 
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
         return new
 
-    def bfill(self, dim, limit=None):
-        '''Fill NaN values by propogating values backward
+    def bfill(self, dim: Hashable, limit: int = None) -> 'Dataset':
+        """Fill NaN values by propogating values backward
 
         *Requires bottleneck.*
 
@@ -3603,13 +3610,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         Dataset
-        '''
+        """
         from .missing import bfill, _apply_over_vars_with_dim
 
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
         return new
 
-    def combine_first(self, other):
+    def combine_first(self, other: 'Dataset') -> 'Dataset':
         """Combine two Datasets, default to data_vars of self.
 
         The new coordinates follow the normal broadcasting and alignment rules
@@ -3618,7 +3625,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        other : DataArray
+        other : Dataset
             Used to fill all matching missing values in this array.
 
         Returns
@@ -3628,13 +3635,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
-    def reduce(self, func, dim=None, keep_attrs=None, keepdims=False,
-               numeric_only=False, allow_lazy=False, **kwargs):
+    def reduce(
+        self,
+        func: Callable,
+        dim: Union[Hashable, Iterable[Hashable]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        numeric_only: bool = False,
+        allow_lazy: bool = False,
+        **kwargs: Any
+    ) -> 'Dataset':
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
@@ -3651,7 +3666,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             are removed.
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to ``func``.
 
         Returns
@@ -3662,10 +3677,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if dim is ALL_DIMS:
             dim = None
-        if isinstance(dim, str):
-            dims = set([dim])
-        elif dim is None:
+        if dim is None:
             dims = set(self.dims)
+        elif isinstance(dim, str) or not isinstance(dim, Iterable):
+            dims = {dim}
         else:
             dims = set(dim)
 
@@ -3677,9 +3692,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        variables = OrderedDict()
+        variables = OrderedDict()  # type: OrderedDict[Hashable, Variable]
         for name, var in self._variables.items():
-            reduce_dims = [d for d in var.dims if d in dims]
+            reduce_dims = [
+                d for d in var.dims
+                if d in dims
+            ]
             if name in self.coords:
                 if not reduce_dims:
                     variables[name] = var
@@ -3695,7 +3713,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         # prefer to aggregate over axis=None rather than
                         # axis=(0, 1) if they will be equivalent, because
                         # the former is often more efficient
-                        reduce_dims = None
+                        reduce_dims = None  # type: ignore
                     variables[name] = var.reduce(func, dim=reduce_dims,
                                                  keep_attrs=keep_attrs,
                                                  keepdims=keepdims,
@@ -3709,12 +3727,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes)
 
-    def apply(self, func, keep_attrs=None, args=(), **kwargs):
+    def apply(
+        self,
+        func: Callable,
+        keep_attrs: bool = None,
+        args: Iterable[Any] = (),
+        **kwargs: Any
+    ) -> 'Dataset':
         """Apply a function over the data variables in this dataset.
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form `func(x, *args, **kwargs)`
             to transform each DataArray `x` in this dataset into another
             DataArray.
@@ -3724,7 +3748,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             be returned without attributes.
         args : tuple, optional
             Positional arguments passed on to `func`.
-        **kwargs : dict
+        **kwargs : Any
             Keyword arguments passed on to `func`.
 
         Returns
@@ -3759,7 +3783,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
-    def assign(self, variables=None, **variables_kwargs):
+    def assign(
+        self,
+        variables: Mapping[Hashable, Any] = None,
+        **variables_kwargs: Hashable
+    ) -> 'Dataset':
         """Assign new data variables to a Dataset, returning a new object
         with all the original variables in addition to the new ones.
 
@@ -3772,7 +3800,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             scalar, or array), they are simply assigned.
         **variables_kwargs:
             The keyword arguments form of ``variables``.
-            One of variables or variables_kwarg must be provided.
+            One of variables or variables_kwargs must be provided.
 
         Returns
         -------
