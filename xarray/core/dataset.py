@@ -3272,7 +3272,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def drop(
         self,
-        labels: Union[Hashable, Iterable[Hashable], DataArray],
+        labels: Union[Hashable, Iterable[Hashable], 'DataArray'],
         dim: Hashable = None,
         *,
         errors: str = 'raise'
