@@ -150,7 +150,7 @@ def list_equiv(first, second):
         return False
     else:
         for f, s in zip(first, second):
-            equiv = equiv and equivalent(first[i], second[i])
+            equiv = equiv and equivalent(f, s)
     return equiv
 
 
