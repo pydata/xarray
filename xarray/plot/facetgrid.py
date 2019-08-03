@@ -285,9 +285,9 @@ class FacetGrid:
         kwargs['add_guide'] = False
         kwargs['_is_facetgrid'] = True
 
-        if kwargs.get('scatter_size', None):
+        if kwargs.get('markersize', None):
             kwargs['size_mapping'] = _parse_size(
-                self.data[kwargs['scatter_size']],
+                self.data[kwargs['markersize']],
                 kwargs.pop('size_norm', None))
 
         meta_data = _infer_meta_data(self.data, x, y, hue, hue_style,
