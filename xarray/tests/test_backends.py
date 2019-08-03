@@ -2361,6 +2361,27 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
             assert_identical(original, actual)
 
 
+@requires_netCDF4
+def test_open_mfdataset_list_attr():
+    from netCDF4 import Dataset
+    with create_tmp_files(2) as nfiles:
+        for i in range(2):
+            f = Dataset(nfiles[i], "w")
+            f.createDimension("x", 3)
+            vlvar = f.createVariable("test_var", np.int32, ("x"))
+            # here create an attribute as a list
+            vlvar.test_attr = ["string a {}".format(i),
+                               "string b {}".format(i)]
+            vlvar[:] = np.arange(3)
+            f.close()
+        ds1 = open_dataset(nfiles[0])
+        ds2 = open_dataset(nfiles[1])
+        original = xr.concat([ds1, ds2], dim='x')
+        with xr.open_mfdataset([nfiles[0], nfiles[1]], combine='nested',
+                               concat_dim='x') as actual:
+            assert_identical(actual, original)
+
+
 @requires_scipy_or_netCDF4
 @requires_dask
 class TestOpenMFDatasetWithDataVarsAndCoordsKw:
