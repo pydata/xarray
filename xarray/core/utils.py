@@ -149,7 +149,7 @@ def list_equiv(first, second):
     if len(first) != len(second):
         return False
     else:
-        for i in range(len(first)):
+        for f, s in zip(first, second):
             equiv = equiv and equivalent(first[i], second[i])
     return equiv
 
