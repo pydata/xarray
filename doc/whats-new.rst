@@ -361,11 +361,6 @@ Other enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-
-- Resampling of standard and non-standard calendars indexed by
-  :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
-  By `Jwen Fai Low <https://github.com/jwenfai>`_ and
-  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Add ``tolerance`` option to ``resample()`` methods ``bfill``, ``pad``,
   ``nearest``. (:issue:`2695`)
   By `Hauke Schulz <https://github.com/observingClouds>`_.
