@@ -105,6 +105,9 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Better error message when using groupby on an empty DataArray (:issue:`3037`).
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+- Fix error that arises when using open_mfdataset on a series of netcdf files
+  having differing values for a variable attribute of type list. (:issue:`3034`)
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 
 .. _whats-new.0.12.2:
 

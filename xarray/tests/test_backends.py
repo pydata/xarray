@@ -2363,6 +2363,9 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
 
 @requires_netCDF4
 def test_open_mfdataset_list_attr():
+    """
+    Case when an attribute of type list differs across the multiple files
+    """
     from netCDF4 import Dataset
     with create_tmp_files(2) as nfiles:
         for i in range(2):
