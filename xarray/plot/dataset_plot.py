@@ -277,7 +277,7 @@ def _dsplot(plotfunc):
                 cmap_params = meta_data['cmap_params']
             else:
                 cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                    plotfunc, locals(), ds[hue].values)
+                    plotfunc, ds[hue].values, **locals())
 
             # subset that can be passed to scatter, hist2d
             cmap_params_subset = dict(

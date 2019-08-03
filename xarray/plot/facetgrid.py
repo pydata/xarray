@@ -296,7 +296,7 @@ class FacetGrid:
 
         if hue and meta_data['hue_style'] == 'continuous':
             cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                func, kwargs, self.data[hue].values)
+                func, self.data[hue].values, **kwargs)
             kwargs['meta_data']['cmap_params'] = cmap_params
             kwargs['meta_data']['cbar_kwargs'] = cbar_kwargs
 
