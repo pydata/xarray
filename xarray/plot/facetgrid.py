@@ -316,7 +316,7 @@ class FacetGrid:
         if hue:
             self._hue_label = meta_data.pop('hue_label', None)
             if meta_data['add_legend']:
-                self._hue_var = meta_data['hue_values']
+                self._hue_var = meta_data['hue']
                 self.add_legend()
             elif meta_data['add_colorbar']:
                 self.add_colorbar(label=self._hue_label, **cbar_kwargs)
@@ -337,13 +337,9 @@ class FacetGrid:
             self._finalized = True
 
     def add_legend(self, **kwargs):
-        if hasattr(self._hue_var, 'values'):
-            labels = self._hue_var.values
-        else:
-            labels = self._hue_var
         figlegend = self.fig.legend(
             handles=self._mappables[-1],
-            labels=list(labels),
+            labels=list(self._hue_var.values),
             title=self._hue_label,
             loc="center right", **kwargs)
 

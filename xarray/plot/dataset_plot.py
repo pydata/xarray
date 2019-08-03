@@ -53,10 +53,10 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
 
     if hue:
         hue_label = label_from_attrs(ds[hue])
-        hue_values = ds[hue].values
+        hue = ds[hue]
     else:
         hue_label = None
-        hue_values = None
+        hue = None
 
     return {'add_colorbar': add_colorbar,
             'add_legend': add_legend,
@@ -64,7 +64,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
             'hue_style': hue_style,
             'xlabel': label_from_attrs(ds[x]),
             'ylabel': label_from_attrs(ds[y]),
-            'hue_values': hue_values}
+            'hue': hue}
 
 
 def _infer_scatter_data(ds, x, y, hue, markersize, size_norm,
@@ -300,7 +300,7 @@ def _dsplot(plotfunc):
 
         if meta_data['add_legend']:
             ax.legend(handles=primitive,
-                      labels=list(meta_data['hue_values']),
+                      labels=list(meta_data['hue'].values),
                       title=meta_data.get('hue_label', None))
         if meta_data['add_colorbar']:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
