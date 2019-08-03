@@ -610,7 +610,6 @@ Plotting
    plot.hist
    plot.imshow
    plot.line
-   plot.scatter
    plot.pcolormesh
    plot.FacetGrid
 
