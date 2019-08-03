@@ -35,7 +35,7 @@ from . import (
     requires_cftime, requires_dask, requires_h5fileobj, requires_h5netcdf,
     requires_netCDF4, requires_pathlib, requires_pseudonetcdf, requires_pydap,
     requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr)
+    requires_scipy_or_netCDF4, requires_zarr, arm_xfail)
 from .test_coding_times import (
     _ALL_CALENDARS, _NON_STANDARD_CALENDARS, _STANDARD_CALENDARS)
 from .test_dataset import create_test_data, create_append_test_data
@@ -400,6 +400,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
             assert actual['x'].encoding['_Encoding'] == 'ascii'
 
+    @arm_xfail
     def test_roundtrip_numpy_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
@@ -1205,18 +1206,6 @@ class NetCDF4Base(CFEncodedBase):
                 expected = Dataset({'x': ((), 123)})
                 assert_identical(expected, ds)
 
-    def test_already_open_dataset(self):
-        with create_tmp_file() as tmp_file:
-            with nc4.Dataset(tmp_file, mode='w') as nc:
-                v = nc.createVariable('x', 'int')
-                v[...] = 42
-
-            nc = nc4.Dataset(tmp_file, mode='r')
-            store = backends.NetCDF4DataStore(nc)
-            with open_dataset(store) as ds:
-                expected = Dataset({'x': ((), 42)})
-                assert_identical(expected, ds)
-
     def test_read_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
@@ -1317,6 +1306,41 @@ class TestNetCDF4Data(NetCDF4Base):
             with pytest.warns(FutureWarning):
                 with self.open(tmp_file, autoclose=True) as actual:
                     assert_identical(data, actual)
+
+    def test_already_open_dataset(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                v = nc.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc)
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+    def test_already_open_dataset_group(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                group = nc.createGroup('g')
+                v = group.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc.groups['g'])
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            store = backends.NetCDF4DataStore(nc, group='g')
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
+
+            with nc4.Dataset(tmp_file, mode='r') as nc:
+                with pytest.raises(ValueError, match='must supply a root'):
+                    backends.NetCDF4DataStore(nc.groups['g'], group='g')
 
 
 @requires_netCDF4
@@ -1426,6 +1450,7 @@ class ZarrBase(CFEncodedBase):
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
 
+    @pytest.mark.filterwarnings('ignore:Specified Dask chunks')
     def test_manual_chunk(self):
         original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
 
@@ -1630,7 +1655,7 @@ class ZarrBase(CFEncodedBase):
         # check append mode for append write
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode='w')
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             original = xr.concat([ds, ds_to_append], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
@@ -1666,7 +1691,7 @@ class ZarrBase(CFEncodedBase):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode='w')
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             original = xr.concat([ds, ds_to_append], dim='time')
             assert_identical(original, xr.open_zarr(store_target))
 
@@ -1682,8 +1707,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(ValueError):
             with self.create_zarr_target() as store_target:
                 ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a',
-                                     append_dim='notvalid')
+                ds_to_append.to_zarr(store_target, append_dim='notvalid')
 
     def test_append_with_append_dim_not_set_raises(self):
 
@@ -1695,6 +1719,17 @@ class ZarrBase(CFEncodedBase):
                 ds.to_zarr(store_target, mode='w')
                 ds_to_append.to_zarr(store_target, mode='a')
 
+    def test_append_with_mode_not_a_raises(self):
+
+        ds, ds_to_append, _ = create_append_test_data()
+
+        # check failure when append_dim is set and mode != 'a'
+        with pytest.raises(ValueError):
+            with self.create_zarr_target() as store_target:
+                ds.to_zarr(store_target, mode='w')
+                ds_to_append.to_zarr(store_target, mode='w',
+                                     append_dim='time')
+
     def test_append_with_existing_encoding_raises(self):
 
         ds, ds_to_append, _ = create_append_test_data()
@@ -1703,8 +1738,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(ValueError):
             with self.create_zarr_target() as store_target:
                 ds.to_zarr(store_target, mode='w')
-                ds_to_append.to_zarr(store_target, mode='a',
-                                     append_dim='time',
+                ds_to_append.to_zarr(store_target, append_dim='time',
                                      encoding={'da': {'compressor': None}})
 
     def test_check_encoding_is_consistent_after_append(self):
@@ -1717,7 +1751,7 @@ class ZarrBase(CFEncodedBase):
             compressor = zarr.Blosc()
             encoding = {'da': {'compressor': compressor}}
             ds.to_zarr(store_target, mode='w', encoding=encoding)
-            ds_to_append.to_zarr(store_target, mode='a', append_dim='time')
+            ds_to_append.to_zarr(store_target, append_dim='time')
             actual_ds = xr.open_zarr(store_target)
             actual_encoding = actual_ds['da'].encoding['compressor']
             assert actual_encoding.get_config() == compressor.get_config()
@@ -1778,7 +1812,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(ds, actual)
 
             delayed_obj = self.save(ds_to_append, store, compute=False,
-                                    mode='a', append_dim='time')
+                                    append_dim='time')
             assert isinstance(delayed_obj, Delayed)
 
             with pytest.raises(AssertionError):
@@ -2884,6 +2918,17 @@ class TestOpenMFDataSetDeprecation:
     Set of tests to check that FutureWarnings are correctly raised until the
     deprecation cycle is complete. #2616
     """
+    def test_open_mfdataset_default(self):
+        ds1, ds2 = Dataset({'x': [0]}), Dataset({'x': [1]})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+
+                with pytest.warns(FutureWarning, match="default behaviour of"
+                                                       " `open_mfdataset`"):
+                    open_mfdataset([tmp1, tmp2])
+
     def test_open_mfdataset_with_concat_dim(self):
         ds1, ds2 = Dataset({'x': [0]}), Dataset({'x': [1]})
         with create_tmp_file() as tmp1:
@@ -3309,7 +3354,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                        transform_args=[5000, 80000, 1000, 2000.],
                        crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
                             'proj': 'utm', 'zone': 18},
-                       open_kwargs=None):
+                       open_kwargs=None,
+                       additional_attrs=None):
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
@@ -3332,6 +3378,11 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
             *data_shape)
         if transform is None:
             transform = from_origin(*transform_args)
+        if additional_attrs is None:
+            additional_attrs = {
+                'descriptions': tuple('d{}'.format(n + 1) for n in range(nz)),
+                'units': tuple('u{}'.format(n + 1) for n in range(nz)),
+            }
         with rasterio.open(
                 tmp_file, 'w',
                 driver='GTiff', height=ny, width=nx, count=nz,
@@ -3339,6 +3390,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                 transform=transform,
                 dtype=rasterio.float32,
                 **open_kwargs) as s:
+            for attr, val in additional_attrs.items():
+                setattr(s, attr, val)
             s.write(data, **write_kwargs)
             dx, dy = s.res[0], -s.res[1]
 
@@ -3358,7 +3411,7 @@ class TestRasterio:
 
     @requires_scipy_or_netCDF4
     def test_serialization(self):
-        with create_tmp_geotiff() as (tmp_file, expected):
+        with create_tmp_geotiff(additional_attrs={}) as (tmp_file, expected):
             # Write it to a netcdf and read again (roundtrip)
             with xr.open_rasterio(tmp_file) as rioda:
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:
@@ -3370,6 +3423,10 @@ class TestRasterio:
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
+                assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
+                assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3393,6 +3450,10 @@ class TestRasterio:
                 assert 'x' not in rioda.coords
                 assert 'y' not in rioda.coords
                 assert 'crs' not in rioda.attrs
+                assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                assert rioda.attrs['descriptions'] == ('d1', 'd2', 'd3')
+                assert rioda.attrs['units'] == ('u1', 'u2', 'u3')
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -3413,6 +3474,10 @@ class TestRasterio:
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
+                assert rioda.attrs['scales'] == (1.0,)
+                assert rioda.attrs['offsets'] == (0.0,)
+                assert isinstance(rioda.attrs['descriptions'], tuple)
+                assert isinstance(rioda.attrs['units'], tuple)
                 assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
@@ -3441,6 +3506,8 @@ class TestRasterio:
                         tmp_file, 'w',
                         driver='GTiff', height=ny, width=nx, count=nz,
                         dtype=rasterio.float32) as s:
+                    s.descriptions = ('nx', 'ny', 'nz')
+                    s.units = ('cm', 'm', 'km')
                     s.write(data)
 
                 # Tests
@@ -3452,6 +3519,10 @@ class TestRasterio:
                                              })
                 with xr.open_rasterio(tmp_file) as rioda:
                     assert_allclose(rioda, expected)
+                    assert rioda.attrs['scales'] == (1.0, 1.0, 1.0)
+                    assert rioda.attrs['offsets'] == (0.0, 0.0, 0.0)
+                    assert rioda.attrs['descriptions'] == ('nx', 'ny', 'nz')
+                    assert rioda.attrs['units'] == ('cm', 'm', 'km')
                     assert isinstance(rioda.attrs['res'], tuple)
                     assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                     assert isinstance(rioda.attrs['transform'], tuple)
@@ -3705,7 +3776,6 @@ class TestRasterio:
                 with rasterio.vrt.WarpedVRT(src, crs='epsg:4326') as vrt:
                     expected_shape = (vrt.width, vrt.height)
                     expected_crs = vrt.crs
-                    print(expected_crs)
                     expected_res = vrt.res
                     # Value of single pixel in center of image
                     lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
@@ -3713,7 +3783,6 @@ class TestRasterio:
                     with xr.open_rasterio(vrt) as da:
                         actual_shape = (da.sizes['x'], da.sizes['y'])
                         actual_crs = da.crs
-                        print(actual_crs)
                         actual_res = da.res
                         actual_val = da.sel(dict(x=lon, y=lat),
                                             method='nearest').data
@@ -3752,35 +3821,29 @@ class TestRasterio:
 
     @network
     def test_rasterio_vrt_network(self):
+        # Make sure loading w/ rasterio give same results as xarray
         import rasterio
-
-        url = 'https://storage.googleapis.com/\
-        gcp-public-data-landsat/LC08/01/047/027/\
-        LC08_L1TP_047027_20130421_20170310_01_T1/\
-        LC08_L1TP_047027_20130421_20170310_01_T1_B4.TIF'
-        env = rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR',
-                           CPL_VSIL_CURL_USE_HEAD=False,
-                           CPL_VSIL_CURL_ALLOWED_EXTENSIONS='TIF')
-        with env:
-            with rasterio.open(url) as src:
+        # use same url that rasterio package uses in tests
+        prefix = "https://landsat-pds.s3.amazonaws.com/L8/139/045/"
+        image = "LC81390452014295LGN00/LC81390452014295LGN00_B1.TIF"
+        httpstif = prefix + image
+        with rasterio.Env(aws_unsigned=True):
+            with rasterio.open(httpstif) as src:
                 with rasterio.vrt.WarpedVRT(src, crs='epsg:4326') as vrt:
-                    expected_shape = (vrt.width, vrt.height)
-                    expected_crs = vrt.crs
+                    expected_shape = vrt.width, vrt.height
                     expected_res = vrt.res
                     # Value of single pixel in center of image
                     lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
                     expected_val = next(vrt.sample([(lon, lat)]))
                     with xr.open_rasterio(vrt) as da:
-                        actual_shape = (da.sizes['x'], da.sizes['y'])
-                        actual_crs = da.crs
+                        actual_shape = da.sizes['x'], da.sizes['y']
                         actual_res = da.res
                         actual_val = da.sel(dict(x=lon, y=lat),
                                             method='nearest').data
 
-                        assert_equal(actual_shape, expected_shape)
-                        assert_equal(actual_crs, expected_crs)
-                        assert_equal(actual_res, expected_res)
-                        assert_equal(expected_val, actual_val)
+                        assert actual_shape == expected_shape
+                        assert actual_res == expected_res
+                        assert expected_val == actual_val
 
 
 class TestEncodingInvalid:

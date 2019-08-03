@@ -64,6 +64,22 @@ class TestDataArray:
           - level_2  (x) int64 1 2 1 2""")
         assert expected == repr(self.mda)
 
+    def test_repr_multiindex_long(self):
+        mindex_long = pd.MultiIndex.from_product(
+            [['a', 'b', 'c', 'd'], [1, 2, 3, 4, 5, 6, 7, 8]],
+            names=('level_1', 'level_2'))
+        mda_long = DataArray(list(range(32)),
+                             coords={'x': mindex_long}, dims='x')
+        expected = dedent("""\
+        <xarray.DataArray (x: 32)>
+        array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+               18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+        Coordinates:
+          * x        (x) MultiIndex
+          - level_1  (x) object 'a' 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+          - level_2  (x) int64 1 2 3 4 5 6 7 8 1 2 3 4 5 6 ... 4 5 6 7 8 1 2 3 4 5 6 7 8""")  # noqa: E501
+        assert expected == repr(mda_long)
+
     def test_properties(self):
         assert_equal(self.dv.variable, self.v)
         assert_array_equal(self.dv.values, self.v.values)
@@ -1238,6 +1254,25 @@ class TestDataArray:
         actual = arr.coords[1]
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
+
+    def test_broadcast_like(self):
+        arr1 = DataArray(np.ones((2, 3)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b'], 'y': ['a', 'b', 'c']})
+        arr2 = DataArray(np.ones((3, 2)), dims=['x', 'y'],
+                         coords={'x': ['a', 'b', 'c'], 'y': ['a', 'b']})
+        orig1, orig2 = broadcast(arr1, arr2)
+        new1 = arr1.broadcast_like(arr2)
+        new2 = arr2.broadcast_like(arr1)
+
+        assert orig1.identical(new1)
+        assert orig2.identical(new2)
+
+        orig3 = DataArray(np.random.randn(5), [('x', range(5))])
+        orig4 = DataArray(np.random.randn(6), [('y', range(6))])
+        new3, new4 = broadcast(orig3, orig4)
+
+        assert_identical(orig3.broadcast_like(orig4), new3.transpose('y', 'x'))
+        assert_identical(orig4.broadcast_like(orig3), new4)
 
     def test_reindex_like(self):
         foo = DataArray(np.random.randn(5, 6),
@@ -3109,7 +3144,9 @@ class TestDataArray:
         expected_no_data = expected.copy()
         del expected_no_data['data']
         del expected_no_data['coords']['x']['data']
-        expected_no_data['coords']['x'].update({'dtype': '<U1', 'shape': (2,)})
+        endiantype = '<U1' if sys.byteorder == 'little' else '>U1'
+        expected_no_data['coords']['x'].update({'dtype': endiantype,
+                                                'shape': (2,)})
         expected_no_data.update({'dtype': 'float64', 'shape': (2, 3)})
         actual_no_data = array.to_dict(data=False)
         assert expected_no_data == actual_no_data

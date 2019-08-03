@@ -31,13 +31,14 @@ def _decode_variable_name(name):
     return name
 
 
-def find_root(ds):
-    """
-    Helper function to find the root of a netcdf or h5netcdf dataset.
-    """
+def find_root_and_group(ds):
+    """Find the root and group name of a netCDF4/h5netcdf dataset."""
+    hierarchy = ()
     while ds.parent is not None:
+        hierarchy = (ds.name,) + hierarchy
         ds = ds.parent
-    return ds
+    group = '/' + '/'.join(hierarchy)
+    return ds, group
 
 
 def robust_getitem(array, key, catch=Exception, max_retries=6,
@@ -122,7 +123,7 @@ class AbstractDataStore(Mapping):
         return variables, attributes
 
     @property
-    def variables(self):
+    def variables(self):  # pragma: no cover
         warnings.warn('The ``variables`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
@@ -130,7 +131,7 @@ class AbstractDataStore(Mapping):
         return variables
 
     @property
-    def attrs(self):
+    def attrs(self):  # pragma: no cover
         warnings.warn('The ``attrs`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
@@ -138,7 +139,7 @@ class AbstractDataStore(Mapping):
         return attrs
 
     @property
-    def dimensions(self):
+    def dimensions(self):  # pragma: no cover
         warnings.warn('The ``dimensions`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)

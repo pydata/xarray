@@ -22,7 +22,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-PYTHON_REQUIRES = '>=3.5'
+PYTHON_REQUIRES = '>=3.5.3'
 INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 SETUP_REQUIRES = ['pytest-runner >= 4.2'] if needs_pytest else []
@@ -104,4 +104,4 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       packages=find_packages(),
-      package_data={'xarray': ['tests/data/*']})
+      package_data={'xarray': ['py.typed', 'tests/data/*']})

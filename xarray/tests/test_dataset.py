@@ -1560,6 +1560,21 @@ class TestDataset:
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
                          mdata.sel(one='a', two=1))
 
+    def test_broadcast_like(self):
+        original1 = DataArray(np.random.randn(5),
+                              [('x', range(5))], name='a').to_dataset()
+
+        original2 = DataArray(np.random.randn(6),
+                              [('y', range(6))], name='b')
+
+        expected1, expected2 = broadcast(original1, original2)
+
+        assert_identical(original1.broadcast_like(original2),
+                         expected1.transpose('y', 'x'))
+
+        assert_identical(original2.broadcast_like(original1),
+                         expected2)
+
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])
@@ -3445,7 +3460,8 @@ class TestDataset:
         del expected_no_data['coords']['t']['data']
         del expected_no_data['data_vars']['a']['data']
         del expected_no_data['data_vars']['b']['data']
-        expected_no_data['coords']['t'].update({'dtype': '<U1',
+        endiantype = '<U1' if sys.byteorder == 'little' else '>U1'
+        expected_no_data['coords']['t'].update({'dtype': endiantype,
                                                 'shape': (10,)})
         expected_no_data['data_vars']['a'].update({'dtype': 'float64',
                                                    'shape': (10,)})

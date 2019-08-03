@@ -94,7 +94,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
                       FutureWarning, stacklevel=2)
         dim = 'concat_dims'
 
-    if indexers is not None:  # pragma: nocover
+    if indexers is not None:  # pragma: no cover
         warnings.warn('indexers has been renamed to positions; the alias '
                       'will be removed in a future version of xarray',
                       FutureWarning, stacklevel=2)

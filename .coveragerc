@@ -1,5 +1,4 @@
 [run]
-branch = True
 omit =
     xarray/tests/*
     xarray/core/dask_array_compat.py

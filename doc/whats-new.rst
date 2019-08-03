@@ -13,31 +13,98 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.12.3:
+.. _whats-new.0.12.4:
 
-v0.12.3 (unreleased)
---------------------
+v0.12.4 (unreleased)
+-------------------
+
+This release increases the minimum required Python version from 3.5.0 to 3.5.3
+(:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
-- New methods for reshaping Datasets of variables with different dimensions
-  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
+- Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
+  <http://github.com/DavidMertz>`_.
+
+- The xarray package is now discoverably by mypy (although typing hints
+  coverage is not complete yet). mypy users can now remove from their setup.cfg
+  the lines::
+
+    [mypy-xarray]
+    ignore_missing_imports = True
+
+   By `Guido Imperiale <https://github.com/crusaderky>`_
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Renaming variables and dimensions independently:
-  Datasets with coordinate dimensions can now have only their dimension 
-  (using rename_dim) or only their coordinate (using rename_vars) renamed 
-  instead of the rename function applyingto both. (:issue:`3026`)
+- In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
+  ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
+  By `David Brochart <https://github.com/davidbrochart>`_.
+
+Bug fixes
+~~~~~~~~~
+- Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
+  unicode indices to dtype=object (:issue:`3094`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Improved error handling and documentation for `.expand_dims()`
+  read-only view.
+- Fix tests for big-endian systems (:issue:`3125`).
+  By `Graham Inggs <https://github.com/ginggs>`_.
+- XFAIL several tests which are expected to fail on ARM systems
+  due to a ``datetime`` issue in NumPy (:issue:`2334`).
+  By `Graham Inggs <https://github.com/ginggs>`_.
+- Fixed bug in ``combine_by_coords()`` causing a `ValueError` if the input had
+  an unused dimension with coordinates which were not monotonic (:issue:`3150`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fixed crash when applying ``distributed.Client.compute()`` to a DataArray
+  (:issue:`3171`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+
+.. _whats-new.0.12.3:
+
+v0.12.3 (10 July 2019)
+----------------------
+
+New functions/methods
+~~~~~~~~~~~~~~~~~~~~~
+
+- New methods :py:meth:`Dataset.to_stacked_array` and
+  :py:meth:`DataArray.to_unstacked_dataset` for reshaping Datasets of variables
+  with different dimensions
+  (:issue:`1317`).
+  This is useful for feeding data from xarray into machine learning models,
+  as described in :ref:`reshape.stacking_different`.
+  By `Noah Brenowitz <https://github.com/nbren12>`_.
+
+- Support for renaming ``Dataset`` variables and dimensions independently
+  with :py:meth:`~Dataset.rename_vars` and :py:meth:`~Dataset.rename_dims`
+  (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
-  
+
+Enhancements
+~~~~~~~~~~~~
+
+- Add ``scales``, ``offsets``, ``units`` and ``descriptions``
+  attributes to :py:class:`~xarray.DataArray` returned by
+  :py:func:`~xarray.open_rasterio`. (:issue:`3013`)
+  By `Erle Carrara <https://github.com/ecarrara>`_.
+
 Bug fixes
 ~~~~~~~~~
 
+- Resolved deprecation warnings from newer versions of matplotlib and dask.
 - Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix summaries for multiindex coordinates (:issue:`3079`).
+  By `Jonas Hörsch <https://github.com/coroa>`_.
+- Fix HDF5 error that could arise when reading multiple groups from a file at
+  once (:issue:`2954`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Better error message when using groupby on an empty DataArray (:issue:`3037`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 - Fix error that arises when using open_mfdataset on a series of netcdf files
   having differing values for a variable attribute of type list. (:issue:`3034`)
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.

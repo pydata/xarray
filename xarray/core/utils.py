@@ -17,11 +17,6 @@ import pandas as pd
 
 from .pycompat import dask_array_type
 
-try:  # Fix typed collections in Python 3.5.0~3.5.2
-    from .pycompat import Mapping, MutableMapping, MutableSet  # noqa: F811
-except ImportError:
-    pass
-
 
 K = TypeVar('K')
 V = TypeVar('V')
@@ -93,7 +88,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
 
 
 def multiindex_from_product_levels(levels: Sequence[pd.Index],
-                                   names: Optional[Sequence[str]] = None
+                                   names: Sequence[str] = None
                                    ) -> pd.MultiIndex:
     """Creating a MultiIndex from a product without refactorizing levels.
 
@@ -332,18 +327,7 @@ def ordered_dict_intersection(first_dict: Mapping[K, V],
     return new_dict
 
 
-class SingleSlotPickleMixin:
-    """Mixin class to add the ability to pickle objects whose state is defined
-    by a single __slots__ attribute. Only necessary under Python 2.
-    """
-    def __getstate__(self):
-        return getattr(self, self.__slots__[0])
-
-    def __setstate__(self, state):
-        setattr(self, self.__slots__[0], state)
-
-
-class Frozen(Mapping[K, V], SingleSlotPickleMixin):
+class Frozen(Mapping[K, V]):
     """Wrapper around an object implementing the mapping interface to make it
     immutable. If you really want to modify the mapping, the mutable version is
     saved under the `mapping` attribute.
@@ -373,14 +357,14 @@ def FrozenOrderedDict(*args, **kwargs) -> Frozen:
     return Frozen(OrderedDict(*args, **kwargs))
 
 
-class SortedKeysDict(MutableMapping[K, V], SingleSlotPickleMixin):
+class SortedKeysDict(MutableMapping[K, V]):
     """An wrapper for dictionary-like objects that always iterates over its
     items in sorted order by key but is otherwise equivalent to the underlying
     mapping.
     """
     __slots__ = ['mapping']
 
-    def __init__(self, mapping: Optional[MutableMapping[K, V]] = None):
+    def __init__(self, mapping: MutableMapping[K, V] = None):
         self.mapping = {} if mapping is None else mapping
 
     def __getitem__(self, key: K) -> V:
@@ -411,7 +395,7 @@ class OrderedSet(MutableSet[T]):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
-    def __init__(self, values: Optional[AbstractSet[T]] = None):
+    def __init__(self, values: AbstractSet[T] = None):
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
         if values is not None:
             # Disable type checking - both mypy and PyCharm believes that
@@ -491,11 +475,21 @@ class NDArrayMixin(NdimSizeLenMixin):
 class ReprObject:
     """Object that prints as the given value, for use with sentinel values.
     """
+    __slots__ = ('_value', )
+
     def __init__(self, value: str):
         self._value = value
 
     def __repr__(self) -> str:
         return self._value
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ReprObject):
+            return self._value == other._value
+        return False
+
+    def __hash__(self) -> int:
+        return hash((ReprObject, self._value))
 
 
 @contextlib.contextmanager

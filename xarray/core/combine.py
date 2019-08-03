@@ -501,14 +501,13 @@ def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
                                    fill_value=fill_value)
 
         # Check the overall coordinates are monotonically increasing
-        for dim in concatenated.dims:
-            if dim in concatenated:
-                indexes = concatenated.indexes.get(dim)
-                if not (indexes.is_monotonic_increasing
-                        or indexes.is_monotonic_decreasing):
-                    raise ValueError("Resulting object does not have monotonic"
-                                     " global indexes along dimension {}"
-                                     .format(dim))
+        for dim in concat_dims:
+            indexes = concatenated.indexes.get(dim)
+            if not (indexes.is_monotonic_increasing
+                    or indexes.is_monotonic_decreasing):
+                raise ValueError("Resulting object does not have monotonic"
+                                 " global indexes along dimension {}"
+                                 .format(dim))
         concatenated_grouped_by_data_vars.append(concatenated)
 
     return merge(concatenated_grouped_by_data_vars, compat=compat,
@@ -523,7 +522,8 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
 def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
-                 data_vars='all', coords='different', fill_value=dtypes.NA):
+                 data_vars='all', coords='different', fill_value=dtypes.NA,
+                 from_openmfds=False):
     """
     Attempt to auto-magically combine the given datasets into one.
 
@@ -582,8 +582,11 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     Dataset.merge
     """
 
-    basic_msg = """In xarray version 0.13 `auto_combine` will be deprecated."""
-    warnings.warn(basic_msg, FutureWarning, stacklevel=2)
+    if not from_openmfds:
+        basic_msg = dedent("""\
+        In xarray version 0.13 `auto_combine` will be deprecated. See
+        http://xarray.pydata.org/en/stable/combining.html#combining-multi""")
+        warnings.warn(basic_msg, FutureWarning, stacklevel=2)
 
     if concat_dim == '_not_supplied':
         concat_dim = _CONCAT_DIM_DEFAULT
@@ -599,10 +602,10 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         message += dedent("""\
         The datasets supplied have global dimension coordinates. You may want
         to use the new `combine_by_coords` function (or the
-        `combine='by_coords'` option to `open_mfdataset` to order the datasets
+        `combine='by_coords'` option to `open_mfdataset`) to order the datasets
         before concatenation. Alternatively, to continue concatenating based
-        on the order the datasets are supplied in in future, please use the
-        new `combine_nested` function (or the `combine='nested'` option to
+        on the order the datasets are supplied in future, please use the new
+        `combine_nested` function (or the `combine='nested'` option to
         open_mfdataset).""")
     else:
         message += dedent("""\
@@ -615,7 +618,7 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         manual_dims = [concat_dim].append(None)
         message += dedent("""\
         The datasets supplied require both concatenation and merging. From
-        xarray version 0.14 this will operation will require either using the
+        xarray version 0.13 this will operation will require either using the
         new `combine_nested` function (or the `combine='nested'` option to
         open_mfdataset), with a nested list structure such that you can combine
         along the dimensions {}. Alternatively if your datasets have global
