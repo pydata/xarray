@@ -38,6 +38,9 @@ Bug fixes
 
 - Compatibility fixes for the upcoming pandas 0.25 and NumPy 1.17 releases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix error that arises when using open_mfdataset on a series of netcdf files
+  having differing values for a variable attribute of type list. (:issue:`3034`)
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 
 .. _whats-new.0.12.2:
 
