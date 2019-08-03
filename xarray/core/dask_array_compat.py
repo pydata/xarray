@@ -4,6 +4,13 @@ import dask.array as da
 import numpy as np
 from dask import __version__ as dask_version
 
+
+try:
+    blockwise = da.blockwise
+except AttributeError:
+    blockwise = da.atop
+
+
 try:
     from dask.array import isin
 except ImportError:  # pragma: no cover
@@ -20,13 +27,13 @@ except ImportError:  # pragma: no cover
         test_elements = da.asarray(test_elements)
         element_axes = tuple(range(element.ndim))
         test_axes = tuple(i + element.ndim for i in range(test_elements.ndim))
-        mapped = da.atop(_isin_kernel, element_axes + test_axes,
-                         element, element_axes,
-                         test_elements, test_axes,
-                         adjust_chunks={axis: lambda _: 1
-                                        for axis in test_axes},
-                         dtype=bool,
-                         assume_unique=assume_unique)
+        mapped = blockwise(_isin_kernel, element_axes + test_axes,
+                           element, element_axes,
+                           test_elements, test_axes,
+                           adjust_chunks={axis: lambda _: 1
+                                          for axis in test_axes},
+                           dtype=bool,
+                           assume_unique=assume_unique)
         result = mapped.any(axis=test_axes)
         if invert:
             result = ~result
@@ -82,7 +89,7 @@ else:  # pragma: no cover
         grad = np.gradient(x, coord, axis=axis, **grad_kwargs)
         return grad
 
-    def gradient(f, *varargs, **kwargs):
+    def gradient(f, *varargs, axis=None, **kwargs):
         f = da.asarray(f)
 
         kwargs["edge_order"] = math.ceil(kwargs.get("edge_order", 1))
@@ -90,7 +97,6 @@ else:  # pragma: no cover
             raise ValueError("edge_order must be less than or equal to 2.")
 
         drop_result_list = False
-        axis = kwargs.pop("axis", None)
         if axis is None:
             axis = tuple(range(f.ndim))
         elif isinstance(axis, Integral):

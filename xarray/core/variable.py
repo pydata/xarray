@@ -632,7 +632,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         dims, indexer, new_order = self._broadcast_indexes(key)
         data = as_indexable(self._data)[indexer]
         if new_order:
-            data = np.moveaxis(data, range(len(new_order)), new_order)
+            data = duck_array_ops.moveaxis(
+                data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self, dims, data):
@@ -676,7 +677,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             data = np.broadcast_to(fill_value, getattr(mask, 'shape', ()))
 
         if new_order:
-            data = np.moveaxis(data, range(len(new_order)), new_order)
+            data = duck_array_ops.moveaxis(
+                data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def __setitem__(self, key, value):
@@ -705,7 +707,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) +
                           (Ellipsis,)]
-            value = np.moveaxis(value, new_order, range(len(new_order)))
+            value = duck_array_ops.moveaxis(
+                value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
         indexable[index_tuple] = value
@@ -1840,8 +1843,7 @@ class IndexVariable(Variable):
     """
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
-        super(IndexVariable, self).__init__(dims, data, attrs, encoding,
-                                            fastpath)
+        super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -1940,14 +1942,7 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            if deep:
-                # self._data should be a `PandasIndexAdapter` instance at this
-                # point, which doesn't have a copy method, so make a deep copy
-                # of the underlying `pandas.MultiIndex` and create a new
-                # `PandasIndexAdapter` instance with it.
-                data = PandasIndexAdapter(self._data.array.copy(deep=True))
-            else:
-                data = self._data
+            data = self._data.copy(deep=deep)
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:
@@ -1959,7 +1954,7 @@ class IndexVariable(Variable):
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
         if equiv is not None:
-            return super(IndexVariable, self).equals(other, equiv)
+            return super().equals(other, equiv)
 
         # otherwise use the native index equals, rather than looking at _data
         other = getattr(other, 'variable', other)

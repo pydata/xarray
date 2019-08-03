@@ -232,6 +232,9 @@ class GroupBy(SupportsArithmetic):
                 raise TypeError('`group` must be an xarray.DataArray or the '
                                 'name of an xarray variable or dimension')
             group = obj[group]
+            if len(group) == 0:
+                raise ValueError("{} must not be empty".format(group.name))
+
             if group.name not in obj.coords and group.name in obj.dims:
                 # DummyGroups should not appear on groupby results
                 group = _DummyGroup(obj, group.name, group.coords)
@@ -726,7 +729,7 @@ ops.inject_binary_ops(DataArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
-    def apply(self, func, args=(), **kwargs):
+    def apply(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function over each Dataset in the group and concatenate them
         together into a new Dataset.
 
@@ -756,7 +759,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         applied : Dataset or DataArray
             The result of splitting, applying and combining this dataset.
         """
-        kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
+        # ignore shortcut if set (for now)
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         return self._combine(applied)
 

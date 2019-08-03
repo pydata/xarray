@@ -222,12 +222,15 @@ class FacetGrid:
             raise ValueError('cbar_ax not supported by FacetGrid.')
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            func, kwargs, self.data.values)
+            func, self.data.values, **kwargs)
 
         self._cmap_extend = cmap_params.get('extend')
 
         # Order is important
-        func_kwargs = kwargs.copy()
+        func_kwargs = {
+            k: v for k, v in kwargs.items()
+            if k not in {'cmap', 'colors', 'cbar_kwargs', 'levels'}
+        }
         func_kwargs.update(cmap_params)
         func_kwargs.update({'add_colorbar': False, 'add_labels': False})
 
@@ -250,24 +253,21 @@ class FacetGrid:
 
         return self
 
-    def map_dataarray_line(self, func, x, y, **kwargs):
+    def map_dataarray_line(self, func, x, y, hue, add_legend=True,
+                           _labels=None, **kwargs):
         from .plot import _infer_line_data
-
-        add_legend = kwargs.pop('add_legend', True)
-        kwargs['add_legend'] = False
-        func_kwargs = kwargs.copy()
-        func_kwargs['_labels'] = False
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
+                mappable = func(subset, x=x, y=y, ax=ax,
+                                hue=hue, add_legend=False, _labels=False,
+                                **kwargs)
                 self._mappables.append(mappable)
 
         _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
-            darray=self.data.loc[self.name_dicts.flat[0]],
-            x=x, y=y, hue=func_kwargs['hue'])
+            darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y, hue=hue)
 
         self._hue_var = hueplt
         self._hue_label = huelabel
@@ -417,7 +417,7 @@ class FacetGrid:
         return self
 
     def set_titles(self, template="{coord} = {value}", maxchar=30,
-                   **kwargs):
+                   size=None, **kwargs):
         """
         Draw titles either above each facet or on the grid margins.
 
@@ -437,7 +437,8 @@ class FacetGrid:
         """
         import matplotlib as mpl
 
-        kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
+        if size is None:
+            size = mpl.rcParams["axes.labelsize"]
 
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
                                       template=template)
@@ -448,7 +449,7 @@ class FacetGrid:
                 if d is not None:
                     coord, value = list(d.items()).pop()
                     title = nicetitle(coord, value, maxchar=maxchar)
-                    ax.set_title(title, **kwargs)
+                    ax.set_title(title, size=size, **kwargs)
         else:
             # The row titles on the right edge of the grid
             for ax, row_name in zip(self.axes[:, -1], self.row_names):
@@ -461,7 +462,7 @@ class FacetGrid:
             for ax, col_name in zip(self.axes[0, :], self.col_names):
                 title = nicetitle(coord=self._col_var, value=col_name,
                                   maxchar=maxchar)
-                ax.set_title(title, **kwargs)
+                ax.set_title(title, size=size, **kwargs)
 
         return self
 
@@ -493,7 +494,7 @@ class FacetGrid:
             ax.yaxis.set_major_locator(y_major_locator)
             for tick in itertools.chain(ax.xaxis.get_major_ticks(),
                                         ax.yaxis.get_major_ticks()):
-                tick.label.set_fontsize(fontsize)
+                tick.label1.set_fontsize(fontsize)
 
         return self
 
@@ -541,14 +542,13 @@ class FacetGrid:
 
 def _easy_facetgrid(data, plotfunc, kind, x=None, y=None, row=None,
                     col=None, col_wrap=None, sharex=True, sharey=True,
-                    aspect=None, size=None, subplot_kws=None, **kwargs):
+                    aspect=None, size=None, subplot_kws=None, ax=None,
+                    figsize=None, **kwargs):
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 
     kwargs are the arguments to 2d plotting method
     """
-    ax = kwargs.pop('ax', None)
-    figsize = kwargs.pop('figsize', None)
     if ax is not None:
         raise ValueError("Can't use axes when making faceted plots.")
     if aspect is None:

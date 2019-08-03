@@ -20,7 +20,7 @@ from xarray.core.common import duck_array_ops, full_like
 from xarray.core.pycompat import integer_types
 
 from . import (
-    InaccessibleArray, UnexpectedDataAccess, assert_allclose,
+    LooseVersion, InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_cftime, requires_dask,
     requires_numbagg, requires_scipy, source_ndarray)
@@ -52,20 +52,79 @@ def create_test_data(seed=None):
     return obj
 
 
+def create_append_test_data(seed=None):
+    rs = np.random.RandomState(seed)
+
+    lat = [2, 1, 0]
+    lon = [0, 1, 2]
+    nt1 = 3
+    nt2 = 2
+    time1 = pd.date_range('2000-01-01', periods=nt1)
+    time2 = pd.date_range('2000-02-01', periods=nt2)
+    string_var = np.array(["ae", "bc", "df"], dtype=object)
+    string_var_to_append = np.array(['asdf', 'asdfg'], dtype=object)
+    unicode_var = ["áó", "áó", "áó"]
+
+    ds = xr.Dataset(
+        data_vars={
+            'da': xr.DataArray(rs.rand(3, 3, nt1), coords=[lat, lon, time1],
+                               dims=['lat', 'lon', 'time']),
+            'string_var': xr.DataArray(string_var, coords=[time1],
+                                       dims=['time']),
+            'unicode_var': xr.DataArray(unicode_var, coords=[time1],
+                                        dims=['time']).astype(np.unicode_)
+        }
+    )
+
+    ds_to_append = xr.Dataset(
+        data_vars={
+            'da': xr.DataArray(rs.rand(3, 3, nt2), coords=[lat, lon, time2],
+                               dims=['lat', 'lon', 'time']),
+            'string_var': xr.DataArray(string_var_to_append, coords=[time2],
+                                       dims=['time']),
+            'unicode_var': xr.DataArray(unicode_var[:nt2], coords=[time2],
+                                        dims=['time']).astype(np.unicode_)
+        }
+    )
+
+    ds_with_new_var = xr.Dataset(
+        data_vars={
+            'new_var': xr.DataArray(
+                rs.rand(3, 3, nt1 + nt2),
+                coords=[lat, lon, time1.append(time2)],
+                dims=['lat', 'lon', 'time']
+            ),
+        }
+    )
+
+    assert all(objp.data.flags.writeable for objp in ds.variables.values())
+    assert all(
+        objp.data.flags.writeable for objp in ds_to_append.variables.values()
+    )
+    return ds, ds_to_append, ds_with_new_var
+
+
 def create_test_multiindex():
     mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                         names=('level_1', 'level_2'))
     return Dataset({}, {'x': mindex})
 
 
+def create_test_stacked_array():
+    x = DataArray(pd.Index(np.r_[:10], name='x'))
+    y = DataArray(pd.Index(np.r_[:20], name='y'))
+    a = x * y
+    b = x * y * y
+    return a, b
+
+
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def __init__(self):
-        super(InaccessibleVariableDataStore, self).__init__()
+        super().__init__()
         self._indexvars = set()
 
     def store(self, variables, *args, **kwargs):
-        super(InaccessibleVariableDataStore, self).store(
-            variables, *args, **kwargs)
+        super().store(variables, *args, **kwargs)
         for k, v in variables.items():
             if isinstance(v, IndexVariable):
                 self._indexvars.add(k)
@@ -338,7 +397,7 @@ class TestDataset:
             DataArray(np.random.rand(4, 3), dims=['a', 'b']),  # df
         ]
 
-        if hasattr(pd, 'Panel'):
+        if LooseVersion(pd.__version__) < '0.25.0':
             das.append(
                 DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']))
 
@@ -1501,6 +1560,21 @@ class TestDataset:
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
                          mdata.sel(one='a', two=1))
 
+    def test_broadcast_like(self):
+        original1 = DataArray(np.random.randn(5),
+                              [('x', range(5))], name='a').to_dataset()
+
+        original2 = DataArray(np.random.randn(6),
+                              [('y', range(6))], name='b')
+
+        expected1, expected2 = broadcast(original1, original2)
+
+        assert_identical(original1.broadcast_like(original2),
+                         expected1.transpose('y', 'x'))
+
+        assert_identical(original2.broadcast_like(original1),
+                         expected2)
+
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])
@@ -2111,6 +2185,40 @@ class TestDataset:
         # check virtual variables
         assert_array_equal(data['t.dayofyear'], [1, 2, 3])
 
+    def test_rename_dims(self):
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x': ('x_new', [0, 1, 2]), 'y': ('x_new', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x')
+        dims_dict = {'x': 'x_new'}
+        actual = original.rename_dims(dims_dict)
+        assert_identical(expected, actual)
+        actual_2 = original.rename_dims(**dims_dict)
+        assert_identical(expected, actual_2)
+
+        # Test to raise ValueError
+        dims_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            original.rename_dims(dims_dict_bad)
+
+    def test_rename_vars(self):
+        original = Dataset(
+            {'x': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = Dataset(
+            {'x_new': ('x', [0, 1, 2]), 'y': ('x', [10, 11, 12]), 'z': 42})
+        expected = expected.set_coords('x_new')
+        name_dict = {'x': 'x_new'}
+        actual = original.rename_vars(name_dict)
+        assert_identical(expected, actual)
+        actual_2 = original.rename_vars(**name_dict)
+        assert_identical(expected, actual_2)
+
+        # Test to raise ValueError
+        names_dict_bad = {'x_bad': 'x_new'}
+        with pytest.raises(ValueError):
+            original.rename_vars(names_dict_bad)
+
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
         expected = Dataset({'z': 42},
@@ -2396,6 +2504,61 @@ class TestDataset:
         stacked = ds[['b']].stack(z=['x', 'y'])
         actual = stacked.isel(z=slice(None, None, -1)).unstack('z')
         assert actual.identical(ds[['b']])
+
+    def test_to_stacked_array_invalid_sample_dims(self):
+        data = xr.Dataset(
+            data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
+                       'b': ('x', [6, 7])},
+            coords={'y': ['u', 'v', 'w']}
+        )
+        with pytest.raises(ValueError):
+            data.to_stacked_array("features", sample_dims=['y'])
+
+    def test_to_stacked_array_name(self):
+        name = 'adf9d'
+
+        # make a two dimensional dataset
+        a, b = create_test_stacked_array()
+        D = xr.Dataset({'a': a, 'b': b})
+        sample_dims = ['x']
+
+        y = D.to_stacked_array('features', sample_dims, name=name)
+        assert y.name == name
+
+    def test_to_stacked_array_dtype_dims(self):
+        # make a two dimensional dataset
+        a, b = create_test_stacked_array()
+        D = xr.Dataset({'a': a, 'b': b})
+        sample_dims = ['x']
+        y = D.to_stacked_array('features', sample_dims)
+        assert y.indexes['features'].levels[1].dtype == D.y.dtype
+        assert y.dims == ('x', 'features')
+
+    def test_to_stacked_array_to_unstacked_dataset(self):
+        # make a two dimensional dataset
+        a, b = create_test_stacked_array()
+        D = xr.Dataset({'a': a, 'b': b})
+        sample_dims = ['x']
+        y = D.to_stacked_array('features', sample_dims)\
+            .transpose("x", "features")
+
+        x = y.to_unstacked_dataset("features")
+        assert_identical(D, x)
+
+        # test on just one sample
+        x0 = y[0].to_unstacked_dataset("features")
+        d0 = D.isel(x=0)
+        assert_identical(d0, x0)
+
+    def test_to_stacked_array_to_unstacked_dataset_different_dimension(self):
+        # test when variables have different dimensionality
+        a, b = create_test_stacked_array()
+        sample_dims = ['x']
+        D = xr.Dataset({'a': a, 'b': b.isel(y=0)})
+
+        y = D.to_stacked_array('features', sample_dims)
+        x = y.to_unstacked_dataset('features')
+        assert_identical(D, x)
 
     def test_update(self):
         data = create_test_data(seed=0)
@@ -3297,7 +3460,8 @@ class TestDataset:
         del expected_no_data['coords']['t']['data']
         del expected_no_data['data_vars']['a']['data']
         del expected_no_data['data_vars']['b']['data']
-        expected_no_data['coords']['t'].update({'dtype': '<U1',
+        endiantype = '<U1' if sys.byteorder == 'little' else '>U1'
+        expected_no_data['coords']['t'].update({'dtype': endiantype,
                                                 'shape': (10,)})
         expected_no_data['data_vars']['a'].update({'dtype': 'float64',
                                                    'shape': (10,)})
@@ -4788,18 +4952,16 @@ def test_coarsen_coords_cftime():
 
 def test_rolling_properties(ds):
     # catching invalid args
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='exactly one dim/window should'):
         ds.rolling(time=7, x=2)
-    assert 'exactly one dim/window should' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match='window must be > 0'):
         ds.rolling(time=-2)
-    assert 'window must be > 0' in str(exception)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError, match='min_periods must be greater than zero'
+    ):
         ds.rolling(time=2, min_periods=0)
-    assert 'min_periods must be greater than zero' in str(exception)
-    with pytest.raises(KeyError) as exception:
+    with pytest.raises(KeyError, match='time2'):
         ds.rolling(time2=2)
-    assert 'time2' in str(exception)
 
 
 @pytest.mark.parametrize('name',

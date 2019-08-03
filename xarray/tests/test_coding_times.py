@@ -7,7 +7,8 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, coding, decode_cf
 from xarray.coding.times import (
-    _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime)
+    _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime,
+    to_timedelta_unboxed)
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
@@ -15,7 +16,7 @@ from xarray.testing import assert_equal
 
 from . import (
     assert_array_equal, has_cftime, has_cftime_or_netCDF4, has_dask,
-    requires_cftime, requires_cftime_or_netCDF4)
+    requires_cftime, requires_cftime_or_netCDF4, arm_xfail)
 
 try:
     from pandas.errors import OutOfBoundsDatetime
@@ -469,6 +470,7 @@ def test_decode_360_day_calendar():
         assert_array_equal(actual, expected)
 
 
+@arm_xfail
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['num_dates', 'units', 'expected_list'],
@@ -555,7 +557,7 @@ def test_cf_timedelta(timedeltas, units, numbers):
     if timedeltas == 'NaT':
         timedeltas = np.timedelta64('NaT', 'ns')
     else:
-        timedeltas = pd.to_timedelta(timedeltas, box=False)
+        timedeltas = to_timedelta_unboxed(timedeltas)
     numbers = np.array(numbers)
 
     expected = numbers
@@ -579,7 +581,7 @@ def test_cf_timedelta_2d():
     units = 'days'
     numbers = np.atleast_2d([1, 2, 3])
 
-    timedeltas = np.atleast_2d(pd.to_timedelta(timedeltas, box=False))
+    timedeltas = np.atleast_2d(to_timedelta_unboxed(timedeltas))
     expected = timedeltas
 
     actual = coding.times.decode_cf_timedelta(numbers, units)

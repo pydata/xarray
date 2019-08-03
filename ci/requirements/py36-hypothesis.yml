@@ -1,10 +1,8 @@
-name: test_env
+name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - python=3.7
-  - cftime
-  - nc-time-axis
+  - python=3.6
   - dask
   - distributed
   - h5py
@@ -12,11 +10,20 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
+  - pytest-cov
   - pytest-env
+  - coveralls
+  - hypothesis
+  - flake8
   - numpy>=1.12
   - pandas>=0.19
+  - pip
   - scipy
   - seaborn
   - toolz
   - rasterio
+  - boto3
+  - bottleneck
   - zarr
+  - pydap
+  - lxml

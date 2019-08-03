@@ -151,11 +151,11 @@ We'll now kick off a two-step process:
 .. code-block:: none
 
    # Create and activate the build environment
-   conda env create -f ci/requirements-py36.yml
-   conda activate test_env
+   conda env create -f ci/requirements/py36.yml
+   conda activate xarray-tests
 
    # or with older versions of Anaconda:
-   source activate test_env
+   source activate xarray-tests
 
    # Build and install xarray
    pip install -e .
@@ -383,13 +383,13 @@ method signatures and add deprecation warnings where needed.
 Testing With Continuous Integration
 -----------------------------------
 
-The *xarray* test suite will run automatically on `Travis-CI <https://travis-ci.org/>`__,
-and `Appveyor <https://www.appveyor.com/>`__, continuous integration services, once
-your pull request is submitted. However, if you wish to run the test suite on a
-branch prior to submitting the pull request, then the continuous integration
-services need to be hooked to your GitHub repository. Instructions are here
-for `Travis-CI <http://about.travis-ci.org/docs/user/getting-started/>`__, and
-`Appveyor <https://www.appveyor.com/docs/>`__.
+The *xarray* test suite runs automatically the
+`Azure Pipelines <https://azure.microsoft.com/en-us/services/devops/pipelines//>`__,
+continuous integration service, once your pull request is submitted. However,
+if you wish to run the test suite on a branch prior to submitting the pull
+request, then Azure Pipelines
+`needs to be configured <https://docs.microsoft.com/en-us/azure/devops/pipelines/>`_
+for your GitHub repository.
 
 A pull-request will be considered for merging when you have an all 'green' build. If any
 tests are failing, then you will get a red 'X', where you can click through to see the
@@ -399,10 +399,9 @@ individual failed tests. This is an example of a green build.
 
 .. note::
 
-   Each time you push to your PR branch, a new run of the tests will be triggered on the CI.
-   Appveyor will auto-cancel any non-currently-running tests for that same pull-request.
-   You can also enable the auto-cancel feature for `Travis-CI here
-   <https://docs.travis-ci.com/user/customizing-the-build/#Building-only-the-latest-commit>`__.
+   Each time you push to your PR branch, a new run of the tests will be
+   triggered on the CI. If they haven't already finished, tests for any older
+   commits on the same branch will be automatically cancelled.
 
 .. _contributing.tdd:
 
