@@ -41,7 +41,9 @@ Bug fixes
 - XFAIL several tests which are expected to fail on ARM systems
   due to a ``datetime`` issue in NumPy (:issue:`2334`).
   By `Graham Inggs <https://github.com/ginggs>`_.
-
+- Fix KeyError that arises when using .sel method with float values
+  different from coords float type (:issue:`3137`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 .. _whats-new.0.12.3:
 
 v0.12.3 (10 July 2019)
