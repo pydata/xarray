@@ -13,7 +13,7 @@ import pandas as pd
 
 from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import dask_array_type
+from .pycompat import dask_array_type, sparse_array_type
 
 try:
     import dask.array as dask_array
@@ -148,8 +148,9 @@ def as_shared_dtype(scalars_or_arrays):
 def as_like_arrays(*data):
     if all(isinstance(d, dask_array_type) for d in data):
         return data
-    elif all(hasattr(d, '__array_function__') for d in data):
-        return data
+    elif any(isinstance(d, sparse_array_type) for d in data):
+        from sparse import COO
+        return tuple(COO(d) for d in data)
     else:
         return tuple(np.asarray(d) for d in data)
 
