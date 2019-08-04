@@ -64,9 +64,10 @@ moveaxis = npcompat.moveaxis
 around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
 
-if hasattr(np, 'isnat'):
-    # numpy 1.13
-    isnat = _dask_or_eager_func('isnat')
+if hasattr(np, 'isnat') and (
+        dask_array is None or hasattr(dask_array_type, '__array_ufunc__')):
+    # can use the isnat ufunc
+    isnat = np.isnat
 else:
     isnat = _dask_or_eager_func('isnull', eager_module=pd)
 isnan = _dask_or_eager_func('isnan')
