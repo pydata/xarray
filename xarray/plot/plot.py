@@ -10,7 +10,6 @@ import functools
 import numpy as np
 import pandas as pd
 
-from ..core.pycompat import dask_array_type
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_xy_labels,
@@ -140,10 +139,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
         Additional keyword arguments to matplotlib
 
     """
-    darray = darray.squeeze()
-
-    if isinstance(darray.data, dask_array_type):
-        darray = darray.compute()
+    darray = darray.squeeze().compute()
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)
