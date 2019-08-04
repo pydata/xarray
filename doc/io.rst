@@ -609,8 +609,9 @@ store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
-It is also possible to append to an existing store. For that, add ``mode='a'``
-and set ``append_dim`` to the name of the dimension along which to append.
+It is also possible to append to an existing store. For that, set
+``append_dim`` to the name of the dimension along which to append. ``mode``
+can be omitted as it will internally be set to ``'a'``.
 
 .. ipython:: python
    :suppress:
@@ -628,7 +629,7 @@ and set ``append_dim`` to the name of the dimension along which to append.
                      coords={'x': [10, 20, 30, 40],
                              'y': [1,2,3,4,5],
                              't': pd.date_range('2001-01-03', periods=2)})
-    ds2.to_zarr('path/to/directory.zarr', mode='a', append_dim='t')
+    ds2.to_zarr('path/to/directory.zarr', append_dim='t')
 
 To store variable length strings use ``dtype=object``.
 
