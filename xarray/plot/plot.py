@@ -139,7 +139,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
         Additional keyword arguments to matplotlib
 
     """
-    darray = darray.squeeze()
+    darray = darray.squeeze().compute()
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)
