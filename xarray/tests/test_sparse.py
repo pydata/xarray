@@ -96,7 +96,6 @@ def test_variable_property(prop):
     (do('isel', x=slice(2, 4)), True),
     (do('isnull'), True),
     (do('mean'), False),
-    (do('notnull'), True),
     (do('roll'), True),
     (do('round'), True),
     (do('set_dims', dims=('x', 'y', 'z')), True),
@@ -143,6 +142,8 @@ def test_variable_property(prop):
           marks=xfail(reason='Coercion to dense')),
     param(do('no_conflicts', other=make_xrvar({'x': 10, 'y': 5})), True,
           marks=xfail(reason='mixed sparse-dense operation')),
+    param(do('notnull'), True,
+          marks=xfail(reason='Coercion to dense')),
     param(do('pad_with_fill_value', pad_widths={'x': (1, 1)}, fill_value=5), True, # noqa
           marks=xfail(reason='Missing implementation for np.pad')),
     param(do('prod'), False,
