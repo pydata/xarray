@@ -249,7 +249,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
                                  'an associated coordinate.')
             pos_indexers[dim] = label
         else:
-            coords_dtype = data_obj.coords[dim].values.dtype
+            coords_dtype = data_obj.coords[dim].dtype
             label = maybe_cast_to_coords_dtype(label, coords_dtype)
             idxr, new_idx = convert_label_indexer(index, label,
                                                   dim, method, tolerance)
