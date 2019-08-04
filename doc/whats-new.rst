@@ -28,13 +28,28 @@ New functions/methods
   By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
   <http://github.com/DavidMertz>`_.
 
+- The xarray package is now discoverably by mypy (although typing hints
+  coverage is not complete yet). mypy users can now remove from their setup.cfg
+  the lines::
+
+    [mypy-xarray]
+    ignore_missing_imports = True
+
+   By `Guido Imperiale <https://github.com/crusaderky>`_
+
 Enhancements
 ~~~~~~~~~~~~
 
+- In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
+  ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
+  By `David Brochart <https://github.com/davidbrochart>`_.
+
 Bug fixes
 ~~~~~~~~~
-
-- Improved error handling and documentation for `.expand_dims()` 
+- Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
+  unicode indices to dtype=object (:issue:`3094`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Improved error handling and documentation for `.expand_dims()`
   read-only view.
 - Fix tests for big-endian systems (:issue:`3125`).
   By `Graham Inggs <https://github.com/ginggs>`_.
@@ -44,6 +59,13 @@ Bug fixes
 - Fix KeyError that arises when using .sel method with float values
   different from coords float type (:issue:`3137`).
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+- Fixed bug in ``combine_by_coords()`` causing a `ValueError` if the input had
+  an unused dimension with coordinates which were not monotonic (:issue:`3150`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fixed crash when applying ``distributed.Client.compute()`` to a DataArray
+  (:issue:`3171`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+
 .. _whats-new.0.12.3:
 
 v0.12.3 (10 July 2019)
@@ -65,7 +87,6 @@ New functions/methods
   (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
 
-
 Enhancements
 ~~~~~~~~~~~~
 
@@ -85,6 +106,8 @@ Bug fixes
 - Fix HDF5 error that could arise when reading multiple groups from a file at
   once (:issue:`2954`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Better error message when using groupby on an empty DataArray (:issue:`3037`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 
 .. _whats-new.0.12.2:
 

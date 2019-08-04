@@ -96,7 +96,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
 
 
 def multiindex_from_product_levels(levels: Sequence[pd.Index],
-                                   names: Optional[Sequence[str]] = None
+                                   names: Sequence[str] = None
                                    ) -> pd.MultiIndex:
     """Creating a MultiIndex from a product without refactorizing levels.
 
@@ -359,7 +359,7 @@ class SortedKeysDict(MutableMapping[K, V]):
     """
     __slots__ = ['mapping']
 
-    def __init__(self, mapping: Optional[MutableMapping[K, V]] = None):
+    def __init__(self, mapping: MutableMapping[K, V] = None):
         self.mapping = {} if mapping is None else mapping
 
     def __getitem__(self, key: K) -> V:
@@ -390,7 +390,7 @@ class OrderedSet(MutableSet[T]):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
-    def __init__(self, values: Optional[AbstractSet[T]] = None):
+    def __init__(self, values: AbstractSet[T] = None):
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
         if values is not None:
             # Disable type checking - both mypy and PyCharm believes that
@@ -470,11 +470,21 @@ class NDArrayMixin(NdimSizeLenMixin):
 class ReprObject:
     """Object that prints as the given value, for use with sentinel values.
     """
+    __slots__ = ('_value', )
+
     def __init__(self, value: str):
         self._value = value
 
     def __repr__(self) -> str:
         return self._value
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ReprObject):
+            return self._value == other._value
+        return False
+
+    def __hash__(self) -> int:
+        return hash((ReprObject, self._value))
 
 
 @contextlib.contextmanager

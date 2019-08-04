@@ -22,12 +22,15 @@ dependencies:
   - seaborn
   - toolz
   - rasterio
+  - boto3
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
   - cfgrib>=0.9.2
   - cdms2
-  - pynio
+  # Disabled due to conflicting dependencies:
+  # https://github.com/pydata/xarray/issues/3154
+  # - pynio
   - iris>=1.10
   - pydap
   - lxml
