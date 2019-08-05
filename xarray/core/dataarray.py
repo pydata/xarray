@@ -119,11 +119,10 @@ def _check_data_shape(data, coords, dims):
     if data.shape == () and coords is not None:
         if utils.is_dict_like(coords):
             if dims is None:
-                data_shp = tuple(as_compatible_data(
-                    v).size for k, v in coords.items())
+                return data
             else:
                 data_shp = tuple(as_compatible_data(
-                    v).size for k, v in coords.items() if k in dims)
+                    coords[k]).size if k in coords.keys() else 1 for k in dims)
         elif any(isinstance(coord, tuple) for coord in coords):
             data_shp = tuple(as_compatible_data(
                 coord).size for d, coord in coords)
