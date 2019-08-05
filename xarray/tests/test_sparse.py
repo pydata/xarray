@@ -101,6 +101,7 @@ def test_variable_property(prop):
     (do('isnull'), True),
     (do('load'), True),
     (do('mean'), False),
+    (do('notnull'), True),
     (do('roll'), True),
     (do('round'), True),
     (do('set_dims', dims=('x', 'y', 'z')), True),
@@ -138,8 +139,6 @@ def test_variable_property(prop):
           marks=xfail(reason='Coercion to dense via bottleneck')),
     param(do('no_conflicts', other=make_xrvar({'x': 10, 'y': 5})), True,
           marks=xfail(reason='mixed sparse-dense operation')),
-    param(do('notnull'), True,
-          marks=xfail(reason='Coercion to dense')),
     param(do('pad_with_fill_value', pad_widths={'x': (1, 1)}, fill_value=5), True, # noqa
           marks=xfail(reason='Missing implementation for np.pad')),
     param(do('prod'), False,
@@ -282,8 +281,6 @@ def test_dataarray_property(prop):
     (do('astype', int), True),
     (do('broadcast_equals', make_xrarray({'x': 10, 'y': 5})), False),
     (do('clip', min=0, max=1), True),
-    # (do('close'), False),
-    # (do('coarsen', windows={'x': 2}, func=np.sum), True),
     (do('compute'), True),
     (do('conj'), True),
     (do('copy'), True),
@@ -294,12 +291,9 @@ def test_dataarray_property(prop):
     (do('expand_dims', {'z': 2}, axis=2), True),
     (do('get_axis_num', 'x'), False),
     (do('get_index', 'x'), False),
-    # (do('groupby'), False),
-    # (do('groupby_bins'), False),
     (do('identical', make_xrarray({'x': 5, 'y': 5})), False),
     (do('integrate', 'x'), True),
     (do('isel', {'x': slice(0, 3), 'y': slice(2, 4)}), True),
-    # (do('isel_points'), False),
     (do('isnull'), True),
     (do('load'), True),
     (do('mean'), False),
@@ -307,22 +301,20 @@ def test_dataarray_property(prop):
     (do('reindex', {'x': [1, 2, 3]}), True),
     (do('rename', 'foo'), True),
     (do('reorder_levels'), True),
-    # (do('resample'), False),
     (do('reset_coords', drop=True), True),
     (do('reset_index', 'x'), True),
-    # (do('rolling'), False),
-    # (do('rolling_exp'), False),
     (do('round'), True),
-    # (do('sel'), False),
-    # (do('sel_points'), False),
-    # (do('set_index'), False),
+    (do('sel', x=[0, 1, 2]), True),
     (do('shift'), True),
-    # (do('sortby'), False),
+    (do('sortby', 'x', ascending=False), True),
     (do('stack', z={'x', 'y'}), True),
-    param(do('sum'), False,
-          marks=xfail(reason='Missing implementation for np.result_type')),
-    # (do('swap_dims'), True),
     (do('transpose'), True),
+
+    # TODO
+    # isel_points
+    # sel_points
+    # set_index
+    # swap_dims
 
     param(do('argmax'), True,
           marks=xfail(reason='Missing implementation for np.argmax')),
@@ -391,8 +383,12 @@ def test_dataarray_property(prop):
           marks=xfail(reason='Indexing COO with more than one iterable index')), # noqa
     param(do('roll', x=2), True,
           marks=xfail(reason='Missing implementation for np.result_type')),
+    param(do('sel', x=[0, 1, 2], y=[2, 3]), True,
+          marks=xfail(reason='Indexing COO with more than one iterable index')), # noqa
     param(do('std'), False,
           marks=xfail(reason='Coercion to dense via bottleneck')),
+    param(do('sum'), False,
+          marks=xfail(reason='Missing implementation for np.result_type')),
     param(do('var'), False,
           marks=xfail(reason='Coercion to dense via bottleneck')),
     param(do('where', make_xrarray({'x': 10, 'y': 5}) > 0.5), False,
@@ -584,6 +580,35 @@ class TestSparseDataArrayAndDataset:
         ds2 = pickle.loads(pickle.dumps(ds1))
         assert_identical(ds1, ds2)
 
+    def test_coarsen(self):
+        a1 = self.ds_xr
+        a2 = self.sp_xr
+        m1 = a1.coarsen(x=2, boundary='trim').mean()
+        m2 = a2.coarsen(x=2, boundary='trim').mean()
+
+        assert isinstance(m2.data, sparse.SparseArray)
+        assert np.allclose(m1.data, m2.data.todense())
+
+    @pytest.mark.xfail(reason="No implementation of np.pad")
+    def test_rolling(self):
+        a1 = self.ds_xr
+        a2 = self.sp_xr
+        m1 = a1.rolling(x=2, center=True).mean()
+        m2 = a2.rolling(x=2, center=True).mean()
+
+        assert isinstance(m2.data, sparse.SparseArray)
+        assert np.allclose(m1.data, m2.data.todense())
+
+    @pytest.mark.xfail(reason="Coercion to dense")
+    def test_rolling_exp(self):
+        a1 = self.ds_xr
+        a2 = self.sp_xr
+        m1 = a1.rolling_exp(x=2, center=True).mean()
+        m2 = a2.rolling_exp(x=2, center=True).mean()
+
+        assert isinstance(m2.data, sparse.SparseArray)
+        assert np.allclose(m1.data, m2.data.todense())
+
     @pytest.mark.xfail(reason="No implementation of np.einsum")
     def test_dot(self):
         a1 = self.xp_xr.dot(self.xp_xr[0])
@@ -605,6 +630,28 @@ class TestSparseDataArrayAndDataset:
         x.coords['ab'] = ('x', ['a', 'a', 'b', 'b'])
         x.groupby('ab').first()
         x.groupby('ab').first(skipna=False)
+
+    @pytest.mark.xfail(reason="Groupby reductions produce dense output")
+    def test_groupby_bins(self):
+        x1 = self.ds_xr
+        x2 = self.sp_xr
+        m1 = x1.groupby_bins('x', bins=[0, 3, 7, 10]).sum()
+        m2 = x2.groupby_bins('x', bins=[0, 3, 7, 10]).sum()
+        assert isinstance(m2.data, sparse.SparseArray)
+        assert np.allclose(m1.data, m2.data.todense())
+
+    @pytest.mark.xfail(reason="Resample produces dense output")
+    def test_resample(self):
+        t1 = xr.DataArray(np.linspace(0, 11, num=12),
+                          coords=[pd.date_range('15/12/1999',
+                                  periods=12, freq=pd.DateOffset(months=1))],
+                          dims='time')
+        t2 = t1.copy()
+        t2.data = COO(t2.data)
+        m1 = t1.resample(time="QS-DEC").mean()
+        m2 = t2.resample(time="QS-DEC").mean()
+        assert isinstance(m2.data, sparse.SparseArray)
+        assert np.allclose(m1.data, m2.data.todense())
 
     @pytest.mark.xfail
     def test_reindex(self):
@@ -638,10 +685,10 @@ class TestSparseDataArrayAndDataset:
         x.where(cond)
 
 
-# Do we even want this?
-# class TestSparseCoords:
-#     def test_sparse_coords(self):
-#         xr.DataArray(
-#             COO.from_numpy(np.arange(4)),
-#             dims=['x'],
-#             coords={'x': COO.from_numpy([1, 2, 3, 4])})
+class TestSparseCoords:
+    @pytest.mark.xfail(reason="COO treated as scalar by core.utils.is_scalar")
+    def test_sparse_coords(self):
+        xr.DataArray(
+            COO.from_numpy(np.arange(4)),
+            dims=['x'],
+            coords={'x': COO.from_numpy([1, 2, 3, 4])})
