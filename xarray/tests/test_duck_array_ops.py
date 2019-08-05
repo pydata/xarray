@@ -178,14 +178,18 @@ class TestArrayNotNullEquiv():
         assert not array_notnull_equiv(a, b)
 
     @pytest.mark.parametrize("val1, val2, val3, null", [
-        (1, 2, 3, None),
+        (np.datetime64('2000'),
+         np.datetime64('2001'),
+         np.datetime64('2002'),
+         np.datetime64('NaT')),
         (1., 2., 3., np.nan),
-        (1., 2., 3., None),
         ('foo', 'bar', 'baz', None),
+        ('foo', 'bar', 'baz', np.nan),
     ])
     def test_types(self, val1, val2, val3, null):
-        arr1 = np.array([val1, null, val3, null])
-        arr2 = np.array([val1, val2, null, null])
+        dtype = object if isinstance(val1, str) else None
+        arr1 = np.array([val1, null, val3, null], dtype=dtype)
+        arr2 = np.array([val1, val2, null, null], dtype=dtype)
         assert array_notnull_equiv(arr1, arr2)
 
 
@@ -430,6 +434,19 @@ def test_argmin_max_error():
     da[0] = np.nan
     with pytest.raises(ValueError):
         da.argmin(dim='y')
+
+
+@pytest.mark.parametrize('array', [
+    np.array([np.datetime64('2000-01-01'), np.datetime64('NaT')]),
+    np.array([np.timedelta64(1, 'h'), np.timedelta64('NaT')]),
+    np.array([0.0, np.nan]),
+    np.array([1j, np.nan]),
+    np.array(['foo', np.nan], dtype=object),
+])
+def test_isnull(array):
+    expected = np.array([False, True])
+    actual = duck_array_ops.isnull(array)
+    np.testing.assert_equal(expected, actual)
 
 
 @requires_dask
