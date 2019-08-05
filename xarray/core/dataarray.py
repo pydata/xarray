@@ -260,8 +260,10 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
-                coords = getattr(data, 'coords', None)
-                if isinstance(data, pd.Series):
+
+                if isinstance(data, DataArray):
+                    coords = data.coords
+                elif isinstance(data, pd.Series):
                     coords = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coords = [data.index, data.columns]
@@ -269,6 +271,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data]
                 elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
+
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
             if name is None:

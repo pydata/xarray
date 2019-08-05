@@ -243,7 +243,9 @@ def is_scalar(value: Any) -> bool:
     return (
         getattr(value, 'ndim', None) == 0 or
         isinstance(value, (str, bytes)) or not
-        isinstance(value, (Iterable, ) + dask_array_type))
+        (isinstance(value, (Iterable, ) + dask_array_type) or
+         hasattr(value, '__array_function__'))
+    )
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:

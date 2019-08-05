@@ -657,6 +657,9 @@ def as_indexable(array):
         return PandasIndexAdapter(array)
     if isinstance(array, dask_array_type):
         return DaskIndexingAdapter(array)
+    if hasattr(array, '__array_function__'):
+        return NdArrayLikeIndexingAdapter(array)
+
     raise TypeError('Invalid array type: {}'.format(type(array)))
 
 
@@ -1187,6 +1190,16 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                                  "Do you want to .copy() array first?")
             else:
                 raise
+
+
+class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
+    def __init__(self, array):
+        if not hasattr(array, '__array_function__'):
+            raise TypeError(
+                'NdArrayLikeIndexingAdapter must wrap an object that '
+                'implements the __array_function__ protocol'
+            )
+        self.array = array
 
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):

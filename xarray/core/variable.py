@@ -17,6 +17,7 @@ from .indexing import (
     as_indexable)
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
+from .npcompat import IS_NEP18_ACTIVE
 from .utils import (
     OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
@@ -179,6 +180,18 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
+    if not isinstance(data, np.ndarray):
+        if hasattr(data, '__array_function__'):
+            if IS_NEP18_ACTIVE:
+                return data
+            else:
+                raise TypeError(
+                    'Got an NumPy-like array type providing the '
+                    '__array_function__ protocol but NEP18 is not enabled. '
+                    'Check that numpy >= v1.16 and that the environment '
+                    'variable "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION" is set to '
+                    '"1"')
+
     # validate whether the data is valid data types
     data = np.asarray(data)
 
@@ -288,7 +301,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
     @property
     def data(self):
-        if isinstance(self._data, dask_array_type):
+        if hasattr(self._data, '__array_function__'):
             return self._data
         else:
             return self.values
@@ -320,7 +333,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         if isinstance(self._data, dask_array_type):
             self._data = as_compatible_data(self._data.compute(**kwargs))
-        elif not isinstance(self._data, np.ndarray):
+        elif not hasattr(self._data, '__array_function__'):
             self._data = np.asarray(self._data)
         return self
 
@@ -705,8 +718,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         if new_order:
             value = duck_array_ops.asarray(value)
-            value = value[(len(dims) - value.ndim) * (np.newaxis,) +
-                          (Ellipsis,)]
+            value = value[(len(dims) - value.ndim) * (np.newaxis,)
+                          + (Ellipsis,)]
             value = duck_array_ops.moveaxis(
                 value, new_order, range(len(new_order)))
 
@@ -805,7 +818,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 data = indexing.MemoryCachedArray(data.array)
 
             if deep:
-                if isinstance(data, dask_array_type):
+                if (hasattr(data, '__array_function__')
+                        or isinstance(data, dask_array_type)):
                     data = data.copy()
                 elif not isinstance(data, PandasIndexAdapter):
                     # pandas.Index is immutable
@@ -1494,9 +1508,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims and
-                    (self._data is other._data or
-                     equiv(self.data, other.data)))
+            return (
+                self.dims == other.dims and
+                (self._data is other._data or equiv(self.data, other.data))
+            )
         except (TypeError, AttributeError):
             return False
 
@@ -1517,8 +1532,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """Like equals, but also checks attributes.
         """
         try:
-            return (utils.dict_equiv(self.attrs, other.attrs) and
-                    self.equals(other))
+            return (utils.dict_equiv(self.attrs, other.attrs)
+                    and self.equals(other))
         except (TypeError, AttributeError):
             return False
 
@@ -1959,8 +1974,8 @@ class IndexVariable(Variable):
         # otherwise use the native index equals, rather than looking at _data
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims and
-                    self._data_equals(other))
+            return (self.dims == other.dims
+                    and self._data_equals(other))
         except (TypeError, AttributeError):
             return False
 
