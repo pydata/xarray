@@ -67,9 +67,7 @@ def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
 
 
 def maybe_cast_to_coords_dtype(label, coords_dtype):
-    if isinstance(label, float):
-        label = coords_dtype.type(label)
-    elif isinstance(label, list) and coords_dtype.kind == 'f':
+    if coords_dtype.kind == 'f' and not isinstance(label, slice):
         label = np.asarray(label, dtype=coords_dtype)
     return label
 
