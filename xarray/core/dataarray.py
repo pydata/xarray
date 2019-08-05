@@ -124,6 +124,9 @@ def _check_data_shape(data, coords, dims):
             else:
                 data_shp = tuple(as_compatible_data(
                     v).size for k, v in coords.items() if k in dims)
+        elif any(isinstance(coord, tuple) for coord in coords):
+            data_shp = tuple(as_compatible_data(
+                coord).size for d, coord in coords)
         else:
             data_shp = tuple(as_compatible_data(
                 coord).size for coord in coords)
@@ -291,7 +294,6 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data]
                 elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
-
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
             if name is None:
