@@ -129,13 +129,10 @@ def _check_data_shape(data, coords, dims):
         else:
             data_shp = tuple(as_compatible_data(
                 coord).size for coord in coords)
-        if all(shp_val == 1 for shp_val in data_shp):
-            data = data
-        elif any(data_shp):
-            if data.item() is None:
-                data = np.empty(data_shp)
-            else:
-                data = np.full(data_shp, data)
+        if data.item() is None:
+            data = np.empty(data_shp)
+        else:
+            data = np.full(data_shp, data)
     return data
 
 
