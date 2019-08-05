@@ -1879,8 +1879,7 @@ class TestDatasetScatterPlots(PlotTestCase):
             self.ds.plot.scatter(x, y, hue_style=hue_style,
                                  add_guide=add_guide)
 
-    @pytest.mark.xfail(reason=['datetime, timedelta64 hue variable'
-                               ' not supported yet.'])
+    @pytest.mark.xfail(reason='datetime,timedelta hue variable not supported.')
     @pytest.mark.parametrize('hue_style', ['discrete', 'continuous'])
     def test_datetime_hue(self, hue_style):
         ds2 = self.ds.copy()
