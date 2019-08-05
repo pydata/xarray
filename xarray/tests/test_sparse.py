@@ -212,11 +212,6 @@ class TestSparseVariable:
         assert_sparse_eq(abs(self.var).data, abs(self.data))
         assert_sparse_eq(self.var.round().data, self.data.round())
 
-    def test_binary_op(self):
-        assert_sparse_eq((2 * self.var).data, 2 * self.data)
-        assert_sparse_eq((self.var + self.var).data, self.data + self.data)
-        # assert_eq((self.var[0] + self.var).data, self.data[0] + self.data)
-
     def test_univariate_ufunc(self):
         assert_sparse_eq(np.sin(self.data), xu.sin(self.var).data)
 
@@ -686,7 +681,7 @@ class TestSparseDataArrayAndDataset:
 
 
 class TestSparseCoords:
-    @pytest.mark.xfail(reason="COO treated as scalar by core.utils.is_scalar")
+    @pytest.mark.xfail(reason="Coercion of coords to dense")
     def test_sparse_coords(self):
         xr.DataArray(
             COO.from_numpy(np.arange(4)),
