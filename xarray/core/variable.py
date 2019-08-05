@@ -333,7 +333,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         if isinstance(self._data, dask_array_type):
             self._data = as_compatible_data(self._data.compute(**kwargs))
-        elif not isinstance(self._data, np.ndarray):
+        elif not hasattr(self._data, '__array_function__'):
             self._data = np.asarray(self._data)
         return self
 
