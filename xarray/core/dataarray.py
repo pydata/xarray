@@ -1794,8 +1794,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         dropped : DataArray
         """
-        if utils.is_scalar(labels):
-            labels = [labels]
         ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
         return self._from_temp_dataset(ds)
 
