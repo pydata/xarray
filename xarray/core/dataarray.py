@@ -116,7 +116,7 @@ def _infer_coords_and_dims(
 
 
 def _check_data_shape(data, coords, dims):
-    if data.size == 1 and coords is not None:
+    if data.shape == () and coords is not None:
         if utils.is_dict_like(coords):
             if dims is None:
                 data_shp = tuple(as_compatible_data(
