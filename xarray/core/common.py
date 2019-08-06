@@ -20,6 +20,7 @@ from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 ALL_DIMS = ReprObject('<all-dims>')
 
 
+C = TypeVar('C')
 T = TypeVar('T')
 
 
@@ -297,9 +298,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             # need to ensure dtype=int64 in case range is empty on Python 2
             return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
-    def _calc_assign_results(self, kwargs: Mapping[str, T]
-                             ) -> MutableMapping[str, T]:
-        results = SortedKeysDict()  # type: SortedKeysDict[str, T]
+    def _calc_assign_results(
+            self: C,
+            kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
+    ) -> MutableMapping[Hashable, T]:
+        results = SortedKeysDict()  # type: SortedKeysDict[Hashable, T]
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)

@@ -2000,6 +2000,12 @@ class TestDataset:
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
+        # DataArrays as labels are a nasty corner case as they are not
+        # Iterable[Hashable] - DataArray.__iter__ yields scalar DataArrays.
+        actual = data.drop(DataArray(['a', 'b', 'c']), 'x', errors='ignore')
+        expected = data.isel(x=slice(0, 0))
+        assert_identical(expected, actual)
+
         with raises_regex(
                 ValueError, 'does not have coordinate labels'):
             data.drop(1, 'y')

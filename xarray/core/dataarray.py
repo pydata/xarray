@@ -4,7 +4,8 @@ import warnings
 from collections import OrderedDict
 from numbers import Number
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
-                    Optional, Sequence, Tuple, Union, cast, TYPE_CHECKING)
+                    Optional, Sequence, Tuple, Union, cast, overload,
+                    TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
@@ -1755,17 +1756,35 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> 'DataArray':
         return self.transpose()
 
-    def drop(self,
-             labels: Union[Hashable, Sequence[Hashable]],
-             dim: Hashable = None,
-             *,
-             errors: str = 'raise') -> 'DataArray':
+    # Drop coords
+    @overload
+    def drop(
+        self,
+        labels: Union[Hashable, Iterable[Hashable]],
+        *,
+        errors: str = 'raise'
+    ) -> 'DataArray':
+        ...
+
+    # Drop index labels along dimension
+    @overload  # noqa: F811
+    def drop(
+        self,
+        labels: Any,  # array-like
+        dim: Hashable,
+        *,
+        errors: str = 'raise'
+    ) -> 'DataArray':
+        ...
+
+    def drop(self, labels, dim=None, *, errors='raise'):  # noqa: F811
         """Drop coordinates or index labels from this DataArray.
 
         Parameters
         ----------
         labels : hashable or sequence of hashables
-            Name(s) of coordinate variables or index labels to drop.
+            Name(s) of coordinates or index labels to drop.
+            If dim is not None, labels can be any array-like.
         dim : hashable, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.
@@ -1778,8 +1797,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         dropped : DataArray
         """
-        if utils.is_scalar(labels):
-            labels = [labels]
         ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
         return self._from_temp_dataset(ds)
 

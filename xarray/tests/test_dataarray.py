@@ -1904,9 +1904,9 @@ class TestDataArray:
         assert_identical(actual, expected)
 
         with raises_regex(ValueError, 'cannot be found'):
-            arr.drop(None)
+            arr.drop('w')
 
-        actual = expected.drop(None, errors='ignore')
+        actual = expected.drop('w', errors='ignore')
         assert_identical(actual, expected)
 
         renamed = arr.rename('foo')
