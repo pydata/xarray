@@ -11,6 +11,7 @@ Geosciences
 ~~~~~~~~~~~
 
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
+- `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction. 
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meterology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
 - `MetPy <https://unidata.github.io/MetPy/dev/index.html>`_: A collection of tools in Python for reading, visualizing, and performing calculations with weather data.
