@@ -317,7 +317,15 @@ def combine_nested(datasets, concat_dim, compat='no_conflicts',
     fill_value : scalar, optional
         Value to use for newly missing values
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes.
+        String indicating how to combine differing indexes
+        (excluding concat_dim) in objects
+
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
 
     Returns
     -------
@@ -446,7 +454,15 @@ def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
     fill_value : scalar, optional
         Value to use for newly missing values
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes.
+        String indicating how to combine differing indexes
+        (excluding concat_dim) in objects
+
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
 
     Returns
     -------
@@ -580,7 +596,15 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     fill_value : scalar, optional
         Value to use for newly missing values
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes.
+        String indicating how to combine differing indexes
+        (excluding concat_dim) in objects
+
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
 
     Returns
     -------

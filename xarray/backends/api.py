@@ -705,7 +705,15 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes.
+        String indicating how to combine differing indexes
+        (excluding concat_dim) in objects
+
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 

@@ -52,7 +52,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
           * 'all': All coordinate variables will be concatenated, except
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
-            in addition the 'minimal' coordinates.
+            in addition to the 'minimal' coordinates.
     compat : {'equals', 'identical'}, optional
         String indicating how to compare non-concatenated variables and
         dataset global attributes for potential conflicts. 'equals' means
@@ -66,8 +66,16 @@ def concat(objs, dim=None, data_vars='all', coords='different',
     fill_value : scalar, optional
         Value to use for newly missing values
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes
-        (excluding index along 'dim').
+        String indicating how to combine differing indexes
+        (excluding dim) in objects
+
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
+
     indexers, mode, concat_over : deprecated
 
     Returns
