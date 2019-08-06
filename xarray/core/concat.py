@@ -43,10 +43,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
     coords : {'minimal', 'different', 'all' or list of str}, optional
         These coordinate variables will be concatenated together:
           * 'minimal': Only coordinates in which the dimension already appears
-            are concatenated. Non-dimensional coordinates will be checked for
-            equality.
-          * 'skip_nondim': Same as minimal but avoids checking nondimensional
-            coordinates for equality.
+            are included.
           * 'different': Coordinates which are not equal (ignoring attributes)
             across all datasets are also concatenated (as well as all for which
             dimension already appears). Beware: this option may load the data
@@ -193,8 +190,6 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                                    set(datasets[0].dims))
             elif opt == 'minimal':
                 pass
-            elif opt == 'skip_nondim' and subset == 'coords':
-                pass
             else:
                 raise ValueError("unexpected value for %s: %s" % (subset, opt))
         else:
@@ -263,13 +258,6 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions,
             elif (k in result_coord_names) != (k in ds.coords):
                 raise ValueError('%r is a coordinate in some datasets but not '
                                  'others' % k)
-            elif ((k in result_coord_names)
-                  and (k in result_vars)
-                  and (k not in ds.dims)
-                  and (coords == 'skip_nondim')):
-                # skip comparison of non dimensional coords when ask to
-                # concatenate only over dim_coords if needed
-                pass
             elif k in result_vars and k != dim:
                 # Don't use Variable.identical as it internally invokes
                 # Variable.equals, and we may already know the answer
