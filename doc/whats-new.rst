@@ -46,8 +46,10 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
-
-- Improved error handling and documentation for `.expand_dims()` 
+- Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
+  unicode indices to dtype=object (:issue:`3094`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Improved error handling and documentation for `.expand_dims()`
   read-only view.
 - Fix tests for big-endian systems (:issue:`3125`).
   By `Graham Inggs <https://github.com/ginggs>`_.
@@ -55,8 +57,11 @@ Bug fixes
   due to a ``datetime`` issue in NumPy (:issue:`2334`).
   By `Graham Inggs <https://github.com/ginggs>`_.
 - Fixed bug in ``combine_by_coords()`` causing a `ValueError` if the input had
-  an unused dimension with coordinates which were not monotonic (:issue`3150`).
+  an unused dimension with coordinates which were not monotonic (:issue:`3150`).
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fixed crash when applying ``distributed.Client.compute()`` to a DataArray
+  (:issue:`3171`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 
 .. _whats-new.0.12.3:
 

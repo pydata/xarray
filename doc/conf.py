@@ -66,6 +66,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.extlinks',
     'sphinx.ext.mathjax',
+    'sphinx.ext.napoleon',
     'numpydoc',
     'IPython.sphinxext.ipython_directive',
     'IPython.sphinxext.ipython_console_highlighting',
@@ -83,6 +84,10 @@ sphinx_gallery_conf = {'examples_dirs': 'gallery',
                        }
 
 autosummary_generate = True
+autodoc_typehints = 'none'
+
+napoleon_use_param = True
+napoleon_use_rtype = True   
 
 numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
