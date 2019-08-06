@@ -462,11 +462,21 @@ class NDArrayMixin(NdimSizeLenMixin):
 class ReprObject:
     """Object that prints as the given value, for use with sentinel values.
     """
+    __slots__ = ('_value', )
+
     def __init__(self, value: str):
         self._value = value
 
     def __repr__(self) -> str:
         return self._value
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ReprObject):
+            return self._value == other._value
+        return False
+
+    def __hash__(self) -> int:
+        return hash((ReprObject, self._value))
 
 
 @contextlib.contextmanager
