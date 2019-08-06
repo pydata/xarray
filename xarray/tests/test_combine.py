@@ -337,6 +337,24 @@ class TestNestedCombine:
         with pytest.raises(KeyError):
             combine_nested(objs, concat_dim='x')
 
+    @pytest.mark.parametrize("join, expected",
+                             [('outer', Dataset({'x': [0, 1], 'y': [0, 1]})),
+                              ('inner', Dataset({'x': [0, 1], 'y': []})),
+                              ('left', Dataset({'x': [0, 1], 'y': [0]})),
+                              ('right', Dataset({'x': [0, 1], 'y': [1]})),
+                             ])
+    def test_combine_nested_join(self, join, expected):
+        objs = [Dataset({'x': [0], 'y': [0]}),
+                Dataset({'x': [1], 'y': [1]})]
+        actual = combine_nested(objs, concat_dim='x', join=join)
+        assert_identical(expected, actual)
+
+    def test_combine_nested_join_exact(self):
+        objs = [Dataset({'x': [0], 'y': [0]}),
+                Dataset({'x': [1], 'y': [1]})]
+        with raises_regex(ValueError, 'indexes along dimension'):
+            actual = combine_nested(objs, concat_dim='x', join='exact')
+
     def test_empty_input(self):
         assert_identical(Dataset(), combine_nested([], concat_dim='x'))
 
@@ -573,6 +591,24 @@ class TestCombineAuto:
 
         def test_empty_input(self):
             assert_identical(Dataset(), combine_by_coords([]))
+
+    @pytest.mark.parametrize("join, expected",
+                             [('outer', Dataset({'x': [0, 1], 'y': [0, 1]})),
+                              ('inner', Dataset({'x': [0, 1], 'y': []})),
+                              ('left', Dataset({'x': [0, 1], 'y': [0]})),
+                              ('right', Dataset({'x': [0, 1], 'y': [1]})),
+                             ])
+    def test_combine_coords_join(self, join, expected):
+        objs = [Dataset({'x': [0], 'y': [0]}),
+                Dataset({'x': [1], 'y': [1]})]
+        actual = combine_nested(objs, concat_dim='x', join=join)
+        assert_identical(expected, actual)
+
+    def test_combine_coords_join_exact(self):
+        objs = [Dataset({'x': [0], 'y': [0]}),
+                Dataset({'x': [1], 'y': [1]})]
+        with raises_regex(ValueError, 'indexes along dimension'):
+            actual = combine_nested(objs, concat_dim='x', join='exact')
 
     def test_infer_order_from_coords(self):
         data = create_test_data()
