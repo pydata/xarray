@@ -306,8 +306,8 @@ class TestCheckShapeTileIDs:
             _check_shape_tile_ids(combined_tile_ids)
 
 
-class TestManualCombine:
-    def test_manual_concat(self):
+class TestNestedCombine:
+    def test_nested_concat(self):
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
         expected = Dataset({'x': [0, 1]})
         actual = combine_nested(objs, concat_dim='x')
@@ -326,7 +326,7 @@ class TestManualCombine:
         expected = Dataset({'x': [0, 1, 2]})
         assert_identical(expected, actual)
 
-        # ensure manual_combine handles non-sorted variables
+        # ensure combine_nested handles non-sorted variables
         objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
                 Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
         actual = combine_nested(objs, concat_dim='a')
@@ -337,17 +337,37 @@ class TestManualCombine:
         with pytest.raises(KeyError):
             combine_nested(objs, concat_dim='x')
 
+    @pytest.mark.parametrize(
+        "join, expected",
+        [
+            ('outer', Dataset({'x': [0, 1], 'y': [0, 1]})),
+            ('inner', Dataset({'x': [0, 1], 'y': []})),
+            ('left', Dataset({'x': [0, 1], 'y': [0]})),
+            ('right', Dataset({'x': [0, 1], 'y': [1]})),
+        ])
+    def test_combine_nested_join(self, join, expected):
+        objs = [Dataset({'x': [0], 'y': [0]}),
+                Dataset({'x': [1], 'y': [1]})]
+        actual = combine_nested(objs, concat_dim='x', join=join)
+        assert_identical(expected, actual)
+
+    def test_combine_nested_join_exact(self):
+        objs = [Dataset({'x': [0], 'y': [0]}),
+                Dataset({'x': [1], 'y': [1]})]
+        with raises_regex(ValueError, 'indexes along dimension'):
+            combine_nested(objs, concat_dim='x', join='exact')
+
     def test_empty_input(self):
         assert_identical(Dataset(), combine_nested([], concat_dim='x'))
 
     # Fails because of concat's weird treatment of dimension coords, see #2975
     @pytest.mark.xfail
-    def test_manual_concat_too_many_dims_at_once(self):
+    def test_nested_concat_too_many_dims_at_once(self):
         objs = [Dataset({'x': [0], 'y': [1]}), Dataset({'y': [0], 'x': [1]})]
         with pytest.raises(ValueError, match="not equal across datasets"):
             combine_nested(objs, concat_dim='x', coords='minimal')
 
-    def test_manual_concat_along_new_dim(self):
+    def test_nested_concat_along_new_dim(self):
         objs = [Dataset({'a': ('x', [10]), 'x': [0]}),
                 Dataset({'a': ('x', [20]), 'x': [0]})]
         expected = Dataset({'a': (('t', 'x'), [[10], [20]]), 'x': [0]})
@@ -361,7 +381,7 @@ class TestManualCombine:
         actual = combine_nested(objs, concat_dim=dim)
         assert_identical(expected, actual)
 
-    def test_manual_merge(self):
+    def test_nested_merge(self):
         data = Dataset({'x': 0})
         actual = combine_nested([data, data, data], concat_dim=None)
         assert_identical(data, actual)
@@ -450,7 +470,7 @@ class TestManualCombine:
         result = combine_nested(datasets, concat_dim=['dim1', 'dim2'])
         assert_equal(result, expected)
 
-    def test_manual_combine_missing_data_new_dim(self):
+    def test_combine_nested_missing_data_new_dim(self):
         # Your data includes "time" and "station" dimensions, and each year's
         # data has a different set of stations.
         datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
@@ -513,7 +533,7 @@ class TestManualCombine:
         expected = Dataset({'x': [0]})
         assert_identical(expected, actual)
 
-    def test_manual_combine_but_need_auto_combine(self):
+    def test_combine_nested_but_need_auto_combine(self):
         objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2], 'wall': [0]})]
         with raises_regex(ValueError, 'cannot be combined'):
             combine_nested(objs, concat_dim='x')
@@ -573,6 +593,26 @@ class TestCombineAuto:
 
         def test_empty_input(self):
             assert_identical(Dataset(), combine_by_coords([]))
+
+    @pytest.mark.parametrize(
+        "join, expected",
+        [
+            ('outer', Dataset({'x': [0, 1], 'y': [0, 1]})),
+            ('inner', Dataset({'x': [0, 1], 'y': []})),
+            ('left', Dataset({'x': [0, 1], 'y': [0]})),
+            ('right', Dataset({'x': [0, 1], 'y': [1]})),
+        ])
+    def test_combine_coords_join(self, join, expected):
+        objs = [Dataset({'x': [0], 'y': [0]}),
+                Dataset({'x': [1], 'y': [1]})]
+        actual = combine_nested(objs, concat_dim='x', join=join)
+        assert_identical(expected, actual)
+
+    def test_combine_coords_join_exact(self):
+        objs = [Dataset({'x': [0], 'y': [0]}),
+                Dataset({'x': [1], 'y': [1]})]
+        with raises_regex(ValueError, 'indexes along dimension'):
+            combine_nested(objs, concat_dim='x', join='exact')
 
     def test_infer_order_from_coords(self):
         data = create_test_data()
