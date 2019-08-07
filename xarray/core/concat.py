@@ -143,6 +143,11 @@ def concat(
             "`data_vars` and `coords` arguments"
         )
 
+    if compat not in ["equals", "identical", "override"]:
+        raise ValueError(
+            "compat=%r invalid: must be 'equals', 'identical or 'override'" % compat
+        )
+
     if isinstance(first_obj, DataArray):
         f = _dataarray_concat
     elif isinstance(first_obj, Dataset):
@@ -189,7 +194,11 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     equals = {}
 
     if dim in datasets[0]:
+        concat_over_existing_dim = True
         concat_over.add(dim)
+    else:
+        concat_over_existing_dim = False
+
     for ds in datasets:
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
 
@@ -226,6 +235,11 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                 )
             elif opt == "minimal":
                 pass
+            elif opt == "sensible":
+                if not concat_over_existing_dim:
+                    concat_over.update(
+                        set(getattr(datasets[0], subset)) - set(datasets[0].dims)
+                    )
             else:
                 raise ValueError("unexpected value for %s: %s" % (subset, opt))
         else:
@@ -263,11 +277,6 @@ def _dataset_concat(
     """
     from .dataset import Dataset
 
-    if compat not in ["equals", "identical"]:
-        raise ValueError(
-            "compat=%r invalid: must be 'equals' " "or 'identical'" % compat
-        )
-
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
@@ -297,21 +306,24 @@ def _dataset_concat(
     # across all datasets
     for ds in datasets[1:]:
         if compat == "identical" and not utils.dict_equiv(ds.attrs, result_attrs):
-            raise ValueError("dataset global attributes not equal")
+            raise ValueError("Dataset global attributes are not equal.")
         for k, v in ds.variables.items():
             if k not in result_vars and k not in concat_over:
-                raise ValueError("encountered unexpected variable %r" % k)
+                raise ValueError("Encountered unexpected variable %r" % k)
             elif (k in result_coord_names) != (k in ds.coords):
                 raise ValueError(
-                    "%r is a coordinate in some datasets but not " "others" % k
+                    "%r is a coordinate in some datasets but not others." % k
                 )
-            elif k in result_vars and k != dim:
+            elif compat != "override" and k in result_vars and k != dim:
                 # Don't use Variable.identical as it internally invokes
                 # Variable.equals, and we may already know the answer
                 if compat == "identical" and not utils.dict_equiv(
                     v.attrs, result_vars[k].attrs
                 ):
-                    raise ValueError("variable %s not identical across datasets" % k)
+                    raise ValueError(
+                        "Variable '%s' is not identical across datasets. "
+                        "You can skip this check by specifying compat='override'." % k
+                    )
 
                 # Proceed with equals()
                 try:
@@ -321,7 +333,10 @@ def _dataset_concat(
                     result_vars[k].load()
                     is_equal = v.equals(result_vars[k])
                 if not is_equal:
-                    raise ValueError("variable %s not equal across datasets" % k)
+                    raise ValueError(
+                        "Variable '%s' is not equal across datasets. "
+                        "You can skip this check by specifying compat='override'." % k
+                    )
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
