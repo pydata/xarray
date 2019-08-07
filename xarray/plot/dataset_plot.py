@@ -37,10 +37,12 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
             raise ValueError('Cannot create a colorbar for a non numeric'
                              ' coordinate: ' + hue)
 
-        if add_guide is None:
+        if add_guide is None or add_guide is True:
             add_colorbar = True if hue_style == 'continuous' else False
             add_legend = True if hue_style == 'discrete' else False
-
+        else:
+            add_colorbar = False
+            add_legend = False
     else:
         if add_guide is True:
             raise ValueError('Cannot set add_guide when hue is None.')

@@ -9,6 +9,7 @@ import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray, Dataset
 from xarray.coding.times import _import_cftime
+from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
@@ -1837,6 +1838,23 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds.A.attrs['units'] = 'Aunits'
         ds.B.attrs['units'] = 'Bunits'
         self.ds = ds
+
+    @pytest.mark.parametrize(
+        'add_guide, hue_style, legend, colorbar', [
+            (None, None, False, True),
+            (False, None, False, False),
+            (True, None, False, True),
+            (True, "continuous", False, True),
+            (False, "discrete", False, False),
+            (True, "discrete", True, False)]
+    )
+    def test_add_guide(self, add_guide, hue_style, legend, colorbar):
+
+        meta_data = _infer_meta_data(self.ds, x='A', y='B', hue='hue',
+                                     hue_style=hue_style,
+                                     add_guide=add_guide)
+        assert meta_data['add_legend'] is legend
+        assert meta_data['add_colorbar'] is colorbar
 
     def test_facetgrid_shape(self):
         g = self.ds.plot.scatter(x='A', y='B', row='row', col='col')
