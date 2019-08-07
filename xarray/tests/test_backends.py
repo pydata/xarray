@@ -2392,8 +2392,12 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     var_name = 'v1'
 
     @contextlib.contextmanager
-    def setup_files_and_datasets(self):
+    def setup_files_and_datasets(self, fuzz=0):
         ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+
+        # to test join='exact'
+        ds1['x'] = ds1.x + fuzz
+
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
 
@@ -2430,19 +2434,28 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         return ds1, ds2
 
+    @pytest.mark.parametrize('combine', ['nested', 'by_coords'])
     @pytest.mark.parametrize('opt', ['all', 'minimal', 'different'])
-    def test_open_mfdataset_does_same_as_concat(self, opt):
+    @pytest.mark.parametrize('join', ['outer', 'inner', 'left', 'right'])
+    def test_open_mfdataset_does_same_as_concat(self, combine, opt, join):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
-            with open_mfdataset(files, data_vars=opt,
-                                combine='nested', concat_dim='t') as ds:
-                kwargs = dict(data_vars=opt, dim='t')
-                ds_expect = xr.concat([ds1, ds2], **kwargs)
+            if combine == 'by_coords':
+                files.reverse()
+            with open_mfdataset(files, data_vars=opt, combine=combine,
+                                concat_dim='t', join=join) as ds:
+                ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim='t',
+                                      join=join)
                 assert_identical(ds, ds_expect)
-            with open_mfdataset(files, coords=opt,
-                                combine='nested', concat_dim='t') as ds:
-                kwargs = dict(coords=opt, dim='t')
-                ds_expect = xr.concat([ds1, ds2], **kwargs)
-                assert_identical(ds, ds_expect)
+
+    @pytest.mark.parametrize('combine', ['nested', 'by_coords'])
+    @pytest.mark.parametrize('opt', ['all', 'minimal', 'different'])
+    def test_open_mfdataset_exact_join_raises_error(self, combine, opt):
+        with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
+            if combine == 'by_coords':
+                files.reverse()
+            with raises_regex(ValueError, 'indexes along dimension'):
+                open_mfdataset(files, data_vars=opt, combine=combine,
+                               concat_dim='t', join='exact')
 
     def test_common_coord_when_datavars_all(self):
         opt = 'all'

@@ -40,6 +40,8 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
+  It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
