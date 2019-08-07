@@ -113,7 +113,7 @@ def calculate_dimensions(
     """
     dims = {}  # type: Dict[Any, int]
     last_used = {}
-    scalar_vars = set(k for k, v in variables.items() if not v.dims)
+    scalar_vars = {k for k, v in variables.items() if not v.dims}
     for k, var in variables.items():
         for dim, size in zip(var.dims, var.shape):
             if dim in scalar_vars:
@@ -997,7 +997,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         for v in variables.values():
             needed_dims.update(v.dims)
 
-        dims = dict((k, self.dims[k]) for k in needed_dims)
+        dims = {k: self.dims[k] for k in needed_dims}
 
         for k in self._coord_names:
             if set(self.variables[k].dims) <= needed_dims:
@@ -1569,7 +1569,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         def selkeys(dict_, keys):
             if dict_ is None:
                 return None
-            return dict((d, dict_[d]) for d in keys if d in dict_)
+            return {d: dict_[d] for d in keys if d in dict_}
 
         def maybe_chunk(name, var, chunks):
             chunks = selkeys(chunks, var.dims)
@@ -1923,7 +1923,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 raise ValueError('Indexers must be 1 dimensional')
 
         # all the indexers should have the same length
-        lengths = set(len(v) for k, v in indexers)
+        lengths = {len(v) for k, v in indexers}
         if len(lengths) > 1:
             raise ValueError('All indexers must be the same length')
 
@@ -2577,7 +2577,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                                  'variable along the old dimension %r'
                                  % (v, k))
 
-        result_dims = set(dims_dict.get(dim, dim) for dim in self.dims)
+        result_dims = {dims_dict.get(dim, dim) for dim in self.dims}
 
         coord_names = self._coord_names.copy()
         coord_names.update(dims_dict.values())
@@ -2674,7 +2674,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         elif isinstance(dim, Sequence):
             if len(dim) != len(set(dim)):
                 raise ValueError('dims should not contain duplicate values.')
-            dim = OrderedDict(((d, 1) for d in dim))
+            dim = OrderedDict((d, 1) for d in dim)
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'expand_dims')
         assert isinstance(dim, MutableMapping)
@@ -2905,7 +2905,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         idx = utils.multiindex_from_product_levels(levels, names=dims)
         variables[new_dim] = IndexVariable(new_dim, idx)
 
-        coord_names = set(self._coord_names) - set(dims) | set([new_dim])
+        coord_names = set(self._coord_names) - set(dims) | {new_dim}
 
         indexes = OrderedDict((k, v) for k, v in self.indexes.items()
                               if k not in dims)
@@ -3103,7 +3103,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables[name] = IndexVariable(name, lev)
             indexes[name] = lev
 
-        coord_names = set(self._coord_names) - set([dim]) | set(new_dim_names)
+        coord_names = set(self._coord_names) - {dim} | set(new_dim_names)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes)
@@ -3348,7 +3348,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         variables = OrderedDict((k, v) for k, v in self._variables.items()
                                 if k not in names)
-        coord_names = set(k for k in self._coord_names if k in variables)
+        coord_names = {k for k in self._coord_names if k in variables}
         indexes = OrderedDict((k, v) for k, v in self.indexes.items()
                               if k not in names)
         return self._replace_with_new_dims(
@@ -3740,7 +3740,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                                                  allow_lazy=allow_lazy,
                                                  **kwargs)
 
-        coord_names = set(k for k in self.coords if k in variables)
+        coord_names = {k for k in self.coords if k in variables}
         indexes = OrderedDict((k, v) for k, v in self.indexes.items()
                               if k in variables)
         attrs = self.attrs if keep_attrs else None
@@ -4079,7 +4079,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.from_dict
         """
 
-        if not set(['coords', 'data_vars']).issubset(set(d)):
+        if not {'coords', 'data_vars'}.issubset(set(d)):
             variables = d.items()
         else:
             import itertools
@@ -4250,8 +4250,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if n == 0:
             return self
         if n < 0:
-            raise ValueError('order `n` must be non-negative but got {0}'
-                             ''.format(n))
+            raise ValueError(
+                'order `n` must be non-negative but got {}'.format(n)
+            )
 
         # prepare slices
         kwargs_start = {dim: slice(None, -1)}
@@ -4530,7 +4531,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
 
         if isinstance(dim, str):
-            dims = set([dim])
+            dims = {dim}
         elif dim is None:
             dims = set(self.dims)
         else:
@@ -4561,7 +4562,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 variables[name] = var
 
         # construct the new dataset
-        coord_names = set(k for k in self.coords if k in variables)
+        coord_names = {k for k in self.coords if k in variables}
         indexes = OrderedDict(
             (k, v) for k, v in self.indexes.items() if k in variables
         )

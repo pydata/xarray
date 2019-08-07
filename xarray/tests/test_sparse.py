@@ -535,7 +535,7 @@ class TestSparseDataArrayAndDataset:
 
     def test_dataarray_repr(self):
         a = xr.DataArray(
-            COO.from_numpy(np.ones((4))),
+            COO.from_numpy(np.ones(4)),
             dims=['x'],
             coords={'y': ('x', COO.from_numpy(np.arange(4)))})
         expected = dedent("""\
@@ -548,7 +548,7 @@ class TestSparseDataArrayAndDataset:
 
     def test_dataset_repr(self):
         ds = xr.Dataset(
-            data_vars={'a': ('x', COO.from_numpy(np.ones((4))))},
+            data_vars={'a': ('x', COO.from_numpy(np.ones(4)))},
             coords={'y': ('x', COO.from_numpy(np.arange(4)))})
         expected = dedent("""\
         <xarray.Dataset>
@@ -562,7 +562,7 @@ class TestSparseDataArrayAndDataset:
 
     def test_dataarray_pickle(self):
         a1 = xr.DataArray(
-            COO.from_numpy(np.ones((4))),
+            COO.from_numpy(np.ones(4)),
             dims=['x'],
             coords={'y': ('x', COO.from_numpy(np.arange(4)))})
         a2 = pickle.loads(pickle.dumps(a1))
@@ -570,7 +570,7 @@ class TestSparseDataArrayAndDataset:
 
     def test_dataset_pickle(self):
         ds1 = xr.Dataset(
-            data_vars={'a': ('x', COO.from_numpy(np.ones((4))))},
+            data_vars={'a': ('x', COO.from_numpy(np.ones(4)))},
             coords={'y': ('x', COO.from_numpy(np.arange(4)))})
         ds2 = pickle.loads(pickle.dumps(ds1))
         assert_identical(ds1, ds2)
