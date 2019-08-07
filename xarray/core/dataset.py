@@ -3364,7 +3364,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        drop_dims : str or list
+        drop_dims : hashable or iterable of hashable
             Dimension or dimensions to drop.
         errors: {'raise', 'ignore'}, optional
             If 'raise' (default), raises a ValueError error if any of the
@@ -3386,18 +3386,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError('errors must be either "raise" or "ignore"')
 
         if isinstance(drop_dims, str) or not isinstance(drop_dims, Iterable):
-            drop_dims = [drop_dims]
+            drop_dims = {drop_dims}
         else:
-            drop_dims = list(drop_dims)
+            drop_dims = set(drop_dims)
 
         if errors == 'raise':
-            missing_dimensions = [d for d in drop_dims if d not in self.dims]
-            if missing_dimensions:
+            missing_dims = drop_dims - set(self.dims)
+            if missing_dims:
                 raise ValueError('Dataset does not contain the dimensions: %s'
-                                 % missing_dimensions)
+                                 % missing_dims)
 
-        drop_vars = set(k for k, v in self._variables.items()
-                        for d in v.dims if d in drop_dims)
+        drop_vars = {
+            k for k, v in self._variables.items()
+            if set(v.dims) & drop_dims
+        }
         return self._drop_vars(drop_vars)
 
     def transpose(self, *dims: Hashable) -> 'Dataset':
