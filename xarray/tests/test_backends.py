@@ -1077,11 +1077,11 @@ class NetCDF4Base(CFEncodedBase):
 
             with open_dataset(tmp_file) as actual:
                 assert_equal(actual['time'], expected['time'])
-                actual_encoding = dict((k, v) for k, v in
-                                       actual['time'].encoding.items()
-                                       if k in expected['time'].encoding)
-                assert actual_encoding == \
-                    expected['time'].encoding
+                actual_encoding = {
+                    k: v for k, v in actual['time'].encoding.items()
+                    if k in expected['time'].encoding
+                }
+                assert actual_encoding == expected['time'].encoding
 
     def test_dump_encodings(self):
         # regression test for #709
@@ -2857,11 +2857,15 @@ class TestDask(DatasetIOBase):
             data = create_test_data()
             data.to_netcdf(tmp)
             with open_mfdataset(tmp, combine='by_coords') as ds:
-                original_names = dict((k, v.data.name)
-                                      for k, v in ds.data_vars.items())
+                original_names = {
+                    k: v.data.name
+                    for k, v in ds.data_vars.items()
+                }
             with open_mfdataset(tmp, combine='by_coords') as ds:
-                repeat_names = dict((k, v.data.name)
-                                    for k, v in ds.data_vars.items())
+                repeat_names = {
+                    k: v.data.name
+                    for k, v in ds.data_vars.items()
+                }
             for var_name, dask_name in original_names.items():
                 assert var_name in dask_name
                 assert dask_name[:13] == 'open_dataset-'

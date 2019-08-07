@@ -341,10 +341,10 @@ def reindex_variables(
     for dim, indexer in indexers.items():
         if isinstance(indexer, DataArray) and indexer.dims != (dim,):
             warnings.warn(
-                "Indexer has dimensions {0:s} that are different "
-                "from that to be indexed along {1:s}. "
-                "This will behave differently in the future.".format(
-                    str(indexer.dims), dim),
+                "Indexer has dimensions {:s} that are different "
+                "from that to be indexed along {:s}. "
+                "This will behave differently in the future."
+                .format(str(indexer.dims), dim),
                 FutureWarning, stacklevel=3)
 
         target = new_indexes[dim] = utils.safe_cast_to_index(indexers[dim])

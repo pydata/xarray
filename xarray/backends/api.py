@@ -742,7 +742,7 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
     if not paths:
-        raise IOError('no files to open')
+        raise OSError('no files to open')
 
     # If combine='by_coords' then this is unnecessary, but quick.
     # If combine='nested' then this creates a flat list which is easier to
@@ -1039,7 +1039,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     if groups is None:
         groups = [None] * len(datasets)
 
-    if len(set([len(datasets), len(paths), len(groups)])) > 1:
+    if len({len(datasets), len(paths), len(groups)}) > 1:
         raise ValueError('must supply lists of the same length for the '
                          'datasets, paths and groups arguments to '
                          'save_mfdataset')
