@@ -4,8 +4,9 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
-from typing import Callable, Dict, Hashable, Iterable, Mapping, Tuple, Union
 from textwrap import dedent
+from typing import (Callable, Dict, Hashable, Iterable, Mapping, Tuple, Union,
+                    TYPE_CHECKING)
 
 import numpy as np
 
@@ -17,7 +18,6 @@ from ..core.combine import (
     _nested_combine,
     _infer_concat_order_from_positions
 )
-from ..core.pycompat import TYPE_CHECKING
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter, AbstractDataStore
 from .locks import _get_scheduler
@@ -1102,7 +1102,7 @@ def _validate_append_dim_and_encoding(ds_to_append, store, append_dim,
                 )
 
 
-def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
+def to_zarr(dataset, store=None, mode=None, synchronizer=None, group=None,
             encoding=None, compute=True, consolidated=False, append_dim=None):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1118,7 +1118,7 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    if mode == "a":
+    if mode == 'a':
         _validate_datatypes_for_zarr_append(dataset)
         _validate_append_dim_and_encoding(dataset, store, append_dim,
                                           group=group,

@@ -357,7 +357,10 @@ def set_numpy_options(*args, **kwargs):
 
 
 def short_array_repr(array):
-    array = np.asarray(array)
+
+    if not hasattr(array, '__array_function__'):
+        array = np.asarray(array)
+
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
     options = {
@@ -394,7 +397,7 @@ def short_data_repr(array):
     if isinstance(getattr(array, 'variable', array)._data, dask_array_type):
         return short_dask_repr(array)
     elif array._in_memory or array.size < 1e5:
-        return short_array_repr(array.values)
+        return short_array_repr(array.data)
     else:
         return u'[{} values with dtype={}]'.format(array.size, array.dtype)
 

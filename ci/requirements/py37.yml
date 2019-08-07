@@ -1,4 +1,4 @@
-name: test_env
+name: xarray-tests
 channels:
   - conda-forge
 dependencies:
@@ -21,8 +21,10 @@ dependencies:
   - pip
   - scipy
   - seaborn
+  - sparse
   - toolz
   - rasterio
+  - boto3
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1

@@ -3,7 +3,7 @@ from contextlib import suppress
 from textwrap import dedent
 from typing import (
     Any, Callable, Hashable, Iterable, Iterator, List, Mapping, MutableMapping,
-    Optional, Tuple, TypeVar, Union)
+    Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -20,6 +20,7 @@ from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 ALL_DIMS = ReprObject('<all-dims>')
 
 
+C = TypeVar('C')
 T = TypeVar('T')
 
 
@@ -101,7 +102,7 @@ class AbstractArray(ImplementsArrayReduce):
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: Optional[DTypeLike] = None) -> np.ndarray:
+    def __array__(self: Any, dtype: DTypeLike = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
@@ -297,9 +298,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             # need to ensure dtype=int64 in case range is empty on Python 2
             return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
-    def _calc_assign_results(self, kwargs: Mapping[str, T]
-                             ) -> MutableMapping[str, T]:
-        results = SortedKeysDict()  # type: SortedKeysDict[str, T]
+    def _calc_assign_results(
+            self: C,
+            kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
+    ) -> MutableMapping[Hashable, T]:
+        results = SortedKeysDict()  # type: SortedKeysDict[Hashable, T]
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)
@@ -448,7 +451,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             return func(self, *args, **kwargs)
 
     def groupby(self, group, squeeze: bool = True,
-                restore_coord_dims: Optional[bool] = None):
+                restore_coord_dims: bool = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -501,7 +504,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def groupby_bins(self, group, bins, right: bool = True, labels=None,
                      precision: int = 3, include_lowest: bool = False,
                      squeeze: bool = True,
-                     restore_coord_dims: Optional[bool] = None):
+                     restore_coord_dims: bool = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -557,8 +560,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                              'include_lowest':
                                                  include_lowest})
 
-    def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
-                min_periods: Optional[int] = None, center: bool = False,
+    def rolling(self, dim: Mapping[Hashable, int] = None,
+                min_periods: int = None, center: bool = False,
                 **window_kwargs: int):
         """
         Rolling window object.
@@ -621,7 +624,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def rolling_exp(
         self,
-        window: Optional[Mapping[Hashable, int]] = None,
+        window: Mapping[Hashable, int] = None,
         window_type: str = 'span',
         **window_kwargs
     ):
@@ -658,7 +661,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return self._rolling_exp_cls(self, window, window_type)
 
-    def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
+    def coarsen(self, dim: Mapping[Hashable, int] = None,
                 boundary: str = 'exact',
                 side: Union[str, Mapping[Hashable, str]] = 'left',
                 coord_func: str = 'mean',
@@ -721,11 +724,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
 
-    def resample(self, indexer: Optional[Mapping[Hashable, str]] = None,
-                 skipna=None, closed: Optional[str] = None,
-                 label: Optional[str] = None,
-                 base: int = 0, keep_attrs: Optional[bool] = None,
-                 loffset=None, restore_coord_dims: Optional[bool] = None,
+    def resample(self, indexer: Mapping[Hashable, str] = None,
+                 skipna=None, closed: str = None,
+                 label: str = None,
+                 base: int = 0, keep_attrs: bool = None,
+                 loffset=None, restore_coord_dims: bool = None,
                  **indexer_kwargs: str):
         """Returns a Resample object for performing resampling operations.
 
@@ -1003,7 +1006,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         raise NotImplementedError
 
 
-def full_like(other, fill_value, dtype: Optional[DTypeLike] = None):
+def full_like(other, fill_value, dtype: DTypeLike = None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -1044,7 +1047,7 @@ def full_like(other, fill_value, dtype: Optional[DTypeLike] = None):
 
 
 def _full_like_variable(other, fill_value,
-                        dtype: Optional[DTypeLike] = None):
+                        dtype: DTypeLike = None):
     """Inner function of full_like, where other must be a variable
     """
     from .variable import Variable
@@ -1061,13 +1064,13 @@ def _full_like_variable(other, fill_value,
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype: Optional[DTypeLike] = None):
+def zeros_like(other, dtype: DTypeLike = None):
     """Shorthand for full_like(other, 0, dtype)
     """
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype: Optional[DTypeLike] = None):
+def ones_like(other, dtype: DTypeLike = None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)

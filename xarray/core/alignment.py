@@ -3,7 +3,16 @@ import operator
 import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import suppress
-from typing import Any, Mapping, Optional, Tuple
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+    TYPE_CHECKING,
+)
 
 import numpy as np
 import pandas as pd
@@ -12,6 +21,10 @@ from . import dtypes, utils
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 def _get_joiner(join):
@@ -169,8 +182,8 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
 
     This function is not public API.
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from .dataarray import DataArray  # noqa: F811
+    from .dataset import Dataset  # noqa: F811
 
     if indexes is None:
         indexes = {}
@@ -222,7 +235,10 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
     return out
 
 
-def reindex_like_indexers(target, other):
+def reindex_like_indexers(
+    target: Union['DataArray', 'Dataset'],
+    other: Union['DataArray', 'Dataset'],
+) -> Dict[Hashable, pd.Index]:
     """Extract indexers to align target with other.
 
     Not public API.
@@ -236,7 +252,8 @@ def reindex_like_indexers(target, other):
 
     Returns
     -------
-    Dict[Any, pandas.Index] providing indexes for reindex keyword arguments.
+    Dict[Hashable, pandas.Index] providing indexes for reindex keyword
+    arguments.
 
     Raises
     ------
@@ -310,7 +327,7 @@ def reindex_variables(
     new_indexes : OrderedDict
         Dict of indexes associated with the reindexed variables.
     """
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
 
     # create variables for the new dataset
     reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
@@ -391,6 +408,58 @@ def reindex_variables(
     return reindexed, new_indexes
 
 
+def _get_broadcast_dims_map_common_coords(args, exclude):
+
+    common_coords = OrderedDict()
+    dims_map = OrderedDict()
+    for arg in args:
+        for dim in arg.dims:
+            if dim not in common_coords and dim not in exclude:
+                dims_map[dim] = arg.sizes[dim]
+                if dim in arg.coords:
+                    common_coords[dim] = arg.coords[dim].variable
+
+    return dims_map, common_coords
+
+
+def _broadcast_helper(arg, exclude, dims_map, common_coords):
+
+    from .dataarray import DataArray  # noqa: F811
+    from .dataset import Dataset  # noqa: F811
+
+    def _set_dims(var):
+        # Add excluded dims to a copy of dims_map
+        var_dims_map = dims_map.copy()
+        for dim in exclude:
+            with suppress(ValueError):
+                # ignore dim not in var.dims
+                var_dims_map[dim] = var.shape[var.dims.index(dim)]
+
+        return var.set_dims(var_dims_map)
+
+    def _broadcast_array(array):
+        data = _set_dims(array.variable)
+        coords = OrderedDict(array.coords)
+        coords.update(common_coords)
+        return DataArray(data, coords, data.dims, name=array.name,
+                         attrs=array.attrs)
+
+    def _broadcast_dataset(ds):
+        data_vars = OrderedDict(
+            (k, _set_dims(ds.variables[k]))
+            for k in ds.data_vars)
+        coords = OrderedDict(ds.coords)
+        coords.update(common_coords)
+        return Dataset(data_vars, coords, ds.attrs)
+
+    if isinstance(arg, DataArray):
+        return _broadcast_array(arg)
+    elif isinstance(arg, Dataset):
+        return _broadcast_dataset(arg)
+    else:
+        raise ValueError('all input must be Dataset or DataArray objects')
+
+
 def broadcast(*args, exclude=None):
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
@@ -463,55 +532,16 @@ def broadcast(*args, exclude=None):
         a        (x, y) int64 1 1 2 2 3 3
         b        (x, y) int64 5 6 5 6 5 6
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
 
     if exclude is None:
         exclude = set()
     args = align(*args, join='outer', copy=False, exclude=exclude)
 
-    common_coords = OrderedDict()
-    dims_map = OrderedDict()
-    for arg in args:
-        for dim in arg.dims:
-            if dim not in common_coords and dim not in exclude:
-                dims_map[dim] = arg.sizes[dim]
-                if dim in arg.coords:
-                    common_coords[dim] = arg.coords[dim].variable
-
-    def _set_dims(var):
-        # Add excluded dims to a copy of dims_map
-        var_dims_map = dims_map.copy()
-        for dim in exclude:
-            with suppress(ValueError):
-                # ignore dim not in var.dims
-                var_dims_map[dim] = var.shape[var.dims.index(dim)]
-
-        return var.set_dims(var_dims_map)
-
-    def _broadcast_array(array):
-        data = _set_dims(array.variable)
-        coords = OrderedDict(array.coords)
-        coords.update(common_coords)
-        return DataArray(data, coords, data.dims, name=array.name,
-                         attrs=array.attrs)
-
-    def _broadcast_dataset(ds):
-        data_vars = OrderedDict(
-            (k, _set_dims(ds.variables[k]))
-            for k in ds.data_vars)
-        coords = OrderedDict(ds.coords)
-        coords.update(common_coords)
-        return Dataset(data_vars, coords, ds.attrs)
-
+    dims_map, common_coords = _get_broadcast_dims_map_common_coords(
+        args, exclude)
     result = []
     for arg in args:
-        if isinstance(arg, DataArray):
-            result.append(_broadcast_array(arg))
-        elif isinstance(arg, Dataset):
-            result.append(_broadcast_dataset(arg))
-        else:
-            raise ValueError('all input must be Dataset or DataArray objects')
+        result.append(_broadcast_helper(arg, exclude, dims_map, common_coords))
 
     return tuple(result)
 

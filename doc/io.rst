@@ -147,13 +147,18 @@ convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
 when loading, ensuring that the ``DataArray`` that is loaded is always exactly
 the same as the one that was saved.
 
-A dataset can also be loaded or written to a specific group within a netCDF
-file. To load from a group, pass a ``group`` keyword argument to the
+NetCDF groups are not supported as part of the
+:py:class:`~xarray.Dataset` data model.  Instead, groups can be loaded
+individually as Dataset objects.
+To do so, pass a ``group`` keyword argument to the
 ``open_dataset`` function. The group can be specified as a path-like
 string, e.g., to access subgroup 'bar' within group 'foo' pass
-'/foo/bar' as the ``group`` argument. When writing multiple groups in one file,
-pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
-file.
+'/foo/bar' as the ``group`` argument.
+In a similar way, the ``group`` keyword argument can be given to the
+:py:meth:`~xarray.Dataset.to_netcdf` method to write to a group
+in a netCDF file.
+When writing multiple groups in one file, pass ``mode='a'`` to ``to_netcdf``
+to ensure that each call does not delete the file.
 
 Data is always loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
@@ -604,8 +609,9 @@ store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
-It is also possible to append to an existing store. For that, add ``mode='a'``
-and set ``append_dim`` to the name of the dimension along which to append.
+It is also possible to append to an existing store. For that, set
+``append_dim`` to the name of the dimension along which to append. ``mode``
+can be omitted as it will internally be set to ``'a'``.
 
 .. ipython:: python
    :suppress:
@@ -623,7 +629,7 @@ and set ``append_dim`` to the name of the dimension along which to append.
                      coords={'x': [10, 20, 30, 40],
                              'y': [1,2,3,4,5],
                              't': pd.date_range('2001-01-03', periods=2)})
-    ds2.to_zarr('path/to/directory.zarr', mode='a', append_dim='t')
+    ds2.to_zarr('path/to/directory.zarr', append_dim='t')
 
 To store variable length strings use ``dtype=object``.
 
