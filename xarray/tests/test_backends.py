@@ -1077,11 +1077,11 @@ class NetCDF4Base(CFEncodedBase):
 
             with open_dataset(tmp_file) as actual:
                 assert_equal(actual['time'], expected['time'])
-                actual_encoding = dict((k, v) for k, v in
-                                       actual['time'].encoding.items()
-                                       if k in expected['time'].encoding)
-                assert actual_encoding == \
-                    expected['time'].encoding
+                actual_encoding = {
+                    k: v for k, v in actual['time'].encoding.items()
+                    if k in expected['time'].encoding
+                }
+                assert actual_encoding == expected['time'].encoding
 
     def test_dump_encodings(self):
         # regression test for #709
@@ -2361,6 +2361,30 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
             assert_identical(original, actual)
 
 
+@requires_netCDF4
+def test_open_mfdataset_list_attr():
+    """
+    Case when an attribute of type list differs across the multiple files
+    """
+    from netCDF4 import Dataset
+    with create_tmp_files(2) as nfiles:
+        for i in range(2):
+            f = Dataset(nfiles[i], "w")
+            f.createDimension("x", 3)
+            vlvar = f.createVariable("test_var", np.int32, ("x"))
+            # here create an attribute as a list
+            vlvar.test_attr = ["string a {}".format(i),
+                               "string b {}".format(i)]
+            vlvar[:] = np.arange(3)
+            f.close()
+        ds1 = open_dataset(nfiles[0])
+        ds2 = open_dataset(nfiles[1])
+        original = xr.concat([ds1, ds2], dim='x')
+        with xr.open_mfdataset([nfiles[0], nfiles[1]], combine='nested',
+                               concat_dim='x') as actual:
+            assert_identical(actual, original)
+
+
 @requires_scipy_or_netCDF4
 @requires_dask
 class TestOpenMFDatasetWithDataVarsAndCoordsKw:
@@ -2368,8 +2392,12 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     var_name = 'v1'
 
     @contextlib.contextmanager
-    def setup_files_and_datasets(self):
+    def setup_files_and_datasets(self, fuzz=0):
         ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+
+        # to test join='exact'
+        ds1['x'] = ds1.x + fuzz
+
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
 
@@ -2406,19 +2434,28 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         return ds1, ds2
 
+    @pytest.mark.parametrize('combine', ['nested', 'by_coords'])
     @pytest.mark.parametrize('opt', ['all', 'minimal', 'different'])
-    def test_open_mfdataset_does_same_as_concat(self, opt):
+    @pytest.mark.parametrize('join', ['outer', 'inner', 'left', 'right'])
+    def test_open_mfdataset_does_same_as_concat(self, combine, opt, join):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
-            with open_mfdataset(files, data_vars=opt,
-                                combine='nested', concat_dim='t') as ds:
-                kwargs = dict(data_vars=opt, dim='t')
-                ds_expect = xr.concat([ds1, ds2], **kwargs)
+            if combine == 'by_coords':
+                files.reverse()
+            with open_mfdataset(files, data_vars=opt, combine=combine,
+                                concat_dim='t', join=join) as ds:
+                ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim='t',
+                                      join=join)
                 assert_identical(ds, ds_expect)
-            with open_mfdataset(files, coords=opt,
-                                combine='nested', concat_dim='t') as ds:
-                kwargs = dict(coords=opt, dim='t')
-                ds_expect = xr.concat([ds1, ds2], **kwargs)
-                assert_identical(ds, ds_expect)
+
+    @pytest.mark.parametrize('combine', ['nested', 'by_coords'])
+    @pytest.mark.parametrize('opt', ['all', 'minimal', 'different'])
+    def test_open_mfdataset_exact_join_raises_error(self, combine, opt):
+        with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
+            if combine == 'by_coords':
+                files.reverse()
+            with raises_regex(ValueError, 'indexes along dimension'):
+                open_mfdataset(files, data_vars=opt, combine=combine,
+                               concat_dim='t', join='exact')
 
     def test_common_coord_when_datavars_all(self):
         opt = 'all'
@@ -2833,11 +2870,15 @@ class TestDask(DatasetIOBase):
             data = create_test_data()
             data.to_netcdf(tmp)
             with open_mfdataset(tmp, combine='by_coords') as ds:
-                original_names = dict((k, v.data.name)
-                                      for k, v in ds.data_vars.items())
+                original_names = {
+                    k: v.data.name
+                    for k, v in ds.data_vars.items()
+                }
             with open_mfdataset(tmp, combine='by_coords') as ds:
-                repeat_names = dict((k, v.data.name)
-                                    for k, v in ds.data_vars.items())
+                repeat_names = {
+                    k: v.data.name
+                    for k, v in ds.data_vars.items()
+                }
             for var_name, dask_name in original_names.items():
                 assert var_name in dask_name
                 assert dask_name[:13] == 'open_dataset-'

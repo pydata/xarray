@@ -166,8 +166,7 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
 def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
     encoding = variable.encoding.copy()
 
-    valid_encodings = set(['chunks', 'compressor', 'filters',
-                           'cache_metadata'])
+    valid_encodings = {'chunks', 'compressor', 'filters', 'cache_metadata'}
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
@@ -340,8 +339,10 @@ class ZarrStore(AbstractWritableDataStore):
             only needed in append mode
         """
 
-        existing_variables = set([vn for vn in variables
-                                 if _encode_variable_name(vn) in self.ds])
+        existing_variables = {
+            vn for vn in variables
+            if _encode_variable_name(vn) in self.ds
+        }
         new_variables = set(variables) - existing_variables
         variables_without_encoding = OrderedDict([(vn, variables[vn])
                                                  for vn in new_variables])

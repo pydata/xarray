@@ -129,16 +129,29 @@ def maybe_wrap_array(original, new_array):
 
 def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
-    array_equiv if either object is an ndarray
+    array_equiv if either object is an ndarray. If both objects are lists,
+    equivalent is sequentially called on all the elements.
     """
     # TODO: refactor to avoid circular import
     from . import duck_array_ops
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+    elif isinstance(first, list) or isinstance(second, list):
+        return list_equiv(first, second)
     else:
         return ((first is second) or
                 (first == second) or
                 (pd.isnull(first) and pd.isnull(second)))
+
+
+def list_equiv(first, second):
+    equiv = True
+    if len(first) != len(second):
+        return False
+    else:
+        for f, s in zip(first, second):
+            equiv = equiv and equivalent(f, s)
+    return equiv
 
 
 def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
@@ -230,7 +243,9 @@ def is_scalar(value: Any) -> bool:
     return (
         getattr(value, 'ndim', None) == 0 or
         isinstance(value, (str, bytes)) or not
-        isinstance(value, (Iterable, ) + dask_array_type))
+        (isinstance(value, (Iterable, ) + dask_array_type) or
+         hasattr(value, '__array_function__'))
+    )
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:

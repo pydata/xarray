@@ -35,7 +35,7 @@ def test_vlen_dtype():
 def test_EncodedStringCoder_decode():
     coder = strings.EncodedStringCoder()
 
-    raw_data = np.array([b'abc', 'ß∂µ∆'.encode('utf-8')])
+    raw_data = np.array([b'abc', 'ß∂µ∆'.encode()])
     raw = Variable(('x',), raw_data, {'_Encoding': 'utf-8'})
     actual = coder.decode(raw)
 
@@ -50,7 +50,7 @@ def test_EncodedStringCoder_decode():
 def test_EncodedStringCoder_decode_dask():
     coder = strings.EncodedStringCoder()
 
-    raw_data = np.array([b'abc', 'ß∂µ∆'.encode('utf-8')])
+    raw_data = np.array([b'abc', 'ß∂µ∆'.encode()])
     raw = Variable(('x',), raw_data, {'_Encoding': 'utf-8'}).chunk()
     actual = coder.decode(raw)
     assert isinstance(actual.data, da.Array)

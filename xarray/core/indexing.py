@@ -149,7 +149,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
             raise ValueError('cannot use a dict-like object for selection on '
                              'a dimension that does not have a MultiIndex')
         elif len(label) == index.nlevels and not is_nested_vals:
-            indexer = index.get_loc(tuple((label[k] for k in index.names)))
+            indexer = index.get_loc(tuple(label[k] for k in index.names))
         else:
             for k, v in label.items():
                 # index should be an item (i.e. Hashable) not an array-like
@@ -657,6 +657,9 @@ def as_indexable(array):
         return PandasIndexAdapter(array)
     if isinstance(array, dask_array_type):
         return DaskIndexingAdapter(array)
+    if hasattr(array, '__array_function__'):
+        return NdArrayLikeIndexingAdapter(array)
+
     raise TypeError('Invalid array type: {}'.format(type(array)))
 
 
@@ -1187,6 +1190,16 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                                  "Do you want to .copy() array first?")
             else:
                 raise
+
+
+class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
+    def __init__(self, array):
+        if not hasattr(array, '__array_function__'):
+            raise TypeError(
+                'NdArrayLikeIndexingAdapter must wrap an object that '
+                'implements the __array_function__ protocol'
+            )
+        self.array = array
 
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):

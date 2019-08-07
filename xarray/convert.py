@@ -30,7 +30,7 @@ def encode(var):
 def _filter_attrs(attrs, ignored_attrs):
     """ Return attrs that are not in ignored_attrs
     """
-    return dict((k, v) for k, v in attrs.items() if k not in ignored_attrs)
+    return {k: v for k, v in attrs.items() if k not in ignored_attrs}
 
 
 def from_cdms2(variable):
@@ -119,7 +119,7 @@ def to_cdms2(dataarray, copy=True):
 def _pick_attrs(attrs, keys):
     """ Return attrs with keys in keys list
     """
-    return dict((k, v) for k, v in attrs.items() if k in keys)
+    return {k: v for k, v in attrs.items() if k in keys}
 
 
 def _get_iris_args(attrs):
@@ -188,7 +188,7 @@ def _iris_obj_to_attrs(obj):
     if obj.units.origin != '1' and not obj.units.is_unknown():
         attrs['units'] = obj.units.origin
     attrs.update(obj.attributes)
-    return dict((k, v) for k, v in attrs.items() if v is not None)
+    return {k: v for k, v in attrs.items() if v is not None}
 
 
 def _iris_cell_methods_to_str(cell_methods_obj):
