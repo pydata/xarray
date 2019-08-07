@@ -77,7 +77,7 @@ def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
             msg = """
             MD5 checksum does not match, try downloading dataset again.
             """
-            raise IOError(msg)
+            raise OSError(msg)
 
     ds = _open_dataset(localfile, **kws)
 

@@ -136,8 +136,10 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
             data = indexing.LazilyOuterIndexedArray(
                 InaccessibleArray(v.values))
             return Variable(v.dims, data, v.attrs)
-        return dict((k, lazy_inaccessible(k, v)) for
-                    k, v in self._variables.items())
+        return {
+            k: lazy_inaccessible(k, v)
+            for k, v in self._variables.items()
+        }
 
 
 class TestDataset:
@@ -239,7 +241,7 @@ class TestDataset:
         repr(data)  # should not raise
 
         byteorder = '<' if sys.byteorder == 'little' else '>'
-        expected = dedent(u"""\
+        expected = dedent("""\
         <xarray.Dataset>
         Dimensions:  (foø: 1)
         Coordinates:
@@ -520,7 +522,7 @@ class TestDataset:
         assert ds.title == ds.attrs['title']
         assert ds.tmin.units == ds['tmin'].attrs['units']
 
-        assert set(['tmin', 'title']) <= set(dir(ds))
+        assert {'tmin', 'title'} <= set(dir(ds))
         assert 'units' in set(dir(ds.tmin))
 
         # should defer to variable of same name
@@ -1953,8 +1955,9 @@ class TestDataset:
 
         assert_identical(data, data.drop([]))
 
-        expected = Dataset(dict((k, data[k]) for k in data.variables
-                                if k != 'time'))
+        expected = Dataset(
+            {k: data[k] for k in data.variables if k != 'time'}
+        )
         actual = data.drop('time')
         assert_identical(expected, actual)
         actual = data.drop(['time'])
@@ -2951,9 +2954,9 @@ class TestDataset:
         all_items = set(data.variables)
         assert set(data.variables) == all_items
         del data['var1']
-        assert set(data.variables) == all_items - set(['var1'])
+        assert set(data.variables) == all_items - {'var1'}
         del data['numbers']
-        assert set(data.variables) == all_items - set(['var1', 'numbers'])
+        assert set(data.variables) == all_items - {'var1', 'numbers'}
         assert 'numbers' not in data.coords
 
         expected = Dataset()
@@ -2966,8 +2969,12 @@ class TestDataset:
         for args in [[], [['x']], [['x', 'z']]]:
             def get_args(v):
                 return [set(args[0]) & set(v.dims)] if args else []
-            expected = Dataset(dict((k, v.squeeze(*get_args(v)))
-                                    for k, v in data.variables.items()))
+            expected = Dataset(
+                {
+                    k: v.squeeze(*get_args(v))
+                    for k, v in data.variables.items()
+                }
+            )
             expected = expected.set_coords(data.coords)
             assert_identical(expected, data.squeeze(*args))
         # invalid squeeze
@@ -3869,8 +3876,9 @@ class TestDataset:
         assert len(data.mean().coords) == 0
 
         actual = data.max()
-        expected = Dataset(dict((k, v.max())
-                                for k, v in data.data_vars.items()))
+        expected = Dataset(
+            {k: v.max() for k, v in data.data_vars.items()}
+        )
         assert_equal(expected, actual)
 
         assert_equal(data.min(dim=['dim1']),
@@ -4981,7 +4989,7 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     # Test all bottleneck functions
     rolling_obj = ds.rolling(time=7, min_periods=min_periods)
 
-    func_name = 'move_{0}'.format(name)
+    func_name = 'move_{}'.format(name)
     actual = getattr(rolling_obj, name)()
     if key == 'z1':  # z1 does not depend on 'Time' axis. Stored as it is.
         expected = ds[key]

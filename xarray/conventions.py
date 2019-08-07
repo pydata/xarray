@@ -186,7 +186,7 @@ def ensure_dtype_not_object(var, name=None):
             if strings.is_bytes_dtype(inferred_dtype):
                 fill_value = b''
             elif strings.is_unicode_dtype(inferred_dtype):
-                fill_value = u''
+                fill_value = ''
             else:
                 # insist on using float for numeric values
                 if not np.issubdtype(inferred_dtype, np.floating):

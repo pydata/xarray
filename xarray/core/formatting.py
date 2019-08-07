@@ -145,7 +145,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
     elif isinstance(x, (float, np.float)):
-        return '{0:.4}'.format(x)
+        return '{:.4}'.format(x)
     else:
         return str(x)
 
@@ -399,7 +399,7 @@ def short_data_repr(array):
     elif array._in_memory or array.size < 1e5:
         return short_array_repr(array.data)
     else:
-        return u'[{} values with dtype={}]'.format(array.size, array.dtype)
+        return '[{} values with dtype={}]'.format(array.size, array.dtype)
 
 
 def array_repr(arr):
@@ -409,10 +409,12 @@ def array_repr(arr):
     else:
         name_str = ''
 
-    summary = ['<xarray.{} {}({})>'.format(
-               type(arr).__name__, name_str, dim_summary(arr))]
-
-    summary.append(short_data_repr(arr))
+    summary = [
+        '<xarray.{} {}({})>'.format(
+            type(arr).__name__, name_str, dim_summary(arr)
+        ),
+        short_data_repr(arr)
+    ]
 
     if hasattr(arr, 'coords'):
         if arr.coords:

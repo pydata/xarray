@@ -537,9 +537,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 if k.dtype.kind == 'b':
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
-                            "Boolean array size {0:d} is used to index array "
-                            "with shape {1:s}.".format(len(k),
-                                                       str(self.shape)))
+                            "Boolean array size {:d} is used to index array "
+                            "with shape {:s}."
+                            .format(len(k), str(self.shape))
+                        )
                     if k.ndim > 1:
                         raise IndexError("{}-dimensional boolean indexing is "
                                          "not supported. ".format(k.ndim))
@@ -547,8 +548,9 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            "on {0:s} but the target dimension is "
-                            "{1:s}.".format(str(k.dims), dim))
+                            "on {:s} but the target dimension is {:s}."
+                            .format(str(k.dims), dim)
+                        )
 
     def _broadcast_indexes_outer(self, key):
         dims = tuple(k.dims[0] if isinstance(k, Variable) else dim
@@ -888,8 +890,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         import dask.array as da
 
         if utils.is_dict_like(chunks):
-            chunks = dict((self.get_axis_num(dim), chunk)
-                          for dim, chunk in chunks.items())
+            chunks = {
+                self.get_axis_num(dim): chunk
+                for dim, chunk in chunks.items()
+            }
 
         if chunks is None:
             chunks = self.chunks or self.shape

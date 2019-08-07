@@ -29,9 +29,14 @@ class TestConcatDataset:
         def rectify_dim_order(dataset):
             # return a new dataset with all variable dimensions transposed into
             # the order in which they are found in `data`
-            return Dataset(dict((k, v.transpose(*data[k].dims))
-                                for k, v in dataset.data_vars.items()),
-                           dataset.coords, attrs=dataset.attrs)
+            return Dataset(
+                {
+                    k: v.transpose(*data[k].dims)
+                    for k, v in dataset.data_vars.items()
+                },
+                dataset.coords,
+                attrs=dataset.attrs
+            )
 
         for dim in ['dim1', 'dim2']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]

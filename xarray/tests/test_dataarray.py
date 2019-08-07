@@ -1685,7 +1685,7 @@ class TestDataArray:
         assert_identical(expected, actual)
 
         actual = orig + orig[0, 0]
-        exp_coords = dict((k, v) for k, v in coords.items() if k != 'lat')
+        exp_coords = {k: v for k, v in coords.items() if k != 'lat'}
         expected = DataArray(orig.values + orig.values[0, 0],
                              exp_coords, dims=['x', 'y'])
         assert_identical(expected, actual)
@@ -3377,7 +3377,7 @@ class TestDataArray:
         assert '' == a2._title_for_slice()
 
     def test__title_for_slice_truncate(self):
-        array = DataArray(np.ones((4)))
+        array = DataArray(np.ones(4))
         array.coords['a'] = 'a' * 100
         array.coords['b'] = 'b' * 100
 
@@ -3773,7 +3773,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     # Test all bottleneck functions
     rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
-    func_name = 'move_{0}'.format(name)
+    func_name = 'move_{}'.format(name)
     actual = getattr(rolling_obj, name)()
     expected = getattr(bn, func_name)(da.values, window=7, axis=1,
                                       min_count=min_periods)

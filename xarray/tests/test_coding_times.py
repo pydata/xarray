@@ -451,7 +451,7 @@ def test_decode_360_day_calendar():
     calendar = '360_day'
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
-        units = 'days since {0}-01-01'.format(year)
+        units = 'days since {}-01-01'.format(year)
         num_times = np.arange(100)
 
         if cftime.__name__ == 'cftime':

@@ -138,7 +138,7 @@ def _netcdf4_create_group(dataset, name):
 
 
 def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
-    if group in set([None, '', '/']):
+    if group in {None, '', '/'}:
         # use the root group
         return ds
     else:
@@ -155,7 +155,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                     ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
-                    raise IOError('group not found: %s' % key, e)
+                    raise OSError('group not found: %s' % key, e)
         return ds
 
 
@@ -195,9 +195,11 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 
     encoding = variable.encoding.copy()
 
-    safe_to_drop = set(['source', 'original_shape'])
-    valid_encodings = set(['zlib', 'complevel', 'fletcher32', 'contiguous',
-                           'chunksizes', 'shuffle', '_FillValue', 'dtype'])
+    safe_to_drop = {'source', 'original_shape'}
+    valid_encodings = {
+        'zlib', 'complevel', 'fletcher32', 'contiguous',
+        'chunksizes', 'shuffle', '_FillValue', 'dtype'
+    }
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
     if h5py_okay:

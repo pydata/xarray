@@ -149,7 +149,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
             raise ValueError('cannot use a dict-like object for selection on '
                              'a dimension that does not have a MultiIndex')
         elif len(label) == index.nlevels and not is_nested_vals:
-            indexer = index.get_loc(tuple((label[k] for k in index.names)))
+            indexer = index.get_loc(tuple(label[k] for k in index.names))
         else:
             for k, v in label.items():
                 # index should be an item (i.e. Hashable) not an array-like
