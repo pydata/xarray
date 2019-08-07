@@ -1389,7 +1389,7 @@ class DataArray(AbstractArray, DataWithCoords):
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError('dims should not contain duplicate values.')
-            dim = OrderedDict(((d, 1) for d in dim))
+            dim = OrderedDict((d, 1) for d in dim)
         elif dim is not None and not isinstance(dim, Mapping):
             dim = OrderedDict(((cast(Hashable, dim), 1),))
 

@@ -46,20 +46,30 @@ def _dummy_copy(xarray_obj):
     from .dataset import Dataset
     from .dataarray import DataArray
     if isinstance(xarray_obj, Dataset):
-        res = Dataset(dict((k, dtypes.get_fill_value(v.dtype))
-                           for k, v in xarray_obj.data_vars.items()),
-                      dict((k, dtypes.get_fill_value(v.dtype))
-                           for k, v in xarray_obj.coords.items()
-                           if k not in xarray_obj.dims),
-                      xarray_obj.attrs)
+        res = Dataset(
+            {
+                k: dtypes.get_fill_value(v.dtype)
+                for k, v in xarray_obj.data_vars.items()
+            },
+            {
+                k: dtypes.get_fill_value(v.dtype)
+                for k, v in xarray_obj.coords.items()
+                if k not in xarray_obj.dims
+            },
+            xarray_obj.attrs
+        )
     elif isinstance(xarray_obj, DataArray):
-        res = DataArray(dtypes.get_fill_value(xarray_obj.dtype),
-                        dict((k, dtypes.get_fill_value(v.dtype))
-                             for k, v in xarray_obj.coords.items()
-                             if k not in xarray_obj.dims),
-                        dims=[],
-                        name=xarray_obj.name,
-                        attrs=xarray_obj.attrs)
+        res = DataArray(
+            dtypes.get_fill_value(xarray_obj.dtype),
+            {
+                k: dtypes.get_fill_value(v.dtype)
+                for k, v in xarray_obj.coords.items()
+                if k not in xarray_obj.dims
+            },
+            dims=[],
+            name=xarray_obj.name,
+            attrs=xarray_obj.attrs
+        )
     else:  # pragma: no cover
         raise AssertionError
     return res

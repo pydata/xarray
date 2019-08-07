@@ -41,9 +41,8 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
 
     if isinstance(entry, list):
         for i, item in enumerate(entry):
-            for result in _infer_tile_ids_from_nested_list(item,
-                                                           current_pos + (i,)):
-                yield result
+            yield from _infer_tile_ids_from_nested_list(
+                item, current_pos + (i,))
     else:
         yield current_pos, entry
 
@@ -735,10 +734,12 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different',
             concat_dims = set(ds0.dims)
             if ds0.dims != ds1.dims:
                 dim_tuples = set(ds0.dims.items()) - set(ds1.dims.items())
-                concat_dims = set(i for i, _ in dim_tuples)
+                concat_dims = {i for i, _ in dim_tuples}
             if len(concat_dims) > 1:
-                concat_dims = set(d for d in concat_dims
-                                  if not ds0[d].equals(ds1[d]))
+                concat_dims = {
+                    d for d in concat_dims
+                    if not ds0[d].equals(ds1[d])
+                }
             if len(concat_dims) > 1:
                 raise ValueError('too many different dimensions to '
                                  'concatenate: %s' % concat_dims)

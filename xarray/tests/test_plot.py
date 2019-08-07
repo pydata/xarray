@@ -45,7 +45,7 @@ def substring_in_axes(substring, ax):
     '''
     Return True if a substring is found anywhere in an axes
     '''
-    alltxt = set([t.get_text() for t in ax.findobj(mpl.text.Text)])
+    alltxt = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     for txt in alltxt:
         if substring in txt:
             return True
@@ -1158,9 +1158,9 @@ class Common2dMixin:
         d = DataArray(data, dims=['x', 'y', 'time'])
         fg = d.plot.pcolormesh(col='time')
         # check that all color limits are the same
-        assert len(set(m.get_clim() for m in fg._mappables)) == 1
+        assert len({m.get_clim() for m in fg._mappables}) == 1
         # check that all colormaps are the same
-        assert len(set(m.get_cmap().name for m in fg._mappables)) == 1
+        assert len({m.get_cmap().name for m in fg._mappables}) == 1
 
     def test_facetgrid_cbar_kwargs(self):
         a = easy_array((10, 15, 2, 3))
@@ -1498,7 +1498,7 @@ class TestFacetGrid(PlotTestCase):
         self.darray.name = 'testvar'
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
         for k, ax in zip('abc', self.g.axes.flat):
-            assert 'z = {0}'.format(k) == ax.get_title()
+            assert 'z = {}'.format(k) == ax.get_title()
 
         alltxt = text_in_fig()
         assert self.darray.name in alltxt
