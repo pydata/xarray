@@ -357,3 +357,18 @@ def moveaxis(a, source, destination):
 # https://github.com/numpy/numpy/issues/7370
 # https://github.com/numpy/numpy-stubs/
 DTypeLike = Union[np.dtype, str]
+
+
+# from dask/array/utils.py
+def _is_nep18_active():
+    class A:
+        def __array_function__(self, *args, **kwargs):
+            return True
+
+    try:
+        return np.concatenate([A()])
+    except ValueError:
+        return False
+
+
+IS_NEP18_ACTIVE = _is_nep18_active()

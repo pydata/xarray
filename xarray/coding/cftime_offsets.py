@@ -637,7 +637,7 @@ _FREQUENCIES = {
 
 
 _FREQUENCY_CONDITION = '|'.join(_FREQUENCIES.keys())
-_PATTERN = r'^((?P<multiple>\d+)|())(?P<freq>({0}))$'.format(
+_PATTERN = r'^((?P<multiple>\d+)|())(?P<freq>({}))$'.format(
     _FREQUENCY_CONDITION)
 
 

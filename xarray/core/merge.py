@@ -530,7 +530,14 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
           must be equal. The returned dataset then contains the combination
           of all non-null values.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes.
+        String indicating how to combine differing indexes in objects.
+
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
     fill_value : scalar, optional
         Value to use for newly missing values
 
