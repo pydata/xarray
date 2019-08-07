@@ -81,12 +81,12 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding['unlimited_dims'] = {
-            k for k in self.ds.dimensions
-            if self.ds.dimensions[k].isunlimited()
+        return {
+            'unlimited_dims': {
+                k for k in self.ds.dimensions
+                if self.ds.dimensions[k].isunlimited()
+            }
         }
-        return encoding
 
     def close(self):
         self._manager.close()
