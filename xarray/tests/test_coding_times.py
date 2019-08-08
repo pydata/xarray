@@ -16,7 +16,7 @@ from xarray.testing import assert_equal
 
 from . import (
     assert_array_equal, has_cftime, has_cftime_or_netCDF4, has_dask,
-    requires_cftime, requires_cftime_or_netCDF4)
+    requires_cftime, requires_cftime_or_netCDF4, arm_xfail)
 
 try:
     from pandas.errors import OutOfBoundsDatetime
@@ -451,7 +451,7 @@ def test_decode_360_day_calendar():
     calendar = '360_day'
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
-        units = 'days since {0}-01-01'.format(year)
+        units = 'days since {}-01-01'.format(year)
         num_times = np.arange(100)
 
         if cftime.__name__ == 'cftime':
@@ -470,6 +470,7 @@ def test_decode_360_day_calendar():
         assert_array_equal(actual, expected)
 
 
+@arm_xfail
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['num_dates', 'units', 'expected_list'],

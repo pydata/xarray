@@ -75,10 +75,12 @@ class NioDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding['unlimited_dims'] = set(
-            [k for k in self.ds.dimensions if self.ds.unlimited(k)])
-        return encoding
+        return {
+            'unlimited_dims': {
+                k for k in self.ds.dimensions
+                if self.ds.unlimited(k)
+            }
+        }
 
     def close(self):
         self._manager.close()

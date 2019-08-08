@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from textwrap import dedent
+import sys
 
 import numpy as np
 import pandas as pd
@@ -204,6 +205,7 @@ class TestFormatting:
                     'label': ('x', np.array([1, 2], dtype='int64'))},
             attrs={'units': 'kg'})
 
+        byteorder = '<' if sys.byteorder == 'little' else '>'
         expected = dedent("""\
         Left and right DataArray objects are not identical
         Differing dimensions:
@@ -215,8 +217,8 @@ class TestFormatting:
         R
             array([1, 2], dtype=int64)
         Differing coordinates:
-        L * x        (x) <U1 'a' 'b'
-        R * x        (x) <U1 'a' 'c'
+        L * x        (x) %cU1 'a' 'b'
+        R * x        (x) %cU1 'a' 'c'
         Coordinates only on the left object:
           * y        (y) int64 1 2 3
         Coordinates only on the right object:
@@ -225,7 +227,7 @@ class TestFormatting:
         L   units: m
         R   units: kg
         Attributes only on the left object:
-            description: desc""")
+            description: desc""" % (byteorder, byteorder))
 
         actual = formatting.diff_array_repr(da_a, da_b, 'identical')
         try:
@@ -277,13 +279,14 @@ class TestFormatting:
             attrs={'units': 'kg'}
         )
 
+        byteorder = '<' if sys.byteorder == 'little' else '>'
         expected = dedent("""\
         Left and right Dataset objects are not identical
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
-        L * x        (x) <U1 'a' 'b'
-        R * x        (x) <U1 'a' 'c'
+        L * x        (x) %cU1 'a' 'b'
+        R * x        (x) %cU1 'a' 'c'
             source: 0
         Coordinates only on the left object:
           * y        (y) int64 1 2 3
@@ -298,7 +301,7 @@ class TestFormatting:
         L   units: m
         R   units: kg
         Attributes only on the left object:
-            description: desc""")
+            description: desc""" % (byteorder, byteorder))
 
         actual = formatting.diff_dataset_repr(ds_a, ds_b, 'identical')
         assert actual == expected

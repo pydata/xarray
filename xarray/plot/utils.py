@@ -503,7 +503,7 @@ def _ensure_plottable(*args):
                               'package.')
 
 
-def _numeric(arr):
+def _is_numeric(arr):
     numpy_types = [np.floating, np.integer]
     return _valid_numpy_subdtype(arr, numpy_types)
 

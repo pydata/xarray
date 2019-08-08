@@ -8,14 +8,14 @@ from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 from typing import (
     AbstractSet, Any, Callable, Iterable, List, Mapping, Optional, Sequence,
-    Tuple, Union)
+    Tuple, Union, TYPE_CHECKING)
 
 import numpy as np
 
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import TYPE_CHECKING, dask_array_type
+from .pycompat import dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
 
@@ -683,7 +683,7 @@ def apply_array_ufunc(func, *args, dask='forbidden'):
 def apply_ufunc(
     func: Callable,
     *args: Any,
-    input_core_dims: Optional[Sequence[Sequence]] = None,
+    input_core_dims: Sequence[Sequence] = None,
     output_core_dims: Optional[Sequence[Sequence]] = ((),),
     exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
@@ -693,8 +693,8 @@ def apply_ufunc(
     keep_attrs: bool = False,
     kwargs: Mapping = None,
     dask: str = 'forbidden',
-    output_dtypes: Optional[Sequence] = None,
-    output_sizes: Optional[Mapping[Any, int]] = None
+    output_dtypes: Sequence = None,
+    output_sizes: Mapping[Any, int] = None
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 

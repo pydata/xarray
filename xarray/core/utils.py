@@ -17,11 +17,6 @@ import pandas as pd
 
 from .pycompat import dask_array_type
 
-try:  # Fix typed collections in Python 3.5.0~3.5.2
-    from .pycompat import Mapping, MutableMapping, MutableSet  # noqa: F811
-except ImportError:
-    pass
-
 
 K = TypeVar('K')
 V = TypeVar('V')
@@ -93,7 +88,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
 
 
 def multiindex_from_product_levels(levels: Sequence[pd.Index],
-                                   names: Optional[Sequence[str]] = None
+                                   names: Sequence[str] = None
                                    ) -> pd.MultiIndex:
     """Creating a MultiIndex from a product without refactorizing levels.
 
@@ -134,16 +129,29 @@ def maybe_wrap_array(original, new_array):
 
 def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
-    array_equiv if either object is an ndarray
+    array_equiv if either object is an ndarray. If both objects are lists,
+    equivalent is sequentially called on all the elements.
     """
     # TODO: refactor to avoid circular import
     from . import duck_array_ops
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+    elif isinstance(first, list) or isinstance(second, list):
+        return list_equiv(first, second)
     else:
         return ((first is second) or
                 (first == second) or
                 (pd.isnull(first) and pd.isnull(second)))
+
+
+def list_equiv(first, second):
+    equiv = True
+    if len(first) != len(second):
+        return False
+    else:
+        for f, s in zip(first, second):
+            equiv = equiv and equivalent(f, s)
+    return equiv
 
 
 def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
@@ -235,7 +243,9 @@ def is_scalar(value: Any) -> bool:
     return (
         getattr(value, 'ndim', None) == 0 or
         isinstance(value, (str, bytes)) or not
-        isinstance(value, (Iterable, ) + dask_array_type))
+        (isinstance(value, (Iterable, ) + dask_array_type) or
+         hasattr(value, '__array_function__'))
+    )
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
@@ -356,7 +366,7 @@ class SortedKeysDict(MutableMapping[K, V]):
     """
     __slots__ = ['mapping']
 
-    def __init__(self, mapping: Optional[MutableMapping[K, V]] = None):
+    def __init__(self, mapping: MutableMapping[K, V] = None):
         self.mapping = {} if mapping is None else mapping
 
     def __getitem__(self, key: K) -> V:
@@ -387,7 +397,7 @@ class OrderedSet(MutableSet[T]):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
-    def __init__(self, values: Optional[AbstractSet[T]] = None):
+    def __init__(self, values: AbstractSet[T] = None):
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
         if values is not None:
             # Disable type checking - both mypy and PyCharm believes that
@@ -467,11 +477,21 @@ class NDArrayMixin(NdimSizeLenMixin):
 class ReprObject:
     """Object that prints as the given value, for use with sentinel values.
     """
+    __slots__ = ('_value', )
+
     def __init__(self, value: str):
         self._value = value
 
     def __repr__(self) -> str:
         return self._value
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ReprObject):
+            return self._value == other._value
+        return False
+
+    def __hash__(self) -> int:
+        return hash((ReprObject, self._value))
 
 
 @contextlib.contextmanager

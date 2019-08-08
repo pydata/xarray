@@ -46,20 +46,30 @@ def _dummy_copy(xarray_obj):
     from .dataset import Dataset
     from .dataarray import DataArray
     if isinstance(xarray_obj, Dataset):
-        res = Dataset(dict((k, dtypes.get_fill_value(v.dtype))
-                           for k, v in xarray_obj.data_vars.items()),
-                      dict((k, dtypes.get_fill_value(v.dtype))
-                           for k, v in xarray_obj.coords.items()
-                           if k not in xarray_obj.dims),
-                      xarray_obj.attrs)
+        res = Dataset(
+            {
+                k: dtypes.get_fill_value(v.dtype)
+                for k, v in xarray_obj.data_vars.items()
+            },
+            {
+                k: dtypes.get_fill_value(v.dtype)
+                for k, v in xarray_obj.coords.items()
+                if k not in xarray_obj.dims
+            },
+            xarray_obj.attrs
+        )
     elif isinstance(xarray_obj, DataArray):
-        res = DataArray(dtypes.get_fill_value(xarray_obj.dtype),
-                        dict((k, dtypes.get_fill_value(v.dtype))
-                             for k, v in xarray_obj.coords.items()
-                             if k not in xarray_obj.dims),
-                        dims=[],
-                        name=xarray_obj.name,
-                        attrs=xarray_obj.attrs)
+        res = DataArray(
+            dtypes.get_fill_value(xarray_obj.dtype),
+            {
+                k: dtypes.get_fill_value(v.dtype)
+                for k, v in xarray_obj.coords.items()
+                if k not in xarray_obj.dims
+            },
+            dims=[],
+            name=xarray_obj.name,
+            attrs=xarray_obj.attrs
+        )
     else:  # pragma: no cover
         raise AssertionError
     return res
@@ -232,6 +242,9 @@ class GroupBy(SupportsArithmetic):
                 raise TypeError('`group` must be an xarray.DataArray or the '
                                 'name of an xarray variable or dimension')
             group = obj[group]
+            if len(group) == 0:
+                raise ValueError("{} must not be empty".format(group.name))
+
             if group.name not in obj.coords and group.name in obj.dims:
                 # DummyGroups should not appear on groupby results
                 group = _DummyGroup(obj, group.name, group.coords)

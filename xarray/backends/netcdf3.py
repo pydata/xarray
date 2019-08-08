@@ -11,9 +11,10 @@ _specialchars = '_.@+- !"#$%&\\()*,:;<=>?[]^`{|}~'
 
 # The following are reserved names in CDL and may not be used as names of
 # variables, dimension, attributes
-_reserved_names = set(['byte', 'char', 'short', 'ushort', 'int', 'uint',
-                       'int64', 'uint64', 'float' 'real', 'double', 'bool',
-                       'string'])
+_reserved_names = {
+    'byte', 'char', 'short', 'ushort', 'int', 'uint', 'int64', 'uint64',
+    'float' 'real', 'double', 'bool', 'string'
+}
 
 # These data-types aren't supported by netCDF3, so they are automatically
 # coerced instead as indicated by the "coerce_nc3_dtype" function
@@ -108,4 +109,4 @@ def is_valid_nc3_name(s):
             ('/' not in s) and
             (s[-1] != ' ') and
             (_isalnumMUTF8(s[0]) or (s[0] == '_')) and
-            all((_isalnumMUTF8(c) or c in _specialchars for c in s)))
+            all(_isalnumMUTF8(c) or c in _specialchars for c in s))
