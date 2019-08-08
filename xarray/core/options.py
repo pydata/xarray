@@ -1,27 +1,27 @@
 import warnings
 
-DISPLAY_WIDTH = 'display_width'
-ARITHMETIC_JOIN = 'arithmetic_join'
-ENABLE_CFTIMEINDEX = 'enable_cftimeindex'
-FILE_CACHE_MAXSIZE = 'file_cache_maxsize'
-WARN_FOR_UNCLOSED_FILES = 'warn_for_unclosed_files'
-CMAP_SEQUENTIAL = 'cmap_sequential'
-CMAP_DIVERGENT = 'cmap_divergent'
-KEEP_ATTRS = 'keep_attrs'
+DISPLAY_WIDTH = "display_width"
+ARITHMETIC_JOIN = "arithmetic_join"
+ENABLE_CFTIMEINDEX = "enable_cftimeindex"
+FILE_CACHE_MAXSIZE = "file_cache_maxsize"
+WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
+CMAP_SEQUENTIAL = "cmap_sequential"
+CMAP_DIVERGENT = "cmap_divergent"
+KEEP_ATTRS = "keep_attrs"
 
 
 OPTIONS = {
     DISPLAY_WIDTH: 80,
-    ARITHMETIC_JOIN: 'inner',
+    ARITHMETIC_JOIN: "inner",
     ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
     WARN_FOR_UNCLOSED_FILES: False,
-    CMAP_SEQUENTIAL: 'viridis',
-    CMAP_DIVERGENT: 'RdBu_r',
-    KEEP_ATTRS: 'default'
+    CMAP_SEQUENTIAL: "viridis",
+    CMAP_DIVERGENT: "RdBu_r",
+    KEEP_ATTRS: "default",
 }
 
-_JOIN_OPTIONS = frozenset(['inner', 'outer', 'left', 'right', 'exact'])
+_JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 
 
 def _positive_integer(value):
@@ -34,39 +34,41 @@ _VALIDATORS = {
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
-    KEEP_ATTRS: lambda choice: choice in [True, False, 'default']
+    KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
 }
 
 
 def _set_file_cache_maxsize(value):
     from ..backends.file_manager import FILE_CACHE
+
     FILE_CACHE.maxsize = value
 
 
 def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
     warnings.warn(
-        'The enable_cftimeindex option is now a no-op '
-        'and will be removed in a future version of xarray.',
-        FutureWarning)
+        "The enable_cftimeindex option is now a no-op "
+        "and will be removed in a future version of xarray.",
+        FutureWarning,
+    )
 
 
 _SETTERS = {
     FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
-    ENABLE_CFTIMEINDEX: _warn_on_setting_enable_cftimeindex
+    ENABLE_CFTIMEINDEX: _warn_on_setting_enable_cftimeindex,
 }
 
 
 def _get_keep_attrs(default):
-    global_choice = OPTIONS['keep_attrs']
+    global_choice = OPTIONS["keep_attrs"]
 
-    if global_choice == 'default':
+    if global_choice == "default":
         return default
     elif global_choice in [True, False]:
         return global_choice
     else:
         raise ValueError(
-            "The global option keep_attrs must be one of"
-            " True, False or 'default'.")
+            "The global option keep_attrs must be one of" " True, False or 'default'."
+        )
 
 
 class set_options:
@@ -119,11 +121,11 @@ class set_options:
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError(
-                    'argument name %r is not in the set of valid options %r'
-                    % (k, set(OPTIONS)))
+                    "argument name %r is not in the set of valid options %r"
+                    % (k, set(OPTIONS))
+                )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError(
-                    'option %r given an invalid value: %r' % (k, v))
+                raise ValueError("option %r given an invalid value: %r" % (k, v))
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 

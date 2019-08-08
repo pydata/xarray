@@ -14,22 +14,20 @@ from xarray.core.indexes import default_indexes
 
 
 def _decode_string_data(data):
-    if data.dtype.kind == 'S':
-        return np.core.defchararray.decode(data, 'utf-8', 'replace')
+    if data.dtype.kind == "S":
+        return np.core.defchararray.decode(data, "utf-8", "replace")
     return data
 
 
-def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08,
-                            decode_bytes=True):
-    if any(arr.dtype.kind == 'S' for arr in [arr1, arr2]) and decode_bytes:
+def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=True):
+    if any(arr.dtype.kind == "S" for arr in [arr1, arr2]) and decode_bytes:
         arr1 = _decode_string_data(arr1)
         arr2 = _decode_string_data(arr2)
-    exact_dtypes = ['M', 'm', 'O', 'S', 'U']
+    exact_dtypes = ["M", "m", "O", "S", "U"]
     if any(arr.dtype.kind in exact_dtypes for arr in [arr1, arr2]):
         return duck_array_ops.array_equiv(arr1, arr2)
     else:
-        return duck_array_ops.allclose_or_equiv(
-            arr1, arr2, rtol=rtol, atol=atol)
+        return duck_array_ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
 def assert_equal(a, b):
@@ -56,12 +54,11 @@ def assert_equal(a, b):
     __tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)  # noqa
     if isinstance(a, (Variable, DataArray)):
-        assert a.equals(b), formatting.diff_array_repr(a, b, 'equals')
+        assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
-        assert a.equals(b), formatting.diff_dataset_repr(a, b, 'equals')
+        assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
     else:
-        raise TypeError('{} not supported by assertion comparison'
-                        .format(type(a)))
+        raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
 def assert_identical(a, b):
@@ -84,15 +81,14 @@ def assert_identical(a, b):
     __tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)  # noqa
     if isinstance(a, Variable):
-        assert a.identical(b), formatting.diff_array_repr(a, b, 'identical')
+        assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
         assert a.name == b.name
-        assert a.identical(b), formatting.diff_array_repr(a, b, 'identical')
+        assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, (Dataset, Variable)):
-        assert a.identical(b), formatting.diff_dataset_repr(a, b, 'identical')
+        assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
     else:
-        raise TypeError('{} not supported by assertion comparison'
-                        .format(type(a)))
+        raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
 def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
@@ -126,17 +122,17 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     if isinstance(a, Variable):
         assert a.dims == b.dims
         allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
-        assert allclose, '{}\n{}'.format(a.values, b.values)
+        assert allclose, "{}\n{}".format(a.values, b.values)
     elif isinstance(a, DataArray):
         assert_allclose(a.variable, b.variable, **kwargs)
         assert set(a.coords) == set(b.coords)
         for v in a.coords.variables:
             # can't recurse with this function as coord is sometimes a
             # DataArray, so call into _data_allclose_or_equiv directly
-            allclose = _data_allclose_or_equiv(a.coords[v].values,
-                                               b.coords[v].values, **kwargs)
-            assert allclose, '{}\n{}'.format(a.coords[v].values,
-                                             b.coords[v].values)
+            allclose = _data_allclose_or_equiv(
+                a.coords[v].values, b.coords[v].values, **kwargs
+            )
+            assert allclose, "{}\n{}".format(a.coords[v].values, b.coords[v].values)
     elif isinstance(a, Dataset):
         assert set(a.data_vars) == set(b.data_vars)
         assert set(a.coords) == set(b.coords)
@@ -144,26 +140,25 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
             assert_allclose(a[k], b[k], **kwargs)
 
     else:
-        raise TypeError('{} not supported by assertion comparison'
-                        .format(type(a)))
+        raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
 def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
     assert isinstance(indexes, OrderedDict), indexes
-    assert all(isinstance(v, pd.Index) for v in indexes.values()), \
-        {k: type(v) for k, v in indexes.items()}
+    assert all(isinstance(v, pd.Index) for v in indexes.values()), {
+        k: type(v) for k, v in indexes.items()
+    }
 
-    index_vars = {k for k, v in possible_coord_variables.items()
-                  if isinstance(v, IndexVariable)}
+    index_vars = {
+        k for k, v in possible_coord_variables.items() if isinstance(v, IndexVariable)
+    }
     assert indexes.keys() <= index_vars, (set(indexes), index_vars)
 
     # Note: when we support non-default indexes, these checks should be opt-in
     # only!
     defaults = default_indexes(possible_coord_variables, dims)
-    assert indexes.keys() == defaults.keys(), \
-        (set(indexes), set(defaults))
-    assert all(v.equals(defaults[k]) for k, v in indexes.items()), \
-        (indexes, defaults)
+    assert indexes.keys() == defaults.keys(), (set(indexes), set(defaults))
+    assert all(v.equals(defaults[k]) for k, v in indexes.items()), (indexes, defaults)
 
 
 def _assert_variable_invariants(var: Variable, name: Hashable = None):
@@ -172,12 +167,16 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
     else:
         name_or_empty = (name,)
     assert isinstance(var._dims, tuple), name_or_empty + (var._dims,)
-    assert len(var._dims) == len(var._data.shape), \
-        name_or_empty + (var._dims, var._data.shape)
-    assert isinstance(var._encoding, (type(None), dict)), \
-        name_or_empty + (var._encoding,)
-    assert isinstance(var._attrs, (type(None), OrderedDict)), \
-        name_or_empty + (var._attrs,)
+    assert len(var._dims) == len(var._data.shape), name_or_empty + (
+        var._dims,
+        var._data.shape,
+    )
+    assert isinstance(var._encoding, (type(None), dict)), name_or_empty + (
+        var._encoding,
+    )
+    assert isinstance(var._attrs, (type(None), OrderedDict)), name_or_empty + (
+        var._attrs,
+    )
 
 
 def _assert_dataarray_invariants(da: DataArray):
@@ -185,14 +184,14 @@ def _assert_dataarray_invariants(da: DataArray):
     _assert_variable_invariants(da._variable)
 
     assert isinstance(da._coords, OrderedDict), da._coords
+    assert all(isinstance(v, Variable) for v in da._coords.values()), da._coords
+    assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
+        da.dims,
+        {k: v.dims for k, v in da._coords.items()},
+    )
     assert all(
-        isinstance(v, Variable) for v in da._coords.values()), da._coords
-    assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), \
-        (da.dims, {k: v.dims for k, v in da._coords.items()})
-    assert all(isinstance(v, IndexVariable)
-               for (k, v) in da._coords.items()
-               if v.dims == (k,)), \
-        {k: type(v) for k, v in da._coords.items()}
+        isinstance(v, IndexVariable) for (k, v) in da._coords.items() if v.dims == (k,)
+    ), {k: type(v) for k, v in da._coords.items()}
     for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
 
@@ -204,15 +203,15 @@ def _assert_dataarray_invariants(da: DataArray):
 
 def _assert_dataset_invariants(ds: Dataset):
     assert isinstance(ds._variables, OrderedDict), type(ds._variables)
-    assert all(
-        isinstance(v, Variable) for v in ds._variables.values()), \
-        ds._variables
+    assert all(isinstance(v, Variable) for v in ds._variables.values()), ds._variables
     for k, v in ds._variables.items():
         _assert_variable_invariants(v, k)
 
     assert isinstance(ds._coord_names, set), ds._coord_names
-    assert ds._coord_names <= ds._variables.keys(), \
-        (ds._coord_names, set(ds._variables))
+    assert ds._coord_names <= ds._variables.keys(), (
+        ds._coord_names,
+        set(ds._variables),
+    )
 
     assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
@@ -220,18 +219,17 @@ def _assert_dataset_invariants(ds: Dataset):
     for v in ds._variables.values():
         var_dims.update(v.dims)
     assert ds._dims.keys() == var_dims, (set(ds._dims), var_dims)
-    assert all(ds._dims[k] == v.sizes[k]
-               for v in ds._variables.values()
-               for k in v.sizes), \
-        (ds._dims, {k: v.sizes for k, v in ds._variables.items()})
-    assert all(isinstance(v, IndexVariable)
-               for (k, v) in ds._variables.items()
-               if v.dims == (k,)), \
-        {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
-    assert all(v.dims == (k,)
-               for (k, v) in ds._variables.items()
-               if k in ds._dims), \
-        {k: v.dims for k, v in ds._variables.items() if k in ds._dims}
+    assert all(
+        ds._dims[k] == v.sizes[k] for v in ds._variables.values() for k in v.sizes
+    ), (ds._dims, {k: v.sizes for k, v in ds._variables.items()})
+    assert all(
+        isinstance(v, IndexVariable)
+        for (k, v) in ds._variables.items()
+        if v.dims == (k,)
+    ), {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
+    assert all(v.dims == (k,) for (k, v) in ds._variables.items() if k in ds._dims), {
+        k: v.dims for k, v in ds._variables.items() if k in ds._dims
+    }
 
     if ds._indexes is not None:
         _assert_indexes_invariants_checks(ds._indexes, ds._variables, ds._dims)
@@ -241,9 +239,7 @@ def _assert_dataset_invariants(ds: Dataset):
     assert ds._initialized is True
 
 
-def _assert_internal_invariants(
-    xarray_obj: Union[DataArray, Dataset, Variable],
-):
+def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable],):
     """Validate that an xarray object satisfies its own internal invariants.
 
     This exists for the benefit of xarray's own test suite, but may be useful
@@ -258,5 +254,7 @@ def _assert_internal_invariants(
         _assert_dataset_invariants(xarray_obj)
     else:
         raise TypeError(
-            '{} is not a supported type for xarray invariant checks'
-            .format(type(xarray_obj)))
+            "{} is not a supported type for xarray invariant checks".format(
+                type(xarray_obj)
+            )
+        )

@@ -128,16 +128,18 @@ except ImportError:
                [ True,  False]])
         """
         element = np.asarray(element)
-        return np.in1d(element, test_elements, assume_unique=assume_unique,
-                       invert=invert).reshape(element.shape)
+        return np.in1d(
+            element, test_elements, assume_unique=assume_unique, invert=invert
+        ).reshape(element.shape)
 
 
-if LooseVersion(np.__version__) >= LooseVersion('1.13'):
+if LooseVersion(np.__version__) >= LooseVersion("1.13"):
     gradient = np.gradient
 else:
+
     def normalize_axis_tuple(axes, N):
         if isinstance(axes, int):
-            axes = (axes, )
+            axes = (axes,)
         return tuple([N + a if a < 0 else a for a in axes])
 
     def gradient(f, *varargs, axis=None, edge_order=1):
@@ -169,8 +171,10 @@ else:
                 elif np.ndim(distances) != 1:
                     raise ValueError("distances must be either scalars or 1d")
                 if len(distances) != f.shape[axes[i]]:
-                    raise ValueError("when 1d, distances must match the "
-                                     "length of the corresponding dimension")
+                    raise ValueError(
+                        "when 1d, distances must match the "
+                        "length of the corresponding dimension"
+                    )
                 diffx = np.diff(distances)
                 # if distances are constant reduce to the scalar case
                 # since it brings a consistent speedup
@@ -195,15 +199,15 @@ else:
         slice4 = [slice(None)] * N
 
         otype = f.dtype.char
-        if otype not in ['f', 'd', 'F', 'D', 'm', 'M']:
-            otype = 'd'
+        if otype not in ["f", "d", "F", "D", "m", "M"]:
+            otype = "d"
 
         # Difference of datetime64 elements results in timedelta64
-        if otype == 'M':
+        if otype == "M":
             # Need to use the full dtype name because it contains unit
             # information
-            otype = f.dtype.name.replace('datetime', 'timedelta')
-        elif otype == 'm':
+            otype = f.dtype.name.replace("datetime", "timedelta")
+        elif otype == "m":
             # Needs to keep the specific units, can't be a general unit
             otype = f.dtype
 
@@ -211,7 +215,7 @@ else:
         # that is a view of ints if the data is datetime64, otherwise
         # just set y equal to the array `f`.
         if f.dtype.char in ["M", "m"]:
-            y = f.view('int64')
+            y = f.view("int64")
         else:
             y = f
 
@@ -220,7 +224,8 @@ else:
                 raise ValueError(
                     "Shape of array too small to calculate a numerical "
                     "gradient, at least (edge_order + 1) elements are "
-                    "required.")
+                    "required."
+                )
             # result allocation
             out = np.empty_like(y, dtype=otype)
 
@@ -233,7 +238,7 @@ else:
             slice4[axis] = slice(2, None)
 
             if uniform_spacing:
-                out[slice1] = (f[slice4] - f[slice2]) / (2. * dx[i])
+                out[slice1] = (f[slice4] - f[slice2]) / (2.0 * dx[i])
             else:
                 dx1 = dx[i][0:-1]
                 dx2 = dx[i][1:]
@@ -272,14 +277,14 @@ else:
                 slice4[axis] = 2
                 if uniform_spacing:
                     a = -1.5 / dx[i]
-                    b = 2. / dx[i]
+                    b = 2.0 / dx[i]
                     c = -0.5 / dx[i]
                 else:
                     dx1 = dx[i][0]
                     dx2 = dx[i][1]
-                    a = -(2. * dx1 + dx2) / (dx1 * (dx1 + dx2))
+                    a = -(2.0 * dx1 + dx2) / (dx1 * (dx1 + dx2))
                     b = (dx1 + dx2) / (dx1 * dx2)
-                    c = - dx1 / (dx2 * (dx1 + dx2))
+                    c = -dx1 / (dx2 * (dx1 + dx2))
                 # 1D equivalent -- out[0] = a * y[0] + b * y[1] + c * y[2]
                 out[slice1] = a * y[slice2] + b * y[slice3] + c * y[slice4]
 
@@ -289,14 +294,14 @@ else:
                 slice4[axis] = -1
                 if uniform_spacing:
                     a = 0.5 / dx[i]
-                    b = -2. / dx[i]
+                    b = -2.0 / dx[i]
                     c = 1.5 / dx[i]
                 else:
                     dx1 = dx[i][-2]
                     dx2 = dx[i][-1]
                     a = (dx2) / (dx1 * (dx1 + dx2))
-                    b = - (dx2 + dx1) / (dx1 * dx2)
-                    c = (2. * dx2 + dx1) / (dx2 * (dx1 + dx2))
+                    b = -(dx2 + dx1) / (dx1 * dx2)
+                    c = (2.0 * dx2 + dx1) / (dx2 * (dx1 + dx2))
                 # 1D equivalent -- out[-1] = a * f[-3] + b * f[-2] + c * f[-1]
                 out[slice1] = a * y[slice2] + b * y[slice3] + c * y[slice4]
 
@@ -323,10 +328,9 @@ def _validate_axis(axis, ndim, argname):
         axis = list(axis)
     axis = [a + ndim if a < 0 else a for a in axis]
     if not builtins.all(0 <= a < ndim for a in axis):
-        raise ValueError('invalid axis for this array in `%s` argument' %
-                         argname)
+        raise ValueError("invalid axis for this array in `%s` argument" % argname)
     if len(set(axis)) != len(axis):
-        raise ValueError('repeated axis in `%s` argument' % argname)
+        raise ValueError("repeated axis in `%s` argument" % argname)
     return axis
 
 
@@ -338,11 +342,13 @@ def moveaxis(a, source, destination):
         a = np.asarray(a)
         transpose = a.transpose
 
-    source = _validate_axis(source, a.ndim, 'source')
-    destination = _validate_axis(destination, a.ndim, 'destination')
+    source = _validate_axis(source, a.ndim, "source")
+    destination = _validate_axis(destination, a.ndim, "destination")
     if len(source) != len(destination):
-        raise ValueError('`source` and `destination` arguments must have '
-                         'the same number of elements')
+        raise ValueError(
+            "`source` and `destination` arguments must have "
+            "the same number of elements"
+        )
 
     order = [n for n in range(a.ndim) if n not in source]
 

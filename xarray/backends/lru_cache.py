@@ -17,6 +17,7 @@ class LRUCache(collections.abc.MutableMapping):
     The ``maxsize`` property can be used to view or adjust the capacity of
     the cache, e.g., ``cache.maxsize = new_size``.
     """
+
     def __init__(self, maxsize, on_evict=None):
         """
         Parameters
@@ -28,9 +29,9 @@ class LRUCache(collections.abc.MutableMapping):
             evicted.
         """
         if not isinstance(maxsize, int):
-            raise TypeError('maxsize must be an integer')
+            raise TypeError("maxsize must be an integer")
         if maxsize < 0:
-            raise ValueError('maxsize must be non-negative')
+            raise ValueError("maxsize must be non-negative")
         self._maxsize = maxsize
         self._on_evict = on_evict
         self._cache = collections.OrderedDict()
@@ -84,7 +85,7 @@ class LRUCache(collections.abc.MutableMapping):
     def maxsize(self, size):
         """Resize the cache, evicting the oldest items if necessary."""
         if size < 0:
-            raise ValueError('maxsize must be non-negative')
+            raise ValueError("maxsize must be non-negative")
         with self._lock:
             self._enforce_size_limit(size)
             self._maxsize = size

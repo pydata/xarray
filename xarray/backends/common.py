@@ -16,7 +16,7 @@ from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 logger = logging.getLogger(__name__)
 
 
-NONE_VAR_NAME = '__values__'
+NONE_VAR_NAME = "__values__"
 
 
 def _encode_variable_name(name):
@@ -37,12 +37,11 @@ def find_root_and_group(ds):
     while ds.parent is not None:
         hierarchy = (ds.name,) + hierarchy
         ds = ds.parent
-    group = '/' + '/'.join(hierarchy)
+    group = "/" + "/".join(hierarchy)
     return ds, group
 
 
-def robust_getitem(array, key, catch=Exception, max_retries=6,
-                   initial_delay=500):
+def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500):
     """
     Robustly index an array, using retry logic with exponential backoff if any
     of the errors ``catch`` are raised. The initial_delay is measured in ms.
@@ -59,22 +58,22 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
                 raise
             base_delay = initial_delay * 2 ** n
             next_delay = base_delay + np.random.randint(base_delay)
-            msg = ('getitem failed, waiting %s ms before trying again '
-                   '(%s tries remaining). Full traceback: %s' %
-                   (next_delay, max_retries - n, traceback.format_exc()))
+            msg = (
+                "getitem failed, waiting %s ms before trying again "
+                "(%s tries remaining). Full traceback: %s"
+                % (next_delay, max_retries - n, traceback.format_exc())
+            )
             logger.debug(msg)
             time.sleep(1e-3 * next_delay)
 
 
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
-
     def __array__(self, dtype=None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return np.asarray(self[key], dtype=dtype)
 
 
 class AbstractDataStore(Mapping):
-
     def __iter__(self):
         return iter(self.variables)
 
@@ -117,32 +116,42 @@ class AbstractDataStore(Mapping):
         This function will be called anytime variables or attributes
         are requested, so care should be taken to make sure its fast.
         """
-        variables = FrozenOrderedDict((_decode_variable_name(k), v)
-                                      for k, v in self.get_variables().items())
+        variables = FrozenOrderedDict(
+            (_decode_variable_name(k), v) for k, v in self.get_variables().items()
+        )
         attributes = FrozenOrderedDict(self.get_attrs())
         return variables, attributes
 
     @property
     def variables(self):  # pragma: no cover
-        warnings.warn('The ``variables`` property has been deprecated and '
-                      'will be removed in xarray v0.11.',
-                      FutureWarning, stacklevel=2)
+        warnings.warn(
+            "The ``variables`` property has been deprecated and "
+            "will be removed in xarray v0.11.",
+            FutureWarning,
+            stacklevel=2,
+        )
         variables, _ = self.load()
         return variables
 
     @property
     def attrs(self):  # pragma: no cover
-        warnings.warn('The ``attrs`` property has been deprecated and '
-                      'will be removed in xarray v0.11.',
-                      FutureWarning, stacklevel=2)
+        warnings.warn(
+            "The ``attrs`` property has been deprecated and "
+            "will be removed in xarray v0.11.",
+            FutureWarning,
+            stacklevel=2,
+        )
         _, attrs = self.load()
         return attrs
 
     @property
     def dimensions(self):  # pragma: no cover
-        warnings.warn('The ``dimensions`` property has been deprecated and '
-                      'will be removed in xarray v0.11.',
-                      FutureWarning, stacklevel=2)
+        warnings.warn(
+            "The ``dimensions`` property has been deprecated and "
+            "will be removed in xarray v0.11.",
+            FutureWarning,
+            stacklevel=2,
+        )
         return self.get_dimensions()
 
     def close(self):
@@ -176,13 +185,19 @@ class ArrayWriter:
     def sync(self, compute=True):
         if self.sources:
             import dask.array as da
+
             # TODO: consider wrapping targets with dask.delayed, if this makes
             # for any discernable difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
-            delayed_store = da.store(self.sources, self.targets,
-                                     lock=self.lock, compute=compute,
-                                     flush=True, regions=self.regions)
+            delayed_store = da.store(
+                self.sources,
+                self.targets,
+                lock=self.lock,
+                compute=compute,
+                flush=True,
+                regions=self.regions,
+            )
             self.sources = []
             self.targets = []
             self.regions = []
@@ -190,7 +205,6 @@ class ArrayWriter:
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-
     def encode(self, variables, attributes):
         """
         Encode the variables and attributes in this store
@@ -208,10 +222,12 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes : dict-like
 
         """
-        variables = OrderedDict([(k, self.encode_variable(v))
-                                 for k, v in variables.items()])
-        attributes = OrderedDict([(k, self.encode_attribute(v))
-                                  for k, v in attributes.items()])
+        variables = OrderedDict(
+            [(k, self.encode_variable(v)) for k, v in variables.items()]
+        )
+        attributes = OrderedDict(
+            [(k, self.encode_attribute(v)) for k, v in attributes.items()]
+        )
         return variables, attributes
 
     def encode_variable(self, v):
@@ -240,8 +256,14 @@ class AbstractWritableDataStore(AbstractDataStore):
         """
         self.store(dataset, dataset.attrs)
 
-    def store(self, variables, attributes, check_encoding_set=frozenset(),
-              writer=None, unlimited_dims=None):
+    def store(
+        self,
+        variables,
+        attributes,
+        check_encoding_set=frozenset(),
+        writer=None,
+        unlimited_dims=None,
+    ):
         """
         Top level method for putting data on this store, this method:
           - encodes variables/attributes
@@ -269,8 +291,9 @@ class AbstractWritableDataStore(AbstractDataStore):
 
         self.set_attributes(attributes)
         self.set_dimensions(variables, unlimited_dims=unlimited_dims)
-        self.set_variables(variables, check_encoding_set, writer,
-                           unlimited_dims=unlimited_dims)
+        self.set_variables(
+            variables, check_encoding_set, writer, unlimited_dims=unlimited_dims
+        )
 
     def set_attributes(self, attributes):
         """
@@ -285,8 +308,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         for k, v in attributes.items():
             self.set_attribute(k, v)
 
-    def set_variables(self, variables, check_encoding_set, writer,
-                      unlimited_dims=None):
+    def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
         """
         This provides a centralized method to set the variables on the data
         store.
@@ -308,7 +330,8 @@ class AbstractWritableDataStore(AbstractDataStore):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
             target, source = self.prepare_variable(
-                name, v, check, unlimited_dims=unlimited_dims)
+                name, v, check, unlimited_dims=unlimited_dims
+            )
 
             writer.add(source, target)
 
@@ -340,20 +363,22 @@ class AbstractWritableDataStore(AbstractDataStore):
             if dim in existing_dims and length != existing_dims[dim]:
                 raise ValueError(
                     "Unable to update size for existing dimension"
-                    "%r (%d != %d)" % (dim, length, existing_dims[dim]))
+                    "%r (%d != %d)" % (dim, length, existing_dims[dim])
+                )
             elif dim not in existing_dims:
                 is_unlimited = dim in unlimited_dims
                 self.set_dimension(dim, length, is_unlimited)
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
-
     def encode(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
         variables, attributes = cf_encoder(variables, attributes)
-        variables = OrderedDict([(k, self.encode_variable(v))
-                                 for k, v in variables.items()])
-        attributes = OrderedDict([(k, self.encode_attribute(v))
-                                  for k, v in attributes.items()])
+        variables = OrderedDict(
+            [(k, self.encode_variable(v)) for k, v in variables.items()]
+        )
+        attributes = OrderedDict(
+            [(k, self.encode_attribute(v)) for k, v in attributes.items()]
+        )
         return variables, attributes

@@ -15,11 +15,11 @@ def move_exp_nanmean(array, *, axis, alpha):
     if isinstance(array, dask_array_type):
         raise TypeError("rolling_exp is not currently support for dask arrays")
     import numbagg
+
     if axis == ():
         return array.astype(np.float64)
     else:
-        return numbagg.move_exp_nanmean(
-            array, axis=axis, alpha=alpha)
+        return numbagg.move_exp_nanmean(array, axis=axis, alpha=alpha)
 
 
 def _get_center_of_mass(comass, span, halflife, alpha):
@@ -29,10 +29,10 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     See licenses/PANDAS_LICENSE for the function's license
     """
     from pandas.core import common as com
+
     valid_count = com.count_not_none(comass, span, halflife, alpha)
     if valid_count > 1:
-        raise ValueError("comass, span, halflife, and alpha "
-                         "are mutually exclusive")
+        raise ValueError("comass, span, halflife, and alpha " "are mutually exclusive")
 
     # Convert to center of mass; domain checks ensure 0 < alpha <= 1
     if comass is not None:
@@ -41,7 +41,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     elif span is not None:
         if span < 1:
             raise ValueError("span must satisfy: span >= 1")
-        comass = (span - 1) / 2.
+        comass = (span - 1) / 2.0
     elif halflife is not None:
         if halflife <= 0:
             raise ValueError("halflife must satisfy: halflife > 0")
@@ -83,7 +83,7 @@ class RollingExp:
     RollingExp : type of input argument
     """  # noqa
 
-    def __init__(self, obj, windows, window_type='span'):
+    def __init__(self, obj, windows, window_type="span"):
         self.obj = obj
         dim, window = next(iter(windows.items()))
         self.dim = dim
@@ -102,5 +102,4 @@ class RollingExp:
         Dimensions without coordinates: x
         """
 
-        return self.obj.reduce(
-            move_exp_nanmean, dim=self.dim, alpha=self.alpha)
+        return self.obj.reduce(move_exp_nanmean, dim=self.dim, alpha=self.alpha)

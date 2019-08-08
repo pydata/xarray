@@ -43,9 +43,10 @@ import pandas as pd
 
 
 # allow ourselves to type checks for Panel even after it's removed
-if LooseVersion(pd.__version__) < '0.25.0':
+if LooseVersion(pd.__version__) < "0.25.0":
     Panel = pd.Panel
 else:
+
     class Panel:  # type: ignore
         pass
 

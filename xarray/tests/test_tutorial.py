@@ -12,17 +12,18 @@ from . import assert_identical, network
 class TestLoadDataset:
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self.testfile = 'tiny'
-        self.testfilepath = os.path.expanduser(os.sep.join(
-            ('~', '.xarray_tutorial_data', self.testfile)))
+        self.testfile = "tiny"
+        self.testfilepath = os.path.expanduser(
+            os.sep.join(("~", ".xarray_tutorial_data", self.testfile))
+        )
         with suppress(OSError):
-            os.remove('{}.nc'.format(self.testfilepath))
+            os.remove("{}.nc".format(self.testfilepath))
         with suppress(OSError):
-            os.remove('{}.md5'.format(self.testfilepath))
+            os.remove("{}.md5".format(self.testfilepath))
 
     def test_download_from_github(self):
         ds = tutorial.open_dataset(self.testfile).load()
-        tiny = DataArray(range(5), name='tiny').to_dataset()
+        tiny = DataArray(range(5), name="tiny").to_dataset()
         assert_identical(ds, tiny)
 
     def test_download_from_github_load_without_cache(self):
