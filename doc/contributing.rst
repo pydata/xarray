@@ -382,6 +382,21 @@ from the root of the Xarray repository. Now ``black`` and ``flake8`` will be run
 each time you commit changes. You can skip these checks with
 ``git commit --no-verify``.
 
+.. note::
+
+  If you were working on a branch *prior* to the code being reformatted with black,
+  you will likely face some merge conflicts. These steps can eliminate many of those
+  conflicts. Because they have had limited testing, please reach out to the core devs
+  on your pull request if you face any issues, and we'll help with the merge:
+
+  - Merge the commit on master prior to the `black` commit into your branch 
+    `git merge f172c673`. Any conflicts are real conflicts and require resolving
+  - Apply `black .` to your branch and commit
+    # TODO: insert after the black commit is on master
+  - Merge master at the `black` commit, resolving in favor of 'our' changes: 
+    `git merge [master-at-black-commit] -X ours`. You shouldn't have any merge conflicts
+  - Merge current master `git merge master`; any conflicts here are real and 
+    again require resolving
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
