@@ -441,7 +441,7 @@ equivalent. The easiest way to verify that your code is correct is to
 explicitly construct the result you expect, then compare the actual result to
 the expected correct result::
 
-    def test_constructor_from_0d(self):
+    def test_constructor_from_0d():
         expected = Dataset({None: ([], 0)})[None]
         actual = DataArray(0)
         assert_identical(expected, actual)
@@ -480,8 +480,7 @@ features that we like to use.
 - to set a mark on a parameter, ``pytest.param(..., marks=...)`` syntax should be used
 - ``fixture``, code for object construction, on a per-test basis
 - using bare ``assert`` for scalars and truth-testing
-- ``tm.assert_series_equal`` (and its counter part ``tm.assert_frame_equal``), for xarray
-  object comparisons.
+- ``assert_equal`` and ``assert_identical`` from the ``xarray.testing`` module for xarray object comparisons.
 - the typical pattern of constructing an ``expected`` and comparing versus the ``result``
 
 We would name this file ``test_cool_feature.py`` and put in an appropriate place in the
@@ -715,18 +714,6 @@ Doing 'git status' again should give something like::
     #
     #       modified:   /relative/path/to/file-you-added.py
     #
-
-Finally, commit your changes to your local repository with an explanatory message.
-*Xarray* uses a convention for commit message prefixes and layout.  Here are
-some common prefixes along with general guidelines for when to use them:
-
-    * ``ENH``: Enhancement, new functionality
-    * ``BUG``: Bug fix
-    * ``DOC``: Additions/updates to documentation
-    * ``TST``: Additions/updates to tests
-    * ``BLD``: Updates to the build process/scripts
-    * ``PERF``: Performance improvement
-    * ``CLN``: Code cleanup
 
 The following defines how a commit message should be structured:
 
