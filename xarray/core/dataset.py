@@ -37,6 +37,7 @@ from .utils import (Frozen, SortedKeysDict, _check_inplace,
                     decode_numpy_dict_values, either_dict_or_kwargs, hashable,
                     maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+from ..plot.dataset_plot import _Dataset_PlotMethods
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -4768,6 +4769,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def imag(self):
         return self._unary_op(lambda x: x.imag,
                               keep_attrs=True)(self)
+
+    @property
+    def plot(self):
+        """
+        Access plotting functions. Use it as a namespace to use
+        xarray.plot functions as Dataset methods
+
+        >>> ds.plot.scatter(...)  # equivalent to xarray.plot.scatter(ds,...)
+
+        """
+        return _Dataset_PlotMethods(self)
 
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.

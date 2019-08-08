@@ -9,7 +9,11 @@ import hashlib
 import os as _os
 from urllib.request import urlretrieve
 
+import numpy as np
+
 from .backends.api import open_dataset as _open_dataset
+from .core.dataarray import DataArray
+from .core.dataset import Dataset
 
 _default_cache_dir = _os.sep.join(('~', '.xarray_tutorial_data'))
 
@@ -99,3 +103,26 @@ def load_dataset(*args, **kwargs):
     """
     with open_dataset(*args, **kwargs) as ds:
         return ds.load()
+
+
+def scatter_example_dataset():
+    A = DataArray(np.zeros([3, 11, 4, 4]),
+                  dims=['x', 'y', 'z', 'w'],
+                  coords=[np.arange(3),
+                          np.linspace(0, 1, 11),
+                          np.arange(4),
+                          0.1 * np.random.randn(4)])
+    B = 0.1 * A.x**2 + A.y**2.5 + 0.1 * A.z * A.w
+    A = -0.1 * A.x + A.y / (5 + A.z) + A.w
+    ds = Dataset({'A': A, 'B': B})
+    ds['w'] = ['one', 'two', 'three', 'five']
+
+    ds.x.attrs['units'] = 'xunits'
+    ds.y.attrs['units'] = 'yunits'
+    ds.z.attrs['units'] = 'zunits'
+    ds.w.attrs['units'] = 'wunits'
+
+    ds.A.attrs['units'] = 'Aunits'
+    ds.B.attrs['units'] = 'Bunits'
+
+    return ds
