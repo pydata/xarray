@@ -168,7 +168,7 @@ default, but can be centered by passing ``center=True`` when constructing the
     r.mean()
 
 As can be seen above, aggregations of windows which overlap the border of the
-array produce ``nan``s.  Setting ``min_periods`` in the call to ``rolling``
+array produce ``nan``\s.  Setting ``min_periods`` in the call to ``rolling``
 changes the minimum number of observations within the window required to have
 a value when aggregating:
 
