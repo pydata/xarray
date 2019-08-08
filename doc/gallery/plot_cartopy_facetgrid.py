@@ -33,8 +33,8 @@ p = air.plot(
     col="time",
     col_wrap=1,  # multiplot settings
     aspect=ds.dims["lon"] / ds.dims["lat"],  # for a sensible figsize
-    subplot_kws={"projection": map_proj},
-)  # the plot's projection
+    subplot_kws={"projection": map_proj},  # the plot's projection
+)
 
 # We have to set the map's options on all four axes
 for ax in p.axes.flat:
