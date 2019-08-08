@@ -37,6 +37,10 @@ New functions/methods
 
    By `Guido Imperiale <https://github.com/crusaderky>`_
 
+- Dataset plotting API for visualizing dependences between two `DataArray`s!
+  Currently only :py:meth:`Dataset.plot.scatter` is implemented.
+  By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
+
 Enhancements
 ~~~~~~~~~~~~
 

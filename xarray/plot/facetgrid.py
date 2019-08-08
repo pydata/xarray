@@ -8,7 +8,6 @@ from ..core.formatting import format_item
 from .utils import (
     _infer_xy_labels, _process_cmap_cbar_kwargs, import_matplotlib_pyplot,
     label_from_attrs)
-
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
 _FONTSIZE = 'small'
@@ -174,6 +173,7 @@ class FacetGrid:
         self.axes = axes
         self.row_names = row_names
         self.col_names = col_names
+        self.figlegend = None
 
         # Next the private variables
         self._single_group = single_group
@@ -246,7 +246,6 @@ class FacetGrid:
                 mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
                 self._mappables.append(mappable)
 
-        self._cmap_extend = cmap_params.get('extend')
         self._finalize_grid(x, y)
 
         if kwargs.get('add_colorbar', True):
@@ -279,6 +278,51 @@ class FacetGrid:
 
         return self
 
+    def map_dataset(self, func, x=None, y=None, hue=None, hue_style=None,
+                    add_guide=None, **kwargs):
+        from .dataset_plot import _infer_meta_data, _parse_size
+
+        kwargs['add_guide'] = False
+        kwargs['_is_facetgrid'] = True
+
+        if kwargs.get('markersize', None):
+            kwargs['size_mapping'] = _parse_size(
+                self.data[kwargs['markersize']],
+                kwargs.pop('size_norm', None))
+
+        meta_data = _infer_meta_data(self.data, x, y, hue, hue_style,
+                                     add_guide)
+        kwargs['meta_data'] = meta_data
+
+        if hue and meta_data['hue_style'] == 'continuous':
+            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+                func, self.data[hue].values, **kwargs)
+            kwargs['meta_data']['cmap_params'] = cmap_params
+            kwargs['meta_data']['cbar_kwargs'] = cbar_kwargs
+
+        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            # None is the sentinel value
+            if d is not None:
+                subset = self.data.loc[d]
+                maybe_mappable = func(ds=subset, x=x, y=y,
+                                      hue=hue, hue_style=hue_style,
+                                      ax=ax, **kwargs)
+                # TODO: this is needed to get legends to work.
+                # but maybe_mappable is a list in that case :/
+                self._mappables.append(maybe_mappable)
+
+        self._finalize_grid(meta_data['xlabel'], meta_data['ylabel'])
+
+        if hue:
+            self._hue_label = meta_data.pop('hue_label', None)
+            if meta_data['add_legend']:
+                self._hue_var = meta_data['hue']
+                self.add_legend()
+            elif meta_data['add_colorbar']:
+                self.add_colorbar(label=self._hue_label, **cbar_kwargs)
+
+        return self
+
     def _finalize_grid(self, *axlabels):
         """Finalize the annotations and layout."""
         if not self._finalized:
@@ -299,6 +343,7 @@ class FacetGrid:
             title=self._hue_label,
             loc="center right", **kwargs)
 
+        self.figlegend = figlegend
         # Draw the plot to set the bounding boxes correctly
         self.fig.draw(self.fig.canvas.get_renderer())
 
@@ -518,3 +563,6 @@ def _easy_facetgrid(data, plotfunc, kind, x=None, y=None, row=None,
 
     if kind == 'dataarray':
         return g.map_dataarray(plotfunc, x, y, **kwargs)
+
+    if kind == 'dataset':
+        return g.map_dataset(plotfunc, x, y, **kwargs)
