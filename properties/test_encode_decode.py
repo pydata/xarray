@@ -4,8 +4,6 @@ Property-based tests for encoding/decoding methods.
 These ones pass, just as you'd hope!
 
 """
-from __future__ import absolute_import, division, print_function
-
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import given, settings

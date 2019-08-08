@@ -22,4 +22,5 @@ dependencies:
   - seaborn
   - toolz
   - rasterio
+  - boto3
   - zarr

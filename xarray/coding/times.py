@@ -23,7 +23,7 @@ except ImportError:
 
 
 # standard calendars recognized by cftime
-_STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
+_STANDARD_CALENDARS = {'standard', 'gregorian', 'proleptic_gregorian'}
 
 _NS_PER_TIME_DELTA = {'us': int(1e3),
                       'ms': int(1e6),

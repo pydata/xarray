@@ -17,6 +17,7 @@ from .indexing import (
     as_indexable)
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
+from .npcompat import IS_NEP18_ACTIVE
 from .utils import (
     OrderedSet, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
@@ -179,6 +180,18 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
+    if not isinstance(data, np.ndarray):
+        if hasattr(data, '__array_function__'):
+            if IS_NEP18_ACTIVE:
+                return data
+            else:
+                raise TypeError(
+                    'Got an NumPy-like array type providing the '
+                    '__array_function__ protocol but NEP18 is not enabled. '
+                    'Check that numpy >= v1.16 and that the environment '
+                    'variable "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION" is set to '
+                    '"1"')
+
     # validate whether the data is valid data types
     data = np.asarray(data)
 
@@ -288,7 +301,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
     @property
     def data(self):
-        if isinstance(self._data, dask_array_type):
+        if hasattr(self._data, '__array_function__'):
             return self._data
         else:
             return self.values
@@ -320,7 +333,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         if isinstance(self._data, dask_array_type):
             self._data = as_compatible_data(self._data.compute(**kwargs))
-        elif not isinstance(self._data, np.ndarray):
+        elif not hasattr(self._data, '__array_function__'):
             self._data = np.asarray(self._data)
         return self
 
@@ -524,9 +537,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 if k.dtype.kind == 'b':
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
-                            "Boolean array size {0:d} is used to index array "
-                            "with shape {1:s}.".format(len(k),
-                                                       str(self.shape)))
+                            "Boolean array size {:d} is used to index array "
+                            "with shape {:s}."
+                            .format(len(k), str(self.shape))
+                        )
                     if k.ndim > 1:
                         raise IndexError("{}-dimensional boolean indexing is "
                                          "not supported. ".format(k.ndim))
@@ -534,8 +548,9 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            "on {0:s} but the target dimension is "
-                            "{1:s}.".format(str(k.dims), dim))
+                            "on {:s} but the target dimension is {:s}."
+                            .format(str(k.dims), dim)
+                        )
 
     def _broadcast_indexes_outer(self, key):
         dims = tuple(k.dims[0] if isinstance(k, Variable) else dim
@@ -705,8 +720,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         if new_order:
             value = duck_array_ops.asarray(value)
-            value = value[(len(dims) - value.ndim) * (np.newaxis,) +
-                          (Ellipsis,)]
+            value = value[(len(dims) - value.ndim) * (np.newaxis,)
+                          + (Ellipsis,)]
             value = duck_array_ops.moveaxis(
                 value, new_order, range(len(new_order)))
 
@@ -805,7 +820,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 data = indexing.MemoryCachedArray(data.array)
 
             if deep:
-                if isinstance(data, dask_array_type):
+                if (hasattr(data, '__array_function__')
+                        or isinstance(data, dask_array_type)):
                     data = data.copy()
                 elif not isinstance(data, PandasIndexAdapter):
                     # pandas.Index is immutable
@@ -874,8 +890,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         import dask.array as da
 
         if utils.is_dict_like(chunks):
-            chunks = dict((self.get_axis_num(dim), chunk)
-                          for dim, chunk in chunks.items())
+            chunks = {
+                self.get_axis_num(dim): chunk
+                for dim, chunk in chunks.items()
+            }
 
         if chunks is None:
             chunks = self.chunks or self.shape
@@ -1494,9 +1512,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims and
-                    (self._data is other._data or
-                     equiv(self.data, other.data)))
+            return (
+                self.dims == other.dims and
+                (self._data is other._data or equiv(self.data, other.data))
+            )
         except (TypeError, AttributeError):
             return False
 
@@ -1517,8 +1536,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """Like equals, but also checks attributes.
         """
         try:
-            return (utils.dict_equiv(self.attrs, other.attrs) and
-                    self.equals(other))
+            return (utils.dict_equiv(self.attrs, other.attrs)
+                    and self.equals(other))
         except (TypeError, AttributeError):
             return False
 
@@ -1942,14 +1961,7 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            if deep:
-                # self._data should be a `PandasIndexAdapter` instance at this
-                # point, which doesn't have a copy method, so make a deep copy
-                # of the underlying `pandas.MultiIndex` and create a new
-                # `PandasIndexAdapter` instance with it.
-                data = PandasIndexAdapter(self._data.array.copy(deep=True))
-            else:
-                data = self._data
+            data = self._data.copy(deep=deep)
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:
@@ -1966,8 +1978,8 @@ class IndexVariable(Variable):
         # otherwise use the native index equals, rather than looking at _data
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims and
-                    self._data_equals(other))
+            return (self.dims == other.dims
+                    and self._data_equals(other))
         except (TypeError, AttributeError):
             return False
 
