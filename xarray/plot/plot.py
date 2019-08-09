@@ -2,8 +2,9 @@
 Use this module directly:
     import xarray.plot as xplt
 
-Or use the methods on a DataArray:
+Or use the methods on a DataArray or Dataset:
     DataArray.plot._____
+    Dataset.plot._____
 """
 import functools
 
@@ -20,7 +21,7 @@ from .utils import (
 
 
 def _infer_line_data(darray, x, y, hue):
-    error_msg = ('must be either None or one of ({0:s})'
+    error_msg = ('must be either None or one of ({:s})'
                  .format(', '.join([repr(dd) for dd in darray.dims])))
     ndims = len(darray.dims)
 
@@ -70,7 +71,7 @@ def _infer_line_data(darray, x, y, hue):
                         otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError('For 2D inputs, hue must be a dimension'
-                                     + ' i.e. one of ' + repr(darray.dims))
+                                     ' i.e. one of ' + repr(darray.dims))
 
             else:
                 yplt = darray.transpose(xname, huename)
@@ -86,7 +87,7 @@ def _infer_line_data(darray, x, y, hue):
                         otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError('For 2D inputs, hue must be a dimension'
-                                     + ' i.e. one of ' + repr(darray.dims))
+                                     ' i.e. one of ' + repr(darray.dims))
 
             else:
                 xplt = darray.transpose(yname, huename)
@@ -246,7 +247,7 @@ def line(darray, *args, row=None, col=None, figsize=None, aspect=None,
         assert 'args' not in kwargs
 
     ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
+    xplt, yplt, hueplt, xlabel, ylabel, hue_label = \
         _infer_line_data(darray, x, y, hue)
 
     # Remove pd.Intervals if contained in xplt.values.
@@ -286,7 +287,7 @@ def line(darray, *args, row=None, col=None, figsize=None, aspect=None,
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
                   labels=list(hueplt.values),
-                  title=huelabel)
+                  title=hue_label)
 
     # Rotate dates on xlabels
     # Do this without calling autofmt_xdate so that x-axes ticks
@@ -650,7 +651,6 @@ def _plot2d(plotfunc):
                 cbar_kwargs['label'] = label_from_attrs(darray)
             cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
                                  cmap_params)
-
         elif cbar_ax is not None or cbar_kwargs:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "

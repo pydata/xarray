@@ -75,18 +75,18 @@ class PseudoNetCDFDataStore(AbstractDataStore):
                                  for k, v in self.ds.variables.items())
 
     def get_attrs(self):
-        return Frozen(dict([(k, getattr(self.ds, k))
-                            for k in self.ds.ncattrs()]))
+        return Frozen({k: getattr(self.ds, k) for k in self.ds.ncattrs()})
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding['unlimited_dims'] = set(
-            [k for k in self.ds.dimensions
-             if self.ds.dimensions[k].isunlimited()])
-        return encoding
+        return {
+            'unlimited_dims': {
+                k for k in self.ds.dimensions
+                if self.ds.dimensions[k].isunlimited()
+            }
+        }
 
     def close(self):
         self._manager.close()

@@ -245,7 +245,9 @@ def is_scalar(value: Any, test0d: Optional[bool] = True) -> bool:
     return (
         test0d or
         isinstance(value, (str, bytes)) or not
-        isinstance(value, (Iterable, ) + dask_array_type))
+        (isinstance(value, (Iterable, ) + dask_array_type) or
+         hasattr(value, '__array_function__'))
+    )
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:

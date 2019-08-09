@@ -4,7 +4,8 @@ import warnings
 from collections import OrderedDict
 from numbers import Number
 from typing import (Any, Callable, Dict, Hashable, Iterable, List, Mapping,
-                    Optional, Sequence, Tuple, Union, cast, TYPE_CHECKING)
+                    Optional, Sequence, Tuple, Union, cast, overload,
+                    TYPE_CHECKING)
 
 import numpy as np
 import pandas as pd
@@ -280,8 +281,10 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
-                coords = getattr(data, 'coords', None)
-                if isinstance(data, pd.Series):
+
+                if isinstance(data, DataArray):
+                    coords = data.coords
+                elif isinstance(data, pd.Series):
                     coords = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coords = [data.index, data.columns]
@@ -289,6 +292,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     coords = [data]
                 elif isinstance(data, pdcompat.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
+
             if dims is None:
                 dims = getattr(data, 'dims', getattr(coords, 'dims', None))
             if name is None:
@@ -1406,7 +1410,7 @@ class DataArray(AbstractArray, DataWithCoords):
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError('dims should not contain duplicate values.')
-            dim = OrderedDict(((d, 1) for d in dim))
+            dim = OrderedDict((d, 1) for d in dim)
         elif dim is not None and not isinstance(dim, Mapping):
             dim = OrderedDict(((cast(Hashable, dim), 1),))
 
@@ -1773,17 +1777,35 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> 'DataArray':
         return self.transpose()
 
-    def drop(self,
-             labels: Union[Hashable, Sequence[Hashable]],
-             dim: Hashable = None,
-             *,
-             errors: str = 'raise') -> 'DataArray':
+    # Drop coords
+    @overload
+    def drop(
+        self,
+        labels: Union[Hashable, Iterable[Hashable]],
+        *,
+        errors: str = 'raise'
+    ) -> 'DataArray':
+        ...
+
+    # Drop index labels along dimension
+    @overload  # noqa: F811
+    def drop(
+        self,
+        labels: Any,  # array-like
+        dim: Hashable,
+        *,
+        errors: str = 'raise'
+    ) -> 'DataArray':
+        ...
+
+    def drop(self, labels, dim=None, *, errors='raise'):  # noqa: F811
         """Drop coordinates or index labels from this DataArray.
 
         Parameters
         ----------
         labels : hashable or sequence of hashables
-            Name(s) of coordinate variables or index labels to drop.
+            Name(s) of coordinates or index labels to drop.
+            If dim is not None, labels can be any array-like.
         dim : hashable, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.
@@ -1796,8 +1818,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         dropped : DataArray
         """
-        if utils.is_scalar(labels):
-            labels = [labels]
         ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
         return self._from_temp_dataset(ds)
 

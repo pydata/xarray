@@ -7,8 +7,9 @@ import pytest
 
 import xarray as xr
 import xarray.plot as xplt
-from xarray import DataArray
+from xarray import DataArray, Dataset
 from xarray.coding.times import _import_cftime
+from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
@@ -45,7 +46,7 @@ def substring_in_axes(substring, ax):
     '''
     Return True if a substring is found anywhere in an axes
     '''
-    alltxt = set([t.get_text() for t in ax.findobj(mpl.text.Text)])
+    alltxt = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     for txt in alltxt:
         if substring in txt:
             return True
@@ -1158,9 +1159,9 @@ class Common2dMixin:
         d = DataArray(data, dims=['x', 'y', 'time'])
         fg = d.plot.pcolormesh(col='time')
         # check that all color limits are the same
-        assert len(set(m.get_clim() for m in fg._mappables)) == 1
+        assert len({m.get_clim() for m in fg._mappables}) == 1
         # check that all colormaps are the same
-        assert len(set(m.get_cmap().name for m in fg._mappables)) == 1
+        assert len({m.get_cmap().name for m in fg._mappables}) == 1
 
     def test_facetgrid_cbar_kwargs(self):
         a = easy_array((10, 15, 2, 3))
@@ -1498,7 +1499,7 @@ class TestFacetGrid(PlotTestCase):
         self.darray.name = 'testvar'
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
         for k, ax in zip('abc', self.g.axes.flat):
-            assert 'z = {0}'.format(k) == ax.get_title()
+            assert 'z = {}'.format(k) == ax.get_title()
 
         alltxt = text_in_fig()
         assert self.darray.name in alltxt
@@ -1731,6 +1732,19 @@ class TestFacetGrid4d(PlotTestCase):
 
 
 @pytest.mark.filterwarnings('ignore:tight_layout cannot')
+class TestFacetedLinePlotsLegend(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.darray = xr.tutorial.scatter_example_dataset()
+
+    def test_legend_labels(self):
+        fg = self.darray.A.plot.line(col='x', row='w', hue='z')
+        all_legend_labels = [t.get_text() for t in fg.figlegend.texts]
+        # labels in legend should be ['0', '1', '2', '3']
+        assert sorted(all_legend_labels) == ['0', '1', '2', '3']
+
+
+@pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetedLinePlots(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -1791,11 +1805,6 @@ class TestFacetedLinePlots(PlotTestCase):
         assert 'longitude' in alltxt
         assert 'latitude' in alltxt
 
-    def test_both_x_and_y(self):
-        with pytest.raises(ValueError):
-            self.darray.plot.line(row='row', col='col',
-                                  x='x', y='hue')
-
     def test_axes_in_faceted_plot(self):
         with pytest.raises(ValueError):
             self.darray.plot.line(row='row', col='col',
@@ -1810,6 +1819,125 @@ class TestFacetedLinePlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.darray.plot(row='row', hue='hue')
             self.darray.plot.line(row='row', hue='hue')
+
+
+@requires_matplotlib
+class TestDatasetScatterPlots(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        das = [DataArray(np.random.randn(3, 3, 4, 4),
+                         dims=['x', 'row', 'col', 'hue'],
+                         coords=[range(k) for k in [3, 3, 4, 4]])
+               for _ in [1, 2]]
+        ds = Dataset({'A': das[0], 'B': das[1]})
+        ds.hue.name = 'huename'
+        ds.hue.attrs['units'] = 'hunits'
+        ds.x.attrs['units'] = 'xunits'
+        ds.col.attrs['units'] = 'colunits'
+        ds.row.attrs['units'] = 'rowunits'
+        ds.A.attrs['units'] = 'Aunits'
+        ds.B.attrs['units'] = 'Bunits'
+        self.ds = ds
+
+    @pytest.mark.parametrize(
+        'add_guide, hue_style, legend, colorbar', [
+            (None, None, False, True),
+            (False, None, False, False),
+            (True, None, False, True),
+            (True, "continuous", False, True),
+            (False, "discrete", False, False),
+            (True, "discrete", True, False)]
+    )
+    def test_add_guide(self, add_guide, hue_style, legend, colorbar):
+
+        meta_data = _infer_meta_data(self.ds, x='A', y='B', hue='hue',
+                                     hue_style=hue_style,
+                                     add_guide=add_guide)
+        assert meta_data['add_legend'] is legend
+        assert meta_data['add_colorbar'] is colorbar
+
+    def test_facetgrid_shape(self):
+        g = self.ds.plot.scatter(x='A', y='B', row='row', col='col')
+        assert g.axes.shape == (len(self.ds.row), len(self.ds.col))
+
+        g = self.ds.plot.scatter(x='A', y='B', row='col', col='row')
+        assert g.axes.shape == (len(self.ds.col), len(self.ds.row))
+
+    def test_default_labels(self):
+        g = self.ds.plot.scatter('A', 'B', row='row', col='col', hue='hue')
+
+        # Top row should be labeled
+        for label, ax in zip(self.ds.coords['col'].values, g.axes[0, :]):
+            assert substring_in_axes(str(label), ax)
+
+        # Bottom row should have name of x array name and units
+        for ax in g.axes[-1, :]:
+            assert ax.get_xlabel() == 'A [Aunits]'
+
+        # Leftmost column should have name of y array name and units
+        for ax in g.axes[:, 0]:
+            assert ax.get_ylabel() == 'B [Bunits]'
+
+    def test_axes_in_faceted_plot(self):
+        with pytest.raises(ValueError):
+            self.ds.plot.scatter(x='A', y='B', row='row', ax=plt.axes())
+
+    def test_figsize_and_size(self):
+        with pytest.raises(ValueError):
+            self.ds.plot.scatter(x='A', y='B', row='row', size=3, figsize=4)
+
+    @pytest.mark.parametrize('x, y, hue_style, add_guide', [
+        ('A', 'B', 'something', True),
+        ('A', 'B', 'discrete', True),
+        ('A', 'B', None, True),
+        ('A', 'The Spanish Inquisition', None, None),
+        ('The Spanish Inquisition', 'B', None, True)])
+    def test_bad_args(self, x, y, hue_style, add_guide):
+        with pytest.raises(ValueError):
+            self.ds.plot.scatter(x, y, hue_style=hue_style,
+                                 add_guide=add_guide)
+
+    @pytest.mark.xfail(reason='datetime,timedelta hue variable not supported.')
+    @pytest.mark.parametrize('hue_style', ['discrete', 'continuous'])
+    def test_datetime_hue(self, hue_style):
+        ds2 = self.ds.copy()
+        ds2['hue'] = pd.date_range('2000-1-1', periods=4)
+        ds2.plot.scatter(x='A', y='B', hue='hue', hue_style=hue_style)
+
+        ds2['hue'] = pd.timedelta_range('-1D', periods=4, freq='D')
+        ds2.plot.scatter(x='A', y='B', hue='hue', hue_style=hue_style)
+
+    def test_facetgrid_hue_style(self):
+        # Can't move this to pytest.mark.parametrize because py35-min
+        # doesn't have mpl.
+        for hue_style, map_type in zip(['discrete', 'continuous'],
+                                       [list, mpl.collections.PathCollection]):
+            g = self.ds.plot.scatter(x='A', y='B', row='row', col='col',
+                                     hue='hue', hue_style=hue_style)
+            # for 'discrete' a list is appended to _mappables
+            # for 'continuous', should be single PathCollection
+            assert isinstance(g._mappables[-1], map_type)
+
+    @pytest.mark.parametrize('x, y, hue, markersize', [
+        ('A', 'B', 'x', 'col'),
+        ('x', 'row', 'A', 'B')])
+    def test_scatter(self, x, y, hue, markersize):
+        self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
+
+    def test_non_numeric_legend(self):
+        ds2 = self.ds.copy()
+        ds2['hue'] = ['a', 'b', 'c', 'd']
+        lines = ds2.plot.scatter(x='A', y='B', hue='hue')
+        # should make a discrete legend
+        assert lines[0].axes.legend_ is not None
+        # and raise an error if explicitly not allowed to do so
+        with pytest.raises(ValueError):
+            ds2.plot.scatter(x='A', y='B', hue='hue',
+                             hue_style='continuous')
+
+    def test_add_legend_by_default(self):
+        sc = self.ds.plot.scatter(x='A', y='B', hue='hue')
+        assert len(sc.figure.axes) == 2
 
 
 class TestDatetimePlot(PlotTestCase):

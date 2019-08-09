@@ -37,9 +37,15 @@ New functions/methods
 
    By `Guido Imperiale <https://github.com/crusaderky>`_
 
+- Dataset plotting API for visualizing dependences between two `DataArray`s!
+  Currently only :py:meth:`Dataset.plot.scatter` is implemented.
+  By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
+
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
+  It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
