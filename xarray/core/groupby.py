@@ -776,11 +776,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         else:
 
             def wrapped_func(  # type: ignore
-                self,
-                dim=DEFAULT_DIMS,
-                axis=None,
-                keep_attrs=None,
-                **kwargs
+                self, dim=DEFAULT_DIMS, axis=None, keep_attrs=None, **kwargs
             ):
                 return self.reduce(
                     func, dim, axis, keep_attrs=keep_attrs, allow_lazy=True, **kwargs
@@ -912,11 +908,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         else:
 
-            def wrapped_func(  # type: ignore
-                self,
-                dim=DEFAULT_DIMS,
-                **kwargs
-            ):
+            def wrapped_func(self, dim=DEFAULT_DIMS, **kwargs):  # type: ignore
                 return self.reduce(
                     func, dim, numeric_only=numeric_only, allow_lazy=True, **kwargs
                 )
