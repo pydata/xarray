@@ -46,11 +46,15 @@ import numpy as np
 from .computation import apply_ufunc
 
 _cpython_optimized_encoders = (
-    "utf-8", "utf8", "latin-1", "latin1", "iso-8859-1", "mbcs", "ascii"
+    "utf-8",
+    "utf8",
+    "latin-1",
+    "latin1",
+    "iso-8859-1",
+    "mbcs",
+    "ascii",
 )
-_cpython_optimized_decoders = _cpython_optimized_encoders + (
-    "utf-16", "utf-32"
-)
+_cpython_optimized_decoders = _cpython_optimized_encoders + ("utf-16", "utf-32")
 
 
 def _is_str_like(x):
@@ -80,17 +84,16 @@ class StringAccessor:
             dtype = self._obj.dtype
 
         g = np.vectorize(f, otypes=[dtype])
-        return apply_ufunc(
-            g, self._obj, dask='parallelized', output_dtypes=[dtype])
+        return apply_ufunc(g, self._obj, dask="parallelized", output_dtypes=[dtype])
 
     def len(self):
-        '''
+        """
         Compute the length of each element in the array.
 
         Returns
         -------
         lengths array : array of int
-        '''
+        """
         return self._apply(len, dtype=int)
 
     def __getitem__(self, key):
@@ -100,7 +103,7 @@ class StringAccessor:
             return self.get(key)
 
     def get(self, i):
-        '''
+        """
         Extract element from indexable in each element in the array.
 
         Parameters
@@ -114,12 +117,12 @@ class StringAccessor:
         Returns
         -------
         items : array of objects
-        '''
+        """
         obj = slice(-1, None) if i == -1 else slice(i, i + 1)
         return self._apply(lambda x: x[obj])
 
     def slice(self, start=None, stop=None, step=None):
-        '''
+        """
         Slice substrings from each element in the array.
 
         Parameters
@@ -134,13 +137,13 @@ class StringAccessor:
         Returns
         -------
         sliced strings : same type as values
-        '''
+        """
         s = slice(start, stop, step)
         f = lambda x: x[s]
         return self._apply(f)
 
-    def slice_replace(self, start=None, stop=None, repl=''):
-        '''
+    def slice_replace(self, start=None, stop=None, repl=""):
+        """
         Replace a positional slice of a string with another value.
 
         Parameters
@@ -160,7 +163,7 @@ class StringAccessor:
         Returns
         -------
         replaced : same type as values
-        '''
+        """
         repl = self._obj.dtype.type(repl)
 
         def f(x):
@@ -168,7 +171,7 @@ class StringAccessor:
                 local_stop = start
             else:
                 local_stop = stop
-            y = self._obj.dtype.type('')
+            y = self._obj.dtype.type("")
             if start is not None:
                 y += x[:start]
             y += repl
@@ -179,156 +182,156 @@ class StringAccessor:
         return self._apply(f)
 
     def capitalize(self):
-        '''
+        """
         Convert strings in the array to be capitalized.
 
         Returns
         -------
         capitalized : same type as values
-        '''
+        """
         return self._apply(lambda x: x.capitalize())
 
     def lower(self):
-        '''
+        """
         Convert strings in the array to lowercase.
 
         Returns
         -------
         lowerd : same type as values
-        '''
+        """
         return self._apply(lambda x: x.lower())
 
     def swapcase(self):
-        '''
+        """
         Convert strings in the array to be swapcased.
 
         Returns
         -------
         swapcased : same type as values
-        '''
+        """
         return self._apply(lambda x: x.swapcase())
 
     def title(self):
-        '''
+        """
         Convert strings in the array to titlecase.
 
         Returns
         -------
         titled : same type as values
-        '''
+        """
         return self._apply(lambda x: x.title())
 
     def upper(self):
-        '''
+        """
         Convert strings in the array to uppercase.
 
         Returns
         -------
         uppered : same type as values
-        '''
+        """
         return self._apply(lambda x: x.upper())
 
     def isalnum(self):
-        '''
+        """
         Check whether all characters in each string are alphanumeric.
 
         Returns
         -------
         isalnum : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.isalnum(), dtype=bool)
 
     def isalpha(self):
-        '''
+        """
         Check whether all characters in each string are alphabetic.
 
         Returns
         -------
         isalpha : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.isalpha(), dtype=bool)
 
     def isdecimal(self):
-        '''
+        """
         Check whether all characters in each string are decimal.
 
         Returns
         -------
         isdecimal : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.isdecimal(), dtype=bool)
 
     def isdigit(self):
-        '''
+        """
         Check whether all characters in each string are digits.
 
         Returns
         -------
         isdigit : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.isdigit(), dtype=bool)
 
     def islower(self):
-        '''
+        """
         Check whether all characters in each string are lowercase.
 
         Returns
         -------
         islower : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.islower(), dtype=bool)
 
     def isnumeric(self):
-        '''
+        """
         Check whether all characters in each string are numeric.
 
         Returns
         -------
         isnumeric : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.isnumeric(), dtype=bool)
 
     def isspace(self):
-        '''
+        """
         Check whether all characters in each string are spaces.
 
         Returns
         -------
         isspace : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.isspace(), dtype=bool)
 
     def istitle(self):
-        '''
+        """
         Check whether all characters in each string are titlecase.
 
         Returns
         -------
         istitle : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.istitle(), dtype=bool)
 
     def isupper(self):
-        '''
+        """
         Check whether all characters in each string are uppercase.
 
         Returns
         -------
         isupper : array of bool
             Array of boolean values with the same shape as the original array.
-        '''
+        """
         return self._apply(lambda x: x.isupper(), dtype=bool)
 
     def count(self, pat, flags=0):
-        '''
+        """
         Count occurrences of pattern in each string of the array.
 
         This function is used to count the number of times a particular regex
@@ -346,14 +349,14 @@ class StringAccessor:
         Returns
         -------
         counts : array of int
-        '''
+        """
         pat = self._obj.dtype.type(pat)
         regex = re.compile(pat, flags=flags)
         f = lambda x: len(regex.findall(x))
         return self._apply(f, dtype=int)
 
     def startswith(self, pat):
-        '''
+        """
         Test if the start of each string element matches a pattern.
 
         Parameters
@@ -366,13 +369,13 @@ class StringAccessor:
         startswith : array of bool
             An array of booleans indicating whether the given pattern matches
             the start of each string element.
-        '''
+        """
         pat = self._obj.dtype.type(pat)
         f = lambda x: x.startswith(pat)
         return self._apply(f, dtype=bool)
 
     def endswith(self, pat):
-        '''
+        """
         Test if the end of each string element matches a pattern.
 
         Parameters
@@ -385,13 +388,13 @@ class StringAccessor:
         endswith : array of bool
             A Series of booleans indicating whether the given pattern matches
             the end of each string element.
-        '''
+        """
         pat = self._obj.dtype.type(pat)
         f = lambda x: x.endswith(pat)
         return self._apply(f, dtype=bool)
 
-    def pad(self, width, side='left', fillchar=' '):
-        '''
+    def pad(self, width, side="left", fillchar=" "):
+        """
         Pad strings in the array up to width.
 
         Parameters
@@ -408,25 +411,25 @@ class StringAccessor:
         -------
         filled : same type as values
             Array with a minimum number of char in each element.
-        '''
+        """
         width = int(width)
         fillchar = self._obj.dtype.type(fillchar)
         if len(fillchar) != 1:
-            raise TypeError('fillchar must be a character, not str')
+            raise TypeError("fillchar must be a character, not str")
 
-        if side == 'left':
+        if side == "left":
             f = lambda s: s.rjust(width, fillchar)
-        elif side == 'right':
+        elif side == "right":
             f = lambda s: s.ljust(width, fillchar)
-        elif side == 'both':
+        elif side == "both":
             f = lambda s: s.center(width, fillchar)
         else:  # pragma: no cover
-            raise ValueError('Invalid side')
+            raise ValueError("Invalid side")
 
         return self._apply(f)
 
-    def center(self, width, fillchar=' '):
-        '''
+    def center(self, width, fillchar=" "):
+        """
         Filling left and right side of strings in the array with an
         additional character.
 
@@ -441,11 +444,11 @@ class StringAccessor:
         Returns
         -------
         filled : same type as values
-        '''
-        return self.pad(width, side='both', fillchar=fillchar)
+        """
+        return self.pad(width, side="both", fillchar=fillchar)
 
-    def ljust(self, width, fillchar=' '):
-        '''
+    def ljust(self, width, fillchar=" "):
+        """
         Filling right side of strings in the array with an additional
         character.
 
@@ -460,11 +463,11 @@ class StringAccessor:
         Returns
         -------
         filled : same type as values
-        '''
-        return self.pad(width, side='right', fillchar=fillchar)
+        """
+        return self.pad(width, side="right", fillchar=fillchar)
 
-    def rjust(self, width, fillchar=' '):
-        '''
+    def rjust(self, width, fillchar=" "):
+        """
         Filling left side of strings in the array with an additional character.
 
         Parameters
@@ -478,11 +481,11 @@ class StringAccessor:
         Returns
         -------
         filled : same type as values
-        '''
-        return self.pad(width, side='left', fillchar=fillchar)
+        """
+        return self.pad(width, side="left", fillchar=fillchar)
 
     def zfill(self, width):
-        '''
+        """
         Pad strings in the array by prepending '0' characters.
 
         Strings in the array are padded with '0' characters on the
@@ -498,11 +501,11 @@ class StringAccessor:
         Returns
         -------
         filled : same type as values
-        '''
-        return self.pad(width, side='left', fillchar='0')
+        """
+        return self.pad(width, side="left", fillchar="0")
 
     def contains(self, pat, case=True, flags=0, regex=True):
-        '''
+        """
         Test if pattern or regex is contained within a string of the array.
 
         Return boolean array based on whether a given pattern or regex is
@@ -526,7 +529,7 @@ class StringAccessor:
             An array of boolean values indicating whether the
             given pattern is contained within the string of each element
             of the array.
-        '''
+        """
         pat = self._obj.dtype.type(pat)
         if regex:
             if not case:
@@ -548,7 +551,7 @@ class StringAccessor:
         return self._apply(f, dtype=bool)
 
     def match(self, pat, case=True, flags=0):
-        '''
+        """
         Determine if each string matches a regular expression.
 
         Parameters
@@ -563,7 +566,7 @@ class StringAccessor:
         Returns
         -------
         matched : array of bool
-        '''
+        """
         if not case:
             flags |= re.IGNORECASE
 
@@ -572,8 +575,8 @@ class StringAccessor:
         f = lambda x: bool(regex.match(x))
         return self._apply(f, dtype=bool)
 
-    def strip(self, to_strip=None, side='both'):
-        '''
+    def strip(self, to_strip=None, side="both"):
+        """
         Remove leading and trailing characters.
 
         Strip whitespaces (including newlines) or a set of specified characters
@@ -591,23 +594,23 @@ class StringAccessor:
         Returns
         -------
         stripped : same type as values
-        '''
+        """
         if to_strip is not None:
             to_strip = self._obj.dtype.type(to_strip)
 
-        if side == 'both':
+        if side == "both":
             f = lambda x: x.strip(to_strip)
-        elif side == 'left':
+        elif side == "left":
             f = lambda x: x.lstrip(to_strip)
-        elif side == 'right':
+        elif side == "right":
             f = lambda x: x.rstrip(to_strip)
         else:  # pragma: no cover
-            raise ValueError('Invalid side')
+            raise ValueError("Invalid side")
 
         return self._apply(f)
 
     def lstrip(self, to_strip=None):
-        '''
+        """
         Remove leading and trailing characters.
 
         Strip whitespaces (including newlines) or a set of specified characters
@@ -623,11 +626,11 @@ class StringAccessor:
         Returns
         -------
         stripped : same type as values
-        '''
-        return self.strip(to_strip, side='left')
+        """
+        return self.strip(to_strip, side="left")
 
     def rstrip(self, to_strip=None):
-        '''
+        """
         Remove leading and trailing characters.
 
         Strip whitespaces (including newlines) or a set of specified characters
@@ -643,11 +646,11 @@ class StringAccessor:
         Returns
         -------
         stripped : same type as values
-        '''
-        return self.strip(to_strip, side='right')
+        """
+        return self.strip(to_strip, side="right")
 
     def wrap(self, width, **kwargs):
-        '''
+        """
         Wrap long strings in the array to be formatted in paragraphs with
         length less than a given width.
 
@@ -682,13 +685,13 @@ class StringAccessor:
         Returns
         -------
         wrapped : same type as values
-        '''
+        """
         tw = textwrap.TextWrapper(width=width)
-        f = lambda x: '\n'.join(tw.wrap(x))
+        f = lambda x: "\n".join(tw.wrap(x))
         return self._apply(f)
 
     def translate(self, table):
-        '''
+        """
         Map all characters in the string through the given mapping table.
 
         Parameters
@@ -702,12 +705,12 @@ class StringAccessor:
         Returns
         -------
         translated : same type as values
-        '''
+        """
         f = lambda x: x.translate(table)
         return self._apply(f)
 
     def repeat(self, repeats):
-        '''
+        """
         Duplicate each string in the array.
 
         Parameters
@@ -719,12 +722,12 @@ class StringAccessor:
         -------
         repeated : same type as values
             Array of repeated string objects.
-        '''
+        """
         f = lambda x: repeats * x
         return self._apply(f)
 
-    def find(self, sub, start=0, end=None, side='left'):
-        '''
+    def find(self, sub, start=0, end=None, side="left"):
+        """
         Return lowest or highest indexes in each strings in the array
         where the substring is fully contained between [start:end].
         Return -1 on failure.
@@ -743,15 +746,15 @@ class StringAccessor:
         Returns
         -------
         found : array of integer values
-        '''
+        """
         sub = self._obj.dtype.type(sub)
 
-        if side == 'left':
-            method = 'find'
-        elif side == 'right':
-            method = 'rfind'
+        if side == "left":
+            method = "find"
+        elif side == "right":
+            method = "rfind"
         else:  # pragma: no cover
-            raise ValueError('Invalid side')
+            raise ValueError("Invalid side")
 
         if end is None:
             f = lambda x: getattr(x, method)(sub, start)
@@ -761,7 +764,7 @@ class StringAccessor:
         return self._apply(f, dtype=int)
 
     def rfind(self, sub, start=0, end=None):
-        '''
+        """
         Return highest indexes in each strings in the array
         where the substring is fully contained between [start:end].
         Return -1 on failure.
@@ -778,11 +781,11 @@ class StringAccessor:
         Returns
         -------
         found : array of integer values
-        '''
-        return self.find(sub, start=start, end=end, side='right')
+        """
+        return self.find(sub, start=start, end=end, side="right")
 
-    def index(self, sub, start=0, end=None, side='left'):
-        '''
+    def index(self, sub, start=0, end=None, side="left"):
+        """
         Return lowest or highest indexes in each strings where the substring is
         fully contained between [start:end]. This is the same as
         ``str.find`` except instead of returning -1, it raises a ValueError
@@ -802,15 +805,15 @@ class StringAccessor:
         Returns
         -------
         found : array of integer values
-        '''
+        """
         sub = self._obj.dtype.type(sub)
 
-        if side == 'left':
-            method = 'index'
-        elif side == 'right':
-            method = 'rindex'
+        if side == "left":
+            method = "index"
+        elif side == "right":
+            method = "rindex"
         else:  # pragma: no cover
-            raise ValueError('Invalid side')
+            raise ValueError("Invalid side")
 
         if end is None:
             f = lambda x: getattr(x, method)(sub, start)
@@ -820,7 +823,7 @@ class StringAccessor:
         return self._apply(f, dtype=int)
 
     def rindex(self, sub, start=0, end=None):
-        '''
+        """
         Return highest indexes in each strings where the substring is
         fully contained between [start:end]. This is the same as
         ``str.rfind`` except instead of returning -1, it raises a ValueError
@@ -838,11 +841,11 @@ class StringAccessor:
         Returns
         -------
         found : array of integer values
-        '''
-        return self.index(sub, start=start, end=end, side='right')
+        """
+        return self.index(sub, start=start, end=end, side="right")
 
     def replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
-        '''
+        """
         Replace occurrences of pattern/regex in the array with some string.
 
         Parameters
@@ -875,7 +878,7 @@ class StringAccessor:
         replaced : same type as values
             A copy of the object with all matching occurrences of `pat`
             replaced by `repl`.
-        '''
+        """
         if not (_is_str_like(repl) or callable(repl)):  # pragma: no cover
             raise TypeError("repl must be a string or callable")
 
@@ -885,12 +888,13 @@ class StringAccessor:
         if _is_str_like(repl):
             repl = self._obj.dtype.type(repl)
 
-        is_compiled_re = isinstance(pat, type(re.compile('')))
+        is_compiled_re = isinstance(pat, type(re.compile("")))
         if regex:
             if is_compiled_re:
                 if (case is not None) or (flags != 0):
-                    raise ValueError("case and flags cannot be set"
-                                     " when pat is a compiled regex")
+                    raise ValueError(
+                        "case and flags cannot be set" " when pat is a compiled regex"
+                    )
             else:
                 # not a compiled regex
                 # set default case
@@ -908,16 +912,19 @@ class StringAccessor:
                 f = lambda x: x.replace(pat, repl, n)
         else:
             if is_compiled_re:
-                raise ValueError("Cannot use a compiled regex as replacement "
-                                 "pattern with regex=False")
+                raise ValueError(
+                    "Cannot use a compiled regex as replacement "
+                    "pattern with regex=False"
+                )
             if callable(repl):
-                raise ValueError("Cannot use a callable replacement when "
-                                 "regex=False")
+                raise ValueError(
+                    "Cannot use a callable replacement when " "regex=False"
+                )
             f = lambda x: x.replace(pat, repl, n)
         return self._apply(f)
 
-    def decode(self, encoding, errors='strict'):
-        '''
+    def decode(self, encoding, errors="strict"):
+        """
         Decode character string in the array using indicated encoding.
 
         Parameters
@@ -928,7 +935,7 @@ class StringAccessor:
         Returns
         -------
         decoded : same type as values
-        '''
+        """
         if encoding in _cpython_optimized_decoders:
             f = lambda x: x.decode(encoding, errors)
         else:
@@ -936,8 +943,8 @@ class StringAccessor:
             f = lambda x: decoder(x, errors)[0]
         return self._apply(f, dtype=np.str_)
 
-    def encode(self, encoding, errors='strict'):
-        '''
+    def encode(self, encoding, errors="strict"):
+        """
         Encode character string in the array using indicated encoding.
 
         Parameters
@@ -948,7 +955,7 @@ class StringAccessor:
         Returns
         -------
         encoded : same type as values
-        '''
+        """
         if encoding in _cpython_optimized_encoders:
             f = lambda x: x.encode(encoding, errors)
         else:

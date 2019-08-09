@@ -1,7 +1,7 @@
 import xarray as xr
 
 
-@xr.register_dataset_accessor('geo')
+@xr.register_dataset_accessor("geo")
 class GeoAccessor:
     def __init__(self, xarray_obj):
         self._obj = xarray_obj
@@ -20,4 +20,4 @@ class GeoAccessor:
 
     def plot(self):
         """Plot data on a map."""
-        return 'plotting!'
+        return "plotting!"

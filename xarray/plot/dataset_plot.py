@@ -6,8 +6,12 @@ import pandas as pd
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _is_numeric, _process_cmap_cbar_kwargs, get_axis,
-    label_from_attrs)
+    _add_colorbar,
+    _is_numeric,
+    _process_cmap_cbar_kwargs,
+    get_axis,
+    label_from_attrs,
+)
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
@@ -15,43 +19,44 @@ _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
     dvars = set(ds.variables.keys())
-    error_msg = (' must be one of ({0:s})'
-                 .format(', '.join(dvars)))
+    error_msg = " must be one of ({0:s})".format(", ".join(dvars))
 
     if x not in dvars:
-        raise ValueError('x' + error_msg)
+        raise ValueError("x" + error_msg)
 
     if y not in dvars:
-        raise ValueError('y' + error_msg)
+        raise ValueError("y" + error_msg)
 
     if hue is not None and hue not in dvars:
-        raise ValueError('hue' + error_msg)
+        raise ValueError("hue" + error_msg)
 
     if hue:
         hue_is_numeric = _is_numeric(ds[hue].values)
 
         if hue_style is None:
-            hue_style = 'continuous' if hue_is_numeric else 'discrete'
+            hue_style = "continuous" if hue_is_numeric else "discrete"
 
-        if not hue_is_numeric and (hue_style == 'continuous'):
-            raise ValueError('Cannot create a colorbar for a non numeric'
-                             ' coordinate: ' + hue)
+        if not hue_is_numeric and (hue_style == "continuous"):
+            raise ValueError(
+                "Cannot create a colorbar for a non numeric" " coordinate: " + hue
+            )
 
         if add_guide is None or add_guide is True:
-            add_colorbar = True if hue_style == 'continuous' else False
-            add_legend = True if hue_style == 'discrete' else False
+            add_colorbar = True if hue_style == "continuous" else False
+            add_legend = True if hue_style == "discrete" else False
         else:
             add_colorbar = False
             add_legend = False
     else:
         if add_guide is True:
-            raise ValueError('Cannot set add_guide when hue is None.')
+            raise ValueError("Cannot set add_guide when hue is None.")
         add_legend = False
         add_colorbar = False
 
-    if hue_style is not None and hue_style not in ['discrete', 'continuous']:
-        raise ValueError("hue_style must be either None, 'discrete' "
-                         "or 'continuous'.")
+    if hue_style is not None and hue_style not in ["discrete", "continuous"]:
+        raise ValueError(
+            "hue_style must be either None, 'discrete' " "or 'continuous'."
+        )
 
     if hue:
         hue_label = label_from_attrs(ds[hue])
@@ -60,46 +65,44 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
         hue_label = None
         hue = None
 
-    return {'add_colorbar': add_colorbar,
-            'add_legend': add_legend,
-            'hue_label': hue_label,
-            'hue_style': hue_style,
-            'xlabel': label_from_attrs(ds[x]),
-            'ylabel': label_from_attrs(ds[y]),
-            'hue': hue}
+    return {
+        "add_colorbar": add_colorbar,
+        "add_legend": add_legend,
+        "hue_label": hue_label,
+        "hue_style": hue_style,
+        "xlabel": label_from_attrs(ds[x]),
+        "ylabel": label_from_attrs(ds[y]),
+        "hue": hue,
+    }
 
 
-def _infer_scatter_data(ds, x, y, hue, markersize, size_norm,
-                        size_mapping=None):
+def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None):
 
-    broadcast_keys = ['x', 'y']
+    broadcast_keys = ["x", "y"]
     to_broadcast = [ds[x], ds[y]]
     if hue:
         to_broadcast.append(ds[hue])
-        broadcast_keys.append('hue')
+        broadcast_keys.append("hue")
     if markersize:
         to_broadcast.append(ds[markersize])
-        broadcast_keys.append('size')
+        broadcast_keys.append("size")
 
     broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
 
-    data = {'x': broadcasted['x'],
-            'y': broadcasted['y'],
-            'hue': None,
-            'sizes': None}
+    data = {"x": broadcasted["x"], "y": broadcasted["y"], "hue": None, "sizes": None}
 
     if hue:
-        data['hue'] = broadcasted['hue']
+        data["hue"] = broadcasted["hue"]
 
     if markersize:
-        size = broadcasted['size']
+        size = broadcasted["size"]
 
         if size_mapping is None:
             size_mapping = _parse_size(size, size_norm)
 
-        data['sizes'] = size.copy(
-            data=np.reshape(size_mapping.loc[size.values.ravel()].values,
-                            size.shape))
+        data["sizes"] = size.copy(
+            data=np.reshape(size_mapping.loc[size.values.ravel()].values, size.shape)
+        )
 
     return data
 
@@ -128,8 +131,7 @@ def _parse_size(data, norm):
     elif isinstance(norm, tuple):
         norm = mpl.colors.Normalize(*norm)
     elif not isinstance(norm, mpl.colors.Normalize):
-        err = ("``size_norm`` must be None, tuple, "
-               "or Normalize object.")
+        err = "``size_norm`` must be None, tuple, " "or Normalize object."
         raise ValueError(err)
 
     norm.clip = True
@@ -156,8 +158,10 @@ class _Dataset_PlotMethods(object):
         self._ds = dataset
 
     def __call__(self, *args, **kwargs):
-        raise ValueError('Dataset.plot cannot be called directly. Use '
-                         'an explicit plot method, e.g. ds.plot.scatter(...)')
+        raise ValueError(
+            "Dataset.plot cannot be called directly. Use "
+            "an explicit plot method, e.g. ds.plot.scatter(...)"
+        )
 
 
 def _dsplot(plotfunc):
@@ -239,89 +243,145 @@ def _dsplot(plotfunc):
     """
 
     # Build on the original docstring
-    plotfunc.__doc__ = '%s\n%s' % (plotfunc.__doc__, commondoc)
+    plotfunc.__doc__ = "%s\n%s" % (plotfunc.__doc__, commondoc)
 
     @functools.wraps(plotfunc)
-    def newplotfunc(ds, x=None, y=None, hue=None, hue_style=None,
-                    col=None, row=None, ax=None, figsize=None, size=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    subplot_kws=None, add_guide=None, cbar_kwargs=None,
-                    cbar_ax=None, vmin=None, vmax=None,
-                    norm=None, infer_intervals=None, center=None, levels=None,
-                    robust=None, colors=None, extend=None, cmap=None,
-                    **kwargs):
+    def newplotfunc(
+        ds,
+        x=None,
+        y=None,
+        hue=None,
+        hue_style=None,
+        col=None,
+        row=None,
+        ax=None,
+        figsize=None,
+        size=None,
+        col_wrap=None,
+        sharex=True,
+        sharey=True,
+        aspect=None,
+        subplot_kws=None,
+        add_guide=None,
+        cbar_kwargs=None,
+        cbar_ax=None,
+        vmin=None,
+        vmax=None,
+        norm=None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust=None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs
+    ):
 
-        _is_facetgrid = kwargs.pop('_is_facetgrid', False)
+        _is_facetgrid = kwargs.pop("_is_facetgrid", False)
         if _is_facetgrid:  # facetgrid call
-            meta_data = kwargs.pop('meta_data')
+            meta_data = kwargs.pop("meta_data")
         else:
             meta_data = _infer_meta_data(ds, x, y, hue, hue_style, add_guide)
 
-        hue_style = meta_data['hue_style']
+        hue_style = meta_data["hue_style"]
 
         # handle facetgrids first
         if col or row:
             allargs = locals().copy()
-            allargs['plotfunc'] = globals()[plotfunc.__name__]
-            allargs['data'] = ds
+            allargs["plotfunc"] = globals()[plotfunc.__name__]
+            allargs["data"] = ds
             # TODO dcherian: why do I need to remove kwargs?
-            for arg in ['meta_data', 'kwargs', 'ds']:
+            for arg in ["meta_data", "kwargs", "ds"]:
                 del allargs[arg]
 
-            return _easy_facetgrid(kind='dataset', **allargs, **kwargs)
+            return _easy_facetgrid(kind="dataset", **allargs, **kwargs)
 
-        figsize = kwargs.pop('figsize', None)
+        figsize = kwargs.pop("figsize", None)
         ax = get_axis(figsize, size, aspect, ax)
 
-        if hue_style == 'continuous' and hue is not None:
+        if hue_style == "continuous" and hue is not None:
             if _is_facetgrid:
-                cbar_kwargs = meta_data['cbar_kwargs']
-                cmap_params = meta_data['cmap_params']
+                cbar_kwargs = meta_data["cbar_kwargs"]
+                cmap_params = meta_data["cmap_params"]
             else:
                 cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                    plotfunc, ds[hue].values, **locals())
+                    plotfunc, ds[hue].values, **locals()
+                )
 
             # subset that can be passed to scatter, hist2d
             cmap_params_subset = dict(
-                (vv, cmap_params[vv])
-                for vv in ['vmin', 'vmax', 'norm', 'cmap'])
+                (vv, cmap_params[vv]) for vv in ["vmin", "vmax", "norm", "cmap"]
+            )
 
         else:
             cmap_params_subset = {}
 
-        primitive = plotfunc(ds=ds, x=x, y=y, hue=hue, hue_style=hue_style,
-                             ax=ax, cmap_params=cmap_params_subset, **kwargs)
+        primitive = plotfunc(
+            ds=ds,
+            x=x,
+            y=y,
+            hue=hue,
+            hue_style=hue_style,
+            ax=ax,
+            cmap_params=cmap_params_subset,
+            **kwargs
+        )
 
         if _is_facetgrid:  # if this was called from Facetgrid.map_dataset,
-            return primitive        # finish here. Else, make labels
+            return primitive  # finish here. Else, make labels
 
-        if meta_data.get('xlabel', None):
-            ax.set_xlabel(meta_data.get('xlabel'))
-        if meta_data.get('ylabel', None):
-            ax.set_ylabel(meta_data.get('ylabel'))
+        if meta_data.get("xlabel", None):
+            ax.set_xlabel(meta_data.get("xlabel"))
+        if meta_data.get("ylabel", None):
+            ax.set_ylabel(meta_data.get("ylabel"))
 
-        if meta_data['add_legend']:
-            ax.legend(handles=primitive,
-                      labels=list(meta_data['hue'].values),
-                      title=meta_data.get('hue_label', None))
-        if meta_data['add_colorbar']:
+        if meta_data["add_legend"]:
+            ax.legend(
+                handles=primitive,
+                labels=list(meta_data["hue"].values),
+                title=meta_data.get("hue_label", None),
+            )
+        if meta_data["add_colorbar"]:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
-            if 'label' not in cbar_kwargs:
-                cbar_kwargs['label'] = meta_data.get('hue_label', None)
+            if "label" not in cbar_kwargs:
+                cbar_kwargs["label"] = meta_data.get("hue_label", None)
             _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
 
         return primitive
 
     @functools.wraps(newplotfunc)
-    def plotmethod(_PlotMethods_obj, x=None, y=None, hue=None,
-                   hue_style=None, col=None, row=None, ax=None,
-                   figsize=None,
-                   col_wrap=None, sharex=True, sharey=True, aspect=None,
-                   size=None, subplot_kws=None, add_guide=None,
-                   cbar_kwargs=None, cbar_ax=None, vmin=None, vmax=None,
-                   norm=None, infer_intervals=None, center=None, levels=None,
-                   robust=None, colors=None, extend=None, cmap=None,
-                   **kwargs):
+    def plotmethod(
+        _PlotMethods_obj,
+        x=None,
+        y=None,
+        hue=None,
+        hue_style=None,
+        col=None,
+        row=None,
+        ax=None,
+        figsize=None,
+        col_wrap=None,
+        sharex=True,
+        sharey=True,
+        aspect=None,
+        size=None,
+        subplot_kws=None,
+        add_guide=None,
+        cbar_kwargs=None,
+        cbar_ax=None,
+        vmin=None,
+        vmax=None,
+        norm=None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust=None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs
+    ):
         """
         The method should have the same signature as the function.
 
@@ -329,9 +389,9 @@ def _dsplot(plotfunc):
         and passes all the other arguments straight through.
         """
         allargs = locals()
-        allargs['ds'] = _PlotMethods_obj._ds
+        allargs["ds"] = _PlotMethods_obj._ds
         allargs.update(kwargs)
-        for arg in ['_PlotMethods_obj', 'newplotfunc', 'kwargs']:
+        for arg in ["_PlotMethods_obj", "newplotfunc", "kwargs"]:
             del allargs[arg]
         return newplotfunc(**allargs)
 
@@ -347,43 +407,47 @@ def scatter(ds, x, y, ax, **kwargs):
     Scatter Dataset data variables against each other.
     """
 
-    if 'add_colorbar' in kwargs or 'add_legend' in kwargs:
-        raise ValueError("Dataset.plot.scatter does not accept "
-                         "'add_colorbar' or 'add_legend'. "
-                         "Use 'add_guide' instead.")
+    if "add_colorbar" in kwargs or "add_legend" in kwargs:
+        raise ValueError(
+            "Dataset.plot.scatter does not accept "
+            "'add_colorbar' or 'add_legend'. "
+            "Use 'add_guide' instead."
+        )
 
-    cmap_params = kwargs.pop('cmap_params')
-    hue = kwargs.pop('hue')
-    hue_style = kwargs.pop('hue_style')
-    markersize = kwargs.pop('markersize', None)
-    size_norm = kwargs.pop('size_norm', None)
-    size_mapping = kwargs.pop('size_mapping', None)  # set by facetgrid
+    cmap_params = kwargs.pop("cmap_params")
+    hue = kwargs.pop("hue")
+    hue_style = kwargs.pop("hue_style")
+    markersize = kwargs.pop("markersize", None)
+    size_norm = kwargs.pop("size_norm", None)
+    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
 
     # need to infer size_mapping with full dataset
-    data = _infer_scatter_data(ds, x, y, hue,
-                               markersize, size_norm, size_mapping)
+    data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
 
-    if hue_style == 'discrete':
+    if hue_style == "discrete":
         primitive = []
-        for label in np.unique(data['hue'].values):
-            mask = data['hue'] == label
-            if data['sizes'] is not None:
-                kwargs.update(
-                    s=data['sizes'].where(mask, drop=True).values.flatten())
+        for label in np.unique(data["hue"].values):
+            mask = data["hue"] == label
+            if data["sizes"] is not None:
+                kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
 
             primitive.append(
-                ax.scatter(data['x'].where(mask, drop=True).values.flatten(),
-                           data['y'].where(mask, drop=True).values.flatten(),
-                           label=label, **kwargs))
+                ax.scatter(
+                    data["x"].where(mask, drop=True).values.flatten(),
+                    data["y"].where(mask, drop=True).values.flatten(),
+                    label=label,
+                    **kwargs
+                )
+            )
 
-    elif hue is None or hue_style == 'continuous':
-        if data['sizes'] is not None:
-            kwargs.update(s=data['sizes'].values.ravel())
-        if data['hue'] is not None:
-            kwargs.update(c=data['hue'].values.ravel())
+    elif hue is None or hue_style == "continuous":
+        if data["sizes"] is not None:
+            kwargs.update(s=data["sizes"].values.ravel())
+        if data["hue"] is not None:
+            kwargs.update(c=data["hue"].values.ravel())
 
-        primitive = ax.scatter(data['x'].values.ravel(),
-                               data['y'].values.ravel(),
-                               **cmap_params, **kwargs)
+        primitive = ax.scatter(
+            data["x"].values.ravel(), data["y"].values.ravel(), **cmap_params, **kwargs
+        )
 
     return primitive

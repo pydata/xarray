@@ -5,8 +5,16 @@ from io import BytesIO
 from numbers import Number
 from pathlib import Path
 from textwrap import dedent
-from typing import (Callable, Dict, Hashable, Iterable, Mapping, Tuple, Union,
-                    TYPE_CHECKING)
+from typing import (
+    Callable,
+    Dict,
+    Hashable,
+    Iterable,
+    Mapping,
+    Tuple,
+    Union,
+    TYPE_CHECKING,
+)
 
 import numpy as np
 
@@ -16,7 +24,7 @@ from .. import auto_combine
 from ..core.combine import (
     combine_by_coords,
     _nested_combine,
-    _infer_concat_order_from_positions
+    _infer_concat_order_from_positions,
 )
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter, AbstractDataStore
@@ -29,21 +37,25 @@ if TYPE_CHECKING:
         Delayed = None
 
 
-DATAARRAY_NAME = '__xarray_dataarray_name__'
-DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
+DATAARRAY_NAME = "__xarray_dataarray_name__"
+DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
 
 def _get_default_engine_remote_uri():
     try:
         import netCDF4  # noqa
-        engine = 'netcdf4'
+
+        engine = "netcdf4"
     except ImportError:  # pragma: no cover
         try:
             import pydap  # noqa
-            engine = 'pydap'
+
+            engine = "pydap"
         except ImportError:
-            raise ValueError('netCDF4 or pydap is required for accessing '
-                             'remote datasets via OPeNDAP')
+            raise ValueError(
+                "netCDF4 or pydap is required for accessing "
+                "remote datasets via OPeNDAP"
+            )
     return engine
 
 
@@ -51,41 +63,47 @@ def _get_default_engine_grib():
     msgs = []
     try:
         import Nio  # noqa
+
         msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
     except ImportError:  # pragma: no cover
         pass
     try:
         import cfgrib  # noqa
+
         msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
     except ImportError:  # pragma: no cover
         pass
     if msgs:
-        raise ValueError(' or\n'.join(msgs))
+        raise ValueError(" or\n".join(msgs))
     else:
-        raise ValueError('PyNIO or cfgrib is required for accessing '
-                         'GRIB files')
+        raise ValueError("PyNIO or cfgrib is required for accessing " "GRIB files")
 
 
 def _get_default_engine_gz():
     try:
         import scipy  # noqa
-        engine = 'scipy'
+
+        engine = "scipy"
     except ImportError:  # pragma: no cover
-        raise ValueError('scipy is required for accessing .gz files')
+        raise ValueError("scipy is required for accessing .gz files")
     return engine
 
 
 def _get_default_engine_netcdf():
     try:
         import netCDF4  # noqa
-        engine = 'netcdf4'
+
+        engine = "netcdf4"
     except ImportError:  # pragma: no cover
         try:
             import scipy.io.netcdf  # noqa
-            engine = 'scipy'
+
+            engine = "scipy"
         except ImportError:
-            raise ValueError('cannot read or write netCDF files without '
-                             'netCDF4-python or scipy installed')
+            raise ValueError(
+                "cannot read or write netCDF files without "
+                "netCDF4-python or scipy installed"
+            )
     return engine
 
 
@@ -95,25 +113,30 @@ def _get_engine_from_magic_number(filename_or_obj):
         magic_number = filename_or_obj[:8]
     else:
         if filename_or_obj.tell() != 0:
-            raise ValueError("file-like object read/write pointer not at zero "
-                             "please close and reopen, or use a context "
-                             "manager")
+            raise ValueError(
+                "file-like object read/write pointer not at zero "
+                "please close and reopen, or use a context "
+                "manager"
+            )
         magic_number = filename_or_obj.read(8)
         filename_or_obj.seek(0)
 
-    if magic_number.startswith(b'CDF'):
-        engine = 'scipy'
-    elif magic_number.startswith(b'\211HDF\r\n\032\n'):
-        engine = 'h5netcdf'
+    if magic_number.startswith(b"CDF"):
+        engine = "scipy"
+    elif magic_number.startswith(b"\211HDF\r\n\032\n"):
+        engine = "h5netcdf"
         if isinstance(filename_or_obj, bytes):
-            raise ValueError("can't open netCDF4/HDF5 as bytes "
-                             "try passing a path or file-like object")
+            raise ValueError(
+                "can't open netCDF4/HDF5 as bytes "
+                "try passing a path or file-like object"
+            )
     else:
         if isinstance(filename_or_obj, bytes) and len(filename_or_obj) > 80:
-            filename_or_obj = filename_or_obj[:80] + b'...'
-        raise ValueError('{} is not a valid netCDF file '
-                         'did you mean to pass a string for a path instead?'
-                         .format(filename_or_obj))
+            filename_or_obj = filename_or_obj[:80] + b"..."
+        raise ValueError(
+            "{} is not a valid netCDF file "
+            "did you mean to pass a string for a path instead?".format(filename_or_obj)
+        )
     return engine
 
 
@@ -122,7 +145,7 @@ def _get_default_engine(path, allow_remote=False):
         engine = _get_default_engine_remote_uri()
     elif is_grib_path(path):
         engine = _get_default_engine_grib()
-    elif path.endswith('.gz'):
+    elif path.endswith(".gz"):
         engine = _get_default_engine_gz()
     else:
         engine = _get_default_engine_netcdf()
@@ -138,15 +161,20 @@ def _normalize_path(path):
 
 def _validate_dataset_names(dataset):
     """DataArray.name and Dataset keys must be a string or None"""
+
     def check_name(name):
         if isinstance(name, str):
             if not name:
-                raise ValueError('Invalid name for DataArray or Dataset key: '
-                                 'string must be length 1 or greater for '
-                                 'serialization to netCDF files')
+                raise ValueError(
+                    "Invalid name for DataArray or Dataset key: "
+                    "string must be length 1 or greater for "
+                    "serialization to netCDF files"
+                )
         elif name is not None:
-            raise TypeError('DataArray.name or Dataset key must be either a '
-                            'string or None for serialization to netCDF files')
+            raise TypeError(
+                "DataArray.name or Dataset key must be either a "
+                "string or None for serialization to netCDF files"
+            )
 
     for k in dataset.variables:
         check_name(k)
@@ -156,22 +184,28 @@ def _validate_attrs(dataset):
     """`attrs` must have a string key and a value which is either: a number,
     a string, an ndarray or a list/tuple of numbers/strings.
     """
+
     def check_attr(name, value):
         if isinstance(name, str):
             if not name:
-                raise ValueError('Invalid name for attr: string must be '
-                                 'length 1 or greater for serialization to '
-                                 'netCDF files')
+                raise ValueError(
+                    "Invalid name for attr: string must be "
+                    "length 1 or greater for serialization to "
+                    "netCDF files"
+                )
         else:
-            raise TypeError("Invalid name for attr: {} must be a string for "
-                            "serialization to netCDF files".format(name))
+            raise TypeError(
+                "Invalid name for attr: {} must be a string for "
+                "serialization to netCDF files".format(name)
+            )
 
-        if not isinstance(value, (str, Number, np.ndarray, np.number,
-                                  list, tuple)):
-            raise TypeError('Invalid value for attr: {} must be a number, '
-                            'a string, an ndarray or a list/tuple of '
-                            'numbers/strings for serialization to netCDF '
-                            'files'.format(value))
+        if not isinstance(value, (str, Number, np.ndarray, np.number, list, tuple)):
+            raise TypeError(
+                "Invalid value for attr: {} must be a number, "
+                "a string, an ndarray or a list/tuple of "
+                "numbers/strings for serialization to netCDF "
+                "files".format(value)
+            )
 
     # Check attrs on the dataset itself
     for k, v in dataset.attrs.items():
@@ -218,8 +252,8 @@ def load_dataset(filename_or_obj, **kwargs):
     --------
     open_dataset
     """
-    if 'cache' in kwargs:
-        raise TypeError('cache has no effect in this context')
+    if "cache" in kwargs:
+        raise TypeError("cache has no effect in this context")
 
     with open_dataset(filename_or_obj, **kwargs) as ds:
         return ds.load()
@@ -244,18 +278,30 @@ def load_dataarray(filename_or_obj, **kwargs):
     --------
     open_dataarray
     """
-    if 'cache' in kwargs:
-        raise TypeError('cache has no effect in this context')
+    if "cache" in kwargs:
+        raise TypeError("cache has no effect in this context")
 
     with open_dataarray(filename_or_obj, **kwargs) as da:
         return da.load()
 
 
-def open_dataset(filename_or_obj, group=None, decode_cf=True,
-                 mask_and_scale=None, decode_times=True, autoclose=None,
-                 concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=None, cache=None, drop_variables=None,
-                 backend_kwargs=None, use_cftime=None):
+def open_dataset(
+    filename_or_obj,
+    group=None,
+    decode_cf=True,
+    mask_and_scale=None,
+    decode_times=True,
+    autoclose=None,
+    concat_characters=True,
+    decode_coords=True,
+    engine=None,
+    chunks=None,
+    lock=None,
+    cache=None,
+    drop_variables=None,
+    backend_kwargs=None,
+    use_cftime=None,
+):
     """Open and decode a dataset from a file or file-like object.
 
     Parameters
@@ -352,24 +398,35 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     --------
     open_mfdataset
     """
-    engines = [None, 'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio',
-               'cfgrib', 'pseudonetcdf']
+    engines = [
+        None,
+        "netcdf4",
+        "scipy",
+        "pydap",
+        "h5netcdf",
+        "pynio",
+        "cfgrib",
+        "pseudonetcdf",
+    ]
     if engine not in engines:
-        raise ValueError('unrecognized engine for open_dataset: {}\n'
-                         'must be one of: {}'
-                         .format(engine, engines))
+        raise ValueError(
+            "unrecognized engine for open_dataset: {}\n"
+            "must be one of: {}".format(engine, engines)
+        )
 
     if autoclose is not None:
         warnings.warn(
-            'The autoclose argument is no longer used by '
-            'xarray.open_dataset() and is now ignored; it will be removed in '
-            'a future version of xarray. If necessary, you can control the '
-            'maximum number of simultaneous open files with '
-            'xarray.set_options(file_cache_maxsize=...).',
-            FutureWarning, stacklevel=2)
+            "The autoclose argument is no longer used by "
+            "xarray.open_dataset() and is now ignored; it will be removed in "
+            "a future version of xarray. If necessary, you can control the "
+            "maximum number of simultaneous open files with "
+            "xarray.set_options(file_cache_maxsize=...).",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     if mask_and_scale is None:
-        mask_and_scale = not engine == 'pseudonetcdf'
+        mask_and_scale = not engine == "pseudonetcdf"
 
     if not decode_cf:
         mask_and_scale = False
@@ -385,26 +442,41 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
-            store, mask_and_scale=mask_and_scale, decode_times=decode_times,
-            concat_characters=concat_characters, decode_coords=decode_coords,
-            drop_variables=drop_variables, use_cftime=use_cftime)
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+        )
 
         _protect_dataset_variables_inplace(ds, cache)
 
         if chunks is not None:
             from dask.base import tokenize
+
             # if passed an actual file path, augment the token with
             # the file modification time
-            if (isinstance(filename_or_obj, str) and
-                    not is_remote_uri(filename_or_obj)):
+            if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
                 mtime = os.path.getmtime(filename_or_obj)
             else:
                 mtime = None
-            token = tokenize(filename_or_obj, mtime, group, decode_cf,
-                             mask_and_scale, decode_times, concat_characters,
-                             decode_coords, engine, chunks, drop_variables,
-                             use_cftime)
-            name_prefix = 'open_dataset-%s' % token
+            token = tokenize(
+                filename_or_obj,
+                mtime,
+                group,
+                decode_cf,
+                mask_and_scale,
+                decode_times,
+                concat_characters,
+                decode_coords,
+                engine,
+                chunks,
+                drop_variables,
+                use_cftime,
+            )
+            name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
             ds2._file_obj = ds._file_obj
         else:
@@ -422,56 +494,72 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         filename_or_obj = _normalize_path(filename_or_obj)
 
         if engine is None:
-            engine = _get_default_engine(filename_or_obj,
-                                         allow_remote=True)
-        if engine == 'netcdf4':
+            engine = _get_default_engine(filename_or_obj, allow_remote=True)
+        if engine == "netcdf4":
             store = backends.NetCDF4DataStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs)
-        elif engine == 'scipy':
+                filename_or_obj, group=group, lock=lock, **backend_kwargs
+            )
+        elif engine == "scipy":
             store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == 'pydap':
-            store = backends.PydapDataStore.open(
-                filename_or_obj, **backend_kwargs)
-        elif engine == 'h5netcdf':
+        elif engine == "pydap":
+            store = backends.PydapDataStore.open(filename_or_obj, **backend_kwargs)
+        elif engine == "h5netcdf":
             store = backends.H5NetCDFStore(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs)
-        elif engine == 'pynio':
-            store = backends.NioDataStore(
-                filename_or_obj, lock=lock, **backend_kwargs)
-        elif engine == 'pseudonetcdf':
+                filename_or_obj, group=group, lock=lock, **backend_kwargs
+            )
+        elif engine == "pynio":
+            store = backends.NioDataStore(filename_or_obj, lock=lock, **backend_kwargs)
+        elif engine == "pseudonetcdf":
             store = backends.PseudoNetCDFDataStore.open(
-                filename_or_obj, lock=lock, **backend_kwargs)
-        elif engine == 'cfgrib':
+                filename_or_obj, lock=lock, **backend_kwargs
+            )
+        elif engine == "cfgrib":
             store = backends.CfGribDataStore(
-                filename_or_obj, lock=lock, **backend_kwargs)
+                filename_or_obj, lock=lock, **backend_kwargs
+            )
 
     else:
-        if engine not in [None, 'scipy', 'h5netcdf']:
-            raise ValueError("can only read bytes or file-like objects "
-                             "with engine='scipy' or 'h5netcdf'")
+        if engine not in [None, "scipy", "h5netcdf"]:
+            raise ValueError(
+                "can only read bytes or file-like objects "
+                "with engine='scipy' or 'h5netcdf'"
+            )
         engine = _get_engine_from_magic_number(filename_or_obj)
-        if engine == 'scipy':
+        if engine == "scipy":
             store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == 'h5netcdf':
-            store = backends.H5NetCDFStore(filename_or_obj, group=group,
-                                           lock=lock, **backend_kwargs)
+        elif engine == "h5netcdf":
+            store = backends.H5NetCDFStore(
+                filename_or_obj, group=group, lock=lock, **backend_kwargs
+            )
 
     with close_on_error(store):
         ds = maybe_decode_store(store)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
-    if 'source' not in ds.encoding:
+    if "source" not in ds.encoding:
         if isinstance(filename_or_obj, str):
-            ds.encoding['source'] = filename_or_obj
+            ds.encoding["source"] = filename_or_obj
 
     return ds
 
 
-def open_dataarray(filename_or_obj, group=None, decode_cf=True,
-                   mask_and_scale=None, decode_times=True, autoclose=None,
-                   concat_characters=True, decode_coords=True, engine=None,
-                   chunks=None, lock=None, cache=None, drop_variables=None,
-                   backend_kwargs=None, use_cftime=None):
+def open_dataarray(
+    filename_or_obj,
+    group=None,
+    decode_cf=True,
+    mask_and_scale=None,
+    decode_times=True,
+    autoclose=None,
+    concat_characters=True,
+    decode_coords=True,
+    engine=None,
+    chunks=None,
+    lock=None,
+    cache=None,
+    drop_variables=None,
+    backend_kwargs=None,
+    use_cftime=None,
+):
     """Open an DataArray from a file or file-like object containing a single
     data variable.
 
@@ -565,20 +653,30 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     open_dataset
     """
 
-    dataset = open_dataset(filename_or_obj, group=group, decode_cf=decode_cf,
-                           mask_and_scale=mask_and_scale,
-                           decode_times=decode_times, autoclose=autoclose,
-                           concat_characters=concat_characters,
-                           decode_coords=decode_coords, engine=engine,
-                           chunks=chunks, lock=lock, cache=cache,
-                           drop_variables=drop_variables,
-                           backend_kwargs=backend_kwargs,
-                           use_cftime=use_cftime)
+    dataset = open_dataset(
+        filename_or_obj,
+        group=group,
+        decode_cf=decode_cf,
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        autoclose=autoclose,
+        concat_characters=concat_characters,
+        decode_coords=decode_coords,
+        engine=engine,
+        chunks=chunks,
+        lock=lock,
+        cache=cache,
+        drop_variables=drop_variables,
+        backend_kwargs=backend_kwargs,
+        use_cftime=use_cftime,
+    )
 
     if len(dataset.data_vars) != 1:
-        raise ValueError('Given file dataset contains more than one data '
-                         'variable. Please read with xarray.open_dataset and '
-                         'then select the variable you want.')
+        raise ValueError(
+            "Given file dataset contains more than one data "
+            "variable. Please read with xarray.open_dataset and "
+            "then select the variable you want."
+        )
     else:
         data_array, = dataset.data_vars.values()
 
@@ -605,11 +703,22 @@ class _MultiFileCloser:
             f.close()
 
 
-def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
-                   compat='no_conflicts', preprocess=None, engine=None,
-                   lock=None, data_vars='all', coords='different',
-                   combine='_old_auto', autoclose=None, parallel=False,
-                   join='outer', **kwargs):
+def open_mfdataset(
+    paths,
+    chunks=None,
+    concat_dim="_not_supplied",
+    compat="no_conflicts",
+    preprocess=None,
+    engine=None,
+    lock=None,
+    data_vars="all",
+    coords="different",
+    combine="_old_auto",
+    autoclose=None,
+    parallel=False,
+    join="outer",
+    **kwargs
+):
     """Open multiple files as a single dataset.
 
     If combine='by_coords' then the function ``combine_by_coords`` is used to 
@@ -744,35 +853,37 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
     if isinstance(paths, str):
         if is_remote_uri(paths):
             raise ValueError(
-                'cannot do wild-card matching for paths that are remote URLs: '
-                '{!r}. Instead, supply paths as an explicit list of strings.'
-                .format(paths))
+                "cannot do wild-card matching for paths that are remote URLs: "
+                "{!r}. Instead, supply paths as an explicit list of strings.".format(
+                    paths
+                )
+            )
         paths = sorted(glob(paths))
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
     if not paths:
-        raise OSError('no files to open')
+        raise OSError("no files to open")
 
     # If combine='by_coords' then this is unnecessary, but quick.
     # If combine='nested' then this creates a flat list which is easier to
     # iterate over, while saving the originally-supplied structure as "ids"
-    if combine == 'nested':
-        if str(concat_dim) == '_not_supplied':
-            raise ValueError("Must supply concat_dim when using "
-                             "combine='nested'")
+    if combine == "nested":
+        if str(concat_dim) == "_not_supplied":
+            raise ValueError("Must supply concat_dim when using " "combine='nested'")
         else:
             if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
                 concat_dim = [concat_dim]
     combined_ids_paths = _infer_concat_order_from_positions(paths)
-    ids, paths = (
-        list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
+    ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
-    open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
-                       autoclose=autoclose, **kwargs)
+    open_kwargs = dict(
+        engine=engine, chunks=chunks or {}, lock=lock, autoclose=autoclose, **kwargs
+    )
 
     if parallel:
         import dask
+
         # wrap the open_dataset, getattr, and preprocess with delayed
         open_ = dask.delayed(open_dataset)
         getattr_ = dask.delayed(getattr)
@@ -783,7 +894,7 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
         getattr_ = getattr
 
     datasets = [open_(p, **open_kwargs) for p in paths]
-    file_objs = [getattr_(ds, '_file_obj') for ds in datasets]
+    file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
@@ -794,37 +905,52 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
 
     # Combine all datasets, closing them in case of a ValueError
     try:
-        if combine == '_old_auto':
+        if combine == "_old_auto":
             # Use the old auto_combine for now
             # Remove this after deprecation cycle from #2616 is complete
-            basic_msg = dedent("""\
+            basic_msg = dedent(
+                """\
             In xarray version 0.13 the default behaviour of `open_mfdataset`
             will change. To retain the existing behavior, pass
             combine='nested'. To use future default behavior, pass
             combine='by_coords'. See
             http://xarray.pydata.org/en/stable/combining.html#combining-multi
-            """)
+            """
+            )
             warnings.warn(basic_msg, FutureWarning, stacklevel=2)
 
-            combined = auto_combine(datasets, concat_dim=concat_dim,
-                                    compat=compat, data_vars=data_vars,
-                                    coords=coords, join=join,
-                                    from_openmfds=True)
-        elif combine == 'nested':
+            combined = auto_combine(
+                datasets,
+                concat_dim=concat_dim,
+                compat=compat,
+                data_vars=data_vars,
+                coords=coords,
+                join=join,
+                from_openmfds=True,
+            )
+        elif combine == "nested":
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
-            combined = _nested_combine(datasets, concat_dims=concat_dim,
-                                       compat=compat, data_vars=data_vars,
-                                       coords=coords, ids=ids, join=join)
-        elif combine == 'by_coords':
+            combined = _nested_combine(
+                datasets,
+                concat_dims=concat_dim,
+                compat=compat,
+                data_vars=data_vars,
+                coords=coords,
+                ids=ids,
+                join=join,
+            )
+        elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered
             # previously
-            combined = combine_by_coords(datasets, compat=compat,
-                                         data_vars=data_vars, coords=coords,
-                                         join=join)
+            combined = combine_by_coords(
+                datasets, compat=compat, data_vars=data_vars, coords=coords, join=join
+            )
         else:
-            raise ValueError("{} is an invalid option for the keyword argument"
-                             " ``combine``".format(combine))
+            raise ValueError(
+                "{} is an invalid option for the keyword argument"
+                " ``combine``".format(combine)
+            )
     except ValueError:
         for ds in datasets:
             ds.close()
@@ -836,24 +962,24 @@ def open_mfdataset(paths, chunks=None, concat_dim='_not_supplied',
 
 
 WRITEABLE_STORES = {
-    'netcdf4': backends.NetCDF4DataStore.open,
-    'scipy': backends.ScipyDataStore,
-    'h5netcdf': backends.H5NetCDFStore
+    "netcdf4": backends.NetCDF4DataStore.open,
+    "scipy": backends.ScipyDataStore,
+    "h5netcdf": backends.H5NetCDFStore,
 }  # type: Dict[str, Callable]
 
 
 def to_netcdf(
     dataset: Dataset,
     path_or_file=None,
-    mode: str = 'w',
+    mode: str = "w",
     format: str = None,
     group: str = None,
     engine: str = None,
     encoding: Mapping = None,
     unlimited_dims: Iterable[Hashable] = None,
     compute: bool = True,
-    multifile: bool = False
-) -> Union[Tuple[ArrayWriter, AbstractDataStore], bytes, 'Delayed', None]:
+    multifile: bool = False,
+) -> Union[Tuple[ArrayWriter, AbstractDataStore], bytes, "Delayed", None]:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -869,21 +995,24 @@ def to_netcdf(
 
     if path_or_file is None:
         if engine is None:
-            engine = 'scipy'
-        elif engine != 'scipy':
-            raise ValueError('invalid engine for creating bytes with '
-                             'to_netcdf: %r. Only the default engine '
-                             "or engine='scipy' is supported" % engine)
+            engine = "scipy"
+        elif engine != "scipy":
+            raise ValueError(
+                "invalid engine for creating bytes with "
+                "to_netcdf: %r. Only the default engine "
+                "or engine='scipy' is supported" % engine
+            )
         if not compute:
             raise NotImplementedError(
-                'to_netcdf() with compute=False is not yet implemented when '
-                'returning bytes')
+                "to_netcdf() with compute=False is not yet implemented when "
+                "returning bytes"
+            )
     elif isinstance(path_or_file, str):
         if engine is None:
             engine = _get_default_engine(path_or_file)
         path_or_file = _normalize_path(path_or_file)
     else:  # file-like object
-        engine = 'scipy'
+        engine = "scipy"
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -892,7 +1021,7 @@ def to_netcdf(
     try:
         store_open = WRITEABLE_STORES[engine]
     except KeyError:
-        raise ValueError('unrecognized engine for to_netcdf: %r' % engine)
+        raise ValueError("unrecognized engine for to_netcdf: %r" % engine)
 
     if format is not None:
         format = format.upper()
@@ -901,21 +1030,22 @@ def to_netcdf(
     scheduler = _get_scheduler()
     have_chunks = any(v.chunks for v in dataset.variables.values())
 
-    autoclose = have_chunks and scheduler in ['distributed', 'multiprocessing']
-    if autoclose and engine == 'scipy':
-        raise NotImplementedError("Writing netCDF files with the %s backend "
-                                  "is not currently supported with dask's %s "
-                                  "scheduler" % (engine, scheduler))
+    autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
+    if autoclose and engine == "scipy":
+        raise NotImplementedError(
+            "Writing netCDF files with the %s backend "
+            "is not currently supported with dask's %s "
+            "scheduler" % (engine, scheduler)
+        )
 
     target = path_or_file if path_or_file is not None else BytesIO()
     kwargs = dict(autoclose=True) if autoclose else {}
     store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
-        unlimited_dims = dataset.encoding.get('unlimited_dims', None)
+        unlimited_dims = dataset.encoding.get("unlimited_dims", None)
     if unlimited_dims is not None:
-        if (isinstance(unlimited_dims, str)
-                or not isinstance(unlimited_dims, Iterable)):
+        if isinstance(unlimited_dims, str) or not isinstance(unlimited_dims, Iterable):
             unlimited_dims = [unlimited_dims]
         else:
             unlimited_dims = list(unlimited_dims)
@@ -927,8 +1057,9 @@ def to_netcdf(
     try:
         # TODO: allow this work (setting up the file for writing array data)
         # to be parallelized with dask
-        dump_to_store(dataset, store, writer, encoding=encoding,
-                      unlimited_dims=unlimited_dims)
+        dump_to_store(
+            dataset, store, writer, encoding=encoding, unlimited_dims=unlimited_dims
+        )
         if autoclose:
             store.close()
 
@@ -946,12 +1077,14 @@ def to_netcdf(
 
     if not compute:
         import dask
+
         return dask.delayed(_finalize_store)(writes, store)
     return None
 
 
-def dump_to_store(dataset, store, writer=None, encoder=None,
-                  encoding=None, unlimited_dims=None):
+def dump_to_store(
+    dataset, store, writer=None, encoder=None, encoding=None, unlimited_dims=None
+):
     """Store dataset contents to a backends.*DataStore object."""
     if writer is None:
         writer = ArrayWriter()
@@ -971,12 +1104,12 @@ def dump_to_store(dataset, store, writer=None, encoder=None,
     if encoder:
         variables, attrs = encoder(variables, attrs)
 
-    store.store(variables, attrs, check_encoding, writer,
-                unlimited_dims=unlimited_dims)
+    store.store(variables, attrs, check_encoding, writer, unlimited_dims=unlimited_dims)
 
 
-def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
-                   engine=None, compute=True):
+def save_mfdataset(
+    datasets, paths, mode="w", format=None, groups=None, engine=None, compute=True
+):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
     This function is intended for use with datasets consisting of dask.array
@@ -1039,27 +1172,36 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     >>> paths = ['%s.nc' % y for y in years]
     >>> xr.save_mfdataset(datasets, paths)
     """
-    if mode == 'w' and len(set(paths)) < len(paths):
-        raise ValueError("cannot use mode='w' when writing multiple "
-                         'datasets to the same path')
+    if mode == "w" and len(set(paths)) < len(paths):
+        raise ValueError(
+            "cannot use mode='w' when writing multiple " "datasets to the same path"
+        )
 
     for obj in datasets:
         if not isinstance(obj, Dataset):
-            raise TypeError('save_mfdataset only supports writing Dataset '
-                            'objects, received type %s' % type(obj))
+            raise TypeError(
+                "save_mfdataset only supports writing Dataset "
+                "objects, received type %s" % type(obj)
+            )
 
     if groups is None:
         groups = [None] * len(datasets)
 
     if len({len(datasets), len(paths), len(groups)}) > 1:
-        raise ValueError('must supply lists of the same length for the '
-                         'datasets, paths and groups arguments to '
-                         'save_mfdataset')
+        raise ValueError(
+            "must supply lists of the same length for the "
+            "datasets, paths and groups arguments to "
+            "save_mfdataset"
+        )
 
-    writers, stores = zip(*[
-        to_netcdf(ds, path, mode, format, group, engine, compute=compute,
-                  multifile=True)
-        for ds, path, group in zip(datasets, paths, groups)])
+    writers, stores = zip(
+        *[
+            to_netcdf(
+                ds, path, mode, format, group, engine, compute=compute, multifile=True
+            )
+            for ds, path, group in zip(datasets, paths, groups)
+        ]
+    )
 
     try:
         writes = [w.sync(compute=compute) for w in writers]
@@ -1070,27 +1212,36 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
     if not compute:
         import dask
-        return dask.delayed([dask.delayed(_finalize_store)(w, s)
-                             for w, s in zip(writes, stores)])
+
+        return dask.delayed(
+            [dask.delayed(_finalize_store)(w, s) for w, s in zip(writes, stores)]
+        )
 
 
 def _validate_datatypes_for_zarr_append(dataset):
     """DataArray.name and Dataset keys must be a string or None"""
+
     def check_dtype(var):
-        if (not np.issubdtype(var.dtype, np.number)
-                and not coding.strings.is_unicode_dtype(var.dtype)
-                and not var.dtype == object):
+        if (
+            not np.issubdtype(var.dtype, np.number)
+            and not coding.strings.is_unicode_dtype(var.dtype)
+            and not var.dtype == object
+        ):
             # and not re.match('^bytes[1-9]+$', var.dtype.name)):
-            raise ValueError('Invalid dtype for data variable: {} '
-                             'dtype must be a subtype of number, '
-                             'a fixed sized string, a fixed size '
-                             'unicode string or an object'.format(var))
+            raise ValueError(
+                "Invalid dtype for data variable: {} "
+                "dtype must be a subtype of number, "
+                "a fixed sized string, a fixed size "
+                "unicode string or an object".format(var)
+            )
+
     for k in dataset.data_vars.values():
         check_dtype(k)
 
 
-def _validate_append_dim_and_encoding(ds_to_append, store, append_dim,
-                                      encoding, **open_kwargs):
+def _validate_append_dim_and_encoding(
+    ds_to_append, store, append_dim, encoding, **open_kwargs
+):
     try:
         ds = backends.zarr.open_zarr(store, **open_kwargs)
     except ValueError:  # store empty
@@ -1114,8 +1265,17 @@ def _validate_append_dim_and_encoding(ds_to_append, store, append_dim,
                 )
 
 
-def to_zarr(dataset, store=None, mode=None, synchronizer=None, group=None,
-            encoding=None, compute=True, consolidated=False, append_dim=None):
+def to_zarr(
+    dataset,
+    store=None,
+    mode=None,
+    synchronizer=None,
+    group=None,
+    encoding=None,
+    compute=True,
+    consolidated=False,
+    append_dim=None,
+):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -1130,17 +1290,24 @@ def to_zarr(dataset, store=None, mode=None, synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    if mode == 'a':
+    if mode == "a":
         _validate_datatypes_for_zarr_append(dataset)
-        _validate_append_dim_and_encoding(dataset, store, append_dim,
-                                          group=group,
-                                          consolidated=consolidated,
-                                          encoding=encoding)
+        _validate_append_dim_and_encoding(
+            dataset,
+            store,
+            append_dim,
+            group=group,
+            consolidated=consolidated,
+            encoding=encoding,
+        )
 
-    zstore = backends.ZarrStore.open_group(store=store, mode=mode,
-                                           synchronizer=synchronizer,
-                                           group=group,
-                                           consolidate_on_close=consolidated)
+    zstore = backends.ZarrStore.open_group(
+        store=store,
+        mode=mode,
+        synchronizer=synchronizer,
+        group=group,
+        consolidate_on_close=consolidated,
+    )
     zstore.append_dim = append_dim
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
@@ -1151,6 +1318,7 @@ def to_zarr(dataset, store=None, mode=None, synchronizer=None, group=None,
         _finalize_store(writes, zstore)
     else:
         import dask
+
         return dask.delayed(_finalize_store)(writes, zstore)
 
     return zstore
