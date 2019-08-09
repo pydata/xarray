@@ -190,6 +190,10 @@ class TestConcatDataset:
             {"a": (("x", "y"), np.array([np.nan, 0], ndmin=2).T)},
             coords={"x": [0, 1], "y": [0.0001]},
         )
+        expected["override"] = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2).T)},
+            coords={"x": [0, 1], "y": [0]},
+        )
 
         with raises_regex(ValueError, "indexes along dimension 'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
@@ -398,6 +402,10 @@ class TestConcatDataArray:
         expected["right"] = Dataset(
             {"a": (("x", "y"), np.array([np.nan, 0], ndmin=2).T)},
             coords={"x": [0, 1], "y": [0.0001]},
+        )
+        expected["override"] = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2).T)},
+            coords={"x": [0, 1], "y": [0]},
         )
 
         with raises_regex(ValueError, "indexes along dimension 'y'"):
