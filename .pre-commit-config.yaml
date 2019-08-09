@@ -10,7 +10,7 @@ repos:
     rev: v2.2.3
     hooks:
       - id: flake8
-  # run occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
+  # run these occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
   # - repo: https://github.com/asottile/pyupgrade
   #   rev: v1.22.1
   #   hooks:
@@ -19,3 +19,7 @@ repos:
   #         - "--py3-only"
   #         # remove on f-strings in Py3.7
   #         - "--keep-percent-format"
+  # - repo: https://github.com/timothycrosley/isort
+  #   rev: 4.3.21-2
+  #   hooks:
+  #     - id: isort
