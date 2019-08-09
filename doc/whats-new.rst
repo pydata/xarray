@@ -30,7 +30,7 @@ New functions/methods
 
 - The xarray package is now discoverably by mypy (although typing hints
   coverage is not complete yet). mypy type checking is now enforced by CI.
-  mypy users can now remove from their setup.cfg the lines::
+  Libraries that depend xarray and use mypy can now remove from their setup.cfg the lines::
 
     [mypy-xarray]
     ignore_missing_imports = True
