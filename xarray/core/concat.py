@@ -63,12 +63,14 @@ def concat(
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
             in addition to the 'minimal' coordinates.
-    compat : {'equals', 'identical'}, optional
+    compat : {'equals', 'identical', 'override'}, optional
         String indicating how to compare non-concatenated variables and
-        dataset global attributes for potential conflicts. 'equals' means
-        that all variable values and dimensions must be the same;
-        'identical' means that variable attributes and global attributes
-        must also be equal.
+        dataset global attributes for potential conflicts.
+          * 'equals' means that all variable values and dimensions must be the same;
+          * 'identical' means that variable attributes and global attributes
+             must also be equal.
+          * 'override' means that checks are skipped and values from the first dataset
+            are used.
     positions : None or list of integer arrays, optional
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
