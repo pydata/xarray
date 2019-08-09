@@ -389,14 +389,14 @@ each time you commit changes. You can skip these checks with
   conflicts. Because they have had limited testing, please reach out to the core devs
   on your pull request if you face any issues, and we'll help with the merge:
 
-  - Merge the commit on master prior to the `black` commit into your branch 
-    `git merge f172c673`. Any conflicts are real conflicts and require resolving
-  - Apply `black .` to your branch and commit
-    # TODO: insert after the black commit is on master
-  - Merge master at the `black` commit, resolving in favor of 'our' changes: 
-    `git merge [master-at-black-commit] -X ours`. You shouldn't have any merge conflicts
-  - Merge current master `git merge master`; any conflicts here are real and 
-    again require resolving
+  - Merge the commit on master prior to the ``black`` commit into your branch
+    ``git merge f172c673``. If you have conflicts here, resolve and commit.
+  - Apply ``black .`` to your branch and commit ``git commit -am "black"``
+  - Apply a patch of other changes we made on that commit: ``curl https://gist.githubusercontent.com/max-sixty/3cceb8472ed4ea806353999ca43aed52/raw/03cbee4e386156bddb61acaa250c0bfc726f596d/xarray%2520black%2520diff | git apply -``
+  - Commit (``git commit -am "black2"``)
+  - Merge master at the ``black`` commit, resolving in favor of 'our' changes:
+    ``git merge d089df38 -X ours``. You shouldn't have any merge conflicts
+  - Merge current master ``git merge master``; resolve and commit any conflicts
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -469,7 +469,7 @@ equivalent. The easiest way to verify that your code is correct is to
 explicitly construct the result you expect, then compare the actual result to
 the expected correct result::
 
-    def test_constructor_from_0d(self):
+    def test_constructor_from_0d():
         expected = Dataset({None: ([], 0)})[None]
         actual = DataArray(0)
         assert_identical(expected, actual)
@@ -508,8 +508,7 @@ features that we like to use.
 - to set a mark on a parameter, ``pytest.param(..., marks=...)`` syntax should be used
 - ``fixture``, code for object construction, on a per-test basis
 - using bare ``assert`` for scalars and truth-testing
-- ``tm.assert_series_equal`` (and its counter part ``tm.assert_frame_equal``), for xarray
-  object comparisons.
+- ``assert_equal`` and ``assert_identical`` from the ``xarray.testing`` module for xarray object comparisons.
 - the typical pattern of constructing an ``expected`` and comparing versus the ``result``
 
 We would name this file ``test_cool_feature.py`` and put in an appropriate place in the
@@ -743,18 +742,6 @@ Doing 'git status' again should give something like::
     #
     #       modified:   /relative/path/to/file-you-added.py
     #
-
-Finally, commit your changes to your local repository with an explanatory message.
-*Xarray* uses a convention for commit message prefixes and layout.  Here are
-some common prefixes along with general guidelines for when to use them:
-
-    * ``ENH``: Enhancement, new functionality
-    * ``BUG``: Bug fix
-    * ``DOC``: Additions/updates to documentation
-    * ``TST``: Additions/updates to tests
-    * ``BLD``: Updates to the build process/scripts
-    * ``PERF``: Performance improvement
-    * ``CLN``: Code cleanup
 
 The following defines how a commit message should be structured:
 
