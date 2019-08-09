@@ -21,8 +21,6 @@ if not IS_NEP18_ACTIVE:
     )
 
 sparse = pytest.importorskip("sparse")
-from sparse import COO, SparseArray  # noqa
-from sparse.utils import assert_eq as assert_sparse_eq  # noqa
 
 
 def make_ndarray(shape):
@@ -228,7 +226,7 @@ def test_variable_method(func, sparse_output):
     ret_d = func(var_d)
 
     if sparse_output:
-        assert isinstance(ret_s.data, SparseArray)
+        assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
     else:
         assert np.allclose(ret_s, ret_d, equal_nan=True)
@@ -254,7 +252,7 @@ def test_1d_variable_method(func, sparse_output):
     ret_d = func(var_d)
 
     if sparse_output:
-        assert isinstance(ret_s.data, SparseArray)
+        assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data)
     else:
         assert np.allclose(ret_s, ret_d)
@@ -267,16 +265,16 @@ class TestSparseVariable:
         self.var = xr.Variable(("x", "y"), self.data)
 
     def test_unary_op(self):
-        assert_sparse_eq(-self.var.data, -self.data)
-        assert_sparse_eq(abs(self.var).data, abs(self.data))
-        assert_sparse_eq(self.var.round().data, self.data.round())
+        sparse.utils.assert_eq(-self.var.data, -self.data)
+        sparse.utils.assert_eq(abs(self.var).data, abs(self.data))
+        sparse.utils.assert_eq(self.var.round().data, self.data.round())
 
     def test_univariate_ufunc(self):
-        assert_sparse_eq(np.sin(self.data), xu.sin(self.var).data)
+        sparse.utils.assert_eq(np.sin(self.data), xu.sin(self.var).data)
 
     def test_bivariate_ufunc(self):
-        assert_sparse_eq(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
-        assert_sparse_eq(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
+        sparse.utils.assert_eq(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
+        sparse.utils.assert_eq(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
 
     def test_repr(self):
         expected = dedent(
@@ -289,12 +287,12 @@ class TestSparseVariable:
     def test_pickle(self):
         v1 = self.var
         v2 = pickle.loads(pickle.dumps(v1))
-        assert_sparse_eq(v1.data, v2.data)
+        sparse.utils.assert_eq(v1.data, v2.data)
 
     @pytest.mark.xfail(reason="Missing implementation for np.result_type")
     def test_missing_values(self):
         a = np.array([0, 1, np.nan, 3])
-        s = COO.from_numpy(a)
+        s = sparse.COO.from_numpy(a)
         var_s = Variable("x", s)
         assert np.all(var_s.fillna(2).data.todense() == np.arange(4))
         assert np.all(var_s.count() == 3)
@@ -544,7 +542,7 @@ def test_dataarray_method(func, sparse_output):
     ret_d = func(arr_d)
 
     if sparse_output:
-        assert isinstance(ret_s.data, SparseArray)
+        assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
     else:
         assert np.allclose(ret_s, ret_d, equal_nan=True)
@@ -568,7 +566,7 @@ def test_datarray_1d_method(func, sparse_output):
     ret_d = func(arr_d)
 
     if sparse_output:
-        assert isinstance(ret_s.data, SparseArray)
+        assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
     else:
         assert np.allclose(ret_s, ret_d, equal_nan=True)
@@ -593,10 +591,14 @@ class TestSparseDataArrayAndDataset:
 
     def test_align(self):
         a1 = xr.DataArray(
-            COO.from_numpy(np.arange(4)), dims=["x"], coords={"x": ["a", "b", "c", "d"]}
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=["x"],
+            coords={"x": ["a", "b", "c", "d"]},
         )
         b1 = xr.DataArray(
-            COO.from_numpy(np.arange(4)), dims=["x"], coords={"x": ["a", "b", "d", "e"]}
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=["x"],
+            coords={"x": ["a", "b", "d", "e"]},
         )
         a2, b2 = xr.align(a1, b1, join="inner")
         assert isinstance(a2.data, sparse.SparseArray)
@@ -636,10 +638,14 @@ class TestSparseDataArrayAndDataset:
     @pytest.mark.xfail(reason="fill value leads to sparse-dense operation")
     def test_align_outer(self):
         a1 = xr.DataArray(
-            COO.from_numpy(np.arange(4)), dims=["x"], coords={"x": ["a", "b", "c", "d"]}
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=["x"],
+            coords={"x": ["a", "b", "c", "d"]},
         )
         b1 = xr.DataArray(
-            COO.from_numpy(np.arange(4)), dims=["x"], coords={"x": ["a", "b", "d", "e"]}
+            sparse.COO.from_numpy(np.arange(4)),
+            dims=["x"],
+            coords={"x": ["a", "b", "d", "e"]},
         )
         a2, b2 = xr.align(a1, b1, join="outer")
         assert isinstance(a2.data, sparse.SparseArray)
@@ -653,13 +659,13 @@ class TestSparseDataArrayAndDataset:
         ds2 = xr.Dataset(data_vars={"d": self.sp_xr})
         ds3 = xr.Dataset(data_vars={"d": self.sp_xr})
         out = xr.concat([ds1, ds2, ds3], dim="x")
-        assert_sparse_eq(
+        sparse.utils.assert_eq(
             out["d"].data,
             sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=0),
         )
 
         out = xr.concat([self.sp_xr, self.sp_xr, self.sp_xr], dim="y")
-        assert_sparse_eq(
+        sparse.utils.assert_eq(
             out.data, sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=1)
         )
 
@@ -684,9 +690,9 @@ class TestSparseDataArrayAndDataset:
 
     def test_dataarray_repr(self):
         a = xr.DataArray(
-            COO.from_numpy(np.ones(4)),
+            sparse.COO.from_numpy(np.ones(4)),
             dims=["x"],
-            coords={"y": ("x", COO.from_numpy(np.arange(4)))},
+            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4)))},
         )
         expected = dedent(
             """\
@@ -700,8 +706,8 @@ class TestSparseDataArrayAndDataset:
 
     def test_dataset_repr(self):
         ds = xr.Dataset(
-            data_vars={"a": ("x", COO.from_numpy(np.ones(4)))},
-            coords={"y": ("x", COO.from_numpy(np.arange(4)))},
+            data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))},
+            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4)))},
         )
         expected = dedent(
             """\
@@ -717,17 +723,17 @@ class TestSparseDataArrayAndDataset:
 
     def test_dataarray_pickle(self):
         a1 = xr.DataArray(
-            COO.from_numpy(np.ones(4)),
+            sparse.COO.from_numpy(np.ones(4)),
             dims=["x"],
-            coords={"y": ("x", COO.from_numpy(np.arange(4)))},
+            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4)))},
         )
         a2 = pickle.loads(pickle.dumps(a1))
         assert_identical(a1, a2)
 
     def test_dataset_pickle(self):
         ds1 = xr.Dataset(
-            data_vars={"a": ("x", COO.from_numpy(np.ones(4)))},
-            coords={"y": ("x", COO.from_numpy(np.arange(4)))},
+            data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))},
+            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4)))},
         )
         ds2 = pickle.loads(pickle.dumps(ds1))
         assert_identical(ds1, ds2)
@@ -802,7 +808,7 @@ class TestSparseDataArrayAndDataset:
             dims="time",
         )
         t2 = t1.copy()
-        t2.data = COO(t2.data)
+        t2.data = sparse.COO(t2.data)
         m1 = t1.resample(time="QS-DEC").mean()
         m2 = t2.resample(time="QS-DEC").mean()
         assert isinstance(m2.data, sparse.SparseArray)
@@ -833,7 +839,7 @@ class TestSparseDataArrayAndDataset:
         cond = a > 3
         xr.DataArray(a).where(cond)
 
-        s = COO.from_numpy(a)
+        s = sparse.COO.from_numpy(a)
         cond = s > 3
         xr.DataArray(s).where(cond)
 
@@ -846,7 +852,7 @@ class TestSparseCoords:
     @pytest.mark.xfail(reason="Coercion of coords to dense")
     def test_sparse_coords(self):
         xr.DataArray(
-            COO.from_numpy(np.arange(4)),
+            sparse.COO.from_numpy(np.arange(4)),
             dims=["x"],
-            coords={"x": COO.from_numpy([1, 2, 3, 4])},
+            coords={"x": sparse.COO.from_numpy([1, 2, 3, 4])},
         )
