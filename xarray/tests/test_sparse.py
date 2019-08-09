@@ -1,27 +1,17 @@
-from collections import OrderedDict
-from contextlib import suppress
-from distutils.version import LooseVersion
-from textwrap import dedent
 import pickle
+from textwrap import dedent
+
 import numpy as np
 import pandas as pd
+import pytest
 
-from xarray import DataArray, Dataset, Variable
-from xarray.tests import mock
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 import xarray as xr
 import xarray.ufuncs as xu
+from xarray import Variable
+from xarray.core.npcompat import IS_NEP18_ACTIVE
 
-from . import (
-    assert_allclose,
-    assert_array_equal,
-    assert_equal,
-    assert_frame_equal,
-    assert_identical,
-    raises_regex,
-)
+from . import assert_equal, assert_identical
 
-import pytest
 
 param = pytest.param
 xfail = pytest.mark.xfail
@@ -32,8 +22,8 @@ if not IS_NEP18_ACTIVE:
     )
 
 sparse = pytest.importorskip("sparse")
-from sparse.utils import assert_eq as assert_sparse_eq  # noqa
 from sparse import COO, SparseArray  # noqa
+from sparse.utils import assert_eq as assert_sparse_eq  # noqa
 
 
 def make_ndarray(shape):

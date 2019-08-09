@@ -1,7 +1,7 @@
 import collections.abc
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Any, Hashable, Mapping, Iterator, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Union
 
 import pandas as pd
 

@@ -3,7 +3,7 @@ import operator
 import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import suppress
-from typing import Any, Dict, Hashable, Mapping, Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Hashable, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd

@@ -7,6 +7,7 @@ import operator
 from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 from typing import (
+    TYPE_CHECKING,
     AbstractSet,
     Any,
     Callable,
@@ -17,7 +18,6 @@ from typing import (
     Sequence,
     Tuple,
     Union,
-    TYPE_CHECKING,
 )
 
 import numpy as np

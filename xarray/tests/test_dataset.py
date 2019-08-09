@@ -30,8 +30,8 @@ from xarray.core.common import duck_array_ops, full_like
 from xarray.core.pycompat import integer_types
 
 from . import (
-    LooseVersion,
     InaccessibleArray,
+    LooseVersion,
     UnexpectedDataAccess,
     assert_allclose,
     assert_array_equal,

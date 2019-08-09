@@ -18,9 +18,9 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
+from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
-from .npcompat import IS_NEP18_ACTIVE
 from .utils import (
     OrderedSet,
     decode_numpy_dict_values,

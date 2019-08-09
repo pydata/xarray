@@ -5,10 +5,10 @@ from textwrap import dedent
 
 import pandas as pd
 
+from . import dtypes
+from .concat import concat
 from .dataarray import DataArray
 from .dataset import Dataset
-from .concat import concat
-from . import dtypes
 from .merge import merge
 
 

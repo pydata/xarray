@@ -4,6 +4,7 @@ import warnings
 from collections import OrderedDict
 from numbers import Number
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -17,7 +18,6 @@ from typing import (
     Union,
     cast,
     overload,
-    TYPE_CHECKING,
 )
 
 import numpy as np
@@ -38,9 +38,9 @@ from . import (
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
-    align,
     _broadcast_helper,
     _get_broadcast_dims_map_common_coords,
+    align,
     reindex_like_indexers,
 )
 from .common import AbstractArray, DataWithCoords
@@ -54,7 +54,7 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .utils import _check_inplace, either_dict_or_kwargs, ReprObject
+from .utils import ReprObject, _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
     Variable,
