@@ -431,6 +431,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - mapping {var name: Variable}
             - mapping {var name: (dimension name, array-like)}
             - mapping {var name: (tuple of dimension names, array-like)}
+            - mapping {dimension name: array-like}
+              (it will be automatically moved to coords, see below)
 
             Each dimension must have the same length in all variables in which
             it appears.
@@ -452,6 +454,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - mapping {coord name: (dimension name, array-like)}
             - mapping {coord name: (tuple of dimension names, array-like)}
             - mapping {dimension name: array-like}
+              (the dimension name is implicitly set to be the same as the coord name)
 
             The last notation implies that the coord name is the same as the
             dimension name.
