@@ -1,18 +1,14 @@
-from __future__ import absolute_import, division, print_function
-
-import traceback
 import warnings
 
 from .dataarray import DataArray
 from .dataset import Dataset
-from .pycompat import PY2
 
 
 class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
 
 
-class _CachedAccessor(object):
+class _CachedAccessor:
     """Custom property-like object (descriptor) for caching accessors."""
 
     def __init__(self, name, accessor):
@@ -29,10 +25,7 @@ class _CachedAccessor(object):
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            msg = 'error initializing %r accessor.' % self._name
-            if PY2:
-                msg += ' Full traceback:\n' + traceback.format_exc()
-            raise RuntimeError(msg)
+            raise RuntimeError("error initializing %r accessor." % self._name)
         # Replace the property with the accessor object. Inspired by:
         # http://www.pydanny.com/cached-property.html
         # We need to use object.__setattr__ because we overwrite __setattr__ on
@@ -45,13 +38,15 @@ def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
             warnings.warn(
-                'registration of accessor %r under name %r for type %r is '
-                'overriding a preexisting attribute with the same name.'
+                "registration of accessor %r under name %r for type %r is "
+                "overriding a preexisting attribute with the same name."
                 % (accessor, name, cls),
                 AccessorRegistrationWarning,
-                stacklevel=2)
+                stacklevel=2,
+            )
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
+
     return decorator
 
 
@@ -88,7 +83,7 @@ def register_dataset_accessor(name):
         import xarray as xr
 
         @xr.register_dataset_accessor('geo')
-        class GeoAccessor(object):
+        class GeoAccessor:
             def __init__(self, xarray_obj):
                 self._obj = xarray_obj
 

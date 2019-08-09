@@ -1,23 +1,29 @@
-from __future__ import absolute_import, division, print_function
-
-from collections import Mapping
+import collections.abc
+from collections import OrderedDict
 from contextlib import contextmanager
+from typing import Any, Hashable, Mapping, Iterator, Union, TYPE_CHECKING
 
 import pandas as pd
 
 from . import formatting, indexing
 from .merge import (
-    expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
-from .pycompat import OrderedDict
+    expand_and_merge_variables,
+    merge_coords,
+    merge_coords_for_inplace_math,
+)
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
 
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
-_THIS_ARRAY = ReprObject('<this-array>')
+_THIS_ARRAY = ReprObject("<this-array>")
 
 
-class AbstractCoordinates(Mapping, formatting.ReprMixin):
+class AbstractCoordinates(collections.abc.Mapping):
     def __getitem__(self, key):
         raise NotImplementedError
 
@@ -47,7 +53,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
     def __contains__(self, key):
         return key in self._names
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.coords_repr(self)
 
     @property
@@ -73,11 +79,13 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
         if ordered_dims is None:
             ordered_dims = self.dims
         elif set(ordered_dims) != set(self.dims):
-            raise ValueError('ordered_dims must match dims, but does not: '
-                             '{} vs {}'.format(ordered_dims, self.dims))
+            raise ValueError(
+                "ordered_dims must match dims, but does not: "
+                "{} vs {}".format(ordered_dims, self.dims)
+            )
 
         if len(ordered_dims) == 0:
-            raise ValueError('no valid index for a 0-dimensional object')
+            raise ValueError("no valid index for a 0-dimensional object")
         elif len(ordered_dims) == 1:
             (dim,) = ordered_dims
             return self._data.get_index(dim)
@@ -87,9 +95,10 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
             return pd.MultiIndex.from_product(indexes, names=names)
 
     def update(self, other):
-        other_vars = getattr(other, 'variables', other)
-        coords = merge_coords([self.variables, other_vars],
-                              priority_arg=1, indexes=self.indexes)
+        other_vars = getattr(other, "variables", other)
+        coords = merge_coords(
+            [self.variables, other_vars], priority_arg=1, indexes=self.indexes
+        )
         self._update_coords(coords)
 
     def _merge_raw(self, other):
@@ -98,8 +107,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
             variables = OrderedDict(self.variables)
         else:
             # don't align because we already called xarray.align
-            variables = expand_and_merge_variables(
-                [self.variables, other.variables])
+            variables = expand_and_merge_variables([self.variables, other.variables])
         return variables
 
     @contextmanager
@@ -111,9 +119,11 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
             # don't include indexes in priority_vars, because we didn't align
             # first
             priority_vars = OrderedDict(
-                kv for kv in self.variables.items() if kv[0] not in self.dims)
+                kv for kv in self.variables.items() if kv[0] not in self.dims
+            )
             variables = merge_coords_for_inplace_math(
-                [self.variables, other.variables], priority_vars=priority_vars)
+                [self.variables, other.variables], priority_vars=priority_vars
+            )
             yield
             self._update_coords(variables)
 
@@ -144,7 +154,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
         if other is None:
             return self.to_dataset()
         else:
-            other_vars = getattr(other, 'variables', other)
+            other_vars = getattr(other, "variables", other)
             coords = expand_and_merge_variables([self.variables, other_vars])
             return Dataset._from_vars_and_coord_names(coords, set(coords))
 
@@ -166,9 +176,11 @@ class DatasetCoordinates(AbstractCoordinates):
 
     @property
     def variables(self):
-        return Frozen(OrderedDict((k, v)
-                                  for k, v in self._data.variables.items()
-                                  if k in self._names))
+        return Frozen(
+            OrderedDict(
+                (k, v) for k, v in self._data.variables.items() if k in self._names
+            )
+        )
 
     def __getitem__(self, key):
         if key in self._data.data_vars:
@@ -195,7 +207,8 @@ class DatasetCoordinates(AbstractCoordinates):
 
         self._data._variables = variables
         self._data._coord_names.update(new_coord_names)
-        self._data._dims = dict(dims)
+        self._data._dims = dims
+        self._data._indexes = None
 
     def __delitem__(self, key):
         if key in self:
@@ -205,8 +218,11 @@ class DatasetCoordinates(AbstractCoordinates):
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython. """
-        return [key for key in self._data._ipython_key_completions_()
-                if key not in self._data.data_vars]
+        return [
+            key
+            for key in self._data._ipython_key_completions_()
+            if key not in self._data.data_vars
+        ]
 
 
 class DataArrayCoordinates(AbstractCoordinates):
@@ -233,9 +249,11 @@ class DataArrayCoordinates(AbstractCoordinates):
         coords_plus_data[_THIS_ARRAY] = self._data.variable
         dims = calculate_dimensions(coords_plus_data)
         if not set(dims) <= set(self.dims):
-            raise ValueError('cannot add coordinates with new dimensions to '
-                             'a DataArray')
+            raise ValueError(
+                "cannot add coordinates with new dimensions to " "a DataArray"
+            )
         self._data._coords = coords
+        self._data._indexes = None
 
     @property
     def variables(self):
@@ -243,8 +261,11 @@ class DataArrayCoordinates(AbstractCoordinates):
 
     def _to_dataset(self, shallow_copy=True):
         from .dataset import Dataset
-        coords = OrderedDict((k, v.copy(deep=False) if shallow_copy else v)
-                             for k, v in self._data._coords.items())
+
+        coords = OrderedDict(
+            (k, v.copy(deep=False) if shallow_copy else v)
+            for k, v in self._data._coords.items()
+        )
         return Dataset._from_vars_and_coord_names(coords, set(coords))
 
     def to_dataset(self):
@@ -258,60 +279,25 @@ class DataArrayCoordinates(AbstractCoordinates):
         return self._data._ipython_key_completions_()
 
 
-class LevelCoordinatesSource(object):
+class LevelCoordinatesSource(Mapping[Hashable, Any]):
     """Iterator for MultiIndex level coordinates.
 
     Used for attribute style lookup with AttrAccessMixin. Not returned directly
     by any public methods.
     """
 
-    def __init__(self, data_object):
+    def __init__(self, data_object: "Union[DataArray, Dataset]"):
         self._data = data_object
 
     def __getitem__(self, key):
         # not necessary -- everything here can already be found in coords.
-        raise KeyError
+        raise KeyError()
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Hashable]:
         return iter(self._data._level_coords)
 
-
-class Indexes(Mapping, formatting.ReprMixin):
-    """Ordered Mapping[str, pandas.Index] for xarray objects.
-    """
-
-    def __init__(self, variables, sizes):
-        """Not for public consumption.
-
-        Parameters
-        ----------
-        variables : OrderedDict[Any, Variable]
-            Reference to OrderedDict holding variable objects. Should be the
-            same dictionary used by the source object.
-        sizes : OrderedDict[Any, int]
-            Map from dimension names to sizes.
-        """
-        self._variables = variables
-        self._sizes = sizes
-
-    def __iter__(self):
-        for key in self._sizes:
-            if key in self._variables:
-                yield key
-
-    def __len__(self):
-        return sum(key in self._variables for key in self._sizes)
-
-    def __contains__(self, key):
-        return key in self._sizes and key in self._variables
-
-    def __getitem__(self, key):
-        if key not in self._sizes:
-            raise KeyError(key)
-        return self._variables[key].to_index()
-
-    def __unicode__(self):
-        return formatting.indexes_repr(self)
+    def __len__(self) -> int:
+        return len(self._data._level_coords)
 
 
 def assert_coordinate_consistent(obj, coords):
@@ -326,13 +312,16 @@ def assert_coordinate_consistent(obj, coords):
         if k in coords and k in obj.coords:
             if not coords[k].equals(obj[k].variable):
                 raise IndexError(
-                    'dimension coordinate {!r} conflicts between '
-                    'indexed and indexing objects:\n{}\nvs.\n{}'
-                    .format(k, obj[k], coords[k]))
+                    "dimension coordinate {!r} conflicts between "
+                    "indexed and indexing objects:\n{}\nvs.\n{}".format(
+                        k, obj[k], coords[k]
+                    )
+                )
 
 
-def remap_label_indexers(obj, indexers=None, method=None, tolerance=None,
-                         **indexers_kwargs):
+def remap_label_indexers(
+    obj, indexers=None, method=None, tolerance=None, **indexers_kwargs
+):
     """
     Remap **indexers from obj.coords.
     If indexer is an instance of DataArray and it has coordinate, then this
@@ -345,11 +334,13 @@ def remap_label_indexers(obj, indexers=None, method=None, tolerance=None,
     new_indexes: mapping of new dimensional-coordinate.
     """
     from .dataarray import DataArray
-    indexers = either_dict_or_kwargs(
-        indexers, indexers_kwargs, 'remap_label_indexers')
 
-    v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
-                  for k, v in indexers.items()}
+    indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "remap_label_indexers")
+
+    v_indexers = {
+        k: v.variable.data if isinstance(v, DataArray) else v
+        for k, v in indexers.items()
+    }
 
     pos_indexers, new_indexes = indexing.remap_label_indexers(
         obj, v_indexers, method=method, tolerance=tolerance
@@ -361,8 +352,8 @@ def remap_label_indexers(obj, indexers=None, method=None, tolerance=None,
         elif isinstance(v, DataArray):
             # drop coordinates found in indexers since .sel() already
             # ensures alignments
-            coords = OrderedDict((k, v) for k, v in v._coords.items()
-                                 if k not in indexers)
-            pos_indexers[k] = DataArray(pos_indexers[k],
-                                        coords=coords, dims=v.dims)
+            coords = OrderedDict(
+                (k, v) for k, v in v._coords.items() if k not in indexers
+            )
+            pos_indexers[k] = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
     return pos_indexers, new_indexes

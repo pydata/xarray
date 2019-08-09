@@ -15,7 +15,6 @@ core functionality.
     import numpy as np
     import pandas as pd
     import xarray as xr
-
     np.random.seed(123456)
 
 Creating datetime64 data
@@ -70,18 +69,19 @@ You can manual decode arrays in this form by passing a dataset to
 One unfortunate limitation of using ``datetime64[ns]`` is that it limits the
 native representation of dates to those that fall between the years 1678 and
 2262. When a netCDF file contains dates outside of these bounds, dates will be
-returned as arrays of ``cftime.datetime`` objects and a ``CFTimeIndex``
-can be used for indexing.  The ``CFTimeIndex`` enables only a subset of
-the indexing functionality of a ``pandas.DatetimeIndex`` and is only enabled
-when using the standalone version of ``cftime`` (not the version packaged with
-earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more information.
+returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex`
+will be used for indexing.  :py:class:`~xarray.CFTimeIndex` enables a subset of
+the indexing functionality of a :py:class:`pandas.DatetimeIndex` and is only
+fully compatible with the standalone version of ``cftime`` (not the version
+packaged with earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more
+information.
 
 Datetime indexing
 -----------------
 
 xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
-This allows for several useful and suscinct forms of indexing, particularly for
+This allows for several useful and succinct forms of indexing, particularly for
 `datetime64` data. For example, we support indexing with strings for single
 items and with the `slice` object:
 
@@ -152,6 +152,15 @@ __ http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 
     ds['time'].dt.floor('D')
 
+The ``.dt`` accessor can also be used to generate formatted datetime strings
+for arrays utilising the same formatting as the standard `datetime.strftime`_.
+
+.. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+
+.. ipython:: python
+
+    ds['time'].dt.strftime('%a, %b %d %H:%M')
+
 .. _resampling:
 
 Resampling and grouped operations
@@ -162,6 +171,7 @@ Datetime components couple particularly well with grouped operations (see
 calculate the mean by time of day:
 
 .. ipython:: python
+   :okwarning:
 
     ds.groupby('time.hour').mean()
 
@@ -175,6 +185,7 @@ same api as ``resample`` `in pandas`_.
 For example, we can downsample our dataset from hourly to 6-hourly:
 
 .. ipython:: python
+   :okwarning:
 
     ds.resample(time='6H')
 
@@ -183,6 +194,7 @@ necessary for resampling. All of the reduction methods which work with
 ``Resample`` objects can also be used for resampling:
 
 .. ipython:: python
+   :okwarning:
 
    ds.resample(time='6H').mean()
 
@@ -193,111 +205,19 @@ resampling group:
 
    ds.resample(time='6H').reduce(np.mean)
 
-For upsampling, xarray provides four methods: ``asfreq``, ``ffill``, ``bfill``,
-and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d`` and
-supports all of its schemes. All of these resampling operations work on both
+For upsampling, xarray provides six methods: ``asfreq``, ``ffill``, ``bfill``, ``pad``,
+``nearest`` and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d``
+and supports all of its schemes. All of these resampling operations work on both
 Dataset and DataArray objects with an arbitrary number of dimensions.
 
-.. note::
+In order to limit the scope of the methods ``ffill``, ``bfill``, ``pad`` and
+``nearest`` the ``tolerance`` argument can be set in coordinate units.
+Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
-   The ``resample`` api was updated in version 0.10.0 to reflect similar
-   updates in pandas ``resample`` api to be more groupby-like. Older style
-   calls to ``resample`` will still be supported for a short period:
+.. ipython:: python
 
-   .. ipython:: python
-
-    ds.resample('6H', dim='time', how='mean')
+    ds.resample(time='1H').nearest(tolerance='1H')
 
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.
-
-
-.. _CFTimeIndex:
-     
-Non-standard calendars and dates outside the Timestamp-valid range
-------------------------------------------------------------------
-
-Through the standalone ``cftime`` library and a custom subclass of
-``pandas.Index``, xarray supports a subset of the indexing functionality enabled
-through the standard ``pandas.DatetimeIndex`` for dates from non-standard
-calendars or dates using a standard calendar, but outside the
-`Timestamp-valid range`_ (approximately between years 1678 and 2262).  This
-behavior has not yet been turned on by default; to take advantage of this
-functionality, you must have the ``enable_cftimeindex`` option set to
-``True`` within your context (see :py:func:`~xarray.set_options` for more
-information).  It is expected that this will become the default behavior in
-xarray version 0.11.
-
-For instance, you can create a DataArray indexed by a time
-coordinate with a no-leap calendar within a context manager setting the
-``enable_cftimeindex`` option, and the time index will be cast to a
-``CFTimeIndex``:
-
-.. ipython:: python
-
-   from itertools import product
-   from cftime import DatetimeNoLeap
-   
-   dates = [DatetimeNoLeap(year, month, 1) for year, month in
-            product(range(1, 3), range(1, 13))]
-   with xr.set_options(enable_cftimeindex=True):
-       da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'],
-                         name='foo')
-                         
-.. note::
-
-   With the ``enable_cftimeindex`` option activated, a ``CFTimeIndex``
-   will be used for time indexing if any of the following are true:
-
-   - The dates are from a non-standard calendar
-   - Any dates are outside the Timestamp-valid range
-
-   Otherwise a ``pandas.DatetimeIndex`` will be used.  In addition, if any
-   variable (not just an index variable) is encoded using a non-standard
-   calendar, its times will be decoded into ``cftime.datetime`` objects,
-   regardless of whether or not they can be represented using
-   ``np.datetime64[ns]`` objects.
-                         
-For data indexed by a ``CFTimeIndex`` xarray currently supports:
-
-- `Partial datetime string indexing`_ using strictly `ISO 8601-format`_ partial
-  datetime strings:
-  
-.. ipython:: python
-
-   da.sel(time='0001')
-   da.sel(time=slice('0001-05', '0002-02'))
-
-- Access of basic datetime components via the ``dt`` accessor (in this case
-  just "year", "month", "day", "hour", "minute", "second", "microsecond", and
-  "season"): 
-
-.. ipython:: python
-
-   da.time.dt.year
-   da.time.dt.month
-   da.time.dt.season
-
-- Group-by operations based on datetime accessor attributes (e.g. by month of
-  the year):
-
-.. ipython:: python
-
-   da.groupby('time.month').sum()
-   
-- And serialization:
-
-.. ipython:: python
-
-   da.to_netcdf('example.nc')
-   xr.open_dataset('example.nc')
-
-.. note::
-   
-   Currently resampling along the time dimension for data indexed by a
-   ``CFTimeIndex`` is not supported.
-  
-.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#timestamp-limitations
-.. _ISO 8601-format: https://en.wikipedia.org/wiki/ISO_8601
-.. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#partial-string-indexing

@@ -45,6 +45,12 @@ Use :py:func:`~xarray.where` to conditionally switch between values:
 
     xr.where(arr > 0, 'positive', 'negative')
 
+Use `@` to perform matrix multiplication:
+
+.. ipython:: python
+
+    arr @ arr
+
 Data arrays also implement many :py:class:`numpy.ndarray` methods:
 
 .. ipython:: python
@@ -143,20 +149,35 @@ name of the dimension as a key (e.g. ``y``) and the window size as the value
 
     arr.rolling(y=3)
 
-The label position and minimum number of periods in the rolling window are
-controlled by the ``center`` and ``min_periods`` arguments:
-
-.. ipython:: python
-
-    arr.rolling(y=3, min_periods=2, center=True)
-
-Aggregation and summary methods can be applied directly to the ``Rolling`` object:
+Aggregation and summary methods can be applied directly to the ``Rolling``
+object:
 
 .. ipython:: python
 
     r = arr.rolling(y=3)
-    r.mean()
     r.reduce(np.std)
+    r.mean()
+
+Aggregation results are assigned the coordinate at the end of each window by
+default, but can be centered by passing ``center=True`` when constructing the
+``Rolling`` object:
+
+.. ipython:: python
+
+    r = arr.rolling(y=3, center=True)
+    r.mean()
+
+As can be seen above, aggregations of windows which overlap the border of the
+array produce ``nan``\s.  Setting ``min_periods`` in the call to ``rolling``
+changes the minimum number of observations within the window required to have
+a value when aggregating:
+
+.. ipython:: python
+
+    r = arr.rolling(y=3, min_periods=2)
+    r.mean()
+    r = arr.rolling(y=3, center=True, min_periods=2)
+    r.mean()
 
 Note that rolling window aggregations are faster when bottleneck_ is installed.
 
@@ -164,11 +185,26 @@ Note that rolling window aggregations are faster when bottleneck_ is installed.
 
 We can also manually iterate through ``Rolling`` objects:
 
-.. ipython:: python
+.. code:: python
 
-   @verbatim
    for label, arr_window in r:
       # arr_window is a view of x
+
+.. _comput.rolling_exp:
+
+While ``rolling`` provides a simple moving average, ``DataArray`` also supports
+an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
+This is similiar to pandas' ``ewm`` method. numbagg_ is required.
+
+.. _numbagg: https://github.com/shoyer/numbagg
+
+.. code:: python
+
+    arr.rolling_exp(y=3).mean()
+
+The ``rolling_exp`` method takes a ``window_type`` kwarg, which can be ``'alpha'``,
+``'com'`` (for ``center-of-mass``), ``'span'``, and ``'halflife'``. The default is
+``span``.
 
 Finally, the rolling object has a ``construct`` method which returns a
 view of the original ``DataArray`` with the windowed dimension in
@@ -198,6 +234,82 @@ You can also use ``construct`` to compute a weighted rolling sum:
   (such as ``.sum()``) if ``skipna`` argument is not specified or set to True.
   This means ``rolling_da.mean('window_dim')`` is memory inefficient.
   To avoid this, use ``skipna=False`` as the above example.
+
+
+.. _comput.coarsen:
+
+Coarsen large arrays
+====================
+
+``DataArray`` and ``Dataset`` objects include a
+:py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
+methods. This supports the block aggregation along multiple dimensions,
+
+.. ipython:: python
+
+  x = np.linspace(0, 10, 300)
+  t = pd.date_range('15/12/1999', periods=364)
+  da = xr.DataArray(np.sin(x) * np.cos(np.linspace(0, 1, 364)[:, np.newaxis]),
+                    dims=['time', 'x'], coords={'time': t, 'x': x})
+  da
+
+In order to take a block mean for every 7 days along ``time`` dimension and
+every 2 points along ``x`` dimension,
+
+.. ipython:: python
+
+  da.coarsen(time=7, x=2).mean()
+
+:py:meth:`~xarray.DataArray.coarsen` raises an ``ValueError`` if the data
+length is not a multiple of the corresponding window size.
+You can choose ``boundary='trim'`` or ``boundary='pad'`` options for trimming
+the excess entries or padding ``nan`` to insufficient entries,
+
+.. ipython:: python
+
+  da.coarsen(time=30, x=2, boundary='trim').mean()
+
+If you want to apply a specific function to coordinate, you can pass the
+function or method name to ``coord_func`` option,
+
+.. ipython:: python
+
+  da.coarsen(time=7, x=2, coord_func={'time': 'min'}).mean()
+
+
+.. _compute.using_coordinates:
+
+Computation using Coordinates
+=============================
+
+Xarray objects have some handy methods for the computation with their
+coordinates. :py:meth:`~xarray.DataArray.differentiate` computes derivatives by
+central finite differences using their coordinates,
+
+.. ipython:: python
+
+    a = xr.DataArray([0, 1, 2, 3], dims=['x'], coords=[[0.1, 0.11, 0.2, 0.3]])
+    a
+    a.differentiate('x')
+
+This method can be used also for multidimensional arrays,
+
+.. ipython:: python
+
+    a = xr.DataArray(np.arange(8).reshape(4, 2), dims=['x', 'y'],
+                     coords={'x': [0.1, 0.11, 0.2, 0.3]})
+    a.differentiate('x')
+
+:py:meth:`~xarray.DataArray.integrate` computes integration based on
+trapezoidal rule using their coordinates,
+
+.. ipython:: python
+
+    a.integrate('x')
+
+.. note::
+    These methods are limited to simple cartesian geometry. Differentiation
+    and integration along multidimensional coordinate are not supported.
 
 
 .. _compute.broadcasting:
@@ -243,7 +355,7 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
-You can explicitly broadcast xaray data structures by using the
+You can explicitly broadcast xarray data structures by using the
 :py:func:`~xarray.broadcast` function:
 
 .. ipython:: python
@@ -273,9 +385,9 @@ operations. The default result of a binary operation is by the *intersection*
 If coordinate values for a dimension are missing on either argument, all
 matching dimensions must have the same size:
 
-.. ipython:: python
+.. ipython::
+    :verbatim:
 
-    @verbatim
     In [1]: arr + xr.DataArray([1, 2], dims='x')
     ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
 

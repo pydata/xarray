@@ -18,8 +18,9 @@ pandas is a fantastic library for analysis of low-dimensional labelled data -
 if it can be sensibly described as "rows and columns", pandas is probably the
 right choice.  However, sometimes we want to use higher dimensional arrays
 (`ndim > 2`), or arrays for which the order of dimensions (e.g., columns vs
-rows) shouldn't really matter. For example, climate and weather data is often
-natively expressed in 4 or more dimensions: time, x, y and z.
+rows) shouldn't really matter. For example, the images of a movie can be
+natively represented as an array with four dimensions: time, row, column and
+color.
 
 Pandas has historically supported N-dimensional panels, but deprecated them in
 version 0.20 in favor of Xarray data structures.  There are now built-in methods
@@ -39,9 +40,8 @@ if you were using Panels:
   xarray ``Dataset``.
 
 You can :ref:`read about switching from Panels to Xarray here <panel transition>`.
-Pandas gets a lot of things right, but scientific users need fully multi-
-dimensional data structures.
-
+Pandas gets a lot of things right, but many science, engineering and complex
+analytics use cases need fully multi-dimensional data structures.
 
 How do xarray data structures differ from those found in pandas?
 ----------------------------------------------------------------
@@ -65,7 +65,9 @@ multi-dimensional data-structures.
 
 That said, you should only bother with xarray if some aspect of data is
 fundamentally multi-dimensional. If your data is unstructured or
-one-dimensional, stick with pandas.
+one-dimensional, pandas is usually the right choice: it has better performance
+for common operations such as ``groupby`` and you'll find far more usage
+examples online.
 
 
 Why don't aggregations return Python scalars?
@@ -119,7 +121,8 @@ conventions`_. (An exception is serialization to and from netCDF files.)
 
 An implication of this choice is that we do not propagate ``attrs`` through
 most operations unless explicitly flagged (some methods have a ``keep_attrs``
-option). Similarly, xarray does not check for conflicts between ``attrs`` when
+option, and there is a global flag for setting this to be always True or
+False). Similarly, xarray does not check for conflicts between ``attrs`` when
 combining arrays and datasets, unless explicitly requested with the option
 ``compat='identical'``. The guiding principle is that metadata should not be
 allowed to get in the way.
@@ -160,70 +163,10 @@ methods for converting back and forth between xarray and these libraries. See
 :py:meth:`~xarray.DataArray.to_iris` and :py:meth:`~xarray.DataArray.to_cdms2`
 for more details.
 
-.. _faq.other_projects:
-
 What other projects leverage xarray?
 ------------------------------------
 
-Here are several existing libraries that build functionality upon xarray.
-
-Geosciences
-~~~~~~~~~~~
-
-- `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
-- `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meterology data
-- `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
-- `MPAS-Analysis <http://mpas-analysis.readthedocs.io>`_: Analysis for simulations produced with Model for Prediction Across Scales (MPAS) components and the Accelerated Climate Model for Energy (ACME).
-- `OGGM <http://oggm.org/>`_: Open Global Glacier Model
-- `Oocgcm <https://oocgcm.readthedocs.io/>`_: Analysis of large gridded geophysical datasets
-- `Open Data Cube <https://www.opendatacube.org/>`_: Analysis toolkit of continental scale Earth Observation data from satellites.
-- `Pangaea: <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
-- `Pangeo <https://pangeo-data.github.io>`_: A community effort for big data geoscience in the cloud.
-- `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
-  accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
-  subclass.
-- `Regionmask <https://regionmask.readthedocs.io/>`_: plotting and creation of masks of spatial regions
-- `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
-- `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
-- `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
-  harmonic wind analysis in Python.
-- `wrf-python <https://wrf-python.readthedocs.io/>`_: A collection of diagnostic and interpolation routines for use with output of the Weather Research and Forecasting (WRF-ARW) Model.
-- `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
-- `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
-- `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
-- `xESMF <https://xesmf.readthedocs.io>`_: Universal Regridder for Geospatial Data.
-- `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
-- `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.
-- `xshape <https://xshape.readthedocs.io/>`_: Tools for working with shapefiles, topographies, and polygons in xarray.
-
-Machine Learning
-~~~~~~~~~~~~~~~~
-- `cesium <http://cesium-ml.org/>`_: machine learning for time series analysis
-- `Elm <https://ensemble-learning-models.readthedocs.io>`_: Parallel machine learning on xarray data structures
-- `sklearn-xarray (1) <https://phausamann.github.io/sklearn-xarray>`_: Combines scikit-learn and xarray (1).
-- `sklearn-xarray (2) <https://sklearn-xarray.readthedocs.io/en/latest/>`_: Combines scikit-learn and xarray (2).
-
-Extend xarray capabilities
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-- `Collocate <https://github.com/cistools/collocate>`_: Collocate xarray trajectories in arbitrary physical dimensions
-- `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
-- `xarray_extras <https://github.com/crusaderky/xarray_extras>`_: Advanced algorithms for xarray objects (e.g. intergrations/interpolations).
-- `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
-- `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
-- `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
-- `xyzpy <http://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
-
-Visualization
-~~~~~~~~~~~~~
-- `Datashader <https://datashader.org>`_, `geoviews <http://geo.holoviews.org>`_, `holoviews <http://holoviews.org/>`_, : visualization packages for large data
-- `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
-
-Other
-~~~~~
-- `ptsa <https://pennmem.github.io/ptsa_new/html/index.html>`_: EEG Time Series Analysis
-- `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
-
-More projects can be found at the `"xarray" Github topic <https://github.com/topics/xarray>`_.
+See section :ref:`related-projects`.
 
 How should I cite xarray?
 -------------------------
@@ -269,3 +212,22 @@ would certainly appreciate it. We recommend two citations.
                  doi    = {10.5281/zenodo.59499},
                  url    = {https://doi.org/10.5281/zenodo.59499}
                 }
+
+.. _public api:
+
+What parts of xarray are considered public API?
+-----------------------------------------------
+
+As a rule, only functions/methods documented in our :ref:`api` are considered
+part of xarray's public API. Everything else (in particular, everything in
+``xarray.core`` that is not also exposed in the top level ``xarray`` namespace)
+is considered a private implementation detail that may change at any time.
+
+Objects that exist to facilitate xarray's fluent interface on ``DataArray`` and
+``Dataset`` objects are a special case. For convenience, we document them in
+the API docs, but only their methods and the ``DataArray``/``Dataset``
+methods/properties to construct them (e.g., ``.plot()``, ``.groupby()``,
+``.str``) are considered public API. Constructors and other details of the
+internal classes used to implemented them (i.e.,
+``xarray.plot.plotting._PlotMethods``, ``xarray.core.groupby.DataArrayGroupBy``,
+``xarray.core.accessor_str.StringAccessor``) are not.

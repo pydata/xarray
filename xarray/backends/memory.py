@@ -1,10 +1,8 @@
-from __future__ import absolute_import, division, print_function
-
 import copy
+from collections import OrderedDict
 
 import numpy as np
 
-from ..core.pycompat import OrderedDict
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore
 
@@ -17,10 +15,9 @@ class InMemoryDataStore(AbstractWritableDataStore):
     This store exists purely for internal testing purposes.
     """
 
-    def __init__(self, variables=None, attributes=None, writer=None):
+    def __init__(self, variables=None, attributes=None):
         self._variables = OrderedDict() if variables is None else variables
         self._attributes = OrderedDict() if attributes is None else attributes
-        super(InMemoryDataStore, self).__init__(writer)
 
     def get_attrs(self):
         return self._attributes

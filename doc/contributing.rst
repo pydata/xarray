@@ -151,11 +151,11 @@ We'll now kick off a two-step process:
 .. code-block:: none
 
    # Create and activate the build environment
-   conda env create -f ci/requirements-py36.yml
-   conda activate test_env
+   conda env create -f ci/requirements/py36.yml
+   conda activate xarray-tests
 
    # or with older versions of Anaconda:
-   source activate test_env
+   source activate xarray-tests
 
    # Build and install xarray
    pip install -e .
@@ -285,17 +285,23 @@ How to build the *xarray* documentation
 
 Requirements
 ~~~~~~~~~~~~
+Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
+to build the docs you need to use the environment file ``doc/environment.yml``.
 
-First, you need to have a development environment to be able to build xarray
-(see the docs on :ref:`creating a development environment above <contributing.dev_env>`).
+.. code-block:: none
+
+    # Create and activate the docs environment
+    conda env create -f doc/environment.yml
+    conda activate xarray-docs
+
+    # or with older versions of Anaconda:
+    source activate xarray-docs
+
+    # Build and install xarray
+    pip install -e .
 
 Building the documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In your development environment, install ``sphinx``, ``sphinx_rtd_theme``,
-``sphinx-gallery`` and ``numpydoc``::
-
-    conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc
 
 Navigate to your local ``xarray/doc/`` directory in the console and run::
 
@@ -334,30 +340,63 @@ do not make sudden changes to the code that could have the potential to break
 a lot of user code as a result, that is, we need it to be as *backwards compatible*
 as possible to avoid mass breakages.
 
-Python (PEP8)
-~~~~~~~~~~~~~
+Code Formatting
+~~~~~~~~~~~~~~~
 
-*xarray* uses the `PEP8 <http://www.python.org/dev/peps/pep-0008/>`_ standard.
-There are several tools to ensure you abide by this standard. Here are *some* of
-the more common ``PEP8`` issues:
+Xarray uses `Black <https://black.readthedocs.io/en/stable/>`_ and
+`Flake8 <http://flake8.pycqa.org/en/latest/>`_ to ensure a consistent code
+format throughout the project. ``black`` and ``flake8`` can be installed with
+``pip``::
 
-  - we restrict line-length to 79 characters to promote readability
-  - passing arguments should have spaces after commas, e.g. ``foo(arg1, arg2, kw1='bar')``
+   pip install black flake8
 
-:ref:`Continuous Integration <contributing.ci>` will run
-the `flake8 <http://pypi.python.org/pypi/flake8>`_ tool
-and report any stylistic errors in your code. Therefore, it is helpful before
-submitting code to run the check yourself::
+and then run from the root of the Xarray repository::
 
+   black .
    flake8
 
-If you install `isort <https://github.com/timothycrosley/isort>`_ and
-`flake8-isort <https://github.com/gforcada/flake8-isort>`_, this will also show
-any errors from incorrectly sorted imports. These aren't currently enforced in
-CI. To automatically sort imports, you can run::
+to auto-format your code. Additionally, many editors have plugins that will
+apply ``black`` as you edit files.
 
-   isort -y
+Other recommended but optional tools for checking code quality (not currently
+enforced in CI):
 
+- `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
+  make it easier to catch bugs. Please run ``mypy xarray`` if you annotate any
+  code with `type hints <https://docs.python.org/3/library/typing.html>`_.
+- `isort <https://github.com/timothycrosley/isort>`_ will highlight
+  incorrectly sorted imports. ``isort -y`` will automatically fix them. See
+  also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
+
+Optionally, you may wish to setup `pre-commit hooks <https://pre-commit.com/>`_
+to automatically run ``black`` and ``flake8`` when you make a git commit. This
+can be done by installing ``pre-commit``::
+
+   pip install pre-commit
+
+and then running::
+
+   pre-commit install
+
+from the root of the Xarray repository. Now ``black`` and ``flake8`` will be run
+each time you commit changes. You can skip these checks with
+``git commit --no-verify``.
+
+.. note::
+
+  If you were working on a branch *prior* to the code being reformatted with black,
+  you will likely face some merge conflicts. These steps can eliminate many of those
+  conflicts. Because they have had limited testing, please reach out to the core devs
+  on your pull request if you face any issues, and we'll help with the merge:
+
+  - Merge the commit on master prior to the ``black`` commit into your branch
+    ``git merge f172c673``. If you have conflicts here, resolve and commit.
+  - Apply ``black .`` to your branch and commit ``git commit -am "black"``
+  - Apply a patch of other changes we made on that commit: ``curl https://gist.githubusercontent.com/max-sixty/3cceb8472ed4ea806353999ca43aed52/raw/03cbee4e386156bddb61acaa250c0bfc726f596d/xarray%2520black%2520diff | git apply -``
+  - Commit (``git commit -am "black2"``)
+  - Merge master at the ``black`` commit, resolving in favor of 'our' changes:
+    ``git merge d089df38 -X ours``. You shouldn't have any merge conflicts
+  - Merge current master ``git merge master``; resolve and commit any conflicts
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -365,21 +404,20 @@ Backwards Compatibility
 Please try to maintain backward compatibility. *xarray* has growing number of users with
 lots of existing code, so don't break it if at all possible.  If you think breakage is
 required, clearly state why as part of the pull request.  Also, be careful when changing
-method signatures and add deprecation warnings where needed. Also, add the deprecated
-sphinx directive to the deprecated functions or methods.
+method signatures and add deprecation warnings where needed.
 
 .. _contributing.ci:
 
 Testing With Continuous Integration
 -----------------------------------
 
-The *xarray* test suite will run automatically on `Travis-CI <https://travis-ci.org/>`__,
-and `Appveyor <https://www.appveyor.com/>`__, continuous integration services, once
-your pull request is submitted. However, if you wish to run the test suite on a
-branch prior to submitting the pull request, then the continuous integration
-services need to be hooked to your GitHub repository. Instructions are here
-for `Travis-CI <http://about.travis-ci.org/docs/user/getting-started/>`__, and
-`Appveyor <https://www.appveyor.com/docs/>`__.
+The *xarray* test suite runs automatically the
+`Azure Pipelines <https://azure.microsoft.com/en-us/services/devops/pipelines//>`__,
+continuous integration service, once your pull request is submitted. However,
+if you wish to run the test suite on a branch prior to submitting the pull
+request, then Azure Pipelines
+`needs to be configured <https://docs.microsoft.com/en-us/azure/devops/pipelines/>`_
+for your GitHub repository.
 
 A pull-request will be considered for merging when you have an all 'green' build. If any
 tests are failing, then you will get a red 'X', where you can click through to see the
@@ -389,10 +427,9 @@ individual failed tests. This is an example of a green build.
 
 .. note::
 
-   Each time you push to your PR branch, a new run of the tests will be triggered on the CI.
-   Appveyor will auto-cancel any non-currently-running tests for that same pull-request.
-   You can also enable the auto-cancel feature for `Travis-CI here
-   <https://docs.travis-ci.com/user/customizing-the-build/#Building-only-the-latest-commit>`__.
+   Each time you push to your PR branch, a new run of the tests will be
+   triggered on the CI. If they haven't already finished, tests for any older
+   commits on the same branch will be automatically cancelled.
 
 .. _contributing.tdd:
 
@@ -445,7 +482,7 @@ typically find tests wrapped in a class.
 
 .. code-block:: python
 
-    class TestReallyCoolFeature(object):
+    class TestReallyCoolFeature:
         ....
 
 Going forward, we are moving to a more *functional* style using the

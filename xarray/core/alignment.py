@@ -1,50 +1,57 @@
-from __future__ import absolute_import, division, print_function
-
 import functools
 import operator
 import warnings
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
+from contextlib import suppress
+from typing import Any, Dict, Hashable, Mapping, Optional, Tuple, Union, TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
 
-from . import utils
+from . import dtypes, utils
 from .indexing import get_indexer_nd
-from .pycompat import OrderedDict, iteritems, suppress
 from .utils import is_dict_like, is_full_slice
-from .variable import IndexVariable
+from .variable import IndexVariable, Variable
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 def _get_joiner(join):
-    if join == 'outer':
+    if join == "outer":
         return functools.partial(functools.reduce, operator.or_)
-    elif join == 'inner':
+    elif join == "inner":
         return functools.partial(functools.reduce, operator.and_)
-    elif join == 'left':
+    elif join == "left":
         return operator.itemgetter(0)
-    elif join == 'right':
+    elif join == "right":
         return operator.itemgetter(-1)
-    elif join == 'exact':
+    elif join == "exact":
         # We cannot return a function to "align" in this case, because it needs
         # access to the dimension name to give a good error message.
         return None
     else:
-        raise ValueError('invalid value for join: %s' % join)
+        raise ValueError("invalid value for join: %s" % join)
 
 
-_DEFAULT_EXCLUDE = frozenset()
-
-
-def align(*objects, **kwargs):
-    """align(*objects, join='inner', copy=True, indexes=None,
-             exclude=frozenset())
-
+def align(
+    *objects,
+    join="inner",
+    copy=True,
+    indexes=None,
+    exclude=frozenset(),
+    fill_value=dtypes.NA
+):
+    """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
 
     Array from the aligned objects are suitable as input to mathematical
     operators, because along each dimension they have the same index and size.
 
-    Missing values (if ``join != 'inner'``) are filled with NaN.
+    Missing values (if ``join != 'inner'``) are filled with ``fill_value``.
+    The default fill value is NaN.
 
     Parameters
     ----------
@@ -53,6 +60,7 @@ def align(*objects, **kwargs):
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
+
         - 'outer': use the union of object indexes
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
@@ -64,11 +72,13 @@ def align(*objects, **kwargs):
         ``copy=False`` and reindexing is unnecessary, or can be performed with
         only slice operations, then the output may share memory with the input.
         In either case, new xarray objects are always returned.
-    exclude : sequence of str, optional
-        Dimensions that must be excluded from alignment
     indexes : dict-like, optional
         Any indexes explicitly provided with the `indexes` argument should be
         used in preference to the aligned indexes.
+    exclude : sequence of str, optional
+        Dimensions that must be excluded from alignment
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
@@ -81,15 +91,8 @@ def align(*objects, **kwargs):
         If any dimensions without labels on the arguments have different sizes,
         or a different size than the size of the aligned dimension labels.
     """
-    join = kwargs.pop('join', 'inner')
-    copy = kwargs.pop('copy', True)
-    indexes = kwargs.pop('indexes', None)
-    exclude = kwargs.pop('exclude', _DEFAULT_EXCLUDE)
     if indexes is None:
         indexes = {}
-    if kwargs:
-        raise TypeError('align() got unexpected keyword arguments: %s'
-                        % list(kwargs))
 
     if not indexes and len(objects) == 1:
         # fast path for the trivial case
@@ -115,20 +118,26 @@ def align(*objects, **kwargs):
     #   pandas). This is useful, e.g., for overwriting such duplicate indexes.
     joiner = _get_joiner(join)
     joined_indexes = {}
-    for dim, matching_indexes in iteritems(all_indexes):
+    for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
             index = utils.safe_cast_to_index(indexes[dim])
-            if (any(not index.equals(other) for other in matching_indexes) or
-                    dim in unlabeled_dim_sizes):
+            if (
+                any(not index.equals(other) for other in matching_indexes)
+                or dim in unlabeled_dim_sizes
+            ):
                 joined_indexes[dim] = index
         else:
-            if (any(not matching_indexes[0].equals(other)
-                    for other in matching_indexes[1:]) or
-                    dim in unlabeled_dim_sizes):
-                if join == 'exact':
+            if (
+                any(
+                    not matching_indexes[0].equals(other)
+                    for other in matching_indexes[1:]
+                )
+                or dim in unlabeled_dim_sizes
+            ):
+                if join == "exact":
                     raise ValueError(
-                        'indexes along dimension {!r} are not equal'
-                        .format(dim))
+                        "indexes along dimension {!r} are not equal".format(dim)
+                    )
                 index = joiner(matching_indexes)
                 joined_indexes[dim] = index
             else:
@@ -139,46 +148,57 @@ def align(*objects, **kwargs):
             labeled_size = index.size
             if len(unlabeled_sizes | {labeled_size}) > 1:
                 raise ValueError(
-                    'arguments without labels along dimension %r cannot be '
-                    'aligned because they have different dimension size(s) %r '
-                    'than the size of the aligned dimension labels: %r'
-                    % (dim, unlabeled_sizes, labeled_size))
+                    "arguments without labels along dimension %r cannot be "
+                    "aligned because they have different dimension size(s) %r "
+                    "than the size of the aligned dimension labels: %r"
+                    % (dim, unlabeled_sizes, labeled_size)
+                )
 
     for dim in unlabeled_dim_sizes:
         if dim not in all_indexes:
             sizes = unlabeled_dim_sizes[dim]
             if len(sizes) > 1:
                 raise ValueError(
-                    'arguments without labels along dimension %r cannot be '
-                    'aligned because they have different dimension sizes: %r'
-                    % (dim, sizes))
+                    "arguments without labels along dimension %r cannot be "
+                    "aligned because they have different dimension sizes: %r"
+                    % (dim, sizes)
+                )
 
     result = []
     for obj in objects:
-        valid_indexers = {k: v for k, v in joined_indexes.items()
-                          if k in obj.dims}
+        valid_indexers = {k: v for k, v in joined_indexes.items() if k in obj.dims}
         if not valid_indexers:
             # fast path for no reindexing necessary
             new_obj = obj.copy(deep=copy)
         else:
-            new_obj = obj.reindex(copy=copy, **valid_indexers)
+            new_obj = obj.reindex(copy=copy, fill_value=fill_value, **valid_indexers)
         new_obj.encoding = obj.encoding
         result.append(new_obj)
 
     return tuple(result)
 
 
-def deep_align(objects, join='inner', copy=True, indexes=None,
-               exclude=frozenset(), raise_on_invalid=True):
+def deep_align(
+    objects,
+    join="inner",
+    copy=True,
+    indexes=None,
+    exclude=frozenset(),
+    raise_on_invalid=True,
+    fill_value=dtypes.NA,
+):
     """Align objects for merging, recursing into dictionary values.
 
     This function is not public API.
     """
+    from .dataarray import DataArray  # noqa: F811
+    from .dataset import Dataset  # noqa: F811
+
     if indexes is None:
         indexes = {}
 
     def is_alignable(obj):
-        return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
+        return isinstance(obj, (DataArray, Dataset))
 
     positions = []
     keys = []
@@ -203,14 +223,21 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
                     targets.append(v)
             out.append(OrderedDict(variables))
         elif raise_on_invalid:
-            raise ValueError('object to align is neither an xarray.Dataset, '
-                             'an xarray.DataArray nor a dictionary: %r'
-                             % variables)
+            raise ValueError(
+                "object to align is neither an xarray.Dataset, "
+                "an xarray.DataArray nor a dictionary: %r" % variables
+            )
         else:
             out.append(variables)
 
-    aligned = align(*targets, join=join, copy=copy, indexes=indexes,
-                    exclude=exclude)
+    aligned = align(
+        *targets,
+        join=join,
+        copy=copy,
+        indexes=indexes,
+        exclude=exclude,
+        fill_value=fill_value
+    )
 
     for position, key, aligned_obj in zip(positions, keys, aligned):
         if key is no_key:
@@ -224,7 +251,9 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
     return out
 
 
-def reindex_like_indexers(target, other):
+def reindex_like_indexers(
+    target: Union["DataArray", "Dataset"], other: Union["DataArray", "Dataset"]
+) -> Dict[Hashable, pd.Index]:
     """Extract indexers to align target with other.
 
     Not public API.
@@ -238,7 +267,8 @@ def reindex_like_indexers(target, other):
 
     Returns
     -------
-    Dict[Any, pandas.Index] providing indexes for reindex keyword arguments.
+    Dict[Hashable, pandas.Index] providing indexes for reindex keyword
+    arguments.
 
     Raises
     ------
@@ -252,14 +282,24 @@ def reindex_like_indexers(target, other):
             other_size = other.sizes[dim]
             target_size = target.sizes[dim]
             if other_size != target_size:
-                raise ValueError('different size for unlabeled '
-                                 'dimension on argument %r: %r vs %r'
-                                 % (dim, other_size, target_size))
+                raise ValueError(
+                    "different size for unlabeled "
+                    "dimension on argument %r: %r vs %r"
+                    % (dim, other_size, target_size)
+                )
     return indexers
 
 
-def reindex_variables(variables, sizes, indexes, indexers, method=None,
-                      tolerance=None, copy=True):
+def reindex_variables(
+    variables: Mapping[Any, Variable],
+    sizes: Mapping[Any, int],
+    indexes: Mapping[Any, pd.Index],
+    indexers: Mapping,
+    method: Optional[str] = None,
+    tolerance: Any = None,
+    copy: bool = True,
+    fill_value: Optional[Any] = dtypes.NA,
+) -> "Tuple[OrderedDict[Any, Variable], OrderedDict[Any, pd.Index]]":
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -272,7 +312,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     sizes : dict-like
         Dictionary from dimension names to integer sizes.
     indexes : dict-like
-        Dictionary of xarray.IndexVariable objects associated with variables.
+        Dictionary of indexes associated with variables.
     indexers : dict
         Dictionary with keys given by dimension names and values given by
         arrays of coordinates tick labels. Any mis-matched coordinate values
@@ -287,51 +327,74 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
           * nearest: use nearest valid index value
     tolerance : optional
         Maximum distance between original and new labels for inexact matches.
-        The values of the index at the matching locations most satisfy the
+        The values of the index at the matching locations must satisfy the
         equation ``abs(index[indexer] - target) <= tolerance``.
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed
         with only slice operations, then the output may share memory with
         the input. In either case, new xarray objects are always returned.
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
     reindexed : OrderedDict
-        Another dict, with the items in variables but replaced indexes.
+        Dict of reindexed variables.
+    new_indexes : OrderedDict
+        Dict of indexes associated with the reindexed variables.
     """
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
+
+    # create variables for the new dataset
+    reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
 
     # build up indexers for assignment along each dimension
     int_indexers = {}
-    targets = {}
+    new_indexes = OrderedDict(indexes)
     masked_dims = set()
     unchanged_dims = set()
 
-    # size of reindexed dimensions
-    new_sizes = {}
+    for dim, indexer in indexers.items():
+        if isinstance(indexer, DataArray) and indexer.dims != (dim,):
+            warnings.warn(
+                "Indexer has dimensions {:s} that are different "
+                "from that to be indexed along {:s}. "
+                "This will behave differently in the future.".format(
+                    str(indexer.dims), dim
+                ),
+                FutureWarning,
+                stacklevel=3,
+            )
 
-    for name, index in iteritems(indexes):
-        if name in indexers:
+        target = new_indexes[dim] = utils.safe_cast_to_index(indexers[dim])
+
+        if dim in indexes:
+            index = indexes[dim]
+
             if not index.is_unique:
                 raise ValueError(
-                    'cannot reindex or align along dimension %r because the '
-                    'index has duplicate values' % name)
-
-            target = utils.safe_cast_to_index(indexers[name])
-            new_sizes[name] = len(target)
+                    "cannot reindex or align along dimension %r because the "
+                    "index has duplicate values" % dim
+                )
 
             int_indexer = get_indexer_nd(index, target, method, tolerance)
 
             # We uses negative values from get_indexer_nd to signify
             # values that are missing in the index.
             if (int_indexer < 0).any():
-                masked_dims.add(name)
+                masked_dims.add(dim)
             elif np.array_equal(int_indexer, np.arange(len(index))):
-                unchanged_dims.add(name)
+                unchanged_dims.add(dim)
 
-            int_indexers[name] = int_indexer
-            targets[name] = target
+            int_indexers[dim] = int_indexer
+
+        if dim in variables:
+            var = variables[dim]
+            args = (var.attrs, var.encoding)  # type: tuple
+        else:
+            args = ()
+        reindexed[dim] = IndexVariable((dim,), target, *args)
 
     for dim in sizes:
         if dim not in indexes and dim in indexers:
@@ -339,39 +402,21 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
             new_size = indexers[dim].size
             if existing_size != new_size:
                 raise ValueError(
-                    'cannot reindex or align along dimension %r without an '
-                    'index because its size %r is different from the size of '
-                    'the new index %r' % (dim, existing_size, new_size))
+                    "cannot reindex or align along dimension %r without an "
+                    "index because its size %r is different from the size of "
+                    "the new index %r" % (dim, existing_size, new_size)
+                )
 
-    # create variables for the new dataset
-    reindexed = OrderedDict()
-
-    for dim, indexer in indexers.items():
-        if isinstance(indexer, DataArray) and indexer.dims != (dim,):
-            warnings.warn(
-                "Indexer has dimensions {0:s} that are different "
-                "from that to be indexed along {1:s}. "
-                "This will behave differently in the future.".format(
-                    str(indexer.dims), dim),
-                FutureWarning, stacklevel=3)
-
-        if dim in variables:
-            var = variables[dim]
-            args = (var.attrs, var.encoding)
-        else:
-            args = ()
-        reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
-
-    for name, var in iteritems(variables):
+    for name, var in variables.items():
         if name not in indexers:
-            key = tuple(slice(None)
-                        if d in unchanged_dims
-                        else int_indexers.get(d, slice(None))
-                        for d in var.dims)
+            key = tuple(
+                slice(None) if d in unchanged_dims else int_indexers.get(d, slice(None))
+                for d in var.dims
+            )
             needs_masking = any(d in masked_dims for d in var.dims)
 
             if needs_masking:
-                new_var = var._getitem_with_mask(key)
+                new_var = var._getitem_with_mask(key, fill_value=fill_value)
             elif all(is_full_slice(k) for k in key):
                 # no reindexing necessary
                 # here we need to manually deal with copying data, since
@@ -382,10 +427,59 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
 
             reindexed[name] = new_var
 
-    return reindexed
+    return reindexed, new_indexes
 
 
-def broadcast(*args, **kwargs):
+def _get_broadcast_dims_map_common_coords(args, exclude):
+
+    common_coords = OrderedDict()
+    dims_map = OrderedDict()
+    for arg in args:
+        for dim in arg.dims:
+            if dim not in common_coords and dim not in exclude:
+                dims_map[dim] = arg.sizes[dim]
+                if dim in arg.coords:
+                    common_coords[dim] = arg.coords[dim].variable
+
+    return dims_map, common_coords
+
+
+def _broadcast_helper(arg, exclude, dims_map, common_coords):
+
+    from .dataarray import DataArray  # noqa: F811
+    from .dataset import Dataset  # noqa: F811
+
+    def _set_dims(var):
+        # Add excluded dims to a copy of dims_map
+        var_dims_map = dims_map.copy()
+        for dim in exclude:
+            with suppress(ValueError):
+                # ignore dim not in var.dims
+                var_dims_map[dim] = var.shape[var.dims.index(dim)]
+
+        return var.set_dims(var_dims_map)
+
+    def _broadcast_array(array):
+        data = _set_dims(array.variable)
+        coords = OrderedDict(array.coords)
+        coords.update(common_coords)
+        return DataArray(data, coords, data.dims, name=array.name, attrs=array.attrs)
+
+    def _broadcast_dataset(ds):
+        data_vars = OrderedDict((k, _set_dims(ds.variables[k])) for k in ds.data_vars)
+        coords = OrderedDict(ds.coords)
+        coords.update(common_coords)
+        return Dataset(data_vars, coords, ds.attrs)
+
+    if isinstance(arg, DataArray):
+        return _broadcast_array(arg)
+    elif isinstance(arg, Dataset):
+        return _broadcast_dataset(arg)
+    else:
+        raise ValueError("all input must be Dataset or DataArray objects")
+
+
+def broadcast(*args, exclude=None):
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
 
@@ -457,66 +551,25 @@ def broadcast(*args, **kwargs):
         a        (x, y) int64 1 1 2 2 3 3
         b        (x, y) int64 5 6 5 6 5 6
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
 
-    exclude = kwargs.pop('exclude', None)
     if exclude is None:
         exclude = set()
-    if kwargs:
-        raise TypeError('broadcast() got unexpected keyword arguments: %s'
-                        % list(kwargs))
+    args = align(*args, join="outer", copy=False, exclude=exclude)
 
-    args = align(*args, join='outer', copy=False, exclude=exclude)
-
-    common_coords = OrderedDict()
-    dims_map = OrderedDict()
-    for arg in args:
-        for dim in arg.dims:
-            if dim not in common_coords and dim not in exclude:
-                dims_map[dim] = arg.sizes[dim]
-                if dim in arg.coords:
-                    common_coords[dim] = arg.coords[dim].variable
-
-    def _set_dims(var):
-        # Add excluded dims to a copy of dims_map
-        var_dims_map = dims_map.copy()
-        for dim in exclude:
-            with suppress(ValueError):
-                # ignore dim not in var.dims
-                var_dims_map[dim] = var.shape[var.dims.index(dim)]
-
-        return var.set_dims(var_dims_map)
-
-    def _broadcast_array(array):
-        data = _set_dims(array.variable)
-        coords = OrderedDict(array.coords)
-        coords.update(common_coords)
-        return DataArray(data, coords, data.dims, name=array.name,
-                         attrs=array.attrs, encoding=array.encoding)
-
-    def _broadcast_dataset(ds):
-        data_vars = OrderedDict(
-            (k, _set_dims(ds.variables[k]))
-            for k in ds.data_vars)
-        coords = OrderedDict(ds.coords)
-        coords.update(common_coords)
-        return Dataset(data_vars, coords, ds.attrs)
-
+    dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
     result = []
     for arg in args:
-        if isinstance(arg, DataArray):
-            result.append(_broadcast_array(arg))
-        elif isinstance(arg, Dataset):
-            result.append(_broadcast_dataset(arg))
-        else:
-            raise ValueError('all input must be Dataset or DataArray objects')
+        result.append(_broadcast_helper(arg, exclude, dims_map, common_coords))
 
     return tuple(result)
 
 
 def broadcast_arrays(*args):
     import warnings
-    warnings.warn('xarray.broadcast_arrays is deprecated: use '
-                  'xarray.broadcast instead', DeprecationWarning, stacklevel=2)
+
+    warnings.warn(
+        "xarray.broadcast_arrays is deprecated: use " "xarray.broadcast instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return broadcast(*args)

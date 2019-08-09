@@ -1,11 +1,11 @@
 .. _io:
 
-Serialization and IO
-====================
+Reading and writing files
+=========================
 
 xarray supports direct serialization and IO to several file formats, from
 simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
-format.
+format (recommended).
 
 .. ipython:: python
    :suppress:
@@ -81,6 +81,16 @@ require external libraries and dicts can easily be pickled, or converted to
 json, or geojson. All the values are converted to lists, so dicts might
 be quite large.
 
+To export just the dataset schema, without the data itself, use the
+``data=False`` option:
+
+.. ipython:: python
+
+    ds.to_dict(data=False)
+
+This can be useful for generating indices of dataset contents to expose to
+search indices or other automated data discovery tools.
+
 .. _io.netcdf:
 
 netCDF
@@ -137,13 +147,18 @@ convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
 when loading, ensuring that the ``DataArray`` that is loaded is always exactly
 the same as the one that was saved.
 
-A dataset can also be loaded or written to a specific group within a netCDF
-file. To load from a group, pass a ``group`` keyword argument to the
+NetCDF groups are not supported as part of the
+:py:class:`~xarray.Dataset` data model.  Instead, groups can be loaded
+individually as Dataset objects.
+To do so, pass a ``group`` keyword argument to the
 ``open_dataset`` function. The group can be specified as a path-like
 string, e.g., to access subgroup 'bar' within group 'foo' pass
-'/foo/bar' as the ``group`` argument. When writing multiple groups in one file,
-pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
-file.
+'/foo/bar' as the ``group`` argument.
+In a similar way, the ``group`` keyword argument can be given to the
+:py:meth:`~xarray.Dataset.to_netcdf` method to write to a group
+in a netCDF file.
+When writing multiple groups in one file, pass ``mode='a'`` to ``to_netcdf``
+to ensure that each call does not delete the file.
 
 Data is always loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
@@ -197,24 +212,30 @@ turn this decoding off manually.
 .. _CF conventions: http://cfconventions.org/
 
 You can view this encoding information (among others) in the
-:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` attribute:
+:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` and
+:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` attributes:
 
 .. ipython::
     :verbatim:
 
     In [1]: ds_disk['y'].encoding
     Out[1]:
-    {'calendar': u'proleptic_gregorian',
-     'chunksizes': None,
-     'complevel': 0,
-     'contiguous': True,
-     'dtype': dtype('float64'),
-     'fletcher32': False,
-     'least_significant_digit': None,
+    {'zlib': False,
      'shuffle': False,
+     'complevel': 0,
+     'fletcher32': False,
+     'contiguous': True,
+     'chunksizes': None,
      'source': 'saved_on_disk.nc',
-     'units': u'days since 2000-01-01 00:00:00',
-     'zlib': False}
+     'original_shape': (5,),
+     'dtype': dtype('int64'),
+     'units': 'days since 2000-01-01 00:00:00',
+     'calendar': 'proleptic_gregorian'}
+
+    In [9]: ds_disk.encoding
+    Out[9]:
+    {'unlimited_dims': set(),
+     'source': 'saved_on_disk.nc'}
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
@@ -286,16 +307,23 @@ to using encoded character arrays. Character arrays can be selected even for
 netCDF4 files by setting the ``dtype`` field in ``encoding`` to ``S1``
 (corresponding to NumPy's single-character bytes dtype).
 
-If character arrays are used, the string encoding that was used is stored on
-disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
-`adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
-At the time of this writing (October 2017), a standard convention for indicating
-string encoding for character arrays in netCDF files was
-`still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
-Technically, you can use
-`any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
-by setting the ``_Encoding`` field in ``encoding``. But
-`we don't recommend it <http://utf8everywhere.org/>`_.
+If character arrays are used:
+
+- The string encoding that was used is stored on
+  disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
+  `adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
+  At the time of this writing (October 2017), a standard convention for indicating
+  string encoding for character arrays in netCDF files was
+  `still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
+  Technically, you can use
+  `any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
+  by setting the ``_Encoding`` field in ``encoding``. But
+  `we don't recommend it <http://utf8everywhere.org/>`_.
+- The character dimension name can be specifed by the ``char_dim_name`` field of a variable's
+  ``encoding``. If this is not specified the default name for the character dimension is
+  ``'string%s' % data.shape[-1]``. When decoding character arrays from existing files, the
+  ``char_dim_name`` is added to the variables ``encoding`` to preserve if encoding happens, but
+  the field can be edited by the user.
 
 .. warning::
 
@@ -581,6 +609,30 @@ store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
+It is also possible to append to an existing store. For that, set
+``append_dim`` to the name of the dimension along which to append. ``mode``
+can be omitted as it will internally be set to ``'a'``.
+
+.. ipython:: python
+   :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds1 = xr.Dataset({'foo': (('x', 'y', 't'), np.random.rand(4, 5, 2))},
+                     coords={'x': [10, 20, 30, 40],
+                             'y': [1,2,3,4,5],
+                             't': pd.date_range('2001-01-01', periods=2)})
+    ds1.to_zarr('path/to/directory.zarr')
+    ds2 = xr.Dataset({'foo': (('x', 'y', 't'), np.random.rand(4, 5, 2))},
+                     coords={'x': [10, 20, 30, 40],
+                             'y': [1,2,3,4,5],
+                             't': pd.date_range('2001-01-03', periods=2)})
+    ds2.to_zarr('path/to/directory.zarr', append_dim='t')
+
+To store variable length strings use ``dtype=object``.
+
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`~xarray.open_zarr` method:
 
@@ -635,6 +687,57 @@ For example:
     Not all native zarr compression and filtering options have been tested with
     xarray.
 
+Consolidated Metadata
+~~~~~~~~~~~~~~~~~~~~~
+
+Xarray needs to read all of the zarr metadata when it opens a dataset.
+In some storage mediums, such as with cloud object storage (e.g. amazon S3),
+this can introduce significant overhead, because two separate HTTP calls to the
+object store must be made for each variable in the dataset.
+With version 2.3, zarr will support a feature called *consolidated metadata*,
+which allows all metadata for the entire dataset to be stored with a single
+key (by default called ``.zmetadata``). This can drastically speed up
+opening the store. (For more information on this feature, consult the
+`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+
+If you have zarr version 2.3 or greater, xarray can write and read stores
+with consolidated metadata. To write consolidated metadata, pass the
+``consolidated=True`` option to the
+:py:attr:`Dataset.to_zarr <xarray.Dataset.to_zarr>` method::
+
+    ds.to_zarr('foo.zarr', consolidated=True)
+
+To read a consolidated store, pass the ``consolidated=True`` option to
+:py:func:`~xarray.open_zarr`::
+
+    ds = xr.open_zarr('foo.zarr', consolidated=True)
+
+Xarray can't perform consolidation on pre-existing zarr datasets. This should
+be done directly from zarr, as described in the
+`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.
+
+.. _io.cfgrib:
+
+GRIB format via cfgrib
+----------------------
+
+xarray supports reading GRIB files via ECMWF cfgrib_ python driver and ecCodes_
+C-library, if they are installed. To open a GRIB file supply ``engine='cfgrib'``
+to :py:func:`~xarray.open_dataset`:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: ds_grib = xr.open_dataset('example.grib', engine='cfgrib')
+
+We recommend installing ecCodes via conda::
+
+    conda install -c conda-forge eccodes
+    pip install cfgrib
+
+.. _cfgrib: https://github.com/ecmwf/cfgrib
+.. _ecCodes: https://confluence.ecmwf.int/display/ECC/ecCodes+Home
+
 .. _io.pynio:
 
 Formats supported by PyNIO
@@ -656,7 +759,7 @@ Formats supported by PseudoNetCDF
 ---------------------------------
 
 xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
-formats supported by PseudoNetCDF_, if PseudoNetCDF is installed. 
+formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
 PseudoNetCDF can also provide Climate Forecasting Conventions to
 CMAQ files. In addition, PseudoNetCDF can automatically register custom
 readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
@@ -672,11 +775,14 @@ options are listed on the PseudoNetCDF page.
 .. _PseudoNetCDF: http://github.com/barronh/PseudoNetCDF
 
 
-Formats supported by Pandas
----------------------------
+CSV and other formats supported by Pandas
+-----------------------------------------
 
 For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of `IO tools`_.
+For CSV files, one might also consider `xarray_extras`_.
+
+.. _xarray_extras: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
 
@@ -689,7 +795,10 @@ Combining multiple files
 
 NetCDF files are often encountered in collections, e.g., with different files
 corresponding to different model runs. xarray can straightforwardly combine such
-files into a single Dataset by making use of :py:func:`~xarray.concat`.
+files into a single Dataset by making use of :py:func:`~xarray.concat`,
+:py:func:`~xarray.merge`, :py:func:`~xarray.combine_nested` and
+:py:func:`~xarray.combine_by_coords`. For details on the difference between these
+functions see :ref:`combining data`.
 
 .. note::
 
@@ -702,7 +811,8 @@ files into a single Dataset by making use of :py:func:`~xarray.concat`.
     This function automatically concatenates and merges multiple files into a
     single xarray dataset.
     It is the recommended way to open multiple files with xarray.
-    For more details, see :ref:`dask.io` and a `blog post`_ by Stephan Hoyer.
+    For more details, see :ref:`combining.multi`, :ref:`dask.io` and a
+    `blog post`_ by Stephan Hoyer.
 
 .. _dask: http://dask.pydata.org
 .. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/

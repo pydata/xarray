@@ -8,6 +8,8 @@ This page provides an auto-generated summary of xarray's API. For more details
 and examples, refer to the relevant chapters in the main part of the
 documentation.
 
+See also: :ref:`public api`_.
+
 Top-level functions
 ===================
 
@@ -19,6 +21,9 @@ Top-level functions
    broadcast
    concat
    merge
+   auto_combine
+   combine_by_coords
+   combine_nested
    where
    set_options
    full_like
@@ -84,9 +89,12 @@ Dataset contents
    Dataset.pipe
    Dataset.merge
    Dataset.rename
+   Dataset.rename_vars
+   Dataset.rename_dims
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop
+   Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
 
@@ -147,9 +155,13 @@ Computation
    Dataset.groupby
    Dataset.groupby_bins
    Dataset.rolling
+   Dataset.rolling_exp
+   Dataset.coarsen
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.differentiate
+   Dataset.integrate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -185,6 +197,7 @@ Computation
 :py:attr:`~core.groupby.DatasetGroupBy.last`
 :py:attr:`~core.groupby.DatasetGroupBy.fillna`
 :py:attr:`~core.groupby.DatasetGroupBy.where`
+:py:attr:`~core.groupby.DatasetGroupBy.quantile`
 
 Reshaping and reorganizing
 --------------------------
@@ -195,9 +208,11 @@ Reshaping and reorganizing
    Dataset.transpose
    Dataset.stack
    Dataset.unstack
+   Dataset.to_stacked_array
    Dataset.shift
    Dataset.roll
    Dataset.sortby
+   Dataset.broadcast_like
 
 DataArray
 =========
@@ -311,12 +326,17 @@ Computation
    DataArray.groupby
    DataArray.groupby_bins
    DataArray.rolling
+   DataArray.rolling_exp
+   DataArray.coarsen
    DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.differentiate
+   DataArray.integrate
+   DataArray.str
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -352,7 +372,7 @@ Computation
 :py:attr:`~core.groupby.DataArrayGroupBy.last`
 :py:attr:`~core.groupby.DataArrayGroupBy.fillna`
 :py:attr:`~core.groupby.DataArrayGroupBy.where`
-
+:py:attr:`~core.groupby.DataArrayGroupBy.quantile`
 
 Reshaping and reorganizing
 --------------------------
@@ -363,9 +383,11 @@ Reshaping and reorganizing
    DataArray.transpose
    DataArray.stack
    DataArray.unstack
+   DataArray.to_unstacked_dataset
    DataArray.shift
    DataArray.roll
    DataArray.sortby
+   DataArray.broadcast_like
 
 .. _api.ufuncs:
 
@@ -375,7 +397,7 @@ Universal functions
 .. warning::
 
    With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obliviates the need
+   supported directly on all xarray and dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
    unless compatibility with versions of NumPy prior to v1.13 is required.
 
@@ -453,6 +475,7 @@ Dataset methods
    :toctree: generated/
 
    open_dataset
+   load_dataset
    open_mfdataset
    open_rasterio
    open_zarr
@@ -480,6 +503,7 @@ DataArray methods
    :toctree: generated/
 
    open_dataarray
+   load_dataarray
    DataArray.to_dataset
    DataArray.to_netcdf
    DataArray.to_pandas
@@ -525,6 +549,7 @@ Rolling objects
    core.rolling.DatasetRolling
    core.rolling.DatasetRolling.construct
    core.rolling.DatasetRolling.reduce
+   core.rolling_exp.RollingExp
 
 Resample objects
 ================
@@ -548,6 +573,15 @@ Resample objects also implement the GroupBy interface
    core.resample.DatasetResample.nearest
    core.resample.DatasetResample.pad
 
+Accessors
+=========
+
+.. autosummary::
+   :toctree: generated/
+
+   core.accessor_dt.DatetimeAccessor
+   core.accessor_str.StringAccessor
+
 Custom Indexes
 ==============
 .. autosummary::
@@ -555,12 +589,20 @@ Custom Indexes
 
    CFTimeIndex
 
+Creating custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   cftime_range
+
 Plotting
 ========
 
 .. autosummary::
    :toctree: generated/
 
+   Dataset.plot
    DataArray.plot
    plot.plot
    plot.contourf
@@ -615,3 +657,6 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.FileManager
+   backends.CachingFileManager
+   backends.DummyFileManager

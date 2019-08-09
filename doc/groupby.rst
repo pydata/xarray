@@ -118,7 +118,7 @@ dimensions *other than* the provided one:
 
 .. ipython:: python
 
-    ds.groupby('x').std()
+    ds.groupby('x').std(xr.ALL_DIMS)
 
 First and last
 ~~~~~~~~~~~~~~
@@ -129,7 +129,7 @@ values for group along the grouped dimension:
 
 .. ipython:: python
 
-    ds.groupby('letters').first()
+    ds.groupby('letters').first(xr.ALL_DIMS)
 
 By default, they skip missing values (control this with ``skipna``).
 
@@ -144,7 +144,7 @@ coordinates. For example:
 
 .. ipython:: python
 
-    alt = arr.groupby('letters').mean()
+    alt = arr.groupby('letters').mean(xr.ALL_DIMS)
     alt
     ds.groupby('letters') - alt
 
@@ -197,7 +197,7 @@ __ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimen
                 'lat': (['ny','nx'], [[10,10],[20,20]] ),},
         dims=['ny','nx'])
     da
-    da.groupby('lon').sum()
+    da.groupby('lon').sum(xr.ALL_DIMS)
     da.groupby('lon').apply(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large
@@ -207,3 +207,12 @@ may be desirable:
 .. ipython:: python
 
     da.groupby_bins('lon', [0,45,50]).sum()
+
+These methods group by `lon` values. It is also possible to groupby each
+cell in a grid, regardless of value, by stacking multiple dimensions, 
+applying your function, and then unstacking the result:
+
+.. ipython:: python
+
+   stacked = da.stack(gridcell=['ny', 'nx'])
+   stacked.groupby('gridcell').sum().unstack('gridcell')

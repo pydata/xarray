@@ -5,11 +5,11 @@ import numpy as np
 from . import utils
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
-NA = utils.ReprObject('<NA>')
+NA = utils.ReprObject("<NA>")
 
 
 @functools.total_ordering
-class AlwaysGreaterThan(object):
+class AlwaysGreaterThan:
     def __gt__(self, other):
         return True
 
@@ -18,7 +18,7 @@ class AlwaysGreaterThan(object):
 
 
 @functools.total_ordering
-class AlwaysLessThan(object):
+class AlwaysLessThan:
     def __lt__(self, other):
         return True
 
@@ -42,29 +42,6 @@ PROMOTE_TO_OBJECT = [
 ]
 
 
-@functools.total_ordering
-class AlwaysGreaterThan(object):
-    def __gt__(self, other):
-        return True
-
-    def __eq__(self, other):
-        return isinstance(other, type(self))
-
-
-@functools.total_ordering
-class AlwaysLessThan(object):
-    def __lt__(self, other):
-        return True
-
-    def __eq__(self, other):
-        return isinstance(other, type(self))
-
-
-# Equivalence to np.inf (-np.inf) for object-type
-INF = AlwaysGreaterThan()
-NINF = AlwaysLessThan()
-
-
 def maybe_promote(dtype):
     """Simpler equivalent of pandas.core.common._maybe_promote
 
@@ -80,6 +57,11 @@ def maybe_promote(dtype):
     # N.B. these casting rules should match pandas
     if np.issubdtype(dtype, np.floating):
         fill_value = np.nan
+    elif np.issubdtype(dtype, np.timedelta64):
+        # See https://github.com/numpy/numpy/issues/10685
+        # np.timedelta64 is a subclass of np.integer
+        # Check np.timedelta64 before np.integer
+        fill_value = np.timedelta64("NaT")
     elif np.issubdtype(dtype, np.integer):
         if dtype.itemsize <= 2:
             dtype = np.float32
@@ -89,13 +71,14 @@ def maybe_promote(dtype):
     elif np.issubdtype(dtype, np.complexfloating):
         fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
-        fill_value = np.datetime64('NaT')
-    elif np.issubdtype(dtype, np.timedelta64):
-        fill_value = np.timedelta64('NaT')
+        fill_value = np.datetime64("NaT")
     else:
         dtype = object
         fill_value = np.nan
     return np.dtype(dtype), fill_value
+
+
+NAT_TYPES = (np.datetime64("NaT"), np.timedelta64("NaT"))
 
 
 def get_fill_value(dtype):
@@ -156,8 +139,7 @@ def get_neg_infinity(dtype):
 def is_datetime_like(dtype):
     """Check if a dtype is a subclass of the numpy datetime types
     """
-    return (np.issubdtype(dtype, np.datetime64) or
-            np.issubdtype(dtype, np.timedelta64))
+    return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
 def result_type(*arrays_and_dtypes):
@@ -179,8 +161,9 @@ def result_type(*arrays_and_dtypes):
     types = {np.result_type(t).type for t in arrays_and_dtypes}
 
     for left, right in PROMOTE_TO_OBJECT:
-        if (any(issubclass(t, left) for t in types) and
-                any(issubclass(t, right) for t in types)):
+        if any(issubclass(t, left) for t in types) and any(
+            issubclass(t, right) for t in types
+        ):
             return np.dtype(object)
 
     return np.result_type(*arrays_and_dtypes)
