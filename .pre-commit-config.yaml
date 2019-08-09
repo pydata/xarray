@@ -1,0 +1,12 @@
+# https://pre-commit.com/
+# https://github.com/python/black#version-control-integration
+repos:
+  - repo: https://github.com/python/black
+    rev: stable
+    hooks:
+      - id: black
+        language_version: python3.7
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.2.3
+    hooks:
+      - id: flake8
