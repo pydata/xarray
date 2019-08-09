@@ -775,10 +775,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         else:
 
-            def wrapped_func(
+            def wrapped_func(  # type: ignore
                 self,
                 dim=DEFAULT_DIMS,
-                axis=None,  # type: ignore
+                axis=None,
                 keep_attrs=None,
                 **kwargs
             ):
@@ -912,9 +912,9 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         else:
 
-            def wrapped_func(
+            def wrapped_func(  # type: ignore
                 self,
-                dim=DEFAULT_DIMS,  # type: ignore
+                dim=DEFAULT_DIMS,
                 **kwargs
             ):
                 return self.reduce(
