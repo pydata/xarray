@@ -289,6 +289,123 @@ class TestConcatDataset:
         assert_identical(actual, expected)
 
 
+class TestConcatDatasetNewApi:
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.ds1 = Dataset(
+            {
+                "only_x_y": (("y", "x"), [[1, 2]]),
+                "only_x": ("x", [1, 2]),
+                "only_z": ("z", [1, 2]),
+                "const1": 1.0,
+            },
+            coords={"x": [0, 1], "y": [0], "z": [-1, -2], "coord1": ("x", [0, 1])},
+        )
+        self.ds2 = Dataset(
+            {
+                "only_x_y": (("y", "x"), [[3, 4]]),
+                "only_x": ("x", [1.1, 2.1]),
+                "only_z": ("z", [1, 2]),
+                "const1": 1.0,
+            },
+            coords={
+                "x": [0, 1],
+                "y": [1],
+                "z": [-1, -2],
+                "coord1": ("x", [0.0001, 1.0001]),
+            },
+        )
+
+        self.expected_y = Dataset(
+            {
+                "only_x_y": (("y", "x"), [[1, 2], [3, 4]]),
+                "only_x": ("x", [1, 2]),
+                "only_z": ("z", [1, 2]),
+                "const1": 1.0,
+            },
+            coords={"x": [0, 1], "y": [0, 1], "z": [-1, -2], "coord1": ("x", [0, 1])},
+        )
+
+        self.expected_new_dim = Dataset(
+            {
+                "only_x_y": (
+                    ("new_dim", "y", "x"),
+                    [[[1, 2], [np.nan, np.nan]], [[np.nan, np.nan], [3, 4]]],
+                ),
+                "only_x": (("new_dim", "x"), [[1, 2], [1.1, 2.1]]),
+                "only_z": (("new_dim", "z"), [[1, 2], [1, 2]]),
+                "const1": ("new_dim", [1.0, 1.0]),
+            },
+            coords={
+                "x": [0, 1],
+                "y": [0, 1],
+                "z": [-1, -2],
+                "coord1": (("new_dim", "x"), [[0, 1], [0.0001, 1.0001]]),
+            },
+        )
+
+        self.dsets = [self.ds1, self.ds2]
+
+    def test_concat_sensible_compat_errors(self):
+
+        with raises_regex(ValueError, "'only_x' is not equal across datasets."):
+            concat(self.dsets, data_vars="sensible", dim="y")
+
+        with raises_regex(ValueError, "'coord1' is not equal across datasets."):
+            concat(self.dsets, coords="sensible", dim="y")
+
+    @pytest.mark.parametrize("concat_dim", ["y", "new_dim"])
+    def test_sensible(self, concat_dim):
+        actual = concat(
+            self.dsets,
+            data_vars="sensible",
+            coords="sensible",
+            compat="override",
+            dim=concat_dim,
+        )
+
+        if concat_dim == "y":
+            expected = self.expected_y
+        else:
+            expected = self.expected_new_dim
+
+        assert_equal(actual, expected)
+
+    @pytest.mark.parametrize(
+        "data_vars, coords", [("sensible", "all"), ("all", "sensible")]
+    )
+    def test_compat_override(self, data_vars, coords):
+
+        actual = concat(
+            self.dsets, data_vars=data_vars, coords=coords, compat="override", dim="y"
+        )
+
+        if data_vars == "all":
+            expected_y_dim = ["only_x_y", "only_x", "only_z", "const1"]
+            equal_to_first_ds = []
+        elif data_vars == "sensible":
+            expected_y_dim = ["only_x_y"]
+            if coords == "all":
+                # in this case, variable only_x will not have coord1 as non-dim coord
+                equal_to_first_ds = ["only_z", "const1"]
+            if coords == "sensible":
+                equal_to_first_ds = ["only_x", "only_z", "const1"]
+
+        if coords == "all":
+            expected_y_dim += ["coord1"]
+        elif coords == "sensible":
+            equal_to_first_ds += ["coord1"]
+
+        expected_no_y_dim = set(actual.data_vars.keys()) - set(expected_y_dim)
+
+        for var in expected_no_y_dim:
+            assert "y" not in actual[var].dims
+        for var in expected_y_dim:
+            assert "y" in actual[var].dims
+        for var in equal_to_first_ds:
+            assert_equal(actual[var], self.dsets[0][var])
+
+
 class TestConcatDataArray:
     def test_concat(self):
         ds = Dataset(
