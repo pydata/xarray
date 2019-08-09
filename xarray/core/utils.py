@@ -266,7 +266,7 @@ def either_dict_or_kwargs(
         return cast(Mapping[Hashable, T], kw_kwargs)
 
 
-def is_scalar(value: Any, include_0d: Optional[bool] = True) -> bool:
+def is_scalar(value: Any, include_0d: bool = True) -> bool:
     """Whether to treat a value as a scalar.
 
     Any non-iterable, string, or 0-D array
