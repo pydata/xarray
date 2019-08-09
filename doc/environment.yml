@@ -29,3 +29,4 @@ dependencies:
   - jupyter_client=5.3.1
   - ipykernel=5.1.1
   - pip
+  - cfgrib
