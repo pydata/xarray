@@ -1354,6 +1354,18 @@ class TestDataArray:
         actual = DataArray(3, dims=['x', 'y'], coords=[range(3), range(4)])
         assert_identical(expected, actual)
 
+        expected = DataArray(np.full((1, 10, 2), 0),
+                             dims=['w', 'x', 'y'],
+                             coords={'x': np.arange(10),
+                                     'y': ['north', 'south']})
+        actual = DataArray(0, dims=expected.dims, coords=expected.coords)
+        assert_identical(expected, actual)
+
+        expected = DataArray(np.full((10, 2), np.nan),
+                             coords=[('x', np.arange(10)), ('y', ['a', 'b'])])
+        actual = DataArray(coords=expected.coords)
+        assert_identical(expected, actual)
+
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
         expected = DataArray(array.values, {'y': list('abc')}, dims='y')
