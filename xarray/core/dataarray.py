@@ -116,6 +116,8 @@ def _infer_coords_and_dims(
 
 
 def _check_data_shape(data, coords, dims):
+    if data is dtypes.NA:
+        data = np.nan
     if utils.is_scalar(data, test0d=False) and coords is not None:
         if utils.is_dict_like(coords):
             if dims is None:
@@ -129,10 +131,7 @@ def _check_data_shape(data, coords, dims):
         else:
             data_shp = tuple(as_compatible_data(
                 coord).size for coord in coords)
-        if data.item() is None:
-            data = np.empty(data_shp)
-        else:
-            data = np.full(data_shp, data)
+        data = np.full(data_shp, data)
     return data
 
 
@@ -211,7 +210,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __init__(
         self,
-        data: Any,
+        data: Any = dtypes.NA,
         coords: Union[
             Sequence[Tuple],
             Mapping[Hashable, Any],
