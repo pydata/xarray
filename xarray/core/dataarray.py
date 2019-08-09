@@ -161,7 +161,11 @@ def _infer_coords_and_dims(
 def _check_data_shape(data, coords, dims):
     if data is dtypes.NA:
         data = np.nan
-    if utils.is_scalar(data, test0d=False) and coords is not None:
+    if (
+        coords is not None
+        and utils.is_scalar(data, test0d=False)
+        and not isinstance(data, indexing.ExplicitlyIndexed)
+    ):
         if utils.is_dict_like(coords):
             if dims is None:
                 return data
