@@ -116,7 +116,7 @@ def _infer_coords_and_dims(
 
 
 def _check_data_shape(data, coords, dims):
-    if data.shape == () and coords is not None:
+    if utils.is_scalar(data, test0d=False) and coords is not None:
         if utils.is_dict_like(coords):
             if dims is None:
                 return data
@@ -299,8 +299,8 @@ class DataArray(AbstractArray, DataWithCoords):
             if encoding is None:
                 encoding = getattr(data, 'encoding', None)
 
-            data = as_compatible_data(data)
             data = _check_data_shape(data, coords, dims)
+            data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
 

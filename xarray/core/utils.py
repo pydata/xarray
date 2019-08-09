@@ -235,13 +235,15 @@ def either_dict_or_kwargs(pos_kwargs: Optional[Mapping[Hashable, T]],
         return cast(Mapping[Hashable, T], kw_kwargs)
 
 
-def is_scalar(value: Any) -> bool:
+def is_scalar(value: Any, test0d: Optional[bool] = True) -> bool:
     """Whether to treat a value as a scalar.
 
     Any non-iterable, string, or 0-D array
     """
+    if test0d:
+        test0d = getattr(value, 'ndim', None) == 0
     return (
-        getattr(value, 'ndim', None) == 0 or
+        test0d or
         isinstance(value, (str, bytes)) or not
         isinstance(value, (Iterable, ) + dask_array_type))
 
