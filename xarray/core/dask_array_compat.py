@@ -4,7 +4,6 @@ import dask.array as da
 import numpy as np
 from dask import __version__ as dask_version
 
-
 try:
     blockwise = da.blockwise
 except AttributeError:

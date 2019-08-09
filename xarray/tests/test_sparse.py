@@ -12,7 +12,6 @@ from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import assert_equal, assert_identical
 
-
 param = pytest.param
 xfail = pytest.mark.xfail
 

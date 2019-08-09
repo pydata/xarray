@@ -31,7 +31,6 @@ import pandas as pd
 
 from .pycompat import dask_array_type
 
-
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
