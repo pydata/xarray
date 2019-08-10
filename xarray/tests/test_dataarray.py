@@ -928,6 +928,33 @@ class TestDataArray:
         result = array.sel(delta=slice(array.delta[0], array.delta[-1]))
         assert_equal(result, array)
 
+    def test_sel_float(self):
+        data_values = np.arange(4)
+
+        # case coords are float32 and label is list of floats
+        float_values = [0.0, 0.111, 0.222, 0.333]
+        coord_values = np.asarray(float_values, dtype="float32")
+        array = DataArray(data_values, [("float32_coord", coord_values)])
+        expected = DataArray(data_values[1:3], [("float32_coord", coord_values[1:3])])
+        actual = array.sel(float32_coord=float_values[1:3])
+        # case coords are float16 and label is list of floats
+        coord_values_16 = np.asarray(float_values, dtype="float16")
+        expected_16 = DataArray(
+            data_values[1:3], [("float16_coord", coord_values_16[1:3])]
+        )
+        array_16 = DataArray(data_values, [("float16_coord", coord_values_16)])
+        actual_16 = array_16.sel(float16_coord=float_values[1:3])
+
+        # case coord, label are scalars
+        expected_scalar = DataArray(
+            data_values[2], coords={"float32_coord": coord_values[2]}
+        )
+        actual_scalar = array.sel(float32_coord=float_values[2])
+
+        assert_equal(expected, actual)
+        assert_equal(expected_scalar, actual_scalar)
+        assert_equal(expected_16, actual_16)
+
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims="x")
         assert_identical(array[0], array.sel(x=0))

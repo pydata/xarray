@@ -11,7 +11,7 @@ import pandas as pd
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
 from .pycompat import dask_array_type, integer_types
-from .utils import is_dict_like
+from .utils import is_dict_like, maybe_cast_to_coords_dtype
 
 
 def expanded_indexer(key, ndim):
@@ -269,6 +269,8 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
                 )
             pos_indexers[dim] = label
         else:
+            coords_dtype = data_obj.coords[dim].dtype
+            label = maybe_cast_to_coords_dtype(label, coords_dtype)
             idxr, new_idx = convert_label_indexer(index, label, dim, method, tolerance)
             pos_indexers[dim] = idxr
             if new_idx is not None:
