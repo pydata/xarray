@@ -271,8 +271,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
         else:
             coords_dtype = data_obj.coords[dim].dtype
             label = maybe_cast_to_coords_dtype(label, coords_dtype)
-            idxr, new_idx = convert_label_indexer(index, label,
-                                                  dim, method, tolerance)
+            idxr, new_idx = convert_label_indexer(index, label, dim, method, tolerance)
             pos_indexers[dim] = idxr
             if new_idx is not None:
                 new_indexes[dim] = new_idx
