@@ -75,7 +75,7 @@ jobs:
   - template: ci/azure/install.yml
   - bash: |
       source activate xarray-tests
-      mypy . || exit 0
+      mypy .
     displayName: mypy type checks
 
 - job: Docs

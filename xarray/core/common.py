@@ -46,12 +46,7 @@ class ImplementsArrayReduce:
 
         else:
 
-            def wrapped_func(
-                self,
-                dim=None,
-                axis=None,  # type: ignore
-                **kwargs
-            ):
+            def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore
                 return self.reduce(func, dim, axis, allow_lazy=True, **kwargs)
 
         return wrapped_func
