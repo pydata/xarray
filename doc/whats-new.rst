@@ -29,17 +29,23 @@ New functions/methods
   <http://github.com/DavidMertz>`_.
 
 - The xarray package is now discoverably by mypy (although typing hints
-  coverage is not complete yet). mypy users can now remove from their setup.cfg
-  the lines::
+  coverage is not complete yet). mypy type checking is now enforced by CI.
+  Libraries that depend on xarray and use mypy can now remove from their setup.cfg the lines::
 
     [mypy-xarray]
     ignore_missing_imports = True
 
    By `Guido Imperiale <https://github.com/crusaderky>`_
 
+- Dataset plotting API for visualizing dependences between two `DataArray`s!
+  Currently only :py:meth:`Dataset.plot.scatter` is implemented.
+  By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
+
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
+  It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
@@ -64,8 +70,12 @@ Bug fixes
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Fixed crash when applying ``distributed.Client.compute()`` to a DataArray
   (:issue:`3171`). By `Guido Imperiale <https://github.com/crusaderky>`_.
-
-
+- Better error message when using groupby on an empty DataArray (:issue:`3037`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+- Fix error that arises when using open_mfdataset on a series of netcdf files
+  having differing values for a variable attribute of type list. (:issue:`3034`)
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+                               
 .. _whats-new.0.12.3:
 
 v0.12.3 (10 July 2019)
@@ -106,8 +116,6 @@ Bug fixes
 - Fix HDF5 error that could arise when reading multiple groups from a file at
   once (:issue:`2954`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-- Better error message when using groupby on an empty DataArray (:issue:`3037`).
-  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 
 .. _whats-new.0.12.2:
 

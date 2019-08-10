@@ -8,9 +8,23 @@ import re
 import warnings
 from collections import OrderedDict
 from typing import (
-    AbstractSet, Any, Callable, Container, Dict, Hashable, Iterable, Iterator,
-    Mapping, MutableMapping, MutableSet, Optional, Sequence, Tuple, TypeVar,
-    cast)
+    AbstractSet,
+    Any,
+    Callable,
+    Container,
+    Dict,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
@@ -18,29 +32,33 @@ import pandas as pd
 from .pycompat import dask_array_type
 
 
-K = TypeVar('K')
-V = TypeVar('V')
-T = TypeVar('T')
+K = TypeVar("K")
+V = TypeVar("V")
+T = TypeVar("T")
 
 
 def _check_inplace(inplace: Optional[bool], default: bool = False) -> bool:
     if inplace is None:
         inplace = default
     else:
-        warnings.warn('The inplace argument has been deprecated and will be '
-                      'removed in a future version of xarray.',
-                      FutureWarning, stacklevel=3)
+        warnings.warn(
+            "The inplace argument has been deprecated and will be "
+            "removed in a future version of xarray.",
+            FutureWarning,
+            stacklevel=3,
+        )
 
     return inplace
 
 
 def alias_message(old_name: str, new_name: str) -> str:
-    return '%s has been deprecated. Use %s instead.' % (old_name, new_name)
+    return "%s has been deprecated. Use %s instead." % (old_name, new_name)
 
 
 def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
-    warnings.warn(alias_message(old_name, new_name), FutureWarning,
-                  stacklevel=stacklevel)
+    warnings.warn(
+        alias_message(old_name, new_name), FutureWarning, stacklevel=stacklevel
+    )
 
 
 def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
@@ -50,6 +68,7 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     def wrapper(*args, **kwargs):
         alias_warning(old_name, obj.__name__)
         return obj(*args, **kwargs)
+
     wrapper.__doc__ = alias_message(old_name, obj.__name__)
     return wrapper
 
@@ -57,7 +76,7 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from ..coding.cftimeindex import CFTimeIndex
 
-    if len(index) > 0 and index.dtype == 'O':
+    if len(index) > 0 and index.dtype == "O":
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
@@ -83,19 +102,19 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     """
     if isinstance(array, pd.Index):
         index = array
-    elif hasattr(array, 'to_index'):
+    elif hasattr(array, "to_index"):
         index = array.to_index()
     else:
         kwargs = {}
-        if hasattr(array, 'dtype') and array.dtype.kind == 'O':
-            kwargs['dtype'] = object
+        if hasattr(array, "dtype") and array.dtype.kind == "O":
+            kwargs["dtype"] = object
         index = pd.Index(np.asarray(array), **kwargs)
     return _maybe_cast_to_cftimeindex(index)
 
 
-def multiindex_from_product_levels(levels: Sequence[pd.Index],
-                                   names: Sequence[str] = None
-                                   ) -> pd.MultiIndex:
+def multiindex_from_product_levels(
+    levels: Sequence[pd.Index], names: Sequence[str] = None
+) -> pd.MultiIndex:
     """Creating a MultiIndex from a product without refactorizing levels.
 
     Keeping levels the same gives back the original labels when we unstack.
@@ -112,10 +131,10 @@ def multiindex_from_product_levels(levels: Sequence[pd.Index],
     pandas.MultiIndex
     """
     if any(not isinstance(lev, pd.Index) for lev in levels):
-        raise TypeError('levels must be a list of pd.Index objects')
+        raise TypeError("levels must be a list of pd.Index objects")
 
     split_labels, levels = zip(*[lev.factorize() for lev in levels])
-    labels_mesh = np.meshgrid(*split_labels, indexing='ij')
+    labels_mesh = np.meshgrid(*split_labels, indexing="ij")
     labels = [x.ravel() for x in labels_mesh]
     return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
@@ -135,16 +154,32 @@ def maybe_wrap_array(original, new_array):
 
 def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
-    array_equiv if either object is an ndarray
+    array_equiv if either object is an ndarray. If both objects are lists,
+    equivalent is sequentially called on all the elements.
     """
     # TODO: refactor to avoid circular import
     from . import duck_array_ops
+
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+    elif isinstance(first, list) or isinstance(second, list):
+        return list_equiv(first, second)
     else:
-        return ((first is second) or
-                (first == second) or
-                (pd.isnull(first) and pd.isnull(second)))
+        return (
+            (first is second)
+            or (first == second)
+            or (pd.isnull(first) and pd.isnull(second))
+        )
+
+
+def list_equiv(first, second):
+    equiv = True
+    if len(first) != len(second):
+        return False
+    else:
+        for f, s in zip(first, second):
+            equiv = equiv and equivalent(f, s)
+    return equiv
 
 
 def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
@@ -156,9 +191,11 @@ def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
     return peek, itertools.chain([peek], gen)
 
 
-def update_safety_check(first_dict: MutableMapping[K, V],
-                        second_dict: Mapping[K, V],
-                        compat: Callable[[V, V], bool] = equivalent) -> None:
+def update_safety_check(
+    first_dict: MutableMapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> None:
     """Check the safety of updating one dictionary with another.
 
     Raises ValueError if dictionaries have non-compatible values for any key,
@@ -176,14 +213,17 @@ def update_safety_check(first_dict: MutableMapping[K, V],
     """
     for k, v in second_dict.items():
         if k in first_dict and not compat(v, first_dict[k]):
-            raise ValueError('unsafe to merge dictionaries without '
-                             'overriding values; conflicting key %r' % k)
+            raise ValueError(
+                "unsafe to merge dictionaries without "
+                "overriding values; conflicting key %r" % k
+            )
 
 
-def remove_incompatible_items(first_dict: MutableMapping[K, V],
-                              second_dict: Mapping[K, V],
-                              compat: Callable[[V, V], bool] = equivalent
-                              ) -> None:
+def remove_incompatible_items(
+    first_dict: MutableMapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> None:
     """Remove incompatible items from the first dictionary in-place.
 
     Items are retained if their keys are found in both dictionaries and the
@@ -203,24 +243,28 @@ def remove_incompatible_items(first_dict: MutableMapping[K, V],
 
 
 def is_dict_like(value: Any) -> bool:
-    return hasattr(value, 'keys') and hasattr(value, '__getitem__')
+    return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
 def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
-def either_dict_or_kwargs(pos_kwargs: Optional[Mapping[Hashable, T]],
-                          kw_kwargs: Mapping[str, T],
-                          func_name: str
-                          ) -> Mapping[Hashable, T]:
+def either_dict_or_kwargs(
+    pos_kwargs: Optional[Mapping[Hashable, T]],
+    kw_kwargs: Mapping[str, T],
+    func_name: str,
+) -> Mapping[Hashable, T]:
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
-            raise ValueError('the first argument to .%s must be a dictionary'
-                             % func_name)
+            raise ValueError(
+                "the first argument to .%s must be a dictionary" % func_name
+            )
         if kw_kwargs:
-            raise ValueError('cannot specify both keyword and positional '
-                             'arguments to .%s' % func_name)
+            raise ValueError(
+                "cannot specify both keyword and positional "
+                "arguments to .%s" % func_name
+            )
         return pos_kwargs
     else:
         # Need an explicit cast to appease mypy due to invariance; see
@@ -234,9 +278,13 @@ def is_scalar(value: Any) -> bool:
     Any non-iterable, string, or 0-D array
     """
     return (
-        getattr(value, 'ndim', None) == 0 or
-        isinstance(value, (str, bytes)) or not
-        isinstance(value, (Iterable, ) + dask_array_type))
+        getattr(value, "ndim", None) == 0
+        or isinstance(value, (str, bytes))
+        or not (
+            isinstance(value, (Iterable,) + dask_array_type)
+            or hasattr(value, "__array_function__")
+        )
+    )
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
@@ -259,15 +307,17 @@ def to_0d_object_array(value: Any) -> np.ndarray:
 def to_0d_array(value: Any) -> np.ndarray:
     """Given a value, wrap it in a 0-D numpy.ndarray.
     """
-    if np.isscalar(value) or (isinstance(value, np.ndarray) and
-                              value.ndim == 0):
+    if np.isscalar(value) or (isinstance(value, np.ndarray) and value.ndim == 0):
         return np.array(value)
     else:
         return to_0d_object_array(value)
 
 
-def dict_equiv(first: Mapping[K, V], second: Mapping[K, V],
-               compat: Callable[[V, V], bool] = equivalent) -> bool:
+def dict_equiv(
+    first: Mapping[K, V],
+    second: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> bool:
     """Test equivalence of two dict-like objects. If any of the values are
     numpy arrays, compare them correctly.
 
@@ -293,10 +343,11 @@ def dict_equiv(first: Mapping[K, V], second: Mapping[K, V],
     return True
 
 
-def ordered_dict_intersection(first_dict: Mapping[K, V],
-                              second_dict: Mapping[K, V],
-                              compat: Callable[[V, V], bool] = equivalent
-                              ) -> MutableMapping[K, V]:
+def ordered_dict_intersection(
+    first_dict: Mapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> MutableMapping[K, V]:
     """Return the intersection of two dictionaries as a new OrderedDict.
 
     Items are retained if their keys are found in both dictionaries and the
@@ -325,7 +376,8 @@ class Frozen(Mapping[K, V]):
     immutable. If you really want to modify the mapping, the mutable version is
     saved under the `mapping` attribute.
     """
-    __slots__ = ['mapping']
+
+    __slots__ = ["mapping"]
 
     def __init__(self, mapping: Mapping[K, V]):
         self.mapping = mapping
@@ -343,7 +395,7 @@ class Frozen(Mapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return '%s(%r)' % (type(self).__name__, self.mapping)
+        return "%s(%r)" % (type(self).__name__, self.mapping)
 
 
 def FrozenOrderedDict(*args, **kwargs) -> Frozen:
@@ -355,7 +407,8 @@ class SortedKeysDict(MutableMapping[K, V]):
     items in sorted order by key but is otherwise equivalent to the underlying
     mapping.
     """
-    __slots__ = ['mapping']
+
+    __slots__ = ["mapping"]
 
     def __init__(self, mapping: MutableMapping[K, V] = None):
         self.mapping = {} if mapping is None else mapping
@@ -379,7 +432,7 @@ class SortedKeysDict(MutableMapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return '%s(%r)' % (type(self).__name__, self.mapping)
+        return "%s(%r)" % (type(self).__name__, self.mapping)
 
 
 class OrderedSet(MutableSet[T]):
@@ -388,6 +441,7 @@ class OrderedSet(MutableSet[T]):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
+
     def __init__(self, values: AbstractSet[T] = None):
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
         if values is not None:
@@ -420,13 +474,14 @@ class OrderedSet(MutableSet[T]):
         self |= values  # type: ignore
 
     def __repr__(self) -> str:
-        return '%s(%r)' % (type(self).__name__, list(self))
+        return "%s(%r)" % (type(self).__name__, list(self))
 
 
 class NdimSizeLenMixin:
     """Mixin class that extends a class that defines a ``shape`` property to
     one that also defines ``ndim``, ``size`` and ``__len__``.
     """
+
     @property
     def ndim(self: Any) -> int:
         return len(self.shape)
@@ -440,7 +495,7 @@ class NdimSizeLenMixin:
         try:
             return self.shape[0]
         except IndexError:
-            raise TypeError('len() of unsized object')
+            raise TypeError("len() of unsized object")
 
 
 class NDArrayMixin(NdimSizeLenMixin):
@@ -450,6 +505,7 @@ class NDArrayMixin(NdimSizeLenMixin):
     A subclass should set the `array` property and override one or more of
     `dtype`, `shape` and `__getitem__`.
     """
+
     @property
     def dtype(self: Any) -> np.dtype:
         return self.array.dtype
@@ -462,13 +518,14 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array[key]
 
     def __repr__(self: Any) -> str:
-        return '%s(array=%r)' % (type(self).__name__, self.array)
+        return "%s(array=%r)" % (type(self).__name__, self.array)
 
 
 class ReprObject:
     """Object that prints as the given value, for use with sentinel values.
     """
-    __slots__ = ('_value', )
+
+    __slots__ = ("_value",)
 
     def __init__(self, value: str):
         self._value = value
@@ -498,12 +555,12 @@ def close_on_error(f):
 
 
 def is_remote_uri(path: str) -> bool:
-    return bool(re.search(r'^https?\://', path))
+    return bool(re.search(r"^https?\://", path))
 
 
 def is_grib_path(path: str) -> bool:
     _, ext = os.path.splitext(path)
-    return ext in ['.grib', '.grb', '.grib2', '.grb2']
+    return ext in [".grib", ".grb", ".grib2", ".grb2"]
 
 
 def is_uniform_spaced(arr, **kwargs) -> bool:
@@ -552,15 +609,16 @@ def ensure_us_time_resolution(val):
     """Convert val out of numpy time, for use in to_dict.
     Needed because of numpy bug GH#7619"""
     if np.issubdtype(val.dtype, np.datetime64):
-        val = val.astype('datetime64[us]')
+        val = val.astype("datetime64[us]")
     elif np.issubdtype(val.dtype, np.timedelta64):
-        val = val.astype('timedelta64[us]')
+        val = val.astype("timedelta64[us]")
     return val
 
 
 class HiddenKeyDict(MutableMapping[K, V]):
     """Acts like a normal dictionary, but hides certain keys.
     """
+
     # ``__init__`` method required to create instance from class.
 
     def __init__(self, data: MutableMapping[K, V], hidden_keys: Iterable[K]):
@@ -569,7 +627,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
     def _raise_if_hidden(self, key: K) -> None:
         if key in self._hidden_keys:
-            raise KeyError('Key `%r` is hidden.' % key)
+            raise KeyError("Key `%r` is hidden." % key)
 
     # The next five methods are requirements of the ABC.
     def __setitem__(self, key: K, value: V) -> None:
@@ -608,5 +666,5 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
         -> ['__rolling']
     """
     while new_dim in dims:
-        new_dim = '_' + str(new_dim)
+        new_dim = "_" + str(new_dim)
     return new_dim

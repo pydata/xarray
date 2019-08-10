@@ -10,6 +10,7 @@ from .variable import Variable
 
 class Indexes(collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArrary indexes."""
+
     def __init__(self, indexes):
         """Not for public consumption.
 
@@ -37,9 +38,8 @@ class Indexes(collections.abc.Mapping):
 
 
 def default_indexes(
-    coords: Mapping[Any, Variable],
-    dims: Iterable,
-) -> 'OrderedDict[Any, pd.Index]':
+    coords: Mapping[Any, Variable], dims: Iterable
+) -> "OrderedDict[Any, pd.Index]":
     """Default indexes for a Dataset/DataArray.
 
     Parameters
@@ -54,8 +54,7 @@ def default_indexes(
     Mapping from indexing keys (levels/dimension names) to indexes used for
     indexing along that dimension.
     """
-    return OrderedDict((key, coords[key].to_index())
-                       for key in dims if key in coords)
+    return OrderedDict((key, coords[key].to_index()) for key in dims if key in coords)
 
 
 def isel_variable_and_index(
@@ -71,8 +70,8 @@ def isel_variable_and_index(
 
     if len(variable.dims) > 1:
         raise NotImplementedError(
-            'indexing multi-dimensional variable with indexes is not '
-            'supported yet')
+            "indexing multi-dimensional variable with indexes is not " "supported yet"
+        )
 
     new_variable = variable.isel(indexers)
 
