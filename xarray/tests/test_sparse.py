@@ -136,7 +136,6 @@ def test_variable_property(prop):
             True,
             marks=xfail(reason="'COO' object has no attribute 'argsort'"),
         ),
-        param(do("chunk", chunks=(5, 5)), True, marks=xfail),
         param(
             do(
                 "concat",
@@ -403,9 +402,6 @@ def test_dataarray_property(prop):
             do("bfill", dim="x"),
             False,
             marks=xfail(reason="Missing implementation for np.flip"),
-        ),
-        param(
-            do("chunk", chunks=(5, 5)), False, marks=xfail(reason="Coercion to dense")
         ),
         param(
             do("combine_first", make_xrarray({"x": 10, "y": 5})),
@@ -861,3 +857,17 @@ class TestSparseCoords:
             dims=["x"],
             coords={"x": COO.from_numpy([1, 2, 3, 4])},
         )
+
+
+def test_chunk():
+    s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
+    a = DataArray(s)
+    ac = a.chunk(2)
+    assert ac.chunks == ((2, 2),)
+    assert isinstance(ac.data._meta, sparse.COO)
+    assert_identical(a, ac)
+
+    ds = a.to_dataset("a")
+    dsc = ds.chunk(2)
+    assert dsc.chunks == {"dim_0": (2, 2)}
+    assert_identical(ds, dsc)

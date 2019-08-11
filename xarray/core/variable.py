@@ -928,21 +928,26 @@ class Variable(
         else:
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
-            # da.from_array works by using lazily indexing with a tuple of
-            # slices. Using OuterIndexer is a pragmatic choice: dask does not
-            # yet handle different indexing types in an explicit way:
-            # https://github.com/dask/dask/issues/2883
-            data = indexing.ImplicitToExplicitIndexingAdapter(
-                data, indexing.OuterIndexer
-            )
 
-            # For now, assume that all arrays that we wrap with dask (including
-            # our lazily loaded backend array classes) should use NumPy array
-            # operations.
-            if LooseVersion(dask.__version__) > "1.2.2":
-                kwargs = dict(meta=np.ndarray)
+            if not isinstance(data, np.ndarray) and hasattr(data, "__array_function__"):
+                # This should always be true after Variable.as_compatible_data
+                assert IS_NEP18_ACTIVE
+                kwargs = {}
             else:
-                kwargs = dict()
+                # da.from_array works by using lazily indexing with a tuple of
+                # slices. Using OuterIndexer is a pragmatic choice: dask does not
+                # yet handle different indexing types in an explicit way:
+                # https://github.com/dask/dask/issues/2883
+                data = indexing.ImplicitToExplicitIndexingAdapter(
+                    data, indexing.OuterIndexer
+                )
+
+                if LooseVersion(dask.__version__) < "2.0.0":
+                    kwargs = {}
+                else:
+                    # All of our lazily loaded backend array classes) should use NumPy
+                    # array operations.
+                    kwargs = {"meta": np.ndarray}
 
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 

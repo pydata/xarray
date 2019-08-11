@@ -186,7 +186,12 @@ def as_like_arrays(*data):
     elif any(isinstance(d, sparse_array_type) for d in data):
         from sparse import COO
 
-        return tuple(COO(d) for d in data)
+        out = []
+        for d in data:
+            if isinstance(d, dask_array_type):
+                d = d.compute()
+            out.append(COO(d))
+        return tuple(out)
     else:
         return tuple(np.asarray(d) for d in data)
 
