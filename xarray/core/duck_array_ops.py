@@ -183,6 +183,8 @@ def as_shared_dtype(scalars_or_arrays):
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     """Like np.allclose, but also allows values to be NaN in both arrays
     """
+    arr1 = asarray(arr1)
+    arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
     return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
@@ -191,9 +193,10 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 def array_equiv(arr1, arr2):
     """Like np.array_equal, but also allows values to be NaN in both arrays
     """
+    arr1 = asarray(arr1)
+    arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
         flag_array = (arr1 == arr2) | (isnull(arr1) & isnull(arr2))
@@ -204,9 +207,10 @@ def array_notnull_equiv(arr1, arr2):
     """Like np.array_equal, but also allows values to be NaN in either or both
     arrays
     """
+    arr1 = asarray(arr1)
+    arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
         flag_array = (arr1 == arr2) | isnull(arr1) | isnull(arr2)
