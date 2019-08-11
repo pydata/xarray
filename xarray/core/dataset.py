@@ -489,7 +489,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self._indexes = None  # type: Optional[OrderedDict[Any, pd.Index]]
 
         if attrs is not None:
-            self.attrs = attrs
+            self._attrs = OrderedDict(attrs)
+
         self._encoding = None  # type: Optional[Dict]
         self._initialized = True
 
