@@ -867,7 +867,7 @@ def test_chunk():
     assert isinstance(ac.data._meta, sparse.COO)
     assert_identical(a, ac)
 
-    ds = a.to_dataset("a")
+    ds = a.to_dataset(name="a")
     dsc = ds.chunk(2)
     assert dsc.chunks == {"dim_0": (2, 2)}
     assert_identical(ds, dsc)
