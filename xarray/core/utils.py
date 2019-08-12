@@ -84,6 +84,12 @@ def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
         return index
 
 
+def maybe_cast_to_coords_dtype(label, coords_dtype):
+    if coords_dtype.kind == "f" and not isinstance(label, slice):
+        label = np.asarray(label, dtype=coords_dtype)
+    return label
+
+
 def safe_cast_to_index(array: Any) -> pd.Index:
     """Given an array, safely cast it to a pandas.Index.
 

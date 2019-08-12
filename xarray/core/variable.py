@@ -926,23 +926,29 @@ class Variable(
         if isinstance(data, da.Array):
             data = data.rechunk(chunks)
         else:
+            if isinstance(data, indexing.ExplicitlyIndexed):
+                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
+                # that can't handle general array indexing. For example, in netCDF4 you
+                # can do "outer" indexing along two dimensions independent, which works
+                # differently from how NumPy handles it.
+                # da.from_array works by using lazy indexing with a tuple of slices.
+                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
+                # different indexing types in an explicit way:
+                # https://github.com/dask/dask/issues/2883
+                data = indexing.ImplicitToExplicitIndexingAdapter(
+                    data, indexing.OuterIndexer
+                )
+                if LooseVersion(dask.__version__) < "2.0.0":
+                    kwargs = {}
+                else:
+                    # All of our lazily loaded backend array classes should use NumPy
+                    # array operations.
+                    kwargs = {"meta": np.ndarray}
+            else:
+                kwargs = {}
+
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
-            # da.from_array works by using lazily indexing with a tuple of
-            # slices. Using OuterIndexer is a pragmatic choice: dask does not
-            # yet handle different indexing types in an explicit way:
-            # https://github.com/dask/dask/issues/2883
-            data = indexing.ImplicitToExplicitIndexingAdapter(
-                data, indexing.OuterIndexer
-            )
-
-            # For now, assume that all arrays that we wrap with dask (including
-            # our lazily loaded backend array classes) should use NumPy array
-            # operations.
-            if LooseVersion(dask.__version__) > "1.2.2":
-                kwargs = dict(meta=np.ndarray)
-            else:
-                kwargs = dict()
 
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 

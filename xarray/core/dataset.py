@@ -336,7 +336,7 @@ def as_dataset(obj: Any) -> "Dataset":
     return obj
 
 
-class DataVariables(Mapping[Hashable, "Union[DataArray, Dataset]"]):
+class DataVariables(Mapping[Hashable, "DataArray"]):
     def __init__(self, dataset: "Dataset"):
         self._dataset = dataset
 
@@ -350,14 +350,13 @@ class DataVariables(Mapping[Hashable, "Union[DataArray, Dataset]"]):
     def __len__(self) -> int:
         return len(self._dataset._variables) - len(self._dataset._coord_names)
 
-    def __contains__(self, key) -> bool:
+    def __contains__(self, key: Hashable) -> bool:
         return key in self._dataset._variables and key not in self._dataset._coord_names
 
-    def __getitem__(self, key) -> "Union[DataArray, Dataset]":
+    def __getitem__(self, key: Hashable) -> "DataArray":
         if key not in self._dataset._coord_names:
-            return self._dataset[key]
-        else:
-            raise KeyError(key)
+            return cast("DataArray", self._dataset[key])
+        raise KeyError(key)
 
     def __repr__(self) -> str:
         return formatting.data_vars_repr(self)
@@ -409,17 +408,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         # could make a VariableArgs to use more generally, and refine these
         # categories
-        data_vars: Mapping[
-            Hashable,
-            Union[
-                "DataArray",
-                Variable,
-                Tuple[Hashable, Any],
-                Tuple[Sequence[Hashable], Any],
-            ],
-        ] = None,
+        data_vars: Mapping[Hashable, Any] = None,
         coords: Mapping[Hashable, Any] = None,
-        attrs: Mapping = None,
+        attrs: Mapping[Hashable, Any] = None,
         compat=None,
     ):
         """To load data from a file or file-like object, use the `open_dataset`
@@ -440,6 +431,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - mapping {var name: Variable}
             - mapping {var name: (dimension name, array-like)}
             - mapping {var name: (tuple of dimension names, array-like)}
+            - mapping {dimension name: array-like}
+              (it will be automatically moved to coords, see below)
 
             Each dimension must have the same length in all variables in which
             it appears.
@@ -461,6 +454,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - mapping {coord name: (dimension name, array-like)}
             - mapping {coord name: (tuple of dimension names, array-like)}
             - mapping {dimension name: array-like}
+              (the dimension name is implicitly set to be the same as the coord name)
 
             The last notation implies that the coord name is the same as the
             dimension name.
@@ -495,7 +489,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self._indexes = None  # type: Optional[OrderedDict[Any, pd.Index]]
 
         if attrs is not None:
-            self.attrs = attrs
+            self._attrs = OrderedDict(attrs)
+
         self._encoding = None  # type: Optional[Dict]
         self._initialized = True
 
@@ -1322,7 +1317,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             return False
 
     @property
-    def indexes(self) -> "Mapping[Any, pd.Index]":
+    def indexes(self) -> Indexes:
         """Mapping of pandas.Index objects used for label based indexing
         """
         if self._indexes is None:
@@ -2053,17 +2048,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ]
 
         coords = relevant_keys(self.coords)
-        indexers = [
-            (k, np.asarray(v))  # type: ignore
-            for k, v in indexers.items()
-        ]
-        indexers_dict = dict(indexers)
+        indexers = {k: np.asarray(v) for k, v in indexers.items()}
         non_indexed_dims = set(self.dims) - indexer_dims
         non_indexed_coords = set(self.coords) - set(coords)
 
         # All the indexers should be iterables
         # Check that indexers are valid dims, integers, and 1D
-        for k, v in indexers:
+        for k, v in indexers.items():
             if k not in self.dims:
                 raise ValueError("dimension %s does not exist" % k)
             if v.dtype.kind != "i":  # type: ignore
@@ -2072,7 +2063,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 raise ValueError("Indexers must be 1 dimensional")
 
         # all the indexers should have the same length
-        lengths = {len(v) for k, v in indexers}
+        lengths = {len(v) for k, v in indexers.items()}
         if len(lengths) > 1:
             raise ValueError("All indexers must be the same length")
 
@@ -2110,12 +2101,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = OrderedDict()  # type: ignore
 
         for name, var in reordered.variables.items():
-            if name in indexers_dict or any(d in indexer_dims for d in var.dims):
+            if name in indexers or any(d in indexer_dims for d in var.dims):
                 # slice if var is an indexer or depends on an indexed dim
-                slc = [
-                    indexers_dict[k] if k in indexers_dict else slice(None)
-                    for k in var.dims
-                ]
+                slc = [indexers.get(k, slice(None)) for k in var.dims]
 
                 var_dims = [dim_name] + [d for d in var.dims if d in non_indexed_dims]
                 selection = take(var, tuple(slc))

@@ -1,3 +1,4 @@
+from textwrap import dedent
 import pickle
 from textwrap import dedent
 
@@ -5,6 +6,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from xarray import DataArray, Variable
+from xarray.core.npcompat import IS_NEP18_ACTIVE
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import Variable
@@ -86,16 +89,13 @@ def test_variable_property(prop):
         (do("all"), False),
         (do("any"), False),
         (do("astype", dtype=int), True),
-        (do("broadcast_equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("clip", min=0, max=1), True),
         (do("coarsen", windows={"x": 2}, func=np.sum), True),
         (do("compute"), True),
         (do("conj"), True),
         (do("copy"), True),
         (do("count"), False),
-        (do("equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("get_axis_num", dim="x"), False),
-        (do("identical", other=make_xrvar({"x": 10, "y": 5})), False),
         (do("isel", x=slice(2, 4)), True),
         (do("isnull"), True),
         (do("load"), True),
@@ -108,6 +108,21 @@ def test_variable_property(prop):
         (do("to_base_variable"), True),
         (do("transpose"), True),
         (do("unstack", dimensions={"x": {"x1": 5, "x2": 2}}), True),
+        param(
+            do("broadcast_equals", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
+        param(
+            do("equals", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
+        param(
+            do("identical", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
         param(
             do("argmax"),
             True,
@@ -123,7 +138,6 @@ def test_variable_property(prop):
             True,
             marks=xfail(reason="'COO' object has no attribute 'argsort'"),
         ),
-        param(do("chunk", chunks=(5, 5)), True, marks=xfail),
         param(
             do(
                 "concat",
@@ -336,7 +350,6 @@ def test_dataarray_property(prop):
         (do("assign_attrs", {"foo": "bar"}), True),
         (do("assign_coords", x=make_xrarray({"x": 10}).x + 1), True),
         (do("astype", int), True),
-        (do("broadcast_equals", make_xrarray({"x": 10, "y": 5})), False),
         (do("clip", min=0, max=1), True),
         (do("compute"), True),
         (do("conj"), True),
@@ -344,7 +357,6 @@ def test_dataarray_property(prop):
         (do("count"), False),
         (do("diff", "x"), True),
         (do("drop", "x"), True),
-        (do("equals", make_xrarray({"x": 10, "y": 5})), False),
         (do("expand_dims", {"z": 2}, axis=2), True),
         (do("get_axis_num", "x"), False),
         (do("get_index", "x"), False),
@@ -367,10 +379,18 @@ def test_dataarray_property(prop):
         (do("stack", z={"x", "y"}), True),
         (do("transpose"), True),
         # TODO
-        # isel_points
-        # sel_points
         # set_index
         # swap_dims
+        param(
+            do("broadcast_equals", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
+        param(
+            do("equals", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
         param(
             do("argmax"),
             True,
@@ -390,9 +410,6 @@ def test_dataarray_property(prop):
             do("bfill", dim="x"),
             False,
             marks=xfail(reason="Missing implementation for np.flip"),
-        ),
-        param(
-            do("chunk", chunks=(5, 5)), False, marks=xfail(reason="Coercion to dense")
         ),
         param(
             do("combine_first", make_xrarray({"x": 10, "y": 5})),
@@ -856,3 +873,17 @@ class TestSparseCoords:
             dims=["x"],
             coords={"x": sparse.COO.from_numpy([1, 2, 3, 4])},
         )
+
+
+def test_chunk():
+    s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
+    a = DataArray(s)
+    ac = a.chunk(2)
+    assert ac.chunks == ((2, 2),)
+    assert isinstance(ac.data._meta, sparse.COO)
+    assert_identical(ac, a)
+
+    ds = a.to_dataset(name="a")
+    dsc = ds.chunk(2)
+    assert dsc.chunks == {"dim_0": (2, 2)}
+    assert_identical(dsc, ds)
