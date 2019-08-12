@@ -335,7 +335,7 @@ def as_dataset(obj: Any) -> "Dataset":
     return obj
 
 
-class DataVariables(Mapping[Hashable, "Union[DataArray, Dataset]"]):
+class DataVariables(Mapping[Hashable, "DataArray"]):
     def __init__(self, dataset: "Dataset"):
         self._dataset = dataset
 
@@ -349,14 +349,13 @@ class DataVariables(Mapping[Hashable, "Union[DataArray, Dataset]"]):
     def __len__(self) -> int:
         return len(self._dataset._variables) - len(self._dataset._coord_names)
 
-    def __contains__(self, key) -> bool:
+    def __contains__(self, key: Hashable) -> bool:
         return key in self._dataset._variables and key not in self._dataset._coord_names
 
-    def __getitem__(self, key) -> "Union[DataArray, Dataset]":
+    def __getitem__(self, key: Hashable) -> "DataArray":
         if key not in self._dataset._coord_names:
-            return self._dataset[key]
-        else:
-            raise KeyError(key)
+            return cast("DataArray", self._dataset[key])
+        raise KeyError(key)
 
     def __repr__(self) -> str:
         return formatting.data_vars_repr(self)
@@ -1317,7 +1316,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             return False
 
     @property
-    def indexes(self) -> "Mapping[Any, pd.Index]":
+    def indexes(self) -> Indexes:
         """Mapping of pandas.Index objects used for label based indexing
         """
         if self._indexes is None:
