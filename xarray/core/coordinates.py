@@ -328,9 +328,10 @@ class LevelCoordinatesSource(Mapping[Hashable, Any]):
         return len(self._data._level_coords)
 
 
-def assert_coordinate_consistent(obj, coords):
-    """ Maeke sure the dimension coordinate of obj is
-    consistent with coords.
+def assert_coordinate_consistent(
+    obj: Union["DataArray", "Dataset"], coords: Mapping[Hashable, Variable]
+) -> None:
+    """Make sure the dimension coordinate of obj is consistent with coords.
 
     obj: DataArray or Dataset
     coords: Dict-like of variables
@@ -348,17 +349,20 @@ def assert_coordinate_consistent(obj, coords):
 
 
 def remap_label_indexers(
-    obj, indexers=None, method=None, tolerance=None, **indexers_kwargs
-):
-    """
-    Remap **indexers from obj.coords.
-    If indexer is an instance of DataArray and it has coordinate, then this
-    coordinate will be attached to pos_indexers.
+    obj: Union["DataArray", "Dataset"],
+    indexers: Mapping[Hashable, Any] = None,
+    method: str = None,
+    tolerance=None,
+    **indexers_kwargs: Any
+) -> Tuple[dict, dict]:  # TODO more precise return type after annotations in indexing
+    """Remap indexers from obj.coords.
+    If indexer is an instance of DataArray and it has coordinate, then this coordinate
+    will be attached to pos_indexers.
 
     Returns
     -------
     pos_indexers: Same type of indexers.
-        np.ndarray or Variable or DataArra
+        np.ndarray or Variable or DataArray
     new_indexes: mapping of new dimensional-coordinate.
     """
     from .dataarray import DataArray
