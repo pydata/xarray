@@ -44,6 +44,8 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
+- Added ``join='override'``. This only checks that index sizes are equal among objects and skips
+  checking indexes for equality. By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
   It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
