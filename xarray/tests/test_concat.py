@@ -18,61 +18,62 @@ from .test_dataset import create_test_data
 
 
 class TestConcatDataset:
-    def test_concat(self):
-        # TODO: simplify and split this test case
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.data = create_test_data().drop_dims("dim3")
 
-        # drop the third dimension to keep things relatively understandable
-        data = create_test_data()
-        for k in list(data.variables):
-            if "dim3" in data[k].dims:
-                del data[k]
+    def rectify_dim_order(self, dataset):
+        # return a new dataset with all variable dimensions transposed into
+        # the order in which they are found in `data`
+        return Dataset(
+            {k: v.transpose(*self.data[k].dims) for k, v in dataset.data_vars.items()},
+            dataset.coords,
+            attrs=dataset.attrs,
+        )
 
-        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
-        assert_identical(data, concat(split_data, "dim1"))
+    @pytest.mark.parametrize("coords", ["different", "minimal"])
+    @pytest.mark.parametrize("dim", ["dim1", "dim2"])
+    def test_concat_simple(self, dim, coords):
+        datasets = [g for _, g in self.data.groupby(dim, squeeze=False)]
+        assert_identical(self.data, concat(datasets, dim, coords=coords))
 
-        def rectify_dim_order(dataset):
-            # return a new dataset with all variable dimensions transposed into
-            # the order in which they are found in `data`
-            return Dataset(
-                {k: v.transpose(*data[k].dims) for k, v in dataset.data_vars.items()},
-                dataset.coords,
-                attrs=dataset.attrs,
-            )
-
-        for dim in ["dim1", "dim2"]:
-            datasets = [g for _, g in data.groupby(dim, squeeze=False)]
-            assert_identical(data, concat(datasets, dim))
-
+    def test_concat_2(self):
         dim = "dim2"
-        assert_identical(data, concat(datasets, data[dim]))
-        assert_identical(data, concat(datasets, data[dim], coords="minimal"))
+        datasets = [g for _, g in self.data.groupby(dim, squeeze=True)]
+        concat_over = [
+            k for k, v in self.data.coords.items() if dim in v.dims and k != dim
+        ]
+        actual = concat(datasets, self.data[dim], coords=concat_over)
+        assert_identical(self.data, self.rectify_dim_order(actual))
 
-        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-        concat_over = [k for k, v in data.coords.items() if dim in v.dims and k != dim]
-        actual = concat(datasets, data[dim], coords=concat_over)
-        assert_identical(data, rectify_dim_order(actual))
-
-        actual = concat(datasets, data[dim], coords="different")
-        assert_identical(data, rectify_dim_order(actual))
-
+    @pytest.mark.parametrize("coords", ["different", "minimal", "all"])
+    @pytest.mark.parametrize("dim", ["dim1", "dim2"])
+    def test_concat_coords_kwarg(self, dim, coords):
+        data = self.data.copy(deep=True)
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
-        for dim in ["dim1", "dim2"]:
-            datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-            actual = concat(datasets, data[dim], coords="all")
+        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+
+        actual = concat(datasets, data[dim], coords=coords)
+        if coords == "all":
             expected = np.array([data["extra"].values for _ in range(data.dims[dim])])
             assert_array_equal(actual["extra"].values, expected)
 
-            actual = concat(datasets, data[dim], coords="different")
-            assert_equal(data["extra"], actual["extra"])
-            actual = concat(datasets, data[dim], coords="minimal")
+        else:
             assert_equal(data["extra"], actual["extra"])
 
+    def test_concat(self):
+
+        data = self.data
+        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
+        assert_identical(data, concat(split_data, "dim1"))
+
+    def test_concat_dim_precedence(self):
         # verify that the dim argument takes precedence over
         # concatenating dataset variables of the same name
-        dim = (2 * data["dim1"]).rename("dim1")
-        datasets = [g for _, g in data.groupby("dim1", squeeze=False)]
-        expected = data.copy()
+        dim = (2 * self.data["dim1"]).rename("dim1")
+        datasets = [g for _, g in self.data.groupby("dim1", squeeze=False)]
+        expected = self.data.copy()
         expected["dim1"] = dim
         assert_identical(expected, concat(datasets, dim))
 
