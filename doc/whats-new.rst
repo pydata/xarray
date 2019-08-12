@@ -13,9 +13,9 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.12.4:
+.. _whats-new.0.13.0:
 
-v0.12.4 (unreleased)
+v0.13.0 (unreleased)
 --------------------
 
 This release increases the minimum required Python version from 3.5.0 to 3.5.3
@@ -32,18 +32,21 @@ New functions/methods
   By `Nezar Abdennur <https://github.com/nvictus>`_
   and `Guido Imperiale <https://github.com/crusaderky>`_.
 
-- Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
-  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
-  <http://github.com/DavidMertz>`_.
-
-- The xarray package is now discoverably by mypy (although typing hints
-  coverage is not complete yet). mypy type checking is now enforced by CI.
-  Libraries that depend on xarray and use mypy can now remove from their setup.cfg the lines::
+- The xarray package is now discoverable by mypy (although typing hints coverage is not
+  complete yet). mypy type checking is now enforced by CI. Libraries that depend on
+  xarray and use mypy can now remove from their setup.cfg the lines::
 
     [mypy-xarray]
     ignore_missing_imports = True
 
-   By `Guido Imperiale <https://github.com/crusaderky>`_
+  (:issue:`2877`, :issue:`3088`, :issue:`3090`, :issue:`3112`, :issue:`3117`,
+  :issue:`3207`)
+  By `Guido Imperiale <https://github.com/crusaderky>`_
+  and `Maximilian Roos <https://github.com/max-sixty>`_.
+
+- Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
+  <http://github.com/DavidMertz>`_.
 
 - Dataset plotting API for visualizing dependencies between two `DataArray`s!
   Currently only :py:meth:`Dataset.plot.scatter` is implemented.
