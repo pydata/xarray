@@ -1,25 +1,14 @@
-from collections import OrderedDict
-from contextlib import suppress
-from distutils.version import LooseVersion
 from textwrap import dedent
 import pickle
 import numpy as np
 import pandas as pd
 
-from xarray import DataArray, Dataset, Variable
-from xarray.tests import mock
+from xarray import DataArray, Variable
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 import xarray as xr
 import xarray.ufuncs as xu
 
-from . import (
-    assert_allclose,
-    assert_array_equal,
-    assert_equal,
-    assert_frame_equal,
-    assert_identical,
-    raises_regex,
-)
+from . import assert_equal, assert_identical
 
 import pytest
 
@@ -883,9 +872,9 @@ def test_chunk():
     ac = a.chunk(2)
     assert ac.chunks == ((2, 2),)
     assert isinstance(ac.data._meta, sparse.COO)
-    assert_identical(a, ac)
+    assert_identical(ac, a)
 
     ds = a.to_dataset(name="a")
     dsc = ds.chunk(2)
     assert dsc.chunks == {"dim_0": (2, 2)}
-    assert_identical(ds, dsc)
+    assert_identical(dsc, ds)

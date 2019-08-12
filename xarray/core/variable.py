@@ -926,28 +926,29 @@ class Variable(
         if isinstance(data, da.Array):
             data = data.rechunk(chunks)
         else:
-            if utils.is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
-
-            if not isinstance(data, np.ndarray) and hasattr(data, "__array_function__"):
-                # This should always be true after Variable.as_compatible_data
-                assert IS_NEP18_ACTIVE
-                kwargs = {}
-            else:
-                # da.from_array works by using lazily indexing with a tuple of
-                # slices. Using OuterIndexer is a pragmatic choice: dask does not
-                # yet handle different indexing types in an explicit way:
+            if isinstance(data, indexing.ExplicitlyIndexed):
+                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
+                # that can't handle general array indexing. For example, in netCDF4 you
+                # can do "outer" indexing along two dimensions independent, which works
+                # differently from how NumPy handles it.
+                # da.from_array works by using lazy indexing with a tuple of slices.
+                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
+                # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
                 data = indexing.ImplicitToExplicitIndexingAdapter(
                     data, indexing.OuterIndexer
                 )
-
                 if LooseVersion(dask.__version__) < "2.0.0":
                     kwargs = {}
                 else:
                     # All of our lazily loaded backend array classes) should use NumPy
                     # array operations.
                     kwargs = {"meta": np.ndarray}
+            else:
+                kwargs = {}
+
+            if utils.is_dict_like(chunks):
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
 
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 
