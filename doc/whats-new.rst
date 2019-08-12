@@ -16,13 +16,21 @@ What's New
 .. _whats-new.0.12.4:
 
 v0.12.4 (unreleased)
--------------------
+--------------------
 
 This release increases the minimum required Python version from 3.5.0 to 3.5.3
 (:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
+
+- xarray can now wrap around any
+  `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
+  numpy-like library (important: read notes about NUMPY_EXPERIMENTAL_ARRAY_FUNCTION in
+  the above link). Added explicit test coverage for
+  `sparse <https://github.com/pydata/sparse>`_. (:issue:`3117`, :issue:`3202`)
+  By `Nezar Abdennur <https://github.com/nvictus>`_
+  and `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
   By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
@@ -37,7 +45,7 @@ New functions/methods
 
    By `Guido Imperiale <https://github.com/crusaderky>`_
 
-- Dataset plotting API for visualizing dependences between two `DataArray`s!
+- Dataset plotting API for visualizing dependencies between two `DataArray`s!
   Currently only :py:meth:`Dataset.plot.scatter` is implemented.
   By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
 
