@@ -941,7 +941,7 @@ class Variable(
                 if LooseVersion(dask.__version__) < "2.0.0":
                     kwargs = {}
                 else:
-                    # All of our lazily loaded backend array classes) should use NumPy
+                    # All of our lazily loaded backend array classes should use NumPy
                     # array operations.
                     kwargs = {"meta": np.ndarray}
             else:
