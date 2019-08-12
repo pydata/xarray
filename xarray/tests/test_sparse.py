@@ -99,16 +99,13 @@ def test_variable_property(prop):
         (do("all"), False),
         (do("any"), False),
         (do("astype", dtype=int), True),
-        (do("broadcast_equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("clip", min=0, max=1), True),
         (do("coarsen", windows={"x": 2}, func=np.sum), True),
         (do("compute"), True),
         (do("conj"), True),
         (do("copy"), True),
         (do("count"), False),
-        (do("equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("get_axis_num", dim="x"), False),
-        (do("identical", other=make_xrvar({"x": 10, "y": 5})), False),
         (do("isel", x=slice(2, 4)), True),
         (do("isnull"), True),
         (do("load"), True),
@@ -121,6 +118,21 @@ def test_variable_property(prop):
         (do("to_base_variable"), True),
         (do("transpose"), True),
         (do("unstack", dimensions={"x": {"x1": 5, "x2": 2}}), True),
+        param(
+            do("broadcast_equals", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
+        param(
+            do("equals", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
+        param(
+            do("identical", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
         param(
             do("argmax"),
             True,
@@ -348,7 +360,6 @@ def test_dataarray_property(prop):
         (do("assign_attrs", {"foo": "bar"}), True),
         (do("assign_coords", x=make_xrarray({"x": 10}).x + 1), True),
         (do("astype", int), True),
-        (do("broadcast_equals", make_xrarray({"x": 10, "y": 5})), False),
         (do("clip", min=0, max=1), True),
         (do("compute"), True),
         (do("conj"), True),
@@ -356,7 +367,6 @@ def test_dataarray_property(prop):
         (do("count"), False),
         (do("diff", "x"), True),
         (do("drop", "x"), True),
-        (do("equals", make_xrarray({"x": 10, "y": 5})), False),
         (do("expand_dims", {"z": 2}, axis=2), True),
         (do("get_axis_num", "x"), False),
         (do("get_index", "x"), False),
@@ -379,10 +389,18 @@ def test_dataarray_property(prop):
         (do("stack", z={"x", "y"}), True),
         (do("transpose"), True),
         # TODO
-        # isel_points
-        # sel_points
         # set_index
         # swap_dims
+        param(
+            do("broadcast_equals", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
+        param(
+            do("equals", make_xrvar({"x": 10, "y": 5})),
+            False,
+            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
+        ),
         param(
             do("argmax"),
             True,
