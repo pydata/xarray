@@ -1,4 +1,3 @@
-from textwrap import dedent
 import pickle
 from textwrap import dedent
 
@@ -6,11 +5,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Variable
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 import xarray as xr
 import xarray.ufuncs as xu
-from xarray import Variable
+from xarray import DataArray, Variable
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import assert_equal, assert_identical
