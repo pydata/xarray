@@ -1,25 +1,14 @@
-from collections import OrderedDict
-from contextlib import suppress
-from distutils.version import LooseVersion
 from textwrap import dedent
 import pickle
 import numpy as np
 import pandas as pd
 
-from xarray import DataArray, Dataset, Variable
-from xarray.tests import mock
+from xarray import DataArray, Variable
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 import xarray as xr
 import xarray.ufuncs as xu
 
-from . import (
-    assert_allclose,
-    assert_array_equal,
-    assert_equal,
-    assert_frame_equal,
-    assert_identical,
-    raises_regex,
-)
+from . import assert_equal, assert_identical
 
 import pytest
 
@@ -148,7 +137,6 @@ def test_variable_property(prop):
             True,
             marks=xfail(reason="'COO' object has no attribute 'argsort'"),
         ),
-        param(do("chunk", chunks=(5, 5)), True, marks=xfail),
         param(
             do(
                 "concat",
@@ -421,9 +409,6 @@ def test_dataarray_property(prop):
             do("bfill", dim="x"),
             False,
             marks=xfail(reason="Missing implementation for np.flip"),
-        ),
-        param(
-            do("chunk", chunks=(5, 5)), False, marks=xfail(reason="Coercion to dense")
         ),
         param(
             do("combine_first", make_xrarray({"x": 10, "y": 5})),
@@ -879,3 +864,17 @@ class TestSparseCoords:
             dims=["x"],
             coords={"x": COO.from_numpy([1, 2, 3, 4])},
         )
+
+
+def test_chunk():
+    s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
+    a = DataArray(s)
+    ac = a.chunk(2)
+    assert ac.chunks == ((2, 2),)
+    assert isinstance(ac.data._meta, sparse.COO)
+    assert_identical(ac, a)
+
+    ds = a.to_dataset(name="a")
+    dsc = ds.chunk(2)
+    assert dsc.chunks == {"dim_0": (2, 2)}
+    assert_identical(dsc, ds)
