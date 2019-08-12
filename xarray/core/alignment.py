@@ -113,9 +113,8 @@ def align(
                 if dim not in exclude:
                     if obj.indexes[dim].size != objects[0].indexes[dim].size:
                         raise ValueError(
-                            "Cannot use join='override' when "
-                            "all indexes don't have the same "
-                            "shape."
+                            "Indexes along dimension %r are not equal."
+                            " Cannot use join='override'." % dim
                         )
                     new_indexes[dim] = objects[0].indexes[dim]
 

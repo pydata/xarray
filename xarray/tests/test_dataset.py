@@ -1912,7 +1912,7 @@ class TestDataset:
         assert_identical(left, new_left)
         assert_identical(right, new_right)
 
-        with raises_regex(ValueError, "all indexes don't have the same shape"):
+        with raises_regex(ValueError, "Indexes along dimension 'x' are not equal."):
             new_left, new_right = xr.align(
                 left.isel(x=0).expand_dims("x"), right, join="override"
             )
