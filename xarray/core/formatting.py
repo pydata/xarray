@@ -168,7 +168,7 @@ def format_items(x):
     return formatted
 
 
-def inline_ndarray_repr(array, max_width):
+def format_array_flat(array, max_width):
     """Return a formatted string for as many items in the flattened version of
     array that will fit within max_width characters.
     """
@@ -232,7 +232,7 @@ def inline_sparse_repr(array):
 def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if var._in_memory:
-        return inline_ndarray_repr(var, max_width)
+        return format_array_flat(var, max_width)
     elif isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
