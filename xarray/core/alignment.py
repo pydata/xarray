@@ -92,8 +92,8 @@ def align(
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
         - 'override': if indexes are of same size, rewrite indexes to be
-          those of the first object. Indexes for the same dimension must have
-          the same size in all objects.
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed with
