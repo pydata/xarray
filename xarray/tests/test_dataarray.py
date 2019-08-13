@@ -3144,6 +3144,25 @@ class TestDataArray:
         with raises_regex(ValueError, "Indexes along dimension 'x' are not equal."):
             align(left.isel(x=0).expand_dims("x"), right, join="override")
 
+    @pytest.mark.parametrize(
+        "darrays",
+        [
+            [
+                DataArray(0),
+                DataArray([1], [("x", [1])]),
+                DataArray([2, 3], [("x", [2, 3])]),
+            ],
+            [
+                DataArray([2, 3], [("x", [2, 3])]),
+                DataArray([1], [("x", [1])]),
+                DataArray(0),
+            ],
+        ],
+    )
+    def test_align_override_error(self, darrays):
+        with raises_regex(ValueError, "Indexes along dimension 'x' are not equal."):
+            xr.align(*darrays, join="override")
+
     def test_align_exclude(self):
         x = DataArray([[1, 2], [3, 4]], coords=[("a", [-1, -2]), ("b", [3, 4])])
         y = DataArray([[1, 2], [3, 4]], coords=[("a", [-1, 20]), ("b", [5, 6])])
