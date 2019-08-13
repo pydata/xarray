@@ -1205,12 +1205,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return _LocIndexer(self)
 
-    def __getitem__(self, key: object) -> "Union[DataArray, Dataset]":
+    def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
+        # TODO(shoyer): type this properly: https://github.com/python/mypy/issues/7328
         if utils.is_dict_like(key):
             return self.isel(**cast(Mapping, key))
 
@@ -4154,16 +4155,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
-            dims = [
+            dims = tuple(
                 name if name is not None else "level_%i" % n
                 for n, name in enumerate(idx.names)
-            ]
+            )
             for dim, lev in zip(dims, idx.levels):
                 obj[dim] = (dim, lev)
             shape = [lev.size for lev in idx.levels]
         else:
-            dims = (idx.name if idx.name is not None else "index",)
-            obj[dims[0]] = (dims, idx)
+            index_name = idx.name if idx.name is not None else "index"
+            dims = (index_name,)
+            obj[index_name] = (dims, idx)
             shape = [idx.size]
 
         if sparse:

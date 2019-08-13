@@ -2307,7 +2307,7 @@ class DataArray(AbstractArray, DataWithCoords):
         name = series.name
         df = pd.DataFrame({name: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
-        return ds[name]
+        return ds[name]  # type: ignore
 
     def to_cdms2(self) -> "cdms2_Variable":
         """Convert this array into a cdms2.Variable
