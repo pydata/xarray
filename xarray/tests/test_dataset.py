@@ -178,7 +178,7 @@ class TestDataset:
     def test_repr(self):
         data = create_test_data(seed=123)
         data.attrs["foo"] = "bar"
-        # need to insert str dtype at runtime to handle both Python 2 & 3
+        # need to insert str dtype at runtime to handle different endianness
         expected = dedent(
             """\
             <xarray.Dataset>
