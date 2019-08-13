@@ -3374,6 +3374,18 @@ class TestDataArray:
         expected_da = self.dv.rename(None)
         assert_identical(expected_da, DataArray.from_series(actual).drop(["x", "y"]))
 
+    def test_from_series_sparse(self):
+        sparse = pytest.importorskip("sparse")
+
+        series = pd.Series([1, 2], index=[("a", 1), ("b", 2)])
+
+        actual_sparse = DataArray.from_series(series, sparse=True)
+        actual_dense = DataArray.from_series(series, sparse=True)
+
+        assert isinstance(actual_sparse.data, sparse.COO)
+        actual_sparse.data = actual_sparse.data.todense()
+        assert_identical(actual_sparse, actual_dense)
+
     def test_to_and_from_empty_series(self):
         # GH697
         expected = pd.Series([])

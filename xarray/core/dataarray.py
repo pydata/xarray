@@ -2295,7 +2295,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return obj
 
     @classmethod
-    def from_series(cls, series: pd.Series) -> "DataArray":
+    def from_series(cls, series: pd.Series, sparse: bool = False) -> "DataArray":
         """Convert a pandas.Series into an xarray.DataArray.
 
         If the series's index is a MultiIndex, it will be expanded into a
@@ -2303,10 +2303,10 @@ class DataArray(AbstractArray, DataWithCoords):
         values with NaN). Thus this operation should be the inverse of the
         `to_series` method.
         """
-        # TODO: add a 'name' parameter
+        # TODO: add a 'name' parameter?
         name = series.name
         df = pd.DataFrame({name: series})
-        ds = Dataset.from_dataframe(df)
+        ds = Dataset.from_dataframe(df, sparse=sparse)
         return ds[name]
 
     def to_cdms2(self) -> "cdms2_Variable":
