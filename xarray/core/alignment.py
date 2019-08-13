@@ -38,6 +38,27 @@ def _get_joiner(join):
         raise ValueError("invalid value for join: %s" % join)
 
 
+def _override_indexes(objects, all_indexes, exclude):
+    for dim, dim_indexes in all_indexes.items():
+        if dim not in exclude:
+            lengths = [dd.size for dd in dim_indexes]
+            if not all([ll == lengths[0] for ll in lengths[1:]]):
+                raise ValueError(
+                    "Indexes along dimension %r are not equal."
+                    " Cannot use join='override'." % dim
+                )
+
+    objects = list(objects)
+    for idx, obj in enumerate(objects[1:]):
+        new_indexes = dict()
+        for dim in obj.dims:
+            if dim not in exclude:
+                new_indexes[dim] = all_indexes[dim][0]
+        objects[idx + 1] = obj._overwrite_indexes(new_indexes)
+
+    return objects
+
+
 def align(
     *objects,
     join="inner",
@@ -105,21 +126,6 @@ def align(
         obj, = objects
         return (obj.copy(deep=copy),)
 
-    if join == "override":
-        objects = list(objects)
-        new_indexes = dict()
-        for index, obj in enumerate(objects[1:]):
-            for dim in objects[0].indexes:
-                if dim not in exclude:
-                    if obj.indexes[dim].size != objects[0].indexes[dim].size:
-                        raise ValueError(
-                            "Indexes along dimension %r are not equal."
-                            " Cannot use join='override'." % dim
-                        )
-                    new_indexes[dim] = objects[0].indexes[dim]
-
-            objects[index + 1] = obj._overwrite_indexes(new_indexes)
-
     all_indexes = defaultdict(list)
     unlabeled_dim_sizes = defaultdict(set)
     for obj in objects:
@@ -131,6 +137,9 @@ def align(
                     unlabeled_dim_sizes[dim].add(obj.sizes[dim])
                 else:
                     all_indexes[dim].append(index)
+
+    if join == "override":
+        objects = _override_indexes(list(objects), all_indexes, exclude)
 
     # We don't reindex over dimensions with all equal indexes for two reasons:
     # - It's faster for the usual case (already aligned objects).
