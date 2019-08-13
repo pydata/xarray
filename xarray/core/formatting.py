@@ -416,7 +416,9 @@ def short_data_repr(array):
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
         return short_numpy_repr(array)
-    elif hasattr(internal_data, "__array_function__"):
+    elif hasattr(internal_data, "__array_function__") or isinstance(
+        internal_data, dask_array_type
+    ):
         return repr(array.data)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)
