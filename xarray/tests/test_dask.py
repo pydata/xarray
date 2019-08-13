@@ -149,8 +149,8 @@ class TestVariable(DaskTestCase):
     def test_repr(self):
         expected = dedent(
             """\
-        <xarray.Variable (x: 4, y: 6)>
-        dask.array<shape=(4, 6), dtype=float64, chunksize=(2, 2)>"""
+            <xarray.Variable (x: 4, y: 6)>
+            dask.array<array, shape=(4, 6), dtype=float64, chunksize=(2, 2)>"""
         )
         assert expected == repr(self.lazy_var)
 
@@ -499,11 +499,11 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         expected = dedent(
             """\
-        <xarray.DataArray 'data' (x: 1)>
-        dask.array<shape=(1,), dtype=int64, chunksize=(1,)>
-        Coordinates:
-            y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
-        Dimensions without coordinates: x"""
+            <xarray.DataArray 'data' (x: 1)>
+            dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>
+            Coordinates:
+                y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
+            Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
         assert kernel_call_count == 0
@@ -516,13 +516,13 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
         expected = dedent(
             """\
-        <xarray.Dataset>
-        Dimensions:  (x: 1)
-        Coordinates:
-            y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
-        Dimensions without coordinates: x
-        Data variables:
-            a        (x) int64 dask.array<shape=(1,), chunksize=(1,)>"""
+            <xarray.Dataset>
+            Dimensions:  (x: 1)
+            Coordinates:
+                y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
+            Dimensions without coordinates: x
+            Data variables:
+                a        (x) int64 dask.array<shape=(1,), chunksize=(1,)>"""
         )
         assert expected == repr(ds)
         assert kernel_call_count == 0
