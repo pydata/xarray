@@ -216,14 +216,14 @@ def inline_dask_repr(array):
     redundant information that's already printed by the repr
     function of the xarray wrapper.
     """
-    assert isinstance(array, dask_array_type)
+    assert isinstance(array, dask_array_type), array
     chunksize = tuple(c[0] for c in array.chunks)
     return "dask.array<shape={}, chunksize={}>".format(array.shape, chunksize)
 
 
 def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
-    assert isinstance(array, sparse_array_type)
+    assert isinstance(array, sparse_array_type), array
     return "<COO: shape={!s}, nnz={:d}, fill_value={!s}>".format(
         array.shape, array.nnz, array.fill_value
     )
