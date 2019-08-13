@@ -298,7 +298,7 @@ class TestDataset:
         actual = str(data)
         assert expected == actual
 
-    @pytest.mark.skipif(not IS_NEP18_ACTIVE, reason='requires __array_function__')
+    @pytest.mark.skipif(not IS_NEP18_ACTIVE, reason="requires __array_function__")
     def test_repr_nep18(self):
         class Array:
             def __init__(self):
