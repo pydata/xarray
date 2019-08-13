@@ -196,7 +196,7 @@ class TestDataset:
             Attributes:
                 foo:      bar"""
             % data["dim3"].dtype
-        )  # noqa: E501
+        )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
         assert expected == actual
