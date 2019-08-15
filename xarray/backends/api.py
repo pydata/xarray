@@ -979,6 +979,7 @@ def to_netcdf(
     unlimited_dims: Iterable[Hashable] = None,
     compute: bool = True,
     multifile: bool = False,
+    invalid_netcdf: bool = False,
 ) -> Union[Tuple[ArrayWriter, AbstractDataStore], bytes, "Delayed", None]:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -1040,6 +1041,8 @@ def to_netcdf(
 
     target = path_or_file if path_or_file is not None else BytesIO()
     kwargs = dict(autoclose=True) if autoclose else {}
+    if engine == 'h5netcdf' and invalid_netcdf:
+        kwargs['invalid_netcdf'] = invalid_netcdf
     store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
