@@ -491,10 +491,24 @@ class TestDataArrayAndDataset(DaskTestCase):
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
 
+    @pytest.mark.skipif(LooseVersion(dask.__version__) >= "2.0", reason="no meta")
+    def test_dataarray_repr_legacy(self):
+        data = build_dask_array("data")
+        nonindex_coord = build_dask_array("coord")
+        a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
+        expected = dedent(
+            """\
+            <xarray.DataArray 'data' (x: 1)>
+            dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>
+            Coordinates:
+                y        (x) int64 dask.array<chunksize=(1,)>
+            Dimensions without coordinates: x"""
+        )
+        assert expected == repr(a)
+        assert kernel_call_count == 0  # should not evaluate dask array
+
     @pytest.mark.skipif(LooseVersion(dask.__version__) < "2.0", reason="needs meta")
     def test_dataarray_repr(self):
-        # Test that __repr__ converts the dask backend to numpy
-        # in neither the data variable nor the non-index coords
         data = build_dask_array("data")
         nonindex_coord = build_dask_array("coord")
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
@@ -507,12 +521,10 @@ class TestDataArrayAndDataset(DaskTestCase):
             Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
-        assert kernel_call_count == 0
+        assert kernel_call_count == 0  # should not evaluate dask array
 
     @pytest.mark.skipif(LooseVersion(dask.__version__) < "2.0", reason="needs meta")
     def test_dataset_repr(self):
-        # Test that pickling/unpickling converts the dask backend
-        # to numpy in neither the data variables nor the non-index coords
         data = build_dask_array("data")
         nonindex_coord = build_dask_array("coord")
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
@@ -527,7 +539,7 @@ class TestDataArrayAndDataset(DaskTestCase):
                 a        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>"""
         )
         assert expected == repr(ds)
-        assert kernel_call_count == 0
+        assert kernel_call_count == 0  # should not evaluate dask array
 
     def test_dataarray_pickle(self):
         # Test that pickling/unpickling converts the dask backend
