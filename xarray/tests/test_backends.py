@@ -2172,13 +2172,17 @@ class TestH5NetCDFData(NetCDF4Base):
             yield backends.H5NetCDFStore(tmp_file, "w")
 
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
-    def test_complex(self):
+    def test_complex_warning(self):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         with pytest.warns(FutureWarning):
-            # TODO: make it possible to write invalid netCDF files from xarray
-            # without a warning
             with self.roundtrip(expected) as actual:
                 assert_equal(expected, actual)
+
+    def test_complex(self):
+        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
+        save_kwargs = {"invalid_netcdf": True}
+        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+            assert_equal(expected, actual)
 
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
