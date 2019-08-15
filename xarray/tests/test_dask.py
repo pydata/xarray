@@ -491,6 +491,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
 
+    @pytest.mark.skipif(LooseVersion(dask.__version__) < "2.0", reason="needs meta")
     def test_dataarray_repr(self):
         # Test that __repr__ converts the dask backend to numpy
         # in neither the data variable nor the non-index coords
@@ -502,12 +503,13 @@ class TestDataArrayAndDataset(DaskTestCase):
             <xarray.DataArray 'data' (x: 1)>
             dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>
             Coordinates:
-                y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
+                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
             Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
         assert kernel_call_count == 0
 
+    @pytest.mark.skipif(LooseVersion(dask.__version__) < "2.0", reason="needs meta")
     def test_dataset_repr(self):
         # Test that pickling/unpickling converts the dask backend
         # to numpy in neither the data variables nor the non-index coords
@@ -519,10 +521,10 @@ class TestDataArrayAndDataset(DaskTestCase):
             <xarray.Dataset>
             Dimensions:  (x: 1)
             Coordinates:
-                y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
+                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
             Dimensions without coordinates: x
             Data variables:
-                a        (x) int64 dask.array<shape=(1,), chunksize=(1,)>"""
+                a        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>"""
         )
         assert expected == repr(ds)
         assert kernel_call_count == 0

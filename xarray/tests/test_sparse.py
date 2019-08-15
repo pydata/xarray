@@ -8,7 +8,7 @@ from xarray.core.npcompat import IS_NEP18_ACTIVE
 import xarray as xr
 import xarray.ufuncs as xu
 
-from . import assert_equal, assert_identical
+from . import assert_equal, assert_identical, requires_dask
 
 import pytest
 
@@ -707,7 +707,7 @@ class TestSparseDataArrayAndDataset:
             <xarray.DataArray (x: 4)>
             <COO: shape=(4,), dtype=float64, nnz=4, fill_value=0.0>
             Coordinates:
-                y        (x) int64 <COO: shape=(4,), nnz=3, fill_value=0>
+                y        (x) int64 <COO: nnz=3, fill_value=0>
             Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
@@ -722,10 +722,23 @@ class TestSparseDataArrayAndDataset:
             <xarray.Dataset>
             Dimensions:  (x: 4)
             Coordinates:
-                y        (x) int64 <COO: shape=(4,), nnz=3, fill_value=0>
+                y        (x) int64 <COO: nnz=3, fill_value=0>
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 <COO: shape=(4,), nnz=4, fill_value=0.0>"""
+                a        (x) float64 <COO: nnz=4, fill_value=0.0>"""
+        )
+        assert expected == repr(ds)
+
+    @requires_dask
+    def test_sparse_dask_dataset_repr(self):
+        ds = xr.Dataset(data_vars={"a": ("x", COO.from_numpy(np.ones(4)))}).chunk()
+        expected = dedent(
+            """\
+            <xarray.Dataset>
+            Dimensions:  (x: 4)
+            Dimensions without coordinates: x
+            Data variables:
+                a        (x) float64 dask.array<chunksize=(4,), meta=sparse.COO>"""
         )
         assert expected == repr(ds)
 

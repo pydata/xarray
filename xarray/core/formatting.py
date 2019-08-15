@@ -211,21 +211,40 @@ def format_array_flat(array, max_width):
     return pprint_str
 
 
+_KNOWN_TYPE_REPRS = {np.ndarray: "np.ndarray"}
+with contextlib.suppress(ImportError):
+    import sparse
+
+    _KNOWN_TYPE_REPRS[sparse.COO] = "sparse.COO"
+
+
 def inline_dask_repr(array):
     """Similar to dask.array.DataArray.__repr__, but without
     redundant information that's already printed by the repr
     function of the xarray wrapper.
     """
     assert isinstance(array, dask_array_type), array
+
     chunksize = tuple(c[0] for c in array.chunks)
-    return "dask.array<shape={}, chunksize={}>".format(array.shape, chunksize)
+
+    if hasattr(array, "_meta"):
+        meta = array._meta
+        if type(meta) in _KNOWN_TYPE_REPRS:
+            meta_repr = _KNOWN_TYPE_REPRS[type(meta)]
+        else:
+            meta_repr = type(meta).__name__
+        meta_string = ", meta={}".format(meta_repr)
+    else:
+        meta_string = ""
+
+    return "dask.array<chunksize={}{}>".format(chunksize, meta_string)
 
 
 def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
     assert isinstance(array, sparse_array_type), array
-    return "<COO: shape={!s}, nnz={:d}, fill_value={!s}>".format(
-        array.shape, array.nnz, array.fill_value
+    return "<{}: nnz={:d}, fill_value={!s}>".format(
+        type(array).__name__, array.nnz, array.fill_value
     )
 
 
