@@ -1499,6 +1499,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compute: boolean
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
+        invalid_netcdf: boolean
+            Only valid along with engine='h5netcdf'. If True, allow writing
+            hdf5 files which are (not yet) valid netcdf as described in
+            https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
             encoding = {}
