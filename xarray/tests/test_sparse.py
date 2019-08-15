@@ -8,7 +8,7 @@ from xarray.core.npcompat import IS_NEP18_ACTIVE
 import xarray as xr
 import xarray.ufuncs as xu
 
-from . import assert_equal, assert_identical, requires_dask
+from . import assert_equal, assert_identical
 
 import pytest
 
@@ -729,8 +729,8 @@ class TestSparseDataArrayAndDataset:
         )
         assert expected == repr(ds)
 
-    @requires_dask
     def test_sparse_dask_dataset_repr(self):
+        dask = pytest.importorskip('dask', minversion='2.0')
         ds = xr.Dataset(data_vars={"a": ("x", COO.from_numpy(np.ones(4)))}).chunk()
         expected = dedent(
             """\
