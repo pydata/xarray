@@ -30,6 +30,7 @@ from xarray.tests import (
     requires_np113,
     requires_numbagg,
     requires_scipy,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -3374,13 +3375,14 @@ class TestDataArray:
         expected_da = self.dv.rename(None)
         assert_identical(expected_da, DataArray.from_series(actual).drop(["x", "y"]))
 
+    @requires_sparse
     def test_from_series_sparse(self):
-        sparse = pytest.importorskip("sparse")
+        import sparse
 
         series = pd.Series([1, 2], index=[("a", 1), ("b", 2)])
 
         actual_sparse = DataArray.from_series(series, sparse=True)
-        actual_dense = DataArray.from_series(series, sparse=True)
+        actual_dense = DataArray.from_series(series, sparse=False)
 
         assert isinstance(actual_sparse.data, sparse.COO)
         actual_sparse.data = actual_sparse.data.todense()

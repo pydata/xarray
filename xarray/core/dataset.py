@@ -4072,7 +4072,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return self._to_dataframe(self.dims)
 
-    def _set_sparse_data_from_dataframe(self, dataframe, dims, shape):
+    def _set_sparse_data_from_dataframe(
+        self, dataframe: pd.DataFrame, dims: tuple, shape: Tuple[int, ...]
+    ) -> None:
         from sparse import COO
 
         idx = dataframe.index
@@ -4089,6 +4091,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             is_sorted = True
 
         for name, series in dataframe.items():
+            # Cast to a NumPy array first, in case the Series is a pandas
+            # Extension array (which doesn't have a valid NumPy dtype)
             values = np.asarray(series)
 
             # In virtually all real use cases, the sparse array will now have
@@ -4108,7 +4112,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
             self[name] = (dims, data)
 
-    def _set_numpy_data_from_dataframe(self, dataframe, dims, shape):
+    def _set_numpy_data_from_dataframe(
+        self, dataframe: pd.DataFrame, dims: tuple, shape: Tuple[int, ...]
+    ) -> None:
         idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             # expand the DataFrame to include the product of all levels
@@ -4143,6 +4149,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         New Dataset.
+
+        See also
+        --------
+        xarray.DataArray.from_series
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
@@ -4161,12 +4171,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
             for dim, lev in zip(dims, idx.levels):
                 obj[dim] = (dim, lev)
-            shape = [lev.size for lev in idx.levels]
+            shape = tuple(lev.size for lev in idx.levels)
         else:
             index_name = idx.name if idx.name is not None else "index"
             dims = (index_name,)
             obj[index_name] = (dims, idx)
-            shape = [idx.size]
+            shape = (idx.size,)
 
         if sparse:
             obj._set_sparse_data_from_dataframe(dataframe, dims, shape)

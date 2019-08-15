@@ -45,6 +45,7 @@ from . import (
     requires_dask,
     requires_numbagg,
     requires_scipy,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -3674,8 +3675,9 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    @requires_sparse
     def test_from_dataframe_sparse(self):
-        sparse = pytest.importorskip("sparse")
+        import sparse
 
         df_base = pd.DataFrame(
             {"x": range(10), "y": list("abcdefghij"), "z": np.arange(0, 100, 10)}

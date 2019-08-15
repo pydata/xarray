@@ -2302,12 +2302,19 @@ class DataArray(AbstractArray, DataWithCoords):
         tensor product of one-dimensional coordinates (filling in missing
         values with NaN). Thus this operation should be the inverse of the
         `to_series` method.
+
+        If sparse=True, creates a sparse array instead of a dense NumPy array.
+        Requires the pydata/sparse package.
+
+        See also
+        --------
+        xarray.Dataset.from_dataframe
         """
-        # TODO: add a 'name' parameter?
-        name = series.name
-        df = pd.DataFrame({name: series})
+        df = pd.DataFrame({_THIS_ARRAY: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
-        return ds[name]  # type: ignore
+        result = cast(DataArray, ds[_THIS_ARRAY])
+        result.name = series.name
+        return result
 
     def to_cdms2(self) -> "cdms2_Variable":
         """Convert this array into a cdms2.Variable
