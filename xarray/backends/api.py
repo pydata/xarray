@@ -1041,8 +1041,13 @@ def to_netcdf(
 
     target = path_or_file if path_or_file is not None else BytesIO()
     kwargs = dict(autoclose=True) if autoclose else {}
-    if engine == "h5netcdf" and invalid_netcdf:
-        kwargs["invalid_netcdf"] = invalid_netcdf
+    if invalid_netcdf:
+        if engine == "h5netcdf":
+            kwargs["invalid_netcdf"] = invalid_netcdf
+        else:
+            raise ValueError(
+                "unrecognized option 'invalid_netcdf' for engine %s" % engine
+            )
     store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
