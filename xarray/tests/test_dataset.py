@@ -1917,7 +1917,7 @@ class TestDataset:
         assert_identical(left.isel(x=0, drop=True), new_left)
         assert_identical(right, new_right)
 
-        with raises_regex(ValueError, "Indexes along dimension 'x' are not equal."):
+        with raises_regex(ValueError, "Indexes along dimension 'x' don't have"):
             xr.align(left.isel(x=0).expand_dims("x"), right, join="override")
 
     def test_align_exclude(self):

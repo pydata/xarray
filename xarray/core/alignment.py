@@ -41,10 +41,10 @@ def _get_joiner(join):
 def _override_indexes(objects, all_indexes, exclude):
     for dim, dim_indexes in all_indexes.items():
         if dim not in exclude:
-            lengths = [dd.size for dd in dim_indexes]
-            if not all([ll == lengths[0] for ll in lengths[1:]]):
+            lengths = {index.size for index in dim_indexes}
+            if len(lengths) != 1:
                 raise ValueError(
-                    "Indexes along dimension %r are not equal."
+                    "Indexes along dimension %r don't have the same length."
                     " Cannot use join='override'." % dim
                 )
 
