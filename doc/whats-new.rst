@@ -256,6 +256,10 @@ Enhancements
 - Speed up :py:meth:`Dataset.isel` up to 33% and :py:meth:`DataArray.isel` up to 25% for small
   arrays (:issue:`2799`, :pull:`3375`). By
   `Guido Imperiale <https://github.com/crusaderky>`_.
+- Added example notebook demonstrating use of xarray with Regional Ocean
+  Modeling System (ROMS) ocean hydrodynamic model output.
+  (:issue:`3116`).
+  By `Robert Hetland <https://github.com/hetland>`
 
 Bug fixes
 ~~~~~~~~~
