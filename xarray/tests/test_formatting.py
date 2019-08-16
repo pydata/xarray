@@ -350,7 +350,7 @@ def test_set_numpy_options():
     assert np.get_printoptions() == original_options
 
 
-def test_short_array_repr():
+def test_short_numpy_repr():
     cases = [
         np.random.randn(500),
         np.random.randn(20, 20),
@@ -359,7 +359,7 @@ def test_short_array_repr():
     ]
     # number of lines:
     # for default numpy repr: 167, 140, 254, 248
-    # for short_array_repr: 1, 7, 24, 19
+    # for short_numpy_repr: 1, 7, 24, 19
     for array in cases:
-        num_lines = formatting.short_array_repr(array).count("\n") + 1
+        num_lines = formatting.short_numpy_repr(array).count("\n") + 1
         assert num_lines < 30

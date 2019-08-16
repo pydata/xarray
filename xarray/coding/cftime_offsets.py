@@ -955,7 +955,7 @@ def cftime_range(
     See Also
     --------
     pandas.date_range
-    """  # noqa: E501
+    """
     # Adapted from pandas.core.indexes.datetimes._generate_range.
     if _count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
