@@ -727,7 +727,7 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             if self.name is None:
                 raise ValueError(
-                    "cannot reset_coords with drop=False " "on an unnamed DataArrray"
+                    "cannot reset_coords with drop=False on an unnamed DataArrray"
                 )
             dataset[self.name] = self.variable
             return dataset
@@ -1468,9 +1468,7 @@ class DataArray(AbstractArray, DataWithCoords):
             This object, but with an additional dimension(s).
         """
         if isinstance(dim, int):
-            raise TypeError(
-                "dim should be hashable or sequence/mapping of " "hashables"
-            )
+            raise TypeError("dim should be hashable or sequence/mapping of hashables")
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
@@ -2310,9 +2308,10 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         xarray.Dataset.from_dataframe
         """
-        df = pd.DataFrame({_THIS_ARRAY: series})
+        temp_name = "__temporary_name"
+        df = pd.DataFrame({temp_name: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
-        result = cast(DataArray, ds[_THIS_ARRAY])
+        result = cast(DataArray, ds[temp_name])
         result.name = series.name
         return result
 
@@ -2729,7 +2728,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         if isinstance(other, Dataset):
             raise NotImplementedError(
-                "dot products are not yet supported " "with Dataset objects."
+                "dot products are not yet supported with Dataset objects."
             )
         if not isinstance(other, DataArray):
             raise TypeError("dot only operates on DataArrays.")
