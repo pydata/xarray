@@ -3444,12 +3444,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if virtual_okay:
             bad_names -= self.virtual_variables
         if bad_names:
-<<<<<<< HEAD
-            raise ValueError('One or more of the specified variables '
-                             'cannot be found in this dataset')
-
-    def drop(self, labels=None, dim=None, *, errors='raise', **dim_kwargs):
-=======
             raise ValueError(
                 "One or more of the specified variables "
                 "cannot be found in this dataset"
@@ -3469,8 +3463,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     ) -> "Dataset":
         ...
 
-    def drop(self, labels, dim=None, *, errors="raise"):  # noqa: F811
->>>>>>> master
+    def drop(self, labels=None, dim=None, *, errors="raise", **labels_kwargs):
         """Drop variables or index labels from this dataset.
 
         Parameters
@@ -3486,49 +3479,74 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             any of the variable or index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
+        **labels_kwargs : {dim: label, ...}, optional
+            The keyword arguments form of ``dim`` and ``labels``.
 
         Returns
         -------
         dropped : Dataset
-        """
-<<<<<<< HEAD
-        if len(dim_kwargs) > 0:
-            if labels is not None or dim is not None:
-                raise ValueError('cannot specify both `dim` and `labels` along'
-                                 'with keyword arguments')
-            if len(dim_kwargs) > 1:
-                raise ValueError('cannot specify multiple dimensions')
-            dim = list(dim_kwargs.keys())[0]
-            labels = list(dim_kwargs.values())
-            if utils.is_list_like(labels[0]):
-                labels = labels[0]
 
-        if errors not in ['raise', 'ignore']:
-=======
+        Examples
+        --------
+        >>> data = np.random.randn(2, 3)
+        >>> labels = ['a', 'b', 'c']
+        >>> ds = xr.Dataset({'A': (['x', 'y'], data), 'y': labels})
+        >>> ds.drop(y=['a', 'c'])
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 1)
+        Coordinates:
+          * y        (y) <U1 'b'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) float64 -0.3454 0.1734
+        >>> ds.drop(y='b')
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * y        (y) <U1 'a' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) float64 -0.3944 -1.418 1.423 -1.041
+        """
         if errors not in ["raise", "ignore"]:
->>>>>>> master
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        if dim is None:
+        if labels_kwargs or utils.is_dict_like(labels):
+            labels_kwargs = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
+            if dim is not None:
+                raise ValueError("cannot specify dim amd dict-like " "arguments.")
+            ds = self
+            for dim, labels in labels_kwargs.items():
+                ds = ds._drop_labels(labels, dim, errors=errors)
+            return ds
+        elif dim is None:
             if isinstance(labels, str) or not isinstance(labels, Iterable):
                 labels = {labels}
             else:
                 labels = set(labels)
-
             return self._drop_vars(labels, errors=errors)
         else:
-            # Don't cast to set, as it would harm performance when labels
-            # is a large numpy array
-            if utils.is_scalar(labels):
-                labels = [labels]
-            labels = np.asarray(labels)
+            if utils.is_list_like(labels):
+                warnings.warn(
+                    "dropping dimensions using list-like labels is deprecated; "
+                    "use dict-like arguments.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            return self._drop_labels(labels, dim, errors=errors)
 
-            try:
-                index = self.indexes[dim]
-            except KeyError:
-                raise ValueError("dimension %r does not have coordinate labels" % dim)
-            new_index = index.drop(labels, errors=errors)
-            return self.loc[{dim: new_index}]
+    def _drop_labels(self, labels=None, dim=None, errors="raise"):
+        # Don't cast to set, as it would harm performance when labels
+        # is a large numpy array
+        if utils.is_scalar(labels):
+            labels = [labels]
+        labels = np.asarray(labels)
+        try:
+            index = self.indexes[dim]
+        except KeyError:
+            raise ValueError("dimension %r does not have coordinate labels" % dim)
+        new_index = index.drop(labels, errors=errors)
+        return self.loc[{dim: new_index}]
 
     def _drop_vars(self, names: set, errors: str = "raise") -> "Dataset":
         if errors == "raise":

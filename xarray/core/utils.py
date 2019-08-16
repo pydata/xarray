@@ -250,6 +250,10 @@ def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
+def is_list_like(value: Any) -> bool:
+    return isinstance(value, list) or isinstance(value, tuple)
+
+
 def either_dict_or_kwargs(
     pos_kwargs: Optional[Mapping[Hashable, T]],
     kw_kwargs: Mapping[str, T],

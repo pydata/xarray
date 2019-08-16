@@ -2161,6 +2161,31 @@ class TestDataset:
         with raises_regex(ValueError, "does not have coordinate labels"):
             data.drop(1, "y")
 
+    def test_drop_labels_by_keyword(self):
+        # Tests for #2910: Support for a additional `drop()` API.
+        data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
+        # Basic functionality.
+        assert len(data.coords["x"]) == 2
+
+        with pytest.warns(DeprecationWarning):
+            ds1 = data.drop(["a"], dim="x")
+
+        ds2 = data.drop(x="a")
+        ds3 = data.drop(x=["a"])
+        ds4 = data.drop(x=["a", "b"])
+        assert len(ds1.coords["x"]) == 1
+        assert len(ds2.coords["x"]) == 1
+        assert len(ds3.coords["x"]) == 1
+        assert len(ds4.coords["x"]) == 0
+
+        # Error handling if user tries both approaches.
+        with pytest.raises(ValueError):
+            data.drop(labels=["a"], x="a")
+        with pytest.raises(ValueError):
+            data.drop(dim="x", x="a")
+        with pytest.raises(ValueError):
+            data.drop(labels=["a"], dim="x", x="a")
+
     def test_drop_dims(self):
         data = xr.Dataset(
             {
