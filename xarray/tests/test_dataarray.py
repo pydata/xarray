@@ -3144,6 +3144,56 @@ class TestDataArray:
         assert_identical(x, x2)
         assert source_ndarray(x2.data) is not source_ndarray(x.data)
 
+    def test_align_override(self):
+        left = DataArray([1, 2, 3], dims="x", coords={"x": [0, 1, 2]})
+        right = DataArray(
+            np.arange(9).reshape((3, 3)),
+            dims=["x", "y"],
+            coords={"x": [0.1, 1.1, 2.1], "y": [1, 2, 3]},
+        )
+
+        expected_right = DataArray(
+            np.arange(9).reshape(3, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1, 2], "y": [1, 2, 3]},
+        )
+
+        new_left, new_right = align(left, right, join="override")
+        assert_identical(left, new_left)
+        assert_identical(new_right, expected_right)
+
+        new_left, new_right = align(left, right, exclude="x", join="override")
+        assert_identical(left, new_left)
+        assert_identical(right, new_right)
+
+        new_left, new_right = xr.align(
+            left.isel(x=0, drop=True), right, exclude="x", join="override"
+        )
+        assert_identical(left.isel(x=0, drop=True), new_left)
+        assert_identical(right, new_right)
+
+        with raises_regex(ValueError, "Indexes along dimension 'x' don't have"):
+            align(left.isel(x=0).expand_dims("x"), right, join="override")
+
+    @pytest.mark.parametrize(
+        "darrays",
+        [
+            [
+                DataArray(0),
+                DataArray([1], [("x", [1])]),
+                DataArray([2, 3], [("x", [2, 3])]),
+            ],
+            [
+                DataArray([2, 3], [("x", [2, 3])]),
+                DataArray([1], [("x", [1])]),
+                DataArray(0),
+            ],
+        ],
+    )
+    def test_align_override_error(self, darrays):
+        with raises_regex(ValueError, "Indexes along dimension 'x' don't have"):
+            xr.align(*darrays, join="override")
+
     def test_align_exclude(self):
         x = DataArray([[1, 2], [3, 4]], coords=[("a", [-1, -2]), ("b", [3, 4])])
         y = DataArray([[1, 2], [3, 4]], coords=[("a", [-1, 20]), ("b", [5, 6])])

@@ -375,7 +375,7 @@ class DataArray(AbstractArray, DataWithCoords):
             )
         return self._replace(variable, coords, name)
 
-    def _replace_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
+    def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
         if not len(indexes):
             return self
         coords = self._coords.copy()
