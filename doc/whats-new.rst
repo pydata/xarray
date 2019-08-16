@@ -13,20 +13,80 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.12.4:
+.. _whats-new.0.13.0:
 
-v0.12.4 (unreleased)
--------------------
+v0.13.0 (unreleased)
+--------------------
+
+This release increases the minimum required Python version from 3.5.0 to 3.5.3
+(:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
+- xarray can now wrap around any
+  `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
+  numpy-like library (important: read notes about NUMPY_EXPERIMENTAL_ARRAY_FUNCTION in
+  the above link). Added explicit test coverage for
+  `sparse <https://github.com/pydata/sparse>`_. (:issue:`3117`, :issue:`3202`)
+  By `Nezar Abdennur <https://github.com/nvictus>`_
+  and `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- The xarray package is now discoverable by mypy (although typing hints coverage is not
+  complete yet). mypy type checking is now enforced by CI. Libraries that depend on
+  xarray and use mypy can now remove from their setup.cfg the lines::
+
+    [mypy-xarray]
+    ignore_missing_imports = True
+
+  (:issue:`2877`, :issue:`3088`, :issue:`3090`, :issue:`3112`, :issue:`3117`,
+  :issue:`3207`)
+  By `Guido Imperiale <https://github.com/crusaderky>`_
+  and `Maximilian Roos <https://github.com/max-sixty>`_.
+
+- Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
+  <http://github.com/DavidMertz>`_.
+
+- Dataset plotting API for visualizing dependencies between two `DataArray`s!
+  Currently only :py:meth:`Dataset.plot.scatter` is implemented.
+  By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
+
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
+  It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
+- In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
+  ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
+  By `David Brochart <https://github.com/davidbrochart>`_.
+
 Bug fixes
 ~~~~~~~~~
-
+- Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
+  unicode indices to dtype=object (:issue:`3094`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Improved error handling and documentation for `.expand_dims()`
+  read-only view.
+- Fix tests for big-endian systems (:issue:`3125`).
+  By `Graham Inggs <https://github.com/ginggs>`_.
+- XFAIL several tests which are expected to fail on ARM systems
+  due to a ``datetime`` issue in NumPy (:issue:`2334`).
+  By `Graham Inggs <https://github.com/ginggs>`_.
+- Fix KeyError that arises when using .sel method with float values
+  different from coords float type (:issue:`3137`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+- Fixed bug in ``combine_by_coords()`` causing a `ValueError` if the input had
+  an unused dimension with coordinates which were not monotonic (:issue:`3150`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fixed crash when applying ``distributed.Client.compute()`` to a DataArray
+  (:issue:`3171`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Better error message when using groupby on an empty DataArray (:issue:`3037`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+- Fix error that arises when using open_mfdataset on a series of netcdf files
+  having differing values for a variable attribute of type list. (:issue:`3034`)
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+                               
 .. _whats-new.0.12.3:
 
 v0.12.3 (10 July 2019)

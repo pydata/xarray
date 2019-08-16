@@ -14,7 +14,6 @@ PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])
 
 
 class PncArrayWrapper(BackendArray):
-
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -28,8 +27,8 @@ class PncArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR,
-            self._getitem)
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+        )
 
     def _getitem(self, key):
         with self.datastore.lock:
@@ -40,14 +39,15 @@ class PncArrayWrapper(BackendArray):
 class PseudoNetCDFDataStore(AbstractDataStore):
     """Store for accessing datasets via PseudoNetCDF
     """
+
     @classmethod
     def open(cls, filename, lock=None, mode=None, **format_kwargs):
         from PseudoNetCDF import pncopen
 
-        keywords = {'kwargs': format_kwargs}
+        keywords = {"kwargs": format_kwargs}
         # only include mode if explicitly passed
         if mode is not None:
-            keywords['mode'] = mode
+            keywords["mode"] = mode
 
         if lock is None:
             lock = PNETCDF_LOCK
@@ -64,29 +64,27 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyOuterIndexedArray(
-            PncArrayWrapper(name, self)
-        )
+        data = indexing.LazilyOuterIndexedArray(PncArrayWrapper(name, self))
         attrs = OrderedDict((k, getattr(var, k)) for k in var.ncattrs())
         return Variable(var.dimensions, data, attrs)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in self.ds.variables.items())
+        return FrozenOrderedDict(
+            (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
+        )
 
     def get_attrs(self):
-        return Frozen(dict([(k, getattr(self.ds, k))
-                            for k in self.ds.ncattrs()]))
+        return Frozen({k: getattr(self.ds, k) for k in self.ds.ncattrs()})
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding['unlimited_dims'] = set(
-            [k for k in self.ds.dimensions
-             if self.ds.dimensions[k].isunlimited()])
-        return encoding
+        return {
+            "unlimited_dims": {
+                k for k in self.ds.dimensions if self.ds.dimensions[k].isunlimited()
+            }
+        }
 
     def close(self):
         self._manager.close()

@@ -1,4 +1,4 @@
-name: test_env
+name: xarray-tests
 channels:
   - conda-forge
 dependencies:
@@ -16,13 +16,16 @@ dependencies:
   - pytest-env
   - coveralls
   - flake8
+  - mypy==0.720  # Must match .pre-commit-config.yaml
   - numpy>=1.12
   - pandas>=0.19
   - pip
   - scipy
   - seaborn
+  - sparse
   - toolz
   - rasterio
+  - boto3
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
@@ -30,5 +33,4 @@ dependencies:
   - lxml
   - pydap
   - pip:
-    - mypy==0.650
     - numbagg

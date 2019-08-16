@@ -46,7 +46,7 @@ jobs:
   steps:
   - template: ci/azure/unit-tests.yml
 
-- job: Lint
+- job: LintFlake8
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
@@ -56,6 +56,16 @@ jobs:
   - bash: flake8
     displayName: flake8 lint checks
 
+- job: FormattingBlack
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - task: UsePythonVersion@0
+  - bash: python -m pip install black
+    displayName: Install black
+  - bash: black --check .
+    displayName: black formatting check
+
 - job: TypeChecking
   variables:
     conda_env: py37
@@ -64,8 +74,8 @@ jobs:
   steps:
   - template: ci/azure/install.yml
   - bash: |
-      source activate test_env
-      mypy . || exit 0
+      source activate xarray-tests
+      mypy .
     displayName: mypy type checks
 
 - job: Docs
@@ -76,7 +86,7 @@ jobs:
     parameters:
       env_file: doc/environment.yml
   - bash: |
-      source activate test_env
+      source activate xarray-tests
       cd doc
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs
@@ -89,6 +99,6 @@ jobs:
   steps:
   - template: ci/azure/install.yml
   - bash: |
-      source activate test_env
+      source activate xarray-tests
       pytest properties
     displayName: Property based tests

@@ -212,6 +212,7 @@ Reshaping and reorganizing
    Dataset.shift
    Dataset.roll
    Dataset.sortby
+   Dataset.broadcast_like
 
 DataArray
 =========
@@ -386,6 +387,7 @@ Reshaping and reorganizing
    DataArray.shift
    DataArray.roll
    DataArray.sortby
+   DataArray.broadcast_like
 
 .. _api.ufuncs:
 
@@ -600,6 +602,7 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
+   Dataset.plot
    DataArray.plot
    plot.plot
    plot.contourf
