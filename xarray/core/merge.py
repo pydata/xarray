@@ -540,6 +540,9 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
     fill_value : scalar, optional
         Value to use for newly missing values
 
