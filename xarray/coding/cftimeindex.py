@@ -480,7 +480,7 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00], dtype='object')
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
-        """  # noqa: E501
+        """
         nptimes = cftime_to_nptime(self)
         calendar = infer_calendar_name(self)
         if calendar not in _STANDARD_CALENDARS and not unsafe:

@@ -199,7 +199,7 @@ class _LocIndexer:
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
 
-        pos_indexers, _ = remap_label_indexers(self.data_array, **key)
+        pos_indexers, _ = remap_label_indexers(self.data_array, key)
         self.data_array[pos_indexers] = value
 
 
