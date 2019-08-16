@@ -317,7 +317,9 @@ class Variable(
 
     @property
     def data(self):
-        if hasattr(self._data, "__array_function__"):
+        if hasattr(self._data, "__array_function__") or isinstance(
+            self._data, dask_array_type
+        ):
             return self._data
         else:
             return self.values

@@ -10,7 +10,7 @@ import pandas as pd
 
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
-from .pycompat import dask_array_type
+from .pycompat import dask_array_type, sparse_array_type
 
 try:
     from pandas.errors import OutOfBoundsDatetime
@@ -211,9 +211,60 @@ def format_array_flat(array, max_width):
     return pprint_str
 
 
-def summarize_variable(
-    name, var, col_width, show_values=True, marker=" ", max_width=None
-):
+_KNOWN_TYPE_REPRS = {np.ndarray: "np.ndarray"}
+with contextlib.suppress(ImportError):
+    import sparse
+
+    _KNOWN_TYPE_REPRS[sparse.COO] = "sparse.COO"
+
+
+def inline_dask_repr(array):
+    """Similar to dask.array.DataArray.__repr__, but without
+    redundant information that's already printed by the repr
+    function of the xarray wrapper.
+    """
+    assert isinstance(array, dask_array_type), array
+
+    chunksize = tuple(c[0] for c in array.chunks)
+
+    if hasattr(array, "_meta"):
+        meta = array._meta
+        if type(meta) in _KNOWN_TYPE_REPRS:
+            meta_repr = _KNOWN_TYPE_REPRS[type(meta)]
+        else:
+            meta_repr = type(meta).__name__
+        meta_string = ", meta={}".format(meta_repr)
+    else:
+        meta_string = ""
+
+    return "dask.array<chunksize={}{}>".format(chunksize, meta_string)
+
+
+def inline_sparse_repr(array):
+    """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
+    assert isinstance(array, sparse_array_type), array
+    return "<{}: nnz={:d}, fill_value={!s}>".format(
+        type(array).__name__, array.nnz, array.fill_value
+    )
+
+
+def inline_variable_array_repr(var, max_width):
+    """Build a one-line summary of a variable's data."""
+    if var._in_memory:
+        return format_array_flat(var, max_width)
+    elif isinstance(var._data, dask_array_type):
+        return inline_dask_repr(var.data)
+    elif isinstance(var._data, sparse_array_type):
+        return inline_sparse_repr(var.data)
+    elif hasattr(var._data, "__array_function__"):
+        return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
+    else:
+        # internal xarray array type
+        return "..."
+
+
+def summarize_variable(name, var, col_width, marker=" ", max_width=None):
+    """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
     if max_width is None:
         max_width = OPTIONS["display_width"]
     first_col = pretty_print("  {} {} ".format(marker, name), col_width)
@@ -222,12 +273,9 @@ def summarize_variable(
     else:
         dims_str = ""
     front_str = "{}{}{} ".format(first_col, dims_str, var.dtype)
-    if show_values:
-        values_str = format_array_flat(var, max_width - len(front_str))
-    elif isinstance(var._data, dask_array_type):
-        values_str = short_dask_repr(var, show_dtype=False)
-    else:
-        values_str = "..."
+
+    values_width = max_width - len(front_str)
+    values_str = inline_variable_array_repr(var, values_width)
 
     return front_str + values_str
 
@@ -249,13 +297,11 @@ def _summarize_coord_levels(coord, col_width, marker="-"):
 
 
 def summarize_datavar(name, var, col_width):
-    show_values = var._in_memory
-    return summarize_variable(name, var.variable, col_width, show_values)
+    return summarize_variable(name, var.variable, col_width)
 
 
 def summarize_coord(name, var, col_width):
     is_index = name in var.dims
-    show_values = var._in_memory
     marker = "*" if is_index else " "
     if is_index:
         coord = var.variable.to_index_variable()
@@ -266,7 +312,7 @@ def summarize_coord(name, var, col_width):
                     _summarize_coord_levels(coord, col_width),
                 ]
             )
-    return summarize_variable(name, var.variable, col_width, show_values, marker)
+    return summarize_variable(name, var.variable, col_width, marker)
 
 
 def summarize_attr(key, value, col_width=None):
@@ -361,14 +407,14 @@ def unindexed_dims_repr(dims, coords):
 def set_numpy_options(*args, **kwargs):
     original = np.get_printoptions()
     np.set_printoptions(*args, **kwargs)
-    yield
-    np.set_printoptions(**original)
+    try:
+        yield
+    finally:
+        np.set_printoptions(**original)
 
 
-def short_array_repr(array):
-
-    if not hasattr(array, "__array_function__"):
-        array = np.asarray(array)
+def short_numpy_repr(array):
+    array = np.asarray(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
@@ -384,26 +430,19 @@ def short_array_repr(array):
         return repr(array)
 
 
-def short_dask_repr(array, show_dtype=True):
-    """Similar to dask.array.DataArray.__repr__, but without
-    redundant information that's already printed by the repr
-    function of the xarray wrapper.
-    """
-    chunksize = tuple(c[0] for c in array.chunks)
-    if show_dtype:
-        return "dask.array<shape={}, dtype={}, chunksize={}>".format(
-            array.shape, array.dtype, chunksize
-        )
-    else:
-        return "dask.array<shape={}, chunksize={}>".format(array.shape, chunksize)
-
-
 def short_data_repr(array):
-    if isinstance(getattr(array, "variable", array)._data, dask_array_type):
-        return short_dask_repr(array)
+    """Format "data" for DataArray and Variable."""
+    internal_data = getattr(array, "variable", array)._data
+    if isinstance(array, np.ndarray):
+        return short_numpy_repr(array)
+    elif hasattr(internal_data, "__array_function__") or isinstance(
+        internal_data, dask_array_type
+    ):
+        return repr(array.data)
     elif array._in_memory or array.size < 1e5:
-        return short_array_repr(array.data)
+        return short_numpy_repr(array)
     else:
+        # internal xarray array type
         return "[{} values with dtype={}]".format(array.size, array.dtype)
 
 
@@ -554,7 +593,7 @@ def diff_array_repr(a, b, compat):
     summary.append(diff_dim_summary(a, b))
 
     if not array_equiv(a.data, b.data):
-        temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
+        temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
             for ab_side, ab_data_repr in zip(("L", "R"), temp)
