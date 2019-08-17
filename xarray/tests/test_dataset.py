@@ -2163,11 +2163,9 @@ class TestDataset:
 
     def test_drop_labels_by_keyword(self):
         # Tests for #2910: Support for a additional `drop()` API.
-        data = Dataset({
-            "A": (["x", "y"], np.random.randn(2, 6)),
-            "x": ["a", "b"],
-            "y": range(6)
-        })
+        data = Dataset(
+            {"A": (["x", "y"], np.random.randn(2, 6)), "x": ["a", "b"], "y": range(6)}
+        )
         # Basic functionality.
         assert len(data.coords["x"]) == 2
 
@@ -2182,8 +2180,8 @@ class TestDataset:
         assert_array_equal(ds1.coords["x"], ["b"])
         assert_array_equal(ds2.coords["x"], ["b"])
         assert_array_equal(ds3.coords["x"], ["b"])
-        assert(ds4.coords["x"].size == 0)
-        assert(ds5.coords["x"].size == 0)
+        assert ds4.coords["x"].size == 0
+        assert ds5.coords["x"].size == 0
         assert_array_equal(ds5.coords["y"], [1, 3, 5])
 
         # Error handling if user tries both approaches.
