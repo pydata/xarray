@@ -4404,7 +4404,7 @@ def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
             open_dataset(tmp_file, use_cftime=False)
 
 
-@pytest.mark.parametrize('engine', ['netcdf4', 'scipy'])
+@pytest.mark.parametrize("engine", ["netcdf4", "scipy"])
 def test_invalid_netcdf_raises(engine):
     data = create_test_data()
     with raises_regex(ValueError, "unrecognized option 'invalid_netcdf'"):
