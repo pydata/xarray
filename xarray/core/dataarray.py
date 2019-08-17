@@ -171,13 +171,11 @@ def _check_data_shape(data, coords, dims):
                 return data
             else:
                 data_shape = tuple(
-                    as_compatible_data(coords[k]).size if k in coords.keys() else 1
+                    as_variable(coords[k], k).size if k in coords.keys() else 1
                     for k in dims
                 )
-        elif any(isinstance(coord, tuple) for coord in coords):
-            data_shape = tuple(as_compatible_data(coord).size for d, coord in coords)
         else:
-            data_shape = tuple(as_compatible_data(coord).size for coord in coords)
+            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
         data = np.full(data_shape, data)
     return data
 
