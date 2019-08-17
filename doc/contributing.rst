@@ -842,3 +842,29 @@ branch has not actually been merged.
 The branch will still exist on GitHub, so to delete it there do::
 
     git push origin --delete shiny-new-feature
+
+
+PR checklist
+------------
+
+- **Use a helpful title for your pull request** by summarizing the main contributions rather than using the latest commit message. If this addresses an `issue <https://github.com/pydata/xarray/issues>`_, please reference it.
+- **Properly comment and document your code.** See `"Documenting your code" <https://xarray.pydata.org/en/stable/contributing.html#documenting-your-code>`_ for details.
+- **Test that the documentation builds correctly** by typing ``make html`` in the ``doc`` directory. This is not strictly necessary, but this may be easier than waiting for CI to catch a mistake. See `"Contributing to the documentation" <https://xarray.pydata.org/en/stable/contributing.html#contributing-to-the-documentation>`_ for details.
+- **Test your code**.
+
+    - Write tests if needed. See the section `"Test-driven development/code writing" <https://xarray.pydata.org/en/stable/contributing.html#test-driven-development-code-writing>`_ for details.
+    - Use |pytest|_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
+
+- **Properly format your code** and verify that it passes the formatting guidelines set by |black|_ and |flake8|_. See `"Code formatting" <https://xarray.pydata.org/en/stable/contributing.html#code-formatting>`_ for details.
+
+    - Run ``black .`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
+    - Run ``flake8`` in the root directory. If this fails, it will log an error message.
+
+.. |pytest| replace:: ``pytest``
+.. pytest: http://doc.pytest.org/en/latest/
+.. |black| replace:: ``black``
+.. black: https://black.readthedocs.io/en/stable/
+.. |flake8| replace:: ``flake8``
+.. flake8: http://flake8.pycqa.org/en/latest/
+
+
