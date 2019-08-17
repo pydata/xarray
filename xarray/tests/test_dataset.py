@@ -2163,20 +2163,28 @@ class TestDataset:
 
     def test_drop_labels_by_keyword(self):
         # Tests for #2910: Support for a additional `drop()` API.
-        data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
+        data = Dataset({
+            "A": (["x", "y"], np.random.randn(2, 6)),
+            "x": ["a", "b"],
+            "y": range(6)
+        })
         # Basic functionality.
         assert len(data.coords["x"]) == 2
 
+        # This API is allowed but deprecated.
         with pytest.warns(DeprecationWarning):
             ds1 = data.drop(["a"], dim="x")
-
         ds2 = data.drop(x="a")
         ds3 = data.drop(x=["a"])
         ds4 = data.drop(x=["a", "b"])
-        assert len(ds1.coords["x"]) == 1
-        assert len(ds2.coords["x"]) == 1
-        assert len(ds3.coords["x"]) == 1
-        assert len(ds4.coords["x"]) == 0
+        ds5 = data.drop(x=["a", "b"], y=range(0, 6, 2))
+
+        assert_array_equal(ds1.coords["x"], ["b"])
+        assert_array_equal(ds2.coords["x"], ["b"])
+        assert_array_equal(ds3.coords["x"], ["b"])
+        assert(ds4.coords["x"].size == 0)
+        assert(ds5.coords["x"].size == 0)
+        assert_array_equal(ds5.coords["y"], [1, 3, 5])
 
         # Error handling if user tries both approaches.
         with pytest.raises(ValueError):
