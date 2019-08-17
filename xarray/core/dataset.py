@@ -54,6 +54,7 @@ from .common import (
 )
 from .coordinates import (
     DatasetCoordinates,
+    DataArrayCoordinates,
     LevelCoordinatesSource,
     assert_coordinate_consistent,
     remap_label_indexers,
@@ -3450,7 +3451,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
 
     # Drop variables
-    @overload
+    @overload  # noqa: F811
     def drop(
         self, labels: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "Dataset":
@@ -3463,7 +3464,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     ) -> "Dataset":
         ...
 
-    def drop(self, labels=None, dim=None, *, errors="raise", **labels_kwargs):
+    def drop(  # noqa: F811
+        self, labels=None, dim=None, *, errors="raise", **labels_kwargs
+    ):
         """Drop variables or index labels from this dataset.
 
         Parameters
@@ -3511,7 +3514,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        if labels_kwargs or utils.is_dict_like(labels):
+        labels_are_coords = isinstance(labels, DataArrayCoordinates)
+        if labels_kwargs or (utils.is_dict_like(labels) and not labels_are_coords):
             labels_kwargs = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
             if dim is not None:
                 raise ValueError("cannot specify dim amd dict-like " "arguments.")
