@@ -1524,7 +1524,7 @@ class TestDataArray:
         expected = DataArray(
             np.full((10, 2), np.nan), coords=[("x", np.arange(10)), ("y", ["a", "b"])]
         )
-        actual = DataArray(coords=expected.coords)
+        actual = DataArray(coords=[("x", np.arange(10)), ("y", ["a", "b"])])
         assert_identical(expected, actual)
 
     def test_swap_dims(self):
