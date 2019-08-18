@@ -3518,7 +3518,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if labels_kwargs or (utils.is_dict_like(labels) and not labels_are_coords):
             labels_kwargs = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
             if dim is not None:
-                raise ValueError("cannot specify dim amd dict-like " "arguments.")
+                raise ValueError("cannot specify dim and dict-like arguments.")
             ds = self
             for dim, labels in labels_kwargs.items():
                 ds = ds._drop_labels(labels, dim, errors=errors)
