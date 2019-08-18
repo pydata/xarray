@@ -62,6 +62,9 @@ Bug fixes
 - XFAIL several tests which are expected to fail on ARM systems
   due to a ``datetime`` issue in NumPy (:issue:`2334`).
   By `Graham Inggs <https://github.com/ginggs>`_.
+- Fix KeyError that arises when using .sel method with float values
+  different from coords float type (:issue:`3137`).
+  By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 - Fixed bug in ``combine_by_coords()`` causing a `ValueError` if the input had
   an unused dimension with coordinates which were not monotonic (:issue:`3150`).
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
