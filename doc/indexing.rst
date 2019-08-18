@@ -236,6 +236,7 @@ The :py:meth:`~xarray.Dataset.drop` method returns a new object with the listed
 index labels along a dimension dropped:
 
 .. ipython:: python
+    :okwarning:
 
     ds.drop(['IN', 'IL'], dim='space')
 

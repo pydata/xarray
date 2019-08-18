@@ -57,11 +57,16 @@ Enhancements
 
 - Added ``join='override'``. This only checks that index sizes are equal among objects and skips
   checking indexes for equality. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
   It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
+
+- :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index labels by specifying both ``dim`` and ``labels`` is deprecated (:issue:`2910`).
+  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
 
 Bug fixes
 ~~~~~~~~~
