@@ -2453,7 +2453,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 if not reflexive
                 else f(other_variable, self.variable)
             )
-            coords = self.coords._merge_raw(other_coords)
+            coords, indexes = self.coords._merge_raw(other_coords)
             name = self._result_name(other)
 
             return self._replace(variable, coords, name)
