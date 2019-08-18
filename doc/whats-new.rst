@@ -91,6 +91,13 @@ Bug fixes
                                
 .. _whats-new.0.12.3:
 
+Documentation
+~~~~~~~~~~~~~
+
+- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ as a quick reference for tasks before creating a new PR
+  or pushing new commits.
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
+
 v0.12.3 (10 July 2019)
 ----------------------
 
