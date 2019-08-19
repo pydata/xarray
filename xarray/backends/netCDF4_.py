@@ -12,7 +12,7 @@ from ..coding.variables import pop_to
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
-    BackendArray, WritableCFDataStore, find_root, robust_getitem)
+    BackendArray, WritableCFDataStore, find_root_and_group, robust_getitem)
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import (
     HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock)
@@ -52,12 +52,18 @@ class BaseNetCDF4Array(BackendArray):
             if self.datastore.autoclose:
                 self.datastore.close(needs_lock=False)
 
-    def get_array(self, needs_lock=True):
-        ds = self.datastore._manager.acquire(needs_lock).value
-        return ds.variables[self.variable_name]
-
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
+
+    def get_array(self, needs_lock=True):
+        ds = self.datastore._acquire(needs_lock)
+        variable = ds.variables[self.variable_name]
+        variable.set_auto_maskandscale(False)
+        # only added in netCDF4-python v1.2.8
+        with suppress(AttributeError):
+            variable.set_auto_chartostring(False)
+        return variable
+
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.OUTER,
@@ -132,7 +138,7 @@ def _netcdf4_create_group(dataset, name):
 
 
 def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
-    if group in set([None, '', '/']):
+    if group in {None, '', '/'}:
         # use the root group
         return ds
     else:
@@ -149,7 +155,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                     ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
-                    raise IOError('group not found: %s' % key, e)
+                    raise OSError('group not found: %s' % key, e)
         return ds
 
 
@@ -174,7 +180,7 @@ def _force_native_endianness(var):
         # if endian exists, remove it from the encoding.
         var.encoding.pop('endian', None)
     # check to see if encoding has a value for endian its 'native'
-    if not var.encoding.get('endian', 'native') is 'native':
+    if not var.encoding.get('endian', 'native') == 'native':
         raise NotImplementedError("Attempt to write non-native endian type, "
                                   "this is not supported by the netCDF4 "
                                   "python library.")
@@ -189,9 +195,11 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 
     encoding = variable.encoding.copy()
 
-    safe_to_drop = set(['source', 'original_shape'])
-    valid_encodings = set(['zlib', 'complevel', 'fletcher32', 'contiguous',
-                           'chunksizes', 'shuffle', '_FillValue', 'dtype'])
+    safe_to_drop = {'source', 'original_shape'}
+    valid_encodings = {
+        'zlib', 'complevel', 'fletcher32', 'contiguous',
+        'chunksizes', 'shuffle', '_FillValue', 'dtype'
+    }
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
     if h5py_okay:
@@ -206,9 +214,16 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
         chunks_too_big = any(
             c > d and dim not in unlimited_dims
             for c, d, dim in zip(chunksizes, variable.shape, variable.dims))
-        changed_shape = encoding.get('original_shape') != variable.shape
+        has_original_shape = 'original_shape' in encoding
+        changed_shape = (has_original_shape and
+                         encoding.get('original_shape') != variable.shape)
         if chunks_too_big or changed_shape:
             del encoding['chunksizes']
+
+    var_has_unlim_dim = any(dim in unlimited_dims for dim in variable.dims)
+    if (not raise_on_invalid and var_has_unlim_dim
+            and 'contiguous' in encoding.keys()):
+        del encoding['contiguous']
 
     for k in safe_to_drop:
         if k in encoding:
@@ -226,47 +241,6 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
                 del encoding[k]
 
     return encoding
-
-
-class GroupWrapper:
-    """Wrap netCDF4.Group objects so closing them closes the root group."""
-    def __init__(self, value):
-        self.value = value
-
-    def close(self):
-        # netCDF4 only allows closing the root group
-        find_root(self.value).close()
-
-
-def _open_netcdf4_group(filename, lock, mode, group=None, **kwargs):
-    import netCDF4 as nc4
-
-    ds = nc4.Dataset(filename, mode=mode, **kwargs)
-
-    with close_on_error(ds):
-        ds = _nc4_require_group(ds, group, mode)
-
-    _disable_auto_decode_group(ds)
-
-    return GroupWrapper(ds)
-
-
-def _disable_auto_decode_variable(var):
-    """Disable automatic decoding on a netCDF4.Variable.
-
-    We handle these types of decoding ourselves.
-    """
-    var.set_auto_maskandscale(False)
-
-    # only added in netCDF4-python v1.2.8
-    with suppress(AttributeError):
-        var.set_auto_chartostring(False)
-
-
-def _disable_auto_decode_group(ds):
-    """Disable automatic decoding on all variables in a netCDF4.Group."""
-    for var in ds.variables.values():
-        _disable_auto_decode_variable(var)
 
 
 def _is_list_of_strings(value):
@@ -300,14 +274,24 @@ class NetCDF4DataStore(WritableCFDataStore):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
 
-    def __init__(self, manager, lock=NETCDF4_PYTHON_LOCK, autoclose=False):
+    def __init__(self, manager, group=None, mode=None,
+                 lock=NETCDF4_PYTHON_LOCK, autoclose=False):
         import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
-            _disable_auto_decode_group(manager)
-            manager = DummyFileManager(GroupWrapper(manager))
+            if group is None:
+                root, group = find_root_and_group(manager)
+            else:
+                if not type(manager) is netCDF4.Dataset:
+                    raise ValueError(
+                        'must supply a root netCDF4.Dataset if the group '
+                        'argument is provided')
+                root = manager
+            manager = DummyFileManager(root)
 
         self._manager = manager
+        self._group = group
+        self._mode = mode
         self.format = self.ds.data_model
         self._filename = self.ds.filepath()
         self.is_remote = is_remote_uri(self._filename)
@@ -345,15 +329,21 @@ class NetCDF4DataStore(WritableCFDataStore):
                     base_lock = NETCDFC_LOCK
                 lock = combine_locks([base_lock, get_write_lock(filename)])
 
+        kwargs = dict(clobber=clobber, diskless=diskless, persist=persist,
+                      format=format)
         manager = CachingFileManager(
-            _open_netcdf4_group, filename, lock, mode=mode,
-            kwargs=dict(group=group, clobber=clobber, diskless=diskless,
-                        persist=persist, format=format))
-        return cls(manager, lock=lock, autoclose=autoclose)
+            netCDF4.Dataset, filename, mode=mode, kwargs=kwargs)
+        return cls(manager, group=group, mode=mode, lock=lock,
+                   autoclose=autoclose)
+
+    def _acquire(self, needs_lock=True):
+        with self._manager.acquire_context(needs_lock) as root:
+            ds = _nc4_require_group(root, self._group, self._mode)
+        return ds
 
     @property
     def ds(self):
-        return self._manager.acquire().value
+        return self._acquire()
 
     def open_store_variable(self, name, var):
         dimensions = var.dimensions
@@ -445,6 +435,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding,
             unlimited_dims=unlimited_dims)
+
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
@@ -462,7 +453,6 @@ class NetCDF4DataStore(WritableCFDataStore):
                 least_significant_digit=encoding.get(
                     'least_significant_digit'),
                 fill_value=fill_value)
-            _disable_auto_decode_variable(nc4_var)
 
         for k, v in attrs.items():
             # set attributes one-by-one since netCDF4<1.0.10 can't handle

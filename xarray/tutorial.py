@@ -7,10 +7,13 @@ Useful for:
 '''
 import hashlib
 import os as _os
-import warnings
 from urllib.request import urlretrieve
 
+import numpy as np
+
 from .backends.api import open_dataset as _open_dataset
+from .core.dataarray import DataArray
+from .core.dataset import Dataset
 
 _default_cache_dir = _os.sep.join(('~', '.xarray_tutorial_data'))
 
@@ -27,7 +30,7 @@ def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
                  github_url='https://github.com/pydata/xarray-data',
                  branch='master', **kws):
     """
-    Load a dataset from the online repository (requires internet).
+    Open a dataset from the online repository (requires internet).
 
     If a local copy is found then always use that to avoid network traffic.
 
@@ -78,7 +81,7 @@ def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
             msg = """
             MD5 checksum does not match, try downloading dataset again.
             """
-            raise IOError(msg)
+            raise OSError(msg)
 
     ds = _open_dataset(localfile, **kws)
 
@@ -91,17 +94,35 @@ def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
 
 def load_dataset(*args, **kwargs):
     """
-    `load_dataset` will be removed a future version of xarray. The current
-    behavior of this function can be achived by using
-    `tutorial.open_dataset(...).load()`.
+    Open, load into memory, and close a dataset from the online repository
+    (requires internet).
 
     See Also
     --------
     open_dataset
     """
-    warnings.warn(
-        "load_dataset` will be removed in a future version of xarray. The "
-        "current behavior of this function can be achived by using "
-        "`tutorial.open_dataset(...).load()`.",
-        DeprecationWarning, stacklevel=2)
-    return open_dataset(*args, **kwargs).load()
+    with open_dataset(*args, **kwargs) as ds:
+        return ds.load()
+
+
+def scatter_example_dataset():
+    A = DataArray(np.zeros([3, 11, 4, 4]),
+                  dims=['x', 'y', 'z', 'w'],
+                  coords=[np.arange(3),
+                          np.linspace(0, 1, 11),
+                          np.arange(4),
+                          0.1 * np.random.randn(4)])
+    B = 0.1 * A.x**2 + A.y**2.5 + 0.1 * A.z * A.w
+    A = -0.1 * A.x + A.y / (5 + A.z) + A.w
+    ds = Dataset({'A': A, 'B': B})
+    ds['w'] = ['one', 'two', 'three', 'five']
+
+    ds.x.attrs['units'] = 'xunits'
+    ds.y.attrs['units'] = 'yunits'
+    ds.z.attrs['units'] = 'zunits'
+    ds.w.attrs['units'] = 'wunits'
+
+    ds.A.attrs['units'] = 'Aunits'
+    ds.B.attrs['units'] = 'Bunits'
+
+    return ds

@@ -4,16 +4,16 @@ Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
 import contextlib
-from functools import partial
 import inspect
 import warnings
+from functools import partial
 
 import numpy as np
 import pandas as pd
 
 from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import dask_array_type
+from .pycompat import dask_array_type, sparse_array_type
 
 try:
     import dask.array as dask_array
@@ -57,21 +57,58 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
         raise NotImplementedError(msg % func_name)
 
 
+# switch to use dask.array / __array_function__ version when dask supports it:
+# https://github.com/dask/dask/pull/4822
+moveaxis = npcompat.moveaxis
+
 around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
-notnull = _dask_or_eager_func('notnull', eager_module=pd)
-_isnull = _dask_or_eager_func('isnull', eager_module=pd)
+
+
+if hasattr(np, 'isnat') and (
+        dask_array is None or hasattr(dask_array_type, '__array_ufunc__')):
+    # np.isnat is available since NumPy 1.13, so __array_ufunc__ is always
+    # supported.
+    isnat = np.isnat
+else:
+    isnat = _dask_or_eager_func('isnull', eager_module=pd)
+isnan = _dask_or_eager_func('isnan')
+zeros_like = _dask_or_eager_func('zeros_like')
+
+
+pandas_isnull = _dask_or_eager_func('isnull', eager_module=pd)
 
 
 def isnull(data):
-    # GH837, GH861
-    # isnull fcn from pandas will throw TypeError when run on numpy structured
-    # array therefore for dims that are np structured arrays we assume all
-    # data is present
-    try:
-        return _isnull(data)
-    except TypeError:
-        return np.zeros(data.shape, dtype=bool)
+    data = asarray(data)
+    scalar_type = data.dtype.type
+    if issubclass(scalar_type, (np.datetime64, np.timedelta64)):
+        # datetime types use NaT for null
+        # note: must check timedelta64 before integers, because currently
+        # timedelta64 inherits from np.integer
+        return isnat(data)
+    elif issubclass(scalar_type, np.inexact):
+        # float types use NaN for null
+        return isnan(data)
+    elif issubclass(
+        scalar_type, (np.bool_, np.integer, np.character, np.void)
+    ):
+        # these types cannot represent missing values
+        return zeros_like(data, dtype=bool)
+    else:
+        # at this point, array should have dtype=object
+        if isinstance(data, (np.ndarray, dask_array_type)):
+            return pandas_isnull(data)
+        else:
+            # Not reachable yet, but intended for use with other duck array
+            # types. For full consistency with pandas, we should accept None as
+            # a null value as well as NaN, but it isn't clear how to do this
+            # with duck typing.
+            return data != data
+
+
+def notnull(data):
+    return ~isnull(data)
 
 
 transpose = _dask_or_eager_func('transpose')
@@ -118,7 +155,11 @@ masked_invalid = _dask_or_eager_func(
 
 def asarray(data):
     from .variable import _as_array_subclass as asarray
-    return data if isinstance(data, dask_array_type) else asarray(data)
+    return (
+        data if (isinstance(data, dask_array_type)
+                 or hasattr(data, '__array_function__'))
+        else asarray(data)
+    )
 
 
 def as_shared_dtype(scalars_or_arrays):
@@ -135,6 +176,9 @@ def as_shared_dtype(scalars_or_arrays):
 def as_like_arrays(*data):
     if all(isinstance(d, dask_array_type) for d in data):
         return data
+    elif any(isinstance(d, sparse_array_type) for d in data):
+        from sparse import COO
+        return tuple(COO(d) for d in data)
     else:
         return tuple(np.asarray(d) for d in data)
 

@@ -1,12 +1,16 @@
-name: test_env
+name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - python=3.6
+  - python=3.7
   - cftime
+  - nc-time-axis
   - dask
   - distributed
+  - h5py
+  - h5netcdf
   - matplotlib
+  - netcdf4
   - pytest
   - pytest-cov
   - pytest-env
@@ -14,9 +18,20 @@ dependencies:
   - flake8
   - numpy>=1.12
   - pandas>=0.19
+  - pip
   - scipy
   - seaborn
+  - sparse
   - toolz
+  - rasterio
+  - boto3
   - bottleneck
+  - zarr
+  - pseudonetcdf>=3.0.1
+  - cfgrib>=0.9.2
+  - lxml
+  - pydap
+  - quantities
   - pip:
-    - git+https://github.com/zarr-developers/zarr.git
+    - mypy==0.650
+    - numbagg

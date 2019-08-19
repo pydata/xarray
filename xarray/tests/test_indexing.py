@@ -43,6 +43,22 @@ class TestIndexers:
         assert res[0] == (0,)
         assert res[1] == (1,)
 
+    def test_stacked_multiindex_min_max(self):
+        data = np.random.randn(3, 23, 4)
+        da = DataArray(
+            data, name="value",
+            dims=["replicate", "rsample", "exp"],
+            coords=dict(
+                replicate=[0, 1, 2],
+                exp=["a", "b", "c", "d"],
+                rsample=list(range(23))
+            ),
+        )
+        da2 = da.stack(sample=("replicate", "rsample"))
+        s = da2.sample
+        assert_array_equal(da2.loc['a', s.max()], data[2, 22, 0])
+        assert_array_equal(da2.loc['b', s.min()], data[0, 0, 1])
+
     def test_convert_label_indexer(self):
         # TODO: add tests that aren't just for edge cases
         index = pd.Index([1, 2, 3])
@@ -127,6 +143,16 @@ class TestIndexers:
         test_indexer(mdata, {'one': 'a'},
                      [True, True, True, True, False, False, False, False],
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
+
+    def test_read_only_view(self):
+        from collections import OrderedDict
+        arr = DataArray(np.random.rand(3, 3),
+                        coords={'x': np.arange(3), 'y': np.arange(3)},
+                        dims=('x', 'y'))     # Create a 2D DataArray
+        arr = arr.expand_dims(OrderedDict([('z', 3)]), -1)  # New dimension 'z'
+        arr['z'] = np.arange(3)              # New coords to dimension 'z'
+        with pytest.raises(ValueError, match='Do you want to .copy()'):
+            arr.loc[0, 0, 0] = 999
 
 
 class TestLazyArray:
@@ -505,11 +531,18 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support):
 
 
 def test_implicit_indexing_adapter():
-    array = np.arange(10)
+    array = np.arange(10, dtype=np.int64)
     implicit = indexing.ImplicitToExplicitIndexingAdapter(
         indexing.NumpyIndexingAdapter(array), indexing.BasicIndexer)
     np.testing.assert_array_equal(array, np.asarray(implicit))
     np.testing.assert_array_equal(array, implicit[:])
+
+
+def test_implicit_indexing_adapter_copy_on_write():
+    array = np.arange(10, dtype=np.int64)
+    implicit = indexing.ImplicitToExplicitIndexingAdapter(
+        indexing.CopyOnWriteArray(array))
+    assert isinstance(implicit[:], indexing.ImplicitToExplicitIndexingAdapter)
 
 
 def test_outer_indexer_consistency_with_broadcast_indexes_vectorized():

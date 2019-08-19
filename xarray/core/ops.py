@@ -38,11 +38,6 @@ REDUCE_METHODS = ['all', 'any']
 NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
                       'std', 'var', 'median']
 NAN_CUM_METHODS = ['cumsum', 'cumprod']
-BOTTLENECK_ROLLING_METHODS = {'move_sum': 'sum', 'move_mean': 'mean',
-                              'move_std': 'std', 'move_min': 'min',
-                              'move_max': 'max', 'move_var': 'var',
-                              'move_argmin': 'argmin', 'move_argmax': 'argmax',
-                              'move_median': 'median'}
 # TODO: wrap take, dot, sort
 
 
@@ -102,20 +97,6 @@ min_count : int, default None
     The required number of valid values to perform the operation.
     If fewer than min_count non-NA values are present the result will
     be NA. New in version 0.10.8: Added with the default being None."""
-
-_ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
-Reduce this {da_or_ds}'s data windows by applying `{name}` along its dimension.
-
-Parameters
-----------
-**kwargs : dict
-    Additional keyword arguments passed on to `{name}`.
-
-Returns
--------
-reduced : {da_or_ds}
-    New {da_or_ds} object with `{name}` applied along its rolling dimnension.
-"""
 
 _COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
 Coarsen this object by applying `{name}` along its dimensions.
@@ -236,13 +217,6 @@ def _func_slash_method_wrapper(f, name=None):
     return func
 
 
-def rolling_count(rolling):
-
-    rolling_count = rolling._counts()
-    enough_periods = rolling_count >= rolling._min_periods
-    return rolling_count.where(enough_periods)
-
-
 def inject_reduce_methods(cls):
     methods = ([(name, getattr(duck_array_ops, 'array_%s' % name), False)
                 for name in REDUCE_METHODS] +
@@ -284,8 +258,10 @@ def get_op(name):
     return getattr(operator, op_str(name))
 
 
-NON_INPLACE_OP = dict((get_op('i' + name), get_op(name))
-                      for name in NUM_BINARY_OPS)
+NON_INPLACE_OP = {
+    get_op('i' + name): get_op(name)
+    for name in NUM_BINARY_OPS
+}
 
 
 def inplace_to_noninplace_op(f):
@@ -338,55 +314,6 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
 
     inject_reduce_methods(cls)
     inject_cum_methods(cls)
-
-
-def inject_bottleneck_rolling_methods(cls):
-    # standard numpy reduce methods
-    methods = [(name, getattr(duck_array_ops, name))
-               for name in NAN_REDUCE_METHODS]
-    for name, f in methods:
-        func = cls._reduce_method(f)
-        func.__name__ = name
-        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__, da_or_ds='DataArray')
-        setattr(cls, name, func)
-
-    # bottleneck doesn't offer rolling_count, so we construct it ourselves
-    func = rolling_count
-    func.__name__ = 'count'
-    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-        name=func.__name__, da_or_ds='DataArray')
-    setattr(cls, 'count', func)
-
-    # bottleneck rolling methods
-    if not has_bottleneck:
-        return
-
-    for bn_name, method_name in BOTTLENECK_ROLLING_METHODS.items():
-        f = getattr(bn, bn_name)
-        func = cls._bottleneck_reduce(f)
-        func.__name__ = method_name
-        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__, da_or_ds='DataArray')
-        setattr(cls, method_name, func)
-
-
-def inject_datasetrolling_methods(cls):
-    # standard numpy reduce methods
-    methods = [(name, getattr(duck_array_ops, name))
-               for name in NAN_REDUCE_METHODS]
-    for name, f in methods:
-        func = cls._reduce_method(f)
-        func.__name__ = name
-        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__, da_or_ds='Dataset')
-        setattr(cls, name, func)
-    # bottleneck doesn't offer rolling_count, so we construct it ourselves
-    func = rolling_count
-    func.__name__ = 'count'
-    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-        name=func.__name__, da_or_ds='Dataset')
-    setattr(cls, 'count', func)
 
 
 def inject_coarsen_methods(cls):

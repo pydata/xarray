@@ -12,7 +12,7 @@ dependencies:
   - ipython=7.2.0
   - netCDF4=1.4.2
   - cartopy=0.17.0
-  - rasterio=1.0.13
+  - rasterio=1.0.24
   - zarr=2.2.0
   - iris=2.2.0
   - flake8=3.6.0
@@ -24,3 +24,4 @@ dependencies:
   - pillow=5.4.1
   - sphinx_rtd_theme=0.4.2
   - mock=2.0.0
+  - pip

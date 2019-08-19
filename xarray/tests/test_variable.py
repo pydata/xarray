@@ -477,8 +477,9 @@ class VariableSubclassobjects:
         assert actual.dtype == object
 
     @pytest.mark.parametrize('deep', [True, False])
-    def test_copy(self, deep):
-        v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})
+    @pytest.mark.parametrize('astype', [float, int, str])
+    def test_copy(self, deep, astype):
+        v = self.cls('x', (0.5 * np.arange(10)).astype(astype), {'foo': 'bar'})
         w = v.copy(deep=deep)
         assert type(v) is type(w)
         assert_identical(v, w)
@@ -1540,6 +1541,42 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
+    def test_reduce_keepdims(self):
+        v = Variable(['x', 'y'], self.d)
+
+        assert_identical(v.mean(keepdims=True),
+                         Variable(v.dims, np.mean(self.d, keepdims=True)))
+        assert_identical(v.mean(dim='x', keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=0,
+                                  keepdims=True)))
+        assert_identical(v.mean(dim='y', keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=1,
+                                  keepdims=True)))
+        assert_identical(v.mean(dim=['y', 'x'], keepdims=True),
+                         Variable(v.dims, np.mean(self.d, axis=(1, 0),
+                                  keepdims=True)))
+
+        v = Variable([], 1.0)
+        assert_identical(v.mean(keepdims=True),
+                         Variable([], np.mean(v.data, keepdims=True)))
+
+    @requires_dask
+    def test_reduce_keepdims_dask(self):
+        import dask.array
+        v = Variable(['x', 'y'], self.d).chunk()
+
+        actual = v.mean(keepdims=True)
+        assert isinstance(actual.data, dask.array.Array)
+
+        expected = Variable(v.dims, np.mean(self.d, keepdims=True))
+        assert_identical(actual, expected)
+
+        actual = v.mean(dim='y', keepdims=True)
+        assert isinstance(actual.data, dask.array.Array)
+
+        expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
+        assert_identical(actual, expected)
+
     def test_reduce_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}
 
@@ -1740,32 +1777,32 @@ class TestVariableWithDask(VariableSubclassobjects):
 
     @pytest.mark.xfail
     def test_0d_object_array_with_list(self):
-        super(TestVariableWithDask, self).test_0d_object_array_with_list()
+        super().test_0d_object_array_with_list()
 
     @pytest.mark.xfail
     def test_array_interface(self):
         # dask array does not have `argsort`
-        super(TestVariableWithDask, self).test_array_interface()
+        super().test_array_interface()
 
     @pytest.mark.xfail
     def test_copy_index(self):
-        super(TestVariableWithDask, self).test_copy_index()
+        super().test_copy_index()
 
     @pytest.mark.xfail
     def test_eq_all_dtypes(self):
-        super(TestVariableWithDask, self).test_eq_all_dtypes()
+        super().test_eq_all_dtypes()
 
     def test_getitem_fancy(self):
-        super(TestVariableWithDask, self).test_getitem_fancy()
+        super().test_getitem_fancy()
 
     def test_getitem_1d_fancy(self):
-        super(TestVariableWithDask, self).test_getitem_1d_fancy()
+        super().test_getitem_1d_fancy()
 
     def test_equals_all_dtypes(self):
         import dask
         if '0.18.2' <= LooseVersion(dask.__version__) < '0.19.1':
             pytest.xfail('https://github.com/pydata/xarray/issues/2318')
-        super(TestVariableWithDask, self).test_equals_all_dtypes()
+        super().test_equals_all_dtypes()
 
     def test_getitem_with_mask_nd_indexer(self):
         import dask.array as da
@@ -1865,31 +1902,31 @@ class TestIndexVariable(VariableSubclassobjects):
     # IndexVariable objects:
     @pytest.mark.xfail
     def test_getitem_error(self):
-        super(TestIndexVariable, self).test_getitem_error()
+        super().test_getitem_error()
 
     @pytest.mark.xfail
     def test_getitem_advanced(self):
-        super(TestIndexVariable, self).test_getitem_advanced()
+        super().test_getitem_advanced()
 
     @pytest.mark.xfail
     def test_getitem_fancy(self):
-        super(TestIndexVariable, self).test_getitem_fancy()
+        super().test_getitem_fancy()
 
     @pytest.mark.xfail
     def test_getitem_uint(self):
-        super(TestIndexVariable, self).test_getitem_fancy()
+        super().test_getitem_fancy()
 
     @pytest.mark.xfail
     def test_pad(self):
-        super(TestIndexVariable, self).test_rolling_window()
+        super().test_rolling_window()
 
     @pytest.mark.xfail
     def test_rolling_window(self):
-        super(TestIndexVariable, self).test_rolling_window()
+        super().test_rolling_window()
 
     @pytest.mark.xfail
     def test_coarsen_2d(self):
-        super(TestIndexVariable, self).test_coarsen_2d()
+        super().test_coarsen_2d()
 
 
 class TestAsCompatibleData:

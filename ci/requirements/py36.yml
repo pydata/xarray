@@ -1,9 +1,11 @@
-name: test_env
+name: xarray-tests
 channels:
   - conda-forge
 dependencies:
   - python=3.6
   - cftime
+  - dask
+  - distributed
   - h5py
   - h5netcdf
   - matplotlib
@@ -15,13 +17,23 @@ dependencies:
   - flake8
   - numpy>=1.12
   - pandas>=0.19
+  - pip
   - scipy
   - seaborn
   - toolz
   - rasterio
+  - boto3
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
+  - cfgrib>=0.9.2
+  - cdms2
+  # Disabled due to conflicting dependencies:
+  # https://github.com/pydata/xarray/issues/3154
+  # - pynio
+  - iris>=1.10
+  - pydap
+  - lxml
+  - quantities
   - pip:
-    - git+https://github.com/dask/dask.git
-    - git+https://github.com/dask/distributed.git
+    - mypy==0.711

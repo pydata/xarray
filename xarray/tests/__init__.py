@@ -1,19 +1,19 @@
+import importlib
+import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
-import re
-import importlib
-from unittest import mock
+from unittest import mock  # noqa
 
 import numpy as np
-from numpy.testing import assert_array_equal  # noqa: F401
-from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
 import pytest
+from numpy.testing import assert_array_equal  # noqa: F401
 
-from xarray.core import utils
-from xarray.core.options import set_options
-from xarray.core.indexing import ExplicitlyIndexed
 import xarray.testing
+from xarray.core import utils
+from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
+from xarray.core.indexing import ExplicitlyIndexed
+from xarray.core.options import set_options
 from xarray.plot.utils import import_seaborn
 
 try:
@@ -30,6 +30,11 @@ try:
     mpl.use('Agg')
 except ImportError:
     pass
+
+import platform
+arm_xfail = pytest.mark.xfail(platform.machine() == 'aarch64' or
+                              'arm' in platform.machine(),
+                              reason='expected failure on ARM')
 
 
 def _importorskip(modname, minversion=None):
@@ -74,6 +79,7 @@ has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
 has_np113, requires_np113 = _importorskip('numpy', minversion='1.13.0')
 has_iris, requires_iris = _importorskip('iris')
 has_cfgrib, requires_cfgrib = _importorskip('cfgrib')
+has_numbagg, requires_numbagg = _importorskip('numbagg')
 
 # some special cases
 has_h5netcdf07, requires_h5netcdf07 = _importorskip('h5netcdf',
@@ -108,23 +114,8 @@ if has_dask:
     else:
         dask.config.set(scheduler='single-threaded')
 
-# pytest config
-try:
-    _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
-    _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")
-except (ValueError, AttributeError):
-    # Can't get config from pytest, e.g., because xarray is installed instead
-    # of being run from a development version (and hence conftests.py is not
-    # available). Don't run flaky tests.
-    _SKIP_FLAKY = True
-    _SKIP_NETWORK_TESTS = True
-
-flaky = pytest.mark.skipif(
-    _SKIP_FLAKY, reason="set --run-flaky option to run flaky tests")
-network = pytest.mark.skipif(
-    _SKIP_NETWORK_TESTS,
-    reason="set --run-network-tests option to run tests requiring an "
-    "internet connection")
+flaky = pytest.mark.flaky
+network = pytest.mark.network
 
 
 @contextmanager
@@ -183,21 +174,20 @@ def source_ndarray(array):
 
 # Internal versions of xarray's test functions that validate additional
 # invariants
-# TODO: add more invariant checks.
 
 def assert_equal(a, b):
     xarray.testing.assert_equal(a, b)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
 
 
 def assert_identical(a, b):
     xarray.testing.assert_identical(a, b)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
 
 
 def assert_allclose(a, b, **kwargs):
     xarray.testing.assert_allclose(a, b, **kwargs)
-    xarray.testing._assert_indexes_invariants(a)
-    xarray.testing._assert_indexes_invariants(b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)

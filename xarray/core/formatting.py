@@ -145,7 +145,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
     elif isinstance(x, (float, np.float)):
-        return '{0:.4}'.format(x)
+        return '{:.4}'.format(x)
     else:
         return str(x)
 
@@ -235,10 +235,9 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 
 
 def _summarize_coord_levels(coord, col_width, marker='-'):
-    relevant_coord = coord[:30]
     return '\n'.join(
         [summarize_variable(lname,
-                            relevant_coord.get_level_variable(lname),
+                            coord.get_level_variable(lname),
                             col_width, marker=marker)
          for lname in coord.level_names])
 
@@ -358,7 +357,10 @@ def set_numpy_options(*args, **kwargs):
 
 
 def short_array_repr(array):
-    array = np.asarray(array)
+
+    if not hasattr(array, '__array_function__'):
+        array = np.asarray(array)
+
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
     options = {
@@ -395,9 +397,9 @@ def short_data_repr(array):
     if isinstance(getattr(array, 'variable', array)._data, dask_array_type):
         return short_dask_repr(array)
     elif array._in_memory or array.size < 1e5:
-        return short_array_repr(array.values)
+        return short_array_repr(array.data)
     else:
-        return u'[{} values with dtype={}]'.format(array.size, array.dtype)
+        return '[{} values with dtype={}]'.format(array.size, array.dtype)
 
 
 def array_repr(arr):
@@ -407,10 +409,12 @@ def array_repr(arr):
     else:
         name_str = ''
 
-    summary = ['<xarray.{} {}({})>'.format(
-               type(arr).__name__, name_str, dim_summary(arr))]
-
-    summary.append(short_data_repr(arr))
+    summary = [
+        '<xarray.{} {}({})>'.format(
+            type(arr).__name__, name_str, dim_summary(arr)
+        ),
+        short_data_repr(arr)
+    ]
 
     if hasattr(arr, 'coords'):
         if arr.coords:

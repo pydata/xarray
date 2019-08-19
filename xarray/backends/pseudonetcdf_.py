@@ -41,12 +41,11 @@ class PseudoNetCDFDataStore(AbstractDataStore):
     """Store for accessing datasets via PseudoNetCDF
     """
     @classmethod
-    def open(cls, filename, lock=None, **format_kwds):
+    def open(cls, filename, lock=None, mode=None, **format_kwargs):
         from PseudoNetCDF import pncopen
 
-        keywords = dict(kwargs=format_kwds)
+        keywords = {'kwargs': format_kwargs}
         # only include mode if explicitly passed
-        mode = format_kwds.pop('mode', None)
         if mode is not None:
             keywords['mode'] = mode
 
@@ -76,18 +75,18 @@ class PseudoNetCDFDataStore(AbstractDataStore):
                                  for k, v in self.ds.variables.items())
 
     def get_attrs(self):
-        return Frozen(dict([(k, getattr(self.ds, k))
-                            for k in self.ds.ncattrs()]))
+        return Frozen({k: getattr(self.ds, k) for k in self.ds.ncattrs()})
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding['unlimited_dims'] = set(
-            [k for k in self.ds.dimensions
-             if self.ds.dimensions[k].isunlimited()])
-        return encoding
+        return {
+            'unlimited_dims': {
+                k for k in self.ds.dimensions
+                if self.ds.dimensions[k].isunlimited()
+            }
+        }
 
     def close(self):
         self._manager.close()

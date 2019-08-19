@@ -7,6 +7,7 @@ import pandas as pd
 from .coding import strings, times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
+from .core.common import contains_cftime_datetimes
 from .core.pycompat import dask_array_type
 from .core.variable import IndexVariable, Variable, as_variable
 
@@ -82,7 +83,8 @@ def maybe_encode_nonstring_dtype(var, name=None):
         if dtype != var.dtype:
             if np.issubdtype(dtype, np.integer):
                 if (np.issubdtype(var.dtype, np.floating) and
-                        '_FillValue' not in var.attrs):
+                        '_FillValue' not in var.attrs and
+                        'missing_value' not in var.attrs):
                     warnings.warn('saving variable %s with floating '
                                   'point data as an integer dtype without '
                                   'any _FillValue to use for NaNs' % name,
@@ -184,7 +186,7 @@ def ensure_dtype_not_object(var, name=None):
             if strings.is_bytes_dtype(inferred_dtype):
                 fill_value = b''
             elif strings.is_unicode_dtype(inferred_dtype):
-                fill_value = u''
+                fill_value = ''
             else:
                 # insist on using float for numeric values
                 if not np.issubdtype(inferred_dtype, np.floating):
@@ -354,6 +356,51 @@ def _update_bounds_attributes(variables):
                     bounds_attrs.setdefault('calendar', attrs['calendar'])
 
 
+def _update_bounds_encoding(variables):
+    """Adds time encoding to time bounds variables.
+
+    Variables handling time bounds ("Cell boundaries" in the CF
+    conventions) do not necessarily carry the necessary attributes to be
+    decoded. This copies the encoding from the time variable to the
+    associated bounds variable so that we write CF-compliant files.
+
+    See Also:
+
+    http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
+         cf-conventions.html#cell-boundaries
+
+    https://github.com/pydata/xarray/issues/2565
+    """
+
+    # For all time variables with bounds
+    for v in variables.values():
+        attrs = v.attrs
+        encoding = v.encoding
+        has_date_units = 'units' in encoding and 'since' in encoding['units']
+        is_datetime_type = (np.issubdtype(v.dtype, np.datetime64) or
+                            contains_cftime_datetimes(v))
+
+        if (is_datetime_type and not has_date_units and
+           'bounds' in attrs and attrs['bounds'] in variables):
+            warnings.warn("Variable '{0}' has datetime type and a "
+                          "bounds variable but {0}.encoding does not have "
+                          "units specified. The units encodings for '{0}' "
+                          "and '{1}' will be determined independently "
+                          "and may not be equal, counter to CF-conventions. "
+                          "If this is a concern, specify a units encoding for "
+                          "'{0}' before writing to a file."
+                          .format(v.name, attrs['bounds']),
+                          UserWarning)
+
+        if has_date_units and 'bounds' in attrs:
+            if attrs['bounds'] in variables:
+                bounds_encoding = variables[attrs['bounds']].encoding
+                bounds_encoding.setdefault('units', encoding['units'])
+                if 'calendar' in encoding:
+                    bounds_encoding.setdefault('calendar',
+                                               encoding['calendar'])
+
+
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
                         decode_coords=True, drop_variables=None,
@@ -491,8 +538,6 @@ def cf_decoder(variables, attributes,
     """
     Decode a set of CF encoded variables and attributes.
 
-    See Also, decode_cf_variable
-
     Parameters
     ----------
     variables : dict
@@ -514,6 +559,10 @@ def cf_decoder(variables, attributes,
         A dictionary mapping from variable name to xarray.Variable objects.
     decoded_attributes : dict
         A dictionary mapping from attribute name to values.
+
+    See also
+    --------
+    decode_cf_variable
     """
     variables, attributes, _ = decode_cf_variables(
         variables, attributes, concat_characters, mask_and_scale, decode_times)
@@ -594,14 +643,12 @@ def encode_dataset_coordinates(dataset):
 
 def cf_encoder(variables, attributes):
     """
-    A function which takes a dicts of variables and attributes
-    and encodes them to conform to CF conventions as much
-    as possible.  This includes masking, scaling, character
-    array handling, and CF-time encoding.
+    Encode a set of CF encoded variables and attributes.
+    Takes a dicts of variables and attributes and encodes them
+    to conform to CF conventions as much as possible.
+    This includes masking, scaling, character array handling,
+    and CF-time encoding.
 
-    Decode a set of CF encoded variables and attributes.
-
-    See Also, decode_cf_variable
 
     Parameters
     ----------
@@ -617,8 +664,27 @@ def cf_encoder(variables, attributes):
     encoded_attributes : dict
         A dictionary mapping from attribute name to value
 
-    See also: encode_cf_variable
+    See also
+    --------
+    decode_cf_variable, encode_cf_variable
     """
+
+    # add encoding for time bounds variables if present.
+    _update_bounds_encoding(variables)
+
     new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
                            for k, v in variables.items())
+
+    # Remove attrs from bounds variables (issue #2921)
+    for var in new_vars.values():
+        bounds = var.attrs['bounds'] if 'bounds' in var.attrs else None
+        if bounds and bounds in new_vars:
+            # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries # noqa
+            for attr in ['units', 'standard_name', 'axis', 'positive',
+                         'calendar', 'long_name', 'leap_month', 'leap_year',
+                         'month_lengths']:
+                if attr in new_vars[bounds].attrs and attr in var.attrs:
+                    if new_vars[bounds].attrs[attr] == var.attrs[attr]:
+                        new_vars[bounds].attrs.pop(attr)
+
     return new_vars, attributes

@@ -31,13 +31,14 @@ def _decode_variable_name(name):
     return name
 
 
-def find_root(ds):
-    """
-    Helper function to find the root of a netcdf or h5netcdf dataset.
-    """
+def find_root_and_group(ds):
+    """Find the root and group name of a netCDF4/h5netcdf dataset."""
+    hierarchy = ()
     while ds.parent is not None:
+        hierarchy = (ds.name,) + hierarchy
         ds = ds.parent
-    return ds
+    group = '/' + '/'.join(hierarchy)
+    return ds, group
 
 
 def robust_getitem(array, key, catch=Exception, max_retries=6,
@@ -122,7 +123,7 @@ class AbstractDataStore(Mapping):
         return variables, attributes
 
     @property
-    def variables(self):
+    def variables(self):  # pragma: no cover
         warnings.warn('The ``variables`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
@@ -130,7 +131,7 @@ class AbstractDataStore(Mapping):
         return variables
 
     @property
-    def attrs(self):
+    def attrs(self):  # pragma: no cover
         warnings.warn('The ``attrs`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
@@ -138,7 +139,7 @@ class AbstractDataStore(Mapping):
         return attrs
 
     @property
-    def dimensions(self):
+    def dimensions(self):  # pragma: no cover
         warnings.warn('The ``dimensions`` property has been deprecated and '
                       'will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
@@ -158,14 +159,19 @@ class ArrayWriter:
     def __init__(self, lock=None):
         self.sources = []
         self.targets = []
+        self.regions = []
         self.lock = lock
 
-    def add(self, source, target):
+    def add(self, source, target, region=None):
         if isinstance(source, dask_array_type):
             self.sources.append(source)
             self.targets.append(target)
+            self.regions.append(region)
         else:
-            target[...] = source
+            if region:
+                target[region] = source
+            else:
+                target[...] = source
 
     def sync(self, compute=True):
         if self.sources:
@@ -173,11 +179,13 @@ class ArrayWriter:
             # TODO: consider wrapping targets with dask.delayed, if this makes
             # for any discernable difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
+
             delayed_store = da.store(self.sources, self.targets,
                                      lock=self.lock, compute=compute,
-                                     flush=True)
+                                     flush=True, regions=self.regions)
             self.sources = []
             self.targets = []
+            self.regions = []
             return delayed_store
 
 

@@ -2,15 +2,15 @@ import itertools
 import textwrap
 import warnings
 from datetime import datetime
+from distutils.version import LooseVersion
+from inspect import getfullargspec
+from typing import Any, Iterable, Mapping, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
-from inspect import getfullargspec
-
 from ..core.options import OPTIONS
 from ..core.utils import is_scalar
-from distutils.version import LooseVersion
 
 try:
     import nc_time_axis
@@ -265,8 +265,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
-    if ((levels is not None or isinstance(norm, mpl.colors.BoundaryNorm))
-            and (not isinstance(cmap, mpl.colors.Colormap))):
+    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 
@@ -504,7 +503,7 @@ def _ensure_plottable(*args):
                               'package.')
 
 
-def _numeric(arr):
+def _is_numeric(arr):
     numpy_types = [np.floating, np.integer]
     return _valid_numpy_subdtype(arr, numpy_types)
 
@@ -650,13 +649,15 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
 
 
-def _process_cmap_cbar_kwargs(func, kwargs, data):
+def _process_cmap_cbar_kwargs(
+        func, data, cmap=None, colors=None,
+        cbar_kwargs: Union[Iterable[Tuple[str, Any]],
+                           Mapping[str, Any]] = None,
+        levels=None, **kwargs):
     """
     Parameters
     ==========
     func : plotting function
-    kwargs : dict,
-        Dictionary with arguments that need to be parsed
     data : ndarray,
         Data values
 
@@ -666,14 +667,8 @@ def _process_cmap_cbar_kwargs(func, kwargs, data):
 
     cbar_kwargs
     """
-
-    cmap = kwargs.pop('cmap', None)
-    colors = kwargs.pop('colors', None)
-
-    cbar_kwargs = kwargs.pop('cbar_kwargs', {})
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
 
-    levels = kwargs.pop('levels', None)
     if 'contour' in func.__name__ and levels is None:
         levels = 7  # this is the matplotlib default
 

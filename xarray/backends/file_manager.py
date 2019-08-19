@@ -1,7 +1,7 @@
 import contextlib
 import threading
-from typing import Any, Dict
 import warnings
+from typing import Any, Dict
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -29,6 +29,15 @@ class FileManager:
 
     def acquire(self, needs_lock=True):
         """Acquire the file object from this manager."""
+        raise NotImplementedError
+
+    def acquire_context(self, needs_lock=True):
+        """Context manager for acquiring a file. Yields a file object.
+
+        The context manager unwinds any actions taken as part of acquisition
+        (i.e., removes it from any cache) if an exception is raised from the
+        context. It *does not* automatically close the file.
+        """
         raise NotImplementedError
 
     def close(self, needs_lock=True):
@@ -64,7 +73,8 @@ class CachingFileManager(FileManager):
 
     """
 
-    def __init__(self, opener, *args, **keywords):
+    def __init__(self, opener, *args, mode=_DEFAULT_MODE, kwargs=None,
+                 lock=None, cache=None, ref_counts=None):
         """Initialize a FileManager.
 
         The cache and ref_counts arguments exist solely to facilitate
@@ -102,17 +112,6 @@ class CachingFileManager(FileManager):
             Optional dict to use for keeping track the number of references to
             the same file.
         """
-        # TODO: replace with real keyword arguments when we drop Python 2
-        # support
-        mode = keywords.pop('mode', _DEFAULT_MODE)
-        kwargs = keywords.pop('kwargs', None)
-        lock = keywords.pop('lock', None)
-        cache = keywords.pop('cache', FILE_CACHE)
-        ref_counts = keywords.pop('ref_counts', REF_COUNTS)
-        if keywords:
-            raise TypeError('FileManager() got unexpected keyword arguments: '
-                            '%s' % list(keywords))
-
         self._opener = opener
         self._args = args
         self._mode = mode
@@ -122,12 +121,16 @@ class CachingFileManager(FileManager):
         self._lock = threading.Lock() if self._default_lock else lock
 
         # cache[self._key] stores the file associated with this object.
+        if cache is None:
+            cache = FILE_CACHE
         self._cache = cache
         self._key = self._make_key()
 
         # ref_counts[self._key] stores the number of CachingFileManager objects
         # in memory referencing this same file. We use this to know if we can
         # close a file when the manager is deallocated.
+        if ref_counts is None:
+            ref_counts = REF_COUNTS
         self._ref_counter = _RefCounter(ref_counts)
         self._ref_counter.increment(self._key)
 
@@ -149,7 +152,7 @@ class CachingFileManager(FileManager):
             yield
 
     def acquire(self, needs_lock=True):
-        """Acquiring a file object from the manager.
+        """Acquire a file object from the manager.
 
         A new file is only opened if it has expired from the
         least-recently-used cache.
@@ -162,6 +165,22 @@ class CachingFileManager(FileManager):
         -------
         An open file object, as returned by ``opener(*args, **kwargs)``.
         """
+        file, _ = self._acquire_with_cache_info(needs_lock)
+        return file
+
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock=True):
+        """Context manager for acquiring a file."""
+        file, cached = self._acquire_with_cache_info(needs_lock)
+        try:
+            yield file
+        except Exception:
+            if not cached:
+                self.close(needs_lock)
+            raise
+
+    def _acquire_with_cache_info(self, needs_lock=True):
+        """Acquire a file, returning the file and whether it was cached."""
         with self._optional_lock(needs_lock):
             try:
                 file = self._cache[self._key]
@@ -175,7 +194,9 @@ class CachingFileManager(FileManager):
                     # ensure file doesn't get overriden when opened again
                     self._mode = 'a'
                 self._cache[self._key] = file
-        return file
+                return file, False
+            else:
+                return file, True
 
     def close(self, needs_lock=True):
         """Explicitly close any associated file object (if necessary)."""
@@ -284,6 +305,11 @@ class DummyFileManager(FileManager):
     def acquire(self, needs_lock=True):
         del needs_lock  # ignored
         return self._value
+
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock=True):
+        del needs_lock
+        yield self._value
 
     def close(self, needs_lock=True):
         del needs_lock  # ignored

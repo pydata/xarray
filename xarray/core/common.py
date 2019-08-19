@@ -1,23 +1,26 @@
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
-from typing import (Any, Callable, Hashable, Iterable, Iterator, List, Mapping,
-                    MutableMapping, Optional, Tuple, TypeVar, Union)
+from typing import (
+    Any, Callable, Hashable, Iterable, Iterator, List, Mapping, MutableMapping,
+    Tuple, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
+from .npcompat import DTypeLike
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type
+from .rolling_exp import RollingExp
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
-
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
 
 
+C = TypeVar('C')
 T = TypeVar('T')
 
 
@@ -86,6 +89,7 @@ class ImplementsDatasetReduce:
 class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable.
     """
+
     def __bool__(self: Any) -> bool:
         return bool(self.values)
 
@@ -98,8 +102,7 @@ class AbstractArray(ImplementsArrayReduce):
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: Union[str, np.dtype, None] = None
-                  ) -> np.ndarray:
+    def __array__(self: Any, dtype: DTypeLike = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
@@ -159,13 +162,15 @@ class AttrAccessMixin:
     _initialized = False
 
     @property
-    def _attr_sources(self):
-        """List of places to look-up items for attribute-style access"""
+    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
+        """List of places to look-up items for attribute-style access
+        """
         return []
 
     @property
-    def _item_sources(self):
-        """List of places to look-up items for key-autocompletion """
+    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
+        """List of places to look-up items for key-autocompletion
+        """
         return []
 
     def __getattr__(self, name: str) -> Any:
@@ -249,6 +254,8 @@ def get_squeeze_dims(xarray_obj,
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
+    _rolling_exp_cls = RollingExp
+
     def squeeze(self, dim: Union[Hashable, Iterable[Hashable], None] = None,
                 drop: bool = False,
                 axis: Union[int, Iterable[int], None] = None):
@@ -291,9 +298,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             # need to ensure dtype=int64 in case range is empty on Python 2
             return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
-    def _calc_assign_results(self, kwargs: Mapping[str, T]
-                             ) -> MutableMapping[str, T]:
-        results = SortedKeysDict()  # type: SortedKeysDict[str, T]
+    def _calc_assign_results(
+            self: C,
+            kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
+    ) -> MutableMapping[Hashable, T]:
+        results = SortedKeysDict()  # type: SortedKeysDict[Hashable, T]
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)
@@ -441,7 +450,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze: bool = True):
+    def groupby(self, group, squeeze: bool = True,
+                restore_coord_dims: bool = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -453,6 +463,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
 
         Returns
         -------
@@ -485,11 +498,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
         """  # noqa
-        return self._groupby_cls(self, group, squeeze=squeeze)
+        return self._groupby_cls(self, group, squeeze=squeeze,
+                                 restore_coord_dims=restore_coord_dims)
 
     def groupby_bins(self, group, bins, right: bool = True, labels=None,
                      precision: int = 3, include_lowest: bool = False,
-                     squeeze: bool = True):
+                     squeeze: bool = True,
+                     restore_coord_dims: bool = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -522,6 +537,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
 
         Returns
         -------
@@ -536,13 +554,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                 restore_coord_dims=restore_coord_dims,
                                  cut_kwargs={'right': right, 'labels': labels,
                                              'precision': precision,
-                                             'include_lowest': include_lowest})
+                                             'include_lowest':
+                                                 include_lowest})
 
-    def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
-                min_periods: Optional[int] = None, center: bool = False,
-                **dim_kwargs: int):
+    def rolling(self, dim: Mapping[Hashable, int] = None,
+                min_periods: int = None, center: bool = False,
+                **window_kwargs: int):
         """
         Rolling window object.
 
@@ -557,9 +577,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **dim_kwargs : optional
+        **window_kwargs : optional
             The keyword arguments form of ``dim``.
-            One of dim or dim_kwargs must be provided.
+            One of dim or window_kwargs must be provided.
 
         Returns
         -------
@@ -598,15 +618,54 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """  # noqa
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
+        dim = either_dict_or_kwargs(dim, window_kwargs, 'rolling')
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
-    def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
+    def rolling_exp(
+        self,
+        window: Mapping[Hashable, int] = None,
+        window_type: str = 'span',
+        **window_kwargs
+    ):
+        """
+        Exponentially-weighted moving window.
+        Similar to EWM in pandas
+
+        Requires the optional Numbagg dependency.
+
+        Parameters
+        ----------
+        window : A single mapping from a dimension name to window value,
+                 optional
+            dim : str
+                Name of the dimension to create the rolling exponential window
+                along (e.g., `time`).
+            window : int
+                Size of the moving window. The type of this is specified in
+                `window_type`
+        window_type : str, one of ['span', 'com', 'halflife', 'alpha'],
+                      default 'span'
+            The format of the previously supplied window. Each is a simple
+            numerical transformation of the others. Described in detail:
+            https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+        **window_kwargs : optional
+            The keyword arguments form of ``window``.
+            One of window or window_kwargs must be provided.
+
+        See Also
+        --------
+        core.rolling_exp.RollingExp
+        """
+        window = either_dict_or_kwargs(window, window_kwargs, 'rolling_exp')
+
+        return self._rolling_exp_cls(self, window, window_type)
+
+    def coarsen(self, dim: Mapping[Hashable, int] = None,
                 boundary: str = 'exact',
                 side: Union[str, Mapping[Hashable, str]] = 'left',
                 coord_func: str = 'mean',
-                **dim_kwargs: int):
+                **window_kwargs: int):
         """
         Coarsen object.
 
@@ -660,16 +719,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        dim = either_dict_or_kwargs(dim, window_kwargs, 'coarsen')
         return self._coarsen_cls(
             self, dim, boundary=boundary, side=side,
             coord_func=coord_func)
 
-    def resample(self, indexer: Optional[Mapping[Hashable, str]] = None,
-                 skipna=None, closed: Optional[str] = None,
-                 label: Optional[str] = None,
-                 base: int = 0, keep_attrs: Optional[bool] = None,
-                 loffset=None,
+    def resample(self, indexer: Mapping[Hashable, str] = None,
+                 skipna=None, closed: str = None,
+                 label: str = None,
+                 base: int = 0, keep_attrs: bool = None,
+                 loffset=None, restore_coord_dims: bool = None,
                  **indexer_kwargs: str):
         """Returns a Resample object for performing resampling operations.
 
@@ -697,6 +756,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
         **indexer_kwargs : {dim: freq}
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
@@ -786,7 +848,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                           dims=dim_coord.dims, name=RESAMPLE_DIM)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
-                                       resample_dim=RESAMPLE_DIM)
+                                       resample_dim=RESAMPLE_DIM,
+                                       restore_coord_dims=restore_coord_dims)
 
         return resampler
 
@@ -938,8 +1001,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
+    def __getitem__(self, value):
+        # implementations of this class should implement this method
+        raise NotImplementedError
 
-def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
+
+def full_like(other, fill_value, dtype: DTypeLike = None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -980,7 +1047,7 @@ def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
 
 
 def _full_like_variable(other, fill_value,
-                        dtype: Union[str, np.dtype, None] = None):
+                        dtype: DTypeLike = None):
     """Inner function of full_like, where other must be a variable
     """
     from .variable import Variable
@@ -997,19 +1064,19 @@ def _full_like_variable(other, fill_value,
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype: Union[str, np.dtype, None] = None):
+def zeros_like(other, dtype: DTypeLike = None):
     """Shorthand for full_like(other, 0, dtype)
     """
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype: Union[str, np.dtype, None] = None):
+def ones_like(other, dtype: DTypeLike = None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)
 
 
-def is_np_datetime_like(dtype: Union[str, np.dtype]) -> bool:
+def is_np_datetime_like(dtype: DTypeLike) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types
     """
     return (np.issubdtype(dtype, np.datetime64) or

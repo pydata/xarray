@@ -10,7 +10,7 @@ AUTHOR = 'xarray Developers'
 AUTHOR_EMAIL = 'xarray@googlegroups.com'
 URL = 'https://github.com/pydata/xarray'
 CLASSIFIERS = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'License :: OSI Approved :: Apache Software License',
     'Operating System :: OS Independent',
     'Intended Audience :: Science/Research',
@@ -22,13 +22,11 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-PYTHON_REQUIRES = '>=3.5'
+PYTHON_REQUIRES = '>=3.5.3'
 INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 SETUP_REQUIRES = ['pytest-runner >= 4.2'] if needs_pytest else []
 TESTS_REQUIRE = ['pytest >= 2.7.1']
-if sys.version_info[0] < 3:
-    TESTS_REQUIRE.append('mock')
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
@@ -48,9 +46,10 @@ It is particularly tailored to working with netCDF_ files, which were the
 source of xarray's data model, and integrates tightly with dask_ for parallel
 computing.
 
-.. _NumPy: http://www.numpy.org/
-.. _pandas: http://pandas.pydata.org
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _NumPy: https://www.numpy.org
+.. _pandas: https://pandas.pydata.org
+.. _dask: https://dask.org
+.. _netCDF: https://www.unidata.ucar.edu/software/netcdf
 
 Why xarray?
 -----------
@@ -105,4 +104,4 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       packages=find_packages(),
-      package_data={'xarray': ['tests/data/*']})
+      package_data={'xarray': ['py.typed', 'tests/data/*']})

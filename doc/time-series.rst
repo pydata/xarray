@@ -152,6 +152,15 @@ __ http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 
     ds['time'].dt.floor('D')
 
+The ``.dt`` accessor can also be used to generate formatted datetime strings
+for arrays utilising the same formatting as the standard `datetime.strftime`_.
+
+.. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+
+.. ipython:: python
+
+    ds['time'].dt.strftime('%a, %b %d %H:%M')
+
 .. _resampling:
 
 Resampling and grouped operations

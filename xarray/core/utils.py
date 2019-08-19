@@ -7,20 +7,15 @@ import os.path
 import re
 import warnings
 from collections import OrderedDict
-from typing import (AbstractSet, Any, Callable, Container, Dict, Hashable,
-                    Iterable, Iterator, Optional, Sequence,
-                    Tuple, TypeVar, cast)
+from typing import (
+    AbstractSet, Any, Callable, Container, Dict, Hashable, Iterable, Iterator,
+    Mapping, MutableMapping, MutableSet, Optional, Sequence, Tuple, TypeVar,
+    cast)
 
 import numpy as np
 import pandas as pd
 
 from .pycompat import dask_array_type
-
-from typing import Mapping, MutableMapping, MutableSet
-try:  # Fix typed collections in Python 3.5.0~3.5.2
-    from .pycompat import Mapping, MutableMapping, MutableSet  # noqa: F811
-except ImportError:
-    pass
 
 
 K = TypeVar('K')
@@ -28,7 +23,7 @@ V = TypeVar('V')
 T = TypeVar('T')
 
 
-def _check_inplace(inplace: bool, default: bool = False) -> bool:
+def _check_inplace(inplace: Optional[bool], default: bool = False) -> bool:
     if inplace is None:
         inplace = default
     else:
@@ -62,7 +57,7 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from ..coding.cftimeindex import CFTimeIndex
 
-    if index.dtype == 'O':
+    if len(index) > 0 and index.dtype == 'O':
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
@@ -93,7 +88,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
 
 
 def multiindex_from_product_levels(levels: Sequence[pd.Index],
-                                   names: Optional[Sequence[str]] = None
+                                   names: Sequence[str] = None
                                    ) -> pd.MultiIndex:
     """Creating a MultiIndex from a product without refactorizing levels.
 
@@ -134,16 +129,29 @@ def maybe_wrap_array(original, new_array):
 
 def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
-    array_equiv if either object is an ndarray
+    array_equiv if either object is an ndarray. If both objects are lists,
+    equivalent is sequentially called on all the elements.
     """
     # TODO: refactor to avoid circular import
     from . import duck_array_ops
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+    elif isinstance(first, list) or isinstance(second, list):
+        return list_equiv(first, second)
     else:
         return ((first is second) or
                 (first == second) or
                 (pd.isnull(first) and pd.isnull(second)))
+
+
+def list_equiv(first, second):
+    equiv = True
+    if len(first) != len(second):
+        return False
+    else:
+        for f, s in zip(first, second):
+            equiv = equiv and equivalent(f, s)
+    return equiv
 
 
 def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
@@ -235,7 +243,9 @@ def is_scalar(value: Any) -> bool:
     return (
         getattr(value, 'ndim', None) == 0 or
         isinstance(value, (str, bytes)) or not
-        isinstance(value, (Iterable, ) + dask_array_type))
+        (isinstance(value, (Iterable, ) + dask_array_type) or
+         hasattr(value, '__array_function__'))
+    )
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
@@ -319,18 +329,7 @@ def ordered_dict_intersection(first_dict: Mapping[K, V],
     return new_dict
 
 
-class SingleSlotPickleMixin:
-    """Mixin class to add the ability to pickle objects whose state is defined
-    by a single __slots__ attribute. Only necessary under Python 2.
-    """
-    def __getstate__(self):
-        return getattr(self, self.__slots__[0])
-
-    def __setstate__(self, state):
-        setattr(self, self.__slots__[0], state)
-
-
-class Frozen(Mapping[K, V], SingleSlotPickleMixin):
+class Frozen(Mapping[K, V]):
     """Wrapper around an object implementing the mapping interface to make it
     immutable. If you really want to modify the mapping, the mutable version is
     saved under the `mapping` attribute.
@@ -360,14 +359,14 @@ def FrozenOrderedDict(*args, **kwargs) -> Frozen:
     return Frozen(OrderedDict(*args, **kwargs))
 
 
-class SortedKeysDict(MutableMapping[K, V], SingleSlotPickleMixin):
+class SortedKeysDict(MutableMapping[K, V]):
     """An wrapper for dictionary-like objects that always iterates over its
     items in sorted order by key but is otherwise equivalent to the underlying
     mapping.
     """
     __slots__ = ['mapping']
 
-    def __init__(self, mapping: Optional[MutableMapping[K, V]] = None):
+    def __init__(self, mapping: MutableMapping[K, V] = None):
         self.mapping = {} if mapping is None else mapping
 
     def __getitem__(self, key: K) -> V:
@@ -398,7 +397,7 @@ class OrderedSet(MutableSet[T]):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
-    def __init__(self, values: Optional[AbstractSet[T]] = None):
+    def __init__(self, values: AbstractSet[T] = None):
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
         if values is not None:
             # Disable type checking - both mypy and PyCharm believes that
@@ -478,11 +477,21 @@ class NDArrayMixin(NdimSizeLenMixin):
 class ReprObject:
     """Object that prints as the given value, for use with sentinel values.
     """
+    __slots__ = ('_value', )
+
     def __init__(self, value: str):
         self._value = value
 
     def __repr__(self) -> str:
         return self._value
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ReprObject):
+            return self._value == other._value
+        return False
+
+    def __hash__(self) -> int:
+        return hash((ReprObject, self._value))
 
 
 @contextlib.contextmanager

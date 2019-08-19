@@ -1,21 +1,48 @@
-import typing
 from collections import OrderedDict
-from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    TYPE_CHECKING
+)
 
 import pandas as pd
 
-from . import dtypes
+from . import dtypes, pdcompat
 from .alignment import deep_align
-from .pycompat import TYPE_CHECKING
 from .utils import Frozen
 from .variable import (
     Variable, as_variable, assert_unique_multiindex_level_names)
 
 if TYPE_CHECKING:
+    from .dataarray import DataArray
     from .dataset import Dataset
 
+    DatasetLikeValue = Union[
+        DataArray,
+        Variable,
+        Tuple[Hashable, Any],
+        Tuple[Sequence[Hashable], Any],
+    ]
+    DatasetLike = Union[Dataset, Mapping[Hashable, DatasetLikeValue]]
+    """Any object type that can be used on the rhs of Dataset.update,
+    Dataset.merge, etc.
+    """
+    MutableDatasetLike = Union[
+        Dataset,
+        MutableMapping[Hashable, DatasetLikeValue],
+    ]
 
-PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
+
+PANDAS_TYPES = (pd.Series, pd.DataFrame, pdcompat.Panel)
 
 _VALID_COMPAT = Frozen({'identical': 0,
                         'equals': 1,
@@ -108,7 +135,7 @@ class OrderedDefaultDict(OrderedDict):
     # beware: does not pickle or copy properly
     def __init__(self, default_factory):
         self.default_factory = default_factory
-        super(OrderedDefaultDict, self).__init__()
+        super().__init__()
 
     def __missing__(self, key):
         self[key] = default = self.default_factory()
@@ -116,11 +143,10 @@ class OrderedDefaultDict(OrderedDict):
 
 
 def merge_variables(
-        list_of_variables_dicts,  # type: List[Mapping[Any, Variable]]
-        priority_vars=None,       # type: Optional[Mapping[Any, Variable]]
-        compat='minimal',         # type: str
-):
-    # type: (...) -> OrderedDict[Any, Variable]
+        list_of_variables_dicts: List[Mapping[Any, Variable]],
+        priority_vars: Mapping[Any, Variable] = None,
+        compat: str = 'minimal',
+) -> 'OrderedDict[Any, Variable]':
     """Merge dicts of variables, while resolving conflicts appropriately.
 
     Parameters
@@ -198,7 +224,7 @@ def expand_variable_dicts(
     an input's values. The values of each ordered dictionary are all
     xarray.Variable objects.
     """
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
 
     var_dicts = []
@@ -228,8 +254,9 @@ def expand_variable_dicts(
     return var_dicts
 
 
-def determine_coords(list_of_variable_dicts):
-    # type: (List[Dict]) -> Tuple[Set, Set]
+def determine_coords(
+    list_of_variable_dicts: Iterable['DatasetLike']
+) -> Tuple[Set[Hashable], Set[Hashable]]:
     """Given a list of dicts with xarray object values, identify coordinates.
 
     Parameters
@@ -244,7 +271,7 @@ def determine_coords(list_of_variable_dicts):
         All variable found in the input should appear in either the set of
         coordinate or non-coordinate names.
     """
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
 
     coord_names = set()  # type: set
@@ -265,7 +292,9 @@ def determine_coords(list_of_variable_dicts):
     return coord_names, noncoord_names
 
 
-def coerce_pandas_values(objects):
+def coerce_pandas_values(
+    objects: Iterable['DatasetLike']
+) -> List['DatasetLike']:
     """Convert pandas values found in a list of labeled objects.
 
     Parameters
@@ -279,13 +308,13 @@ def coerce_pandas_values(objects):
     List of Dataset or OrderedDict objects. Any inputs or values in the inputs
     that were pandas objects have been converted into native xarray objects.
     """
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
-    from .dataarray import DataArray
 
     out = []
     for obj in objects:
         if isinstance(obj, Dataset):
-            variables = obj
+            variables = obj  # type: DatasetLike
         else:
             variables = OrderedDict()
             if isinstance(obj, PANDAS_TYPES):
@@ -401,13 +430,17 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
                 'by the xarray data model.' % coord_name)
 
 
-def merge_core(objs,
-               compat='broadcast_equals',
-               join='outer',
-               priority_arg=None,
-               explicit_coords=None,
-               indexes=None,
-               fill_value=dtypes.NA):
+def merge_core(
+    objs,
+    compat='broadcast_equals',
+    join='outer',
+    priority_arg=None,
+    explicit_coords=None,
+    indexes=None,
+    fill_value=dtypes.NA
+) -> Tuple['OrderedDict[Hashable, Variable]',
+           Set[Hashable],
+           Dict[Hashable, int]]:
     """Core logic for merging labeled objects.
 
     This is not public API.
@@ -473,7 +506,7 @@ def merge_core(objs,
                          'coordinates or not in the merged result: %s'
                          % ambiguous_coords)
 
-    return variables, coord_names, dict(dims)
+    return variables, coord_names, dims
 
 
 def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
@@ -497,7 +530,14 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
           must be equal. The returned dataset then contains the combination
           of all non-null values.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes.
+        String indicating how to combine differing indexes in objects.
+
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
     fill_value : scalar, optional
         Value to use for newly missing values
 
@@ -530,12 +570,17 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     --------
     concat
     """  # noqa
-    from .dataarray import DataArray
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
 
-    dict_like_objects = [
-        obj.to_dataset() if isinstance(obj, DataArray) else obj
-        for obj in objects]
+    dict_like_objects = list()
+    for obj in objects:
+        if not (isinstance(obj, (DataArray, Dataset, dict))):
+            raise TypeError("objects must be an iterable containing only "
+                            "Dataset(s), DataArray(s), and dictionaries.")
+
+        obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
+        dict_like_objects.append(obj)
 
     variables, coord_names, dims = merge_core(dict_like_objects, compat, join,
                                               fill_value=fill_value)
@@ -546,17 +591,28 @@ def merge(objects, compat='no_conflicts', join='outer', fill_value=dtypes.NA):
     return merged
 
 
-def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
-                         fill_value=dtypes.NA):
-    """Guts of the Dataset.merge method."""
+def dataset_merge_method(
+    dataset: 'Dataset',
+    other: 'DatasetLike',
+    overwrite_vars: Union[Hashable, Iterable[Hashable]],
+    compat: str,
+    join: str,
+    fill_value: Any
+) -> Tuple['OrderedDict[Hashable, Variable]',
+           Set[Hashable],
+           Dict[Hashable, int]]:
+    """Guts of the Dataset.merge method.
+    """
 
     # we are locked into supporting overwrite_vars for the Dataset.merge
     # method due for backwards compatibility
     # TODO: consider deprecating it?
 
-    if isinstance(overwrite_vars, str):
-        overwrite_vars = set([overwrite_vars])
-    overwrite_vars = set(overwrite_vars)
+    if isinstance(overwrite_vars, Iterable) and not isinstance(
+            overwrite_vars, str):
+        overwrite_vars = set(overwrite_vars)
+    else:
+        overwrite_vars = {overwrite_vars}
 
     if not overwrite_vars:
         objs = [dataset, other]
@@ -565,8 +621,8 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
         objs = [dataset, other]
         priority_arg = 1
     else:
-        other_overwrite = OrderedDict()
-        other_no_overwrite = OrderedDict()
+        other_overwrite = OrderedDict()  # type: MutableDatasetLike
+        other_no_overwrite = OrderedDict()  # type: MutableDatasetLike
         for k, v in other.items():
             if k in overwrite_vars:
                 other_overwrite[k] = v
@@ -579,15 +635,20 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join,
                       fill_value=fill_value)
 
 
-def dataset_update_method(dataset, other):
+def dataset_update_method(
+    dataset: 'Dataset',
+    other: 'DatasetLike',
+) -> Tuple['OrderedDict[Hashable, Variable]',
+           Set[Hashable],
+           Dict[Hashable, int]]:
     """Guts of the Dataset.update method.
 
     This drops a duplicated coordinates from `other` if `other` is not an
     `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
     GH2180).
     """
+    from .dataarray import DataArray  # noqa: F811
     from .dataset import Dataset
-    from .dataarray import DataArray
 
     if not isinstance(other, Dataset):
         other = OrderedDict(other)

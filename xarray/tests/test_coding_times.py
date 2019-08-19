@@ -5,17 +5,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Variable, coding, decode_cf
+from xarray import DataArray, Dataset, Variable, coding, decode_cf
 from xarray.coding.times import (
-    _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime)
+    _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime,
+    to_timedelta_unboxed)
 from xarray.coding.variables import SerializationWarning
-from xarray.conventions import _update_bounds_attributes
+from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal
 
 from . import (
     assert_array_equal, has_cftime, has_cftime_or_netCDF4, has_dask,
-    requires_cftime_or_netCDF4, requires_cftime)
+    requires_cftime, requires_cftime_or_netCDF4, arm_xfail)
 
 try:
     from pandas.errors import OutOfBoundsDatetime
@@ -450,7 +451,7 @@ def test_decode_360_day_calendar():
     calendar = '360_day'
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
-        units = 'days since {0}-01-01'.format(year)
+        units = 'days since {}-01-01'.format(year)
         num_times = np.arange(100)
 
         if cftime.__name__ == 'cftime':
@@ -469,6 +470,7 @@ def test_decode_360_day_calendar():
         assert_array_equal(actual, expected)
 
 
+@arm_xfail
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['num_dates', 'units', 'expected_list'],
@@ -555,7 +557,7 @@ def test_cf_timedelta(timedeltas, units, numbers):
     if timedeltas == 'NaT':
         timedeltas = np.timedelta64('NaT', 'ns')
     else:
-        timedeltas = pd.to_timedelta(timedeltas, box=False)
+        timedeltas = to_timedelta_unboxed(timedeltas)
     numbers = np.array(numbers)
 
     expected = numbers
@@ -579,7 +581,7 @@ def test_cf_timedelta_2d():
     units = 'days'
     numbers = np.atleast_2d([1, 2, 3])
 
-    timedeltas = np.atleast_2d(pd.to_timedelta(timedeltas, box=False))
+    timedeltas = np.atleast_2d(to_timedelta_unboxed(timedeltas))
     expected = timedeltas
 
     actual = coding.times.decode_cf_timedelta(numbers, units)
@@ -669,6 +671,51 @@ def test_decode_cf_time_bounds():
     ds['time'].attrs.update(attrs)
     ds['time'].attrs['bounds'] = 'fake_var'
     _update_bounds_attributes(ds.variables)
+
+
+@requires_cftime_or_netCDF4
+def test_encode_time_bounds():
+
+    time = pd.date_range('2000-01-16', periods=1)
+    time_bounds = pd.date_range('2000-01-01', periods=2, freq='MS')
+    ds = Dataset(dict(time=time, time_bounds=time_bounds))
+    ds.time.attrs = {'bounds': 'time_bounds'}
+    ds.time.encoding = {'calendar': 'noleap',
+                        'units': 'days since 2000-01-01'}
+
+    expected = dict()
+    # expected['time'] = Variable(data=np.array([15]), dims=['time'])
+    expected['time_bounds'] = Variable(data=np.array([0, 31]),
+                                       dims=['time_bounds'])
+
+    encoded, _ = cf_encoder(ds.variables, ds.attrs)
+    assert_equal(encoded['time_bounds'], expected['time_bounds'])
+    assert 'calendar' not in encoded['time_bounds'].attrs
+    assert 'units' not in encoded['time_bounds'].attrs
+
+    # if time_bounds attrs are same as time attrs, it doesn't matter
+    ds.time_bounds.encoding = {'calendar': 'noleap',
+                               'units': 'days since 2000-01-01'}
+    encoded, _ = cf_encoder({k: ds[k] for k in ds.variables},
+                            ds.attrs)
+    assert_equal(encoded['time_bounds'], expected['time_bounds'])
+    assert 'calendar' not in encoded['time_bounds'].attrs
+    assert 'units' not in encoded['time_bounds'].attrs
+
+    # for CF-noncompliant case of time_bounds attrs being different from
+    # time attrs; preserve them for faithful roundtrip
+    ds.time_bounds.encoding = {'calendar': 'noleap',
+                               'units': 'days since 1849-01-01'}
+    encoded, _ = cf_encoder({k: ds[k] for k in ds.variables},
+                            ds.attrs)
+    with pytest.raises(AssertionError):
+        assert_equal(encoded['time_bounds'], expected['time_bounds'])
+    assert 'calendar' not in encoded['time_bounds'].attrs
+    assert encoded['time_bounds'].attrs['units'] == ds.time_bounds.encoding['units']  # noqa
+
+    ds.time.encoding = {}
+    with pytest.warns(UserWarning):
+        cf_encoder(ds.variables, ds.attrs)
 
 
 @pytest.fixture(params=_ALL_CALENDARS)
