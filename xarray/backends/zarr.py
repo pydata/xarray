@@ -506,6 +506,7 @@ def open_zarr(
     consolidated=False,
     overwrite_encoded_chunks=False,
     decode_timedelta=None,
+    use_cftime=None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -570,6 +571,16 @@ def open_zarr(
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
@@ -631,6 +642,7 @@ def open_zarr(
             decode_coords=decode_coords,
             drop_variables=drop_variables,
             decode_timedelta=decode_timedelta,
+            use_cftime=use_cftime
         )
 
         # TODO: this is where we would apply caching
