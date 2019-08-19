@@ -5,14 +5,12 @@ from xarray import DataArray, set_options
 
 try:
     import quantities as pq
+
     has_quantities = True
 except ImportError:
     has_quantities = False
 
-pytestmark = pytest.mark.skipif(
-    not has_quantities,
-    reason="requires python-quantities",
-)
+pytestmark = pytest.mark.skipif(not has_quantities, reason="requires python-quantities")
 
 
 set_options(enable_experimental_ndarray_subclass_support=True)
@@ -22,14 +20,10 @@ def assert_equal_with_units(a, b):
     a = a if not isinstance(a, DataArray) else a.data
     b = b if not isinstance(b, DataArray) else b.data
 
-    assert (
-        (hasattr(a, "units") and hasattr(b, "units"))
-        and a.units == b.units
-    )
+    assert (hasattr(a, "units") and hasattr(b, "units")) and a.units == b.units
 
-    assert (
-        (hasattr(a, "magnitude") and hasattr(b, "magnitude"))
-        and np.allclose(a.magnitude, b.magnitude)
+    assert (hasattr(a, "magnitude") and hasattr(b, "magnitude")) and np.allclose(
+        a.magnitude, b.magnitude
     )
 
 
@@ -46,30 +40,18 @@ def create_coord_arrays():
 
 def create_coords():
     x, y, xp = create_coord_arrays()
-    coords = dict(
-        x=x,
-        y=y,
-        xp=(['x'], xp),
-    )
+    coords = dict(x=x, y=y, xp=(["x"], xp))
     return coords
 
 
 def create_data_array():
     data = create_data()
     coords = create_coords()
-    return DataArray(
-        data,
-        dims=('x', 'y'),
-        coords=coords,
-    )
+    return DataArray(data, dims=("x", "y"), coords=coords)
 
 
 def with_keys(mapping, keys):
-    return {
-        key: value
-        for key, value in mapping.items()
-        if key in keys
-    }
+    return {key: value for key, value in mapping.items() if key in keys}
 
 
 def test_without_subclass_support():
@@ -78,9 +60,7 @@ def test_without_subclass_support():
         assert not hasattr(data_array.data, "units")
 
 
-@pytest.mark.filterwarnings(
-    "ignore:the matrix subclass:PendingDeprecationWarning"
-)
+@pytest.mark.filterwarnings("ignore:the matrix subclass:PendingDeprecationWarning")
 def test_matrix():
     matrix = np.matrix([[1, 2], [3, 4]])
     da = DataArray(matrix)
@@ -107,17 +87,17 @@ def test_arithmetics():
     da = create_data_array()
 
     f = np.arange(10 * 20).reshape(10, 20) * pq.A
-    g = DataArray(f, dims=['x', 'y'], coords=with_keys(coords, ['x', 'y']))
+    g = DataArray(f, dims=["x", "y"], coords=with_keys(coords, ["x", "y"]))
     assert_equal_with_units(da * g, v * f)
 
     # swapped dimension order
     f = np.arange(20 * 10).reshape(20, 10) * pq.V
-    g = DataArray(f, dims=['y', 'x'], coords=with_keys(coords, ['x', 'y']))
+    g = DataArray(f, dims=["y", "x"], coords=with_keys(coords, ["x", "y"]))
     assert_equal_with_units(da + g, v + f.T)
 
     # broadcasting
     f = (np.arange(10) + 1) * pq.m
-    g = DataArray(f, dims=['x'], coords=with_keys(coords, ['x']))
+    g = DataArray(f, dims=["x"], coords=with_keys(coords, ["x"]))
     assert_equal_with_units(da / g, v / f[:, None])
 
 
@@ -130,7 +110,7 @@ def test_combine():
     a = data_array[:, :10]
     b = data_array[:, 10:]
 
-    assert_equal_with_units(concat([a, b], dim='y'), data_array)
+    assert_equal_with_units(concat([a, b], dim="y"), data_array)
 
 
 def test_unit_checking():
@@ -138,9 +118,8 @@ def test_unit_checking():
     da = create_data_array()
 
     f = np.arange(10 * 20).reshape(10, 20) * pq.A
-    g = DataArray(f, dims=['x', 'y'], coords=with_keys(coords, ['x', 'y']))
-    with pytest.raises(ValueError,
-                       match="Unable to convert between units"):
+    g = DataArray(f, dims=["x", "y"], coords=with_keys(coords, ["x", "y"]))
+    with pytest.raises(ValueError, match="Unable to convert between units"):
         da + g
 
 
@@ -166,4 +145,4 @@ def test_sel():
 def test_mean():
     data = create_data()
     data_array = create_data_array()
-    assert_equal_with_units(data_array.mean('x'), data.mean(0))
+    assert_equal_with_units(data_array.mean("x"), data.mean(0))

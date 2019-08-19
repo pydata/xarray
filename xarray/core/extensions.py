@@ -25,7 +25,7 @@ class _CachedAccessor:
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            raise RuntimeError('error initializing %r accessor.' % self._name)
+            raise RuntimeError("error initializing %r accessor." % self._name)
         # Replace the property with the accessor object. Inspired by:
         # http://www.pydanny.com/cached-property.html
         # We need to use object.__setattr__ because we overwrite __setattr__ on
@@ -38,13 +38,15 @@ def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
             warnings.warn(
-                'registration of accessor %r under name %r for type %r is '
-                'overriding a preexisting attribute with the same name.'
+                "registration of accessor %r under name %r for type %r is "
+                "overriding a preexisting attribute with the same name."
                 % (accessor, name, cls),
                 AccessorRegistrationWarning,
-                stacklevel=2)
+                stacklevel=2,
+            )
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
+
     return decorator
 
 
