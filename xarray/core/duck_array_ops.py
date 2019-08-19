@@ -162,12 +162,12 @@ masked_invalid = _dask_or_eager_func(
 
 
 def asarray(data):
-    from .variable import _as_array_subclass as asarray
+    from .npcompat import _asarray
 
     return (
         data
         if (isinstance(data, dask_array_type) or hasattr(data, "__array_function__"))
-        else asarray(data)
+        else _asarray(data)
     )
 
 

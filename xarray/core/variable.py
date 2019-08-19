@@ -18,9 +18,9 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from .options import _get_keep_attrs, OPTIONS
+from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
-from .npcompat import IS_NEP18_ACTIVE
+from .npcompat import IS_NEP18_ACTIVE, _asarray
 from .utils import (
     OrderedSet,
     decode_numpy_dict_values,
@@ -151,16 +151,6 @@ def _possibly_convert_objects(values):
     return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
 
 
-def _as_array_subclass(data):
-    asarray = (
-        np.asanyarray
-        if OPTIONS["enable_experimental_ndarray_subclass_support"]
-        else np.asarray
-    )
-
-    return asarray(data)
-
-
 def as_compatible_data(data, fastpath=False):
     """Prepare and wrap data to put in a Variable.
 
@@ -220,7 +210,7 @@ def as_compatible_data(data, fastpath=False):
                 )
 
     # validate whether the data is valid data types
-    data = _as_array_subclass(data)
+    data = _asarray(data)
     if isinstance(data, np.ndarray):
         if data.dtype.kind == "O":
             data = _possibly_convert_objects(data)
@@ -261,7 +251,7 @@ def _as_any_array_or_item(data):
 
     The same caveats as for ``_as_array_or_item`` apply.
     """
-    data = _as_array_subclass(data)
+    data = _asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -348,7 +338,7 @@ class Variable(
         ):
             return self._data
         else:
-            return _as_array_subclass(self._data)
+            return _as_any_array_or_item(self._data)
 
     @data.setter
     def data(self, data):

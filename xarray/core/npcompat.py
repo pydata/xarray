@@ -35,6 +35,8 @@ from typing import Union
 import operator
 import numpy as np
 
+from .options import OPTIONS
+
 try:
     from numpy import isin
 except ImportError:
@@ -378,3 +380,12 @@ def _is_nep18_active():
 
 
 IS_NEP18_ACTIVE = _is_nep18_active()
+
+
+def _asarray(data):
+    # options get set after import, so this needs to be done in a
+    # function
+    if OPTIONS["enable_experimental_ndarray_subclass_support"]:
+        return np.asanyarray(data)
+    else:
+        return np.asarray(data)
