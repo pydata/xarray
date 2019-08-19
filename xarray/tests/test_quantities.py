@@ -75,10 +75,12 @@ def test_masked_array():
 
 
 def test_units_in_data_and_coords():
+    data = create_data()
+    _, _, xp = create_coord_arrays()
     data_array = create_data_array()
 
-    assert_equal_with_units(data_array.data, data_array)
-    assert_equal_with_units(data_array.xp.data, data_array.xp)
+    assert_equal_with_units(data, data_array)
+    assert_equal_with_units(xp, data_array.xp)
 
 
 def test_arithmetics():
