@@ -3548,8 +3548,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        labels_are_coords = isinstance(labels, DataArrayCoordinates)
-        if labels_kwargs or (utils.is_dict_like(labels) and not labels_are_coords):
+        if labels_kwargs or isinstance(labels, dict):
             labels_kwargs = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
             if dim is not None:
                 raise ValueError("cannot specify dim and dict-like arguments.")
@@ -3558,6 +3557,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 ds = ds._drop_labels(labels, dim, errors=errors)
             return ds
         elif dim is None:
+            if isinstance(labels, DataArrayCoordinates):
+                warnings.warn(
+                    "dropping coordinates using a DataArrayCoordinates object "
+                    "is deprecated; use drop_vars or a list of coordinates",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             if isinstance(labels, str) or not isinstance(labels, Iterable):
                 labels = {labels}
             else:
