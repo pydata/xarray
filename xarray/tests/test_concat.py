@@ -18,56 +18,53 @@ from .test_dataset import create_test_data
 
 
 class TestConcatDataset:
-    def test_concat(self):
-        # TODO: simplify and split this test case
+    @pytest.fixture
+    def data(self):
+        return create_test_data().drop_dims("dim3")
 
-        # drop the third dimension to keep things relatively understandable
-        data = create_test_data()
-        for k in list(data.variables):
-            if "dim3" in data[k].dims:
-                del data[k]
+    def rectify_dim_order(self, data, dataset):
+        # return a new dataset with all variable dimensions transposed into
+        # the order in which they are found in `data`
+        return Dataset(
+            {k: v.transpose(*data[k].dims) for k, v in dataset.data_vars.items()},
+            dataset.coords,
+            attrs=dataset.attrs,
+        )
 
-        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
-        assert_identical(data, concat(split_data, "dim1"))
+    @pytest.mark.parametrize("coords", ["different", "minimal"])
+    @pytest.mark.parametrize("dim", ["dim1", "dim2"])
+    def test_concat_simple(self, data, dim, coords):
+        datasets = [g for _, g in data.groupby(dim, squeeze=False)]
+        assert_identical(data, concat(datasets, dim, coords=coords))
 
-        def rectify_dim_order(dataset):
-            # return a new dataset with all variable dimensions transposed into
-            # the order in which they are found in `data`
-            return Dataset(
-                {k: v.transpose(*data[k].dims) for k, v in dataset.data_vars.items()},
-                dataset.coords,
-                attrs=dataset.attrs,
-            )
-
-        for dim in ["dim1", "dim2"]:
-            datasets = [g for _, g in data.groupby(dim, squeeze=False)]
-            assert_identical(data, concat(datasets, dim))
-
+    def test_concat_2(self, data):
         dim = "dim2"
-        assert_identical(data, concat(datasets, data[dim]))
-        assert_identical(data, concat(datasets, data[dim], coords="minimal"))
-
         datasets = [g for _, g in data.groupby(dim, squeeze=True)]
         concat_over = [k for k, v in data.coords.items() if dim in v.dims and k != dim]
         actual = concat(datasets, data[dim], coords=concat_over)
-        assert_identical(data, rectify_dim_order(actual))
+        assert_identical(data, self.rectify_dim_order(data, actual))
 
-        actual = concat(datasets, data[dim], coords="different")
-        assert_identical(data, rectify_dim_order(actual))
-
+    @pytest.mark.parametrize("coords", ["different", "minimal", "all"])
+    @pytest.mark.parametrize("dim", ["dim1", "dim2"])
+    def test_concat_coords_kwarg(self, data, dim, coords):
+        data = data.copy(deep=True)
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
-        for dim in ["dim1", "dim2"]:
-            datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-            actual = concat(datasets, data[dim], coords="all")
+        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+
+        actual = concat(datasets, data[dim], coords=coords)
+        if coords == "all":
             expected = np.array([data["extra"].values for _ in range(data.dims[dim])])
             assert_array_equal(actual["extra"].values, expected)
 
-            actual = concat(datasets, data[dim], coords="different")
-            assert_equal(data["extra"], actual["extra"])
-            actual = concat(datasets, data[dim], coords="minimal")
+        else:
             assert_equal(data["extra"], actual["extra"])
 
+    def test_concat(self, data):
+        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
+        assert_identical(data, concat(split_data, "dim1"))
+
+    def test_concat_dim_precedence(self, data):
         # verify that the dim argument takes precedence over
         # concatenating dataset variables of the same name
         dim = (2 * data["dim1"]).rename("dim1")
@@ -189,6 +186,10 @@ class TestConcatDataset:
         expected["right"] = Dataset(
             {"a": (("x", "y"), np.array([np.nan, 0], ndmin=2).T)},
             coords={"x": [0, 1], "y": [0.0001]},
+        )
+        expected["override"] = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2).T)},
+            coords={"x": [0, 1], "y": [0]},
         )
 
         with raises_regex(ValueError, "indexes along dimension 'y'"):
@@ -398,6 +399,10 @@ class TestConcatDataArray:
         expected["right"] = Dataset(
             {"a": (("x", "y"), np.array([np.nan, 0], ndmin=2).T)},
             coords={"x": [0, 1], "y": [0.0001]},
+        )
+        expected["override"] = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2).T)},
+            coords={"x": [0, 1], "y": [0]},
         )
 
         with raises_regex(ValueError, "indexes along dimension 'y'"):

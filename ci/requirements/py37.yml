@@ -16,6 +16,7 @@ dependencies:
   - pytest-env
   - coveralls
   - flake8
+  - mypy==0.720  # Must match .pre-commit-config.yaml
   - numpy>=1.12
   - pandas>=0.19
   - pip
@@ -33,5 +34,4 @@ dependencies:
   - pydap
   - quantities
   - pip:
-    - mypy==0.650
     - numbagg

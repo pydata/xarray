@@ -813,7 +813,7 @@ def open_mfdataset(
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    join : {'outer', 'inner', 'left', 'right', 'exact, 'override'}, optional
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
 
@@ -823,6 +823,9 @@ def open_mfdataset(
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
