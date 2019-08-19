@@ -1524,6 +1524,30 @@ class DataArray(AbstractArray, DataWithCoords):
             Another DataArray, with this data but replaced coordinates.
             Return None if inplace=True.
 
+        Example
+        -------
+        >>> arr = xr.DataArray(data=np.ones((2, 3)),
+        ...                    dims=['x', 'y'],
+        ...                    coords={'x':
+        ...                        range(2), 'y':
+        ...                        range(3), 'a': ('x', [3, 4])
+        ...                    })
+        >>> arr
+        <xarray.DataArray (x: 2, y: 3)>
+        array([[1., 1., 1.],
+               [1., 1., 1.]])
+        Coordinates:
+          * x        (x) int64 0 1
+          * y        (y) int64 0 1 2
+            a        (x) int64 3 4
+        >>> arr.set_index(x='a')
+        <xarray.DataArray (x: 2, y: 3)>
+        array([[1., 1., 1.],
+               [1., 1., 1.]])
+        Coordinates:
+          * x        (x) int64 3 4
+          * y        (y) int64 0 1 2
+
         See Also
         --------
         DataArray.reset_index
