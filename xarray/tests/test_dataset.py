@@ -29,6 +29,7 @@ from xarray.core import dtypes, indexing, npcompat, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
+from xarray.core.coordinates import DatasetCoordinates, DataArrayCoordinates
 
 from . import (
     LooseVersion,
@@ -2214,13 +2215,20 @@ class TestDataset:
         # Basic functionality.
         assert len(data.coords["x"]) == 2
 
-        # This API is allowed but deprecated.
+        # In the future, this will break.
         with pytest.warns(DeprecationWarning):
             ds1 = data.drop(["a"], dim="x")
         ds2 = data.drop(x="a")
         ds3 = data.drop(x=["a"])
         ds4 = data.drop(x=["a", "b"])
         ds5 = data.drop(x=["a", "b"], y=range(0, 6, 2))
+
+        # In the future, this will result in different behavior.
+        arr = DataArray(range(3), dims=["c"])
+        with pytest.warns(FutureWarning):
+            data.drop(arr.coords)
+        with pytest.warns(FutureWarning):
+            data.drop(arr.indexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
         assert_array_equal(ds2.coords["x"], ["b"])
