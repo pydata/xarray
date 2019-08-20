@@ -84,7 +84,7 @@ from ..plot.dataset_plot import _Dataset_PlotMethods
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
-    from .merge import DatasetLike
+    from .merge import CoercibleMapping
 
     try:
         from dask.delayed import Delayed
@@ -3330,7 +3330,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._unstack_once(dim)
         return result
 
-    def update(self, other: "DatasetLike", inplace: bool = None) -> "Dataset":
+    def update(self, other: "CoercibleMapping", inplace: bool = None) -> "Dataset":
         """Update this dataset's variables with those from another dataset.
 
         Parameters
@@ -3365,7 +3365,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def merge(
         self,
-        other: "DatasetLike",
+        other: "CoercibleMapping",
         inplace: bool = None,
         overwrite_vars: Union[Hashable, Iterable[Hashable]] = frozenset(),
         compat: str = "no_conflicts",

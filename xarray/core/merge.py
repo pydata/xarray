@@ -37,8 +37,10 @@ if TYPE_CHECKING:
         Tuple[DimsLike, Any, Mapping],
         Tuple[DimsLike, Any, Mapping, Mapping],
     ]
-    DatasetLikeValue = Union[DataArray, Variable, VariableTuple]
-    DatasetLike = Union[Dataset, Mapping[Hashable, DatasetLikeValue]]
+    XarrayValue = Union[DataArray, Variable, VariableTuple]
+    DatasetLike = Union[Dataset, Mapping[Hashable, XarrayValue]]
+    CoercibleValue = Union[XarrayValue, pd.Series, pd.DataFrame]
+    CoercibleMapping = Union[Dataset, Mapping[Hashable, CoercibleValue]]
 
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pdcompat.Panel)
@@ -350,7 +352,7 @@ def determine_coords(
     return coord_names, noncoord_names
 
 
-def coerce_pandas_values(objects: Iterable["DatasetLike"]) -> List["DatasetLike"]:
+def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["DatasetLike"]:
     """Convert pandas values found in a list of labeled objects.
 
     Parameters
@@ -417,12 +419,12 @@ def _get_priority_vars_and_indexes(
 
 
 def merge_coords(
-    objects,
-    compat="minimal",
-    join="outer",
-    priority_arg=None,
-    indexes=None,
-    fill_value=dtypes.NA,
+    objects: Iterable["CoercibleMapping"],
+    compat: str = "minimal",
+    join: str = "outer",
+    priority_arg: Optional[int] = None,
+    indexes: Optional[Mapping[Hashable, pd.Index]] = None,
+    fill_value: object = dtypes.NA,
 ) -> Tuple["OrderedDict[Hashable, Variable]", "OrderedDict[Hashable, pd.Index]"]:
     """Merge coordinate variables.
 
@@ -487,13 +489,13 @@ _MergeResult = NamedTuple(
 
 
 def merge_core(
-    objects,
-    compat="broadcast_equals",
-    join="outer",
-    priority_arg=None,
-    explicit_coords=None,
-    indexes=None,
-    fill_value=dtypes.NA,
+    objects: Iterable["CoercibleMapping"],
+    compat: str = "broadcast_equals",
+    join: str = "outer",
+    priority_arg: Optional[int] = None,
+    explicit_coords: Optional[Sequence] = None,
+    indexes: Optional[Mapping[Hashable, pd.Index]] = None,
+    fill_value: object = dtypes.NA,
 ) -> _MergeResult:
     """Core logic for merging labeled objects.
 
@@ -562,7 +564,12 @@ def merge_core(
     return _MergeResult(variables, coord_names, dims, out_indexes)
 
 
-def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
+def merge(
+    objects: Iterable[Union["DataArray", CoercibleMapping]],
+    compat: str = "no_conflicts",
+    join: str = "outer",
+    fill_value: object = dtypes.NA,
+) -> "Dataset":
     """Merge any number of xarray objects into a single Dataset as variables.
 
     Parameters
@@ -647,7 +654,7 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
 
 def dataset_merge_method(
     dataset: "Dataset",
-    other: "DatasetLike",
+    other: "CoercibleMapping",
     overwrite_vars: Union[Hashable, Iterable[Hashable]],
     compat: str,
     join: str,
@@ -671,10 +678,10 @@ def dataset_merge_method(
         objs = [dataset, other]
         priority_arg = 1
     else:
-        other_overwrite = OrderedDict()  # type: OrderedDict[Hashable, DatasetLikeValue]
+        other_overwrite = OrderedDict()  # type: OrderedDict[Hashable, CoercibleValue]
         other_no_overwrite = (
             OrderedDict()
-        )  # type: OrderedDict[Hashable, DatasetLikeValue]
+        )  # type: OrderedDict[Hashable, CoercibleValue]
         for k, v in other.items():
             if k in overwrite_vars:
                 other_overwrite[k] = v
@@ -688,7 +695,9 @@ def dataset_merge_method(
     )
 
 
-def dataset_update_method(dataset: "Dataset", other: "DatasetLike") -> _MergeResult:
+def dataset_update_method(
+    dataset: "Dataset", other: "CoercibleMapping"
+) -> _MergeResult:
     """Guts of the Dataset.update method.
 
     This drops a duplicated coordinates from `other` if `other` is not an
