@@ -27,46 +27,9 @@ def assert_equal_with_units(a, b):
     )
 
 
-def create_data():
-    return (np.arange(10 * 20).reshape(10, 20) + 1) * pq.V
-
-
-def create_coord_arrays():
-    x = (np.arange(10) + 1) * pq.A
-    y = np.arange(20) + 1
-    xp = (np.arange(10) + 1) * pq.J
-    return x, y, xp
-
-
-def create_coords(x=None, y=None, xp=None):
-    x_, y_, xp_ = create_coord_arrays()
-    if x is None:
-        x = x_
-    if y is None:
-        y = y_
-    if xp is None:
-        xp = xp_
-
-    coords = dict(x=x, y=y, xp=(["x"], xp))
-    return coords
-
-
-def create_data_array(data=None, coords=None):
-    if data is None:
-        data = create_data()
-    if coords is None:
-        coords = create_coords()
-
-    return DataArray(data, dims=("x", "y"), coords=coords)
-
-
-def with_keys(mapping, keys):
-    return {key: value for key, value in mapping.items() if key in keys}
-
-
 def test_without_subclass_support():
     with set_options(enable_experimental_ndarray_subclass_support=False):
-        data_array = create_data_array()
+        data_array = DataArray(data=np.arange(10) * pq.m)
         assert not hasattr(data_array.data, "units")
 
 
@@ -85,54 +48,62 @@ def test_masked_array():
 
 
 def test_units_in_data_and_coords():
-    data = create_data()
-    _, _, xp = create_coord_arrays()
-    data_array = create_data_array(data=data, coords=create_coords(xp=xp))
+    data = np.arange(10) * pq.m
+    x = np.arange(10) * pq.s
+    xp = x.rescale(pq.ms)
+    data_array = DataArray(data=data, coords={"x": x, "xp": ("x", xp)}, dims=["x"])
 
     assert_equal_with_units(data, data_array)
     assert_equal_with_units(xp, data_array.xp)
 
 
 def test_arithmetics():
-    v = create_data()
-    coords = create_coords()
-    da = create_data_array(data=v, coords=coords)
+    x = np.arange(10)
+    y = np.arange(20)
 
-    f = np.arange(10 * 20).reshape(10, 20) * pq.A
-    g = DataArray(f, dims=["x", "y"], coords=with_keys(coords, ["x", "y"]))
-    assert_equal_with_units(da * g, v * f)
+    f = (np.arange(10 * 20).reshape(10, 20) + 1) * pq.V
+    g = np.arange(10 * 20).reshape(10, 20) * pq.A
+
+    a = DataArray(data=f, coords={"x": x, "y": y}, dims=("x", "y"))
+    b = DataArray(data=g, coords={"x": x, "y": y}, dims=("x", "y"))
+
+    assert_equal_with_units(a * b, f * g)
 
     # swapped dimension order
-    f = np.arange(20 * 10).reshape(20, 10) * pq.V
-    g = DataArray(f, dims=["y", "x"], coords=with_keys(coords, ["x", "y"]))
-    assert_equal_with_units(da + g, v + f.T)
+    g = np.arange(20 * 10).reshape(20, 10) * pq.V
+    b = DataArray(data=g, coords={'x': x, 'y': y}, dims=("y", "x"))
+    assert_equal_with_units(a + b, f + g.T)
 
     # broadcasting
-    f = (np.arange(10) + 1) * pq.m
-    g = DataArray(f, dims=["x"], coords=with_keys(coords, ["x"]))
-    assert_equal_with_units(da / g, v / f[:, None])
+    g = (np.arange(10) + 1) * pq.m
+    b = DataArray(data=g, coords={'x': x}, dims=["x"])
+    assert_equal_with_units(a / b, f / g[:, None])
 
 
 @pytest.mark.xfail(reason="units don't survive through combining yet")
 def test_combine():
     from xarray import concat
 
-    data_array = create_data_array()
+    data = (np.arange(15) + 10) * pq.m
+    y = np.arange(len(data))
 
-    a = data_array[:, :10]
-    b = data_array[:, 10:]
+    data_array = DataArray(data=data, coords={"y": y}, dims=["y"])
+    a = data_array[:5]
+    b = data_array[5:]
 
     assert_equal_with_units(concat([a, b], dim="y"), data_array)
 
 
 def test_unit_checking():
-    coords = create_coords()
-    da = create_data_array(coords=coords)
+    coords = {"x": np.arange(10), "y": np.arange(20)}
 
     f = np.arange(10 * 20).reshape(10, 20) * pq.A
-    g = DataArray(f, dims=["x", "y"], coords=with_keys(coords, ["x", "y"]))
+    g = np.arange(10 * 20).reshape(10, 20) * pq.V
+
+    a = DataArray(f, coords=coords, dims=("x", "y"))
+    b = DataArray(g, coords=coords, dims=("x", "y"))
     with pytest.raises(ValueError, match="Unable to convert between units"):
-        da + g
+        a + b
 
 
 @pytest.mark.xfail(reason="units in indexes not supported")
@@ -142,19 +113,26 @@ def test_units_in_indexes():
     units. Therefore, we currently don't intend to support units on
     indexes either.
     """
-    x, *_ = create_coord_arrays()
-    data_array = create_data_array(coords=create_coords(x=x))
+    data = np.arange(15) * 10
+    x = np.arange(len(data)) * pq.A
+
+    data_array = DataArray(data=data, coords={"x": x}, dims=["x"])
     assert_equal_with_units(data_array.x, x)
 
 
 def test_sel():
-    data = create_data()
-    _, y, _ = create_coord_arrays()
-    data_array = create_data_array(data=data, coords=create_coords(y=y))
+    data = np.arange(10 * 20).reshape(10, 20) * pq.m / pq.s
+    x = np.arange(data.shape[0]) * pq.m
+    y = np.arange(data.shape[1]) * pq.s
+
+    data_array = DataArray(data=data, coords={"x": x, "y": y}, dims=("x", "y"))
     assert_equal_with_units(data_array.sel(y=y[0]), data[:, 0])
 
 
 def test_mean():
-    data = create_data()
-    data_array = create_data_array(data=data)
+    data = np.arange(10 * 20).reshape(10, 20) * pq.V
+    x = np.arange(data.shape[0])
+    y = np.arange(data.shape[1])
+
+    data_array = DataArray(data=data, coords={"x": x, "y": y}, dims=("x", "y"))
     assert_equal_with_units(data_array.mean("x"), data.mean(0))
