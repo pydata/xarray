@@ -29,7 +29,6 @@ from xarray.core import dtypes, indexing, npcompat, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
-from xarray.core.coordinates import DatasetCoordinates, DataArrayCoordinates
 
 from . import (
     LooseVersion,
