@@ -150,7 +150,9 @@ class TestVariable(DaskTestCase):
         expected = dedent(
             """\
             <xarray.Variable (x: 4, y: 6)>
-            dask.array<array, shape=(4, 6), dtype=float64, chunksize=(2, 2)>"""
+            {!r}""".format(
+                self.lazy_var.data
+            )
         )
         assert expected == repr(self.lazy_var)
 
@@ -499,10 +501,12 @@ class TestDataArrayAndDataset(DaskTestCase):
         expected = dedent(
             """\
             <xarray.DataArray 'data' (x: 1)>
-            dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>
+            {!r}
             Coordinates:
                 y        (x) int64 dask.array<chunksize=(1,)>
-            Dimensions without coordinates: x"""
+            Dimensions without coordinates: x""".format(
+                data
+            )
         )
         assert expected == repr(a)
         assert kernel_call_count == 0  # should not evaluate dask array
@@ -515,10 +519,12 @@ class TestDataArrayAndDataset(DaskTestCase):
         expected = dedent(
             """\
             <xarray.DataArray 'data' (x: 1)>
-            dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>
+            {!r}
             Coordinates:
                 y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
-            Dimensions without coordinates: x"""
+            Dimensions without coordinates: x""".format(
+                data
+            )
         )
         assert expected == repr(a)
         assert kernel_call_count == 0  # should not evaluate dask array
