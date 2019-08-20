@@ -32,12 +32,14 @@ if TYPE_CHECKING:
     from .dataset import Dataset
 
     DimsLike = Union[Hashable, Sequence[Hashable]]
-    VariableTuple = Union[
-        Tuple[DimsLike, Any],
-        Tuple[DimsLike, Any, Mapping],
-        Tuple[DimsLike, Any, Mapping, Mapping],
+    ArrayLike = Any
+    VariableLike = Union[
+        ArrayLike,
+        Tuple[DimsLike, ArrayLike],
+        Tuple[DimsLike, ArrayLike, Mapping],
+        Tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
-    XarrayValue = Union[DataArray, Variable, VariableTuple]
+    XarrayValue = Union[DataArray, Variable, VariableLike]
     DatasetLike = Union[Dataset, Mapping[Hashable, XarrayValue]]
     CoercibleValue = Union[XarrayValue, pd.Series, pd.DataFrame]
     CoercibleMapping = Union[Dataset, Mapping[Hashable, CoercibleValue]]
@@ -565,7 +567,7 @@ def merge_core(
 
 
 def merge(
-    objects: Iterable[Union["DataArray", CoercibleMapping]],
+    objects: Iterable[Union["DataArray", "CoercibleMapping"]],
     compat: str = "no_conflicts",
     join: str = "outer",
     fill_value: object = dtypes.NA,
