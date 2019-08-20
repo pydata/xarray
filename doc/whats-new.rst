@@ -65,8 +65,14 @@ Enhancements
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
 
-- :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index labels by specifying both ``dim`` and ``labels`` is deprecated (:issue:`2910`).
+- :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index
+  labels by specifying both ``dim`` and ``labels`` is deprecated (:issue:`2910`).
   By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+
+- Added examples of :py:meth:`Dataset.set_index` and
+  :py:meth:`DataArray.set_index`, as well are more specific error messages
+  when the user passes invalid arguments (:issue:`3176`).
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 Bug fixes
 ~~~~~~~~~
