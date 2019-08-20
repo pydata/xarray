@@ -38,15 +38,25 @@ def create_coord_arrays():
     return x, y, xp
 
 
-def create_coords():
-    x, y, xp = create_coord_arrays()
+def create_coords(x=None, y=None, xp=None):
+    x_, y_, xp_ = create_coord_arrays()
+    if x is None:
+        x = x_
+    if y is None:
+        y = y_
+    if xp is None:
+        xp = xp_
+
     coords = dict(x=x, y=y, xp=(["x"], xp))
     return coords
 
 
-def create_data_array():
-    data = create_data()
-    coords = create_coords()
+def create_data_array(data=None, coords=None):
+    if data is None:
+        data = create_data()
+    if coords is None:
+        coords = create_coords()
+
     return DataArray(data, dims=("x", "y"), coords=coords)
 
 
@@ -77,7 +87,7 @@ def test_masked_array():
 def test_units_in_data_and_coords():
     data = create_data()
     _, _, xp = create_coord_arrays()
-    data_array = create_data_array()
+    data_array = create_data_array(data=data, coords=create_coords(xp=xp))
 
     assert_equal_with_units(data, data_array)
     assert_equal_with_units(xp, data_array.xp)
@@ -86,7 +96,7 @@ def test_units_in_data_and_coords():
 def test_arithmetics():
     v = create_data()
     coords = create_coords()
-    da = create_data_array()
+    da = create_data_array(data=v, coords=coords)
 
     f = np.arange(10 * 20).reshape(10, 20) * pq.A
     g = DataArray(f, dims=["x", "y"], coords=with_keys(coords, ["x", "y"]))
@@ -117,7 +127,7 @@ def test_combine():
 
 def test_unit_checking():
     coords = create_coords()
-    da = create_data_array()
+    da = create_data_array(coords=coords)
 
     f = np.arange(10 * 20).reshape(10, 20) * pq.A
     g = DataArray(f, dims=["x", "y"], coords=with_keys(coords, ["x", "y"]))
@@ -133,18 +143,18 @@ def test_units_in_indexes():
     indexes either.
     """
     x, *_ = create_coord_arrays()
-    data_array = create_data_array()
+    data_array = create_data_array(coords=create_coords(x=x))
     assert_equal_with_units(data_array.x, x)
 
 
 def test_sel():
     data = create_data()
     _, y, _ = create_coord_arrays()
-    data_array = create_data_array()
+    data_array = create_data_array(data=data, coords=create_coords(y=y))
     assert_equal_with_units(data_array.sel(y=y[0]), data[:, 0])
 
 
 def test_mean():
     data = create_data()
-    data_array = create_data_array()
+    data_array = create_data_array(data=data)
     assert_equal_with_units(data_array.mean("x"), data.mean(0))
