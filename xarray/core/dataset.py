@@ -3551,9 +3551,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if is_dict_like(labels) and not isinstance(labels, dict):
             warnings.warn(
-                "dropping coordinates using key values of dict-like labels "
-                "is deprecated; use drop_vars or a list of coordinates.",
+                "dropping coordinates using key values of dict-like labels is "
+                "deprecated; use drop_vars or a list of coordinates.",
                 FutureWarning,
+                stacklevel=2,
+            )
+        if dim is not None and is_list_like(labels):
+            warnings.warn(
+                "dropping dimensions using list-like labels is deprecated; use "
+                "dict-like arguments.",
+                DeprecationWarning,
                 stacklevel=2,
             )
 
@@ -3572,13 +3579,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 labels = set(labels)
             return self._drop_vars(labels, errors=errors)
         else:
-            if is_list_like(labels):
-                warnings.warn(
-                    "dropping dimensions using list-like labels is deprecated; "
-                    "use dict-like arguments.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
             return self._drop_labels(labels, dim, errors=errors)
 
     def _drop_labels(self, labels=None, dim=None, errors="raise"):
