@@ -71,12 +71,12 @@ def test_arithmetics():
 
     # swapped dimension order
     g = np.arange(20 * 10).reshape(20, 10) * pq.V
-    b = DataArray(data=g, coords={'x': x, 'y': y}, dims=("y", "x"))
+    b = DataArray(data=g, coords={"x": x, "y": y}, dims=("y", "x"))
     assert_equal_with_units(a + b, f + g.T)
 
     # broadcasting
     g = (np.arange(10) + 1) * pq.m
-    b = DataArray(data=g, coords={'x': x}, dims=["x"])
+    b = DataArray(data=g, coords={"x": x}, dims=["x"])
     assert_equal_with_units(a / b, f / g[:, None])
 
 
