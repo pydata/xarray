@@ -61,17 +61,19 @@ def test_arithmetics():
     x = np.arange(10)
     y = np.arange(20)
 
+    coords = {"x": x, "y": y}
+
     f = (np.arange(10 * 20).reshape(10, 20) + 1) * pq.V
     g = np.arange(10 * 20).reshape(10, 20) * pq.A
 
-    a = DataArray(data=f, coords={"x": x, "y": y}, dims=("x", "y"))
-    b = DataArray(data=g, coords={"x": x, "y": y}, dims=("x", "y"))
+    a = DataArray(data=f, coords=coords, dims=("x", "y"))
+    b = DataArray(data=g, coords=coords, dims=("x", "y"))
 
     assert_equal_with_units(a * b, f * g)
 
     # swapped dimension order
     g = np.arange(20 * 10).reshape(20, 10) * pq.V
-    b = DataArray(data=g, coords={"x": x, "y": y}, dims=("y", "x"))
+    b = DataArray(data=g, coords=coords, dims=("y", "x"))
     assert_equal_with_units(a + b, f + g.T)
 
     # broadcasting
