@@ -1527,6 +1527,11 @@ class TestDataArray:
         actual = DataArray(coords=[("x", np.arange(10)), ("y", ["a", "b"])])
         assert_identical(expected, actual)
 
+        with pytest.raises(KeyError):
+            DataArray(np.array(1), coords={"x": np.arange(10)}, dims=["x"])
+        with raises_regex(ValueError, "does not match the 0 dim"):
+            DataArray(np.array(1), coords=[("x", np.arange(10))])
+
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {"y": ("x", list("abc"))}, "x")
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
