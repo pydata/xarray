@@ -2712,6 +2712,11 @@ class TestDataset:
         expected = Dataset(coords={"x": [0, 1, 2]})
         assert_identical(ds.set_index(x="x_var"), expected)
 
+        # Issue 3176: Ensure clear error message on key error.
+        with pytest.raises(ValueError) as excinfo:
+            ds.set_index(foo="bar")
+        assert str(excinfo.value) == "bar is not the name of an existing variable."
+
     def test_reset_index(self):
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()

@@ -198,6 +198,7 @@ def merge_indexes(
     """
     vars_to_replace = {}  # Dict[Any, Variable]
     vars_to_remove = []  # type: list
+    error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, str) or not isinstance(var_names, Sequence):
@@ -207,7 +208,10 @@ def merge_indexes(
         current_index_variable = variables.get(dim)
 
         for n in var_names:
-            var = variables[n]
+            try:
+                var = variables[n]
+            except KeyError:
+                raise ValueError(error_msg.format(n))
             if (
                 current_index_variable is not None
                 and var.dims != current_index_variable.dims
@@ -239,8 +243,11 @@ def merge_indexes(
 
         else:
             for n in var_names:
+                try:
+                    var = variables[n]
+                except KeyError:
+                    raise ValueError(error_msg.format(n))
                 names.append(n)
-                var = variables[n]
                 cat = pd.Categorical(var.values, ordered=True)
                 codes.append(cat.codes)
                 levels.append(cat.categories)
@@ -2952,6 +2959,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         obj : Dataset
             Another dataset, with this dataset's data but replaced coordinates.
+
+        Examples
+        --------
+        >>> arr = xr.DataArray(data=np.ones((2, 3)),
+        ...                    dims=['x', 'y'],
+        ...                    coords={'x':
+        ...                        range(2), 'y':
+        ...                        range(3), 'a': ('x', [3, 4])
+        ...                    })
+        >>> ds = xr.Dataset({'v': arr})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * x        (x) int64 0 1
+          * y        (y) int64 0 1 2
+            a        (x) int64 3 4
+        Data variables:
+            v        (x, y) float64 1.0 1.0 1.0 1.0 1.0 1.0
+        >>> ds.set_index(x='a')
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * x        (x) int64 3 4
+          * y        (y) int64 0 1 2
+        Data variables:
+            v        (x, y) float64 1.0 1.0 1.0 1.0 1.0 1.0
 
         See Also
         --------
