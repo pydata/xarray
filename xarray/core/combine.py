@@ -243,11 +243,12 @@ def _combine_1d(
                 dim=concat_dim,
                 data_vars=data_vars,
                 coords=coords,
+                compat=compat,
                 fill_value=fill_value,
                 join=join,
             )
         except ValueError as err:
-            if "encountered unexpected variable" in str(err):
+            if "Encountered unexpected variable" in str(err):
                 raise ValueError(
                     "These objects cannot be combined using only "
                     "xarray.combine_nested, instead either use "
@@ -598,6 +599,7 @@ def combine_by_coords(
             concat_dims=concat_dims,
             data_vars=data_vars,
             coords=coords,
+            compat=compat,
             fill_value=fill_value,
             join=join,
         )
@@ -832,6 +834,7 @@ def _old_auto_combine(
                 dim=dim,
                 data_vars=data_vars,
                 coords=coords,
+                compat=compat,
                 fill_value=fill_value,
                 join=join,
             )
@@ -850,6 +853,7 @@ def _auto_concat(
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
+    compat="no_conflicts",
 ):
     if len(datasets) == 1 and dim is None:
         # There is nothing more to combine, so kick out early.
@@ -876,5 +880,10 @@ def _auto_concat(
                 )
             dim, = concat_dims
         return concat(
-            datasets, dim=dim, data_vars=data_vars, coords=coords, fill_value=fill_value
+            datasets,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            fill_value=fill_value,
+            compat=compat,
         )

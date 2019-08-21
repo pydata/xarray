@@ -44,6 +44,7 @@ _VALID_COMPAT = Frozen(
         "broadcast_equals": 2,
         "minimal": 3,
         "no_conflicts": 4,
+        "override": 5,
     }
 )
 
@@ -81,7 +82,7 @@ def unique_variable(name, variables, compat="broadcast_equals"):
     variables : list of xarray.Variable
         List of Variable objects, all of which go by the same name in different
         inputs.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         Type of equality check to use.
 
     Returns
@@ -93,7 +94,7 @@ def unique_variable(name, variables, compat="broadcast_equals"):
     MergeError: if any of the variables are not equal.
     """  # noqa
     out = variables[0]
-    if len(variables) > 1:
+    if len(variables) > 1 and compat != "override":
         combine_method = None
 
         if compat == "minimal":
@@ -152,7 +153,7 @@ def merge_variables(
     priority_vars : mapping with Variable or None values, optional
         If provided, variables are always taken from this dict in preference to
         the input variable dictionaries, without checking for conflicts.
-    compat : {'identical', 'equals', 'broadcast_equals', 'minimal', 'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'minimal', 'no_conflicts', 'override'}, optional
         Type of equality check to use when checking for conflicts.
 
     Returns
@@ -449,7 +450,7 @@ def merge_core(
     ----------
     objs : list of mappings
         All values must be convertable to labeled arrays.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         Compatibility checks to use when merging variables.
     join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.

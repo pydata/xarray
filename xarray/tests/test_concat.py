@@ -18,6 +18,30 @@ from . import (
 from .test_dataset import create_test_data
 
 
+def test_concat_compat():
+    ds1 = Dataset(
+        {
+            "has_x_y": (("y", "x"), [[1, 2]]),
+            "has_x": ("x", [1, 2]),
+            "no_x_y": ("z", [1, 2]),
+        },
+        coords={"x": [0, 1], "y": [0], "z": [-1, -2]},
+    )
+    ds2 = Dataset(
+        {
+            "has_x_y": (("y", "x"), [[3, 4]]),
+            "has_x": ("x", [1, 2]),
+            "no_x_y": (("q", "z"), [[1, 2]]),
+        },
+        coords={"x": [0, 1], "y": [1], "z": [-1, -2], "q": [0]},
+    )
+
+    result = concat([ds1, ds2], dim="y", compat="equals")
+
+    for var in ["has_x", "no_x_y", "const1"]:
+        assert "y" not in result[var]
+
+
 class TestConcatDataset:
     @pytest.fixture
     def data(self):
@@ -404,6 +428,10 @@ class TestConcatDatasetNewApi:
             assert "y" in actual[var].dims
         for var in equal_to_first_ds:
             assert_equal(actual[var], self.dsets[0][var])
+
+    def test_compat_override_different_error(self):
+        with raises_regex(ValueError, "Cannot specify both .*='different'"):
+            concat(self.dsets, data_vars="different", compat="override")
 
 
 class TestConcatDataArray:

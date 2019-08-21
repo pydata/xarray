@@ -70,7 +70,7 @@ def concat(
           * 'identical' means that variable attributes and global attributes
              must also be equal.
           * 'override' means that checks are skipped and values from the first dataset
-            are used.
+            are used. This cannot be used with coords='different' or data_vars='different'.
     positions : None or list of integer arrays, optional
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
@@ -145,7 +145,7 @@ def concat(
             "`data_vars` and `coords` arguments"
         )
 
-    if compat not in ["equals", "identical", "override"]:
+    if compat not in ["equals", "identical", "override", "no_conflicts"]:
         raise ValueError(
             "compat=%r invalid: must be 'equals', 'identical or 'override'" % compat
         )
@@ -207,6 +207,11 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     def process_subset_opt(opt, subset):
         if isinstance(opt, str):
             if opt == "different":
+                if compat == "override":
+                    raise ValueError(
+                        "Cannot specify both %s='different' and compat='override'."
+                        % subset
+                    )
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
                     if k not in concat_over:
@@ -395,7 +400,7 @@ def _dataarray_concat(
 
     if data_vars != "all":
         raise ValueError(
-            "data_vars is not a valid argument when " "concatenating DataArray objects"
+            "data_vars is not a valid argument when concatenating DataArray objects"
         )
 
     datasets = []
