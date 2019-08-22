@@ -5139,7 +5139,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         """  # noqa
         selection = []
-        for var_name, variable in self.data_vars.items():
+        for var_name, variable in self.variables.items():
             has_value_flag = False
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
