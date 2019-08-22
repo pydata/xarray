@@ -76,6 +76,10 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+
+- :py:meth:`~xarray.DataArray.assign_coords` now supports dictionary arguments
+  (:issue:`3231`).
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 - Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
   unicode indices to dtype=object (:issue:`3094`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
