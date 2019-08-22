@@ -4,20 +4,10 @@ import pytest
 import xarray as xr
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
-try:
-    import pint
-
-    has_pint = True
-except ImportError:
-    has_pint = False
-
-
-pytestmark = [
-    pytest.mark.skipif(
-        not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
-    ),
-    pytest.mark.skipif(not has_pint, reason="pint is not installed"),
-]
+pint = pytest.importorskip("pint", reason="pint is not available")
+pytestmark = pytest.mark.skipif(
+    not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
+)
 
 
 unit_registry = pint.UnitRegistry()
