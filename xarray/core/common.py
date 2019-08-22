@@ -353,13 +353,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             A dict with keys which are variables names. If the values are
             callable, they are computed on this object and assigned to new
             coordinate variables. If the values are not callable,
-            (e.g. a DataArray, scalar, or array), they are simply assigned.
+            (e.g. a ``DataArray``, scalar, or array), they are simply assigned.
 
-        coords_kwargs : keyword, value pairs
-            keywords are the variables names. If the values are callable, they
-            are computed on this object and assigned to new coordinate
-            variables. If the values are not callable, (e.g. a DataArray,
-            scalar, or array), they are simply assigned.
+        **coords_kwargs : keyword, value pairs, optional
+            The keyword arguments form of ``coords``.
+            One of ``coords`` or ``coords_kwargs`` must be provided.
 
         Returns
         -------
