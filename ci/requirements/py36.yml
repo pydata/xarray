@@ -35,4 +35,5 @@ dependencies:
   - iris>=1.10
   - pydap
   - lxml
+  - pint
 

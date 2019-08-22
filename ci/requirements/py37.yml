@@ -32,5 +32,6 @@ dependencies:
   - cfgrib>=0.9.2
   - lxml
   - pydap
+  - pint
   - pip:
     - numbagg
