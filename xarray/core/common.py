@@ -384,7 +384,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         array([0.28298 , 0.667347, 0.657938, 0.177683])
         Coordinates:
           * lon      (lon) int64 -2 -1 0 1
-        >>> da = da.assign_coords({'lon': (((da.lon + 180) % 360) - 180)})
+
+        The function also accepts dictionary arguments:
+
+        >>> da.assign_coords({'lon': (((da.lon + 180) % 360) - 180)})
         <xarray.DataArray (lon: 4)>
         array([0.28298 , 0.667347, 0.657938, 0.177683])
         Coordinates:
