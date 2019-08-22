@@ -64,6 +64,9 @@ Enhancements
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
+- :py:func:`~xarray.Dataset.to_netcdf()` now supports the ``invalid_netcdf`` kwarg when used
+  with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
+  By `Ulrich Herter <https://github.com/ulijh>`_.
 
 - :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index
   labels by specifying both ``dim`` and ``labels`` is deprecated (:issue:`2910`).
