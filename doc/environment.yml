@@ -11,6 +11,7 @@ dependencies:
   - dask=1.1.0
   - ipython=7.2.0
   - netCDF4=1.4.2
+  - h5netcdf=0.7.4
   - cartopy=0.17.0
   - rasterio=1.0.24
   - zarr=2.2.0
