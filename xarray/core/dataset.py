@@ -344,6 +344,8 @@ def as_dataset(obj: Any) -> "Dataset":
 
 
 class DataVariables(Mapping[Hashable, "DataArray"]):
+    __slots__ = ("_dataset",)
+
     def __init__(self, dataset: "Dataset"):
         self._dataset = dataset
 
@@ -383,6 +385,8 @@ class DataVariables(Mapping[Hashable, "DataArray"]):
 
 
 class _LocIndexer:
+    __slots__ = ("dataset",)
+
     def __init__(self, dataset: "Dataset"):
         self.dataset = dataset
 
@@ -405,6 +409,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
+
+    __slots__ = (
+        "_attrs",
+        "_coord_names",
+        "_dims",
+        "_encoding",
+        "_file_obj",
+        "_indexes",
+        "_variables",
+    )
 
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling

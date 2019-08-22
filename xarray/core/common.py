@@ -35,6 +35,8 @@ T = TypeVar("T")
 
 
 class ImplementsArrayReduce:
+    __slots__ = ()
+
     @classmethod
     def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
         if include_skipna:
@@ -72,6 +74,8 @@ class ImplementsArrayReduce:
 
 
 class ImplementsDatasetReduce:
+    __slots__ = ()
+
     @classmethod
     def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
         if include_skipna:
@@ -180,7 +184,7 @@ class AttrAccessMixin:
     """Mixin class that allows getting keys with attribute access
     """
 
-    _initialized = False
+    __slots__ = ("_initialized",)
 
     @property
     def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
@@ -195,6 +199,8 @@ class AttrAccessMixin:
         return []
 
     def __getattr__(self, name: str) -> Any:
+        if name == "_initialized":
+            return False
         if name != "__setstate__":
             # this avoids an infinite loop when pickle looks for the
             # __setstate__ attribute before the xarray object is initialized

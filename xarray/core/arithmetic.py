@@ -14,6 +14,8 @@ class SupportsArithmetic:
     Used by Dataset, DataArray, Variable and GroupBy.
     """
 
+    __slots__ = ()
+
     # TODO: implement special methods for arithmetic here rather than injecting
     # them in xarray/core/ops.py. Ideally, do so by inheriting from
     # numpy.lib.mixins.NDArrayOperatorsMixin.

@@ -159,6 +159,8 @@ def _infer_coords_and_dims(
 
 
 class _LocIndexer:
+    __slots__ = ("data_array",)
+
     def __init__(self, data_array: "DataArray"):
         self.data_array = data_array
 
@@ -222,6 +224,8 @@ class DataArray(AbstractArray, DataWithCoords):
     attrs : OrderedDict
         Dictionary for holding arbitrary metadata.
     """
+
+    __slots__ = ("_coords", "_file_obj", "_name", "_indexes", "_variable")
 
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
