@@ -4,7 +4,7 @@ import pytest
 import xarray as xr
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
-pint = pytest.importorskip("pint", reason="pint is not available")
+pint = pytest.importorskip("pint")
 pytestmark = pytest.mark.skipif(
     not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
 )
