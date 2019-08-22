@@ -28,6 +28,13 @@ def dtype(request):
 
 
 class TestDataArray:
+    @pytest.mark.filterwarnings("error::pint.errors.UnitStrippedWarning")
+    def test_init(self):
+        array = np.arange(10) * unit_registry.m
+        data_array = xr.DataArray(data=array)
+
+        assert_equal_with_units(array, data_array)
+
     @pytest.mark.parametrize(
         "func",
         (
