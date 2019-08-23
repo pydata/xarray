@@ -173,11 +173,13 @@ def test_variable_property(prop):
             False,
             marks=xfail(reason="'COO' object has no attribute 'item'"),
         ),
-        param(do("max"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
         param(
-            do("median"), False, marks=xfail(reason="Coercion to dense via bottleneck")
+            do("median"),
+            False,
+            marks=xfail(reason="Missing implementation for np.nanmedian"),
         ),
-        param(do("min"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
+        param(do("max"), False),
+        param(do("min"), False),
         param(
             do("no_conflicts", other=make_xrvar({"x": 10, "y": 5})),
             True,
@@ -201,7 +203,7 @@ def test_variable_property(prop):
         param(
             do("rank", dim="x"),
             False,
-            marks=xfail(reason="Coercion to dense via bottleneck"),
+            marks=xfail(reason="Only implemented for NumPy arrays (via bottleneck)"),
         ),
         param(
             do("reduce", func=np.sum, dim="x"),
@@ -216,13 +218,17 @@ def test_variable_property(prop):
         param(
             do("shift", x=2), True, marks=xfail(reason="mixed sparse-dense operation")
         ),
-        param(do("std"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
+        param(
+            do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
+        ),
         param(
             do("sum"),
             False,
             marks=xfail(reason="Missing implementation for np.result_type"),
         ),
-        param(do("var"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
+        param(
+            do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
+        ),
         param(do("to_dict"), False, marks=xfail(reason="Coercion to dense")),
         param(
             do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5),
@@ -478,16 +484,14 @@ def test_dataarray_property(prop):
             False,
             marks=xfail(reason="'COO' object has no attribute 'item'"),
         ),
-        param(do("max"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
+        param(do("max"), False),
+        param(do("min"), False),
         param(
-            do("median"), False, marks=xfail(reason="Coercion to dense via bottleneck")
-        ),
-        param(do("min"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
-        param(
-            do("notnull"),
+            do("median"),
             False,
-            marks=xfail(reason="'COO' object has no attribute 'notnull'"),
+            marks=xfail(reason="Missing implementation for np.nanmedian"),
         ),
+        param(do("notnull"), True),
         param(
             do("pipe", np.sum, axis=1),
             True,
@@ -506,7 +510,7 @@ def test_dataarray_property(prop):
         param(
             do("rank", "x"),
             False,
-            marks=xfail(reason="Coercion to dense via bottleneck"),
+            marks=xfail(reason="Only implemented for NumPy arrays (via bottleneck)"),
         ),
         param(
             do("reduce", np.sum, dim="x"),
@@ -534,13 +538,17 @@ def test_dataarray_property(prop):
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
         ),  # noqa
-        param(do("std"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
+        param(
+            do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
+        ),
         param(
             do("sum"),
             False,
             marks=xfail(reason="Missing implementation for np.result_type"),
         ),
-        param(do("var"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
+        param(
+            do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
+        ),
         param(
             do("where", make_xrarray({"x": 10, "y": 5}) > 0.5),
             False,
