@@ -31,8 +31,8 @@ from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
 
 from . import (
-    LooseVersion,
     InaccessibleArray,
+    LooseVersion,
     UnexpectedDataAccess,
     assert_allclose,
     assert_array_equal,
@@ -3203,6 +3203,19 @@ class TestDataset:
 
         actual = ds.groupby("b").assign_coords(c=lambda ds: ds.a.sum())
         expected = expected.set_coords("c")
+        assert_identical(actual, expected)
+
+    def test_assign_coords(self):
+        ds = Dataset()
+
+        actual = ds.assign(x=[0, 1, 2], y=2)
+        actual = actual.assign_coords(x=list("abc"))
+        expected = Dataset({"x": list("abc"), "y": 2})
+        assert_identical(actual, expected)
+
+        actual = ds.assign(x=[0, 1, 2], y=[2, 3])
+        actual = actual.assign_coords({"y": [2.0, 3.0]})
+        expected = ds.assign(x=[0, 1, 2], y=[2.0, 3.0])
         assert_identical(actual, expected)
 
     def test_assign_attrs(self):

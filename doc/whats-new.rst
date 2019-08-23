@@ -64,6 +64,9 @@ Enhancements
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
+- :py:func:`~xarray.Dataset.to_netcdf()` now supports the ``invalid_netcdf`` kwarg when used
+  with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
+  By `Ulrich Herter <https://github.com/ulijh>`_.
 
 - :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index
   labels by using both ``dim`` and ``labels`` or using a
@@ -78,6 +81,13 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+
+- Improve "missing dimensions" error message for :py:func:`~xarray.apply_ufunc` 
+  (:issue:`2078`). 
+  By `Rick Russotto <https://github.com/rdrussotto>`_.
+- :py:meth:`~xarray.DataArray.assign_coords` now supports dictionary arguments
+  (:issue:`3231`).
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 - Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
   unicode indices to dtype=object (:issue:`3094`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -101,7 +111,7 @@ Bug fixes
 - Fix error that arises when using open_mfdataset on a series of netcdf files
   having differing values for a variable attribute of type list. (:issue:`3034`)
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
-                               
+
 .. _whats-new.0.12.3:
 
 Documentation

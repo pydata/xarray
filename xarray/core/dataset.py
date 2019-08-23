@@ -7,6 +7,7 @@ from distutils.version import LooseVersion
 from numbers import Number
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     DefaultDict,
@@ -24,14 +25,15 @@ from typing import (
     Union,
     cast,
     overload,
-    TYPE_CHECKING,
 )
 
 import numpy as np
 import pandas as pd
+
 import xarray as xr
 
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
+from ..plot.dataset_plot import _Dataset_PlotMethods
 from . import (
     alignment,
     dtypes,
@@ -45,7 +47,7 @@ from . import (
     rolling,
     utils,
 )
-from .alignment import align, _broadcast_helper, _get_broadcast_dims_map_common_coords
+from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .common import (
     ALL_DIMS,
     DataWithCoords,
@@ -53,6 +55,7 @@ from .common import (
     _contains_datetime_like_objects,
 )
 from .coordinates import (
+    DataArrayCoordinates,
     DatasetCoordinates,
     LevelCoordinatesSource,
     assert_coordinate_consistent,
@@ -80,7 +83,6 @@ from .utils import (
     is_list_like,
 )
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
-from ..plot.dataset_plot import _Dataset_PlotMethods
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -1444,6 +1446,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         encoding: Mapping = None,
         unlimited_dims: Iterable[Hashable] = None,
         compute: bool = True,
+        invalid_netcdf: bool = False,
     ) -> Union[bytes, "Delayed", None]:
         """Write dataset contents to a netCDF file.
 
@@ -1507,6 +1510,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compute: boolean
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
+        invalid_netcdf: boolean
+            Only valid along with engine='h5netcdf'. If True, allow writing
+            hdf5 files which are valid netcdf as described in
+            https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
             encoding = {}
@@ -1522,6 +1529,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             encoding=encoding,
             unlimited_dims=unlimited_dims,
             compute=compute,
+            invalid_netcdf=invalid_netcdf,
         )
 
     def to_zarr(
