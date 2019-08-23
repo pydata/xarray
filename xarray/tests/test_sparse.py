@@ -651,7 +651,6 @@ class TestSparseDataArrayAndDataset:
         assert np.all(B1.coords["x"] == B2.coords["x"])
         assert np.all(B1.coords["y"] == B2.coords["y"])
 
-    @pytest.mark.xfail(reason="fill value leads to sparse-dense operation")
     def test_align_outer(self):
         a1 = xr.DataArray(
             sparse.COO.from_numpy(np.arange(4)),
@@ -666,8 +665,8 @@ class TestSparseDataArrayAndDataset:
         a2, b2 = xr.align(a1, b1, join="outer")
         assert isinstance(a2.data, sparse.SparseArray)
         assert isinstance(b2.data, sparse.SparseArray)
-        assert np.all(a2.coords["x"].data == ["a", "b", "c", "d"])
-        assert np.all(b2.coords["x"].data == ["a", "b", "c", "d"])
+        assert np.all(a2.coords["x"].data == ["a", "b", "c", "d", "e"])
+        assert np.all(b2.coords["x"].data == ["a", "b", "c", "d", "e"])
 
     @pytest.mark.xfail(reason="Missing implementation for np.result_type")
     def test_concat(self):
@@ -825,8 +824,8 @@ class TestSparseDataArrayAndDataset:
     def test_groupby_bins(self):
         x1 = self.ds_xr
         x2 = self.sp_xr
-        m1 = x1.groupby_bins("x", bins=[0, 3, 7, 10]).sum()
-        m2 = x2.groupby_bins("x", bins=[0, 3, 7, 10]).sum()
+        m1 = x1.groupby_bins("x", bins=[0, 3, 7, 10]).sum(xr.ALL_DIMS)
+        m2 = x2.groupby_bins("x", bins=[0, 3, 7, 10]).sum(xr.ALL_DIMS)
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
 

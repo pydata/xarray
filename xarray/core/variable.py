@@ -33,6 +33,11 @@ try:
 except ImportError:
     pass
 
+try:
+    import sparse
+except ImportError:
+    pass
+
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -235,7 +240,10 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
+    if isinstance(data, sparse.COO):
+        data = data.todense()
     data = np.asarray(data)
+
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -712,6 +720,8 @@ class Variable(
             data = as_indexable(self._data)[actual_indexer]
             chunks_hint = getattr(data, "chunks", None)
             mask = indexing.create_mask(indexer, self.shape, chunks_hint)
+            if isinstance(self.data, sparse.COO):
+                mask = sparse.COO.from_numpy(mask)
             data = duck_array_ops.where(mask, fill_value, data)
         else:
             # array cannot be indexed along dimensions of size 0, so just
