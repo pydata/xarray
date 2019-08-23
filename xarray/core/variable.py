@@ -3,7 +3,7 @@ import itertools
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Hashable, Mapping, MutableMapping, Union
+from typing import Any, Hashable, Mapping, Union
 
 import numpy as np
 import pandas as pd

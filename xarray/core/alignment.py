@@ -14,8 +14,8 @@ from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from .dataarray import DataArray  # noqa: F401
+    from .dataset import Dataset  # noqa: F401
 
 
 def _get_joiner(join):

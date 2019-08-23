@@ -648,7 +648,6 @@ def apply_variable_ufunc(
 def _apply_blockwise(
     func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None
 ):
-    import dask.array as da
     from .dask_array_compat import blockwise
 
     if signature.num_outputs > 1:
