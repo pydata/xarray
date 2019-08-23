@@ -58,9 +58,9 @@ argument to :py:func:`~xarray.open_dataset` or using the
     np.set_printoptions(precision=3, linewidth=100, threshold=100, edgeitems=3)
 
     ds = xr.Dataset({'temperature': (('time', 'latitude', 'longitude'),
-                                     np.random.randn(365, 180, 360)),
-                     'time': pd.date_range('2015-01-01', periods=365),
-                     'longitude': np.arange(360),
+                                     np.random.randn(30, 180, 180)),
+                     'time': pd.date_range('2015-01-01', periods=30),
+                     'longitude': np.arange(180),
                      'latitude': np.arange(89.5, -90.5, -1)})
     ds.to_netcdf('example-data.nc')
 
