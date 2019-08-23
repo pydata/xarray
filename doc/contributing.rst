@@ -152,10 +152,10 @@ We'll now kick off a two-step process:
 
    # Create and activate the build environment
    conda env create -f ci/requirements/py36.yml
-   conda activate test_env
+   conda activate xarray-tests
 
    # or with older versions of Anaconda:
-   source activate test_env
+   source activate xarray-tests
 
    # Build and install xarray
    pip install -e .
