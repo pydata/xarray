@@ -716,10 +716,7 @@ class Variable(
                 actual_indexer = indexer
 
             data = as_indexable(self._data)[actual_indexer]
-            chunks_hint = getattr(data, "chunks", None)
-            mask = indexing.create_mask(indexer, self.shape, chunks_hint)
-            if isinstance(self.data, sparse.COO):
-                mask = sparse.COO.from_numpy(mask)
+            mask = indexing.create_mask(indexer, self.shape, data)
             data = duck_array_ops.where(mask, fill_value, data)
         else:
             # array cannot be indexed along dimensions of size 0, so just

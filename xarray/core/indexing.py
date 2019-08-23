@@ -10,7 +10,7 @@ import pandas as pd
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
-from .pycompat import dask_array_type, integer_types
+from .pycompat import dask_array_type, integer_types, sparse_array_type
 from .utils import is_dict_like, maybe_cast_to_coords_dtype
 
 
@@ -1076,7 +1076,13 @@ def _logical_any(args):
     return functools.reduce(operator.or_, args)
 
 
-def _masked_result_drop_slice(key, chunks_hint=None):
+def _masked_result_drop_slice(key, data=None):
+
+    if data is not None:
+        chunks_hint = getattr(data, "chunks", None)
+    else:
+        chunks_hint = None
+
     key = (k for k in key if not isinstance(k, slice))
     if chunks_hint is not None:
         key = [
@@ -1085,10 +1091,17 @@ def _masked_result_drop_slice(key, chunks_hint=None):
             else k
             for k in key
         ]
-    return _logical_any(k == -1 for k in key)
+
+    mask = _logical_any(k == -1 for k in key)
+    if isinstance(data, sparse_array_type):
+        import sparse
+
+        mask = sparse.COO.from_numpy(mask)
+
+    return mask
 
 
-def create_mask(indexer, shape, chunks_hint=None):
+def create_mask(indexer, shape, data=None):
     """Create a mask for indexing with a fill-value.
 
     Parameters
@@ -1112,11 +1125,11 @@ def create_mask(indexer, shape, chunks_hint=None):
     if isinstance(indexer, OuterIndexer):
         key = _outer_to_vectorized_indexer(indexer, shape).tuple
         assert not any(isinstance(k, slice) for k in key)
-        mask = _masked_result_drop_slice(key, chunks_hint)
+        mask = _masked_result_drop_slice(key, data)
 
     elif isinstance(indexer, VectorizedIndexer):
         key = indexer.tuple
-        base_mask = _masked_result_drop_slice(key, chunks_hint)
+        base_mask = _masked_result_drop_slice(key, data)
         slice_shape = tuple(
             np.arange(*k.indices(size)).size
             for k, size in zip(key, shape)
