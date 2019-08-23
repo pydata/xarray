@@ -280,9 +280,11 @@ class TestSparseVariable:
         sparse.utils.assert_eq(abs(self.var).data, abs(self.data))
         sparse.utils.assert_eq(self.var.round().data, self.data.round())
 
+    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_univariate_ufunc(self):
         sparse.utils.assert_eq(np.sin(self.data), xu.sin(self.var).data)
 
+    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_bivariate_ufunc(self):
         sparse.utils.assert_eq(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
         sparse.utils.assert_eq(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
@@ -698,6 +700,7 @@ class TestSparseDataArrayAndDataset:
         roundtripped = stacked.unstack()
         assert arr.identical(roundtripped)
 
+    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_ufuncs(self):
         x = self.sp_xr
         assert_equal(np.sin(x), xu.sin(x))
