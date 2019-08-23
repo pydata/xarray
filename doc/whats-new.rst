@@ -80,6 +80,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Improve "missing dimensions" error message for :py:func:`~xarray.apply_ufunc` 
+  (:issue:`2078`). 
+  By `Rick Russotto <https://github.com/rdrussotto>`_.
 - :py:meth:`~xarray.DataArray.assign_coords` now supports dictionary arguments
   (:issue:`3231`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
@@ -106,7 +109,7 @@ Bug fixes
 - Fix error that arises when using open_mfdataset on a series of netcdf files
   having differing values for a variable attribute of type list. (:issue:`3034`)
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
-                               
+
 .. _whats-new.0.12.3:
 
 Documentation

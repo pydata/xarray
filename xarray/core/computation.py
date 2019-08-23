@@ -502,9 +502,10 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
     missing_core_dims = [d for d in core_dims if d not in set_old_dims]
     if missing_core_dims:
         raise ValueError(
-            "operand to apply_ufunc has required core dimensions %r, but "
-            "some of these are missing on the input variable:  %r"
-            % (list(core_dims), missing_core_dims)
+            "operand to apply_ufunc has required core dimensions {}, but "
+            "some of these dimensions are absent on an input variable: {}".format(
+                list(core_dims), missing_core_dims
+            )
         )
 
     set_new_dims = set(new_dims)
