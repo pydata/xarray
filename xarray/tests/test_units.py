@@ -17,10 +17,19 @@ unit_registry = pint.UnitRegistry()
 
 
 def assert_equal_with_units(a, b):
+    from pint.quantity import BaseQuantity
+
     a_ = a if not isinstance(a, (xr.Dataset, xr.DataArray, xr.Variable)) else a.data
     b_ = b if not isinstance(b, (xr.Dataset, xr.DataArray, xr.Variable)) else b.data
 
-    assert np.allclose(a_, b_)
+    # workaround until pint implements allclose in __array_function__
+    if isinstance(a_, BaseQuantity) or isinstance(b_, BaseQuantity):
+        assert (hasattr(a_, "magnitude") and hasattr(b_, "magnitude")) and np.allclose(
+            a_.magnitude, b_.magnitude
+        )
+    else:
+        assert np.allclose(a_, b_)
+
     if hasattr(a_, "units") or hasattr(b_, "units"):
         assert (hasattr(a_, "units") and hasattr(b_, "units")) and a_.units == b_.units
 
