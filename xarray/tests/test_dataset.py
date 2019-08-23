@@ -4920,7 +4920,7 @@ class TestDataset:
                 "temperature_10": (["t"], [0], temp10),
                 "precipitation": (["t"], [0], precip),
             },
-            coords={"time": (["t"], [0], dict(axis="T", standard_name="time_in_seconds"))},
+            coords={"time": (["t"], [0], dict(axis="T", long_name="time_in_seconds"))},
         )
 
         # Test return empty Dataset.
@@ -4935,8 +4935,8 @@ class TestDataset:
         assert_equal(new_ds["precipitation"], ds["precipitation"])
 
         # Test filter coordinates
-        new_ds = ds.filter_by_attrs(standard_name="time_in_seconds")
-        assert new_ds["time"].standard_name == "time_in_seconds"
+        new_ds = ds.filter_by_attrs(long_name="time_in_seconds")
+        assert new_ds["time"].long_name == "time_in_seconds"
         assert not bool(new_ds.data_vars)
  
         # Test return more than one DataArray.
