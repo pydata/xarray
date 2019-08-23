@@ -1,3 +1,4 @@
+import warnings
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
@@ -114,6 +115,8 @@ class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable.
     """
 
+    __slots__ = ()
+
     def __bool__(self: Any) -> bool:
         return bool(self.values)
 
@@ -184,7 +187,24 @@ class AttrAccessMixin:
     """Mixin class that allows getting keys with attribute access
     """
 
-    __slots__ = ("_initialized",)
+    __slots__ = ()
+
+    def __init_subclass__(cls):
+        """Verify that all subclasses explicitly define ``__slots__``. If they don't,
+        raise error in the core xarray module and a DeprecationWarning in third-party
+        extensions.
+        This check is only triggered in Python 3.6+.
+        """
+        if not hasattr(object.__new__(cls), "__dict__"):
+            return
+        if cls.__module__.startswith("xarray."):
+            raise AttributeError("%s must explicitly define __slots__" % cls.__name__)
+        else:
+            warnings.warn(
+                "xarray subclass %s should explicitly define __slots__" % cls.__name__,
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     @property
     def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
@@ -199,9 +219,7 @@ class AttrAccessMixin:
         return []
 
     def __getattr__(self, name: str) -> Any:
-        if name == "_initialized":
-            return False
-        if name != "__setstate__":
+        if name not in {"__dict__", "__setstate__"}:
             # this avoids an infinite loop when pickle looks for the
             # __setstate__ attribute before the xarray object is initialized
             for source in self._attr_sources:
@@ -212,19 +230,36 @@ class AttrAccessMixin:
         )
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if self._initialized:
-            try:
-                # Allow setting instance variables if they already exist
-                # (e.g., _attrs). We use __getattribute__ instead of hasattr
-                # to avoid key lookups with attribute-style access.
-                self.__getattribute__(name)
-            except AttributeError:
-                raise AttributeError(
-                    "cannot set attribute %r on a %r object. Use __setitem__ "
-                    "style assignment (e.g., `ds['name'] = ...`) instead to "
-                    "assign variables." % (name, type(self).__name__)
+        """Objects with ``__slots__`` raise AttributeError if you try setting an
+        undeclared attribute. This is desirable, but the error message could use some
+        improvement.
+        """
+        if hasattr(self, "__dict__"):
+            # Deprecated third party subclass (see __init_subclass__ above)
+            object.__setattr__(self, name, value)
+            if name in self.__dict__:
+                # Custom, non-slotted attr, or improperly assigned variable?
+                warnings.warn(
+                    "Setting attribute %r on a %r object. Explicitly define __slots__ "
+                    "to suppress this warning for legitimate custom attributes and "
+                    "raise an error when attempting variables assignments."
+                    % (name, type(self).__name__)
                 )
-        object.__setattr__(self, name, value)
+            return
+
+        # Subclass defines __slots__
+        try:
+            object.__setattr__(self, name, value)
+        except AttributeError as e:
+            # Don't accidentally shadow custom AttributeErrors, e.g.
+            # DataArray.dims.setter
+            if str(e) != "%r object has no attribute %r" % (type(self).__name__, name):
+                raise
+            raise AttributeError(
+                "cannot set attribute %r on a %r object. Use __setitem__ style"
+                "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
+                % (name, type(self).__name__)
+            ) from e
 
     def __dir__(self) -> List[str]:
         """Provide method name lookup and completion. Only provide 'public'
@@ -288,6 +323,8 @@ def get_squeeze_dims(
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
+
+    __slots__ = ()
 
     _rolling_exp_cls = RollingExp
 

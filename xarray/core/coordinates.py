@@ -35,7 +35,7 @@ _THIS_ARRAY = ReprObject("<this-array>")
 
 
 class AbstractCoordinates(Mapping[Hashable, "DataArray"]):
-    __slots__ = ("_data",)
+    __slots__ = ()
 
     def __getitem__(self, key: Hashable) -> "DataArray":
         raise NotImplementedError()
@@ -187,6 +187,8 @@ class DatasetCoordinates(AbstractCoordinates):
     objects.
     """
 
+    __slots__ = ("_data",)
+
     def __init__(self, dataset: "Dataset"):
         self._data = dataset
 
@@ -256,6 +258,8 @@ class DataArrayCoordinates(AbstractCoordinates):
     dimensions and the values given by corresponding DataArray objects.
     """
 
+    __slots__ = ("_data",)
+
     def __init__(self, dataarray: "DataArray"):
         self._data = dataarray
 
@@ -309,6 +313,8 @@ class LevelCoordinatesSource(Mapping[Hashable, Any]):
     Used for attribute style lookup with AttrAccessMixin. Not returned directly
     by any public methods.
     """
+
+    __slots__ = ("_data",)
 
     def __init__(self, data_object: "Union[DataArray, Dataset]"):
         self._data = data_object

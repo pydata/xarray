@@ -513,7 +513,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs = OrderedDict(attrs)
 
         self._encoding = None  # type: Optional[Dict]
-        self._initialized = True
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
         """Set the initial value of Dataset variables and dimensions
@@ -852,7 +851,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._attrs = attrs
         obj._file_obj = file_obj
         obj._encoding = encoding
-        obj._initialized = True
         return obj
 
     __default = object()

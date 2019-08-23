@@ -1933,6 +1933,8 @@ class IndexVariable(Variable):
     unless another name is given.
     """
 
+    __slots__ = ()
+
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:

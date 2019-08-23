@@ -343,8 +343,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         self._file_obj = None
 
-        self._initialized = True  # type: bool
-
     def _replace(
         self,
         variable: Variable = None,

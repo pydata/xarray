@@ -514,6 +514,8 @@ class NDArrayMixin(NdimSizeLenMixin):
     `dtype`, `shape` and `__getitem__`.
     """
 
+    __slots__ = ()
+
     @property
     def dtype(self: Any) -> np.dtype:
         return self.array.dtype

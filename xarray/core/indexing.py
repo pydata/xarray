@@ -327,6 +327,8 @@ class ExplicitIndexer:
     sub-classes BasicIndexer, OuterIndexer or VectorizedIndexer.
     """
 
+    __slots__ = ("_key",)
+
     def __init__(self, key):
         if type(self) is ExplicitIndexer:  # noqa
             raise TypeError("cannot instantiate base ExplicitIndexer objects")
@@ -359,6 +361,8 @@ class BasicIndexer(ExplicitIndexer):
     indexed with an integer are dropped from the result.
     """
 
+    __slots__ = ()
+
     def __init__(self, key):
         if not isinstance(key, tuple):
             raise TypeError("key must be a tuple: {!r}".format(key))
@@ -388,6 +392,8 @@ class OuterIndexer(ExplicitIndexer):
     axes indexed with an integer are dropped from the result. This type of
     indexing works like MATLAB/Fortran.
     """
+
+    __slots__ = ()
 
     def __init__(self, key):
         if not isinstance(key, tuple):
@@ -432,6 +438,8 @@ class VectorizedIndexer(ExplicitIndexer):
     https://github.com/numpy/numpy/pull/6256
     """
 
+    __slots__ = ()
+
     def __init__(self, key):
         if not isinstance(key, tuple):
             raise TypeError("key must be a tuple: {!r}".format(key))
@@ -468,10 +476,15 @@ class VectorizedIndexer(ExplicitIndexer):
 
 
 class ExplicitlyIndexed:
-    """Mixin to mark support for Indexer subclasses in indexing."""
+    """Mixin to mark support for Indexer subclasses in indexing.
+    """
+
+    __slots__ = ()
 
 
 class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
+    __slots__ = ()
+
     def __array__(self, dtype=None):
         key = BasicIndexer((slice(None),) * self.ndim)
         return np.asarray(self[key], dtype=dtype)
@@ -479,6 +492,8 @@ class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
 
 class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
     """Wrap an array, converting tuples into the indicated explicit indexer."""
+
+    __slots__ = ("array", "indexer_cls")
 
     def __init__(self, array, indexer_cls=BasicIndexer):
         self.array = as_indexable(array)
@@ -501,6 +516,8 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy.
     """
+
+    __slots__ = ("array", "key")
 
     def __init__(self, array, key=None):
         """
@@ -577,6 +594,8 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make vectorized indexing lazy.
     """
 
+    __slots__ = ("array", "key")
+
     def __init__(self, array, key):
         """
         Parameters
@@ -631,6 +650,8 @@ def _wrap_numpy_scalars(array):
 
 
 class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
+    __slots__ = ("array", "_copied")
+
     def __init__(self, array):
         self.array = as_indexable(array)
         self._copied = False
@@ -655,6 +676,8 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
 
 
 class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
+    __slots__ = ("array",)
+
     def __init__(self, array):
         self.array = _wrap_numpy_scalars(as_indexable(array))
 
@@ -792,6 +815,9 @@ class IndexingSupport:  # could inherit from enum.Enum on Python 3
     OUTER_1VECTOR = "OUTER_1VECTOR"
     # for backends that support full vectorized indexer.
     VECTORIZED = "VECTORIZED"
+
+    def __new__(cls, *args, **kwargs):
+        raise TypeError("Static class")
 
 
 def explicit_indexing_adapter(key, shape, indexing_support, raw_indexing_method):
@@ -1189,6 +1215,8 @@ def posify_mask_indexer(indexer):
 class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a NumPy array to use explicit indexing."""
 
+    __slots__ = ("array",)
+
     def __init__(self, array):
         # In NumpyIndexingAdapter we only allow to store bare np.ndarray
         if not isinstance(array, np.ndarray):
@@ -1239,6 +1267,8 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
 
 class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
+    __slots__ = ("array",)
+
     def __init__(self, array):
         if not hasattr(array, "__array_function__"):
             raise TypeError(
@@ -1250,6 +1280,8 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a dask array to support explicit indexing."""
+
+    __slots__ = ("array",)
 
     def __init__(self, array):
         """ This adapter is created in Variable.__getitem__ in
@@ -1291,6 +1323,8 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing.
     """
+
+    __slots__ = ("array", "_dtype")
 
     def __init__(self, array: Any, dtype: DTypeLike = None):
         self.array = utils.safe_cast_to_index(array)
