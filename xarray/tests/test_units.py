@@ -5,9 +5,12 @@ import xarray as xr
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 pint = pytest.importorskip("pint")
-pytestmark = pytest.mark.skipif(
-    not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
+    ),
+    pytest.mark.filterwarnings("error::pint.errors.UnitStrippedWarning"),
+]
 
 
 unit_registry = pint.UnitRegistry()
