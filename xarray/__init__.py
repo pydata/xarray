@@ -34,6 +34,8 @@ from .conventions import decode_cf, SerializationWarning
 from .coding.cftime_offsets import cftime_range
 from .coding.cftimeindex import CFTimeIndex
 
+from .core.parallel import map_blocks
+
 from .util.print_versions import show_versions
 
 from . import tutorial
