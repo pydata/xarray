@@ -225,7 +225,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary for holding arbitrary metadata.
     """
 
-    __slots__ = ("_coords", "_file_obj", "_name", "_indexes", "_variable")
+    __slots__ = ("_accessors", "_coords", "_file_obj", "_name", "_indexes", "_variable")
 
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
@@ -336,6 +336,7 @@ class DataArray(AbstractArray, DataWithCoords):
         assert isinstance(coords, OrderedDict)
         self._coords = coords  # type: OrderedDict[Any, Variable]
         self._name = name  # type: Optional[Hashable]
+        self._accessors = None  # type: Optional[Dict[str, Any]]
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
