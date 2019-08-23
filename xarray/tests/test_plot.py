@@ -8,7 +8,6 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray, Dataset
-from xarray.coding.times import _import_cftime
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (

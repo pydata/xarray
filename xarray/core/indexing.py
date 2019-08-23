@@ -3,7 +3,7 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Tuple, Sequence, Union
+from typing import Any, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd

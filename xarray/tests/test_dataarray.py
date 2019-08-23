@@ -24,7 +24,6 @@ from xarray.tests import (
     assert_identical,
     raises_regex,
     requires_bottleneck,
-    requires_cftime,
     requires_dask,
     requires_iris,
     requires_np113,

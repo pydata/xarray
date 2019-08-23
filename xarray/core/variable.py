@@ -3,7 +3,7 @@ import itertools
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Hashable, Mapping, MutableMapping, Union
+from typing import Any, Hashable, Mapping, Union
 
 import numpy as np
 import pandas as pd
@@ -18,9 +18,9 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
+from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
-from .npcompat import IS_NEP18_ACTIVE
 from .utils import (
     OrderedSet,
     decode_numpy_dict_values,

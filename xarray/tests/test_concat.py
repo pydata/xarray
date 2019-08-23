@@ -6,6 +6,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes
+
 from . import (
     InaccessibleArray,
     assert_array_equal,

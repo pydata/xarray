@@ -19,13 +19,13 @@ from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal
 
 from . import (
+    arm_xfail,
     assert_array_equal,
     has_cftime,
     has_cftime_or_netCDF4,
     has_dask,
     requires_cftime,
     requires_cftime_or_netCDF4,
-    arm_xfail,
 )
 
 try:

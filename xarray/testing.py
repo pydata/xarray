@@ -5,12 +5,11 @@ from typing import Hashable, Union
 import numpy as np
 import pandas as pd
 
-from xarray.core import duck_array_ops
-from xarray.core import formatting
+from xarray.core import duck_array_ops, formatting
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.variable import IndexVariable, Variable
 from xarray.core.indexes import default_indexes
+from xarray.core.variable import IndexVariable, Variable
 
 
 def _decode_string_data(data):

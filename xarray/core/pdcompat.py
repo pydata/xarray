@@ -38,9 +38,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from distutils.version import LooseVersion
+
 import numpy as np
 import pandas as pd
-
 
 # allow ourselves to type checks for Panel even after it's removed
 if LooseVersion(pd.__version__) < "0.25.0":

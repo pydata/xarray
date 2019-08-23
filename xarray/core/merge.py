@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Hashable,
@@ -11,7 +12,6 @@ from typing import (
     Set,
     Tuple,
     Union,
-    TYPE_CHECKING,
 )
 
 import pandas as pd

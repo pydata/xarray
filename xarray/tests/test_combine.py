@@ -1,23 +1,29 @@
 from collections import OrderedDict
-from itertools import product
 from datetime import datetime
+from itertools import product
 
 import numpy as np
 import pytest
 
-from xarray import DataArray, Dataset, concat, combine_by_coords, combine_nested
-from xarray import auto_combine
+from xarray import (
+    DataArray,
+    Dataset,
+    auto_combine,
+    combine_by_coords,
+    combine_nested,
+    concat,
+)
 from xarray.core import dtypes
 from xarray.core.combine import (
-    _new_tile_id,
     _check_shape_tile_ids,
     _combine_all_along_first_dim,
     _combine_nd,
-    _infer_concat_order_from_positions,
     _infer_concat_order_from_coords,
+    _infer_concat_order_from_positions,
+    _new_tile_id,
 )
 
-from . import assert_identical, assert_equal, raises_regex
+from . import assert_equal, assert_identical, raises_regex
 from .test_dataset import create_test_data
 
 

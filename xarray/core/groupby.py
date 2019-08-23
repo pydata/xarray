@@ -7,16 +7,16 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops, utils
 from .arithmetic import SupportsArithmetic
-from .concat import concat
 from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
+from .concat import concat
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
+    either_dict_or_kwargs,
     hashable,
     maybe_wrap_array,
     peek_at,
     safe_cast_to_index,
-    either_dict_or_kwargs,
 )
 from .variable import IndexVariable, Variable, as_variable
 
