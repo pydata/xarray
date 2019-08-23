@@ -4938,7 +4938,7 @@ class TestDataset:
         new_ds = ds.filter_by_attrs(long_name="time_in_seconds")
         assert new_ds["time"].long_name == "time_in_seconds"
         assert not bool(new_ds.data_vars)
- 
+
         # Test return more than one DataArray.
         new_ds = ds.filter_by_attrs(standard_name="air_potential_temperature")
         assert len(new_ds.data_vars) == 2
