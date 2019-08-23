@@ -33,11 +33,6 @@ try:
 except ImportError:
     pass
 
-try:
-    import sparse
-except ImportError:
-    pass
-
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
