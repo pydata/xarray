@@ -7,6 +7,7 @@ import operator
 from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 from typing import (
+    TYPE_CHECKING,
     AbstractSet,
     Any,
     Callable,
@@ -17,7 +18,6 @@ from typing import (
     Sequence,
     Tuple,
     Union,
-    TYPE_CHECKING,
 )
 
 import numpy as np
@@ -649,7 +649,6 @@ def apply_variable_ufunc(
 def _apply_blockwise(
     func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None
 ):
-    import dask.array as da
     from .dask_array_compat import blockwise
 
     if signature.num_outputs > 1:

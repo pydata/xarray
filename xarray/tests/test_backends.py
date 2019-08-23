@@ -38,6 +38,7 @@ from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
 
 from . import (
+    arm_xfail,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -61,14 +62,13 @@ from . import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
-    arm_xfail,
 )
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _STANDARD_CALENDARS,
 )
-from .test_dataset import create_test_data, create_append_test_data
+from .test_dataset import create_append_test_data, create_test_data
 
 try:
     import netCDF4 as nc4

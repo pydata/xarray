@@ -5,7 +5,7 @@ import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, close_on_error
+from ..core.utils import FrozenOrderedDict
 from .common import WritableCFDataStore
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock

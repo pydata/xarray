@@ -31,8 +31,8 @@ from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
 
 from . import (
-    LooseVersion,
     InaccessibleArray,
+    LooseVersion,
     UnexpectedDataAccess,
     assert_allclose,
     assert_array_equal,
