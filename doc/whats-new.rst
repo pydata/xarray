@@ -106,6 +106,8 @@ Bug fixes
 - Fix error that arises when using open_mfdataset on a series of netcdf files
   having differing values for a variable attribute of type list. (:issue:`3034`)
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+- :py:meth:`~xarray.DataArray.argmax` and :py:meth:`~xarray.DataArray.argmin` did cause
+  dask to compute (:issue:`3237`). By `Ulrich Herter <https://github.com/ulijh>`_.
                                
 .. _whats-new.0.12.3:
 
