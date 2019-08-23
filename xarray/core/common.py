@@ -347,7 +347,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 results[k] = v
         return results
 
-    def assign_coords(self, **kwargs):
+    def assign_coords(self, coords=None, **coords_kwargs):
         """Assign new coordinates to this object.
 
         Returns a new object with all the original data in addition to the new
@@ -355,11 +355,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        kwargs : keyword, value pairs
-            keywords are the variables names. If the values are callable, they
-            are computed on this object and assigned to new coordinate
-            variables. If the values are not callable, (e.g. a DataArray,
-            scalar, or array), they are simply assigned.
+        coords : dict, optional
+            A dict with keys which are variables names. If the values are
+            callable, they are computed on this object and assigned to new
+            coordinate variables. If the values are not callable,
+            (e.g. a ``DataArray``, scalar, or array), they are simply assigned.
+
+        **coords_kwargs : keyword, value pairs, optional
+            The keyword arguments form of ``coords``.
+            One of ``coords`` or ``coords_kwargs`` must be provided.
 
         Returns
         -------
@@ -369,7 +373,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Examples
         --------
-
         Convert longitude coordinates from 0-359 to -180-179:
 
         >>> da = xr.DataArray(np.random.rand(4),
@@ -386,10 +389,18 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * lon      (lon) int64 -2 -1 0 1
 
+        The function also accepts dictionary arguments:
+
+        >>> da.assign_coords({'lon': (((da.lon + 180) % 360) - 180)})
+        <xarray.DataArray (lon: 4)>
+        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        Coordinates:
+          * lon      (lon) int64 -2 -1 0 1
+
         Notes
         -----
-        Since ``kwargs`` is a dictionary, the order of your arguments may not
-        be preserved, and so the order of the new variables is not well
+        Since ``coords_kwargs`` is a dictionary, the order of your arguments may
+        not be preserved, and so the order of the new variables is not well
         defined. Assigning multiple variables within the same ``assign_coords``
         is possible, but you cannot reference other variables created within
         the same ``assign_coords`` call.
@@ -399,8 +410,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Dataset.assign
         Dataset.swap_dims
         """
+        coords_kwargs = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
-        results = self._calc_assign_results(kwargs)
+        results = self._calc_assign_results(coords_kwargs)
         data.coords.update(results)
         return data
 

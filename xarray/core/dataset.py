@@ -1457,6 +1457,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         encoding: Mapping = None,
         unlimited_dims: Iterable[Hashable] = None,
         compute: bool = True,
+        invalid_netcdf: bool = False,
     ) -> Union[bytes, "Delayed", None]:
         """Write dataset contents to a netCDF file.
 
@@ -1520,6 +1521,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compute: boolean
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
+        invalid_netcdf: boolean
+            Only valid along with engine='h5netcdf'. If True, allow writing
+            hdf5 files which are valid netcdf as described in
+            https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
             encoding = {}
@@ -1535,6 +1540,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             encoding=encoding,
             unlimited_dims=unlimited_dims,
             compute=compute,
+            invalid_netcdf=invalid_netcdf,
         )
 
     def to_zarr(
