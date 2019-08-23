@@ -55,8 +55,8 @@ from .common import (
     _contains_datetime_like_objects,
 )
 from .coordinates import (
-    DatasetCoordinates,
     DataArrayCoordinates,
+    DatasetCoordinates,
     LevelCoordinatesSource,
     assert_coordinate_consistent,
     remap_label_indexers,

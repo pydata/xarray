@@ -10,7 +10,7 @@ import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
-from . import assert_equal, assert_identical, LooseVersion
+from . import assert_equal, assert_identical
 
 param = pytest.param
 xfail = pytest.mark.xfail
@@ -737,7 +737,9 @@ class TestSparseDataArrayAndDataset:
 
     def test_sparse_dask_dataset_repr(self):
         pytest.importorskip("dask", minversion="2.0")
-        ds = xr.Dataset(data_vars={"a": ("x", COO.from_numpy(np.ones(4)))}).chunk()
+        ds = xr.Dataset(
+            data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
+        ).chunk()
         expected = dedent(
             """\
             <xarray.Dataset>

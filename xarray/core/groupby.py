@@ -12,11 +12,11 @@ from .concat import concat
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
+    either_dict_or_kwargs,
     hashable,
     maybe_wrap_array,
     peek_at,
     safe_cast_to_index,
-    either_dict_or_kwargs,
 )
 from .variable import IndexVariable, Variable, as_variable
 
