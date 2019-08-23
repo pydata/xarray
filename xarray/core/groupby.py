@@ -11,7 +11,13 @@ from .concat import concat
 from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .options import _get_keep_attrs
 from .pycompat import integer_types
-from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
+from .utils import (
+    hashable,
+    maybe_wrap_array,
+    peek_at,
+    safe_cast_to_index,
+    either_dict_or_kwargs,
+)
 from .variable import IndexVariable, Variable, as_variable
 
 
@@ -45,6 +51,7 @@ def unique_value_groups(ar, sort=True):
 def _dummy_copy(xarray_obj):
     from .dataset import Dataset
     from .dataarray import DataArray
+
     if isinstance(xarray_obj, Dataset):
         res = Dataset(
             {
@@ -56,7 +63,7 @@ def _dummy_copy(xarray_obj):
                 for k, v in xarray_obj.coords.items()
                 if k not in xarray_obj.dims
             },
-            xarray_obj.attrs
+            xarray_obj.attrs,
         )
     elif isinstance(xarray_obj, DataArray):
         res = DataArray(
@@ -68,7 +75,7 @@ def _dummy_copy(xarray_obj):
             },
             dims=[],
             name=xarray_obj.name,
-            attrs=xarray_obj.attrs
+            attrs=xarray_obj.attrs,
         )
     else:  # pragma: no cover
         raise AssertionError
@@ -86,10 +93,13 @@ def _consolidate_slices(slices):
     last_slice = slice(None)
     for slice_ in slices:
         if not isinstance(slice_, slice):
-            raise ValueError('list element is not a slice: %r' % slice_)
-        if (result and last_slice.stop == slice_.start and
-                _is_one_or_none(last_slice.step) and
-                _is_one_or_none(slice_.step)):
+            raise ValueError("list element is not a slice: %r" % slice_)
+        if (
+            result
+            and last_slice.stop == slice_.start
+            and _is_one_or_none(last_slice.step)
+            and _is_one_or_none(slice_.step)
+        ):
             last_slice = slice(last_slice.start, slice_.stop, slice_.step)
             result[-1] = last_slice
         else:
@@ -142,7 +152,7 @@ def _ensure_1d(group, obj):
     if group.ndim != 1:
         # try to stack the dims of the group into a single dim
         orig_dims = group.dims
-        stacked_dim = 'stacked_' + '_'.join(orig_dims)
+        stacked_dim = "stacked_" + "_".join(orig_dims)
         # these dimensions get created by the stack operation
         inserted_dims = [dim for dim in group.dims if dim not in group.coords]
         # the copy is necessary here, otherwise read only array raises error
@@ -206,8 +216,16 @@ class GroupBy(SupportsArithmetic):
     DataArray.groupby
     """
 
-    def __init__(self, obj, group, squeeze=False, grouper=None, bins=None,
-                 restore_coord_dims=None, cut_kwargs={}):
+    def __init__(
+        self,
+        obj,
+        group,
+        squeeze=False,
+        grouper=None,
+        bins=None,
+        restore_coord_dims=None,
+        cut_kwargs={},
+    ):
         """Create a GroupBy object
 
         Parameters
@@ -239,8 +257,10 @@ class GroupBy(SupportsArithmetic):
 
         if not isinstance(group, (DataArray, IndexVariable)):
             if not hashable(group):
-                raise TypeError('`group` must be an xarray.DataArray or the '
-                                'name of an xarray variable or dimension')
+                raise TypeError(
+                    "`group` must be an xarray.DataArray or the "
+                    "name of an xarray variable or dimension"
+                )
             group = obj[group]
             if len(group) == 0:
                 raise ValueError("{} must not be empty".format(group.name))
@@ -249,23 +269,25 @@ class GroupBy(SupportsArithmetic):
                 # DummyGroups should not appear on groupby results
                 group = _DummyGroup(obj, group.name, group.coords)
 
-        if getattr(group, 'name', None) is None:
-            raise ValueError('`group` must have a name')
+        if getattr(group, "name", None) is None:
+            raise ValueError("`group` must have a name")
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         group_dim, = group.dims
 
         expected_size = obj.sizes[group_dim]
         if group.size != expected_size:
-            raise ValueError('the group variable\'s length does not '
-                             'match the length of this variable along its '
-                             'dimension')
+            raise ValueError(
+                "the group variable's length does not "
+                "match the length of this variable along its "
+                "dimension"
+            )
 
         full_index = None
 
         if bins is not None:
             binned = pd.cut(group.values, bins, **cut_kwargs)
-            new_dim_name = group.name + '_bins'
+            new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
             full_index = binned.categories
 
@@ -273,13 +295,12 @@ class GroupBy(SupportsArithmetic):
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
-                raise ValueError('index must be monotonic for resampling')
-            full_index, first_items = self._get_index_and_items(
-                index, grouper)
+                raise ValueError("index must be monotonic for resampling")
+            full_index, first_items = self._get_index_and_items(index, grouper)
             sbins = first_items.values.astype(np.int64)
-            group_indices = ([slice(i, j)
-                              for i, j in zip(sbins[:-1], sbins[1:])] +
-                             [slice(sbins[-1], None)])
+            group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [
+                slice(sbins[-1], None)
+            ]
             unique_coord = IndexVariable(group.name, first_items.index)
         elif group.dims == (group.name,) and _unique_and_monotonic(group):
             # no need to factorize
@@ -292,17 +313,23 @@ class GroupBy(SupportsArithmetic):
         else:
             # look through group to find the unique values
             unique_values, group_indices = unique_value_groups(
-                safe_cast_to_index(group), sort=(bins is None))
+                safe_cast_to_index(group), sort=(bins is None)
+            )
             unique_coord = IndexVariable(group.name, unique_values)
 
-        if isinstance(obj, DataArray) \
-                and restore_coord_dims is None \
-                and any(obj[c].ndim > 1 for c in obj.coords):
-            warnings.warn('This DataArray contains multi-dimensional '
-                          'coordinates. In the future, the dimension order '
-                          'of these coordinates will be restored as well '
-                          'unless you specify restore_coord_dims=False.',
-                          FutureWarning, stacklevel=2)
+        if (
+            isinstance(obj, DataArray)
+            and restore_coord_dims is None
+            and any(obj[c].ndim > 1 for c in obj.coords)
+        ):
+            warnings.warn(
+                "This DataArray contains multi-dimensional "
+                "coordinates. In the future, the dimension order "
+                "of these coordinates will be restored as well "
+                "unless you specify restore_coord_dims=False.",
+                FutureWarning,
+                stacklevel=2,
+            )
             restore_coord_dims = False
 
         # specification for the groupby operation
@@ -323,8 +350,7 @@ class GroupBy(SupportsArithmetic):
     def groups(self):
         # provided to mimic pandas.groupby
         if self._groups is None:
-            self._groups = dict(zip(self._unique_coord.values,
-                                    self._group_indices))
+            self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
 
     def __len__(self):
@@ -335,6 +361,7 @@ class GroupBy(SupportsArithmetic):
 
     def _get_index_and_items(self, index, grouper):
         from .resample_cftime import CFTimeGrouper
+
         s = pd.Series(np.arange(index.size), index)
         if isinstance(grouper, CFTimeGrouper):
             first_items = grouper.first_items(index)
@@ -371,6 +398,7 @@ class GroupBy(SupportsArithmetic):
             applied = self._yield_binary_applied(g, other)
             combined = self._combine(applied)
             return combined
+
         return func
 
     def _yield_binary_applied(self, func, other):
@@ -380,15 +408,18 @@ class GroupBy(SupportsArithmetic):
             try:
                 other_sel = other.sel(**{self._group.name: group_value})
             except AttributeError:
-                raise TypeError('GroupBy objects only support binary ops '
-                                'when the other argument is a Dataset or '
-                                'DataArray')
+                raise TypeError(
+                    "GroupBy objects only support binary ops "
+                    "when the other argument is a Dataset or "
+                    "DataArray"
+                )
             except (KeyError, ValueError):
                 if self._group.name not in other.dims:
-                    raise ValueError('incompatible dimensions for a grouped '
-                                     'binary operation: the group variable %r '
-                                     'is not a dimension on the other argument'
-                                     % self._group.name)
+                    raise ValueError(
+                        "incompatible dimensions for a grouped "
+                        "binary operation: the group variable %r "
+                        "is not a dimension on the other argument" % self._group.name
+                    )
                 if dummy is None:
                     dummy = _dummy_copy(other)
                 other_sel = dummy
@@ -400,8 +431,7 @@ class GroupBy(SupportsArithmetic):
         """Our index contained empty groups (e.g., from a resampling). If we
         reduced on that dimension, we want to restore the full index.
         """
-        if (self._full_index is not None and
-                self._group.name in combined.dims):
+        if self._full_index is not None and self._group.name in combined.dims:
             indexers = {self._group.name: self._full_index}
             combined = combined.reindex(**indexers)
         return combined
@@ -469,8 +499,9 @@ class GroupBy(SupportsArithmetic):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-        return self.reduce(op, self._group_dim, skipna=skipna,
-                           keep_attrs=keep_attrs, allow_lazy=True)
+        return self.reduce(
+            op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs, allow_lazy=True
+        )
 
     def first(self, skipna=None, keep_attrs=None):
         """Return the first element of each group along the group dimension
@@ -482,7 +513,7 @@ class GroupBy(SupportsArithmetic):
         """
         return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
 
-    def assign_coords(self, **kwargs):
+    def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.
 
         See also
@@ -490,7 +521,8 @@ class GroupBy(SupportsArithmetic):
         Dataset.assign_coords
         Dataset.swap_dims
         """
-        return self.apply(lambda ds: ds.assign_coords(**kwargs))
+        coords_kwargs = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
+        return self.apply(lambda ds: ds.assign_coords(**coords_kwargs))
 
 
 def _maybe_reorder(xarray_obj, dim, positions):
@@ -535,8 +567,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             return axis
 
         new_order = sorted(stacked.dims, key=lookup_order)
-        return stacked.transpose(
-            *new_order, transpose_coords=self._restore_coord_dims)
+        return stacked.transpose(*new_order, transpose_coords=self._restore_coord_dims)
 
     def apply(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
@@ -582,8 +613,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             grouped = self._iter_grouped_shortcut()
         else:
             grouped = self._iter_grouped()
-        applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs))
-                   for arr in grouped)
+        applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
 
     def _combine(self, applied, restore_coord_dims=False, shortcut=False):
@@ -608,7 +638,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         combined = self._maybe_unstack(combined)
         return combined
 
-    def quantile(self, q, dim=None, interpolation='linear', keep_attrs=None):
+    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
 
@@ -656,18 +686,26 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
                     "grouped dimension in a future version of xarray. To "
                     "silence this warning, pass dim=xarray.ALL_DIMS "
                     "explicitly.",
-                    FutureWarning, stacklevel=2)
+                    FutureWarning,
+                    stacklevel=2,
+                )
 
-        out = self.apply(self._obj.__class__.quantile, shortcut=False,
-                         q=q, dim=dim, interpolation=interpolation,
-                         keep_attrs=keep_attrs)
+        out = self.apply(
+            self._obj.__class__.quantile,
+            shortcut=False,
+            q=q,
+            dim=dim,
+            interpolation=interpolation,
+            keep_attrs=keep_attrs,
+        )
 
         if np.asarray(q, dtype=np.float64).ndim == 0:
-            out = out.drop('quantile')
+            out = out.drop("quantile")
         return out
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=None,
-               shortcut=True, **kwargs):
+    def reduce(
+        self, func, dim=None, axis=None, keep_attrs=None, shortcut=True, **kwargs
+    ):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -706,13 +744,16 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
                     "grouped dimension in a future version of xarray. To "
                     "silence this warning, pass dim=xarray.ALL_DIMS "
                     "explicitly.",
-                    FutureWarning, stacklevel=2)
+                    FutureWarning,
+                    stacklevel=2,
+                )
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
+
         return self.apply(reduce_array, shortcut=shortcut)
 
     # TODO remove the following class method and DEFAULT_DIMS after the
@@ -720,19 +761,38 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-            def wrapped_func(self, dim=DEFAULT_DIMS, axis=None, skipna=None,
-                             keep_attrs=None, **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
-                                   skipna=skipna, allow_lazy=True, **kwargs)
+
+            def wrapped_func(
+                self,
+                dim=DEFAULT_DIMS,
+                axis=None,
+                skipna=None,
+                keep_attrs=None,
+                **kwargs
+            ):
+                return self.reduce(
+                    func,
+                    dim,
+                    axis,
+                    keep_attrs=keep_attrs,
+                    skipna=skipna,
+                    allow_lazy=True,
+                    **kwargs
+                )
+
         else:
-            def wrapped_func(self, dim=DEFAULT_DIMS, axis=None,  # type: ignore
-                             keep_attrs=None, **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
-                                   allow_lazy=True, **kwargs)
+
+            def wrapped_func(  # type: ignore
+                self, dim=DEFAULT_DIMS, axis=None, keep_attrs=None, **kwargs
+            ):
+                return self.reduce(
+                    func, dim, axis, keep_attrs=keep_attrs, allow_lazy=True, **kwargs
+                )
+
         return wrapped_func
 
 
-DEFAULT_DIMS = utils.ReprObject('<default-dims>')
+DEFAULT_DIMS = utils.ReprObject("<default-dims>")
 
 ops.inject_reduce_methods(DataArrayGroupBy)
 ops.inject_binary_ops(DataArrayGroupBy)
@@ -823,7 +883,9 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
                 "grouped dimension in a future version of xarray. To "
                 "silence this warning, pass dim=xarray.ALL_DIMS "
                 "explicitly.",
-                FutureWarning, stacklevel=2)
+                FutureWarning,
+                stacklevel=2,
+            )
         elif dim is None:
             dim = self._group_dim
 
@@ -832,6 +894,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
+
         return self.apply(reduce_dataset)
 
     # TODO remove the following class method and DEFAULT_DIMS after the
@@ -839,17 +902,24 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-            def wrapped_func(self, dim=DEFAULT_DIMS,
-                             skipna=None, **kwargs):
-                return self.reduce(func, dim,
-                                   skipna=skipna, numeric_only=numeric_only,
-                                   allow_lazy=True, **kwargs)
+
+            def wrapped_func(self, dim=DEFAULT_DIMS, skipna=None, **kwargs):
+                return self.reduce(
+                    func,
+                    dim,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    allow_lazy=True,
+                    **kwargs
+                )
+
         else:
-            def wrapped_func(self, dim=DEFAULT_DIMS,  # type: ignore
-                             **kwargs):
-                return self.reduce(func, dim,
-                                   numeric_only=numeric_only, allow_lazy=True,
-                                   **kwargs)
+
+            def wrapped_func(self, dim=DEFAULT_DIMS, **kwargs):  # type: ignore
+                return self.reduce(
+                    func, dim, numeric_only=numeric_only, allow_lazy=True, **kwargs
+                )
+
         return wrapped_func
 
     def assign(self, **kwargs):

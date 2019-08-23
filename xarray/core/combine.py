@@ -41,8 +41,7 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
 
     if isinstance(entry, list):
         for i, item in enumerate(entry):
-            yield from _infer_tile_ids_from_nested_list(
-                item, current_pos + (i,))
+            yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
     else:
         yield current_pos, entry
 
@@ -62,8 +61,10 @@ def _infer_concat_order_from_coords(datasets):
             # Need to read coordinate values to do ordering
             indexes = [ds.indexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
-                raise ValueError("Every dimension needs a coordinate for "
-                                 "inferring concatenation order")
+                raise ValueError(
+                    "Every dimension needs a coordinate for "
+                    "inferring concatenation order"
+                )
 
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
@@ -77,34 +78,37 @@ def _infer_concat_order_from_coords(datasets):
                 elif all(index.is_monotonic_decreasing for index in indexes):
                     ascending = False
                 else:
-                    raise ValueError("Coordinate variable {} is neither "
-                                     "monotonically increasing nor "
-                                     "monotonically decreasing on all datasets"
-                                     .format(dim))
+                    raise ValueError(
+                        "Coordinate variable {} is neither "
+                        "monotonically increasing nor "
+                        "monotonically decreasing on all datasets".format(dim)
+                    )
 
                 # Assume that any two datasets whose coord along dim starts
                 # with the same value have the same coord values throughout.
                 if any(index.size == 0 for index in indexes):
-                    raise ValueError('Cannot handle size zero dimensions')
-                first_items = pd.Index([index.take([0])
-                                        for index in indexes])
+                    raise ValueError("Cannot handle size zero dimensions")
+                first_items = pd.Index([index.take([0]) for index in indexes])
 
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
                 # position indices - they should be concatenated along another
                 # dimension, not along this one
                 series = first_items.to_series()
-                rank = series.rank(method='dense', ascending=ascending)
+                rank = series.rank(method="dense", ascending=ascending)
                 order = rank.astype(int).values - 1
 
                 # Append positions along extra dimension to structure which
                 # encodes the multi-dimensional concatentation order
-                tile_ids = [tile_id + (position,) for tile_id, position
-                            in zip(tile_ids, order)]
+                tile_ids = [
+                    tile_id + (position,) for tile_id, position in zip(tile_ids, order)
+                ]
 
     if len(datasets) > 1 and not concat_dims:
-        raise ValueError("Could not find any dimension coordinates to use to "
-                         "order the datasets for concatenation")
+        raise ValueError(
+            "Could not find any dimension coordinates to use to "
+            "order the datasets for concatenation"
+        )
 
     combined_ids = OrderedDict(zip(tile_ids, datasets))
 
@@ -120,22 +124,32 @@ def _check_shape_tile_ids(combined_tile_ids):
     if not nesting_depths:
         nesting_depths = [0]
     if not set(nesting_depths) == {nesting_depths[0]}:
-        raise ValueError("The supplied objects do not form a hypercube because"
-                         " sub-lists do not have consistent depths")
+        raise ValueError(
+            "The supplied objects do not form a hypercube because"
+            " sub-lists do not have consistent depths"
+        )
 
     # Check all lists along one dimension are same length
     for dim in range(nesting_depths[0]):
         indices_along_dim = [tile_id[dim] for tile_id in tile_ids]
         occurrences = Counter(indices_along_dim)
         if len(set(occurrences.values())) != 1:
-            raise ValueError("The supplied objects do not form a hypercube "
-                             "because sub-lists do not have consistent "
-                             "lengths along dimension" + str(dim))
+            raise ValueError(
+                "The supplied objects do not form a hypercube "
+                "because sub-lists do not have consistent "
+                "lengths along dimension" + str(dim)
+            )
 
 
-def _combine_nd(combined_ids, concat_dims, data_vars='all',
-                coords='different', compat='no_conflicts',
-                fill_value=dtypes.NA, join='outer'):
+def _combine_nd(
+    combined_ids,
+    concat_dims,
+    data_vars="all",
+    coords="different",
+    compat="no_conflicts",
+    fill_value=dtypes.NA,
+    join="outer",
+):
     """
     Combines an N-dimensional structure of datasets into one by applying a
     series of either concat and merge operations along each dimension.
@@ -163,27 +177,33 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
 
     n_dims = len(example_tile_id)
     if len(concat_dims) != n_dims:
-        raise ValueError("concat_dims has length {} but the datasets "
-                         "passed are nested in a {}-dimensional structure"
-                         .format(len(concat_dims), n_dims))
+        raise ValueError(
+            "concat_dims has length {} but the datasets "
+            "passed are nested in a {}-dimensional structure".format(
+                len(concat_dims), n_dims
+            )
+        )
 
     # Each iteration of this loop reduces the length of the tile_ids tuples
     # by one. It always combines along the first dimension, removing the first
     # element of the tuple
     for concat_dim in concat_dims:
-        combined_ids = _combine_all_along_first_dim(combined_ids,
-                                                    dim=concat_dim,
-                                                    data_vars=data_vars,
-                                                    coords=coords,
-                                                    compat=compat,
-                                                    fill_value=fill_value,
-                                                    join=join)
+        combined_ids = _combine_all_along_first_dim(
+            combined_ids,
+            dim=concat_dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            fill_value=fill_value,
+            join=join,
+        )
     (combined_ds,) = combined_ids.values()
     return combined_ds
 
 
-def _combine_all_along_first_dim(combined_ids, dim, data_vars, coords, compat,
-                                 fill_value=dtypes.NA, join='outer'):
+def _combine_all_along_first_dim(
+    combined_ids, dim, data_vars, coords, compat, fill_value=dtypes.NA, join="outer"
+):
 
     # Group into lines of datasets which must be combined along dim
     # need to sort by _new_tile_id first for groupby to work
@@ -196,14 +216,21 @@ def _combine_all_along_first_dim(combined_ids, dim, data_vars, coords, compat,
     for new_id, group in grouped:
         combined_ids = OrderedDict(sorted(group))
         datasets = combined_ids.values()
-        new_combined_ids[new_id] = _combine_1d(datasets, dim, compat,
-                                               data_vars, coords, fill_value,
-                                               join)
+        new_combined_ids[new_id] = _combine_1d(
+            datasets, dim, compat, data_vars, coords, fill_value, join
+        )
     return new_combined_ids
 
 
-def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
-                coords='different', fill_value=dtypes.NA, join='outer'):
+def _combine_1d(
+    datasets,
+    concat_dim,
+    compat="no_conflicts",
+    data_vars="all",
+    coords="different",
+    fill_value=dtypes.NA,
+    join="outer",
+):
     """
     Applies either concat or merge to 1D list of datasets depending on value
     of concat_dim
@@ -211,20 +238,27 @@ def _combine_1d(datasets, concat_dim, compat='no_conflicts', data_vars='all',
 
     if concat_dim is not None:
         try:
-            combined = concat(datasets, dim=concat_dim, data_vars=data_vars,
-                              coords=coords, fill_value=fill_value, join=join)
+            combined = concat(
+                datasets,
+                dim=concat_dim,
+                data_vars=data_vars,
+                coords=coords,
+                fill_value=fill_value,
+                join=join,
+            )
         except ValueError as err:
             if "encountered unexpected variable" in str(err):
-                raise ValueError("These objects cannot be combined using only "
-                                 "xarray.combine_nested, instead either use "
-                                 "xarray.combine_by_coords, or do it manually "
-                                 "with xarray.concat, xarray.merge and "
-                                 "xarray.align")
+                raise ValueError(
+                    "These objects cannot be combined using only "
+                    "xarray.combine_nested, instead either use "
+                    "xarray.combine_by_coords, or do it manually "
+                    "with xarray.concat, xarray.merge and "
+                    "xarray.align"
+                )
             else:
                 raise
     else:
-        combined = merge(datasets, compat=compat, fill_value=fill_value,
-                         join=join)
+        combined = merge(datasets, compat=compat, fill_value=fill_value, join=join)
 
     return combined
 
@@ -234,8 +268,16 @@ def _new_tile_id(single_id_ds_pair):
     return tile_id[1:]
 
 
-def _nested_combine(datasets, concat_dims, compat, data_vars, coords, ids,
-                    fill_value=dtypes.NA, join='outer'):
+def _nested_combine(
+    datasets,
+    concat_dims,
+    compat,
+    data_vars,
+    coords,
+    ids,
+    fill_value=dtypes.NA,
+    join="outer",
+):
 
     if len(datasets) == 0:
         return Dataset()
@@ -254,15 +296,27 @@ def _nested_combine(datasets, concat_dims, compat, data_vars, coords, ids,
     _check_shape_tile_ids(combined_ids)
 
     # Apply series of concatenate or merge operations along each dimension
-    combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                           data_vars=data_vars, coords=coords,
-                           fill_value=fill_value, join=join)
+    combined = _combine_nd(
+        combined_ids,
+        concat_dims,
+        compat=compat,
+        data_vars=data_vars,
+        coords=coords,
+        fill_value=fill_value,
+        join=join,
+    )
     return combined
 
 
-def combine_nested(datasets, concat_dim, compat='no_conflicts',
-                   data_vars='all', coords='different', fill_value=dtypes.NA,
-                   join='outer'):
+def combine_nested(
+    datasets,
+    concat_dim,
+    compat="no_conflicts",
+    data_vars="all",
+    coords="different",
+    fill_value=dtypes.NA,
+    join="outer",
+):
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
@@ -325,6 +379,9 @@ def combine_nested(datasets, concat_dim, compat='no_conflicts',
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
 
     Returns
     -------
@@ -394,17 +451,30 @@ def combine_nested(datasets, concat_dim, compat='no_conflicts',
         concat_dim = [concat_dim]
 
     # The IDs argument tells _manual_combine that datasets aren't yet sorted
-    return _nested_combine(datasets, concat_dims=concat_dim, compat=compat,
-                           data_vars=data_vars, coords=coords, ids=False,
-                           fill_value=fill_value, join=join)
+    return _nested_combine(
+        datasets,
+        concat_dims=concat_dim,
+        compat=compat,
+        data_vars=data_vars,
+        coords=coords,
+        ids=False,
+        fill_value=fill_value,
+        join=join,
+    )
 
 
 def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
-                      coords='different', fill_value=dtypes.NA, join='outer'):
+def combine_by_coords(
+    datasets,
+    compat="no_conflicts",
+    data_vars="all",
+    coords="different",
+    fill_value=dtypes.NA,
+    join="outer",
+):
     """
     Attempt to auto-magically combine the given datasets into one by using
     dimension coordinates.
@@ -462,6 +532,9 @@ def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
 
     Returns
     -------
@@ -514,39 +587,56 @@ def combine_by_coords(datasets, compat='no_conflicts', data_vars='all',
     concatenated_grouped_by_data_vars = []
     for vars, datasets_with_same_vars in grouped_by_vars:
         combined_ids, concat_dims = _infer_concat_order_from_coords(
-            list(datasets_with_same_vars))
+            list(datasets_with_same_vars)
+        )
 
         _check_shape_tile_ids(combined_ids)
 
         # Concatenate along all of concat_dims one by one to create single ds
-        concatenated = _combine_nd(combined_ids, concat_dims=concat_dims,
-                                   data_vars=data_vars, coords=coords,
-                                   fill_value=fill_value, join=join)
+        concatenated = _combine_nd(
+            combined_ids,
+            concat_dims=concat_dims,
+            data_vars=data_vars,
+            coords=coords,
+            fill_value=fill_value,
+            join=join,
+        )
 
         # Check the overall coordinates are monotonically increasing
         for dim in concat_dims:
             indexes = concatenated.indexes.get(dim)
-            if not (indexes.is_monotonic_increasing
-                    or indexes.is_monotonic_decreasing):
-                raise ValueError("Resulting object does not have monotonic"
-                                 " global indexes along dimension {}"
-                                 .format(dim))
+            if not (indexes.is_monotonic_increasing or indexes.is_monotonic_decreasing):
+                raise ValueError(
+                    "Resulting object does not have monotonic"
+                    " global indexes along dimension {}".format(dim)
+                )
         concatenated_grouped_by_data_vars.append(concatenated)
 
-    return merge(concatenated_grouped_by_data_vars, compat=compat,
-                 fill_value=fill_value, join=join)
+    return merge(
+        concatenated_grouped_by_data_vars,
+        compat=compat,
+        fill_value=fill_value,
+        join=join,
+    )
 
 
 # Everything beyond here is only needed until the deprecation cycle in #2616
 # is completed
 
 
-_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+_CONCAT_DIM_DEFAULT = "__infer_concat_dim__"
 
 
-def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
-                 data_vars='all', coords='different', fill_value=dtypes.NA,
-                 join='outer', from_openmfds=False):
+def auto_combine(
+    datasets,
+    concat_dim="_not_supplied",
+    compat="no_conflicts",
+    data_vars="all",
+    coords="different",
+    fill_value=dtypes.NA,
+    join="outer",
+    from_openmfds=False,
+):
     """
     Attempt to auto-magically combine the given datasets into one.
 
@@ -604,6 +694,9 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
 
     Returns
     -------
@@ -616,54 +709,71 @@ def auto_combine(datasets, concat_dim='_not_supplied', compat='no_conflicts',
     """
 
     if not from_openmfds:
-        basic_msg = dedent("""\
+        basic_msg = dedent(
+            """\
         In xarray version 0.13 `auto_combine` will be deprecated. See
-        http://xarray.pydata.org/en/stable/combining.html#combining-multi""")
+        http://xarray.pydata.org/en/stable/combining.html#combining-multi"""
+        )
         warnings.warn(basic_msg, FutureWarning, stacklevel=2)
 
-    if concat_dim == '_not_supplied':
+    if concat_dim == "_not_supplied":
         concat_dim = _CONCAT_DIM_DEFAULT
-        message = ''
+        message = ""
     else:
-        message = dedent("""\
+        message = dedent(
+            """\
         Also `open_mfdataset` will no longer accept a `concat_dim` argument.
         To get equivalent behaviour from now on please use the new
         `combine_nested` function instead (or the `combine='nested'` option to
-        `open_mfdataset`).""")
+        `open_mfdataset`)."""
+        )
 
     if _dimension_coords_exist(datasets):
-        message += dedent("""\
+        message += dedent(
+            """\
         The datasets supplied have global dimension coordinates. You may want
         to use the new `combine_by_coords` function (or the
         `combine='by_coords'` option to `open_mfdataset`) to order the datasets
         before concatenation. Alternatively, to continue concatenating based
         on the order the datasets are supplied in future, please use the new
         `combine_nested` function (or the `combine='nested'` option to
-        open_mfdataset).""")
+        open_mfdataset)."""
+        )
     else:
-        message += dedent("""\
+        message += dedent(
+            """\
         The datasets supplied do not have global dimension coordinates. In
         future, to continue concatenating without supplying dimension
         coordinates, please use the new `combine_nested` function (or the
-        `combine='nested'` option to open_mfdataset.""")
+        `combine='nested'` option to open_mfdataset."""
+        )
 
     if _requires_concat_and_merge(datasets):
         manual_dims = [concat_dim].append(None)
-        message += dedent("""\
+        message += dedent(
+            """\
         The datasets supplied require both concatenation and merging. From
         xarray version 0.13 this will operation will require either using the
         new `combine_nested` function (or the `combine='nested'` option to
         open_mfdataset), with a nested list structure such that you can combine
         along the dimensions {}. Alternatively if your datasets have global
         dimension coordinates then you can use the new `combine_by_coords`
-        function.""".format(manual_dims))
+        function.""".format(
+                manual_dims
+            )
+        )
 
     warnings.warn(message, FutureWarning, stacklevel=2)
 
-    return _old_auto_combine(datasets, concat_dim=concat_dim,
-                             compat=compat, data_vars=data_vars,
-                             coords=coords, fill_value=fill_value,
-                             join=join)
+    return _old_auto_combine(
+        datasets,
+        concat_dim=concat_dim,
+        compat=compat,
+        data_vars=data_vars,
+        coords=coords,
+        fill_value=fill_value,
+        join=join,
+    )
 
 
 def _dimension_coords_exist(datasets):
@@ -701,29 +811,46 @@ def _requires_concat_and_merge(datasets):
     return len(list(grouped_by_vars)) > 1
 
 
-def _old_auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
-                      compat='no_conflicts',
-                      data_vars='all', coords='different',
-                      fill_value=dtypes.NA, join='outer'):
+def _old_auto_combine(
+    datasets,
+    concat_dim=_CONCAT_DIM_DEFAULT,
+    compat="no_conflicts",
+    data_vars="all",
+    coords="different",
+    fill_value=dtypes.NA,
+    join="outer",
+):
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
 
         sorted_datasets = sorted(datasets, key=vars_as_keys)
         grouped = itertools.groupby(sorted_datasets, key=vars_as_keys)
 
-        concatenated = [_auto_concat(list(datasets), dim=dim,
-                                     data_vars=data_vars, coords=coords,
-                                     fill_value=fill_value, join=join)
-                        for vars, datasets in grouped]
+        concatenated = [
+            _auto_concat(
+                list(datasets),
+                dim=dim,
+                data_vars=data_vars,
+                coords=coords,
+                fill_value=fill_value,
+                join=join,
+            )
+            for vars, datasets in grouped
+        ]
     else:
         concatenated = datasets
-    merged = merge(concatenated, compat=compat, fill_value=fill_value,
-                   join=join)
+    merged = merge(concatenated, compat=compat, fill_value=fill_value, join=join)
     return merged
 
 
-def _auto_concat(datasets, dim=None, data_vars='all', coords='different',
-                 fill_value=dtypes.NA, join='outer'):
+def _auto_concat(
+    datasets,
+    dim=None,
+    data_vars="all",
+    coords="different",
+    fill_value=dtypes.NA,
+    join="outer",
+):
     if len(datasets) == 1 and dim is None:
         # There is nothing more to combine, so kick out early.
         return datasets[0]
@@ -736,17 +863,18 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different',
                 dim_tuples = set(ds0.dims.items()) - set(ds1.dims.items())
                 concat_dims = {i for i, _ in dim_tuples}
             if len(concat_dims) > 1:
-                concat_dims = {
-                    d for d in concat_dims
-                    if not ds0[d].equals(ds1[d])
-                }
+                concat_dims = {d for d in concat_dims if not ds0[d].equals(ds1[d])}
             if len(concat_dims) > 1:
-                raise ValueError('too many different dimensions to '
-                                 'concatenate: %s' % concat_dims)
+                raise ValueError(
+                    "too many different dimensions to " "concatenate: %s" % concat_dims
+                )
             elif len(concat_dims) == 0:
-                raise ValueError('cannot infer dimension to concatenate: '
-                                 'supply the ``concat_dim`` argument '
-                                 'explicitly')
+                raise ValueError(
+                    "cannot infer dimension to concatenate: "
+                    "supply the ``concat_dim`` argument "
+                    "explicitly"
+                )
             dim, = concat_dims
-        return concat(datasets, dim=dim, data_vars=data_vars, coords=coords,
-                      fill_value=fill_value)
+        return concat(
+            datasets, dim=dim, data_vars=data_vars, coords=coords, fill_value=fill_value
+        )
