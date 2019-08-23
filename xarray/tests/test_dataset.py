@@ -2214,13 +2214,20 @@ class TestDataset:
         # Basic functionality.
         assert len(data.coords["x"]) == 2
 
-        # This API is allowed but deprecated.
+        # In the future, this will break.
         with pytest.warns(DeprecationWarning):
             ds1 = data.drop(["a"], dim="x")
         ds2 = data.drop(x="a")
         ds3 = data.drop(x=["a"])
         ds4 = data.drop(x=["a", "b"])
         ds5 = data.drop(x=["a", "b"], y=range(0, 6, 2))
+
+        # In the future, this will result in different behavior.
+        arr = DataArray(range(3), dims=["c"])
+        with pytest.warns(FutureWarning):
+            data.drop(arr.coords)
+        with pytest.warns(FutureWarning):
+            data.drop(arr.indexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
         assert_array_equal(ds2.coords["x"], ["b"])

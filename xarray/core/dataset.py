@@ -55,7 +55,6 @@ from .common import (
     _contains_datetime_like_objects,
 )
 from .coordinates import (
-    DataArrayCoordinates,
     DatasetCoordinates,
     LevelCoordinatesSource,
     assert_coordinate_consistent,
@@ -79,6 +78,8 @@ from .utils import (
     either_dict_or_kwargs,
     hashable,
     maybe_wrap_array,
+    is_dict_like,
+    is_list_like,
 )
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
@@ -3555,9 +3556,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        labels_are_coords = isinstance(labels, DataArrayCoordinates)
-        if labels_kwargs or (utils.is_dict_like(labels) and not labels_are_coords):
-            labels_kwargs = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
+        if is_dict_like(labels) and not isinstance(labels, dict):
+            warnings.warn(
+                "dropping coordinates using key values of dict-like labels is "
+                "deprecated; use drop_vars or a list of coordinates.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if dim is not None and is_list_like(labels):
+            warnings.warn(
+                "dropping dimensions using list-like labels is deprecated; use "
+                "dict-like arguments.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        if labels_kwargs or isinstance(labels, dict):
+            labels_kwargs = either_dict_or_kwargs(labels, labels_kwargs, "drop")
             if dim is not None:
                 raise ValueError("cannot specify dim and dict-like arguments.")
             ds = self
@@ -3571,13 +3586,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 labels = set(labels)
             return self._drop_vars(labels, errors=errors)
         else:
-            if utils.is_list_like(labels):
-                warnings.warn(
-                    "dropping dimensions using list-like labels is deprecated; "
-                    "use dict-like arguments.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
             return self._drop_labels(labels, dim, errors=errors)
 
     def _drop_labels(self, labels=None, dim=None, errors="raise"):
