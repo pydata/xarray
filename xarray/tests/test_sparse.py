@@ -10,7 +10,7 @@ import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
-from . import assert_equal, assert_identical
+from . import assert_equal, assert_identical, LooseVersion
 
 param = pytest.param
 xfail = pytest.mark.xfail
@@ -290,8 +290,8 @@ class TestSparseVariable:
     def test_repr(self):
         expected = dedent(
             """\
-        <xarray.Variable (x: 4, y: 6)>
-        <COO: shape=(4, 6), dtype=float64, nnz=12, fill_value=0.0>"""
+            <xarray.Variable (x: 4, y: 6)>
+            <COO: shape=(4, 6), dtype=float64, nnz=12, fill_value=0.0>"""
         )
         assert expected == repr(self.var)
 
@@ -710,11 +710,11 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-        <xarray.DataArray (x: 4)>
-        <COO: shape=(4,), dtype=float64, nnz=4, fill_value=0.0>
-        Coordinates:
-            y        (x) int64 ...
-        Dimensions without coordinates: x"""
+            <xarray.DataArray (x: 4)>
+            <COO: shape=(4,), dtype=float64, nnz=4, fill_value=0.0>
+            Coordinates:
+                y        (x) int64 <COO: nnz=3, fill_value=0>
+            Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
 
@@ -725,13 +725,26 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-        <xarray.Dataset>
-        Dimensions:  (x: 4)
-        Coordinates:
-            y        (x) int64 ...
-        Dimensions without coordinates: x
-        Data variables:
-            a        (x) float64 ..."""
+            <xarray.Dataset>
+            Dimensions:  (x: 4)
+            Coordinates:
+                y        (x) int64 <COO: nnz=3, fill_value=0>
+            Dimensions without coordinates: x
+            Data variables:
+                a        (x) float64 <COO: nnz=4, fill_value=0.0>"""
+        )
+        assert expected == repr(ds)
+
+    def test_sparse_dask_dataset_repr(self):
+        pytest.importorskip("dask", minversion="2.0")
+        ds = xr.Dataset(data_vars={"a": ("x", COO.from_numpy(np.ones(4)))}).chunk()
+        expected = dedent(
+            """\
+            <xarray.Dataset>
+            Dimensions:  (x: 4)
+            Dimensions without coordinates: x
+            Data variables:
+                a        (x) float64 dask.array<chunksize=(4,), meta=sparse.COO>"""
         )
         assert expected == repr(ds)
 

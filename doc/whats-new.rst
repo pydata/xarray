@@ -55,14 +55,34 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
+- Added ``join='override'``. This only checks that index sizes are equal among objects and skips
+  checking indexes for equality. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
   It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
+- :py:func:`~xarray.Dataset.to_netcdf()` now supports the ``invalid_netcdf`` kwarg when used
+  with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
+  By `Ulrich Herter <https://github.com/ulijh>`_.
+
+- :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index
+  labels by specifying both ``dim`` and ``labels`` is deprecated (:issue:`2910`).
+  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+
+- Added examples of :py:meth:`Dataset.set_index` and
+  :py:meth:`DataArray.set_index`, as well are more specific error messages
+  when the user passes invalid arguments (:issue:`3176`).
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- :py:meth:`~xarray.DataArray.assign_coords` now supports dictionary arguments
+  (:issue:`3231`).
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 - Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
   unicode indices to dtype=object (:issue:`3094`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -88,6 +108,13 @@ Bug fixes
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
                                
 .. _whats-new.0.12.3:
+
+Documentation
+~~~~~~~~~~~~~
+
+- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ as a quick reference for tasks before creating a new PR
+  or pushing new commits.
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 v0.12.3 (10 July 2019)
 ----------------------

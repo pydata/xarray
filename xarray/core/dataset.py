@@ -56,6 +56,7 @@ from .common import (
 )
 from .coordinates import (
     DatasetCoordinates,
+    DataArrayCoordinates,
     LevelCoordinatesSource,
     assert_coordinate_consistent,
     remap_label_indexers,
@@ -198,6 +199,7 @@ def merge_indexes(
     """
     vars_to_replace = {}  # Dict[Any, Variable]
     vars_to_remove = []  # type: list
+    error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, str) or not isinstance(var_names, Sequence):
@@ -207,7 +209,10 @@ def merge_indexes(
         current_index_variable = variables.get(dim)
 
         for n in var_names:
-            var = variables[n]
+            try:
+                var = variables[n]
+            except KeyError:
+                raise ValueError(error_msg.format(n))
             if (
                 current_index_variable is not None
                 and var.dims != current_index_variable.dims
@@ -239,8 +244,11 @@ def merge_indexes(
 
         else:
             for n in var_names:
+                try:
+                    var = variables[n]
+                except KeyError:
+                    raise ValueError(error_msg.format(n))
                 names.append(n)
-                var = variables[n]
                 cat = pd.Categorical(var.values, ordered=True)
                 codes.append(cat.codes)
                 levels.append(cat.categories)
@@ -1436,6 +1444,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         encoding: Mapping = None,
         unlimited_dims: Iterable[Hashable] = None,
         compute: bool = True,
+        invalid_netcdf: bool = False,
     ) -> Union[bytes, "Delayed", None]:
         """Write dataset contents to a netCDF file.
 
@@ -1499,6 +1508,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compute: boolean
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
+        invalid_netcdf: boolean
+            Only valid along with engine='h5netcdf'. If True, allow writing
+            hdf5 files which are valid netcdf as described in
+            https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
             encoding = {}
@@ -1514,6 +1527,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             encoding=encoding,
             unlimited_dims=unlimited_dims,
             compute=compute,
+            invalid_netcdf=invalid_netcdf,
         )
 
     def to_zarr(
@@ -2952,6 +2966,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj : Dataset
             Another dataset, with this dataset's data but replaced coordinates.
 
+        Examples
+        --------
+        >>> arr = xr.DataArray(data=np.ones((2, 3)),
+        ...                    dims=['x', 'y'],
+        ...                    coords={'x':
+        ...                        range(2), 'y':
+        ...                        range(3), 'a': ('x', [3, 4])
+        ...                    })
+        >>> ds = xr.Dataset({'v': arr})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * x        (x) int64 0 1
+          * y        (y) int64 0 1 2
+            a        (x) int64 3 4
+        Data variables:
+            v        (x, y) float64 1.0 1.0 1.0 1.0 1.0 1.0
+        >>> ds.set_index(x='a')
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * x        (x) int64 3 4
+          * y        (y) int64 0 1 2
+        Data variables:
+            v        (x, y) float64 1.0 1.0 1.0 1.0 1.0 1.0
+
         See Also
         --------
         Dataset.reset_index
@@ -3451,7 +3492,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
 
     # Drop variables
-    @overload
+    @overload  # noqa: F811
     def drop(
         self, labels: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "Dataset":
@@ -3464,7 +3505,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     ) -> "Dataset":
         ...
 
-    def drop(self, labels, dim=None, *, errors="raise"):  # noqa: F811
+    def drop(  # noqa: F811
+        self, labels=None, dim=None, *, errors="raise", **labels_kwargs
+    ):
         """Drop variables or index labels from this dataset.
 
         Parameters
@@ -3480,34 +3523,75 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             any of the variable or index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
+        **labels_kwargs : {dim: label, ...}, optional
+            The keyword arguments form of ``dim`` and ``labels``.
 
         Returns
         -------
         dropped : Dataset
+
+        Examples
+        --------
+        >>> data = np.random.randn(2, 3)
+        >>> labels = ['a', 'b', 'c']
+        >>> ds = xr.Dataset({'A': (['x', 'y'], data), 'y': labels})
+        >>> ds.drop(y=['a', 'c'])
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 1)
+        Coordinates:
+          * y        (y) <U1 'b'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) float64 -0.3454 0.1734
+        >>> ds.drop(y='b')
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * y        (y) <U1 'a' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) float64 -0.3944 -1.418 1.423 -1.041
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        if dim is None:
+        labels_are_coords = isinstance(labels, DataArrayCoordinates)
+        if labels_kwargs or (utils.is_dict_like(labels) and not labels_are_coords):
+            labels_kwargs = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
+            if dim is not None:
+                raise ValueError("cannot specify dim and dict-like arguments.")
+            ds = self
+            for dim, labels in labels_kwargs.items():
+                ds = ds._drop_labels(labels, dim, errors=errors)
+            return ds
+        elif dim is None:
             if isinstance(labels, str) or not isinstance(labels, Iterable):
                 labels = {labels}
             else:
                 labels = set(labels)
-
             return self._drop_vars(labels, errors=errors)
         else:
-            # Don't cast to set, as it would harm performance when labels
-            # is a large numpy array
-            if utils.is_scalar(labels):
-                labels = [labels]
-            labels = np.asarray(labels)
+            if utils.is_list_like(labels):
+                warnings.warn(
+                    "dropping dimensions using list-like labels is deprecated; "
+                    "use dict-like arguments.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            return self._drop_labels(labels, dim, errors=errors)
 
-            try:
-                index = self.indexes[dim]
-            except KeyError:
-                raise ValueError("dimension %r does not have coordinate labels" % dim)
-            new_index = index.drop(labels, errors=errors)
-            return self.loc[{dim: new_index}]
+    def _drop_labels(self, labels=None, dim=None, errors="raise"):
+        # Don't cast to set, as it would harm performance when labels
+        # is a large numpy array
+        if utils.is_scalar(labels):
+            labels = [labels]
+        labels = np.asarray(labels)
+        try:
+            index = self.indexes[dim]
+        except KeyError:
+            raise ValueError("dimension %r does not have coordinate labels" % dim)
+        new_index = index.drop(labels, errors=errors)
+        return self.loc[{dim: new_index}]
 
     def _drop_vars(self, names: set, errors: str = "raise") -> "Dataset":
         if errors == "raise":

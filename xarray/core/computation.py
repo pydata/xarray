@@ -960,7 +960,7 @@ def apply_ufunc(
     .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
     .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
-    """  # noqa: E501  # don't error on that URL one line up
+    """
     from .groupby import GroupBy
     from .dataarray import DataArray
     from .variable import Variable
