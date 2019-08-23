@@ -240,8 +240,6 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    if isinstance(data, sparse.COO):
-        data = data.todense()
     data = np.asarray(data)
 
     if data.ndim == 0:
