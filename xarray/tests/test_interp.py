@@ -669,13 +669,13 @@ def interp_1d(data, dim, vals):
 
     old_coord = data[dim]
 
-    lower = data.sel(**selectors, method='ffill').drop(dim)
-    upper = data.sel(**selectors, method='bfill').drop(dim)
-    lower_x = data[dim].sel(**selectors, method='ffill').drop(dim)
-    upper_x = data[dim].sel(**selectors, method='bfill').drop(dim)
-
-    new_x = lower[dim]
-    weight = np.abs(new_x - lower_x)/np.abs(upper_x-lower_x)
+    lower = data.sel(**selectors, method='ffill')
+    upper = data.sel(**selectors, method='bfill')
+    lower_x = data[dim].sel(**selectors, method='ffill')
+    upper_x = data[dim].sel(**selectors, method='bfill')
+    weight = np.abs(vals - lower_x)/np.abs(upper_x-lower_x)
+    # needed if upper and lower coordinates are identical
+    weight = weight.fillna(1.0)
     ans = lower * (1-weight) + upper * weight
     return ans
 
@@ -686,29 +686,34 @@ def interp_1d(data, dim, vals):
 def test_new_interp(dim):
 
     data = xr.DataArray(np.arange(10), dims=[dim]).assign_coords({dim: np.arange(10)})
-    new_x = np.arange(9) + .5
+    new_x = xr.DataArray(np.arange(9) + .5, dims=['xp'])
     ans = interp_1d(data, dim, new_x)
     np.testing.assert_allclose(new_x, ans.values)
 
 
 def test_interp_1d_nd_targ():
-
     data = xr.DataArray(np.arange(10), dims=['x'], coords={'x': np.arange(10)})
-    new_x_2d = xr.DataArray(np.tile(np.r_[:10], (3, 1)), dims=['y', 'x'])
+    new_x_2d = xr.DataArray(np.tile(np.r_[:9] + .5, (3, 1)), dims=['y', 'xp'])
     ans = interp_1d(data, 'x', new_x_2d)
     np.testing.assert_allclose(new_x_2d, ans.values)
 
+
+def test_interp_1d_nd_targ():
+    # interp with actual coords should be an isel.
+    data = xr.DataArray(np.arange(10), dims=['x'], coords={'x': np.arange(10)})
+    new_x_2d = xr.DataArray(np.tile(np.r_[:9], (3, 1)), dims=['y', 'xp'])
+    ans = interp_1d(data, 'x', new_x_2d)
+    np.testing.assert_allclose(new_x_2d, ans.values)
 
 def test_sel_nd():
     npdata = np.tile(np.arange(10), (5, 1))
     data = xr.DataArray(npdata, dims=['y', 'x'],
                         coords={'x': np.r_[:10], 'y': np.r_[:5]})
-    idx = xr.DataArray(npdata, dims=['z', 'x'])
+    idx = xr.DataArray(npdata, dims=['z', 'xp'])
 
-    ans = data.sel(x=idx, method='bfill')
-    assert set(ans.dims) == {'z', 'y', 'x'}
+    ans = data.sel(x=idx)
+    assert set(ans.dims) == {'z', 'y', 'xp'}
     print(ans)
-
 
 
 
