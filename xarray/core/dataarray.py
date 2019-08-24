@@ -700,14 +700,10 @@ class DataArray(AbstractArray, DataWithCoords):
         drop : bool, optional
             If True, remove coordinates instead of converting them into
             variables.
-        inplace : bool, optional
-            If True, modify this object in place. Otherwise, create a new
-            object.
 
         Returns
         -------
-        Dataset, or DataArray if ``drop == True``, or None if
-        ``inplace == True``
+        Dataset, or DataArray if ``drop == True``
         """
         inplace = _check_inplace(inplace)
         if inplace and not drop:
@@ -1511,9 +1507,6 @@ class DataArray(AbstractArray, DataWithCoords):
         append : bool, optional
             If True, append the supplied index(es) to the existing index(es).
             Otherwise replace the existing index(es) (default).
-        inplace : bool, optional
-            If True, set new index(es) in-place. Otherwise, return a new
-            DataArray object.
         **indexes_kwargs: optional
             The keyword arguments form of ``indexes``.
             One of indexes or indexes_kwargs must be provided.
@@ -1522,7 +1515,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         obj : DataArray
             Another DataArray, with this data but replaced coordinates.
-            Return None if inplace=True.
 
         Example
         -------
@@ -1577,15 +1569,12 @@ class DataArray(AbstractArray, DataWithCoords):
         drop : bool, optional
             If True, remove the specified indexes and/or multi-index levels
             instead of extracting them as new coordinates (default: False).
-        inplace : bool, optional
-            If True, modify the dataarray in-place. Otherwise, return a new
-            DataArray object.
 
         Returns
         -------
         obj : DataArray
             Another dataarray, with this dataarray's data but replaced
-            coordinates. If ``inplace == True``, return None.
+            coordinates.
 
         See Also
         --------
@@ -1615,9 +1604,6 @@ class DataArray(AbstractArray, DataWithCoords):
             Mapping from names matching dimensions and values given
             by lists representing new level orders. Every given dimension
             must have a multi-index.
-        inplace : bool, optional
-            If True, modify the dataarray in-place. Otherwise, return a new
-            DataArray object.
         **dim_order_kwargs: optional
             The keyword arguments form of ``dim_order``.
             One of dim_order or dim_order_kwargs must be provided.
@@ -1626,7 +1612,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         obj : DataArray
             Another dataarray, with this dataarray's data but replaced
-            coordinates. If ``inplace == True``, return None.
+            coordinates.
         """
         inplace = _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")

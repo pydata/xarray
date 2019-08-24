@@ -1354,9 +1354,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         names : hashable or iterable of hashables
             Name(s) of variables in this dataset to convert into coordinates.
-        inplace : bool, optional
-            If True, modify this dataset inplace. Otherwise, create a new
-            object.
 
         Returns
         -------
@@ -1396,9 +1393,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If True, remove coordinates instead of converting them into
             variables.
-        inplace : bool, optional
-            If True, modify this dataset inplace. Otherwise, create a new
-            object.
 
         Returns
         -------
@@ -2605,9 +2599,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         name_dict : dict-like, optional
             Dictionary whose keys are current variable or dimension names and
             whose values are the desired names.
-        inplace : bool, optional
-            If True, rename variables and dimensions in-place. Otherwise,
-            return a new dataset object.
         **names, optional
             Keyword form of ``name_dict``.
             One of name_dict or names must be provided.
@@ -2728,9 +2719,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dictionary whose keys are current dimension names and whose values
             are new names. Each value must already be a variable in the
             dataset.
-        inplace : bool, optional
-            If True, swap dimensions in-place. Otherwise, return a new dataset
-            object.
 
         Returns
         -------
@@ -2954,9 +2942,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         append : bool, optional
             If True, append the supplied index(es) to the existing index(es).
             Otherwise replace the existing index(es) (default).
-        inplace : bool, optional
-            If True, set new index(es) in-place. Otherwise, return a new
-            Dataset object.
         **indexes_kwargs: optional
             The keyword arguments form of ``indexes``.
             One of indexes or indexes_kwargs must be provided.
@@ -3023,9 +3008,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If True, remove the specified indexes and/or multi-index levels
             instead of extracting them as new coordinates (default: False).
-        inplace : bool, optional
-            If True, modify the dataset in-place. Otherwise, return a new
-            Dataset object.
 
         Returns
         -------
@@ -3062,9 +3044,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Mapping from names matching dimensions and values given
             by lists representing new level orders. Every given dimension
             must have a multi-index.
-        inplace : bool, optional
-            If True, modify the dataset in-place. Otherwise, return a new
-            DataArray object.
         **dim_order_kwargs: optional
             The keyword arguments form of ``dim_order``.
             One of dim_order or dim_order_kwargs must be provided.
@@ -3384,9 +3363,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - mapping {var name: (dimension name, array-like)}
             - mapping {var name: (tuple of dimension names, array-like)}
 
-        inplace : bool, optional
-            If True, merge the other dataset into this dataset in-place.
-            Otherwise, return a new dataset object.
 
         Returns
         -------
@@ -3426,9 +3402,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         other : Dataset or castable to Dataset
             Dataset or variables to merge with this dataset.
-        inplace : bool, optional
-            If True, merge the other dataset into this dataset in-place.
-            Otherwise, return a new dataset object.
         overwrite_vars : Hashable or iterable of Hashable, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
