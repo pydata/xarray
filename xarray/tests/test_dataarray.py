@@ -1001,7 +1001,6 @@ class TestDataArray:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
-    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
     def test_loc(self):
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
