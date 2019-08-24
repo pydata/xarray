@@ -680,6 +680,16 @@ def interp_1d(data, dim, vals):
     return ans
 
 
+def interp_nd(data, coords):
+    for dim in coords:
+        data = interp_1d(data, dim, coords[dim])
+    return data
+
+
+def test_interp_nd():
+    assert False
+
+
 @pytest.mark.parametrize('dim',[
     'x', 'y'
 ])
