@@ -1111,16 +1111,15 @@ def create_mask(indexer, shape, data=None):
         the result that should be masked.
     shape : tuple
         Shape of the array being indexed.
-    chunks_hint : tuple, optional
-        Optional tuple indicating desired chunks for the result. If provided,
-        used as a hint for chunks on the resulting dask. Must have a hint for
-        each dimension on the result array.
+    data : optional
+        Data for which mask is being created. If data is a dask arrays, its chunks
+        are used as a hint for chunks on the resulting mask. If data is a sparse
+        array, the returned mask is also a sparse array.
 
     Returns
     -------
-    mask : bool, np.ndarray or dask.array.Array with dtype=bool
-        Dask array if chunks_hint is provided, otherwise a NumPy array. Has the
-        same shape as the indexing result.
+    mask : bool, np.ndarray, SparseArray or dask.array.Array with dtype=bool
+        Same type as data. Has the same shape as the indexing result.
     """
     if isinstance(indexer, OuterIndexer):
         key = _outer_to_vectorized_indexer(indexer, shape).tuple
