@@ -40,12 +40,16 @@ def dtype(request):
 
 
 class TestDataArray:
+    @pytest.mark.xfail(reason="pint does not implement __array_function__ yet")
     def test_init(self):
         array = np.arange(10) * unit_registry.m
         data_array = xr.DataArray(data=array)
 
         assert_equal_with_units(array, data_array)
 
+    @pytest.mark.xfail(
+        reason="pint does not implement __array_function__ for aggregation functions yet"
+    )
     @pytest.mark.parametrize(
         "func",
         (
