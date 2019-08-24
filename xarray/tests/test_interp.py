@@ -662,3 +662,53 @@ def test_datetime_interp_noerror():
         coords={"time": pd.date_range("01-01-2001", periods=50, freq="H")},
     )
     a.interp(x=xi, time=xi.time)  # should not raise an error
+
+
+def interp_1d(data, dim, vals):
+    selectors = {dim: vals}
+
+    old_coord = data[dim]
+
+    lower = data.sel(**selectors, method='ffill').drop(dim)
+    upper = data.sel(**selectors, method='bfill').drop(dim)
+    lower_x = data[dim].sel(**selectors, method='ffill').drop(dim)
+    upper_x = data[dim].sel(**selectors, method='bfill').drop(dim)
+
+    new_x = lower[dim]
+    weight = np.abs(new_x - lower_x)/np.abs(upper_x-lower_x)
+    ans = lower * (1-weight) + upper * weight
+    return ans
+
+
+@pytest.mark.parametrize('dim',[
+    'x', 'y'
+])
+def test_new_interp(dim):
+
+    data = xr.DataArray(np.arange(10), dims=[dim]).assign_coords({dim: np.arange(10)})
+    new_x = np.arange(9) + .5
+    ans = interp_1d(data, dim, new_x)
+    np.testing.assert_allclose(new_x, ans.values)
+
+
+def test_interp_1d_nd_targ():
+
+    data = xr.DataArray(np.arange(10), dims=['x'], coords={'x': np.arange(10)})
+    new_x_2d = xr.DataArray(np.tile(np.r_[:10], (3, 1)), dims=['y', 'x'])
+    ans = interp_1d(data, 'x', new_x_2d)
+    np.testing.assert_allclose(new_x_2d, ans.values)
+
+
+def test_sel_nd():
+    npdata = np.tile(np.arange(10), (5, 1))
+    data = xr.DataArray(npdata, dims=['y', 'x'],
+                        coords={'x': np.r_[:10], 'y': np.r_[:5]})
+    idx = xr.DataArray(npdata, dims=['z', 'x'])
+
+    ans = data.sel(x=idx, method='bfill')
+    assert set(ans.dims) == {'z', 'y', 'x'}
+    print(ans)
+
+
+
+
