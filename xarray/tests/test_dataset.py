@@ -2695,7 +2695,7 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        with pytest.raises(ValueError, match="The inplace argument"):
+        with pytest.raises(ValueError):
             ds.set_index(x=mindex.names, inplace=True)
             assert_identical(ds, expected)
 
