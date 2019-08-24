@@ -78,6 +78,8 @@ Enhancements
   :py:meth:`DataArray.set_index`, as well are more specific error messages
   when the user passes invalid arguments (:issue:`3176`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
+  
+- :py:func:`filter_by_attrs` now filters the coordinates as well as the variables. By `Spencer Jones <https://github.com/cspencerjones>`_.
 
 Bug fixes
 ~~~~~~~~~
