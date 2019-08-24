@@ -40,11 +40,8 @@ def _check_inplace(inplace: Optional[bool], default: bool = False) -> bool:
     if inplace is None:
         inplace = default
     else:
-        warnings.warn(
-            "The inplace argument has been deprecated and will be "
-            "removed in a future version of xarray.",
-            FutureWarning,
-            stacklevel=3,
+        raise ValueError(
+            "The `inplace` argument has been removed from xarray. You can achieve an identical effect with python's standard assignment."
         )
 
     return inplace

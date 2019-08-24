@@ -2428,18 +2428,11 @@ class TestDataset:
         renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
-    @pytest.mark.filterwarnings("ignore:The inplace argument")
     def test_rename_inplace(self):
         times = pd.date_range("2000-01-01", periods=3)
         data = Dataset({"z": ("x", [2, 3, 4]), "t": ("t", times)})
-        copied = data.copy()
-        renamed = data.rename({"x": "y"})
-        data.rename({"x": "y"}, inplace=True)
-        assert_identical(data, renamed)
-        assert not data.equals(copied)
-        assert data.dims == {"y": 3, "t": 3}
-        # check virtual variables
-        assert_array_equal(data["t.dayofyear"], [1, 2, 3])
+        with pytest.raises(ValueError):
+            data.rename({"x": "y"}, inplace=True)
 
     def test_rename_dims(self):
         original = Dataset({"x": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42})
@@ -2702,7 +2695,7 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(ValueError, match="The inplace argument"):
             ds.set_index(x=mindex.names, inplace=True)
             assert_identical(ds, expected)
 
@@ -2727,9 +2720,8 @@ class TestDataset:
         obj = ds.reset_index("x")
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(ValueError):
             ds.reset_index("x", inplace=True)
-            assert_identical(ds, expected)
 
     def test_reorder_levels(self):
         ds = create_test_multiindex()
@@ -2740,9 +2732,8 @@ class TestDataset:
         reindexed = ds.reorder_levels(x=["level_2", "level_1"])
         assert_identical(reindexed, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(ValueError):
             ds.reorder_levels(x=["level_2", "level_1"], inplace=True)
-            assert_identical(ds, expected)
 
         ds = Dataset({}, coords={"x": [1, 2]})
         with raises_regex(ValueError, "has no MultiIndex"):
@@ -2882,11 +2873,8 @@ class TestDataset:
         assert actual_result is actual
         assert_identical(expected, actual)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(ValueError):
             actual = data.update(data, inplace=False)
-            expected = data
-            assert actual is not expected
-            assert_identical(expected, actual)
 
         other = Dataset(attrs={"new": "attr"})
         actual = data.copy()
