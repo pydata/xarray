@@ -81,8 +81,20 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(operator.neg, id="negate"),
-            pytest.param(abs, id="absolute"),
+            pytest.param(
+                operator.neg,
+                id="negate",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                abs,
+                id="absolute",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
             pytest.param(
                 np.round,
                 id="round",
@@ -99,9 +111,27 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(lambda x: 2 * x, id="multiply"),
-            pytest.param(lambda x: x + x, id="add"),
-            pytest.param(lambda x: x[0] + x, id="add scalar"),
+            pytest.param(
+                lambda x: 2 * x,
+                id="multiply",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                lambda x: x + x,
+                id="add",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                lambda x: x[0] + x,
+                id="add scalar",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
             pytest.param(
                 lambda x: x.T @ x,
                 id="matrix multiply",
@@ -127,7 +157,13 @@ class TestDataArray:
                     reason="single index isel() tries to coerce to int"
                 ),
             ),
-            pytest.param([5, 2, 9, 1], id="multiple indices"),
+            pytest.param(
+                [5, 2, 9, 1],
+                id="multiple indices",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
         ),
     )
     def test_isel(self, indices, dtype):
@@ -140,11 +176,21 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "values,error",
         (
-            pytest.param(12, KeyError, id="single value without unit"),
+            pytest.param(
+                12,
+                KeyError,
+                id="single value without unit",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
             pytest.param(
                 12 * unit_registry.degree,
                 KeyError,
                 id="single value with incorrect unit",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
             ),
             pytest.param(
                 12 * unit_registry.s,
@@ -152,16 +198,29 @@ class TestDataArray:
                 id="single value with correct unit",
                 marks=pytest.mark.xfail(reason="single value tries to coerce to int"),
             ),
-            pytest.param((10, 5, 13), KeyError, id="multiple values without unit"),
+            pytest.param(
+                (10, 5, 13),
+                KeyError,
+                id="multiple values without unit",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
             pytest.param(
                 (10, 5, 13) * unit_registry.degree,
                 KeyError,
                 id="multiple values with incorrect unit",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
             ),
             pytest.param(
                 (10, 5, 13) * unit_registry.s,
                 None,
                 id="multiple values with correct unit",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
             ),
         ),
     )
