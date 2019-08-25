@@ -46,6 +46,24 @@ def assert_equal_with_units(a, b):
         assert (hasattr(a_, "units") and hasattr(b_, "units")) and a_.units == b_.units
 
 
+def strip_units(data_array):
+    def magnitude(da):
+        if isinstance(da, xr.Variable):
+            data = da.data
+        else:
+            data = da
+
+        try:
+            return data.magnitude
+        except AttributeError:
+            return data
+
+    array = magnitude(data_array)
+    coords = {name: magnitude(values) for name, values in data_array.coords.items()}
+
+    return xr.DataArray(data=array, coords=coords, dims=tuple(coords.keys()))
+
+
 @pytest.fixture(params=[float, int])
 def dtype(request):
     return request.param
@@ -352,9 +370,124 @@ class TestDataArray:
         )
 
         assert_equal_with_units(np.squeeze(array), data_array.squeeze())
+
         # try squeezing the dimensions separately
         names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
         for index, name in enumerate(names):
             assert_equal_with_units(
                 np.squeeze(array, axis=index), data_array.squeeze(dim=name)
             )
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(
+                1,
+                None,
+                id="without unit",
+                marks=pytest.mark.xfail(reason="retrieving the values property fails"),
+            ),
+            pytest.param(
+                unit_registry.dimensionless,
+                None,
+                id="dimensionless",
+                marks=pytest.mark.xfail(reason="retrieving the values property fails"),
+            ),
+            pytest.param(
+                unit_registry.s,
+                None,
+                id="with incorrect unit",
+                marks=pytest.mark.xfail(reason="retrieving the values property fails"),
+            ),
+            pytest.param(
+                unit_registry.m,
+                None,
+                id="with correct unit",
+                marks=pytest.mark.xfail(reason="retrieving the values property fails"),
+            ),
+        ),
+    )
+    def test_interp(self, unit, error):
+        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+        new_coords = (np.arange(10) + 0.5) * unit
+        coords = {
+            "x": np.arange(10) * unit_registry.m,
+            "y": np.arange(5) * unit_registry.m,
+        }
+
+        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
+
+        if error is not None:
+            with pytest.raises(error):
+                data_array.interp(x=new_coords)
+        else:
+            result_array = strip_units(data_array).interp(
+                x=(
+                    new_coords.magnitude
+                    if hasattr(new_coords, "magnitude")
+                    else new_coords
+                )
+                * unit_registry.degK
+            )
+            result_data_array = data_array.interp(x=new_coords)
+
+            assert_equal_with_units(result_array, result_data_array)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(
+                1,
+                None,
+                id="without unit",
+                marks=pytest.mark.xfail(reason="reindex does not work with units"),
+            ),
+            pytest.param(
+                unit_registry.dimensionless,
+                None,
+                id="dimensionless",
+                marks=pytest.mark.xfail(reason="reindex does not work with units"),
+            ),
+            pytest.param(
+                unit_registry.s,
+                None,
+                id="with incorrect unit",
+                marks=pytest.mark.xfail(reason="reindex does not work with pint"),
+            ),
+            pytest.param(
+                unit_registry.m,
+                None,
+                id="with correct unit",
+                marks=pytest.mark.xfail(reason="reindex does not work with pint"),
+            ),
+        ),
+    )
+    def test_interp_like(self, unit, error):
+        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+        coords = {
+            "x": (np.arange(10) + 0.3) * unit_registry.m,
+            "y": (np.arange(5) + 0.3) * unit_registry.m,
+        }
+
+        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
+        new_data_array = xr.DataArray(
+            data=np.empty((20, 10)),
+            coords={"x": np.arange(20) * unit, "y": np.arange(10) * unit},
+            dims=("x", "y"),
+        )
+
+        if error is not None:
+            with pytest.raises(error):
+                data_array.interp_like(x=new_data_array)
+        else:
+            result_array = (
+                xr.DataArray(
+                    data=array.magnitude,
+                    coords={name: value.magnitude for name, value in coords.items()},
+                    dims=("x", "y"),
+                ).interp_like(strip_units(new_data_array))
+                * unit_registry.degK
+            )
+            result_data_array = data_array.interp_like(new_data_array)
+
+            assert_equal_with_units(result_array, result_data_array)
