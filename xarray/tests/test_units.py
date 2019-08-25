@@ -1,4 +1,5 @@
 import operator
+from distutils.version import LooseVersion
 
 import numpy as np
 import pytest
@@ -13,6 +14,13 @@ pytestmark = [
     ),
     pytest.mark.filterwarnings("error::pint.errors.UnitStrippedWarning"),
 ]
+
+# pint version supporting __array_function__
+pint_version = "0.10"
+
+
+def use_pint_dev_or_xfail(reason):
+    return pytest.mark.xfail(LooseVersion(pint.__version__) < pint_version, reason=reason)
 
 
 unit_registry = pint.UnitRegistry()
@@ -42,7 +50,7 @@ def dtype(request):
 
 
 class TestDataArray:
-    @pytest.mark.xfail(reason="pint does not implement __array_function__ yet")
+    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
     def test_init(self):
         array = np.arange(10) * unit_registry.m
         data_array = xr.DataArray(data=array)
@@ -84,14 +92,14 @@ class TestDataArray:
             pytest.param(
                 operator.neg,
                 id="negate",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
             pytest.param(
                 abs,
                 id="absolute",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
@@ -114,21 +122,21 @@ class TestDataArray:
             pytest.param(
                 lambda x: 2 * x,
                 id="multiply",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
             pytest.param(
                 lambda x: x + x,
                 id="add",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
             pytest.param(
                 lambda x: x[0] + x,
                 id="add scalar",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
@@ -160,7 +168,7 @@ class TestDataArray:
             pytest.param(
                 [5, 2, 9, 1],
                 id="multiple indices",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
@@ -180,7 +188,7 @@ class TestDataArray:
                 12,
                 KeyError,
                 id="single value without unit",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
@@ -188,7 +196,7 @@ class TestDataArray:
                 12 * unit_registry.degree,
                 KeyError,
                 id="single value with incorrect unit",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
@@ -202,7 +210,7 @@ class TestDataArray:
                 (10, 5, 13),
                 KeyError,
                 id="multiple values without unit",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
@@ -210,7 +218,7 @@ class TestDataArray:
                 (10, 5, 13) * unit_registry.degree,
                 KeyError,
                 id="multiple values with incorrect unit",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
@@ -218,7 +226,7 @@ class TestDataArray:
                 (10, 5, 13) * unit_registry.s,
                 None,
                 id="multiple values with correct unit",
-                marks=pytest.mark.xfail(
+                marks=use_pint_dev_or_xfail(
                     reason="pint does not implement __array_function__ yet"
                 ),
             ),
