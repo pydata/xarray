@@ -25,10 +25,10 @@ def assert_equal_with_units(a, b):
     # workaround until pint implements allclose in __array_function__
     if isinstance(a_, BaseQuantity) or isinstance(b_, BaseQuantity):
         assert (hasattr(a_, "magnitude") and hasattr(b_, "magnitude")) and np.allclose(
-            a_.magnitude, b_.magnitude
+            a_.magnitude, b_.magnitude, equal_nan=True
         )
     else:
-        assert np.allclose(a_, b_)
+        assert np.allclose(a_, b_, equal_nan=True)
 
     if hasattr(a_, "units") or hasattr(b_, "units"):
         assert (hasattr(a_, "units") and hasattr(b_, "units")) and a_.units == b_.units
