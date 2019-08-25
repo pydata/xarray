@@ -207,7 +207,7 @@ class TestDataArray:
                 marks=pytest.mark.xfail(reason="single value tries to coerce to int"),
             ),
             pytest.param(
-                (10, 5, 13),
+                [10, 5, 13],
                 KeyError,
                 id="multiple values without unit",
                 marks=use_pint_dev_or_xfail(
@@ -215,7 +215,7 @@ class TestDataArray:
                 ),
             ),
             pytest.param(
-                (10, 5, 13) * unit_registry.degree,
+                [10, 5, 13] * unit_registry.degree,
                 KeyError,
                 id="multiple values with incorrect unit",
                 marks=use_pint_dev_or_xfail(
@@ -223,7 +223,7 @@ class TestDataArray:
                 ),
             ),
             pytest.param(
-                (10, 5, 13) * unit_registry.s,
+                [10, 5, 13] * unit_registry.s,
                 None,
                 id="multiple values with correct unit",
                 marks=use_pint_dev_or_xfail(
