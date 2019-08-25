@@ -307,14 +307,38 @@ class TestDataArray:
         else:
             assert_equal_with_units(array[values.magnitude], data_array.loc[values])
 
-    @pytest.mark.xfail(reason="indexing calls np.asarray")
-    @pytest.mark.parametrize("shape", (
-        (10, 20),
-        (10, 20, 1),
-        (10, 1, 20),
-        (1, 10, 20),
-        (1, 10, 1, 20),
-    ))
+    @pytest.mark.parametrize(
+        "shape",
+        (
+            pytest.param(
+                (10, 20),
+                id="nothing squeezable",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__"
+                ),
+            ),
+            pytest.param(
+                (10, 20, 1),
+                id="last dimension squeezable",
+                marks=pytest.mark.xfail(reason="indexing calls np.asarray"),
+            ),
+            pytest.param(
+                (10, 1, 20),
+                id="middle dimension squeezable",
+                marks=pytest.mark.xfail(reason="indexing calls np.asarray"),
+            ),
+            pytest.param(
+                (1, 10, 20),
+                id="first dimension squeezable",
+                marks=pytest.mark.xfail(reason="indexing calls np.asarray"),
+            ),
+            pytest.param(
+                (1, 10, 1, 20),
+                id="first and last dimension squeezable",
+                marks=pytest.mark.xfail(reason="indexing calls np.asarray"),
+            ),
+        ),
+    )
     def test_squeeze(self, shape, dtype):
         names = "xyzt"
         coords = {
