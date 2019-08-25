@@ -1078,26 +1078,24 @@ def _logical_any(args):
 
 def _masked_result_drop_slice(key, data=None):
 
-    if data is not None:
-        chunks_hint = getattr(data, "chunks", None)
-    else:
-        chunks_hint = None
-
     key = (k for k in key if not isinstance(k, slice))
-    if chunks_hint is not None:
-        key = [
-            _dask_array_with_chunks_hint(k, chunks_hint)
-            if isinstance(k, np.ndarray)
-            else k
-            for k in key
-        ]
+    chunks_hint = getattr(data, "chunks", None)
 
-    mask = _logical_any(k == -1 for k in key)
-    if isinstance(data, sparse_array_type):
-        import sparse
+    new_keys = []
+    for k in key:
+        if isinstance(k, np.ndarray):
+            if isinstance(data, dask_array_type):
+                new_keys.append(_dask_array_with_chunks_hint(k, chunks_hint))
+            elif isinstance(data, sparse_array_type):
+                import sparse
 
-        mask = sparse.COO.from_numpy(mask)
+                new_keys.append(sparse.COO.from_numpy(k))
+            else:
+                new_keys.append(k)
+        else:
+            new_keys.append(k)
 
+    mask = _logical_any(k == -1 for k in new_keys)
     return mask
 
 
