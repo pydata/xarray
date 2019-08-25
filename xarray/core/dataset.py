@@ -1373,7 +1373,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             names = list(names)
         self._assert_all_in_dataset(names)
-        obj = self if inplace else self.copy()
+        obj = self.copy()
         obj._coord_names.update(names)
         return obj
 
@@ -1412,7 +1412,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 raise ValueError(
                     "cannot remove index coordinates with reset_coords: %s" % bad_coords
                 )
-        obj = self if inplace else self.copy()
+        obj = self.copy()
         obj._coord_names.difference_update(names)
         if drop:
             for name in names:
@@ -2419,9 +2419,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables, coord_names, dims, indexes = self._rename_all(
             name_dict=name_dict, dims_dict=name_dict
         )
-        return self._replace(
-            variables, coord_names, dims=dims, indexes=indexes, inplace=inplace
-        )
+        return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
     def rename_dims(
         self, dims_dict: Mapping[Hashable, Hashable] = None, **dims: Hashable
@@ -2558,9 +2556,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             var.dims = dims
             variables[k] = var
 
-        return self._replace_with_new_dims(
-            variables, coord_names, indexes=indexes, inplace=inplace
-        )
+        return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
     def expand_dims(
         self,
@@ -2780,9 +2776,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables, coord_names = merge_indexes(
             indexes, self._variables, self._coord_names, append=append
         )
-        return self._replace_vars_and_dims(
-            variables, coord_names=coord_names, inplace=inplace
-        )
+        return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def reset_index(
         self,
@@ -2818,9 +2812,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             cast(Mapping[Hashable, Hashable], self._level_coords),
             drop=drop,
         )
-        return self._replace_vars_and_dims(
-            variables, coord_names=coord_names, inplace=inplace
-        )
+        return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def reorder_levels(
         self,
@@ -2859,7 +2851,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables[dim] = IndexVariable(coord.dims, new_index)
             indexes[dim] = new_index
 
-        return self._replace(variables, indexes=indexes, inplace=inplace)
+        return self._replace(variables, indexes=indexes)
 
     def _stack_once(self, dims, new_dim):
         variables = OrderedDict()
@@ -3240,9 +3232,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             fill_value=fill_value,
         )
 
-        return self._replace_vars_and_dims(
-            variables, coord_names, dims, inplace=inplace
-        )
+        return self._replace_vars_and_dims(variables, coord_names, dims)
 
     def _assert_all_in_dataset(
         self, names: Iterable[Hashable], virtual_okay: bool = False
