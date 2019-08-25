@@ -2328,7 +2328,7 @@ class TestDataset:
     def test_rename_inplace(self):
         times = pd.date_range("2000-01-01", periods=3)
         data = Dataset({"z": ("x", [2, 3, 4]), "t": ("t", times)})
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             data.rename({"x": "y"}, inplace=True)
 
     def test_rename_dims(self):
@@ -2592,7 +2592,7 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             ds.set_index(x=mindex.names, inplace=True)
             assert_identical(ds, expected)
 
@@ -2617,7 +2617,7 @@ class TestDataset:
         obj = ds.reset_index("x")
         assert_identical(obj, expected)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             ds.reset_index("x", inplace=True)
 
     def test_reorder_levels(self):
@@ -2629,7 +2629,7 @@ class TestDataset:
         reindexed = ds.reorder_levels(x=["level_2", "level_1"])
         assert_identical(reindexed, expected)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             ds.reorder_levels(x=["level_2", "level_1"], inplace=True)
 
         ds = Dataset({}, coords={"x": [1, 2]})
@@ -2770,7 +2770,7 @@ class TestDataset:
         assert actual_result is actual
         assert_identical(expected, actual)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             actual = data.update(data, inplace=False)
 
         other = Dataset(attrs={"new": "attr"})
