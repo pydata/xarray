@@ -20,7 +20,9 @@ pint_version = "0.10"
 
 
 def use_pint_dev_or_xfail(reason):
-    return pytest.mark.xfail(LooseVersion(pint.__version__) < pint_version, reason=reason)
+    return pytest.mark.xfail(
+        LooseVersion(pint.__version__) < pint_version, reason=reason
+    )
 
 
 unit_registry = pint.UnitRegistry()
@@ -316,14 +318,19 @@ class TestDataArray:
     def test_squeeze(self, shape, dtype):
         names = "xyzt"
         coords = {
-            name: np.arange(length).astype(dtype) * (unit_registry.m if name != "t" else unit_registry.s)
+            name: np.arange(length).astype(dtype)
+            * (unit_registry.m if name != "t" else unit_registry.s)
             for name, length in zip(names, shape)
         }
         array = np.arange(10 * 20).astype(dtype).reshape(shape) * unit_registry.J
-        data_array = xr.DataArray(data=array, coords=coords, dims=tuple(names[:len(shape)]))
+        data_array = xr.DataArray(
+            data=array, coords=coords, dims=tuple(names[: len(shape)])
+        )
 
         assert_equal_with_units(np.squeeze(array), data_array.squeeze())
         # try squeezing the dimensions separately
         names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
         for index, name in enumerate(names):
-            assert_equal_with_units(np.squeeze(array, axis=index), data_array.squeeze(dim=name))
+            assert_equal_with_units(
+                np.squeeze(array, axis=index), data_array.squeeze(dim=name)
+            )
