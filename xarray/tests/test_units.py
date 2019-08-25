@@ -242,3 +242,88 @@ class TestDataArray:
                 data_array.sel(x=values)
         else:
             assert_equal_with_units(array[values.magnitude], data_array.sel(x=values))
+
+    @pytest.mark.parametrize(
+        "values,error",
+        (
+            pytest.param(
+                12,
+                KeyError,
+                id="single value without unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                12 * unit_registry.degree,
+                KeyError,
+                id="single value with incorrect unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                12 * unit_registry.s,
+                None,
+                id="single value with correct unit",
+                marks=pytest.mark.xfail(reason="single value tries to coerce to int"),
+            ),
+            pytest.param(
+                [10, 5, 13],
+                KeyError,
+                id="multiple values without unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                [10, 5, 13] * unit_registry.degree,
+                KeyError,
+                id="multiple values with incorrect unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                [10, 5, 13] * unit_registry.s,
+                None,
+                id="multiple values with correct unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+        ),
+    )
+    def test_loc(self, values, error, dtype):
+        array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
+        x = np.arange(len(array)) * unit_registry.s
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+
+        if error is not None:
+            with pytest.raises(error):
+                data_array.loc[values]
+        else:
+            assert_equal_with_units(array[values.magnitude], data_array.loc[values])
+
+    @pytest.mark.xfail(reason="indexing calls np.asarray")
+    @pytest.mark.parametrize("shape", (
+        (10, 20),
+        (10, 20, 1),
+        (10, 1, 20),
+        (1, 10, 20),
+        (1, 10, 1, 20),
+    ))
+    def test_squeeze(self, shape, dtype):
+        names = "xyzt"
+        coords = {
+            name: np.arange(length).astype(dtype) * (unit_registry.m if name != "t" else unit_registry.s)
+            for name, length in zip(names, shape)
+        }
+        array = np.arange(10 * 20).astype(dtype).reshape(shape) * unit_registry.J
+        data_array = xr.DataArray(data=array, coords=coords, dims=tuple(names[:len(shape)]))
+
+        assert_equal_with_units(np.squeeze(array), data_array.squeeze())
+        # try squeezing the dimensions separately
+        names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
+        for index, name in enumerate(names):
+            assert_equal_with_units(np.squeeze(array, axis=index), data_array.squeeze(dim=name))
