@@ -115,3 +115,62 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         assert_equal_with_units(func(array), func(data_array))
+
+    @pytest.mark.parametrize(
+        "indices",
+        (
+            pytest.param(
+                4,
+                id="single index",
+                marks=pytest.mark.xfail(
+                    reason="single index isel() tries to coerce to int"
+                ),
+            ),
+            pytest.param([5, 2, 9, 1], id="multiple indices"),
+        ),
+    )
+    def test_isel(self, indices, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.s
+        x = np.arange(len(array)) * unit_registry.m
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+
+        assert_equal_with_units(array[indices], data_array.isel(x=indices))
+
+    @pytest.mark.parametrize(
+        "values,error",
+        (
+            pytest.param(12, KeyError, id="single value without unit"),
+            pytest.param(
+                12 * unit_registry.degree,
+                KeyError,
+                id="single value with incorrect unit",
+            ),
+            pytest.param(
+                12 * unit_registry.s,
+                None,
+                id="single value with correct unit",
+                marks=pytest.mark.xfail(reason="single value tries to coerce to int"),
+            ),
+            pytest.param((10, 5, 13), KeyError, id="multiple values without unit"),
+            pytest.param(
+                (10, 5, 13) * unit_registry.degree,
+                KeyError,
+                id="multiple values with incorrect unit",
+            ),
+            pytest.param(
+                (10, 5, 13) * unit_registry.s,
+                None,
+                id="multiple values with correct unit",
+            ),
+        ),
+    )
+    def test_sel(self, values, error, dtype):
+        array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
+        x = np.arange(len(array)) * unit_registry.s
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+
+        if error is not None:
+            with pytest.raises(error):
+                data_array.sel(x=values)
+        else:
+            assert_equal_with_units(array[values.magnitude], data_array.sel(x=values))
