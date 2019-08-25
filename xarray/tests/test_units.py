@@ -81,10 +81,11 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
-            operator.neg,
-            abs,
+            pytest.param(operator.neg, id="negate"),
+            pytest.param(abs, id="absolute"),
             pytest.param(
                 np.round,
+                id="round",
                 marks=pytest.mark.xfail(reason="pint does not implement round"),
             ),
         ),
