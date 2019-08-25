@@ -96,21 +96,21 @@ class TestDataArray:
         assert_equal_with_units(func(array), func(data_array))
 
     @pytest.mark.parametrize(
-        "func_name,func",
+        "func",
         (
-            ("multiply", lambda x: 2 * x),
-            ("add", lambda x: x + x),
-            ("add_scalar", lambda x: x[0] + x),
+            pytest.param(lambda x: 2 * x, id="multiply"),
+            pytest.param(lambda x: x + x, id="add"),
+            pytest.param(lambda x: x[0] + x, id="add scalar"),
             pytest.param(
-                "matrix_multiply",
                 lambda x: x.T @ x,
+                id="matrix multiply",
                 marks=pytest.mark.xfail(
                     reason="pint does not support matrix multiplication yet"
                 ),
             ),
         ),
     )
-    def test_binary_operations(self, func_name, func, dtype):
+    def test_binary_operations(self, func, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
         data_array = xr.DataArray(data=array)
 
