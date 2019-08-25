@@ -21,6 +21,14 @@ v0.13.0 (unreleased)
 This release increases the minimum required Python version from 3.5.0 to 3.5.3
 (:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+  The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
+  since v0.10.0. These are redundant with the ``isel`` / ``sel`` methods.
+  See :ref:`vectorized_indexing` for the details 
+  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -69,13 +77,17 @@ Enhancements
   By `Ulrich Herter <https://github.com/ulijh>`_.
 
 - :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index
-  labels by specifying both ``dim`` and ``labels`` is deprecated (:issue:`2910`).
+  labels by using both ``dim`` and ``labels`` or using a
+  :py:class:`~xarray.core.coordinates.DataArrayCoordinates` object are
+  deprecated (:issue:`2910`).
   By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
 
 - Added examples of :py:meth:`Dataset.set_index` and
   :py:meth:`DataArray.set_index`, as well are more specific error messages
   when the user passes invalid arguments (:issue:`3176`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
+  
+- :py:func:`filter_by_attrs` now filters the coordinates as well as the variables. By `Spencer Jones <https://github.com/cspencerjones>`_.
 
 Bug fixes
 ~~~~~~~~~
