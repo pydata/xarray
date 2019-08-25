@@ -1,4 +1,5 @@
 import importlib
+import platform
 import re
 import warnings
 from contextlib import contextmanager
@@ -32,7 +33,6 @@ try:
 except ImportError:
     pass
 
-import platform
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),

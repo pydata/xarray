@@ -24,7 +24,6 @@ from xarray.tests import (
     assert_identical,
     raises_regex,
     requires_bottleneck,
-    requires_cftime,
     requires_dask,
     requires_iris,
     requires_np113,
@@ -1715,6 +1714,11 @@ class TestDataArray:
         )
         with raises_regex(ValueError, "dimension mismatch"):
             array2d.set_index(x="level")
+
+        # Issue 3176: Ensure clear error message on key error.
+        with pytest.raises(ValueError) as excinfo:
+            obj.set_index(x="level_4")
+        assert str(excinfo.value) == "level_4 is not the name of an existing variable."
 
     def test_reset_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]

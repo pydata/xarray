@@ -7,6 +7,7 @@ from distutils.version import LooseVersion
 from numbers import Number
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     DefaultDict,
@@ -24,14 +25,15 @@ from typing import (
     Union,
     cast,
     overload,
-    TYPE_CHECKING,
 )
 
 import numpy as np
 import pandas as pd
+
 import xarray as xr
 
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
+from ..plot.dataset_plot import _Dataset_PlotMethods
 from . import (
     alignment,
     dtypes,
@@ -45,7 +47,7 @@ from . import (
     rolling,
     utils,
 )
-from .alignment import align, _broadcast_helper, _get_broadcast_dims_map_common_coords
+from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .common import (
     ALL_DIMS,
     DataWithCoords,
@@ -53,8 +55,8 @@ from .common import (
     _contains_datetime_like_objects,
 )
 from .coordinates import (
-    DatasetCoordinates,
     DataArrayCoordinates,
+    DatasetCoordinates,
     LevelCoordinatesSource,
     assert_coordinate_consistent,
     remap_label_indexers,
@@ -79,7 +81,6 @@ from .utils import (
     maybe_wrap_array,
 )
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
-from ..plot.dataset_plot import _Dataset_PlotMethods
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -198,6 +199,7 @@ def merge_indexes(
     """
     vars_to_replace = {}  # Dict[Any, Variable]
     vars_to_remove = []  # type: list
+    error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, str) or not isinstance(var_names, Sequence):
@@ -207,7 +209,10 @@ def merge_indexes(
         current_index_variable = variables.get(dim)
 
         for n in var_names:
-            var = variables[n]
+            try:
+                var = variables[n]
+            except KeyError:
+                raise ValueError(error_msg.format(n))
             if (
                 current_index_variable is not None
                 and var.dims != current_index_variable.dims
@@ -239,8 +244,11 @@ def merge_indexes(
 
         else:
             for n in var_names:
+                try:
+                    var = variables[n]
+                except KeyError:
+                    raise ValueError(error_msg.format(n))
                 names.append(n)
-                var = variables[n]
                 cat = pd.Categorical(var.values, ordered=True)
                 codes.append(cat.codes)
                 levels.append(cat.categories)
@@ -1436,6 +1444,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         encoding: Mapping = None,
         unlimited_dims: Iterable[Hashable] = None,
         compute: bool = True,
+        invalid_netcdf: bool = False,
     ) -> Union[bytes, "Delayed", None]:
         """Write dataset contents to a netCDF file.
 
@@ -1499,6 +1508,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compute: boolean
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
+        invalid_netcdf: boolean
+            Only valid along with engine='h5netcdf'. If True, allow writing
+            hdf5 files which are valid netcdf as described in
+            https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
             encoding = {}
@@ -1514,6 +1527,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             encoding=encoding,
             unlimited_dims=unlimited_dims,
             compute=compute,
+            invalid_netcdf=invalid_netcdf,
         )
 
     def to_zarr(
@@ -2951,6 +2965,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         obj : Dataset
             Another dataset, with this dataset's data but replaced coordinates.
+
+        Examples
+        --------
+        >>> arr = xr.DataArray(data=np.ones((2, 3)),
+        ...                    dims=['x', 'y'],
+        ...                    coords={'x':
+        ...                        range(2), 'y':
+        ...                        range(3), 'a': ('x', [3, 4])
+        ...                    })
+        >>> ds = xr.Dataset({'v': arr})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * x        (x) int64 0 1
+          * y        (y) int64 0 1 2
+            a        (x) int64 3 4
+        Data variables:
+            v        (x, y) float64 1.0 1.0 1.0 1.0 1.0 1.0
+        >>> ds.set_index(x='a')
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * x        (x) int64 3 4
+          * y        (y) int64 0 1 2
+        Data variables:
+            v        (x, y) float64 1.0 1.0 1.0 1.0 1.0 1.0
 
         See Also
         --------
