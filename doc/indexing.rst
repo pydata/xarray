@@ -394,14 +394,6 @@ These methods may also be applied to ``Dataset`` objects
 
 .. note::
 
-  Vectorized indexing is a new feature in v0.10.
-  In older versions of xarray, dimensions of indexers are ignored.
-  Dedicated methods for some advanced indexing use cases,
-  ``isel_points`` and ``sel_points`` are now deprecated.
-  See :ref:`more_advanced_indexing` for their alternative.
-
-.. note::
-
   If an indexer is a :py:meth:`~xarray.DataArray`, its coordinates should not
   conflict with the selected subpart of the target array (except for the
   explicitly indexed dimensions with ``.loc``/``.sel``).

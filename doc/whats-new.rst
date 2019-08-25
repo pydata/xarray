@@ -21,6 +21,14 @@ v0.13.0 (unreleased)
 This release increases the minimum required Python version from 3.5.0 to 3.5.3
 (:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+  The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
+  since v0.10.0. These are redundant with the ``isel`` / ``sel`` methods.
+  See :ref:`vectorized_indexing` for the details 
+  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 

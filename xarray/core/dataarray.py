@@ -1026,32 +1026,6 @@ class DataArray(AbstractArray, DataWithCoords):
         )
         return self._from_temp_dataset(ds)
 
-    def isel_points(self, dim="points", **indexers) -> "DataArray":
-        """Return a new DataArray whose data is given by pointwise integer
-        indexing along the specified dimension(s).
-
-        See Also
-        --------
-        Dataset.isel_points
-        """
-        ds = self._to_temp_dataset().isel_points(dim=dim, **indexers)
-        return self._from_temp_dataset(ds)
-
-    def sel_points(
-        self, dim="points", method=None, tolerance=None, **indexers
-    ) -> "DataArray":
-        """Return a new DataArray whose dataset is given by pointwise selection
-        of index labels along the specified dimension(s).
-
-        See Also
-        --------
-        Dataset.sel_points
-        """
-        ds = self._to_temp_dataset().sel_points(
-            dim=dim, method=method, tolerance=tolerance, **indexers
-        )
-        return self._from_temp_dataset(ds)
-
     def broadcast_like(
         self, other: Union["DataArray", Dataset], exclude: Iterable[Hashable] = None
     ) -> "DataArray":
