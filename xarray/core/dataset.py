@@ -40,7 +40,6 @@ from . import (
     duck_array_ops,
     formatting,
     groupby,
-    indexing,
     ops,
     pdcompat,
     resample,
@@ -55,7 +54,6 @@ from .common import (
     _contains_datetime_like_objects,
 )
 from .coordinates import (
-    DataArrayCoordinates,
     DatasetCoordinates,
     LevelCoordinatesSource,
     assert_coordinate_consistent,
@@ -79,6 +77,8 @@ from .utils import (
     either_dict_or_kwargs,
     hashable,
     maybe_wrap_array,
+    is_dict_like,
+    is_list_like,
 )
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
@@ -1998,214 +1998,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         result = self.isel(indexers=pos_indexers, drop=drop)
         return result._overwrite_indexes(new_indexes)
 
-    def isel_points(self, dim: Any = "points", **indexers: Any) -> "Dataset":
-        """Returns a new dataset with each array indexed pointwise along the
-        specified dimension(s).
-
-        This method selects pointwise values from each array and is akin to
-        the NumPy indexing behavior of `arr[[0, 1], [0, 1]]`, except this
-        method does not require knowing the order of each array's dimensions.
-
-        Parameters
-        ----------
-        dim : hashable or DataArray or pandas.Index or other list-like object, 
-              optional
-            Name of the dimension to concatenate along. If dim is provided as a
-            hashable, it must be a new dimension name, in which case it is added
-            along axis=0. If dim is provided as a DataArray or Index or
-            list-like object, its name, which must not be present in the
-            dataset, is used as the dimension to concatenate along and the
-            values are added as a coordinate.
-        **indexers : {dim: indexer, ...}
-            Keyword arguments with names matching dimensions and values given
-            by array-like objects. All indexers must be the same length and
-            1 dimensional.
-
-        Returns
-        -------
-        obj : Dataset
-            A new Dataset with the same contents as this dataset, except each
-            array and dimension is indexed by the appropriate indexers. With
-            pointwise indexing, the new Dataset will always be a copy of the
-            original.
-
-        See Also
-        --------
-        Dataset.sel
-        Dataset.isel
-        Dataset.sel_points
-        DataArray.isel_points
-        """  # noqa
-        warnings.warn(
-            "Dataset.isel_points is deprecated: use Dataset.isel()" "instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        indexer_dims = set(indexers)
-
-        def take(variable, slices):
-            # Note: remove helper function when once when numpy
-            # supports vindex https://github.com/numpy/numpy/pull/6075
-            if hasattr(variable.data, "vindex"):
-                # Special case for dask backed arrays to use vectorised list
-                # indexing
-                sel = variable.data.vindex[slices]
-            else:
-                # Otherwise assume backend is numpy array with 'fancy' indexing
-                sel = variable.data[slices]
-            return sel
-
-        def relevant_keys(mapping):
-            return [
-                k for k, v in mapping.items() if any(d in indexer_dims for d in v.dims)
-            ]
-
-        coords = relevant_keys(self.coords)
-        indexers = {k: np.asarray(v) for k, v in indexers.items()}
-        non_indexed_dims = set(self.dims) - indexer_dims
-        non_indexed_coords = set(self.coords) - set(coords)
-
-        # All the indexers should be iterables
-        # Check that indexers are valid dims, integers, and 1D
-        for k, v in indexers.items():
-            if k not in self.dims:
-                raise ValueError("dimension %s does not exist" % k)
-            if v.dtype.kind != "i":  # type: ignore
-                raise TypeError("Indexers must be integers")
-            if v.ndim != 1:  # type: ignore
-                raise ValueError("Indexers must be 1 dimensional")
-
-        # all the indexers should have the same length
-        lengths = {len(v) for k, v in indexers.items()}
-        if len(lengths) > 1:
-            raise ValueError("All indexers must be the same length")
-
-        # Existing dimensions are not valid choices for the dim argument
-        if isinstance(dim, str):
-            if dim in self.dims:
-                # dim is an invalid string
-                raise ValueError(
-                    "Existing dimension names are not valid "
-                    "choices for the dim argument in sel_points"
-                )
-
-        elif hasattr(dim, "dims"):
-            # dim is a DataArray or Coordinate
-            if dim.name in self.dims:
-                # dim already exists
-                raise ValueError(
-                    "Existing dimensions are not valid choices "
-                    "for the dim argument in sel_points"
-                )
-
-        # Set the new dim_name, and optionally the new dim coordinate
-        # dim is either an array-like or a string
-        if not utils.is_scalar(dim):
-            # dim is array like get name or assign 'points', get as variable
-            dim_name = "points" if not hasattr(dim, "name") else dim.name
-            dim_coord = as_variable(dim, name=dim_name)
-        else:
-            # dim is a string
-            dim_name = dim
-            dim_coord = None  # type: ignore
-
-        reordered = self.transpose(*list(indexer_dims), *list(non_indexed_dims))
-
-        variables = OrderedDict()  # type: ignore
-
-        for name, var in reordered.variables.items():
-            if name in indexers or any(d in indexer_dims for d in var.dims):
-                # slice if var is an indexer or depends on an indexed dim
-                slc = [indexers.get(k, slice(None)) for k in var.dims]
-
-                var_dims = [dim_name] + [d for d in var.dims if d in non_indexed_dims]
-                selection = take(var, tuple(slc))
-                var_subset = type(var)(var_dims, selection, var.attrs)
-                variables[name] = var_subset
-            else:
-                # If not indexed just add it back to variables or coordinates
-                variables[name] = var
-
-        coord_names = (set(coords) & set(variables)) | non_indexed_coords
-
-        dset = self._replace_vars_and_dims(variables, coord_names=coord_names)
-        # Add the dim coord to the new dset. Must be done after creation
-        # because_replace_vars_and_dims can only access existing coords,
-        # not add new ones
-        if dim_coord is not None:
-            dset.coords[dim_name] = dim_coord
-        return dset
-
-    def sel_points(
-        self,
-        dim: Any = "points",
-        method: str = None,
-        tolerance: Number = None,
-        **indexers: Any
-    ):
-        """Returns a new dataset with each array indexed pointwise by tick
-        labels along the specified dimension(s).
-
-        In contrast to `Dataset.isel_points`, indexers for this method should
-        use labels instead of integers.
-
-        In contrast to `Dataset.sel`, this method selects points along the
-        diagonal of multi-dimensional arrays, not the intersection.
-
-        Parameters
-        ----------
-        dim : hashable or DataArray or pandas.Index or other list-like object, 
-              optional
-            Name of the dimension to concatenate along. If dim is provided as a
-            hashable, it must be a new dimension name, in which case it is added
-            along axis=0. If dim is provided as a DataArray or Index or
-            list-like object, its name, which must not be present in the
-            dataset, is used as the dimension to concatenate along and the
-            values are added as a coordinate.
-        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
-            Method to use for inexact matches (requires pandas>=0.16):
-
-            * None (default): only exact matches
-            * pad / ffill: propagate last valid index value forward
-            * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value
-        tolerance : optional
-            Maximum distance between original and new labels for inexact
-            matches. The values of the index at the matching locations must
-            satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
-        **indexers : {dim: indexer, ...}
-            Keyword arguments with names matching dimensions and values given
-            by array-like objects. All indexers must be the same length and
-            1 dimensional.
-
-        Returns
-        -------
-        obj : Dataset
-            A new Dataset with the same contents as this dataset, except each
-            array and dimension is indexed by the appropriate indexers. With
-            pointwise indexing, the new Dataset will always be a copy of the
-            original.
-
-        See Also
-        --------
-        Dataset.sel
-        Dataset.isel
-        Dataset.isel_points
-        DataArray.sel_points
-        """  # noqa
-        warnings.warn(
-            "Dataset.sel_points is deprecated: use Dataset.sel()" "instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        pos_indexers, _ = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
-        )
-        return self.isel_points(dim=dim, **pos_indexers)
-
     def broadcast_like(
         self, other: Union["Dataset", "DataArray"], exclude: Iterable[Hashable] = None
     ) -> "Dataset":
@@ -3555,9 +3347,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        labels_are_coords = isinstance(labels, DataArrayCoordinates)
-        if labels_kwargs or (utils.is_dict_like(labels) and not labels_are_coords):
-            labels_kwargs = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
+        if is_dict_like(labels) and not isinstance(labels, dict):
+            warnings.warn(
+                "dropping coordinates using key values of dict-like labels is "
+                "deprecated; use drop_vars or a list of coordinates.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if dim is not None and is_list_like(labels):
+            warnings.warn(
+                "dropping dimensions using list-like labels is deprecated; use "
+                "dict-like arguments.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        if labels_kwargs or isinstance(labels, dict):
+            labels_kwargs = either_dict_or_kwargs(labels, labels_kwargs, "drop")
             if dim is not None:
                 raise ValueError("cannot specify dim and dict-like arguments.")
             ds = self
@@ -3571,13 +3377,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 labels = set(labels)
             return self._drop_vars(labels, errors=errors)
         else:
-            if utils.is_list_like(labels):
-                warnings.warn(
-                    "dropping dimensions using list-like labels is deprecated; "
-                    "use dict-like arguments.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
             return self._drop_labels(labels, dim, errors=errors)
 
     def _drop_labels(self, labels=None, dim=None, errors="raise"):
@@ -5140,7 +4939,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         """  # noqa
         selection = []
-        for var_name, variable in self.data_vars.items():
+        for var_name, variable in self.variables.items():
             has_value_flag = False
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
