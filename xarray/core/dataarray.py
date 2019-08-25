@@ -706,20 +706,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset, or DataArray if ``drop == True``
         """
         inplace = _check_inplace(inplace)
-        if inplace and not drop:
-            raise ValueError(
-                "cannot reset coordinates in-place on a "
-                "DataArray without ``drop == True``"
-            )
         if names is None:
             names = set(self.coords) - set(self.dims)
         dataset = self.coords.to_dataset().reset_coords(names, drop)
         if drop:
-            if inplace:
-                self._coords = dataset._variables
-                return None
-            else:
-                return self._replace(coords=dataset._variables)
+            return self._replace(coords=dataset._variables)
         else:
             if self.name is None:
                 raise ValueError(
@@ -1521,11 +1512,7 @@ class DataArray(AbstractArray, DataWithCoords):
         inplace = _check_inplace(inplace)
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
         coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
-        if inplace:
-            self._coords = coords
-            return None
-        else:
-            return self._replace(coords=coords)
+        return self._replace(coords=coords)
 
     def reset_index(
         self,
@@ -1558,18 +1545,14 @@ class DataArray(AbstractArray, DataWithCoords):
         coords, _ = split_indexes(
             dims_or_levels, self._coords, set(), self._level_coords, drop=drop
         )
-        if inplace:
-            self._coords = coords
-            return None
-        else:
-            return self._replace(coords=coords)
+        return self._replace(coords=coords)
 
     def reorder_levels(
         self,
         dim_order: Mapping[Hashable, Sequence[int]] = None,
         inplace: bool = None,
         **dim_order_kwargs: Sequence[int]
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Rearrange index levels using input order.
 
         Parameters
@@ -1599,11 +1582,7 @@ class DataArray(AbstractArray, DataWithCoords):
             replace_coords[dim] = IndexVariable(coord.dims, index.reorder_levels(order))
         coords = self._coords.copy()
         coords.update(replace_coords)
-        if inplace:
-            self._coords = coords
-            return None
-        else:
-            return self._replace(coords=coords)
+        return self._replace(coords=coords)
 
     def stack(
         self,
