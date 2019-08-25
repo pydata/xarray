@@ -1,3 +1,5 @@
+import operator
+
 import numpy as np
 import pytest
 
@@ -75,3 +77,41 @@ class TestDataArray:
         result_data_array = func(data_array)
 
         assert_equal_with_units(result_array, result_data_array)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            operator.neg,
+            abs,
+            pytest.param(
+                np.round,
+                marks=pytest.mark.xfail(reason="pint does not implement round"),
+            ),
+        ),
+    )
+    def test_unary_operations(self, func, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.m
+        data_array = xr.DataArray(data=array)
+
+        assert_equal_with_units(func(array), func(data_array))
+
+    @pytest.mark.parametrize(
+        "func_name,func",
+        (
+            ("multiply", lambda x: 2 * x),
+            ("add", lambda x: x + x),
+            ("add_scalar", lambda x: x[0] + x),
+            pytest.param(
+                "matrix_multiply",
+                lambda x: x.T @ x,
+                marks=pytest.mark.xfail(
+                    reason="pint does not support matrix multiplication yet"
+                ),
+            ),
+        ),
+    )
+    def test_binary_operations(self, func_name, func, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.m
+        data_array = xr.DataArray(data=array)
+
+        assert_equal_with_units(func(array), func(data_array))
