@@ -21,6 +21,17 @@ v0.13.0 (unreleased)
 This release increases the minimum required Python version from 3.5.0 to 3.5.3
 (:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
+  since v0.10.0. These are redundant with the ``isel`` / ``sel`` methods.
+  See :ref:`vectorized_indexing` for the details 
+  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+- The ``inplace`` kwarg for public methods now raises an error, having been deprecated
+  since v0.11.0.
+  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -64,6 +75,11 @@ Enhancements
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
+
+- Added the ability to initialize an empty or full DataArray
+  with a single value. (:issue:`277`)
+  By `Gerardo Rivera <http://github.com/dangomelon>`_.
+
 - :py:func:`~xarray.Dataset.to_netcdf()` now supports the ``invalid_netcdf`` kwarg when used
   with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
   By `Ulrich Herter <https://github.com/ulijh>`_.
@@ -78,6 +94,8 @@ Enhancements
   :py:meth:`DataArray.set_index`, as well are more specific error messages
   when the user passes invalid arguments (:issue:`3176`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
+  
+- :py:func:`filter_by_attrs` now filters the coordinates as well as the variables. By `Spencer Jones <https://github.com/cspencerjones>`_.
 
 Bug fixes
 ~~~~~~~~~
