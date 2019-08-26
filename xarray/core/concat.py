@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from . import utils, dtypes
+from . import dtypes, utils
 from .alignment import align
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
@@ -85,6 +85,9 @@ def concat(
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
 
     indexers, mode, concat_over : deprecated
 

@@ -5,10 +5,10 @@ from textwrap import dedent
 
 import pandas as pd
 
+from . import dtypes
+from .concat import concat
 from .dataarray import DataArray
 from .dataset import Dataset
-from .concat import concat
-from . import dtypes
 from .merge import merge
 
 
@@ -379,6 +379,9 @@ def combine_nested(
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
 
     Returns
     -------
@@ -529,6 +532,9 @@ def combine_by_coords(
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
 
     Returns
     -------
@@ -688,6 +694,9 @@ def auto_combine(
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
 
     Returns
     -------

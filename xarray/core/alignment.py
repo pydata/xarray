@@ -3,7 +3,7 @@ import operator
 import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import suppress
-from typing import Any, Dict, Hashable, Mapping, Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Hashable, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -14,8 +14,8 @@ from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from .dataarray import DataArray  # noqa: F401
+    from .dataset import Dataset  # noqa: F401
 
 
 def _get_joiner(join):
@@ -31,8 +31,32 @@ def _get_joiner(join):
         # We cannot return a function to "align" in this case, because it needs
         # access to the dimension name to give a good error message.
         return None
+    elif join == "override":
+        # We rewrite all indexes and then use join='left'
+        return operator.itemgetter(0)
     else:
         raise ValueError("invalid value for join: %s" % join)
+
+
+def _override_indexes(objects, all_indexes, exclude):
+    for dim, dim_indexes in all_indexes.items():
+        if dim not in exclude:
+            lengths = {index.size for index in dim_indexes}
+            if len(lengths) != 1:
+                raise ValueError(
+                    "Indexes along dimension %r don't have the same length."
+                    " Cannot use join='override'." % dim
+                )
+
+    objects = list(objects)
+    for idx, obj in enumerate(objects[1:]):
+        new_indexes = dict()
+        for dim in obj.dims:
+            if dim not in exclude:
+                new_indexes[dim] = all_indexes[dim][0]
+        objects[idx + 1] = obj._overwrite_indexes(new_indexes)
+
+    return objects
 
 
 def align(
@@ -57,7 +81,7 @@ def align(
     ----------
     *objects : Dataset or DataArray
         Objects to align.
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    join : {'outer', 'inner', 'left', 'right', 'exact', 'override'}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
 
@@ -67,6 +91,9 @@ def align(
         - 'right': use indexes from the last object with each dimension
         - 'exact': instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed with
@@ -110,6 +137,9 @@ def align(
                     unlabeled_dim_sizes[dim].add(obj.sizes[dim])
                 else:
                     all_indexes[dim].append(index)
+
+    if join == "override":
+        objects = _override_indexes(list(objects), all_indexes, exclude)
 
     # We don't reindex over dimensions with all equal indexes for two reasons:
     # - It's faster for the usual case (already aligned objects).

@@ -24,7 +24,6 @@ from xarray.tests import (
     assert_identical,
     raises_regex,
     requires_bottleneck,
-    requires_cftime,
     requires_dask,
     requires_iris,
     requires_np113,
@@ -1002,64 +1001,6 @@ class TestDataArray:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
-    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
-    def test_isel_points(self):
-        shape = (10, 5, 6)
-        np_array = np.random.random(shape)
-        da = DataArray(
-            np_array, dims=["time", "y", "x"], coords={"time": np.arange(0, 100, 10)}
-        )
-        y = [1, 3]
-        x = [3, 0]
-
-        expected = da.values[:, y, x]
-
-        actual = da.isel_points(y=y, x=x, dim="test_coord")
-        assert actual.coords["test_coord"].shape == (len(y),)
-        assert list(actual.coords) == ["time"]
-        assert actual.dims == ("test_coord", "time")
-
-        actual = da.isel_points(y=y, x=x)
-        assert "points" in actual.dims
-        # Note that because xarray always concatenates along the first
-        # dimension, We must transpose the result to match the numpy style of
-        # concatenation.
-        np.testing.assert_equal(actual.T, expected)
-
-        # a few corner cases
-        da.isel_points(time=[1, 2], x=[2, 2], y=[3, 4])
-        np.testing.assert_allclose(
-            da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
-            np_array[1, 4, 2].squeeze(),
-        )
-        da.isel_points(time=[1, 2])
-        y = [-1, 0]
-        x = [-2, 2]
-        expected = da.values[:, y, x]
-        actual = da.isel_points(x=x, y=y).values
-        np.testing.assert_equal(actual.T, expected)
-
-        # test that the order of the indexers doesn't matter
-        assert_identical(da.isel_points(y=y, x=x), da.isel_points(x=x, y=y))
-
-        # make sure we're raising errors in the right places
-        with raises_regex(ValueError, "All indexers must be the same length"):
-            da.isel_points(y=[1, 2], x=[1, 2, 3])
-        with raises_regex(ValueError, "dimension bad_key does not exist"):
-            da.isel_points(bad_key=[1, 2])
-        with raises_regex(TypeError, "Indexers must be integers"):
-            da.isel_points(y=[1.5, 2.2])
-        with raises_regex(TypeError, "Indexers must be integers"):
-            da.isel_points(x=[1, 2, 3], y=slice(3))
-        with raises_regex(ValueError, "Indexers must be 1 dimensional"):
-            da.isel_points(y=1, x=2)
-        with raises_regex(ValueError, "Existing dimension names are not"):
-            da.isel_points(y=[1, 2], x=[1, 2], dim="x")
-
-        # using non string dims
-        actual = da.isel_points(y=[1, 2], x=[1, 2], dim=["A", "B"])
-        assert "points" in actual.coords
-
     def test_loc(self):
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
@@ -1350,9 +1291,8 @@ class TestDataArray:
         )
         assert_identical(actual, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
-            with raises_regex(ValueError, "cannot reset coord"):
-                data = data.reset_coords(inplace=True)
+        with pytest.raises(TypeError):
+            data = data.reset_coords(inplace=True)
         with raises_regex(ValueError, "cannot be found"):
             data.reset_coords("foo", drop=True)
         with raises_regex(ValueError, "cannot be found"):
@@ -1742,6 +1682,11 @@ class TestDataArray:
         with raises_regex(ValueError, "dimension mismatch"):
             array2d.set_index(x="level")
 
+        # Issue 3176: Ensure clear error message on key error.
+        with pytest.raises(ValueError) as excinfo:
+            obj.set_index(x="level_4")
+        assert str(excinfo.value) == "level_4 is not the name of an existing variable."
+
     def test_reset_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
@@ -1782,10 +1727,9 @@ class TestDataArray:
         obj = self.mda.reorder_levels(x=["level_2", "level_1"])
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             array = self.mda.copy()
             array.reorder_levels(x=["level_2", "level_1"], inplace=True)
-            assert_identical(array, expected)
 
         array = DataArray([1, 2], dims="x")
         with pytest.raises(KeyError):
@@ -3169,6 +3113,56 @@ class TestDataArray:
         x2, = align(x, copy=True)
         assert_identical(x, x2)
         assert source_ndarray(x2.data) is not source_ndarray(x.data)
+
+    def test_align_override(self):
+        left = DataArray([1, 2, 3], dims="x", coords={"x": [0, 1, 2]})
+        right = DataArray(
+            np.arange(9).reshape((3, 3)),
+            dims=["x", "y"],
+            coords={"x": [0.1, 1.1, 2.1], "y": [1, 2, 3]},
+        )
+
+        expected_right = DataArray(
+            np.arange(9).reshape(3, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1, 2], "y": [1, 2, 3]},
+        )
+
+        new_left, new_right = align(left, right, join="override")
+        assert_identical(left, new_left)
+        assert_identical(new_right, expected_right)
+
+        new_left, new_right = align(left, right, exclude="x", join="override")
+        assert_identical(left, new_left)
+        assert_identical(right, new_right)
+
+        new_left, new_right = xr.align(
+            left.isel(x=0, drop=True), right, exclude="x", join="override"
+        )
+        assert_identical(left.isel(x=0, drop=True), new_left)
+        assert_identical(right, new_right)
+
+        with raises_regex(ValueError, "Indexes along dimension 'x' don't have"):
+            align(left.isel(x=0).expand_dims("x"), right, join="override")
+
+    @pytest.mark.parametrize(
+        "darrays",
+        [
+            [
+                DataArray(0),
+                DataArray([1], [("x", [1])]),
+                DataArray([2, 3], [("x", [2, 3])]),
+            ],
+            [
+                DataArray([2, 3], [("x", [2, 3])]),
+                DataArray([1], [("x", [1])]),
+                DataArray(0),
+            ],
+        ],
+    )
+    def test_align_override_error(self, darrays):
+        with raises_regex(ValueError, "Indexes along dimension 'x' don't have"):
+            xr.align(*darrays, join="override")
 
     def test_align_exclude(self):
         x = DataArray([[1, 2], [3, 4]], coords=[("a", [-1, -2]), ("b", [3, 4])])

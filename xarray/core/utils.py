@@ -29,24 +29,19 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from .pycompat import dask_array_type
 
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
 
 
-def _check_inplace(inplace: Optional[bool], default: bool = False) -> bool:
-    if inplace is None:
-        inplace = default
-    else:
-        warnings.warn(
-            "The inplace argument has been deprecated and will be "
-            "removed in a future version of xarray.",
-            FutureWarning,
-            stacklevel=3,
+def _check_inplace(inplace: Optional[bool]) -> None:
+    if inplace is not None:
+        raise TypeError(
+            "The `inplace` argument has been removed from xarray. "
+            "You can achieve an identical effect with python's standard assignment."
         )
-
-    return inplace
 
 
 def alias_message(old_name: str, new_name: str) -> str:
@@ -246,6 +241,10 @@ def is_dict_like(value: Any) -> bool:
 
 def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
+
+
+def is_list_like(value: Any) -> bool:
+    return isinstance(value, list) or isinstance(value, tuple)
 
 
 def either_dict_or_kwargs(

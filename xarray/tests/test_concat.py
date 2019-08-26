@@ -6,6 +6,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes
+
 from . import (
     InaccessibleArray,
     assert_array_equal,
@@ -186,6 +187,10 @@ class TestConcatDataset:
         expected["right"] = Dataset(
             {"a": (("x", "y"), np.array([np.nan, 0], ndmin=2).T)},
             coords={"x": [0, 1], "y": [0.0001]},
+        )
+        expected["override"] = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2).T)},
+            coords={"x": [0, 1], "y": [0]},
         )
 
         with raises_regex(ValueError, "indexes along dimension 'y'"):
@@ -395,6 +400,10 @@ class TestConcatDataArray:
         expected["right"] = Dataset(
             {"a": (("x", "y"), np.array([np.nan, 0], ndmin=2).T)},
             coords={"x": [0, 1], "y": [0.0001]},
+        )
+        expected["override"] = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2).T)},
+            coords={"x": [0, 1], "y": [0]},
         )
 
         with raises_regex(ValueError, "indexes along dimension 'y'"):
