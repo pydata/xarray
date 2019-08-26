@@ -25,10 +25,8 @@ sparse = pytest.importorskip("sparse")
 
 
 def assert_sparse_equal(a, b):
-    if not isinstance(a, sparse_array_type):
-        a = a.data
-    if not isinstance(b, sparse_array_type):
-        b = b.data
+    assert isinstance(a, sparse_array_type)
+    assert isinstance(b, sparse_array_type)
     np.testing.assert_equal(a.todense(), b.todense())
 
 
