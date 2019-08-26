@@ -651,6 +651,7 @@ class TestSparseDataArrayAndDataset:
         assert np.all(B1.coords["x"] == B2.coords["x"])
         assert np.all(B1.coords["y"] == B2.coords["y"])
 
+    @pytest.mark.xfail(reason="need newer sparse release")
     def test_align_outer(self):
         a1 = xr.DataArray(
             sparse.COO.from_numpy(np.arange(4)),
