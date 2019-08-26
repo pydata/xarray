@@ -13,7 +13,7 @@ import pandas as pd
 
 from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import dask_array_type, sparse_array_type
+from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array

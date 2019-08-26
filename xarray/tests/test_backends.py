@@ -38,6 +38,7 @@ from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
 
 from . import (
+    arm_xfail,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -61,14 +62,13 @@ from . import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
-    arm_xfail,
 )
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _STANDARD_CALENDARS,
 )
-from .test_dataset import create_test_data, create_append_test_data
+from .test_dataset import create_append_test_data, create_test_data
 
 try:
     import netCDF4 as nc4
@@ -2172,13 +2172,17 @@ class TestH5NetCDFData(NetCDF4Base):
             yield backends.H5NetCDFStore(tmp_file, "w")
 
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
-    def test_complex(self):
+    @pytest.mark.parametrize(
+        "invalid_netcdf, warns, num_warns",
+        [(None, FutureWarning, 1), (False, FutureWarning, 1), (True, None, 0)],
+    )
+    def test_complex(self, invalid_netcdf, warns, num_warns):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
-        with pytest.warns(FutureWarning):
-            # TODO: make it possible to write invalid netCDF files from xarray
-            # without a warning
-            with self.roundtrip(expected) as actual:
+        save_kwargs = {"invalid_netcdf": invalid_netcdf}
+        with pytest.warns(warns) as record:
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
+        assert len(record) == num_warns
 
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
@@ -4398,3 +4402,10 @@ def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
         original.to_netcdf(tmp_file)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
             open_dataset(tmp_file, use_cftime=False)
+
+
+@pytest.mark.parametrize("engine", ["netcdf4", "scipy"])
+def test_invalid_netcdf_raises(engine):
+    data = create_test_data()
+    with raises_regex(ValueError, "unrecognized option 'invalid_netcdf'"):
+        data.to_netcdf("foo.nc", engine=engine, invalid_netcdf=True)

@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from . import utils, dtypes
+from . import dtypes, utils
 from .alignment import align
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars

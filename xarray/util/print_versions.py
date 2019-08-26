@@ -1,5 +1,4 @@
 """Utility functions for printing version information."""
-import codecs
 import importlib
 import locale
 import os
