@@ -3923,6 +3923,12 @@ class TestRasterio:
                 assert isinstance(rioda.attrs["map_info"], str)
                 assert isinstance(rioda.attrs["samples"], str)
 
+    def test_geotiff_tags(self):
+        # Create a geotiff file with some tags
+        with create_tmp_geotiff() as (tmp_file, _):
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert isinstance(rioda.attrs["AREA_OR_POINT"], str)
+
     def test_no_mftime(self):
         # rasterio can accept "filename" urguments that are actually urls,
         # including paths to remote files.
