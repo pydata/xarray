@@ -478,7 +478,7 @@ def test_dataarray_property(prop):
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
         ),  # noqa
-        (do("roll", x=2), True),
+        (do("roll", x=2, roll_coords=True), True),
         param(
             do("sel", x=[0, 1, 2], y=[2, 3]),
             True,
