@@ -178,13 +178,7 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "indices",
         (
-            pytest.param(
-                4,
-                id="single index",
-                marks=pytest.mark.xfail(
-                    reason="single index isel() tries to coerce to int"
-                ),
-            ),
+            pytest.param(4, id="single index"),
             pytest.param(
                 [5, 2, 9, 1],
                 id="multiple indices",
@@ -221,10 +215,7 @@ class TestDataArray:
                 ),
             ),
             pytest.param(
-                12 * unit_registry.s,
-                None,
-                id="single value with correct unit",
-                marks=pytest.mark.xfail(reason="single value tries to coerce to int"),
+                12 * unit_registry.s, None, id="single value with correct unit"
             ),
             pytest.param(
                 [10, 5, 13],
@@ -283,10 +274,7 @@ class TestDataArray:
                 ),
             ),
             pytest.param(
-                12 * unit_registry.s,
-                None,
-                id="single value with correct unit",
-                marks=pytest.mark.xfail(reason="single value tries to coerce to int"),
+                12 * unit_registry.s, None, id="single value with correct unit"
             ),
             pytest.param(
                 [10, 5, 13],
@@ -335,26 +323,10 @@ class TestDataArray:
                     reason="pint does not implement __array_function__"
                 ),
             ),
-            pytest.param(
-                (10, 20, 1),
-                id="last dimension squeezable",
-                marks=pytest.mark.xfail(reason="indexing calls np.asarray"),
-            ),
-            pytest.param(
-                (10, 1, 20),
-                id="middle dimension squeezable",
-                marks=pytest.mark.xfail(reason="indexing calls np.asarray"),
-            ),
-            pytest.param(
-                (1, 10, 20),
-                id="first dimension squeezable",
-                marks=pytest.mark.xfail(reason="indexing calls np.asarray"),
-            ),
-            pytest.param(
-                (1, 10, 1, 20),
-                id="first and last dimension squeezable",
-                marks=pytest.mark.xfail(reason="indexing calls np.asarray"),
-            ),
+            pytest.param((10, 20, 1), id="last dimension squeezable"),
+            pytest.param((10, 1, 20), id="middle dimension squeezable"),
+            pytest.param((1, 10, 20), id="first dimension squeezable"),
+            pytest.param((1, 10, 1, 20), id="first and last dimension squeezable"),
         ),
     )
     def test_squeeze(self, shape, dtype):
@@ -381,30 +353,10 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(
-                1,
-                None,
-                id="without unit",
-                marks=pytest.mark.xfail(reason="retrieving the values property fails"),
-            ),
-            pytest.param(
-                unit_registry.dimensionless,
-                None,
-                id="dimensionless",
-                marks=pytest.mark.xfail(reason="retrieving the values property fails"),
-            ),
-            pytest.param(
-                unit_registry.s,
-                None,
-                id="with incorrect unit",
-                marks=pytest.mark.xfail(reason="retrieving the values property fails"),
-            ),
-            pytest.param(
-                unit_registry.m,
-                None,
-                id="with correct unit",
-                marks=pytest.mark.xfail(reason="retrieving the values property fails"),
-            ),
+            pytest.param(1, None, id="without unit"),
+            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
+            pytest.param(unit_registry.s, None, id="with incorrect unit"),
+            pytest.param(unit_registry.m, None, id="with correct unit"),
         ),
     )
     def test_interp(self, unit, error):
@@ -436,30 +388,10 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(
-                1,
-                None,
-                id="without unit",
-                marks=pytest.mark.xfail(reason="reindex does not work with units"),
-            ),
-            pytest.param(
-                unit_registry.dimensionless,
-                None,
-                id="dimensionless",
-                marks=pytest.mark.xfail(reason="reindex does not work with units"),
-            ),
-            pytest.param(
-                unit_registry.s,
-                None,
-                id="with incorrect unit",
-                marks=pytest.mark.xfail(reason="reindex does not work with pint"),
-            ),
-            pytest.param(
-                unit_registry.m,
-                None,
-                id="with correct unit",
-                marks=pytest.mark.xfail(reason="reindex does not work with pint"),
-            ),
+            pytest.param(1, None, id="without unit"),
+            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
+            pytest.param(unit_registry.s, None, id="with incorrect unit"),
+            pytest.param(unit_registry.m, None, id="with correct unit"),
         ),
     )
     def test_interp_like(self, unit, error):
