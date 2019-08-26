@@ -9,6 +9,7 @@ import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.core.npcompat import IS_NEP18_ACTIVE
+from xarray.core.pycompat import sparse_array_type
 
 from . import assert_equal, assert_identical
 
@@ -21,6 +22,14 @@ if not IS_NEP18_ACTIVE:
     )
 
 sparse = pytest.importorskip("sparse")
+
+
+def assert_sparse_equal(a, b):
+    if not isinstance(a, sparse_array_type):
+        a = a.data
+    if not isinstance(b, sparse_array_type):
+        b = b.data
+    np.testing.assert_equal(a.todense(), b.todense())
 
 
 def make_ndarray(shape):
@@ -105,21 +114,9 @@ def test_variable_property(prop):
         (do("to_base_variable"), True),
         (do("transpose"), True),
         (do("unstack", dimensions={"x": {"x1": 5, "x2": 2}}), True),
-        param(
-            do("broadcast_equals", make_xrvar({"x": 10, "y": 5})),
-            False,
-            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
-        ),
-        param(
-            do("equals", make_xrvar({"x": 10, "y": 5})),
-            False,
-            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
-        ),
-        param(
-            do("identical", make_xrvar({"x": 10, "y": 5})),
-            False,
-            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
-        ),
+        (do("broadcast_equals", make_xrvar({"x": 10, "y": 5})), False),
+        (do("equals", make_xrvar({"x": 10, "y": 5})), False),
+        (do("identical", make_xrvar({"x": 10, "y": 5})), False),
         param(
             do("argmax"),
             True,
@@ -161,11 +158,7 @@ def test_variable_property(prop):
             True,
             marks=xfail(reason="Missing implementation for np.nancumsum"),
         ),
-        param(
-            do("fillna", 0),
-            True,
-            marks=xfail(reason="Missing implementation for np.result_type"),
-        ),
+        (do("fillna", 0), True),
         param(
             do("item", (1, 1)),
             False,
@@ -186,11 +179,7 @@ def test_variable_property(prop):
             True,  # noqa
             marks=xfail(reason="Missing implementation for np.pad"),
         ),
-        param(
-            do("prod"),
-            False,
-            marks=xfail(reason="Missing implementation for np.result_type"),
-        ),
+        (do("prod"), False),
         param(
             do("quantile", q=0.5),
             True,
@@ -215,18 +204,10 @@ def test_variable_property(prop):
             do("shift", x=2), True, marks=xfail(reason="mixed sparse-dense operation")
         ),
         param(do("std"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
-        param(
-            do("sum"),
-            False,
-            marks=xfail(reason="Missing implementation for np.result_type"),
-        ),
+        (do("sum"), False),
         param(do("var"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
         param(do("to_dict"), False, marks=xfail(reason="Coercion to dense")),
-        param(
-            do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5),
-            True,
-            marks=xfail(reason="Coercion of dense to sparse when using sparse mask"),
-        ),  # noqa
+        (do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5), True),
     ],
     ids=repr,
 )
@@ -276,18 +257,18 @@ class TestSparseVariable:
         self.var = xr.Variable(("x", "y"), self.data)
 
     def test_unary_op(self):
-        sparse.utils.assert_eq(-self.var.data, -self.data)
-        sparse.utils.assert_eq(abs(self.var).data, abs(self.data))
-        sparse.utils.assert_eq(self.var.round().data, self.data.round())
+        assert_sparse_equal(-self.var.data, -self.data)
+        assert_sparse_equal(abs(self.var).data, abs(self.data))
+        assert_sparse_equal(self.var.round().data, self.data.round())
 
     @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_univariate_ufunc(self):
-        sparse.utils.assert_eq(np.sin(self.data), xu.sin(self.var).data)
+        assert_sparse_equal(np.sin(self.data), xu.sin(self.var).data)
 
     @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_bivariate_ufunc(self):
-        sparse.utils.assert_eq(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
-        sparse.utils.assert_eq(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
+        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
+        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
 
     def test_repr(self):
         expected = dedent(
@@ -300,9 +281,8 @@ class TestSparseVariable:
     def test_pickle(self):
         v1 = self.var
         v2 = pickle.loads(pickle.dumps(v1))
-        sparse.utils.assert_eq(v1.data, v2.data)
+        assert_sparse_equal(v1.data, v2.data)
 
-    @pytest.mark.xfail(reason="Missing implementation for np.result_type")
     def test_missing_values(self):
         a = np.array([0, 1, np.nan, 3])
         s = sparse.COO.from_numpy(a)
@@ -380,16 +360,8 @@ def test_dataarray_property(prop):
         # TODO
         # set_index
         # swap_dims
-        param(
-            do("broadcast_equals", make_xrvar({"x": 10, "y": 5})),
-            False,
-            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
-        ),
-        param(
-            do("equals", make_xrvar({"x": 10, "y": 5})),
-            False,
-            marks=xfail(reason="https://github.com/pydata/sparse/issues/270"),
-        ),
+        (do("broadcast_equals", make_xrvar({"x": 10, "y": 5})), False),
+        (do("equals", make_xrvar({"x": 10, "y": 5})), False),
         param(
             do("argmax"),
             True,
@@ -410,11 +382,7 @@ def test_dataarray_property(prop):
             False,
             marks=xfail(reason="Missing implementation for np.flip"),
         ),
-        param(
-            do("combine_first", make_xrarray({"x": 10, "y": 5})),
-            True,
-            marks=xfail(reason="mixed sparse-dense operation"),
-        ),
+        (do("combine_first", make_xrarray({"x": 10, "y": 5})), True),
         param(
             do("conjugate"),
             False,
@@ -441,16 +409,8 @@ def test_dataarray_property(prop):
             marks=xfail(reason="Missing implementation for np.einsum"),
         ),
         param(do("dropna", "x"), False, marks=xfail(reason="Coercion to dense")),
-        param(
-            do("ffill", "x"),
-            False,
-            marks=xfail(reason="Coercion to dense via bottleneck.push"),
-        ),
-        param(
-            do("fillna", 0),
-            True,
-            marks=xfail(reason="Missing implementation for np.result_type"),
-        ),
+        param(do("ffill", "x"), False, marks=xfail(reason="Coercion to dense")),
+        (do("fillna", 0), True),
         param(
             do("interp", coords={"x": np.arange(10) + 0.5}),
             True,
@@ -488,16 +448,8 @@ def test_dataarray_property(prop):
             False,
             marks=xfail(reason="'COO' object has no attribute 'notnull'"),
         ),
-        param(
-            do("pipe", np.sum, axis=1),
-            True,
-            marks=xfail(reason="Missing implementation for np.result_type"),
-        ),
-        param(
-            do("prod"),
-            False,
-            marks=xfail(reason="Missing implementation for np.result_type"),
-        ),
+        (do("pipe", np.sum, axis=1), True),
+        (do("prod"), False),
         param(
             do("quantile", q=0.5),
             False,
@@ -524,22 +476,14 @@ def test_dataarray_property(prop):
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
         ),  # noqa
-        param(
-            do("roll", x=2),
-            True,
-            marks=xfail(reason="Missing implementation for np.result_type"),
-        ),
+        (do("roll", x=2), True),
         param(
             do("sel", x=[0, 1, 2], y=[2, 3]),
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
         ),  # noqa
         param(do("std"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
-        param(
-            do("sum"),
-            False,
-            marks=xfail(reason="Missing implementation for np.result_type"),
-        ),
+        (do("sum"), False),
         param(do("var"), False, marks=xfail(reason="Coercion to dense via bottleneck")),
         param(
             do("where", make_xrarray({"x": 10, "y": 5}) > 0.5),
@@ -600,7 +544,6 @@ class TestSparseDataArrayAndDataset:
             self.ds_ar, coords={"x": range(4)}, dims=("x", "y"), name="foo"
         )
 
-    @pytest.mark.xfail(reason="Missing implementation for np.result_type")
     def test_to_dataset_roundtrip(self):
         x = self.sp_xr
         assert_equal(x, x.to_dataset("x").to_array("x"))
@@ -651,7 +594,6 @@ class TestSparseDataArrayAndDataset:
         assert np.all(B1.coords["x"] == B2.coords["x"])
         assert np.all(B1.coords["y"] == B2.coords["y"])
 
-    @pytest.mark.xfail(reason="need newer sparse release")
     def test_align_outer(self):
         a1 = xr.DataArray(
             sparse.COO.from_numpy(np.arange(4)),
@@ -669,19 +611,18 @@ class TestSparseDataArrayAndDataset:
         assert np.all(a2.coords["x"].data == ["a", "b", "c", "d", "e"])
         assert np.all(b2.coords["x"].data == ["a", "b", "c", "d", "e"])
 
-    @pytest.mark.xfail(reason="Missing implementation for np.result_type")
     def test_concat(self):
         ds1 = xr.Dataset(data_vars={"d": self.sp_xr})
         ds2 = xr.Dataset(data_vars={"d": self.sp_xr})
         ds3 = xr.Dataset(data_vars={"d": self.sp_xr})
         out = xr.concat([ds1, ds2, ds3], dim="x")
-        sparse.utils.assert_eq(
+        assert_sparse_equal(
             out["d"].data,
             sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=0),
         )
 
         out = xr.concat([self.sp_xr, self.sp_xr, self.sp_xr], dim="y")
-        sparse.utils.assert_eq(
+        assert_sparse_equal(
             out.data, sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=1)
         )
 
