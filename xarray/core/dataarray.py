@@ -705,7 +705,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         Dataset, or DataArray if ``drop == True``
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         if names is None:
             names = set(self.coords) - set(self.dims)
         dataset = self.coords.to_dataset().reset_coords(names, drop)
@@ -1509,7 +1509,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
         coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
         return self._replace(coords=coords)
@@ -1541,7 +1541,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.set_index
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         coords, _ = split_indexes(
             dims_or_levels, self._coords, set(), self._level_coords, drop=drop
         )
@@ -1571,7 +1571,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Another dataarray, with this dataarray's data but replaced
             coordinates.
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         replace_coords = {}
         for dim, order in dim_order.items():

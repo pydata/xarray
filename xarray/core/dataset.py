@@ -1367,7 +1367,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # DataFrame.set_index?
         # nb. check in self._variables, not self.data_vars to insure that the
         # operation is idempotent
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         if isinstance(names, str) or not isinstance(names, Iterable):
             names = [names]
         else:
@@ -1398,7 +1398,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         if names is None:
             names = self._coord_names - set(self.dims)
         else:
@@ -2407,7 +2407,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.rename_dims
         DataArray.rename
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, "rename")
         for k in name_dict.keys():
             if k not in self and k not in self.dims:
@@ -2523,7 +2523,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         # TODO: deprecate this method in favor of a (less confusing)
         # rename_dims() method that only renames dimensions.
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
@@ -2771,7 +2771,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.reset_index
         Dataset.swap_dims
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
         variables, coord_names = merge_indexes(
             indexes, self._variables, self._coord_names, append=append
@@ -2804,7 +2804,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         Dataset.set_index
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         variables, coord_names = split_indexes(
             dims_or_levels,
             self._variables,
@@ -2838,7 +2838,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Another dataset, with this dataset's data but replaced
             coordinates.
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         variables = self._variables.copy()
         indexes = OrderedDict(self.indexes)
@@ -3159,12 +3159,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If any dimensions would have inconsistent sizes in the updated
             dataset.
         """
-        inplace = _check_inplace(inplace, default=True)
+        _check_inplace(inplace)
         variables, coord_names, dims = dataset_update_method(self, other)
 
-        return self._replace_vars_and_dims(
-            variables, coord_names, dims, inplace=inplace
-        )
+        return self._replace_vars_and_dims(variables, coord_names, dims, inplace=True)
 
     def merge(
         self,
@@ -3222,7 +3220,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         MergeError
             If any variables conflict (see ``compat``).
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         variables, coord_names, dims = dataset_merge_method(
             self,
             other,
