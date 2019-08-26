@@ -29,8 +29,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from .pycompat import dask_array_type
-
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
@@ -269,16 +267,20 @@ def either_dict_or_kwargs(
         return cast(Mapping[Hashable, T], kw_kwargs)
 
 
-def is_scalar(value: Any) -> bool:
+def is_scalar(value: Any, include_0d: bool = True) -> bool:
     """Whether to treat a value as a scalar.
 
     Any non-iterable, string, or 0-D array
     """
+    from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
+
+    if include_0d:
+        include_0d = getattr(value, "ndim", None) == 0
     return (
-        getattr(value, "ndim", None) == 0
+        include_0d
         or isinstance(value, (str, bytes))
         or not (
-            isinstance(value, (Iterable,) + dask_array_type)
+            isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
         )
     )
