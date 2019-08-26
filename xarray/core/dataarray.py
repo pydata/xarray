@@ -158,6 +158,24 @@ def _infer_coords_and_dims(
     return new_coords, dims
 
 
+def _check_data_shape(data, coords, dims):
+    if data is dtypes.NA:
+        data = np.nan
+    if coords is not None and utils.is_scalar(data, include_0d=False):
+        if utils.is_dict_like(coords):
+            if dims is None:
+                return data
+            else:
+                data_shape = tuple(
+                    as_variable(coords[k], k).size if k in coords.keys() else 1
+                    for k in dims
+                )
+        else:
+            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
+        data = np.full(data_shape, data)
+    return data
+
+
 class _LocIndexer:
     def __init__(self, data_array: "DataArray"):
         self.data_array = data_array
@@ -234,7 +252,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __init__(
         self,
-        data: Any,
+        data: Any = dtypes.NA,
         coords: Union[Sequence[Tuple], Mapping[Hashable, Any], None] = None,
         dims: Union[Hashable, Sequence[Hashable], None] = None,
         name: Hashable = None,
@@ -323,6 +341,7 @@ class DataArray(AbstractArray, DataWithCoords):
             if encoding is None:
                 encoding = getattr(data, "encoding", None)
 
+            data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
