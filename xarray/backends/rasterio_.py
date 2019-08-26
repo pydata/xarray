@@ -322,11 +322,14 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         attrs["units"] = riods.units
 
     # Parse extra metadata from tags, if supported
-    parsers = {"ENVI": _parse_envi}
+    parsers = {"ENVI": _parse_envi, "GTiff": lambda m: m}
 
     driver = riods.driver
     if driver in parsers:
-        meta = parsers[driver](riods.tags(ns=driver))
+        if driver == "GTiff":
+            meta = parsers[driver](riods.tags())
+        else:
+            meta = parsers[driver](riods.tags(ns=driver))
 
         for k, v in meta.items():
             # Add values as coordinates if they match the band count,
