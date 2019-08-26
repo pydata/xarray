@@ -491,3 +491,38 @@ class TestDataArray:
             result_data_array = data_array.interp_like(new_data_array)
 
             assert_equal_with_units(result_array, result_data_array)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, None, id="without unit"),
+            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
+            pytest.param(unit_registry.s, None, id="with incorrect unit"),
+            pytest.param(unit_registry.m, None, id="with correct unit"),
+        ),
+    )
+    def test_reindex(self, unit, error):
+        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+        new_coords = (np.arange(10) + 0.5) * unit
+        coords = {
+            "x": np.arange(10) * unit_registry.m,
+            "y": np.arange(5) * unit_registry.m,
+        }
+
+        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
+
+        if error is not None:
+            with pytest.raises(error):
+                data_array.interp(x=new_coords)
+        else:
+            result_array = strip_units(data_array).reindex(
+                x=(
+                    new_coords.magnitude
+                    if hasattr(new_coords, "magnitude")
+                    else new_coords
+                )
+                * unit_registry.degK
+            )
+            result_data_array = data_array.reindex(x=new_coords)
+
+            assert_equal_with_units(result_array, result_data_array)
