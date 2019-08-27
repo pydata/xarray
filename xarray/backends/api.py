@@ -6,6 +6,7 @@ from numbers import Number
 from pathlib import Path
 from textwrap import dedent
 from typing import (
+    TYPE_CHECKING,
     Callable,
     Dict,
     Hashable,
@@ -13,21 +14,19 @@ from typing import (
     Mapping,
     Tuple,
     Union,
-    TYPE_CHECKING,
 )
 
 import numpy as np
 
-from .. import Dataset, DataArray, backends, conventions, coding
+from .. import DataArray, Dataset, auto_combine, backends, coding, conventions
 from ..core import indexing
-from .. import auto_combine
 from ..core.combine import (
-    combine_by_coords,
-    _nested_combine,
     _infer_concat_order_from_positions,
+    _nested_combine,
+    combine_by_coords,
 )
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
-from .common import ArrayWriter, AbstractDataStore
+from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
 
 if TYPE_CHECKING:

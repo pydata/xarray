@@ -38,6 +38,7 @@ from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
 
 from . import (
+    arm_xfail,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -61,14 +62,13 @@ from . import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
-    arm_xfail,
 )
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _STANDARD_CALENDARS,
 )
-from .test_dataset import create_test_data, create_append_test_data
+from .test_dataset import create_append_test_data, create_test_data
 
 try:
     import netCDF4 as nc4
@@ -3922,6 +3922,12 @@ class TestRasterio:
                 assert isinstance(rioda.attrs["description"], str)
                 assert isinstance(rioda.attrs["map_info"], str)
                 assert isinstance(rioda.attrs["samples"], str)
+
+    def test_geotiff_tags(self):
+        # Create a geotiff file with some tags
+        with create_tmp_geotiff() as (tmp_file, _):
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert isinstance(rioda.attrs["AREA_OR_POINT"], str)
 
     def test_no_mftime(self):
         # rasterio can accept "filename" urguments that are actually urls,
