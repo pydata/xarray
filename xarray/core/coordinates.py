@@ -4,12 +4,12 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Hashable,
-    Mapping,
     Iterator,
-    Union,
+    Mapping,
+    Sequence,
     Set,
     Tuple,
-    Sequence,
+    Union,
     cast,
 )
 

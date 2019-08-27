@@ -10,7 +10,7 @@ import numpy as np
 from .. import Variable, coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
+from ..core.utils import FrozenOrderedDict, is_remote_uri
 from .common import (
     BackendArray,
     WritableCFDataStore,

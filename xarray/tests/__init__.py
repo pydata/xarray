@@ -1,4 +1,5 @@
 import importlib
+import platform
 import re
 import warnings
 from contextlib import contextmanager
@@ -32,7 +33,6 @@ try:
 except ImportError:
     pass
 
-import platform
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -84,6 +84,7 @@ has_np113, requires_np113 = _importorskip("numpy", minversion="1.13.0")
 has_iris, requires_iris = _importorskip("iris")
 has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
+has_sparse, requires_sparse = _importorskip("sparse")
 
 # some special cases
 has_h5netcdf07, requires_h5netcdf07 = _importorskip("h5netcdf", minversion="0.7")
