@@ -4,6 +4,7 @@ import warnings
 from collections import OrderedDict
 from numbers import Number
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -17,7 +18,6 @@ from typing import (
     Union,
     cast,
     overload,
-    TYPE_CHECKING,
 )
 
 import numpy as np
@@ -38,9 +38,9 @@ from . import (
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
-    align,
     _broadcast_helper,
     _get_broadcast_dims_map_common_coords,
+    align,
     reindex_like_indexers,
 )
 from .common import AbstractArray, DataWithCoords
@@ -54,7 +54,7 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .utils import _check_inplace, either_dict_or_kwargs, ReprObject
+from .utils import ReprObject, _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
     Variable,
@@ -158,6 +158,24 @@ def _infer_coords_and_dims(
     return new_coords, dims
 
 
+def _check_data_shape(data, coords, dims):
+    if data is dtypes.NA:
+        data = np.nan
+    if coords is not None and utils.is_scalar(data, include_0d=False):
+        if utils.is_dict_like(coords):
+            if dims is None:
+                return data
+            else:
+                data_shape = tuple(
+                    as_variable(coords[k], k).size if k in coords.keys() else 1
+                    for k in dims
+                )
+        else:
+            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
+        data = np.full(data_shape, data)
+    return data
+
+
 class _LocIndexer:
     def __init__(self, data_array: "DataArray"):
         self.data_array = data_array
@@ -234,7 +252,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __init__(
         self,
-        data: Any,
+        data: Any = dtypes.NA,
         coords: Union[Sequence[Tuple], Mapping[Hashable, Any], None] = None,
         dims: Union[Hashable, Sequence[Hashable], None] = None,
         name: Hashable = None,
@@ -323,6 +341,7 @@ class DataArray(AbstractArray, DataWithCoords):
             if encoding is None:
                 encoding = getattr(data, "encoding", None)
 
+            data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
@@ -700,30 +719,17 @@ class DataArray(AbstractArray, DataWithCoords):
         drop : bool, optional
             If True, remove coordinates instead of converting them into
             variables.
-        inplace : bool, optional
-            If True, modify this object in place. Otherwise, create a new
-            object.
 
         Returns
         -------
-        Dataset, or DataArray if ``drop == True``, or None if
-        ``inplace == True``
+        Dataset, or DataArray if ``drop == True``
         """
-        inplace = _check_inplace(inplace)
-        if inplace and not drop:
-            raise ValueError(
-                "cannot reset coordinates in-place on a "
-                "DataArray without ``drop == True``"
-            )
+        _check_inplace(inplace)
         if names is None:
             names = set(self.coords) - set(self.dims)
         dataset = self.coords.to_dataset().reset_coords(names, drop)
         if drop:
-            if inplace:
-                self._coords = dataset._variables
-                return None
-            else:
-                return self._replace(coords=dataset._variables)
+            return self._replace(coords=dataset._variables)
         else:
             if self.name is None:
                 raise ValueError(
@@ -1023,32 +1029,6 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method,
             tolerance=tolerance,
             **indexers_kwargs
-        )
-        return self._from_temp_dataset(ds)
-
-    def isel_points(self, dim="points", **indexers) -> "DataArray":
-        """Return a new DataArray whose data is given by pointwise integer
-        indexing along the specified dimension(s).
-
-        See Also
-        --------
-        Dataset.isel_points
-        """
-        ds = self._to_temp_dataset().isel_points(dim=dim, **indexers)
-        return self._from_temp_dataset(ds)
-
-    def sel_points(
-        self, dim="points", method=None, tolerance=None, **indexers
-    ) -> "DataArray":
-        """Return a new DataArray whose dataset is given by pointwise selection
-        of index labels along the specified dimension(s).
-
-        See Also
-        --------
-        Dataset.sel_points
-        """
-        ds = self._to_temp_dataset().sel_points(
-            dim=dim, method=method, tolerance=tolerance, **indexers
         )
         return self._from_temp_dataset(ds)
 
@@ -1511,9 +1491,6 @@ class DataArray(AbstractArray, DataWithCoords):
         append : bool, optional
             If True, append the supplied index(es) to the existing index(es).
             Otherwise replace the existing index(es) (default).
-        inplace : bool, optional
-            If True, set new index(es) in-place. Otherwise, return a new
-            DataArray object.
         **indexes_kwargs: optional
             The keyword arguments form of ``indexes``.
             One of indexes or indexes_kwargs must be provided.
@@ -1522,7 +1499,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         obj : DataArray
             Another DataArray, with this data but replaced coordinates.
-            Return None if inplace=True.
 
         Example
         -------
@@ -1552,14 +1528,10 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
         coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
-        if inplace:
-            self._coords = coords
-            return None
-        else:
-            return self._replace(coords=coords)
+        return self._replace(coords=coords)
 
     def reset_index(
         self,
@@ -1577,36 +1549,29 @@ class DataArray(AbstractArray, DataWithCoords):
         drop : bool, optional
             If True, remove the specified indexes and/or multi-index levels
             instead of extracting them as new coordinates (default: False).
-        inplace : bool, optional
-            If True, modify the dataarray in-place. Otherwise, return a new
-            DataArray object.
 
         Returns
         -------
         obj : DataArray
             Another dataarray, with this dataarray's data but replaced
-            coordinates. If ``inplace == True``, return None.
+            coordinates.
 
         See Also
         --------
         DataArray.set_index
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         coords, _ = split_indexes(
             dims_or_levels, self._coords, set(), self._level_coords, drop=drop
         )
-        if inplace:
-            self._coords = coords
-            return None
-        else:
-            return self._replace(coords=coords)
+        return self._replace(coords=coords)
 
     def reorder_levels(
         self,
         dim_order: Mapping[Hashable, Sequence[int]] = None,
         inplace: bool = None,
         **dim_order_kwargs: Sequence[int]
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Rearrange index levels using input order.
 
         Parameters
@@ -1615,9 +1580,6 @@ class DataArray(AbstractArray, DataWithCoords):
             Mapping from names matching dimensions and values given
             by lists representing new level orders. Every given dimension
             must have a multi-index.
-        inplace : bool, optional
-            If True, modify the dataarray in-place. Otherwise, return a new
-            DataArray object.
         **dim_order_kwargs: optional
             The keyword arguments form of ``dim_order``.
             One of dim_order or dim_order_kwargs must be provided.
@@ -1626,9 +1588,9 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         obj : DataArray
             Another dataarray, with this dataarray's data but replaced
-            coordinates. If ``inplace == True``, return None.
+            coordinates.
         """
-        inplace = _check_inplace(inplace)
+        _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         replace_coords = {}
         for dim, order in dim_order.items():
@@ -1639,11 +1601,7 @@ class DataArray(AbstractArray, DataWithCoords):
             replace_coords[dim] = IndexVariable(coord.dims, index.reorder_levels(order))
         coords = self._coords.copy()
         coords.update(replace_coords)
-        if inplace:
-            self._coords = coords
-            return None
-        else:
-            return self._replace(coords=coords)
+        return self._replace(coords=coords)
 
     def stack(
         self,

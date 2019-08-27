@@ -21,6 +21,17 @@ v0.13.0 (unreleased)
 This release increases the minimum required Python version from 3.5.0 to 3.5.3
 (:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
+  since v0.10.0. These are redundant with the ``isel`` / ``sel`` methods.
+  See :ref:`vectorized_indexing` for the details 
+  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+- The ``inplace`` kwarg for public methods now raises an error, having been deprecated
+  since v0.11.0.
+  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -28,8 +39,8 @@ New functions/methods
   `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
   numpy-like library (important: read notes about NUMPY_EXPERIMENTAL_ARRAY_FUNCTION in
   the above link). Added explicit test coverage for
-  `sparse <https://github.com/pydata/sparse>`_. (:issue:`3117`, :issue:`3202`)
-  By `Nezar Abdennur <https://github.com/nvictus>`_
+  `sparse <https://github.com/pydata/sparse>`_. (:issue:`3117`, :issue:`3202`).
+  This requires `sparse>=0.8.0`. By `Nezar Abdennur <https://github.com/nvictus>`_
   and `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - The xarray package is now discoverable by mypy (although typing hints coverage is not
@@ -65,17 +76,36 @@ Enhancements
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
 
+- Added the ability to initialize an empty or full DataArray
+  with a single value. (:issue:`277`)
+  By `Gerardo Rivera <http://github.com/dangomelon>`_.
+
+- :py:func:`~xarray.Dataset.to_netcdf()` now supports the ``invalid_netcdf`` kwarg when used
+  with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
+  By `Ulrich Herter <https://github.com/ulijh>`_.
+
 - :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index
-  labels by specifying both ``dim`` and ``labels`` is deprecated (:issue:`2910`).
+  labels by using both ``dim`` and ``labels`` or using a
+  :py:class:`~xarray.core.coordinates.DataArrayCoordinates` object are
+  deprecated (:issue:`2910`).
   By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
 
 - Added examples of :py:meth:`Dataset.set_index` and
   :py:meth:`DataArray.set_index`, as well are more specific error messages
   when the user passes invalid arguments (:issue:`3176`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
+  
+- :py:func:`filter_by_attrs` now filters the coordinates as well as the variables. By `Spencer Jones <https://github.com/cspencerjones>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Improve "missing dimensions" error message for :py:func:`~xarray.apply_ufunc` 
+  (:issue:`2078`). 
+  By `Rick Russotto <https://github.com/rdrussotto>`_.
+- :py:meth:`~xarray.DataArray.assign_coords` now supports dictionary arguments
+  (:issue:`3231`).
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 - Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
   unicode indices to dtype=object (:issue:`3094`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -99,7 +129,7 @@ Bug fixes
 - Fix error that arises when using open_mfdataset on a series of netcdf files
   having differing values for a variable attribute of type list. (:issue:`3034`)
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
-                               
+
 .. _whats-new.0.12.3:
 
 Documentation

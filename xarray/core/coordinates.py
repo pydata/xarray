@@ -6,11 +6,10 @@ from typing import (
     Hashable,
     Iterator,
     Mapping,
-    Optional,
-    Union,
     Set,
     Sequence,
     Tuple,
+    Union,
     cast,
 )
 

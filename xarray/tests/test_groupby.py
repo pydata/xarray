@@ -189,4 +189,17 @@ def test_da_groupby_quantile():
     assert_identical(expected, actual)
 
 
+def test_da_groupby_assign_coords():
+    actual = xr.DataArray(
+        [[3, 4, 5], [6, 7, 8]], dims=["y", "x"], coords={"y": range(2), "x": range(3)}
+    )
+    actual1 = actual.groupby("x").assign_coords({"y": [-1, -2]})
+    actual2 = actual.groupby("x").assign_coords(y=[-1, -2])
+    expected = xr.DataArray(
+        [[3, 4, 5], [6, 7, 8]], dims=["y", "x"], coords={"y": [-1, -2], "x": range(3)}
+    )
+    assert_identical(expected, actual1)
+    assert_identical(expected, actual2)
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

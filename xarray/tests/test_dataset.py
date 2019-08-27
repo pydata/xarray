@@ -31,8 +31,8 @@ from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
 
 from . import (
-    LooseVersion,
     InaccessibleArray,
+    LooseVersion,
     UnexpectedDataAccess,
     assert_allclose,
     assert_array_equal,
@@ -1410,116 +1410,6 @@ class TestDataset:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
-    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
-    def test_isel_points(self):
-        data = create_test_data()
-
-        pdim1 = [1, 2, 3]
-        pdim2 = [4, 5, 1]
-        pdim3 = [1, 2, 3]
-        actual = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3, dim="test_coord")
-        assert "test_coord" in actual.dims
-        assert actual.coords["test_coord"].shape == (len(pdim1),)
-
-        actual = data.isel_points(dim1=pdim1, dim2=pdim2)
-        assert "points" in actual.dims
-        assert "dim3" in actual.dims
-        assert "dim3" not in actual.data_vars
-        np.testing.assert_array_equal(data["dim2"][pdim2], actual["dim2"])
-
-        # test that the order of the indexers doesn't matter
-        assert_identical(
-            data.isel_points(dim1=pdim1, dim2=pdim2),
-            data.isel_points(dim2=pdim2, dim1=pdim1),
-        )
-
-        # make sure we're raising errors in the right places
-        with raises_regex(ValueError, "All indexers must be the same length"):
-            data.isel_points(dim1=[1, 2], dim2=[1, 2, 3])
-        with raises_regex(ValueError, "dimension bad_key does not exist"):
-            data.isel_points(bad_key=[1, 2])
-        with raises_regex(TypeError, "Indexers must be integers"):
-            data.isel_points(dim1=[1.5, 2.2])
-        with raises_regex(TypeError, "Indexers must be integers"):
-            data.isel_points(dim1=[1, 2, 3], dim2=slice(3))
-        with raises_regex(ValueError, "Indexers must be 1 dimensional"):
-            data.isel_points(dim1=1, dim2=2)
-        with raises_regex(ValueError, "Existing dimension names are not valid"):
-            data.isel_points(dim1=[1, 2], dim2=[1, 2], dim="dim2")
-
-        # test to be sure we keep around variables that were not indexed
-        ds = Dataset({"x": [1, 2, 3, 4], "y": 0})
-        actual = ds.isel_points(x=[0, 1, 2])
-        assert_identical(ds["y"], actual["y"])
-
-        # tests using index or DataArray as a dim
-        stations = Dataset()
-        stations["station"] = ("station", ["A", "B", "C"])
-        stations["dim1s"] = ("station", [1, 2, 3])
-        stations["dim2s"] = ("station", [4, 5, 1])
-
-        actual = data.isel_points(
-            dim1=stations["dim1s"], dim2=stations["dim2s"], dim=stations["station"]
-        )
-        assert "station" in actual.coords
-        assert "station" in actual.dims
-        assert_identical(actual["station"].drop(["dim2"]), stations["station"])
-
-        # make sure we get the default 'points' coordinate when passed a list
-        actual = data.isel_points(
-            dim1=stations["dim1s"], dim2=stations["dim2s"], dim=["A", "B", "C"]
-        )
-        assert "points" in actual.coords
-        assert actual.coords["points"].values.tolist() == ["A", "B", "C"]
-
-        # test index
-        actual = data.isel_points(
-            dim1=stations["dim1s"].values,
-            dim2=stations["dim2s"].values,
-            dim=pd.Index(["A", "B", "C"], name="letters"),
-        )
-        assert "letters" in actual.coords
-
-        # can pass a numpy array
-        data.isel_points(
-            dim1=stations["dim1s"], dim2=stations["dim2s"], dim=np.array([4, 5, 6])
-        )
-
-    @pytest.mark.filterwarnings("ignore:Dataset.sel_points")
-    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
-    def test_sel_points(self):
-        data = create_test_data()
-
-        # add in a range() index
-        data["dim1"] = data.dim1
-
-        pdim1 = [1, 2, 3]
-        pdim2 = [4, 5, 1]
-        pdim3 = [1, 2, 3]
-        expected = data.isel_points(
-            dim1=pdim1, dim2=pdim2, dim3=pdim3, dim="test_coord"
-        )
-        actual = data.sel_points(
-            dim1=data.dim1[pdim1],
-            dim2=data.dim2[pdim2],
-            dim3=data.dim3[pdim3],
-            dim="test_coord",
-        )
-        assert_identical(expected, actual)
-
-        data = Dataset({"foo": (("x", "y"), np.arange(9).reshape(3, 3))})
-        expected = Dataset({"foo": ("points", [0, 4, 8])})
-        actual = data.sel_points(x=[0, 1, 2], y=[0, 1, 2])
-        assert_identical(expected, actual)
-
-        data.coords.update({"x": [0, 1, 2], "y": [0, 1, 2]})
-        expected.coords.update({"x": ("points", [0, 1, 2]), "y": ("points", [0, 1, 2])})
-        actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0], method="pad")
-        assert_identical(expected, actual)
-
-        with pytest.raises(KeyError):
-            data.sel_points(x=[2.5], y=[2.0], method="pad", tolerance=1e-3)
-
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_sel_fancy(self):
         data = create_test_data()
@@ -2214,13 +2104,20 @@ class TestDataset:
         # Basic functionality.
         assert len(data.coords["x"]) == 2
 
-        # This API is allowed but deprecated.
+        # In the future, this will break.
         with pytest.warns(DeprecationWarning):
             ds1 = data.drop(["a"], dim="x")
         ds2 = data.drop(x="a")
         ds3 = data.drop(x=["a"])
         ds4 = data.drop(x=["a", "b"])
         ds5 = data.drop(x=["a", "b"], y=range(0, 6, 2))
+
+        # In the future, this will result in different behavior.
+        arr = DataArray(range(3), dims=["c"])
+        with pytest.warns(FutureWarning):
+            data.drop(arr.coords)
+        with pytest.warns(FutureWarning):
+            data.drop(arr.indexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
         assert_array_equal(ds2.coords["x"], ["b"])
@@ -2428,18 +2325,11 @@ class TestDataset:
         renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
-    @pytest.mark.filterwarnings("ignore:The inplace argument")
     def test_rename_inplace(self):
         times = pd.date_range("2000-01-01", periods=3)
         data = Dataset({"z": ("x", [2, 3, 4]), "t": ("t", times)})
-        copied = data.copy()
-        renamed = data.rename({"x": "y"})
-        data.rename({"x": "y"}, inplace=True)
-        assert_identical(data, renamed)
-        assert not data.equals(copied)
-        assert data.dims == {"y": 3, "t": 3}
-        # check virtual variables
-        assert_array_equal(data["t.dayofyear"], [1, 2, 3])
+        with pytest.raises(TypeError):
+            data.rename({"x": "y"}, inplace=True)
 
     def test_rename_dims(self):
         original = Dataset({"x": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42})
@@ -2702,7 +2592,7 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             ds.set_index(x=mindex.names, inplace=True)
             assert_identical(ds, expected)
 
@@ -2727,9 +2617,8 @@ class TestDataset:
         obj = ds.reset_index("x")
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             ds.reset_index("x", inplace=True)
-            assert_identical(ds, expected)
 
     def test_reorder_levels(self):
         ds = create_test_multiindex()
@@ -2740,9 +2629,8 @@ class TestDataset:
         reindexed = ds.reorder_levels(x=["level_2", "level_1"])
         assert_identical(reindexed, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             ds.reorder_levels(x=["level_2", "level_1"], inplace=True)
-            assert_identical(ds, expected)
 
         ds = Dataset({}, coords={"x": [1, 2]})
         with raises_regex(ValueError, "has no MultiIndex"):
@@ -2882,11 +2770,8 @@ class TestDataset:
         assert actual_result is actual
         assert_identical(expected, actual)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             actual = data.update(data, inplace=False)
-            expected = data
-            assert actual is not expected
-            assert_identical(expected, actual)
 
         other = Dataset(attrs={"new": "attr"})
         actual = data.copy()
@@ -3196,6 +3081,19 @@ class TestDataset:
 
         actual = ds.groupby("b").assign_coords(c=lambda ds: ds.a.sum())
         expected = expected.set_coords("c")
+        assert_identical(actual, expected)
+
+    def test_assign_coords(self):
+        ds = Dataset()
+
+        actual = ds.assign(x=[0, 1, 2], y=2)
+        actual = actual.assign_coords(x=list("abc"))
+        expected = Dataset({"x": list("abc"), "y": 2})
+        assert_identical(actual, expected)
+
+        actual = ds.assign(x=[0, 1, 2], y=[2, 3])
+        actual = actual.assign_coords({"y": [2.0, 3.0]})
+        expected = ds.assign(x=[0, 1, 2], y=[2.0, 3.0])
         assert_identical(actual, expected)
 
     def test_assign_attrs(self):
@@ -4907,7 +4805,7 @@ class TestDataset:
                 "temperature_10": (["t"], [0], temp10),
                 "precipitation": (["t"], [0], precip),
             },
-            coords={"time": (["t"], [0], dict(axis="T"))},
+            coords={"time": (["t"], [0], dict(axis="T", long_name="time_in_seconds"))},
         )
 
         # Test return empty Dataset.
@@ -4920,6 +4818,11 @@ class TestDataset:
         assert new_ds["precipitation"].standard_name == "convective_precipitation_flux"
 
         assert_equal(new_ds["precipitation"], ds["precipitation"])
+
+        # Test filter coordinates
+        new_ds = ds.filter_by_attrs(long_name="time_in_seconds")
+        assert new_ds["time"].long_name == "time_in_seconds"
+        assert not bool(new_ds.data_vars)
 
         # Test return more than one DataArray.
         new_ds = ds.filter_by_attrs(standard_name="air_potential_temperature")

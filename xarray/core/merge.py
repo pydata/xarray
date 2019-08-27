@@ -1,6 +1,6 @@
 from collections import OrderedDict
-import functools
 from typing import (
+    TYPE_CHECKING,
     AbstractSet,
     Any,
     Dict,
@@ -8,15 +8,12 @@ from typing import (
     Iterable,
     List,
     Mapping,
-    MutableMapping,
     NamedTuple,
     Optional,
     Sequence,
     Set,
     Tuple,
-    TypeVar,
     Union,
-    TYPE_CHECKING,
 )
 
 import pandas as pd
