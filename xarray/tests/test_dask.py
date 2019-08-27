@@ -54,7 +54,7 @@ def _set_dask_scheduler(scheduler):
 
 def test_counting_scheduler():
     data = da.from_array(np.random.RandomState(0).randn(4, 6), chunks=(2, 2))
-    sched = CountingScheduler(0)
+    sched = CountingScheduler(max_computes=0)
     with raises_regex(RuntimeError, "To many computes"):
         with _set_dask_scheduler(sched):
             data.compute()
