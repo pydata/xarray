@@ -109,6 +109,10 @@ Documentation
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
+- Fixed documentation to clean up unwanted files created in ``ipython`` examples
+  (:issue:`3227`).
+  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+
 v0.12.3 (10 July 2019)
 ----------------------
 
