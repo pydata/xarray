@@ -191,7 +191,7 @@ class AttrAccessMixin:
 
     def __init_subclass__(cls):
         """Verify that all subclasses explicitly define ``__slots__``. If they don't,
-        raise error in the core xarray module and a DeprecationWarning in third-party
+        raise error in the core xarray module and a FutureWarning in third-party
         extensions.
         This check is only triggered in Python 3.6+.
         """
@@ -234,10 +234,10 @@ class AttrAccessMixin:
     # operations - particularly DataArray methods that perform a _to_temp_dataset()
     # round-trip - by a whopping 8% compared to a single method that checks
     # hasattr(self, "__dict__") at runtime before every single assignment (like
-    # _setattr_py35 does). All of this is just temporary until the DeprecationWarning
-    # can be changed into a hard crash.
+    # _setattr_py35 does). All of this is just temporary until the FutureWarning can be
+    # changed into a hard crash.
     def _setattr_dict(self, name: str, value: Any) -> None:
-        """Deprecated third party subclass (see __init_subclass__ above)
+        """Deprecated third party subclass (see ``__init_subclass__`` above)
         """
         object.__setattr__(self, name, value)
         if name in self.__dict__:
