@@ -1214,12 +1214,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return _LocIndexer(self)
 
-    def __getitem__(self, key: object) -> "Union[DataArray, Dataset]":
+    def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
+        # TODO(shoyer): type this properly: https://github.com/python/mypy/issues/7328
         if utils.is_dict_like(key):
             return self.isel(**cast(Mapping, key))
 
@@ -3916,8 +3917,61 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return self._to_dataframe(self.dims)
 
+    def _set_sparse_data_from_dataframe(
+        self, dataframe: pd.DataFrame, dims: tuple, shape: Tuple[int, ...]
+    ) -> None:
+        from sparse import COO
+
+        idx = dataframe.index
+        if isinstance(idx, pd.MultiIndex):
+            try:
+                codes = idx.codes
+            except AttributeError:
+                # deprecated since pandas 0.24
+                codes = idx.labels
+            coords = np.stack([np.asarray(code) for code in codes], axis=0)
+            is_sorted = idx.is_lexsorted
+        else:
+            coords = np.arange(idx.size).reshape(1, -1)
+            is_sorted = True
+
+        for name, series in dataframe.items():
+            # Cast to a NumPy array first, in case the Series is a pandas
+            # Extension array (which doesn't have a valid NumPy dtype)
+            values = np.asarray(series)
+
+            # In virtually all real use cases, the sparse array will now have
+            # missing values and needs a fill_value. For consistency, don't
+            # special case the rare exceptions (e.g., dtype=int without a
+            # MultiIndex).
+            dtype, fill_value = dtypes.maybe_promote(values.dtype)
+            values = np.asarray(values, dtype=dtype)
+
+            data = COO(
+                coords,
+                values,
+                shape,
+                has_duplicates=False,
+                sorted=is_sorted,
+                fill_value=fill_value,
+            )
+            self[name] = (dims, data)
+
+    def _set_numpy_data_from_dataframe(
+        self, dataframe: pd.DataFrame, dims: tuple, shape: Tuple[int, ...]
+    ) -> None:
+        idx = dataframe.index
+        if isinstance(idx, pd.MultiIndex):
+            # expand the DataFrame to include the product of all levels
+            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
+            dataframe = dataframe.reindex(full_idx)
+
+        for name, series in dataframe.items():
+            data = np.asarray(series).reshape(shape)
+            self[name] = (dims, data)
+
     @classmethod
-    def from_dataframe(cls, dataframe):
+    def from_dataframe(cls, dataframe: pd.DataFrame, sparse: bool = False) -> "Dataset":
         """Convert a pandas.DataFrame into an xarray.Dataset
 
         Each column will be converted into an independent variable in the
@@ -3926,7 +3980,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         values with NaN). This method will produce a Dataset very similar to
         that on which the 'to_dataframe' method was called, except with
         possibly redundant dimensions (since all dataset variables will have
-        the same dimensionality).
+        the same dimensionality)
+
+        Parameters
+        ----------
+        dataframe : pandas.DataFrame
+            DataFrame from which to copy data and indices.
+        sparse : bool
+            If true, create a sparse arrays instead of dense numpy arrays. This
+            can potentially save a large amount of memory if the DataFrame has
+            a MultiIndex. Requires the sparse package (sparse.pydata.org).
+
+        Returns
+        -------
+        New Dataset.
+
+        See also
+        --------
+        xarray.DataArray.from_series
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
@@ -3939,25 +4010,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
-            # it's a multi-index
-            # expand the DataFrame to include the product of all levels
-            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
-            dataframe = dataframe.reindex(full_idx)
-            dims = [
+            dims = tuple(
                 name if name is not None else "level_%i" % n
                 for n, name in enumerate(idx.names)
-            ]
+            )
             for dim, lev in zip(dims, idx.levels):
                 obj[dim] = (dim, lev)
-            shape = [lev.size for lev in idx.levels]
+            shape = tuple(lev.size for lev in idx.levels)
         else:
-            dims = (idx.name if idx.name is not None else "index",)
-            obj[dims[0]] = (dims, idx)
-            shape = -1
+            index_name = idx.name if idx.name is not None else "index"
+            dims = (index_name,)
+            obj[index_name] = (dims, idx)
+            shape = (idx.size,)
 
-        for name, series in dataframe.items():
-            data = np.asarray(series).reshape(shape)
-            obj[name] = (dims, data)
+        if sparse:
+            obj._set_sparse_data_from_dataframe(dataframe, dims, shape)
+        else:
+            obj._set_numpy_data_from_dataframe(dataframe, dims, shape)
         return obj
 
     def to_dask_dataframe(self, dim_order=None, set_index=False):
