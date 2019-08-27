@@ -410,7 +410,7 @@ class TestDataArray:
 
         if error is not None:
             with pytest.raises(error):
-                data_array.interp_like(x=new_data_array)
+                data_array.interp_like(new_data_array)
         else:
             result_array = (
                 xr.DataArray(
