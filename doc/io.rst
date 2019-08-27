@@ -366,6 +366,31 @@ supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'nol
 By default, xarray uses the 'proleptic_gregorian' calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
 
+Invalid netCDF files
+~~~~~~~~~~~~~~~~~~~~
+
+The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't 
+allowed in netCDF4 (see
+`h5netcdf documentation <https://github.com/shoyer/h5netcdf#invalid-netcdf-files)>`_.
+This feature is availabe through :py:func:`DataArray.to_netcdf` and
+:py:func:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
+and currently raises a warning unless ``invalid_netcdf=True`` is set:
+
+.. ipython:: python
+
+    # Writing complex valued data
+    da = xr.DataArray([1.+1.j, 2.+2.j, 3.+3.j])
+    da.to_netcdf("complex.nc", engine="h5netcdf", invalid_netcdf=True)
+
+    # Reading it back
+    xr.open_dataarray("complex.nc", engine="h5netcdf")
+
+
+.. warning::
+
+  Note that this produces a file that is likely to be not readable by other netCDF
+  libraries!
+
 .. _io.iris:
 
 Iris

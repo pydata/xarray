@@ -25,13 +25,13 @@ from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
 
 from . import (
+    arm_xfail,
     assert_array_equal,
     has_dask,
     has_np113,
     raises_regex,
     requires_cftime,
     requires_dask,
-    arm_xfail,
 )
 
 
@@ -245,9 +245,9 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
 
 
 def from_series_or_scalar(se):
-    try:
+    if isinstance(se, pd.Series):
         return DataArray.from_series(se)
-    except AttributeError:  # scalar case
+    else:  # scalar case
         return DataArray(se)
 
 

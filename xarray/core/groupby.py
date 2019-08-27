@@ -7,11 +7,17 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops, utils
 from .arithmetic import SupportsArithmetic
-from .concat import concat
 from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
+from .concat import concat
 from .options import _get_keep_attrs
 from .pycompat import integer_types
-from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
+from .utils import (
+    either_dict_or_kwargs,
+    hashable,
+    maybe_wrap_array,
+    peek_at,
+    safe_cast_to_index,
+)
 from .variable import IndexVariable, Variable, as_variable
 
 
@@ -507,7 +513,7 @@ class GroupBy(SupportsArithmetic):
         """
         return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
 
-    def assign_coords(self, **kwargs):
+    def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.
 
         See also
@@ -515,7 +521,8 @@ class GroupBy(SupportsArithmetic):
         Dataset.assign_coords
         Dataset.swap_dims
         """
-        return self.apply(lambda ds: ds.assign_coords(**kwargs))
+        coords_kwargs = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
+        return self.apply(lambda ds: ds.assign_coords(**coords_kwargs))
 
 
 def _maybe_reorder(xarray_obj, dim, positions):
