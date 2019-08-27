@@ -458,3 +458,70 @@ class TestDataArray:
             result_data_array = data_array.reindex(x=new_coords)
 
             assert_equal_with_units(result_array, result_data_array)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(
+                1,
+                None,
+                id="without unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.dimensionless,
+                None,
+                id="dimensionless",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.s,
+                None,
+                id="with incorrect unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.m,
+                None,
+                id="with correct unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+        ),
+    )
+    def test_reindex_like(self, unit, error):
+        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+        coords = {
+            "x": (np.arange(10) + 0.3) * unit_registry.m,
+            "y": (np.arange(5) + 0.3) * unit_registry.m,
+        }
+
+        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
+        new_data_array = xr.DataArray(
+            data=np.empty((20, 10)),
+            coords={"x": np.arange(20) * unit, "y": np.arange(10) * unit},
+            dims=("x", "y"),
+        )
+
+        if error is not None:
+            with pytest.raises(error):
+                data_array.reindex_like(new_data_array)
+        else:
+            result_array = (
+                xr.DataArray(
+                    data=array.magnitude,
+                    coords={name: value.magnitude for name, value in coords.items()},
+                    dims=("x", "y"),
+                ).reindex_like(strip_units(new_data_array))
+                * unit_registry.degK
+            )
+            result_data_array = data_array.reindex_like(new_data_array)
+
+            assert_equal_with_units(result_array, result_data_array)
