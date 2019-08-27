@@ -708,7 +708,9 @@ def test_create_mask_dask():
 
     indexer = indexing.OuterIndexer((1, slice(2), np.array([0, -1, 2])))
     expected = np.array(2 * [[False, True, False]])
-    actual = indexing.create_mask(indexer, (5, 5, 5), chunks_hint=((1, 1), (2, 1)))
+    actual = indexing.create_mask(
+        indexer, (5, 5, 5), da.empty((2, 3), chunks=((1, 1), (2, 1)))
+    )
     assert actual.chunks == ((1, 1), (2, 1))
     np.testing.assert_array_equal(expected, actual)
 
@@ -716,12 +718,14 @@ def test_create_mask_dask():
         (np.array([0, -1, 2]), slice(None), np.array([0, 1, -1]))
     )
     expected = np.array([[False, True, True]] * 2).T
-    actual = indexing.create_mask(indexer, (5, 2), chunks_hint=((3,), (2,)))
+    actual = indexing.create_mask(
+        indexer, (5, 2), da.empty((3, 2), chunks=((3,), (2,)))
+    )
     assert isinstance(actual, da.Array)
     np.testing.assert_array_equal(expected, actual)
 
     with pytest.raises(ValueError):
-        indexing.create_mask(indexer, (5, 2), chunks_hint=())
+        indexing.create_mask(indexer, (5, 2), da.empty((5,), chunks=(1,)))
 
 
 def test_create_mask_error():
