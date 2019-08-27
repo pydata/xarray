@@ -203,7 +203,7 @@ class AttrAccessMixin:
             cls.__setattr__ = cls._setattr_dict
             warnings.warn(
                 "xarray subclass %s should explicitly define __slots__" % cls.__name__,
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
 
@@ -247,7 +247,7 @@ class AttrAccessMixin:
                 "to suppress this warning for legitimate custom attributes and "
                 "raise an error when attempting variables assignments."
                 % (name, type(self).__name__),
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
 
