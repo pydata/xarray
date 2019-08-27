@@ -40,7 +40,7 @@ class CountingScheduler:
         self.total_computes += 1
         if self.total_computes > self.max_computes:
             raise RuntimeError(
-                "To many computes. Total: %d > max: %d."
+                "Too many computes. Total: %d > max: %d."
                 % (self.total_computes, self.max_computes)
             )
         return dask.get(dsk, keys, **kwargs)
