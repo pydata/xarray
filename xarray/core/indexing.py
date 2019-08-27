@@ -1,9 +1,10 @@
+import enum
 import functools
 import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Sequence, Tuple, Union
+from typing import Any, Callable, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -806,21 +807,24 @@ def _combine_indexers(old_key, shape, new_key):
     )
 
 
-class IndexingSupport:  # could inherit from enum.Enum on Python 3
+@enum.unique
+class IndexingSupport(enum.Enum):
     # for backends that support only basic indexer
-    BASIC = "BASIC"
+    BASIC = 0
     # for backends that support basic / outer indexer
-    OUTER = "OUTER"
+    OUTER = 1
     # for backends that support outer indexer including at most 1 vector.
-    OUTER_1VECTOR = "OUTER_1VECTOR"
+    OUTER_1VECTOR = 2
     # for backends that support full vectorized indexer.
-    VECTORIZED = "VECTORIZED"
-
-    def __new__(cls, *args, **kwargs):
-        raise TypeError("Static class")
+    VECTORIZED = 3
 
 
-def explicit_indexing_adapter(key, shape, indexing_support, raw_indexing_method):
+def explicit_indexing_adapter(
+    key: ExplicitIndexer,
+    shape: Tuple[int, ...],
+    indexing_support: IndexingSupport,
+    raw_indexing_method: Callable,
+) -> Any:
     """Support explicit indexing by delegating to a raw indexing method.
 
     Outer and/or vectorized indexers are supported by indexing a second time
@@ -850,7 +854,9 @@ def explicit_indexing_adapter(key, shape, indexing_support, raw_indexing_method)
     return result
 
 
-def decompose_indexer(indexer, shape, indexing_support):
+def decompose_indexer(
+    indexer: ExplicitIndexer, shape: Tuple[int, ...], indexing_support: IndexingSupport
+) -> Tuple[ExplicitIndexer, ExplicitIndexer]:
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, (BasicIndexer, OuterIndexer)):
@@ -874,7 +880,11 @@ def _decompose_slice(key, size):
         return slice(start, stop, -step), slice(None, None, -1)
 
 
-def _decompose_vectorized_indexer(indexer, shape, indexing_support):
+def _decompose_vectorized_indexer(
+    indexer: VectorizedIndexer,
+    shape: Tuple[int, ...],
+    indexing_support: IndexingSupport,
+) -> Tuple[ExplicitIndexer, ExplicitIndexer]:
     """
     Decompose vectorized indexer to the successive two indexers, where the
     first indexer will be used to index backend arrays, while the second one
@@ -910,45 +920,49 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
     if indexing_support is IndexingSupport.VECTORIZED:
         return indexer, BasicIndexer(())
 
-    backend_indexer = []
-    np_indexer = []
+    backend_indexer_elems = []
+    np_indexer_elems = []
     # convert negative indices
-    indexer = [
+    indexer_elems = [
         np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
         for k, s in zip(indexer.tuple, shape)
     ]
 
-    for k, s in zip(indexer, shape):
+    for k, s in zip(indexer_elems, shape):
         if isinstance(k, slice):
             # If it is a slice, then we will slice it as-is
             # (but make its step positive) in the backend,
             # and then use all of it (slice(None)) for the in-memory portion.
             bk_slice, np_slice = _decompose_slice(k, s)
-            backend_indexer.append(bk_slice)
-            np_indexer.append(np_slice)
+            backend_indexer_elems.append(bk_slice)
+            np_indexer_elems.append(np_slice)
         else:
             # If it is a (multidimensional) np.ndarray, just pickup the used
             # keys without duplication and store them as a 1d-np.ndarray.
             oind, vind = np.unique(k, return_inverse=True)
-            backend_indexer.append(oind)
-            np_indexer.append(vind.reshape(*k.shape))
+            backend_indexer_elems.append(oind)
+            np_indexer_elems.append(vind.reshape(*k.shape))
 
-    backend_indexer = OuterIndexer(tuple(backend_indexer))
-    np_indexer = VectorizedIndexer(tuple(np_indexer))
+    backend_indexer = OuterIndexer(tuple(backend_indexer_elems))
+    np_indexer = VectorizedIndexer(tuple(np_indexer_elems))
 
     if indexing_support is IndexingSupport.OUTER:
         return backend_indexer, np_indexer
 
     # If the backend does not support outer indexing,
     # backend_indexer (OuterIndexer) is also decomposed.
-    backend_indexer, np_indexer1 = _decompose_outer_indexer(
+    backend_indexer1, np_indexer1 = _decompose_outer_indexer(
         backend_indexer, shape, indexing_support
     )
     np_indexer = _combine_indexers(np_indexer1, shape, np_indexer)
-    return backend_indexer, np_indexer
+    return backend_indexer1, np_indexer
 
 
-def _decompose_outer_indexer(indexer, shape, indexing_support):
+def _decompose_outer_indexer(
+    indexer: Union[BasicIndexer, OuterIndexer],
+    shape: Tuple[int, ...],
+    indexing_support: IndexingSupport,
+) -> Tuple[ExplicitIndexer, ExplicitIndexer]:
     """
     Decompose outer indexer to the successive two indexers, where the
     first indexer will be used to index backend arrays, while the second one
@@ -956,7 +970,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
 
     Parameters
     ----------
-    indexer: VectorizedIndexer
+    indexer: OuterIndexer or BasicIndexer
     indexing_support: One of the entries of IndexingSupport
 
     Returns
@@ -994,7 +1008,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
             pos_indexer.append(k + s)
         else:
             pos_indexer.append(k)
-    indexer = pos_indexer
+    indexer_elems = pos_indexer
 
     if indexing_support is IndexingSupport.OUTER_1VECTOR:
         # some backends such as h5py supports only 1 vector in indexers
@@ -1003,11 +1017,11 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
             (np.max(k) - np.min(k) + 1.0) / len(np.unique(k))
             if isinstance(k, np.ndarray)
             else 0
-            for k in indexer
+            for k in indexer_elems
         ]
         array_index = np.argmax(np.array(gains)) if len(gains) > 0 else None
 
-        for i, (k, s) in enumerate(zip(indexer, shape)):
+        for i, (k, s) in enumerate(zip(indexer_elems, shape)):
             if isinstance(k, np.ndarray) and i != array_index:
                 # np.ndarray key is converted to slice that covers the entire
                 # entries of this key.
@@ -1028,7 +1042,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
         return (OuterIndexer(tuple(backend_indexer)), OuterIndexer(tuple(np_indexer)))
 
     if indexing_support == IndexingSupport.OUTER:
-        for k, s in zip(indexer, shape):
+        for k, s in zip(indexer_elems, shape):
             if isinstance(k, slice):
                 # slice:  convert positive step slice for backend
                 bk_slice, np_slice = _decompose_slice(k, s)
@@ -1050,7 +1064,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
     # basic indexer
     assert indexing_support == IndexingSupport.BASIC
 
-    for k, s in zip(indexer, shape):
+    for k, s in zip(indexer_elems, shape):
         if isinstance(k, np.ndarray):
             # np.ndarray key is converted to slice that covers the entire
             # entries of this key.
