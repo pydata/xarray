@@ -46,6 +46,7 @@ from . import (
     requires_dask,
     requires_numbagg,
     requires_scipy,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -3652,6 +3653,28 @@ class TestDataset:
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=["x", "y"])
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
+
+    @requires_sparse
+    def test_from_dataframe_sparse(self):
+        import sparse
+
+        df_base = pd.DataFrame(
+            {"x": range(10), "y": list("abcdefghij"), "z": np.arange(0, 100, 10)}
+        )
+
+        ds_sparse = Dataset.from_dataframe(df_base.set_index("x"), sparse=True)
+        ds_dense = Dataset.from_dataframe(df_base.set_index("x"), sparse=False)
+        assert isinstance(ds_sparse["y"].data, sparse.COO)
+        assert isinstance(ds_sparse["z"].data, sparse.COO)
+        ds_sparse["y"].data = ds_sparse["y"].data.todense()
+        ds_sparse["z"].data = ds_sparse["z"].data.todense()
+        assert_identical(ds_dense, ds_sparse)
+
+        ds_sparse = Dataset.from_dataframe(df_base.set_index(["x", "y"]), sparse=True)
+        ds_dense = Dataset.from_dataframe(df_base.set_index(["x", "y"]), sparse=False)
+        assert isinstance(ds_sparse["z"].data, sparse.COO)
+        ds_sparse["z"].data = ds_sparse["z"].data.todense()
+        assert_identical(ds_dense, ds_sparse)
 
     def test_to_and_from_empty_dataframe(self):
         # GH697

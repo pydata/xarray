@@ -733,7 +733,7 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             if self.name is None:
                 raise ValueError(
-                    "cannot reset_coords with drop=False " "on an unnamed DataArrray"
+                    "cannot reset_coords with drop=False on an unnamed DataArrray"
                 )
             dataset[self.name] = self.variable
             return dataset
@@ -1448,9 +1448,7 @@ class DataArray(AbstractArray, DataWithCoords):
             This object, but with an additional dimension(s).
         """
         if isinstance(dim, int):
-            raise TypeError(
-                "dim should be hashable or sequence/mapping of " "hashables"
-            )
+            raise TypeError("dim should be hashable or sequence/mapping of hashables")
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
@@ -2277,19 +2275,27 @@ class DataArray(AbstractArray, DataWithCoords):
         return obj
 
     @classmethod
-    def from_series(cls, series: pd.Series) -> "DataArray":
+    def from_series(cls, series: pd.Series, sparse: bool = False) -> "DataArray":
         """Convert a pandas.Series into an xarray.DataArray.
 
         If the series's index is a MultiIndex, it will be expanded into a
         tensor product of one-dimensional coordinates (filling in missing
         values with NaN). Thus this operation should be the inverse of the
         `to_series` method.
+
+        If sparse=True, creates a sparse array instead of a dense NumPy array.
+        Requires the pydata/sparse package.
+
+        See also
+        --------
+        xarray.Dataset.from_dataframe
         """
-        # TODO: add a 'name' parameter
-        name = series.name
-        df = pd.DataFrame({name: series})
-        ds = Dataset.from_dataframe(df)
-        return ds[name]
+        temp_name = "__temporary_name"
+        df = pd.DataFrame({temp_name: series})
+        ds = Dataset.from_dataframe(df, sparse=sparse)
+        result = cast(DataArray, ds[temp_name])
+        result.name = series.name
+        return result
 
     def to_cdms2(self) -> "cdms2_Variable":
         """Convert this array into a cdms2.Variable
@@ -2704,7 +2710,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         if isinstance(other, Dataset):
             raise NotImplementedError(
-                "dot products are not yet supported " "with Dataset objects."
+                "dot products are not yet supported with Dataset objects."
             )
         if not isinstance(other, DataArray):
             raise TypeError("dot only operates on DataArrays.")

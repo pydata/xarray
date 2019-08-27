@@ -43,6 +43,12 @@ New functions/methods
   This requires `sparse>=0.8.0`. By `Nezar Abdennur <https://github.com/nvictus>`_
   and `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- :py:meth:`~Dataset.from_dataframe` and :py:meth:`~DataArray.from_series` now
+  support ``sparse=True`` for converting pandas objects into xarray objects
+  wrapping sparse arrays. This is particularly useful with sparsely populated
+  hierarchical indexes. (:issue:`3206`)
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - The xarray package is now discoverable by mypy (although typing hints coverage is not
   complete yet). mypy type checking is now enforced by CI. Libraries that depend on
   xarray and use mypy can now remove from their setup.cfg the lines::
