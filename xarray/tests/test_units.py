@@ -178,7 +178,13 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "indices",
         (
-            pytest.param(4, id="single index"),
+            pytest.param(
+                4,
+                id="single index",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
             pytest.param(
                 [5, 2, 9, 1],
                 id="multiple indices",
@@ -215,7 +221,12 @@ class TestDataArray:
                 ),
             ),
             pytest.param(
-                12 * unit_registry.s, None, id="single value with correct unit"
+                12 * unit_registry.s,
+                None,
+                id="single value with correct unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
             ),
             pytest.param(
                 [10, 5, 13],
@@ -274,7 +285,12 @@ class TestDataArray:
                 ),
             ),
             pytest.param(
-                12 * unit_registry.s, None, id="single value with correct unit"
+                12 * unit_registry.s,
+                None,
+                id="single value with correct unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
             ),
             pytest.param(
                 [10, 5, 13],
@@ -320,13 +336,37 @@ class TestDataArray:
                 (10, 20),
                 id="nothing squeezable",
                 marks=use_pint_dev_or_xfail(
-                    reason="pint does not implement __array_function__"
+                    reason="pint does not implement __array_function__ yet"
                 ),
             ),
-            pytest.param((10, 20, 1), id="last dimension squeezable"),
-            pytest.param((10, 1, 20), id="middle dimension squeezable"),
-            pytest.param((1, 10, 20), id="first dimension squeezable"),
-            pytest.param((1, 10, 1, 20), id="first and last dimension squeezable"),
+            pytest.param(
+                (10, 20, 1),
+                id="last dimension squeezable",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                (10, 1, 20),
+                id="middle dimension squeezable",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                (1, 10, 20),
+                id="first dimension squeezable",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                (1, 10, 1, 20),
+                id="first and last dimension squeezable",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
         ),
     )
     def test_squeeze(self, shape, dtype):
@@ -353,10 +393,38 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="without unit"),
-            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="with incorrect unit"),
-            pytest.param(unit_registry.m, None, id="with correct unit"),
+            pytest.param(
+                1,
+                None,
+                id="without unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.dimensionless,
+                None,
+                id="dimensionless",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.s,
+                None,
+                id="with incorrect unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.m,
+                None,
+                id="with correct unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
         ),
     )
     def test_interp(self, unit, error):
@@ -388,10 +456,38 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="without unit"),
-            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="with incorrect unit"),
-            pytest.param(unit_registry.m, None, id="with correct unit"),
+            pytest.param(
+                1,
+                None,
+                id="without unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.dimensionless,
+                None,
+                id="dimensionless",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.s,
+                None,
+                id="with incorrect unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.m,
+                None,
+                id="with correct unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
         ),
     )
     def test_interp_like(self, unit, error):
@@ -427,10 +523,38 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="without unit"),
-            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="with incorrect unit"),
-            pytest.param(unit_registry.m, None, id="with correct unit"),
+            pytest.param(
+                1,
+                None,
+                id="without unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.dimensionless,
+                None,
+                id="dimensionless",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.s,
+                None,
+                id="with incorrect unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
+            pytest.param(
+                unit_registry.m,
+                None,
+                id="with correct unit",
+                marks=use_pint_dev_or_xfail(
+                    reason="pint does not implement __array_function__ yet"
+                ),
+            ),
         ),
     )
     def test_reindex(self, unit, error):
