@@ -46,24 +46,30 @@ class CountingScheduler:
         return dask.get(dsk, keys, **kwargs)
 
 
-def _set_dask_scheduler(scheduler):
+def _set_dask_scheduler(scheduler=dask.get):
+    """ Backwards compatible way of setting scheduler. """
     if LooseVersion(dask.__version__) >= LooseVersion("0.18.0"):
         return dask.config.set(scheduler=scheduler)
     return dask.set_options(get=scheduler)
 
 
-def test_counting_scheduler():
+def raise_if_dask_computes(max_computes=0):
+    scheduler = CountingScheduler(max_computes)
+    return _set_dask_scheduler(scheduler)
+
+
+def test_raise_if_dask_computes():
     data = da.from_array(np.random.RandomState(0).randn(4, 6), chunks=(2, 2))
-    sched = CountingScheduler(max_computes=0)
-    with raises_regex(RuntimeError, "To many computes"):
-        with _set_dask_scheduler(sched):
+    with raises_regex(RuntimeError, "Too many computes"):
+        with raise_if_dask_computes():
             data.compute()
-    assert sched.total_computes == 1
 
 
 class DaskTestCase:
     def assertLazyAnd(self, expected, actual, test):
-        with _set_dask_scheduler(CountingScheduler(1)):
+        with _set_dask_scheduler(dask.get):
+            # dask.get is the syncronous scheduler, which get's set also by
+            # dask.config.set(scheduler="syncronous") in current versions.
             test(actual, expected)
 
         if isinstance(actual, Dataset):
@@ -201,15 +207,18 @@ class TestVariable(DaskTestCase):
     def test_reduce(self):
         u = self.eager_var
         v = self.lazy_var
-        with _set_dask_scheduler(CountingScheduler(0)):
-            # None of the methods should trigger compute at this stage.
-            self.assertLazyAndAllClose(u.mean(), v.mean())
-            self.assertLazyAndAllClose(u.std(), v.std())
-            self.assertLazyAndAllClose(u.argmax(dim="x"), v.argmax(dim="x"))
-            self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
-            self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
-            with raises_regex(NotImplementedError, "dask"):
-                v.median()
+        self.assertLazyAndAllClose(u.mean(), v.mean())
+        self.assertLazyAndAllClose(u.std(), v.std())
+        with raise_if_dask_computes():
+            actual = v.argmax(dim="x")
+        self.assertLazyAndAllClose(u.argmax(dim="x"), actual)
+        with raise_if_dask_computes():
+            actual = v.argmin(dim="x")
+        self.assertLazyAndAllClose(u.argmin(dim="x"), actual)
+        self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
+        self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
+        with raises_regex(NotImplementedError, "dask"):
+            v.median()
 
     def test_missing_values(self):
         values = np.array([0, 1, np.nan, 3])
