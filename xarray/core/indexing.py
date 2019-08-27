@@ -10,7 +10,7 @@ import pandas as pd
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
-from .pycompat import dask_array_type, integer_types
+from .pycompat import dask_array_type, integer_types, sparse_array_type
 from .utils import is_dict_like, maybe_cast_to_coords_dtype
 
 
@@ -1076,19 +1076,30 @@ def _logical_any(args):
     return functools.reduce(operator.or_, args)
 
 
-def _masked_result_drop_slice(key, chunks_hint=None):
+def _masked_result_drop_slice(key, data=None):
+
     key = (k for k in key if not isinstance(k, slice))
-    if chunks_hint is not None:
-        key = [
-            _dask_array_with_chunks_hint(k, chunks_hint)
-            if isinstance(k, np.ndarray)
-            else k
-            for k in key
-        ]
-    return _logical_any(k == -1 for k in key)
+    chunks_hint = getattr(data, "chunks", None)
+
+    new_keys = []
+    for k in key:
+        if isinstance(k, np.ndarray):
+            if isinstance(data, dask_array_type):
+                new_keys.append(_dask_array_with_chunks_hint(k, chunks_hint))
+            elif isinstance(data, sparse_array_type):
+                import sparse
+
+                new_keys.append(sparse.COO.from_numpy(k))
+            else:
+                new_keys.append(k)
+        else:
+            new_keys.append(k)
+
+    mask = _logical_any(k == -1 for k in new_keys)
+    return mask
 
 
-def create_mask(indexer, shape, chunks_hint=None):
+def create_mask(indexer, shape, data=None):
     """Create a mask for indexing with a fill-value.
 
     Parameters
@@ -1098,25 +1109,24 @@ def create_mask(indexer, shape, chunks_hint=None):
         the result that should be masked.
     shape : tuple
         Shape of the array being indexed.
-    chunks_hint : tuple, optional
-        Optional tuple indicating desired chunks for the result. If provided,
-        used as a hint for chunks on the resulting dask. Must have a hint for
-        each dimension on the result array.
+    data : optional
+        Data for which mask is being created. If data is a dask arrays, its chunks
+        are used as a hint for chunks on the resulting mask. If data is a sparse
+        array, the returned mask is also a sparse array.
 
     Returns
     -------
-    mask : bool, np.ndarray or dask.array.Array with dtype=bool
-        Dask array if chunks_hint is provided, otherwise a NumPy array. Has the
-        same shape as the indexing result.
+    mask : bool, np.ndarray, SparseArray or dask.array.Array with dtype=bool
+        Same type as data. Has the same shape as the indexing result.
     """
     if isinstance(indexer, OuterIndexer):
         key = _outer_to_vectorized_indexer(indexer, shape).tuple
         assert not any(isinstance(k, slice) for k in key)
-        mask = _masked_result_drop_slice(key, chunks_hint)
+        mask = _masked_result_drop_slice(key, data)
 
     elif isinstance(indexer, VectorizedIndexer):
         key = indexer.tuple
-        base_mask = _masked_result_drop_slice(key, chunks_hint)
+        base_mask = _masked_result_drop_slice(key, data)
         slice_shape = tuple(
             np.arange(*k.indices(size)).size
             for k, size in zip(key, shape)

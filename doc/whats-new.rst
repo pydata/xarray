@@ -39,8 +39,8 @@ New functions/methods
   `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
   numpy-like library (important: read notes about NUMPY_EXPERIMENTAL_ARRAY_FUNCTION in
   the above link). Added explicit test coverage for
-  `sparse <https://github.com/pydata/sparse>`_. (:issue:`3117`, :issue:`3202`)
-  By `Nezar Abdennur <https://github.com/nvictus>`_
+  `sparse <https://github.com/pydata/sparse>`_. (:issue:`3117`, :issue:`3202`).
+  This requires `sparse>=0.8.0`. By `Nezar Abdennur <https://github.com/nvictus>`_
   and `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - The xarray package is now discoverable by mypy (although typing hints coverage is not
