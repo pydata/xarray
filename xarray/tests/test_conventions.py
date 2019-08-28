@@ -278,6 +278,7 @@ class TestDecodeCF:
         )
         assert_identical(decoded, conventions.decode_cf(original).compute())
 
+    @requires_dask
     def test_decode_dask_times(self):
         original = Dataset.from_dict(
             {
