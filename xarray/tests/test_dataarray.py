@@ -1468,7 +1468,7 @@ class TestDataArray:
         actual = DataArray(coords=[("x", np.arange(10)), ("y", ["a", "b"])])
         assert_identical(expected, actual)
 
-        with raises_regex(ValueError, "length 0 on the data"):
+        with raises_regex(ValueError, "different number of dim"):
             DataArray(np.array(1), coords={"x": np.arange(10)}, dims=["x"])
         with raises_regex(ValueError, "does not match the 0 dim"):
             DataArray(np.array(1), coords=[("x", np.arange(10))])
