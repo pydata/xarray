@@ -291,8 +291,8 @@ class TestDecodeCF:
                 }
             }
         ).chunk()
-        actual = conventions.decode_cf(original)
-        # assert_identical(expected, actual)
+        assert_identical(conventions.decode_cf(original), 
+                         conventions.decode_cf(original.chunk()))
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
     def encode_variable(self, var):
