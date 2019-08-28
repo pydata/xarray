@@ -292,11 +292,9 @@ class TestDecodeCF:
                 },
             }
         )
-        # Throws an AttributeError: 'Array' object has no attribute 'tolist'
-        # without updated code
-        assert (
-            conventions.decode_cf(original.chunk()).to_dict()
-            == conventions.decode_cf(original).to_dict()
+        assert_identical(
+            conventions.decode_cf(original.chunk()),
+            conventions.decode_cf(original).chunk(),
         )
 
 
