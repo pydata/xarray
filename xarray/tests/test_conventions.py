@@ -286,9 +286,7 @@ class TestDecodeCF:
                 "data_vars": {
                     "average_T1": {
                         "dims": ("time",),
-                        "attrs": {
-                            "units": "days since 1958-01-01 00:00:00",
-                        },
+                        "attrs": {"units": "days since 1958-01-01 00:00:00"},
                         "data": [87659.0, 88024.0, 88389.0, 88754.0, 89119.0],
                     }
                 },
@@ -296,7 +294,10 @@ class TestDecodeCF:
         )
         # Throws an AttributeError: 'Array' object has no attribute 'tolist'
         # without updated code
-        conventions.decode_cf(original.chunk())
+        assert (
+            conventions.decode_cf(original.chunk()).to_dict()
+            == conventions.decode_cf(original).to_dict()
+        )
 
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
