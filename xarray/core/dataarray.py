@@ -123,6 +123,8 @@ def _infer_coords_and_dims(
     if utils.is_dict_like(coords):
         for k, v in coords.items():
             new_coords[k] = as_variable(v, name=k)
+        if shape == () and dims != ():
+            shape = (0,)
     elif coords is not None:
         for dim, coord in zip(dims, coords):
             var = as_variable(coord, name=dim)
