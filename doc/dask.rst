@@ -132,6 +132,13 @@ A dataset can also be converted to a Dask DataFrame using :py:meth:`~xarray.Data
 
 Dask DataFrames do not support multi-indexes so the coordinate variables from the dataset are included as columns in the Dask DataFrame.
 
+.. ipython:: python
+    :suppress:
+
+    import os
+    os.remove('example-data.nc')
+    os.remove('manipulated-example-data.nc')
+
 Using Dask with xarray
 ----------------------
 
@@ -372,12 +379,6 @@ A good rule of thumb is to create arrays with a minimum chunksize of at least
 one million elements (e.g., a 1000x1000 matrix). With large arrays (10+ GB), the
 cost of queueing up Dask operations can be noticeable, and you may need even
 larger chunksizes.
-
-.. ipython:: python
-    :suppress:
-
-    import os
-    os.remove('example-data.nc')
 
 Optimization Tips
 -----------------

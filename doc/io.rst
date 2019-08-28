@@ -743,6 +743,13 @@ be done directly from zarr, as described in the
 
 .. _io.cfgrib:
 
+.. ipython:: python
+   :suppress:
+
+    import shutil
+    shutil.rmtree('foo.zarr')
+    shutil.rmtree('path/to/directory.zarr')
+
 GRIB format via cfgrib
 ----------------------
 
