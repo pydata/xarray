@@ -278,7 +278,7 @@ class TestDecodeCF:
         )
         assert_identical(decoded, conventions.decode_cf(original).compute())
 
-    def test_experimental_array(self):
+    def test_decode_dask_times(self):
         original = Dataset.from_dict(
             {
                 "coords": {},
@@ -287,7 +287,6 @@ class TestDecodeCF:
                     "average_T1": {
                         "dims": ("time",),
                         "attrs": {
-                            "long_name": "Start time for average period",
                             "units": "days since 1958-01-01 00:00:00",
                         },
                         "data": [87659.0, 88024.0, 88389.0, 88754.0, 89119.0],
