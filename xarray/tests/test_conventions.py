@@ -280,19 +280,25 @@ class TestDecodeCF:
 
     def test_experimental_array(self):
         original = Dataset.from_dict(
-            {'coords': {},
-             'dims': {'time': 5},
-             'data_vars': { 'average_T1': {
-                            'dims': ('time',),
-                            'attrs': {'long_name': 'Start time for average period',
-                            'units': 'days since 1958-01-01 00:00:00'},
-                            'data': [87659.0, 88024.0, 88389.0, 88754.0, 89119.0]}
-                          }
+            {
+                "coords": {},
+                "dims": {"time": 5},
+                "data_vars": {
+                    "average_T1": {
+                        "dims": ("time",),
+                        "attrs": {
+                            "long_name": "Start time for average period",
+                            "units": "days since 1958-01-01 00:00:00",
+                        },
+                        "data": [87659.0, 88024.0, 88389.0, 88754.0, 89119.0],
+                    }
+                },
             }
         )
         # Throws an AttributeError: 'Array' object has no attribute 'tolist'
         # without updated code
         conventions.decode_cf(original.chunk())
+
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
     def encode_variable(self, var):
@@ -300,6 +306,7 @@ class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
         coder = coding.strings.EncodedStringCoder(allows_unicode=True)
         var = coder.encode(var)
         return var
+
 
 @requires_netCDF4
 class TestCFEncodedDataStore(CFEncodedBase):
