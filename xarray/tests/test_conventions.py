@@ -17,7 +17,7 @@ from xarray import (
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
-from xarray.testing import assert_identical
+from xarray.testing import assert_identical, assert_equal
 
 from . import (
     assert_array_equal,
@@ -290,9 +290,10 @@ class TestDecodeCF:
                      'data': [87659.0, 88024.0, 88389.0, 88754.0, 89119.0]}
                 }
             }
-        ).chunk()
-        assert_identical(conventions.decode_cf(original), 
-                         conventions.decode_cf(original.chunk()))
+        )
+        # Throws an AttributeError: 'Array' object has no attribute 'tolist'
+        # without updated code
+        conventions.decode_cf(original.chunk())
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
     def encode_variable(self, var):
