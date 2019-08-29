@@ -344,9 +344,15 @@ def _dataset_concat(
                     "Encountered unexpected variables %r" % list(variables_to_merge)[0]
                 )
             to_merge.append(ds.reset_coords()[list(variables_to_merge)])
+
+        merge_equals = {k: equals.get(k, None) for k in variables_to_merge}
+
         # TODO: Provide equals as an argument and thread that down to merge.unique_variable
         result_vars = merge_variables(
-            expand_variable_dicts(to_merge), priority_vars=None, compat=compat
+            expand_variable_dicts(to_merge),
+            priority_vars=None,
+            compat=compat,
+            equals=merge_equals,
         )
     else:
         result_vars = OrderedDict()

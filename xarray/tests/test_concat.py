@@ -41,7 +41,7 @@ def test_concat_compat():
     for var in ["has_x", "no_x_y"]:
         assert "y" not in result[var]
 
-    with raises_regex(ValueError, "'q' is not a dimension in all datasets"):
+    with raises_regex(ValueError, "'q' is not present in all datasets"):
         concat([ds1, ds2], dim="q", data_vars="all", compat="broadcast_equals")
 
 

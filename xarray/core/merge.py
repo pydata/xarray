@@ -71,8 +71,8 @@ class MergeError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def unique_variable(name, variables, compat="broadcast_equals"):
-    # type: (Any, List[Variable], str) -> Variable
+def unique_variable(name, variables, compat="broadcast_equals", equals=None):
+    # type: (Any, List[Variable], str, bool) -> Variable
     """Return the unique variable from a list of variables or raise MergeError.
 
     Parameters
@@ -84,6 +84,7 @@ def unique_variable(name, variables, compat="broadcast_equals"):
         inputs.
     compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         Type of equality check to use.
+    equals : mapping variable name to None or bool, corresponding to result of compat test
 
     Returns
     -------
@@ -94,30 +95,35 @@ def unique_variable(name, variables, compat="broadcast_equals"):
     MergeError: if any of the variables are not equal.
     """  # noqa
     out = variables[0]
-    if len(variables) > 1 and compat != "override":
-        combine_method = None
 
-        if compat == "minimal":
-            compat = "broadcast_equals"
+    if len(variables) == 1 or compat == "override":
+        return out
 
-        if compat == "broadcast_equals":
-            dim_lengths = broadcast_dimension_size(variables)
-            out = out.set_dims(dim_lengths)
+    combine_method = None
 
-        if compat == "no_conflicts":
-            combine_method = "fillna"
+    if compat == "minimal":
+        compat = "broadcast_equals"
 
+    if compat == "broadcast_equals":
+        dim_lengths = broadcast_dimension_size(variables)
+        out = out.set_dims(dim_lengths)
+
+    if compat == "no_conflicts":
+        combine_method = "fillna"
+
+    if equals is None:
+        equals = all([getattr(out, compat)(var) for var in variables[1:]])
+
+    if not equals:
+        raise MergeError(
+            "conflicting values for variable %r on " "objects to be combined" % (name)
+        )
+
+    if combine_method:
         for var in variables[1:]:
-            if not getattr(out, compat)(var):
-                raise MergeError(
-                    "conflicting values for variable %r on "
-                    "objects to be combined:\n"
-                    "first value: %r\nsecond value: %r" % (name, out, var)
-                )
-            if combine_method:
-                # TODO: add preservation of attrs into fillna
-                out = getattr(out, combine_method)(var)
-                out.attrs = var.attrs
+            # TODO: add preservation of attrs into fillna
+            out = getattr(out, combine_method)(var)
+            out.attrs = var.attrs
 
     return out
 
@@ -143,6 +149,7 @@ def merge_variables(
     list_of_variables_dicts: List[Mapping[Any, Variable]],
     priority_vars: Mapping[Any, Variable] = None,
     compat: str = "minimal",
+    equals: Mapping[Any, bool] = {},
 ) -> "OrderedDict[Any, Variable]":
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -191,7 +198,9 @@ def merge_variables(
                 merged[name] = unique_variable(name, dim_variables, dim_compat)
             else:
                 try:
-                    merged[name] = unique_variable(name, var_list, compat)
+                    merged[name] = unique_variable(
+                        name, var_list, compat, equals.get(name, None)
+                    )
                 except MergeError:
                     if compat != "minimal":
                         # we need more than "minimal" compatibility (for which
