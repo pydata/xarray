@@ -318,12 +318,16 @@ def _dataset_concat(
     both_data_and_coords = result_coord_names & noncoord_names
     if both_data_and_coords:
         raise ValueError(
-            "%r is a coordinate in some datasets and not in others."
-            % list(both_data_and_coords)[0]  # preserve previous behaviour
+            "%r is a coordinate in some datasets but not others."
+            % list(both_data_and_coords)[0]  # preserve format of error message
         )
     dim_names, result_coords = determine_dims(datasets, result_coord_names)
     # we don't want the concat dimension in the result dataset yet
     result_coords.pop(dim, None)
+
+    # case where concat dimension is a coordinate but not a dimension
+    if dim in result_coord_names and dim not in dim_names:
+        datasets = [ds.expand_dims(dim) for ds in datasets]
 
     # determine which variables to concatentate
     concat_over, equals = _calc_concat_over(
@@ -335,6 +339,10 @@ def _dataset_concat(
     if variables_to_merge:
         to_merge = []
         for ds in datasets:
+            if variables_to_merge - set(ds.variables):
+                raise ValueError(
+                    "Encountered unexpected variables %r" % list(variables_to_merge)[0]
+                )
             to_merge.append(ds.reset_coords()[list(variables_to_merge)])
         # TODO: Provide equals as an argument and thread that down to merge.unique_variable
         result_vars = merge_variables(
@@ -397,6 +405,11 @@ def _dataset_concat(
     result = result.set_coords(result_coord_names)
     result.encoding = result_encoding
 
+    # TODO: avoid this
+    unlabeled_dims = dim_names - result_coord_names
+    result = result.drop(unlabeled_dims, errors="ignore")
+
+    # need to pass test when provided dim is a DataArray
     if coord is not None:
         # add concat dimension last to ensure that its in the final Dataset
         result[coord.name] = coord
