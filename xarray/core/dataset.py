@@ -875,7 +875,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         attrs: "Optional[OrderedDict]" = __default,
         indexes: "Optional[OrderedDict[Any, pd.Index]]" = __default,
         encoding: Optional[dict] = __default,
-        accessors: Optional[Dict[str, Any]] = None,
         inplace: bool = False,
     ) -> "Dataset":
         """Fastpath constructor for internal use.
@@ -899,8 +898,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 self._indexes = indexes
             if encoding is not self.__default:
                 self._encoding = encoding
-            if accessors is not None:
-                self._accessors = accessors
             obj = self
         else:
             if variables is None:
@@ -915,10 +912,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 indexes = copy.copy(self._indexes)
             if encoding is self.__default:
                 encoding = copy.copy(self._encoding)
-            if accessors is None and self._accessors is not None:
-                accessors = self._accessors.copy()
             obj = self._construct_direct(
-                variables, coord_names, dims, attrs, indexes, encoding, accessors
+                variables, coord_names, dims, attrs, indexes, encoding
             )
         return obj
 
