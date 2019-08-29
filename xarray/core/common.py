@@ -1,3 +1,4 @@
+import warnings
 from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
@@ -35,6 +36,8 @@ T = TypeVar("T")
 
 
 class ImplementsArrayReduce:
+    __slots__ = ()
+
     @classmethod
     def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
         if include_skipna:
@@ -72,6 +75,8 @@ class ImplementsArrayReduce:
 
 
 class ImplementsDatasetReduce:
+    __slots__ = ()
+
     @classmethod
     def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
         if include_skipna:
@@ -109,6 +114,8 @@ class ImplementsDatasetReduce:
 class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable.
     """
+
+    __slots__ = ()
 
     def __bool__(self: Any) -> bool:
         return bool(self.values)
@@ -180,7 +187,25 @@ class AttrAccessMixin:
     """Mixin class that allows getting keys with attribute access
     """
 
-    _initialized = False
+    __slots__ = ()
+
+    def __init_subclass__(cls):
+        """Verify that all subclasses explicitly define ``__slots__``. If they don't,
+        raise error in the core xarray module and a FutureWarning in third-party
+        extensions.
+        This check is only triggered in Python 3.6+.
+        """
+        if not hasattr(object.__new__(cls), "__dict__"):
+            cls.__setattr__ = cls._setattr_slots
+        elif cls.__module__.startswith("xarray."):
+            raise AttributeError("%s must explicitly define __slots__" % cls.__name__)
+        else:
+            cls.__setattr__ = cls._setattr_dict
+            warnings.warn(
+                "xarray subclass %s should explicitly define __slots__" % cls.__name__,
+                FutureWarning,
+                stacklevel=2,
+            )
 
     @property
     def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
@@ -195,7 +220,7 @@ class AttrAccessMixin:
         return []
 
     def __getattr__(self, name: str) -> Any:
-        if name != "__setstate__":
+        if name not in {"__dict__", "__setstate__"}:
             # this avoids an infinite loop when pickle looks for the
             # __setstate__ attribute before the xarray object is initialized
             for source in self._attr_sources:
@@ -205,20 +230,52 @@ class AttrAccessMixin:
             "%r object has no attribute %r" % (type(self).__name__, name)
         )
 
-    def __setattr__(self, name: str, value: Any) -> None:
-        if self._initialized:
-            try:
-                # Allow setting instance variables if they already exist
-                # (e.g., _attrs). We use __getattribute__ instead of hasattr
-                # to avoid key lookups with attribute-style access.
-                self.__getattribute__(name)
-            except AttributeError:
-                raise AttributeError(
-                    "cannot set attribute %r on a %r object. Use __setitem__ "
-                    "style assignment (e.g., `ds['name'] = ...`) instead to "
-                    "assign variables." % (name, type(self).__name__)
-                )
+    # This complicated three-method design boosts overall performance of simple
+    # operations - particularly DataArray methods that perform a _to_temp_dataset()
+    # round-trip - by a whopping 8% compared to a single method that checks
+    # hasattr(self, "__dict__") at runtime before every single assignment (like
+    # _setattr_py35 does). All of this is just temporary until the FutureWarning can be
+    # changed into a hard crash.
+    def _setattr_dict(self, name: str, value: Any) -> None:
+        """Deprecated third party subclass (see ``__init_subclass__`` above)
+        """
         object.__setattr__(self, name, value)
+        if name in self.__dict__:
+            # Custom, non-slotted attr, or improperly assigned variable?
+            warnings.warn(
+                "Setting attribute %r on a %r object. Explicitly define __slots__ "
+                "to suppress this warning for legitimate custom attributes and "
+                "raise an error when attempting variables assignments."
+                % (name, type(self).__name__),
+                FutureWarning,
+                stacklevel=2,
+            )
+
+    def _setattr_slots(self, name: str, value: Any) -> None:
+        """Objects with ``__slots__`` raise AttributeError if you try setting an
+        undeclared attribute. This is desirable, but the error message could use some
+        improvement.
+        """
+        try:
+            object.__setattr__(self, name, value)
+        except AttributeError as e:
+            # Don't accidentally shadow custom AttributeErrors, e.g.
+            # DataArray.dims.setter
+            if str(e) != "%r object has no attribute %r" % (type(self).__name__, name):
+                raise
+            raise AttributeError(
+                "cannot set attribute %r on a %r object. Use __setitem__ style"
+                "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
+                % (name, type(self).__name__)
+            ) from e
+
+    def _setattr_py35(self, name: str, value: Any) -> None:
+        if hasattr(self, "__dict__"):
+            return self._setattr_dict(name, value)
+        return self._setattr_slots(name, value)
+
+    # Overridden in Python >=3.6 by __init_subclass__
+    __setattr__ = _setattr_py35
 
     def __dir__(self) -> List[str]:
         """Provide method name lookup and completion. Only provide 'public'
@@ -282,6 +339,8 @@ def get_squeeze_dims(
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
+
+    __slots__ = ()
 
     _rolling_exp_cls = RollingExp
 

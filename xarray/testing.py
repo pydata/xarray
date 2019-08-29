@@ -197,8 +197,6 @@ def _assert_dataarray_invariants(da: DataArray):
     if da._indexes is not None:
         _assert_indexes_invariants_checks(da._indexes, da._coords, da.dims)
 
-    assert da._initialized is True
-
 
 def _assert_dataset_invariants(ds: Dataset):
     assert isinstance(ds._variables, OrderedDict), type(ds._variables)
@@ -235,7 +233,6 @@ def _assert_dataset_invariants(ds: Dataset):
 
     assert isinstance(ds._encoding, (type(None), dict))
     assert isinstance(ds._attrs, (type(None), OrderedDict))
-    assert ds._initialized is True
 
 
 def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable],):

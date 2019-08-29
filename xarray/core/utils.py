@@ -376,7 +376,7 @@ class Frozen(Mapping[K, V]):
     saved under the `mapping` attribute.
     """
 
-    __slots__ = ["mapping"]
+    __slots__ = ("mapping",)
 
     def __init__(self, mapping: Mapping[K, V]):
         self.mapping = mapping
@@ -407,7 +407,7 @@ class SortedKeysDict(MutableMapping[K, V]):
     mapping.
     """
 
-    __slots__ = ["mapping"]
+    __slots__ = ("mapping",)
 
     def __init__(self, mapping: MutableMapping[K, V] = None):
         self.mapping = {} if mapping is None else mapping
@@ -440,6 +440,8 @@ class OrderedSet(MutableSet[T]):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
+
+    __slots__ = ("_ordered_dict",)
 
     def __init__(self, values: AbstractSet[T] = None):
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
@@ -481,6 +483,8 @@ class NdimSizeLenMixin:
     one that also defines ``ndim``, ``size`` and ``__len__``.
     """
 
+    __slots__ = ()
+
     @property
     def ndim(self: Any) -> int:
         return len(self.shape)
@@ -504,6 +508,8 @@ class NDArrayMixin(NdimSizeLenMixin):
     A subclass should set the `array` property and override one or more of
     `dtype`, `shape` and `__getitem__`.
     """
+
+    __slots__ = ()
 
     @property
     def dtype(self: Any) -> np.dtype:
@@ -617,6 +623,8 @@ def ensure_us_time_resolution(val):
 class HiddenKeyDict(MutableMapping[K, V]):
     """Acts like a normal dictionary, but hides certain keys.
     """
+
+    __slots__ = ("_data", "_hidden_keys")
 
     # ``__init__`` method required to create instance from class.
 

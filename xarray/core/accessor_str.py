@@ -75,6 +75,8 @@ class StringAccessor:
 
     """
 
+    __slots__ = ("_obj",)
+
     def __init__(self, obj):
         self._obj = obj
 

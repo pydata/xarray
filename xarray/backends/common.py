@@ -68,12 +68,16 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 
 
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
+    __slots__ = ()
+
     def __array__(self, dtype=None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return np.asarray(self[key], dtype=dtype)
 
 
 class AbstractDataStore(Mapping):
+    __slots__ = ()
+
     def __iter__(self):
         return iter(self.variables)
 
@@ -165,6 +169,8 @@ class AbstractDataStore(Mapping):
 
 
 class ArrayWriter:
+    __slots__ = ("sources", "targets", "regions", "lock")
+
     def __init__(self, lock=None):
         self.sources = []
         self.targets = []
@@ -205,6 +211,8 @@ class ArrayWriter:
 
 
 class AbstractWritableDataStore(AbstractDataStore):
+    __slots__ = ()
+
     def encode(self, variables, attributes):
         """
         Encode the variables and attributes in this store
@@ -371,6 +379,8 @@ class AbstractWritableDataStore(AbstractDataStore):
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
+    __slots__ = ()
+
     def encode(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.

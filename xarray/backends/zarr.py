@@ -29,6 +29,8 @@ def _encode_zarr_attr_value(value):
 
 
 class ZarrArrayWrapper(BackendArray):
+    __slots__ = ("datastore", "dtype", "shape", "variable_name")
+
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -230,6 +232,15 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
 class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr
     """
+
+    __slots__ = (
+        "append_dim",
+        "ds",
+        "_consolidate_on_close",
+        "_group",
+        "_read_only",
+        "_synchronizer",
+    )
 
     @classmethod
     def open_group(

@@ -31,6 +31,24 @@ Breaking changes
 - The ``inplace`` kwarg for public methods now raises an error, having been deprecated
   since v0.11.0.
   By `Maximilian Roos <https://github.com/max-sixty>`_ 
+- Most xarray objects now define ``__slots__``. This reduces overall RAM usage by ~22%
+  (not counting the underlying numpy buffers); on CPython 3.7/x64, a trivial DataArray
+  has gone down from 1.9kB to 1.5kB.
+
+  Caveats:
+
+  - Pickle streams produced by older versions of xarray can't be loaded using this
+    release, and vice versa.
+  - Any user code that was accessing the ``__dict__`` attribute of
+    xarray objects will break. The best practice to attach custom metadata to xarray
+    objects is to use the ``attrs`` dictionary.
+  - Any user code that defines custom subclasses of xarray classes must now explicitly
+    define ``__slots__`` itself. Subclasses that don't add any attributes must state so
+    by defining ``__slots__ = ()`` right after the class header.
+    Omitting ``__slots__`` will now cause a ``FutureWarning`` to be logged, and a hard
+    crash in a later release.
+
+  (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
