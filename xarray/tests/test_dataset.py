@@ -5706,3 +5706,25 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual2 = da.integrate("time", datetime_unit="h")
     assert_allclose(actual, actual2 / 24.0)
+
+
+def test_no_dict():
+    d = Dataset()
+    with pytest.raises(AttributeError):
+        d.__dict__
+
+
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
+def test_subclass_slots():
+    """Test that Dataset subclasses must explicitly define ``__slots__``.
+
+    .. note::
+       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
+       defined outside of the xarray package.
+    """
+    with pytest.raises(AttributeError) as e:
+
+        class MyDS(Dataset):
+            pass
+
+    assert str(e.value) == "MyDS must explicitly define __slots__"

@@ -67,7 +67,6 @@ class FacetGrid:
         Contains dictionaries mapping coordinate names to values. None is
         used as a sentinel value for axes which should remain empty, ie.
         sometimes the bottom right grid
-
     """
 
     def __init__(

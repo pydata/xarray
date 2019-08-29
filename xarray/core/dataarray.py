@@ -182,6 +182,8 @@ def _check_data_shape(data, coords, dims):
 
 
 class _LocIndexer:
+    __slots__ = ("data_array",)
+
     def __init__(self, data_array: "DataArray"):
         self.data_array = data_array
 
@@ -245,6 +247,8 @@ class DataArray(AbstractArray, DataWithCoords):
     attrs : OrderedDict
         Dictionary for holding arbitrary metadata.
     """
+
+    __slots__ = ("_accessors", "_coords", "_file_obj", "_name", "_indexes", "_variable")
 
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
@@ -356,14 +360,13 @@ class DataArray(AbstractArray, DataWithCoords):
         assert isinstance(coords, OrderedDict)
         self._coords = coords  # type: OrderedDict[Any, Variable]
         self._name = name  # type: Optional[Hashable]
+        self._accessors = None  # type: Optional[Dict[str, Any]]
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
         self._indexes = indexes
 
         self._file_obj = None
-
-        self._initialized = True  # type: bool
 
     def _replace(
         self,

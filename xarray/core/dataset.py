@@ -345,6 +345,8 @@ def as_dataset(obj: Any) -> "Dataset":
 
 
 class DataVariables(Mapping[Hashable, "DataArray"]):
+    __slots__ = ("_dataset",)
+
     def __init__(self, dataset: "Dataset"):
         self._dataset = dataset
 
@@ -384,6 +386,8 @@ class DataVariables(Mapping[Hashable, "DataArray"]):
 
 
 class _LocIndexer:
+    __slots__ = ("dataset",)
+
     def __init__(self, dataset: "Dataset"):
         self.dataset = dataset
 
@@ -406,6 +410,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
+
+    __slots__ = (
+        "_accessors",
+        "_attrs",
+        "_coord_names",
+        "_dims",
+        "_encoding",
+        "_file_obj",
+        "_indexes",
+        "_variables",
+    )
 
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
@@ -485,6 +500,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self._variables = OrderedDict()  # type: OrderedDict[Any, Variable]
         self._coord_names = set()  # type: Set[Hashable]
         self._dims = {}  # type: Dict[Any, int]
+        self._accessors = None  # type: Optional[Dict[str, Any]]
         self._attrs = None  # type: Optional[OrderedDict]
         self._file_obj = None
         if data_vars is None:
@@ -500,7 +516,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs = OrderedDict(attrs)
 
         self._encoding = None  # type: Optional[Dict]
-        self._initialized = True
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
         """Set the initial value of Dataset variables and dimensions
@@ -839,7 +854,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._attrs = attrs
         obj._file_obj = file_obj
         obj._encoding = encoding
-        obj._initialized = True
+        obj._accessors = None
         return obj
 
     __default = object()
