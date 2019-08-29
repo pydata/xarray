@@ -113,6 +113,11 @@ def _infer_coords_and_dims(
                 coord = as_variable(coord, name=dims[n]).to_index_variable()
                 dims[n] = coord.name
         dims = tuple(dims)
+    elif len(dims) != len(shape):
+        raise ValueError(
+            "different number of dimensions on data "
+            "and dims: %s vs %s" % (len(shape), len(dims))
+        )
     else:
         for d in dims:
             if not isinstance(d, str):
