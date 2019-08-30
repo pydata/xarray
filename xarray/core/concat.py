@@ -281,6 +281,22 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
     return concat_over, equals
 
 
+# determine dimensional coordinate names and a dict mapping name to DataArray
+def _determine_dims(datasets, concat_dim):
+    dims = set()
+    coords = dict()  # maps dim name to variable
+    concat_dim_lengths = []  # length of concat dimension in each dataset
+    dims_sizes = {}  # shared dimension sizes to expand variables
+    for ds in datasets:
+        concat_dim_lengths.append(ds.dims.get(concat_dim, 1))
+        dims_sizes.update(ds.dims)
+        for dim in set(ds.dims) - dims:
+            if dim not in coords:
+                coords[dim] = ds.coords[dim].variable
+        dims = dims | set(ds.dims)
+    return dims, coords, concat_dim_lengths, dims_sizes
+
+
 def _dataset_concat(
     datasets,
     dim,
@@ -303,17 +319,6 @@ def _dataset_concat(
         *datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value
     )
 
-    # determine dimensional coordinate names and a dict mapping name to DataArray
-    def determine_dims(datasets, result_coord_names):
-        dims = set()
-        coords = dict()
-        for ds in datasets:
-            for dim in set(ds.dims) - dims:
-                if dim not in coords:
-                    coords[dim] = ds.coords[dim].variable
-            dims = dims | set(ds.dims)
-        return dims, coords
-
     result_coord_names, noncoord_names = determine_coords(datasets)
     both_data_and_coords = result_coord_names & noncoord_names
     if both_data_and_coords:
@@ -321,9 +326,14 @@ def _dataset_concat(
             "%r is a coordinate in some datasets but not others."
             % list(both_data_and_coords)[0]  # preserve format of error message
         )
-    dim_names, result_coords = determine_dims(datasets, result_coord_names)
+    dim_names, result_coords, concat_dim_lengths, dims_sizes = _determine_dims(
+        datasets, dim
+    )
+    unlabeled_dims = dim_names - result_coord_names
+
     # we don't want the concat dimension in the result dataset yet
     result_coords.pop(dim, None)
+    dims_sizes.pop(dim, None)
 
     # case where concat dimension is a coordinate but not a dimension
     if dim in result_coord_names and dim not in dim_names:
@@ -334,20 +344,19 @@ def _dataset_concat(
         datasets, dim, dim_names, data_vars, coords, compat
     )
 
-    # determine which variables to merge
+    # determine which variables to merge, and then merge them according to compat
     variables_to_merge = (result_coord_names | noncoord_names) - concat_over - dim_names
     if variables_to_merge:
         to_merge = []
         for ds in datasets:
             if variables_to_merge - set(ds.variables):
                 raise ValueError(
-                    "Encountered unexpected variables %r" % list(variables_to_merge)[0]
+                    "encountered unexpected variables %r" % list(variables_to_merge)[0]
                 )
             to_merge.append(ds.reset_coords()[list(variables_to_merge)])
 
         merge_equals = {k: equals.get(k, None) for k in variables_to_merge}
 
-        # TODO: Provide equals as an argument and thread that down to merge.unique_variable
         result_vars = merge_variables(
             expand_variable_dicts(to_merge),
             priority_vars=None,
@@ -362,27 +371,13 @@ def _dataset_concat(
     result_attrs = datasets[0].attrs
     result_encoding = datasets[0].encoding
 
-    def insert_result_variable(k, v):
-        assert isinstance(v, Variable)
-        result_vars[k] = v
-
     # check that global attributes are fixed across all datasets if necessary
     for ds in datasets[1:]:
         if compat == "identical" and not utils.dict_equiv(ds.attrs, result_attrs):
             raise ValueError("Dataset global attributes are not equal.")
 
-    ##############
-    # TODO: do this stuff earlier so we loop over datasets only once
-    #############
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
-    dim_lengths = [ds.dims.get(dim, 1) for ds in datasets]
-    # non_concat_dims = dim_names - concat_over
-    non_concat_dims = {}
-    for ds in datasets:
-        non_concat_dims.update(ds.dims)
-    non_concat_dims.pop(dim, None)
-
     # seems like there should be a helper function for this. We would need to add
     # an exclude kwarg to exclude comparing along concat_dim
     def ensure_common_dims(vars):
@@ -392,30 +387,26 @@ def _dataset_concat(
         common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
         if dim not in common_dims:
             common_dims = (dim,) + common_dims
-        for var, dim_len in zip(vars, dim_lengths):
+        for var, dim_len in zip(vars, concat_dim_lengths):
             if var.dims != common_dims:
-                common_shape = tuple(
-                    non_concat_dims.get(d, dim_len) for d in common_dims
-                )
+                common_shape = tuple(dims_sizes.get(d, dim_len) for d in common_dims)
                 var = var.set_dims(common_dims, common_shape)
             yield var
 
     # stack up each variable to fill-out the dataset (in order)
-    for k in datasets[0].variables:
-        if k in concat_over:
-            vars = ensure_common_dims([ds.variables[k] for ds in datasets])
-            combined = concat_vars(vars, dim, positions)
-            insert_result_variable(k, combined)
+    for k in concat_over & set(datasets[0].variables):
+        vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+        combined = concat_vars(vars, dim, positions)
+        assert isinstance(combined, Variable)
+        result_vars[k] = combined
 
     result = Dataset(result_vars, attrs=result_attrs)
     result = result.set_coords(result_coord_names)
     result.encoding = result_encoding
 
-    # TODO: avoid this
-    unlabeled_dims = dim_names - result_coord_names
+    # TODO: avoid this?
     result = result.drop(unlabeled_dims, errors="ignore")
 
-    # need to pass test when provided dim is a DataArray
     if coord is not None:
         # add concat dimension last to ensure that its in the final Dataset
         result[coord.name] = coord

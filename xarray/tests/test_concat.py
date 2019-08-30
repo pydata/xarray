@@ -175,7 +175,7 @@ class TestConcatDataset:
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
 
-        with raises_regex(ValueError, "Encountered unexpected"):
+        with raises_regex(ValueError, "encountered unexpected"):
             data0, data1 = deepcopy(split_data)
             data1["foo"] = ("bar", np.random.randn(10))
             concat([data0, data1], "dim1")
