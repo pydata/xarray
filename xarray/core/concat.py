@@ -394,11 +394,13 @@ def _dataset_concat(
             yield var
 
     # stack up each variable to fill-out the dataset (in order)
-    for k in concat_over & set(datasets[0].variables):
-        vars = ensure_common_dims([ds.variables[k] for ds in datasets])
-        combined = concat_vars(vars, dim, positions)
-        assert isinstance(combined, Variable)
-        result_vars[k] = combined
+    # n.b. this loop preserves variable order, needed for groupby.
+    for k in datasets[0].variables:
+        if k in concat_over:
+            vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+            combined = concat_vars(vars, dim, positions)
+            assert isinstance(combined, Variable)
+            result_vars[k] = combined
 
     result = Dataset(result_vars, attrs=result_attrs)
     result = result.set_coords(result_coord_names)
