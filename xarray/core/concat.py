@@ -5,12 +5,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
-from .merge import (
-    determine_coords,
-    merge_variables,
-    expand_variable_dicts,
-    _VALID_COMPAT,
-)
+from .merge import merge_variables, expand_variable_dicts, _VALID_COMPAT
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 
@@ -282,19 +277,28 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
-def _determine_dims(datasets, concat_dim):
+def _parse_datasets(datasets, concat_dim):
+
     dims = set()
-    coords = dict()  # maps dim name to variable
+    all_coord_names = set()
+    data_vars = set()  # list of data_vars
+    dim_coords = dict()  # maps dim name to variable
     concat_dim_lengths = []  # length of concat dimension in each dataset
     dims_sizes = {}  # shared dimension sizes to expand variables
+
     for ds in datasets:
         concat_dim_lengths.append(ds.dims.get(concat_dim, 1))
         dims_sizes.update(ds.dims)
+
+        all_coord_names.update(ds.coords)
+        data_vars.update(ds.data_vars)
+
         for dim in set(ds.dims) - dims:
-            if dim not in coords:
-                coords[dim] = ds.coords[dim].variable
+            if dim not in dim_coords:
+                dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
-    return dims, coords, concat_dim_lengths, dims_sizes
+
+    return dim_coords, concat_dim_lengths, dims_sizes, all_coord_names, data_vars
 
 
 def _dataset_concat(
@@ -319,20 +323,20 @@ def _dataset_concat(
         *datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value
     )
 
-    result_coord_names, noncoord_names = determine_coords(datasets)
-    both_data_and_coords = result_coord_names & noncoord_names
+    result_dim_coords, concat_dim_lengths, dims_sizes, result_coord_names, data_names = _parse_datasets(
+        datasets, dim
+    )
+    dim_names = set(result_dim_coords)
+    unlabeled_dims = dim_names - result_coord_names
+
+    both_data_and_coords = result_coord_names & data_names
     if both_data_and_coords:
         raise ValueError(
             "%r is a coordinate in some datasets but not others."
             % list(both_data_and_coords)[0]  # preserve format of error message
         )
-    dim_names, result_coords, concat_dim_lengths, dims_sizes = _determine_dims(
-        datasets, dim
-    )
-    unlabeled_dims = dim_names - result_coord_names
-
     # we don't want the concat dimension in the result dataset yet
-    result_coords.pop(dim, None)
+    result_dim_coords.pop(dim, None)
     dims_sizes.pop(dim, None)
 
     # case where concat dimension is a coordinate but not a dimension
@@ -345,7 +349,7 @@ def _dataset_concat(
     )
 
     # determine which variables to merge, and then merge them according to compat
-    variables_to_merge = (result_coord_names | noncoord_names) - concat_over - dim_names
+    variables_to_merge = (result_coord_names | data_names) - concat_over - dim_names
     if variables_to_merge:
         to_merge = []
         for ds in datasets:
@@ -365,7 +369,7 @@ def _dataset_concat(
         )
     else:
         result_vars = OrderedDict()
-    result_vars.update(result_coords)
+    result_vars.update(result_dim_coords)
 
     # assign attrs and encoding from first dataset
     result_attrs = datasets[0].attrs

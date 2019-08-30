@@ -121,7 +121,7 @@ def unique_variable(name, variables, compat="broadcast_equals", equals=None):
 
     if not equals:
         raise MergeError(
-            "conflicting values for variable %r on " "objects to be combined" % (name)
+            "conflicting values for variable %r on objects to be combined" % (name)
         )
 
     if combine_method:
