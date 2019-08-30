@@ -159,6 +159,32 @@ class TestDataArray:
         assert_equal_with_units(func(array), func(data_array))
 
     @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @pytest.mark.parametrize("units,error", (
+        pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
+        pytest.param(unit_registry.m, pint.errors.DimensionalityError, id="incorrect unit"),
+        pytest.param(unit_registry.degree, None, id="correct unit"),
+    ))
+    def test_univariate_ufunc(self, units, error, dtype):
+        array = np.arange(10).astype(dtype) * units
+        data_array = xr.DataArray(data=array)
+
+        if error is not None:
+            with pytest.raises(error):
+                np.sin(data_array)
+        else:
+            assert_equal_with_units(np.sin(array), np.sin(data_array))
+
+    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    def test_bivariate_ufunc(self, dtype):
+        unit = unit_registry.m
+        array = np.arange(10).astype(dtype) * unit
+        data_array = xr.DataArray(data=array)
+
+        result_array = np.maximum(array, 0 * unit)
+        assert_equal_with_units(result_array, np.maximum(data_array, 0 * unit))
+        assert_equal_with_units(result_array, np.maximum(0 * unit, data_array))
+
+    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
     @pytest.mark.parametrize(
         "indices",
         (
