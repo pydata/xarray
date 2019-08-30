@@ -215,7 +215,6 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
     for ds in datasets:
         if concat_over_existing_dim:
             if dim not in ds.dims:
-                # TODO: why did I do this
                 if dim in ds:
                     ds = ds.set_coords(dim)
                 else:
@@ -260,11 +259,6 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                 )
             elif opt == "minimal":
                 pass
-            elif opt == "sensible":
-                if not concat_over_existing_dim:
-                    concat_over.update(
-                        set(getattr(datasets[0], subset)) - set(datasets[0].dims)
-                    )
             else:
                 raise ValueError("unexpected value for %s: %s" % (subset, opt))
         else:
