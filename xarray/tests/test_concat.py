@@ -177,7 +177,7 @@ class TestConcatDataset:
         with raises_regex(ValueError, "are not coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
 
-        with raises_regex(ValueError, "global attributes are not"):
+        with raises_regex(ValueError, "global attributes not"):
             data0, data1 = deepcopy(split_data)
             data1.attrs["foo"] = "bar"
             concat([data0, data1], "dim1", compat="identical")

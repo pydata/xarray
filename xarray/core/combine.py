@@ -248,7 +248,7 @@ def _combine_1d(
                 join=join,
             )
         except ValueError as err:
-            if "Encountered unexpected variable" in str(err):
+            if "encountered unexpected variable" in str(err):
                 raise ValueError(
                     "These objects cannot be combined using only "
                     "xarray.combine_nested, instead either use "

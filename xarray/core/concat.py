@@ -374,7 +374,7 @@ def _dataset_concat(
     # check that global attributes are fixed across all datasets if necessary
     for ds in datasets[1:]:
         if compat == "identical" and not utils.dict_equiv(ds.attrs, result_attrs):
-            raise ValueError("Dataset global attributes are not equal.")
+            raise ValueError("Dataset global attributes not equal.")
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
