@@ -112,7 +112,12 @@ def unique_variable(name, variables, compat="broadcast_equals", equals=None):
         combine_method = "fillna"
 
     if equals is None:
-        equals = all([getattr(out, compat)(var) for var in variables[1:]])
+        out = out.compute()
+        equals_list = []
+        for var in variables[1:]:
+            equals_list.append(getattr(out, compat)(var.compute()))
+
+        equals = all(equals_list)
 
     if not equals:
         raise MergeError(
