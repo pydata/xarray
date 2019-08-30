@@ -159,11 +159,16 @@ class TestDataArray:
         assert_equal_with_units(func(array), func(data_array))
 
     @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
-    @pytest.mark.parametrize("units,error", (
-        pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-        pytest.param(unit_registry.m, pint.errors.DimensionalityError, id="incorrect unit"),
-        pytest.param(unit_registry.degree, None, id="correct unit"),
-    ))
+    @pytest.mark.parametrize(
+        "units,error",
+        (
+            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
+            pytest.param(
+                unit_registry.m, pint.errors.DimensionalityError, id="incorrect unit"
+            ),
+            pytest.param(unit_registry.degree, None, id="correct unit"),
+        ),
+    )
     def test_univariate_ufunc(self, units, error, dtype):
         array = np.arange(10).astype(dtype) * units
         data_array = xr.DataArray(data=array)
@@ -301,7 +306,9 @@ class TestDataArray:
             )
 
     @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
-    @pytest.mark.xfail(reason="interp() mistakes quantities as objects instead of numeric type arrays")
+    @pytest.mark.xfail(
+        reason="interp() mistakes quantities as objects instead of numeric type arrays"
+    )
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -377,7 +384,9 @@ class TestDataArray:
             assert_equal_with_units(result_array, result_data_array)
 
     @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
-    @pytest.mark.xfail(reason="pint does not implement np.result_type in __array_function__ yet")
+    @pytest.mark.xfail(
+        reason="pint does not implement np.result_type in __array_function__ yet"
+    )
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -414,7 +423,9 @@ class TestDataArray:
             assert_equal_with_units(result_array, result_data_array)
 
     @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
-    @pytest.mark.xfail(reason="pint does not implement np.result_type in __array_function__ yet")
+    @pytest.mark.xfail(
+        reason="pint does not implement np.result_type in __array_function__ yet"
+    )
     @pytest.mark.parametrize(
         "unit,error",
         (
