@@ -158,7 +158,8 @@ def concat(
 
     if compat not in _VALID_COMPAT:
         raise ValueError(
-            "compat=%r invalid: must be 'equals', 'identical or 'override'" % compat
+            "compat=%r invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
+            % compat
         )
 
     if isinstance(first_obj, DataArray):
