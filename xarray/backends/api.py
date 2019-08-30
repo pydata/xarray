@@ -759,7 +759,7 @@ def open_mfdataset(
         `xarray.auto_combine` is used, but in the future this behavior will 
         switch to use `xarray.combine_by_coords` by default.
     compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+              'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
          * 'broadcast_equals': all values must be equal when variables are
@@ -770,6 +770,7 @@ def open_mfdataset(
          * 'no_conflicts': only values which are not null in both datasets
            must be equal. The returned dataset then contains the combination
            of all non-null values.
+         * 'override': skip comparing and pick variable from first dataset
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in

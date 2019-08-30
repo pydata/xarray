@@ -534,7 +534,7 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
     objects : Iterable[Union[xarray.Dataset, xarray.DataArray, dict]]
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -546,6 +546,7 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
         - 'no_conflicts': only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
+        - 'override': skip comparing and pick variable from first dataset
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         String indicating how to combine differing indexes in objects.
 

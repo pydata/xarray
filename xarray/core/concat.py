@@ -69,14 +69,19 @@ def concat(
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
             in addition to the 'minimal' coordinates.
-    compat : {'equals', 'identical', 'override'}, optional
-        String indicating how to compare non-concatenated variables and
-        dataset global attributes for potential conflicts. This is passed down to merge.
-          * 'equals' means that all variable values and dimensions must be the same;
-          * 'identical' means that variable attributes and global attributes
-             must also be equal.
-          * 'override' means that checks are skipped and values from the first dataset
-            are used. This cannot be used with coords='different' or data_vars='different'.
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
+        String indicating how to compare non-concatenated variables of the same name for
+        potential conflicts. This is passed down to merge.
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
+        - 'override': skip comparing and pick variable from first dataset
     positions : None or list of integer arrays, optional
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
