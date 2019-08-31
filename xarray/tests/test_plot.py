@@ -591,6 +591,10 @@ class TestPlotStep(PlotTestCase):
     def test_step(self):
         self.darray[0, 0].plot.step()
 
+    @pytest.mark.parametrize("ds", ["pre", "post", "mid"])
+    def test_step_with_drawstyle(self, ds):
+        self.darray[0, 0].plot.step(drawstyle=ds)
+
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
