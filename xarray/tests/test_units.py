@@ -77,9 +77,7 @@ class TestDataArray:
 
         assert_equal_with_units(array, data_array)
 
-    @pytest.mark.xfail(
-        reason="pint does not implement __array_function__ for aggregation functions yet"
-    )
+    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
     @pytest.mark.parametrize(
         "func",
         (
