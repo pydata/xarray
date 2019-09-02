@@ -13,7 +13,7 @@ from .dataarray import DataArray
 from .dataset import Dataset
 
 
-def map_blocks(func, obj, *args, **kwargs):
+def map_blocks(func, obj, *args, dtype=None, **kwargs):
     """
     Apply a function to each chunk of a DataArray or Dataset.
 
@@ -24,8 +24,13 @@ def map_blocks(func, obj, *args, **kwargs):
     obj: DataArray, Dataset
         Chunks of this object will be provided to 'func'. The function must not change
         shape of the provided DataArray.
-    args, kwargs:
+    args:
         Passed on to func.
+    dtype:
+        dtype of the DataArray returned by func.
+    kwargs:
+        Passed on to func.
+
 
     Returns
     -------
@@ -50,8 +55,21 @@ def map_blocks(func, obj, *args, **kwargs):
 
         return result
 
-    # if not isinstance(obj, DataArray):
-    #    raise ValueError("map_blocks can only be used with DataArrays at present.")
+    if not isinstance(obj, DataArray):
+        raise ValueError("map_blocks can only be used with DataArrays at present.")
+
+    if not dask.is_dask_collection(obj):
+        raise ValueError(
+            "map_blocks can only be used with dask-backed DataArrays. Use .chunk() to convert to a Dask array."
+        )
+
+    try:
+        meta_array = DataArray(obj.data._meta, dims=obj.dims)
+        result_meta = func(meta_array, *args, **kwargs)
+        if dtype is None:
+            dtype = result_meta.dtype
+    except ValueError:
+        raise ValueError("Cannot infer return type from user-provided function.")
 
     if isinstance(obj, DataArray):
         dataset = obj._to_temp_dataset()
@@ -132,7 +150,7 @@ def map_blocks(func, obj, *args, **kwargs):
     if isinstance(obj, DataArray):
         result = DataArray(
             dask.array.Array(
-                final_graph, name=gname, chunks=obj.data.chunks, meta=obj.data._meta
+                final_graph, name=gname, chunks=obj.data.chunks, meta=result_meta
             ),
             dims=obj.dims,
             coords=obj.coords,
