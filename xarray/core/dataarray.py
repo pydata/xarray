@@ -4,6 +4,7 @@ import warnings
 from collections import OrderedDict
 from numbers import Number
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -17,7 +18,6 @@ from typing import (
     Union,
     cast,
     overload,
-    TYPE_CHECKING,
 )
 
 import numpy as np
@@ -38,9 +38,9 @@ from . import (
 from .accessor_dt import DatetimeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
-    align,
     _broadcast_helper,
     _get_broadcast_dims_map_common_coords,
+    align,
     reindex_like_indexers,
 )
 from .common import AbstractArray, DataWithCoords
@@ -54,7 +54,7 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .utils import _check_inplace, either_dict_or_kwargs, ReprObject
+from .utils import ReprObject, _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
     Variable,
@@ -1023,32 +1023,6 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method,
             tolerance=tolerance,
             **indexers_kwargs
-        )
-        return self._from_temp_dataset(ds)
-
-    def isel_points(self, dim="points", **indexers) -> "DataArray":
-        """Return a new DataArray whose data is given by pointwise integer
-        indexing along the specified dimension(s).
-
-        See Also
-        --------
-        Dataset.isel_points
-        """
-        ds = self._to_temp_dataset().isel_points(dim=dim, **indexers)
-        return self._from_temp_dataset(ds)
-
-    def sel_points(
-        self, dim="points", method=None, tolerance=None, **indexers
-    ) -> "DataArray":
-        """Return a new DataArray whose dataset is given by pointwise selection
-        of index labels along the specified dimension(s).
-
-        See Also
-        --------
-        Dataset.sel_points
-        """
-        ds = self._to_temp_dataset().sel_points(
-            dim=dim, method=method, tolerance=tolerance, **indexers
         )
         return self._from_temp_dataset(ds)
 

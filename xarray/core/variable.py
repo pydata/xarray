@@ -3,7 +3,7 @@ import itertools
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Hashable, Mapping, MutableMapping, Union
+from typing import Any, Hashable, Mapping, Union
 
 import numpy as np
 import pandas as pd
@@ -18,9 +18,9 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
+from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
-from .npcompat import IS_NEP18_ACTIVE
 from .utils import (
     OrderedSet,
     decode_numpy_dict_values,
@@ -1697,18 +1697,24 @@ class Variable(
         """
         import bottleneck as bn
 
-        if isinstance(self.data, dask_array_type):
+        data = self.data
+
+        if isinstance(data, dask_array_type):
             raise TypeError(
                 "rank does not work for arrays stored as dask "
                 "arrays. Load the data via .compute() or .load() "
                 "prior to calling this method."
             )
+        elif not isinstance(data, np.ndarray):
+            raise TypeError(
+                "rank is not implemented for {} objects.".format(type(data))
+            )
 
         axis = self.get_axis_num(dim)
         func = bn.nanrankdata if self.dtype.kind == "f" else bn.rankdata
-        ranked = func(self.data, axis=axis)
+        ranked = func(data, axis=axis)
         if pct:
-            count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
+            count = np.sum(~np.isnan(data), axis=axis, keepdims=True)
             ranked /= count
         return Variable(self.dims, ranked)
 
