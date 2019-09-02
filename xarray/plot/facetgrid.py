@@ -200,6 +200,8 @@ class FacetGrid:
         self._ncol = ncol
         self._col_var = col
         self._col_wrap = col_wrap
+        self.row_labels = [None] * nrow
+        self.col_labels = [None] * ncol
         self._x_var = None
         self._y_var = None
         self._cmap_extend = None
@@ -482,22 +484,32 @@ class FacetGrid:
                     ax.set_title(title, size=size, **kwargs)
         else:
             # The row titles on the right edge of the grid
-            for ax, row_name in zip(self.axes[:, -1], self.row_names):
+            for index, (ax, row_name, handle) in enumerate(
+                zip(self.axes[:, -1], self.row_names, self.row_labels)
+            ):
                 title = nicetitle(coord=self._row_var, value=row_name, maxchar=maxchar)
-                ax.annotate(
-                    title,
-                    xy=(1.02, 0.5),
-                    xycoords="axes fraction",
-                    rotation=270,
-                    ha="left",
-                    va="center",
-                    **kwargs,
-                )
+                if not handle:
+                    self.row_labels[index] = ax.annotate(
+                        title,
+                        xy=(1.02, 0.5),
+                        xycoords="axes fraction",
+                        rotation=270,
+                        ha="left",
+                        va="center",
+                        **kwargs,
+                    )
+                else:
+                    handle.set_text(title)
 
             # The column titles on the top row
-            for ax, col_name in zip(self.axes[0, :], self.col_names):
+            for index, (ax, col_name, handle) in enumerate(
+                zip(self.axes[0, :], self.col_names, self.col_labels)
+            ):
                 title = nicetitle(coord=self._col_var, value=col_name, maxchar=maxchar)
-                ax.set_title(title, size=size, **kwargs)
+                if not handle:
+                    self.col_labels[index] = ax.set_title(title, size=size, **kwargs)
+                else:
+                    handle.set_text(title)
 
         return self
 

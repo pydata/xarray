@@ -36,7 +36,7 @@ Bug fixes
 ~~~~~~~~~
 - Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- :py:meth:`Facetgrid.set_titles` can now replace existing row titles. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
