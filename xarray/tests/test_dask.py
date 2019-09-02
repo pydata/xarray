@@ -878,3 +878,31 @@ def test_dask_layers_and_dependencies():
     assert set(x.foo.__dask_graph__().dependencies).issuperset(
         ds.__dask_graph__().dependencies
     )
+
+
+def test_map_blocks():
+    darray = xr.DataArray(
+        dask.array.ones((10, 20), chunks=[4, 5]),
+        dims=["x", "y"],
+        coords={"x": np.arange(10), "y": np.arange(100, 120)},
+    )
+    darray.name = None
+
+    def good_func(darray):
+        return darray * darray.x + 5 * darray.y
+
+    def bad_func(darray):
+        return (darray * darray.x + 5 * darray.y)[:1, :1]
+
+    actual = xr.map_blocks(good_func, darray)
+    expected = good_func(darray)
+    xr.testing.assert_equal(expected, actual)
+
+    with raises_regex(ValueError, "not have the same shape"):
+        xr.map_blocks(bad_func, darray).compute()
+
+    import operator
+
+    expected = darray + 10
+    actual = xr.map_blocks(operator.add, darray, 10)
+    xr.testing.assert_equal(expected, actual)
