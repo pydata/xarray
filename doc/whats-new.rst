@@ -65,18 +65,37 @@ New functions/methods
   By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
   <http://github.com/DavidMertz>`_.
 
-- Dataset plotting API for visualizing dependencies between two `DataArray`s!
+- Dataset plotting API for visualizing dependencies between two DataArrays!
   Currently only :py:meth:`Dataset.plot.scatter` is implemented.
   By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Added ``join='override'``. This only checks that index sizes are equal among objects and skips
-  checking indexes for equality. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Multiple enhancements to :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset`.
 
-- :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
-  It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
+  - Added ``compat='override'``. When merging, this option picks the variable from the first dataset
+    and skips all comparisons.
+
+  - Added ``join='override'``. When aligning, this only checks that index sizes are equal among objects
+    and skips checking indexes for equality.
+
+  - :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
+    It is passed down to :py:func:`~xarray.align`.
+
+  - :py:func:`~xarray.concat` now calls :py:func:`~xarray.merge` on variables that are not concatenated
+    (i.e. variables without ``concat_dim`` when ``data_vars`` or ``coords`` are ``"minimal"``).
+    :py:func:`~xarray.concat` passes its new ``compat`` kwarg down to :py:func:`~xarray.merge`.
+    (:issue:`2064`)
+
+  Users can avoid a common bottleneck when using :py:func:`~xarray.open_mfdataset` on a large number of
+  files with variables that are known to be aligned and some of which need not be concatenated.
+  Slow equality comparisons can now be avoided, for e.g.::
+
+    data = xr.open_mfdataset(files, concat_dim='time', data_vars='minimal',
+                             coords='minimal', compat='override', join='override')
+
+  By `Deepak Cherian <https://github.com/dcherian>`_:
 
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
