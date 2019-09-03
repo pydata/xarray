@@ -79,14 +79,17 @@ class TestDataArray:
 
     @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
-    def test_repr(self):
+    @pytest.mark.parametrize(
+        "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
+    )
+    def test_repr(self, func):
         array = np.linspace(1, 2, 10) * unit_registry.m
         x = np.arange(len(array)) * unit_registry.s
         data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
 
         # FIXME: this just checks that the repr does not raise
         # warnings or errors, but does not check the result
-        repr(data_array)
+        func(data_array)
 
     @require_pint_array_function
     @pytest.mark.parametrize(
