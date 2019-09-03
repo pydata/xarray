@@ -78,6 +78,16 @@ class TestDataArray:
 
         assert_equal_with_units(array, data_array)
 
+    @pytest.mark.filterwarnings("error:::pint[.*]")
+    def test_repr(self):
+        array = np.linspace(1, 2, 10) * unit_registry.m
+        x = np.arange(len(array)) * unit_registry.s
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+
+        # FIXME: this just checks that the repr does not raise
+        # warnings or errors, but does not check the result
+        repr(data_array)
+
     @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
     @pytest.mark.parametrize(
         "func",
