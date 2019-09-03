@@ -880,29 +880,62 @@ def test_dask_layers_and_dependencies():
     )
 
 
-def test_map_blocks():
-    darray = xr.DataArray(
-        dask.array.ones((10, 20), chunks=[4, 5]),
+def make_da():
+    return xr.DataArray(
+        np.ones((10, 20)),
         dims=["x", "y"],
         coords={"x": np.arange(10), "y": np.arange(100, 120)},
-    )
-    darray.name = None
+        name="a",
+    ).chunk({"x": 4, "y": 5})
 
-    def good_func(darray):
-        return darray * darray.x + 5 * darray.y
 
+def make_ds():
+    map_ds = xr.Dataset()
+    map_ds["a"] = map_da
+    map_ds["b"] = map_ds.a + 50
+    map_ds["c"] = map_ds.x + 20
+    map_ds = map_ds.chunk({"x": 4, "y": 5})
+    map_ds["d"] = ("z", [1, 1, 1, 1])
+    map_ds["z"] = [0, 1, 2, 3]
+    map_ds["e"] = map_ds.x + map_ds.y + map_ds.z
+    map_ds.attrs["test"] = "test"
+
+    return map_ds
+
+
+# work around mypy error
+# xarray/tests/test_dask.py:888: error: Dict entry 0 has incompatible type "str": "int"; expected "Hashable": "Union[None, Number, Tuple[Number, ...]]"
+map_da = make_da()
+map_ds = make_ds()
+
+
+@pytest.mark.xfail(reason="Not implemented yet.")
+def test_map_blocks_error():
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
 
-    actual = xr.map_blocks(good_func, darray)
-    expected = good_func(darray)
+    with raises_regex(ValueError, "not have the same shape"):
+        xr.map_blocks(bad_func, map_da).compute()
+
+
+@pytest.mark.parametrize("obj, template", [[map_da, map_da], [map_ds, map_ds.a]])
+def test_map_blocks(obj, template):
+    def good_func(obj):
+        result = obj.x + 5 * obj.y
+        # TODO: this needs to be fixed.
+        if isinstance(result, DataArray):
+            result.name = "a"
+        return result
+
+    actual = xr.map_blocks(good_func, obj, template=template)
+    expected = good_func(obj)
     xr.testing.assert_equal(expected, actual)
 
-    with raises_regex(ValueError, "not have the same shape"):
-        xr.map_blocks(bad_func, darray).compute()
 
+@pytest.mark.parametrize("obj", [map_da, map_ds])
+def test_map_blocks_args(obj):
     import operator
 
-    expected = darray + 10
-    actual = xr.map_blocks(operator.add, darray, 10)
+    expected = obj + 10
+    actual = xr.map_blocks(operator.add, obj, 10, template=obj)
     xr.testing.assert_equal(expected, actual)
