@@ -75,17 +75,32 @@ entirely equivalent to opening a dataset using ``open_dataset`` and then
 chunking the data using the ``chunk`` method, e.g.,
 ``xr.open_dataset('example-data.nc').chunk({'time': 10})``.
 
-To open multiple files simultaneously, use :py:func:`~xarray.open_mfdataset`::
+To open multiple files simultaneously in parallel using Dask delayed,
+use :py:func:`~xarray.open_mfdataset`::
 
-    xr.open_mfdataset('my/files/*.nc')
+    xr.open_mfdataset('my/files/*.nc', parallel=True)
 
 This function will automatically concatenate and merge dataset into one in
 the simple cases that it understands (see :py:func:`~xarray.auto_combine`
-for the full disclaimer). By default, ``open_mfdataset`` will chunk each
+for the full disclaimer). By default, :py:func:`~xarray.open_mfdataset` will chunk each
 netCDF file into a single Dask array; again, supply the ``chunks`` argument to
 control the size of the resulting Dask arrays. In more complex cases, you can
 open each file individually using ``open_dataset`` and merge the result, as
-described in :ref:`combining data`.
+described in :ref:`combining data`. The pattern for parallel reading of multiple files
+using dask, modifying those datasets and then combining into a single ``Dataset`` is::
+
+    def modify(ds):
+        # modify ds here
+        return ds
+
+
+    # this is basically what open_mfdataset does
+    open_kwargs = dict(decode_cf=True, decode_times=False)
+    open_tasks = [dask.delayed(xr.open_dataset)(f, **open_kwargs) for f in file_names]
+    tasks = [dask.delayed(modify)(task) for task in open_tasks]
+    datasets = dask.compute(tasks)
+    combined = xr.combine_nested(datasets)  # or some combination of concat, merge
+
 
 You'll notice that printing a dataset still shows a preview of array values,
 even if they are actually Dask arrays. We can do this quickly with Dask because
