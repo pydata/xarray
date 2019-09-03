@@ -85,7 +85,9 @@ class method:
                 numpy_func = getattr(np, self.name)
                 func = partial(numpy_func, obj)
             else:
-                raise AttributeError(f"{obj} has no method named '{self.name}'")
+                raise AttributeError(
+                    "{obj} has no method named '{self.name}'".format(obj=obj, self=self)
+                )
 
         return func(*self.args, **self.kwargs)
 
