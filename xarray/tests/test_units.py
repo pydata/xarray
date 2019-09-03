@@ -92,7 +92,7 @@ class method:
         return func(*self.args, **self.kwargs)
 
     def __repr__(self):
-        return self.name
+        return "method {self.name}".format(self=self)
 
 
 class TestDataArray:
