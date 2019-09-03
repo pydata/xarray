@@ -68,6 +68,31 @@ def dtype(request):
     return request.param
 
 
+class method:
+    def __init__(self, name, *args, **kwargs):
+        self.name = name
+        self.args = args
+        self.kwargs = kwargs
+
+    def __call__(self, obj):
+        from collections.abc import Callable
+        from functools import partial
+
+        func = getattr(obj, self.name, None)
+        if func is None or not isinstance(func, Callable):
+            # fall back to module level numpy functions if not a xarray object
+            if not isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
+                numpy_func = getattr(np, self.name)
+                func = partial(numpy_func, obj)
+            else:
+                raise AttributeError(f"{obj} has no method named '{self.name}'")
+
+        return func(*self.args, **self.kwargs)
+
+    def __repr__(self):
+        return self.name
+
+
 class TestDataArray:
     @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
