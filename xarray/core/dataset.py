@@ -2037,7 +2037,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def tail(
         self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
     ) -> "Dataset":
-        """Returns a new dataset with the last `n` values of each array 
+        """Returns a new dataset with the last `n` values of each array
         for the specified dimension(s).
 
         Parameters

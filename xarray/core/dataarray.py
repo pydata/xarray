@@ -1045,7 +1045,7 @@ class DataArray(AbstractArray, DataWithCoords):
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the first `n`
         values along the specified dimension(s).
-        
+
         See Also
         --------
         Dataset.head
@@ -1076,7 +1076,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def thin(
         self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
     ) -> "DataArray":
-        """Return a new DataArray whose data is given by each `n` value 
+        """Return a new DataArray whose data is given by each `n` value
         along the specified dimension(s).
 
         See Also
