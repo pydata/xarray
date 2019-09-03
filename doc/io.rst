@@ -845,6 +845,10 @@ functions see :ref:`combining data`.
     It is the recommended way to open multiple files with xarray.
     For more details, see :ref:`combining.multi`, :ref:`dask.io` and a
     `blog post`_ by Stephan Hoyer.
+    :py:func:`~xarray.open_mfdataset` takes many kwargs that allow you to
+    control its behaviour (for e.g. ``compat``, ``join``, ``concat_dim``.
+    See the docstring for more details.
+
 
 .. _dask: http://dask.pydata.org
 .. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
