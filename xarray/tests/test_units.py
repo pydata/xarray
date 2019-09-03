@@ -134,21 +134,6 @@ class TestDataArray:
             np.sum,
             np.std,
             np.var,
-        ),
-    )
-    def test_aggregation(self, func, dtype):
-        array = np.arange(10).astype(dtype) * unit_registry.m
-        data_array = xr.DataArray(data=array)
-
-        result_array = func(array)
-        result_data_array = func(data_array)
-
-        assert_equal_with_units(result_array, result_data_array)
-
-    @require_pint_array_function
-    @pytest.mark.parametrize(
-        "func",
-        (
             method("all"),
             method("any"),
             method("argmax"),
@@ -162,9 +147,9 @@ class TestDataArray:
             method("std"),
             method("var"),
         ),
-        ids=repr,
+        ids=str,
     )
-    def test_aggregation_methods(self, func, dtype):
+    def test_aggregation(self, func, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
         data_array = xr.DataArray(data=array)
 
