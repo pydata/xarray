@@ -12,7 +12,7 @@ pytestmark = [
     pytest.mark.skipif(
         not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
     ),
-    pytest.mark.filterwarnings("error::pint.errors.UnitStrippedWarning"),
+    # pytest.mark.filterwarnings("ignore:::pint[.*]"),
 ]
 
 # pint version supporting __array_function__
@@ -71,6 +71,7 @@ def dtype(request):
 
 class TestDataArray:
     @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @pytest.mark.filterwarnings("error:::pint[.*]")
     def test_init(self):
         array = np.arange(10) * unit_registry.m
         data_array = xr.DataArray(data=array)
