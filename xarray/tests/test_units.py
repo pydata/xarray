@@ -15,15 +15,14 @@ pytestmark = [
     # pytest.mark.filterwarnings("ignore:::pint[.*]"),
 ]
 
-# pint version supporting __array_function__
-pint_version = "0.10"
+
+def use_pint_version_or_xfail(*, version, reason):
+    return pytest.mark.xfail(LooseVersion(pint.__version__) < version, reason=reason)
 
 
-def use_pint_dev_or_xfail(reason):
-    return pytest.mark.xfail(
-        LooseVersion(pint.__version__) < pint_version, reason=reason
-    )
-
+require_pint_array_function = use_pint_version_or_xfail(
+    version="0.10", reason="pint does not implement __array_function__ yet"
+)
 
 unit_registry = pint.UnitRegistry()
 
@@ -70,7 +69,7 @@ def dtype(request):
 
 
 class TestDataArray:
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
     def test_init(self):
         array = np.arange(10) * unit_registry.m
@@ -78,6 +77,7 @@ class TestDataArray:
 
         assert_equal_with_units(array, data_array)
 
+    @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
     def test_repr(self):
         array = np.linspace(1, 2, 10) * unit_registry.m
@@ -88,7 +88,7 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         repr(data_array)
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -115,23 +115,12 @@ class TestDataArray:
 
         assert_equal_with_units(result_array, result_data_array)
 
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                operator.neg,
-                id="negate",
-                marks=use_pint_dev_or_xfail(
-                    reason="pint does not implement __array_function__ yet"
-                ),
-            ),
-            pytest.param(
-                abs,
-                id="absolute",
-                marks=use_pint_dev_or_xfail(
-                    reason="pint does not implement __array_function__ yet"
-                ),
-            ),
+            pytest.param(operator.neg, id="negate"),
+            pytest.param(abs, id="absolute"),
             pytest.param(
                 np.round,
                 id="round",
@@ -145,7 +134,7 @@ class TestDataArray:
 
         assert_equal_with_units(func(array), func(data_array))
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -167,7 +156,7 @@ class TestDataArray:
 
         assert_equal_with_units(func(array), func(data_array))
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "units,error",
         (
@@ -188,7 +177,7 @@ class TestDataArray:
         else:
             assert_equal_with_units(np.sin(array), np.sin(data_array))
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     def test_bivariate_ufunc(self, dtype):
         unit = unit_registry.m
         array = np.arange(10).astype(dtype) * unit
@@ -198,7 +187,7 @@ class TestDataArray:
         assert_equal_with_units(result_array, np.maximum(data_array, 0 * unit))
         assert_equal_with_units(result_array, np.maximum(0 * unit, data_array))
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "indices",
         (
@@ -213,7 +202,7 @@ class TestDataArray:
 
         assert_equal_with_units(array[indices], data_array.isel(x=indices))
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "values",
         (
@@ -246,7 +235,7 @@ class TestDataArray:
             result_data_array = data_array.sel(x=values_with_units)
             assert_equal_with_units(result_array, result_data_array)
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "values",
         (
@@ -279,7 +268,7 @@ class TestDataArray:
             result_data_array = data_array.loc[values_with_units]
             assert_equal_with_units(result_array, result_data_array)
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.xfail(reason="tries to coerce using asarray")
     @pytest.mark.parametrize(
         "shape",
@@ -314,7 +303,7 @@ class TestDataArray:
                 np.squeeze(array, axis=index), data_array.squeeze(dim=name)
             )
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.xfail(
         reason="interp() mistakes quantities as objects instead of numeric type arrays"
     )
@@ -351,7 +340,7 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.xfail(reason="tries to coerce using asarray")
     @pytest.mark.parametrize(
         "unit,error",
@@ -392,7 +381,7 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.xfail(
         reason="pint does not implement np.result_type in __array_function__ yet"
     )
@@ -431,7 +420,7 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    @use_pint_dev_or_xfail(reason="pint does not implement __array_function__ yet")
+    @require_pint_array_function
     @pytest.mark.xfail(
         reason="pint does not implement np.result_type in __array_function__ yet"
     )
