@@ -117,6 +117,9 @@ Indexing
    Dataset.loc
    Dataset.isel
    Dataset.sel
+   Dataset.head
+   Dataset.tail
+   Dataset.thin
    Dataset.squeeze
    Dataset.interp
    Dataset.interp_like
@@ -279,6 +282,9 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
+   Dataset.head
+   Dataset.tail
+   Dataset.thin
    DataArray.squeeze
    DataArray.interp
    DataArray.interp_like
