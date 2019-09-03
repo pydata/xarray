@@ -147,6 +147,34 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
+            method("all"),
+            method("any"),
+            method("argmax"),
+            method("argmin"),
+            method("max"),
+            method("mean"),
+            method("median"),
+            method("min"),
+            method("prod"),
+            method("sum"),
+            method("std"),
+            method("var"),
+        ),
+        ids=repr,
+    )
+    def test_aggregation_methods(self, func, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.m
+        data_array = xr.DataArray(data=array)
+
+        result_array = func(array)
+        result_data_array = func(data_array)
+
+        assert_equal_with_units(result_array, result_data_array)
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "func",
+        (
             pytest.param(operator.neg, id="negate"),
             pytest.param(abs, id="absolute"),
             pytest.param(
