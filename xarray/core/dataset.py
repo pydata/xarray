@@ -2019,7 +2019,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexers : dict, optional
             A dict with keys matching dimensions and integer values `n`.
             One of indexers or indexers_kwargs must be provided.
-        **indexers_kwarg : {dim: n, ...}, optional
+        **indexers_kwargs : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2045,7 +2045,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexers : dict, optional
             A dict with keys matching dimensions and integer values `n`.
             One of indexers or indexers_kwargs must be provided.
-        **indexers_kwarg : {dim: n, ...}, optional
+        **indexers_kwargs : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2075,7 +2075,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexers : dict, optional
             A dict with keys matching dimensions and integer values `n`.
             One of indexers or indexers_kwargs must be provided.
-        **indexers_kwarg : {dim: n, ...}, optional
+        **indexers_kwargs : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
