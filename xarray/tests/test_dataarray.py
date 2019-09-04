@@ -1002,6 +1002,19 @@ class TestDataArray:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    def test_head(self):
+        assert_equal(self.dv.isel(x=slice(5)), self.dv.head(x=5))
+        assert_equal(self.dv.isel(x=slice(0)), self.dv.head(x=0))
+
+    def test_tail(self):
+        assert_equal(self.dv.isel(x=slice(-5, None)), self.dv.tail(x=5))
+        assert_equal(self.dv.isel(x=slice(0)), self.dv.tail(x=0))
+
+    def test_thin(self):
+        assert_equal(self.dv.isel(x=slice(None, None, 5)), self.dv.thin(x=5))
+        with raises_regex(ValueError, "cannot be zero"):
+            self.dv.thin(time=0)
+
     def test_loc(self):
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
