@@ -1411,6 +1411,38 @@ class TestDataset:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    def test_head(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(5), dim2=slice(6))
+        actual = data.head(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel(time=slice(0))
+        actual = data.head(time=0)
+        assert_equal(expected, actual)
+
+    def test_tail(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(-5, None), dim2=slice(-6, None))
+        actual = data.tail(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel(dim1=slice(0))
+        actual = data.tail(dim1=0)
+        assert_equal(expected, actual)
+
+    def test_thin(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(None, None, 5), dim2=slice(None, None, 6))
+        actual = data.thin(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        with raises_regex(ValueError, "cannot be zero"):
+            data.thin(time=0)
+
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_sel_fancy(self):
         data = create_test_data()

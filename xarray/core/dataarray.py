@@ -1040,6 +1040,55 @@ class DataArray(AbstractArray, DataWithCoords):
         )
         return self._from_temp_dataset(ds)
 
+    def head(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by the the first `n`
+        values along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.head
+        DataArray.tail
+        DataArray.thin
+        """
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
+        ds = self._to_temp_dataset().head(indexers=indexers)
+        return self._from_temp_dataset(ds)
+
+    def tail(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by the the last `n`
+        values along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.tail
+        DataArray.head
+        DataArray.thin
+        """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
+        ds = self._to_temp_dataset().tail(indexers=indexers)
+        return self._from_temp_dataset(ds)
+
+    def thin(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by each `n` value
+        along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.thin
+        DataArray.head
+        DataArray.tail
+        """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
+        ds = self._to_temp_dataset().thin(indexers=indexers)
+        return self._from_temp_dataset(ds)
+
     def broadcast_like(
         self, other: Union["DataArray", Dataset], exclude: Iterable[Hashable] = None
     ) -> "DataArray":

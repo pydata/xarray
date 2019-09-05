@@ -87,6 +87,9 @@ New functions/methods
   Currently only :py:meth:`Dataset.plot.scatter` is implemented.
   By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
 
+- Added `head`, `tail` and `thin` methods to `Dataset` and `DataArray`. (:issue:`319`)
+  By `Gerardo Rivera <https://github.com/dangomelon>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -102,7 +105,7 @@ Enhancements
 
 - Added the ability to initialize an empty or full DataArray
   with a single value. (:issue:`277`)
-  By `Gerardo Rivera <http://github.com/dangomelon>`_.
+  By `Gerardo Rivera <https://github.com/dangomelon>`_.
 
 - :py:func:`~xarray.Dataset.to_netcdf()` now supports the ``invalid_netcdf`` kwarg when used
   with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
