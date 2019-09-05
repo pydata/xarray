@@ -2008,6 +2008,90 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         result = self.isel(indexers=pos_indexers, drop=drop)
         return result._overwrite_indexes(new_indexes)
 
+    def head(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with the first `n` values of each array
+        for the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and integer values `n`.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.tail
+        Dataset.thin
+        DataArray.head
+        """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
+        indexers = {k: slice(val) for k, val in indexers.items()}
+        return self.isel(indexers)
+
+    def tail(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with the last `n` values of each array
+        for the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and integer values `n`.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.thin
+        DataArray.tail
+        """
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
+        indexers = {
+            k: slice(-val, None) if val != 0 else slice(val)
+            for k, val in indexers.items()
+        }
+        return self.isel(indexers)
+
+    def thin(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with each array indexed along every `n`th
+        value for the specified dimension(s)
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and integer values `n`.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.tail
+        DataArray.thin
+        """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
+        if 0 in indexers.values():
+            raise ValueError("step cannot be zero")
+        indexers = {k: slice(None, None, val) for k, val in indexers.items()}
+        return self.isel(indexers)
+
     def broadcast_like(
         self, other: Union["Dataset", "DataArray"], exclude: Iterable[Hashable] = None
     ) -> "Dataset":
