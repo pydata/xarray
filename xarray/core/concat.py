@@ -331,8 +331,7 @@ def _dataset_concat(
     both_data_and_coords = result_coord_names & data_names
     if both_data_and_coords:
         raise ValueError(
-            "%r is a coordinate in some datasets but not others."
-            % list(both_data_and_coords)[0]  # preserve format of error message
+            "%r is a coordinate in some datasets but not others." % both_data_and_coords
         )
     # we don't want the concat dimension in the result dataset yet
     result_dim_coords.pop(dim, None)
