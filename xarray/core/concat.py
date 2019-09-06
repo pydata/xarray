@@ -207,6 +207,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
     else:
         concat_over_existing_dim = False
 
+    concat_dim_lengths = []
     for ds in datasets:
         if concat_over_existing_dim:
             if dim not in ds.dims:
@@ -215,6 +216,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                 else:
                     raise ValueError("%r is not present in all datasets" % dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
+        concat_dim_lengths.append(ds.dims.get(dim, 1))
 
     def process_subset_opt(opt, subset):
         if isinstance(opt, str):
@@ -273,7 +275,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
     process_subset_opt(data_vars, "data_vars")
     process_subset_opt(coords, "coords")
-    return concat_over, equals
+    return concat_over, equals, concat_dim_lengths
 
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
@@ -283,13 +285,10 @@ def _parse_datasets(datasets, concat_dim):
     all_coord_names = set()
     data_vars = set()  # list of data_vars
     dim_coords = dict()  # maps dim name to variable
-    concat_dim_lengths = []  # length of concat dimension in each dataset
     dims_sizes = {}  # shared dimension sizes to expand variables
 
     for ds in datasets:
-        concat_dim_lengths.append(ds.dims.get(concat_dim, 1))
         dims_sizes.update(ds.dims)
-
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
 
@@ -298,7 +297,7 @@ def _parse_datasets(datasets, concat_dim):
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
-    return dim_coords, concat_dim_lengths, dims_sizes, all_coord_names, data_vars
+    return dim_coords, dims_sizes, all_coord_names, data_vars
 
 
 def _dataset_concat(
@@ -323,7 +322,7 @@ def _dataset_concat(
         *datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value
     )
 
-    result_dim_coords, concat_dim_lengths, dims_sizes, result_coord_names, data_names = _parse_datasets(
+    result_dim_coords, dims_sizes, result_coord_names, data_names = _parse_datasets(
         datasets, dim
     )
     dim_names = set(result_dim_coords)
@@ -344,7 +343,7 @@ def _dataset_concat(
         datasets = [ds.expand_dims(dim) for ds in datasets]
 
     # determine which variables to concatentate
-    concat_over, equals = _calc_concat_over(
+    concat_over, equals, concat_dim_lengths = _calc_concat_over(
         datasets, dim, dim_names, data_vars, coords, compat
     )
 
