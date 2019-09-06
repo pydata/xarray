@@ -33,7 +33,7 @@ def datasets_1d_vars(draw):
     dims = ("rows",)
     vars = {}
     for _ in range(n_vars):
-        name = draw(st.text(min_size=1))
+        name = draw(st.text(min_size=0))
         dt = draw(numeric_dtypes)
         arr = draw(npst.arrays(dtype=dt, shape=(n_entries,)))
         vars[name] = xr.Variable(dims, arr)
