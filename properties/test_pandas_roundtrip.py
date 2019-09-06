@@ -34,10 +34,26 @@ def test_roundtrip_dataarray(data, arr):
     roundtripped = xr.DataArray(original.to_pandas())
     xr.testing.assert_identical(original, roundtripped)
 
+
 @given(numeric_series, st.text())
-def test_roundtrip_pandas_series(ser, name):
+def test_roundtrip_pandas_series(ser, ix_name):
     # Need to name the index, otherwise Xarray calls it 'dim_0'.
-    ser.index.name = name
+    ser.index.name = ix_name
     arr = xr.DataArray(ser)
     roundtripped = arr.to_pandas()
     pd.testing.assert_series_equal(ser, roundtripped)
+
+
+numeric_homogeneous_dataframe = numeric_dtypes.flatmap(
+    lambda dt: pdst.data_frames(columns=pdst.columns(["a", "b", "c"], dtype=dt))
+)
+
+
+@given(numeric_homogeneous_dataframe)
+def test_roundtrip_pandas_dataframe(df):
+    # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.
+    df.index.name = "rows"
+    df.columns.name = "cols"
+    arr = xr.DataArray(df)
+    roundtripped = arr.to_pandas()
+    pd.testing.assert_frame_equal(df, roundtripped)
