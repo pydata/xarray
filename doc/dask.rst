@@ -86,21 +86,7 @@ for the full disclaimer). By default, :py:func:`~xarray.open_mfdataset` will chu
 netCDF file into a single Dask array; again, supply the ``chunks`` argument to
 control the size of the resulting Dask arrays. In more complex cases, you can
 open each file individually using ``open_dataset`` and merge the result, as
-described in :ref:`combining data`. The pattern for parallel reading of multiple files
-using dask, modifying those datasets and then combining into a single ``Dataset`` is::
-
-    def modify(ds):
-        # modify ds here
-        return ds
-
-
-    # this is basically what open_mfdataset does
-    open_kwargs = dict(decode_cf=True, decode_times=False)
-    open_tasks = [dask.delayed(xr.open_dataset)(f, **open_kwargs) for f in file_names]
-    tasks = [dask.delayed(modify)(task) for task in open_tasks]
-    datasets = dask.compute(tasks)
-    combined = xr.combine_nested(datasets)  # or some combination of concat, merge
-
+described in :ref:`combining data`.
 
 You'll notice that printing a dataset still shows a preview of array values,
 even if they are actually Dask arrays. We can do this quickly with Dask because

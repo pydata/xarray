@@ -309,8 +309,25 @@ and returns a modified Dataset.
 :py:func:`~xarray.open_mfdataset` will call ``preprocess`` on every dataset
 (corresponding to each file) prior to combining them.
 
+
 If :py:func:`~xarray.open_mfdataset` does not meet your needs, other approaches are possible.
-For example, here's how we could approximate ``MFDataset`` from the netCDF4
+The general pattern for parallel reading of multiple files
+using dask, modifying those datasets and then combining into a single ``Dataset`` is::
+
+     def modify(ds):
+         # modify ds here
+         return ds
+
+
+     # this is basically what open_mfdataset does
+     open_kwargs = dict(decode_cf=True, decode_times=False)
+     open_tasks = [dask.delayed(xr.open_dataset)(f, **open_kwargs) for f in file_names]
+     tasks = [dask.delayed(modify)(task) for task in open_tasks]
+     datasets = dask.compute(tasks)  # get a list of xarray.Datasets
+     combined = xr.combine_nested(datasets)  # or some combination of concat, merge
+
+
+As an example, here's how we could approximate ``MFDataset`` from the netCDF4
 library::
 
     from glob import glob
