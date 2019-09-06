@@ -8,6 +8,8 @@ They are stored in a separate directory because they tend to run more examples
 and thus take longer, and so that local development can run a test suite
 without needing to `pip install hypothesis`.
 
+To run these tests, run `pytest` in this directory.
+
 ## Hang on, "property-based" tests?
 
 Instead of making assertions about operations on a particular piece of
