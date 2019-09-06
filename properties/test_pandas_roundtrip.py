@@ -29,7 +29,7 @@ def datasets_1d_vars(draw):
     Suitable for converting to pandas dataframes.
     """
     n_vars = draw(st.integers(min_value=1, max_value=3))
-    n_entries = draw(st.integers(min_value=1, max_value=100))
+    n_entries = draw(st.integers(min_value=0, max_value=100))
     dims = ("rows",)
     vars = {}
     for _ in range(n_vars):
