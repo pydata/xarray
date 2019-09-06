@@ -112,16 +112,17 @@ def unique_variable(name, variables, compat="broadcast_equals", equals=None):
         combine_method = "fillna"
 
     if equals is None:
+        equals = True
         out = out.compute()
-        equals_list = []
         for var in variables[1:]:
-            equals_list.append(getattr(out, compat)(var.compute()))
-
-        equals = all(equals_list)
+            if not getattr(out, compat)(var.compute()):
+                equals = False
+                break
 
     if not equals:
         raise MergeError(
-            "conflicting values for variable %r on objects to be combined" % (name)
+            "conflicting values for variable %r on objects to be combined. You can skip this check by specifying compat='override'."
+            % (name)
         )
 
     if combine_method:
@@ -154,7 +155,6 @@ def merge_variables(
     list_of_variables_dicts: List[Mapping[Any, Variable]],
     priority_vars: Mapping[Any, Variable] = None,
     compat: str = "minimal",
-    equals: Mapping[Any, bool] = {},
 ) -> "OrderedDict[Any, Variable]":
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -203,9 +203,7 @@ def merge_variables(
                 merged[name] = unique_variable(name, dim_variables, dim_compat)
             else:
                 try:
-                    merged[name] = unique_variable(
-                        name, var_list, compat, equals.get(name, None)
-                    )
+                    merged[name] = unique_variable(name, var_list, compat)
                 except MergeError:
                     if compat != "minimal":
                         # we need more than "minimal" compatibility (for which

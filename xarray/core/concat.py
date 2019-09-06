@@ -5,7 +5,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
-from .merge import merge_variables, expand_variable_dicts, _VALID_COMPAT
+from .merge import unique_variable, _VALID_COMPAT
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 
@@ -349,23 +349,25 @@ def _dataset_concat(
 
     # determine which variables to merge, and then merge them according to compat
     variables_to_merge = (result_coord_names | data_names) - concat_over - dim_names
+
+    result_vars = {}
     if variables_to_merge:
-        to_merge = []
+        to_merge = {var: [] for var in variables_to_merge}
+
         for ds in datasets:
-            if variables_to_merge - set(ds.variables):
+            unexpected_merge_vars = variables_to_merge - set(ds.variables)
+            if unexpected_merge_vars:
                 raise ValueError(
-                    "encountered unexpected variables %r" % list(variables_to_merge)[0]
+                    "encountered unexpected variables %r" % unexpected_merge_vars
                 )
-            to_merge.append(ds.reset_coords()[list(variables_to_merge)])
 
-        merge_equals = {k: equals.get(k, None) for k in variables_to_merge}
+            for var in variables_to_merge:
+                to_merge[var].append(ds.variables[var])
 
-        result_vars = merge_variables(
-            expand_variable_dicts(to_merge),
-            priority_vars=None,
-            compat=compat,
-            equals=merge_equals,
-        )
+        for var in variables_to_merge:
+            result_vars[var] = unique_variable(
+                var, to_merge[var], compat=compat, equals=equals.get(var, None)
+            )
     else:
         result_vars = OrderedDict()
     result_vars.update(result_dim_coords)
@@ -409,7 +411,6 @@ def _dataset_concat(
     result = result.set_coords(result_coord_names)
     result.encoding = result_encoding
 
-    # TODO: avoid this?
     result = result.drop(unlabeled_dims, errors="ignore")
 
     if coord is not None:
