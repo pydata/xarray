@@ -2,16 +2,22 @@
 Property-based tests for roundtripping between xarray and pandas objects.
 """
 import hypothesis.extra.numpy as npst
+import hypothesis.extra.pandas as pdst
 import hypothesis.strategies as st
 from hypothesis import given
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
+numeric_dtypes = st.one_of(
+    npst.unsigned_integer_dtypes(), npst.integer_dtypes(), npst.floating_dtypes()
+)
+
+numeric_series = numeric_dtypes.flatmap(lambda dt: pdst.series(dtype=dt))
+
 an_array = npst.arrays(
-    dtype=st.one_of(
-        npst.unsigned_integer_dtypes(), npst.integer_dtypes(), npst.floating_dtypes()
-    ),
+    dtype=numeric_dtypes,
     shape=npst.array_shapes(max_dims=2),  # can only convert 1D/2D to pandas
 )
 
@@ -27,3 +33,11 @@ def test_roundtrip_dataarray(data, arr):
     original = xr.DataArray(arr, dims=names, coords=coords)
     roundtripped = xr.DataArray(original.to_pandas())
     xr.testing.assert_identical(original, roundtripped)
+
+@given(numeric_series, st.text())
+def test_roundtrip_pandas_series(ser, name):
+    # Need to name the index, otherwise Xarray calls it 'dim_0'.
+    ser.index.name = name
+    arr = xr.DataArray(ser)
+    roundtripped = arr.to_pandas()
+    pd.testing.assert_series_equal(ser, roundtripped)
