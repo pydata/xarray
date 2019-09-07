@@ -112,11 +112,10 @@ def unique_variable(name, variables, compat="broadcast_equals", equals=None):
         combine_method = "fillna"
 
     if equals is None:
-        equals = True
         out = out.compute()
         for var in variables[1:]:
-            if not getattr(out, compat)(var.compute()):
-                equals = False
+            equals = getattr(out, compat)(var.compute())
+            if not equals:
                 break
 
     if not equals:
