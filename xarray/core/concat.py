@@ -279,7 +279,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
-def _parse_datasets(datasets, concat_dim):
+def _parse_datasets(datasets):
 
     dims = set()
     all_coord_names = set()
@@ -323,7 +323,7 @@ def _dataset_concat(
     )
 
     result_dim_coords, dims_sizes, result_coord_names, data_names = _parse_datasets(
-        datasets, dim
+        datasets
     )
     dim_names = set(result_dim_coords)
     unlabeled_dims = dim_names - result_coord_names
