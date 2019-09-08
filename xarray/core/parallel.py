@@ -60,6 +60,7 @@ def make_meta(obj):
 
 
 def infer_template(func, obj, *args, **kwargs):
+    """ Infer return object by running the function on meta objects. """
     meta_args = []
     for arg in (obj,) + args:
         meta_args.append(make_meta(arg))
@@ -131,9 +132,13 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
 
         result = func(obj, *args, **kwargs)
 
-        # if isinstance(result, DataArray):
-        #    if result.shape != obj.shape:
-        #        raise ValueError("Result does not have the same shape as input.")
+        for name, index in result.indexes.items():
+            if name in obj.indexes:
+                if len(index) != len(obj.indexes[name]):
+                    raise ValueError(
+                        "Length of the %r dimension has changed. This is not allowed."
+                        % name
+                    )
 
         to_return = _make_dict(result)
 

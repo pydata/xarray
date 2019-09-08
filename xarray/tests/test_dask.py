@@ -924,12 +924,11 @@ def complicated_func(obj):
     return new
 
 
-@pytest.mark.xfail(reason="Not implemented yet.")
 def test_map_blocks_error():
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
 
-    with raises_regex(ValueError, "not have the same shape"):
+    with raises_regex(ValueError, "Length of the.* has changed."):
         xr.map_blocks(bad_func, map_da).compute()
 
 
