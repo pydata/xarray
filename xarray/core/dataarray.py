@@ -1986,6 +1986,7 @@ class DataArray(AbstractArray, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
+        maxgap: int = None,
         **kwargs: Any
     ) -> "DataArray":
         """Interpolate values according to different methods.
@@ -2015,7 +2016,13 @@ class DataArray(AbstractArray, DataWithCoords):
             coordinate variariable to use as the index.
         limit : int, default None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
-            or None for no limit.
+            or None for no limit. This filling is done regardless of the size of
+            the gap in the data.
+        maxgap : int, default None
+            Maximum size of gap that will be filled. Must be greater than 0 or None
+            for no limit.
+        kwargs : dict(), optional
+            parameters passed verbatim to the underlying interpolation function
 
         Returns
         -------
@@ -2034,6 +2041,7 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method,
             limit=limit,
             use_coordinate=use_coordinate,
+            maxgap=maxgap,
             **kwargs
         )
 

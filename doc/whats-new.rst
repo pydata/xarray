@@ -232,6 +232,12 @@ Enhancements
 
   - Added ``join='override'``. When aligning, this only checks that index sizes are equal among objects
     and skips checking indexes for equality.
+- Added the ``maxgap`` kwarg to :py:meth:`~xarray.DataArray.interpolate_na` and
+  :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
+  gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- Added ``join='override'``. This only checks that index sizes are equal among objects and skips
+  checking indexes for equality. By `Deepak Cherian <https://github.com/dcherian>`_.
 
   - :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
     It is passed down to :py:func:`~xarray.align`.

@@ -5,7 +5,12 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.core.missing import NumpyInterpolator, ScipyInterpolator, SplineInterpolator
+from xarray.core.missing import (
+    NumpyInterpolator,
+    ScipyInterpolator,
+    SplineInterpolator,
+    _get_nan_block_lengths,
+)
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
     assert_array_equal,
@@ -439,3 +444,42 @@ def test_ffill_dataset(ds):
 @requires_bottleneck
 def test_bfill_dataset(ds):
     ds.ffill(dim="time")
+
+
+def test_interpolate_na_maxgap(ds):
+    arr = [
+        [
+            np.nan,
+            np.nan,
+            np.nan,
+            1,
+            2,
+            3,
+            np.nan,
+            np.nan,
+            6,
+            7,
+            np.nan,
+            9,
+            np.nan,
+            np.nan,
+        ]
+    ]
+
+    da = xr.DataArray(
+        arr * 2, dims=["x", "y"], coords={"x": [0, 1], "y": np.arange(14)}
+    )
+
+    expected = xr.DataArray(
+        [[np.nan, np.nan, np.nan, 1, 2, 3, 4, 5, 6, 7, 8, 9, np.nan, np.nan]] * 2,
+        dims=["x", "y"],
+        coords={"x": [0, 1], "y": np.arange(14)},
+    )
+
+    expected_lengths = da.copy(data=[[3, 3, 3, 0, 0, 0, 2, 2, 0, 0, 1, 0, 2, 2]] * 2)
+
+    actual_lengths = _get_nan_block_lengths(da, "y")
+    xr.testing.assert_equal(expected_lengths, actual_lengths)
+
+    actual = da.interpolate_na("y", maxgap=2)
+    xr.testing.assert_identical(expected, actual)

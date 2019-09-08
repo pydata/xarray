@@ -6,11 +6,42 @@ import numpy as np
 import pandas as pd
 
 from . import utils
-from .common import _contains_datetime_like_objects
+from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
+
+
+def _get_nan_block_lengths(obj, dim):
+    """
+    Return an object where each NaN element in 'obj' is replaced by the
+    length of the gap the element is in.
+    """
+
+    # algorithm from https://stackoverflow.com/questions/53060003/how-to-get-the-maximum-time-of-gap-in-xarray-dataset/53075828#53075828
+    arange = ones_like(obj) * np.arange(len(obj.indexes[dim])) + 1
+    cumulative_nans = arange.where(obj.notnull()).ffill(dim=dim).fillna(0)
+
+    num_nans = arange - cumulative_nans
+
+    block_lengths_at_peaks = num_nans.where(
+        num_nans.diff(dim=dim, label="lower") < 0
+    ).reindex({dim: obj[dim]})
+
+    # nans at the end
+    maybe_nans_at_end = (
+        block_lengths_at_peaks.isel({dim: -1})
+        .where(obj.isel({dim: -1}).notnull(), num_nans.isel({dim: -1}))
+        .expand_dims(dim)
+        .reindex_like(obj)
+    )
+
+    block_lengths_at_peaks = block_lengths_at_peaks.fillna(maybe_nans_at_end)
+
+    nan_block_lengths = block_lengths_at_peaks.bfill(dim).where(obj.isnull()).fillna(0)
+
+    return nan_block_lengths
 
 
 class BaseInterpolator:
@@ -220,7 +251,13 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
 
 
 def interp_na(
-    self, dim=None, use_coordinate=True, method="linear", limit=None, **kwargs
+    self,
+    dim=None,
+    use_coordinate=True,
+    method="linear",
+    limit=None,
+    maxgap=None,
+    **kwargs
 ):
     """Interpolate values according to different methods.
     """
@@ -252,6 +289,10 @@ def interp_na(
 
     if limit is not None:
         arr = arr.where(valids)
+
+    if maxgap is not None:
+        nan_block_lengths = _get_nan_block_lengths(self, dim)
+        arr = arr.where(nan_block_lengths <= maxgap)
 
     return arr
 
