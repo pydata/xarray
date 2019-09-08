@@ -225,7 +225,6 @@ def map_blocks(func, obj, *args, template=None, **kwargs):
                     # unchunked dimensions in the input have one chunk in the result
                     key += (0,)
 
-            # this is a list [name, values, dims, attrs]
             graph[key] = (operator.getitem, from_wrapper, var)
 
     graph = HighLevelGraph.from_collections(name, graph, dependencies=[dataset])
