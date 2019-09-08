@@ -67,9 +67,10 @@ def _make_dict(x):
     return to_return
 
 
-def map_blocks(func, obj, *args, template=None, **kwargs):
+def map_blocks(func, obj, *args, template=None, chunks=None, **kwargs):
     """
-    Apply a function to each chunk of a DataArray or Dataset.
+    Apply a function to each chunk of a DataArray or Dataset. This function is experimental
+    and its signature may change.
 
     Parameters
     ----------
@@ -149,11 +150,13 @@ def map_blocks(func, obj, *args, template=None, **kwargs):
 
     # If two different variables have different chunking along the same dim
     # .chunks will raise an error.
-    chunks = dataset.chunks
+    input_chunks = dataset.chunks
     # map dims to list of chunk indexes
-    ichunk = {dim: range(len(chunks[dim])) for dim in chunks}
+    ichunk = {dim: range(len(input_chunks[dim])) for dim in input_chunks}
     # mapping from chunk index to slice bounds
-    chunk_index_bounds = {dim: np.cumsum((0,) + chunks[dim]) for dim in chunks}
+    chunk_index_bounds = {
+        dim: np.cumsum((0,) + input_chunks[dim]) for dim in input_chunks
+    }
 
     # iterate over all possible chunk combinations
     for v in itertools.product(*ichunk.values()):
@@ -229,6 +232,15 @@ def map_blocks(func, obj, *args, template=None, **kwargs):
 
     graph = HighLevelGraph.from_collections(name, graph, dependencies=[dataset])
 
+    if chunks is None:
+        if template is not None:
+            chunks = template.chunks
+        else:
+            chunks = input_chunks
+            for dim in chunks:
+                if dim not in template.dims:
+                    chunks.pop(dim)
+
     result = Dataset()
     for var, key in var_key_map.items():
         # indexes need to be known
@@ -239,13 +251,12 @@ def map_blocks(func, obj, *args, template=None, **kwargs):
 
         name = var
         dims = template[var].dims
-        chunks = [
-            template.chunks[dim] if dim in template.chunks else (len(template[dim]),)
-            for dim in dims
+        var_chunks = [
+            chunks[dim] if dim in chunks else (len(template[dim]),) for dim in dims
         ]
         dtype = template[var].dtype
 
-        data = dask.array.Array(graph, name=key, chunks=chunks, dtype=dtype)
+        data = dask.array.Array(graph, name=key, chunks=var_chunks, dtype=dtype)
         result[name] = DataArray(data=data, dims=dims, name=name)
 
     result = Dataset(result)
