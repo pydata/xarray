@@ -267,6 +267,8 @@ class Variable(
     they can use more complete metadata in context of coordinate labels.
     """
 
+    __slots__ = ("_dims", "_data", "_attrs", "_encoding")
+
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         """
         Parameters
@@ -710,8 +712,7 @@ class Variable(
                 actual_indexer = indexer
 
             data = as_indexable(self._data)[actual_indexer]
-            chunks_hint = getattr(data, "chunks", None)
-            mask = indexing.create_mask(indexer, self.shape, chunks_hint)
+            mask = indexing.create_mask(indexer, self.shape, data)
             data = duck_array_ops.where(mask, fill_value, data)
         else:
             # array cannot be indexed along dimensions of size 0, so just
@@ -1926,6 +1927,8 @@ class IndexVariable(Variable):
     They also have a name property, which is the name of their sole dimension
     unless another name is given.
     """
+
+    __slots__ = ()
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)

@@ -452,6 +452,8 @@ class _PlotMethods:
     For example, DataArray.plot.imshow
     """
 
+    __slots__ = ("_da",)
+
     def __init__(self, darray):
         self._da = darray
 

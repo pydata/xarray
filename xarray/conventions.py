@@ -31,6 +31,8 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     dtype('int16')
     """
 
+    __slots__ = ("array",)
+
     def __init__(self, array):
         self.array = indexing.as_indexable(array)
 
@@ -59,6 +61,8 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> BoolTypeArray(x)[:].dtype
     dtype('bool')
     """
+
+    __slots__ = ("array",)
 
     def __init__(self, array):
         self.array = indexing.as_indexable(array)

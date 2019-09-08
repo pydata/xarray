@@ -29,6 +29,7 @@ from xarray.tests import (
     requires_np113,
     requires_numbagg,
     requires_scipy,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -1001,6 +1002,19 @@ class TestDataArray:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    def test_head(self):
+        assert_equal(self.dv.isel(x=slice(5)), self.dv.head(x=5))
+        assert_equal(self.dv.isel(x=slice(0)), self.dv.head(x=0))
+
+    def test_tail(self):
+        assert_equal(self.dv.isel(x=slice(-5, None)), self.dv.tail(x=5))
+        assert_equal(self.dv.isel(x=slice(0)), self.dv.tail(x=0))
+
+    def test_thin(self):
+        assert_equal(self.dv.isel(x=slice(None, None, 5)), self.dv.thin(x=5))
+        with raises_regex(ValueError, "cannot be zero"):
+            self.dv.thin(time=0)
+
     def test_loc(self):
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
@@ -1443,6 +1457,32 @@ class TestDataArray:
 
         renamed_kwargs = self.dv.x.rename(x="z").rename("z")
         assert_identical(renamed, renamed_kwargs)
+
+    def test_init_value(self):
+        expected = DataArray(
+            np.full((3, 4), 3), dims=["x", "y"], coords=[range(3), range(4)]
+        )
+        actual = DataArray(3, dims=["x", "y"], coords=[range(3), range(4)])
+        assert_identical(expected, actual)
+
+        expected = DataArray(
+            np.full((1, 10, 2), 0),
+            dims=["w", "x", "y"],
+            coords={"x": np.arange(10), "y": ["north", "south"]},
+        )
+        actual = DataArray(0, dims=expected.dims, coords=expected.coords)
+        assert_identical(expected, actual)
+
+        expected = DataArray(
+            np.full((10, 2), np.nan), coords=[("x", np.arange(10)), ("y", ["a", "b"])]
+        )
+        actual = DataArray(coords=[("x", np.arange(10)), ("y", ["a", "b"])])
+        assert_identical(expected, actual)
+
+        with raises_regex(ValueError, "different number of dim"):
+            DataArray(np.array(1), coords={"x": np.arange(10)}, dims=["x"])
+        with raises_regex(ValueError, "does not match the 0 dim"):
+            DataArray(np.array(1), coords=[("x", np.arange(10))])
 
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {"y": ("x", list("abc"))}, "x")
@@ -3370,6 +3410,19 @@ class TestDataArray:
         expected_da = self.dv.rename(None)
         assert_identical(expected_da, DataArray.from_series(actual).drop(["x", "y"]))
 
+    @requires_sparse
+    def test_from_series_sparse(self):
+        import sparse
+
+        series = pd.Series([1, 2], index=[("a", 1), ("b", 2)])
+
+        actual_sparse = DataArray.from_series(series, sparse=True)
+        actual_dense = DataArray.from_series(series, sparse=False)
+
+        assert isinstance(actual_sparse.data, sparse.COO)
+        actual_sparse.data = actual_sparse.data.todense()
+        assert_identical(actual_sparse, actual_dense)
+
     def test_to_and_from_empty_series(self):
         # GH697
         expected = pd.Series([])
@@ -4572,3 +4625,25 @@ def test_rolling_exp(da, dim, window_type, window):
     )
 
     assert_allclose(expected.variable, result.variable)
+
+
+def test_no_dict():
+    d = DataArray()
+    with pytest.raises(AttributeError):
+        d.__dict__
+
+
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
+def test_subclass_slots():
+    """Test that DataArray subclasses must explicitly define ``__slots__``.
+
+    .. note::
+       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
+       defined outside of the xarray package.
+    """
+    with pytest.raises(AttributeError) as e:
+
+        class MyArray(DataArray):
+            pass
+
+    assert str(e.value) == "MyArray must explicitly define __slots__"

@@ -51,6 +51,14 @@ class _UFuncSignature:
         Core dimension names on each output variable.
     """
 
+    __slots__ = (
+        "input_core_dims",
+        "output_core_dims",
+        "_all_input_core_dims",
+        "_all_output_core_dims",
+        "_all_core_dims",
+    )
+
     def __init__(self, input_core_dims, output_core_dims=((),)):
         self.input_core_dims = tuple(tuple(a) for a in input_core_dims)
         self.output_core_dims = tuple(tuple(a) for a in output_core_dims)

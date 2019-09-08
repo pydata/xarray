@@ -113,6 +113,11 @@ def _infer_coords_and_dims(
                 coord = as_variable(coord, name=dims[n]).to_index_variable()
                 dims[n] = coord.name
         dims = tuple(dims)
+    elif len(dims) != len(shape):
+        raise ValueError(
+            "different number of dimensions on data "
+            "and dims: %s vs %s" % (len(shape), len(dims))
+        )
     else:
         for d in dims:
             if not isinstance(d, str):
@@ -158,7 +163,27 @@ def _infer_coords_and_dims(
     return new_coords, dims
 
 
+def _check_data_shape(data, coords, dims):
+    if data is dtypes.NA:
+        data = np.nan
+    if coords is not None and utils.is_scalar(data, include_0d=False):
+        if utils.is_dict_like(coords):
+            if dims is None:
+                return data
+            else:
+                data_shape = tuple(
+                    as_variable(coords[k], k).size if k in coords.keys() else 1
+                    for k in dims
+                )
+        else:
+            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
+        data = np.full(data_shape, data)
+    return data
+
+
 class _LocIndexer:
+    __slots__ = ("data_array",)
+
     def __init__(self, data_array: "DataArray"):
         self.data_array = data_array
 
@@ -223,6 +248,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary for holding arbitrary metadata.
     """
 
+    __slots__ = ("_accessors", "_coords", "_file_obj", "_name", "_indexes", "_variable")
+
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
     _coarsen_cls = rolling.DataArrayCoarsen
@@ -234,7 +261,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __init__(
         self,
-        data: Any,
+        data: Any = dtypes.NA,
         coords: Union[Sequence[Tuple], Mapping[Hashable, Any], None] = None,
         dims: Union[Hashable, Sequence[Hashable], None] = None,
         name: Hashable = None,
@@ -323,6 +350,7 @@ class DataArray(AbstractArray, DataWithCoords):
             if encoding is None:
                 encoding = getattr(data, "encoding", None)
 
+            data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
@@ -332,14 +360,13 @@ class DataArray(AbstractArray, DataWithCoords):
         assert isinstance(coords, OrderedDict)
         self._coords = coords  # type: OrderedDict[Any, Variable]
         self._name = name  # type: Optional[Hashable]
+        self._accessors = None  # type: Optional[Dict[str, Any]]
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
         self._indexes = indexes
 
         self._file_obj = None
-
-        self._initialized = True  # type: bool
 
     def _replace(
         self,
@@ -708,7 +735,7 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             if self.name is None:
                 raise ValueError(
-                    "cannot reset_coords with drop=False " "on an unnamed DataArrray"
+                    "cannot reset_coords with drop=False on an unnamed DataArrray"
                 )
             dataset[self.name] = self.variable
             return dataset
@@ -1005,6 +1032,55 @@ class DataArray(AbstractArray, DataWithCoords):
             tolerance=tolerance,
             **indexers_kwargs
         )
+        return self._from_temp_dataset(ds)
+
+    def head(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by the the first `n`
+        values along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.head
+        DataArray.tail
+        DataArray.thin
+        """
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
+        ds = self._to_temp_dataset().head(indexers=indexers)
+        return self._from_temp_dataset(ds)
+
+    def tail(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by the the last `n`
+        values along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.tail
+        DataArray.head
+        DataArray.thin
+        """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
+        ds = self._to_temp_dataset().tail(indexers=indexers)
+        return self._from_temp_dataset(ds)
+
+    def thin(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by each `n` value
+        along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.thin
+        DataArray.head
+        DataArray.tail
+        """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
+        ds = self._to_temp_dataset().thin(indexers=indexers)
         return self._from_temp_dataset(ds)
 
     def broadcast_like(
@@ -1423,9 +1499,7 @@ class DataArray(AbstractArray, DataWithCoords):
             This object, but with an additional dimension(s).
         """
         if isinstance(dim, int):
-            raise TypeError(
-                "dim should be hashable or sequence/mapping of " "hashables"
-            )
+            raise TypeError("dim should be hashable or sequence/mapping of hashables")
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
@@ -2252,19 +2326,27 @@ class DataArray(AbstractArray, DataWithCoords):
         return obj
 
     @classmethod
-    def from_series(cls, series: pd.Series) -> "DataArray":
+    def from_series(cls, series: pd.Series, sparse: bool = False) -> "DataArray":
         """Convert a pandas.Series into an xarray.DataArray.
 
         If the series's index is a MultiIndex, it will be expanded into a
         tensor product of one-dimensional coordinates (filling in missing
         values with NaN). Thus this operation should be the inverse of the
         `to_series` method.
+
+        If sparse=True, creates a sparse array instead of a dense NumPy array.
+        Requires the pydata/sparse package.
+
+        See also
+        --------
+        xarray.Dataset.from_dataframe
         """
-        # TODO: add a 'name' parameter
-        name = series.name
-        df = pd.DataFrame({name: series})
-        ds = Dataset.from_dataframe(df)
-        return ds[name]
+        temp_name = "__temporary_name"
+        df = pd.DataFrame({temp_name: series})
+        ds = Dataset.from_dataframe(df, sparse=sparse)
+        result = cast(DataArray, ds[temp_name])
+        result.name = series.name
+        return result
 
     def to_cdms2(self) -> "cdms2_Variable":
         """Convert this array into a cdms2.Variable
@@ -2679,7 +2761,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         if isinstance(other, Dataset):
             raise NotImplementedError(
-                "dot products are not yet supported " "with Dataset objects."
+                "dot products are not yet supported with Dataset objects."
             )
         if not isinstance(other, DataArray):
             raise TypeError("dot only operates on DataArrays.")

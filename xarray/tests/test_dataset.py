@@ -46,6 +46,7 @@ from . import (
     requires_dask,
     requires_numbagg,
     requires_scipy,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -1409,6 +1410,38 @@ class TestDataset:
         expected = Dataset({"foo": 1}, {"x": 0})
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
+
+    def test_head(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(5), dim2=slice(6))
+        actual = data.head(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel(time=slice(0))
+        actual = data.head(time=0)
+        assert_equal(expected, actual)
+
+    def test_tail(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(-5, None), dim2=slice(-6, None))
+        actual = data.tail(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel(dim1=slice(0))
+        actual = data.tail(dim1=0)
+        assert_equal(expected, actual)
+
+    def test_thin(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(None, None, 5), dim2=slice(None, None, 6))
+        actual = data.thin(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        with raises_regex(ValueError, "cannot be zero"):
+            data.thin(time=0)
 
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_sel_fancy(self):
@@ -3651,6 +3684,28 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    @requires_sparse
+    def test_from_dataframe_sparse(self):
+        import sparse
+
+        df_base = pd.DataFrame(
+            {"x": range(10), "y": list("abcdefghij"), "z": np.arange(0, 100, 10)}
+        )
+
+        ds_sparse = Dataset.from_dataframe(df_base.set_index("x"), sparse=True)
+        ds_dense = Dataset.from_dataframe(df_base.set_index("x"), sparse=False)
+        assert isinstance(ds_sparse["y"].data, sparse.COO)
+        assert isinstance(ds_sparse["z"].data, sparse.COO)
+        ds_sparse["y"].data = ds_sparse["y"].data.todense()
+        ds_sparse["z"].data = ds_sparse["z"].data.todense()
+        assert_identical(ds_dense, ds_sparse)
+
+        ds_sparse = Dataset.from_dataframe(df_base.set_index(["x", "y"]), sparse=True)
+        ds_dense = Dataset.from_dataframe(df_base.set_index(["x", "y"]), sparse=False)
+        assert isinstance(ds_sparse["z"].data, sparse.COO)
+        ds_sparse["z"].data = ds_sparse["z"].data.todense()
+        assert_identical(ds_dense, ds_sparse)
+
     def test_to_and_from_empty_dataframe(self):
         # GH697
         expected = pd.DataFrame({"foo": []})
@@ -5681,3 +5736,25 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual2 = da.integrate("time", datetime_unit="h")
     assert_allclose(actual, actual2 / 24.0)
+
+
+def test_no_dict():
+    d = Dataset()
+    with pytest.raises(AttributeError):
+        d.__dict__
+
+
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
+def test_subclass_slots():
+    """Test that Dataset subclasses must explicitly define ``__slots__``.
+
+    .. note::
+       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
+       defined outside of the xarray package.
+    """
+    with pytest.raises(AttributeError) as e:
+
+        class MyDS(Dataset):
+            pass
+
+    assert str(e.value) == "MyDS must explicitly define __slots__"
