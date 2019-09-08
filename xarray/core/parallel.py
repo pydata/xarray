@@ -6,6 +6,7 @@ try:
 except ImportError:
     pass
 
+import itertools
 import numpy as np
 import operator
 
@@ -124,8 +125,6 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
     dask.array.map_blocks
     """
 
-    import itertools
-
     def _wrapper(func, obj, to_array, args, kwargs):
         if to_array:
             # this should be easier
@@ -152,8 +151,6 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
     else:
         dataset = obj
         input_is_array = False
-
-    dataset_dims = list(dataset.dims)
 
     template = infer_template(func, obj, *args, **kwargs)
     if isinstance(template, DataArray):
@@ -190,7 +187,7 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
 
     # iterate over all possible chunk combinations
     for v in itertools.product(*ichunk.values()):
-        chunk_index_dict = dict(zip(dataset_dims, v))
+        chunk_index_dict = dict(zip(dataset.dims, v))
 
         # this will become [[name1, variable1],
         #                   [name2, variable2],
@@ -284,7 +281,6 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
         )
         result[var] = DataArray(data=data, dims=dims, name=var)
 
-    result = Dataset(result)
     if result_is_array:
         result = _to_array(result)
 
