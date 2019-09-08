@@ -64,11 +64,10 @@ def infer_template(func, obj, *args, **kwargs):
     for arg in (obj,) + args:
         meta_args.append(make_meta(arg))
 
-    # infer template / meta information here
     try:
         template = func(*meta_args, **kwargs)
     except ValueError:
-        raise ValueError("Cannot infer return type from user-provided function.")
+        raise ValueError("Cannot infer object returned by user-provided function.")
 
     return template
 
