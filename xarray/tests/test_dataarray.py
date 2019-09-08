@@ -1394,13 +1394,11 @@ class TestDataArray:
         with raises_regex(ValueError, "different size for unlabeled"):
             foo.reindex_like(bar)
 
-    @pytest.mark.filterwarnings("ignore:Indexer has dimensions")
     def test_reindex_regressions(self):
-        # regression test for #279
-        expected = DataArray(np.random.randn(5), coords=[("time", range(5))])
+        da = DataArray(np.random.randn(5), coords=[("time", range(5))])
         time2 = DataArray(np.arange(5), dims="time2")
-        actual = expected.reindex(time=time2)
-        assert_identical(actual, expected)
+        with pytest.raises(ValueError):
+            da.reindex(time=time2)
 
         # regression test for #736, reindex can not change complex nums dtype
         x = np.array([1, 2, 3], dtype=np.complex)
@@ -3632,10 +3630,8 @@ class TestDataArray:
         expected = Dataset({"foo": ("x", [1, 2])})
         assert_identical(expected, actual)
 
-        expected = Dataset({"bar": ("x", [1, 2])})
-        with pytest.warns(FutureWarning):
+        with pytest.raises(TypeError):
             actual = named.to_dataset("bar")
-        assert_identical(expected, actual)
 
     def test_to_dataset_split(self):
         array = DataArray([1, 2, 3], coords=[("x", list("abc"))], attrs={"a": 1})

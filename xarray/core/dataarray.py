@@ -444,7 +444,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset = Dataset._from_vars_and_coord_names(variables, coord_names)
         return dataset
 
-    def to_dataset(self, dim: Hashable = None, name: Hashable = None) -> Dataset:
+    def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
         """Convert a DataArray to a Dataset.
 
         Parameters
@@ -462,15 +462,9 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset : Dataset
         """
         if dim is not None and dim not in self.dims:
-            warnings.warn(
-                "the order of the arguments on DataArray.to_dataset "
-                "has changed; you now need to supply ``name`` as "
-                "a keyword argument",
-                FutureWarning,
-                stacklevel=2,
+            raise TypeError(
+                "{} is not a dim. If supplying a ``name``, pass as a kwarg.".format(dim)
             )
-            name = dim
-            dim = None
 
         if dim is not None:
             if name is not None:
