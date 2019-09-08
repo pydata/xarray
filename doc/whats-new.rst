@@ -49,6 +49,13 @@ Breaking changes
     crash in a later release.
 
   (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+- :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous 
+  positional arguments were deprecated)
+- Reindexing with variables of a different dimension now raise an error (previously deprecated)
+- :py:func:`~xarray.broadcast_array` is removed (previously deprecated in favor of 
+  :py:func:`~xarray.broadcast`)
+- :py:meth:`~Variable.expand_dims` is removed (previously deprecated in favor of 
+  :py:meth:`~Variable.set_dims`)
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~

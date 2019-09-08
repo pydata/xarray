@@ -6,7 +6,7 @@ from ._version import get_versions
 __version__ = get_versions()["version"]
 del get_versions
 
-from .core.alignment import align, broadcast, broadcast_arrays
+from .core.alignment import align, broadcast
 from .core.common import full_like, zeros_like, ones_like
 from .core.concat import concat
 from .core.combine import combine_by_coords, combine_nested, auto_combine
