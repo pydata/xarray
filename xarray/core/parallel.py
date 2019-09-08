@@ -38,6 +38,9 @@ def _to_array(obj):
 
 
 def make_meta(obj):
+
+    from dask.array.utils import meta_from_array
+
     if isinstance(obj, DataArray):
         meta = DataArray(obj.data._meta, dims=obj.dims)
 
@@ -45,11 +48,28 @@ def make_meta(obj):
         meta = Dataset()
         for name, variable in obj.variables.items():
             if dask.is_dask_collection(variable):
-                meta[name] = DataArray(obj[name].data._meta, dims=obj[name].dims)
+                meta_obj = obj[name].data._meta
             else:
-                continue
+                meta_obj = meta_from_array(obj[name].data)
+            meta[name] = DataArray(meta_obj, dims=obj[name].dims)
+    else:
+        meta = obj
 
     return meta
+
+
+def infer_template(func, obj, *args, **kwargs):
+    meta_args = []
+    for arg in (obj,) + args:
+        meta_args.append(make_meta(arg))
+
+    # infer template / meta information here
+    try:
+        template = func(*meta_args, **kwargs)
+    except ValueError:
+        raise ValueError("Cannot infer return type from user-provided function.")
+
+    return template
 
 
 def _make_dict(x):
@@ -67,7 +87,7 @@ def _make_dict(x):
     return to_return
 
 
-def map_blocks(func, obj, *args, template=None, chunks=None, **kwargs):
+def map_blocks(func, obj, *args, chunks=None, **kwargs):
     """
     Apply a function to each chunk of a DataArray or Dataset. This function is experimental
     and its signature may change.
@@ -76,13 +96,21 @@ def map_blocks(func, obj, *args, template=None, chunks=None, **kwargs):
     ----------
     func: callable
         User-provided function that should accept DataArrays corresponding to one chunk.
+        The function will be run on a small piece of data that looks like 'obj' to determine
+        properties of the returned object such as dtype, variable names,
+        new dimensions and new indexes (if any).
+
+        This function cannot
+        - change size of existing dimensions.
+        - add new chunked dimensions.
+
     obj: DataArray, Dataset
         Chunks of this object will be provided to 'func'. The function must not change
         shape of the provided DataArray.
     args:
         Passed on to func.
-    template:
-        template object representing result
+    chunks:
+        dict mapping index name to chunk size.
     kwargs:
         Passed on to func.
 
@@ -127,30 +155,32 @@ def map_blocks(func, obj, *args, template=None, chunks=None, **kwargs):
 
     dataset_dims = list(dataset.dims)
 
-    # infer template / meta information here
-    if template is None:
-        try:
-            meta = make_meta(obj)
-            result_meta = func(meta, *args, **kwargs)
-        except ValueError:
-            raise ValueError("Cannot infer return type from user-provided function.")
-
-        template = result_meta
-
+    template = infer_template(func, obj, *args, **kwargs)
     if isinstance(template, DataArray):
         result_is_array = True
         template = _to_dataset(template)
     else:
         result_is_array = False
 
-    template_vars = list(template.variables)
+    # If two different variables have different chunking along the same dim
+    # .chunks will raise an error.
+    input_chunks = dataset.chunks
+    # get output chunks
+    if chunks is None:
+        # assume chunking doesn't change
+        chunks = input_chunks
+    for dim in chunks:
+        if dim not in template.dims:
+            chunks.pop(dim)
+
+    indexes = dict(dataset.indexes)
+    for dim in template.indexes:
+        if dim not in indexes:
+            indexes[dim] = template.indexes[dim]
 
     graph = {}
     gname = "%s-%s" % (dask.utils.funcname(func), dask.base.tokenize(dataset))
 
-    # If two different variables have different chunking along the same dim
-    # .chunks will raise an error.
-    input_chunks = dataset.chunks
     # map dims to list of chunk indexes
     ichunk = {dim: range(len(input_chunks[dim])) for dim in input_chunks}
     # mapping from chunk index to slice bounds
@@ -215,10 +245,10 @@ def map_blocks(func, obj, *args, template=None, chunks=None, **kwargs):
 
         # mapping from variable name to dask graph key
         var_key_map = {}
-        for var in template_vars:
-            var_dims = template.variables[var].dims
-            gname_l = gname + dask.base.tokenize(var)
-            var_key_map[var] = gname_l
+        for name, variable in template.variables.items():
+            var_dims = variable.dims
+            gname_l = gname + dask.base.tokenize(name)
+            var_key_map[name] = gname_l
 
             key = (gname_l,)
             for dim in var_dims:
@@ -228,36 +258,31 @@ def map_blocks(func, obj, *args, template=None, chunks=None, **kwargs):
                     # unchunked dimensions in the input have one chunk in the result
                     key += (0,)
 
-            graph[key] = (operator.getitem, from_wrapper, var)
+            graph[key] = (operator.getitem, from_wrapper, name)
 
     graph = HighLevelGraph.from_collections(name, graph, dependencies=[dataset])
-
-    if chunks is None:
-        if template is not None:
-            chunks = template.chunks
-        else:
-            chunks = input_chunks
-            for dim in chunks:
-                if dim not in template.dims:
-                    chunks.pop(dim)
 
     result = Dataset()
     for var, key in var_key_map.items():
         # indexes need to be known
         # otherwise compute is called when DataArray is created
-        if var in template.indexes:
-            result[var] = template[var]
+        if var in indexes:
+            result[var] = indexes[var]
             continue
 
-        name = var
         dims = template[var].dims
-        var_chunks = [
-            chunks[dim] if dim in chunks else (len(template[dim]),) for dim in dims
-        ]
-        dtype = template[var].dtype
+        var_chunks = []
+        for dim in dims:
+            if dim in chunks:
+                var_chunks.append(chunks[dim])
+            else:
+                if dim in indexes:
+                    var_chunks.append((len(indexes[dim]),))
 
-        data = dask.array.Array(graph, name=key, chunks=var_chunks, dtype=dtype)
-        result[name] = DataArray(data=data, dims=dims, name=name)
+        data = dask.array.Array(
+            graph, name=key, chunks=var_chunks, dtype=template[var].dtype
+        )
+        result[var] = DataArray(data=data, dims=dims, name=var)
 
     result = Dataset(result)
     if result_is_array:

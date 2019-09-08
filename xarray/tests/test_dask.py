@@ -909,6 +909,21 @@ map_da = make_da()
 map_ds = make_ds()
 
 
+def simple_func(obj):
+    result = obj.x + 5 * obj.y
+    # TODO: this needs to be fixed.
+    if isinstance(result, DataArray):
+        result.name = "a"
+    return result
+
+
+def complicated_func(obj):
+    new = obj.copy()
+    new = new[["a", "b"]].rename({"a": "new_var1"}).expand_dims(k=[0, 1, 2])
+    new["b"] = new.b.astype("int32")
+    return new
+
+
 @pytest.mark.xfail(reason="Not implemented yet.")
 def test_map_blocks_error():
     def bad_func(darray):
@@ -918,17 +933,14 @@ def test_map_blocks_error():
         xr.map_blocks(bad_func, map_da).compute()
 
 
-@pytest.mark.parametrize("obj, template", [[map_da, map_da], [map_ds, map_ds.a]])
-def test_map_blocks(obj, template):
-    def good_func(obj):
-        result = obj.x + 5 * obj.y
-        # TODO: this needs to be fixed.
-        if isinstance(result, DataArray):
-            result.name = "a"
-        return result
+@pytest.mark.parametrize(
+    "func, obj",
+    [[simple_func, map_da], [simple_func, map_ds], [complicated_func, map_ds]],
+)
+def test_map_blocks(func, obj):
 
-    actual = xr.map_blocks(good_func, obj, template=template)
-    expected = good_func(obj)
+    actual = xr.map_blocks(func, obj)
+    expected = func(obj)
     xr.testing.assert_equal(expected, actual)
 
 
@@ -937,5 +949,5 @@ def test_map_blocks_args(obj):
     import operator
 
     expected = obj + 10
-    actual = xr.map_blocks(operator.add, obj, 10, template=obj)
+    actual = xr.map_blocks(operator.add, obj, 10)
     xr.testing.assert_equal(expected, actual)
