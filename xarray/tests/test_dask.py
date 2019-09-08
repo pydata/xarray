@@ -919,7 +919,12 @@ def simple_func(obj):
 
 def complicated_func(obj):
     new = obj.copy()
-    new = new[["a", "b"]].rename({"a": "new_var1"}).expand_dims(k=[0, 1, 2])
+    new = (
+        new[["a", "b"]]
+        .rename({"a": "new_var1"})
+        .expand_dims(k=[0, 1, 2])
+        .transpose("k", "y", "x")
+    )
     new["b"] = new.b.astype("int32")
     return new
 
