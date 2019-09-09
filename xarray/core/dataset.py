@@ -2009,7 +2009,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return result._overwrite_indexes(new_indexes)
 
     def head(
-        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+        self,
+        indexers: Union[Mapping[Hashable, Any], int] = None,
+        **indexers_kwargs: Any
     ) -> "Dataset":
         """Returns a new dataset with the first `n` values of each array
         for the specified dimension(s).
@@ -2043,7 +2045,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self.isel(indexers)
 
     def tail(
-        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+        self,
+        indexers: Union[Mapping[Hashable, Any], int] = None,
+        **indexers_kwargs: Any
     ) -> "Dataset":
         """Returns a new dataset with the last `n` values of each array
         for the specified dimension(s).
@@ -2080,7 +2084,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self.isel(indexers)
 
     def thin(
-        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+        self,
+        indexers: Union[Mapping[Hashable, Any], int] = None,
+        **indexers_kwargs: Any
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along every `n`th
         value for the specified dimension(s)
