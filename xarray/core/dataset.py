@@ -2016,8 +2016,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        indexers : dict, optional
-            A dict with keys matching dimensions and integer values `n`.
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
             One of indexers or indexers_kwargs must be provided.
         **indexers_kwargs : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
@@ -2030,6 +2031,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.thin
         DataArray.head
         """
+        if not indexers_kwargs:
+            if indexers is None:
+                indexers = 5
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
+                raise TypeError("indexers must be a dict or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
         indexers = {k: slice(val) for k, val in indexers.items()}
         return self.isel(indexers)
@@ -2042,8 +2050,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        indexers : dict, optional
-            A dict with keys matching dimensions and integer values `n`.
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
             One of indexers or indexers_kwargs must be provided.
         **indexers_kwargs : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
@@ -2056,7 +2065,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.thin
         DataArray.tail
         """
-
+        if not indexers_kwargs:
+            if indexers is None:
+                indexers = 5
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
+                raise TypeError("indexers must be a dict or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
         indexers = {
             k: slice(-val, None) if val != 0 else slice(val)
@@ -2072,8 +2087,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        indexers : dict, optional
-            A dict with keys matching dimensions and integer values `n`.
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
             One of indexers or indexers_kwargs must be provided.
         **indexers_kwargs : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
@@ -2086,6 +2102,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.tail
         DataArray.thin
         """
+        if not indexers_kwargs:
+            if indexers is None:
+                indexers = 5
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
+                raise TypeError("indexers must be a dict or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
         if 0 in indexers.values():
             raise ValueError("step cannot be zero")
