@@ -731,7 +731,7 @@ def _process_cmap_cbar_kwargs(
 
     # colors is only valid when levels is supplied or the plot is of type
     # contour or contourf
-    if colors and (("contour" not in func.__name__) and (not levels)):
+    if colors and (("contour" not in func.__name__) and (levels is None)):
         raise ValueError("Can only specify colors with contour or levels")
 
     # we should not be getting a list of colors in cmap anymore

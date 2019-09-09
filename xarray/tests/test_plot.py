@@ -1283,26 +1283,38 @@ class TestContour(Common2dMixin, PlotTestCase):
 
     plotfunc = staticmethod(xplt.contour)
 
+    # matplotlib cmap.colors gives an rgbA ndarray
+    # when seaborn is used, instead we get an rgb tuple
+    @staticmethod
+    def _color_as_tuple(c):
+        return tuple(c[:3])
+
     def test_colors(self):
-        # matplotlib cmap.colors gives an rgbA ndarray
-        # when seaborn is used, instead we get an rgb tuple
-        def _color_as_tuple(c):
-            return tuple(c[:3])
 
         # with single color, we don't want rgb array
         artist = self.plotmethod(colors="k")
         assert artist.cmap.colors[0] == "k"
 
         artist = self.plotmethod(colors=["k", "b"])
-        assert _color_as_tuple(artist.cmap.colors[1]) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(artist.cmap.colors[1]) == (0.0, 0.0, 1.0)
 
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert _color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
-        assert _color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
+        assert self._color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
+        assert self._color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
         # the last color is now under "over"
-        assert _color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
+
+    def test_colors_np_levels(self):
+
+        # https://github.com/pydata/xarray/issues/3284
+        levels = np.array([-0.5, 0.0, 0.5, 1.0])
+        artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
+        assert self._color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
+        assert self._color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
+        # the last color is now under "over"
+        assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
 
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):
