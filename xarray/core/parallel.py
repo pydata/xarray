@@ -33,6 +33,7 @@ def _to_array(obj):
         )
 
     name = list(obj.data_vars)[0]
+    # this should be easier
     da = obj.to_array().squeeze().drop("variable")
     da.name = name
     return da
@@ -127,7 +128,6 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
 
     def _wrapper(func, obj, to_array, args, kwargs):
         if to_array:
-            # this should be easier
             obj = _to_array(obj)
 
         result = func(obj, *args, **kwargs)
@@ -248,7 +248,9 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
         var_key_map = {}
         for name, variable in template.variables.items():
             var_dims = variable.dims
-            gname_l = gname + dask.base.tokenize(name)
+            # cannot tokenize "name" because the hash of <this-array> is not invariant!
+            # This happens when the user function does not set a name on the returned DataArray
+            gname_l = "%s-%s" % (gname, name)
             var_key_map[name] = gname_l
 
             key = (gname_l,)

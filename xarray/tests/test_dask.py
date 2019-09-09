@@ -911,9 +911,6 @@ map_ds = make_ds()
 
 def simple_func(obj):
     result = obj.x + 5 * obj.y
-    # TODO: this needs to be fixed.
-    if isinstance(result, DataArray):
-        result.name = "a"
     return result
 
 
