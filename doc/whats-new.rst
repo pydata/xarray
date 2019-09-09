@@ -61,6 +61,9 @@ New functions/methods
   This requires `sparse>=0.8.0`. By `Nezar Abdennur <https://github.com/nvictus>`_
   and `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- Added :py:func:`~xarray.map_blocks`, modeled after :py:func:`dask.array.map_blocks`
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - :py:meth:`~Dataset.from_dataframe` and :py:meth:`~DataArray.from_series` now
   support ``sparse=True`` for converting pandas objects into xarray objects
   wrapping sparse arrays. This is particularly useful with sparsely populated
