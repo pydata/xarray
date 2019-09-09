@@ -14,15 +14,6 @@ from .dataarray import DataArray
 from .dataset import Dataset
 
 
-def _to_dataset(obj):
-    if obj.name is not None:
-        dataset = obj.to_dataset()
-    else:
-        dataset = obj._to_temp_dataset()
-
-    return dataset
-
-
 def _to_array(obj):
     if not isinstance(obj, Dataset):
         raise ValueError("Trying to convert DataArray to DataArray!")
@@ -78,7 +69,7 @@ def _make_dict(x):
     # Dataset.to_dict() is too complicated
     # maps variable name to numpy array
     if isinstance(x, DataArray):
-        x = _to_dataset(x)
+        x = x._to_temp_dataset()
 
     to_return = dict()
     for var in x.variables:
@@ -150,7 +141,7 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
         )
 
     if isinstance(obj, DataArray):
-        dataset = _to_dataset(obj)
+        dataset = obj._to_temp_dataset()
         input_is_array = True
     else:
         dataset = obj
@@ -159,7 +150,7 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
     template = infer_template(func, obj, *args, **kwargs)
     if isinstance(template, DataArray):
         result_is_array = True
-        template = _to_dataset(template)
+        template = template._to_temp_dataset()
     else:
         result_is_array = False
 
