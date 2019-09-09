@@ -112,14 +112,7 @@ def concat(
         raise ValueError("must supply at least one object to concatenate")
 
     if dim is None:
-        warnings.warn(
-            "the `dim` argument to `concat` will be required "
-            "in a future version of xarray; for now, setting it to "
-            "the old default of 'concat_dim'",
-            FutureWarning,
-            stacklevel=2,
-        )
-        dim = "concat_dims"
+        raise TypeError("the `dim` argument to `concat` is required")
 
     if indexers is not None:  # pragma: no cover
         warnings.warn(

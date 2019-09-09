@@ -45,8 +45,8 @@ Breaking changes
   - Any user code that defines custom subclasses of xarray classes must now explicitly
     define ``__slots__`` itself. Subclasses that don't add any attributes must state so
     by defining ``__slots__ = ()`` right after the class header.
-    Omitting ``__slots__`` will now cause a ``FutureWarning`` to be logged, and a hard
-    crash in a later release.
+    Omitting ``__slots__`` will now cause a ``FutureWarning`` to be logged, and will raise an
+    error in a later release.
 
   (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 - :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous 
@@ -56,6 +56,8 @@ Breaking changes
   :py:func:`~xarray.broadcast`)
 - :py:meth:`~Variable.expand_dims` is removed (previously deprecated in favor of 
   :py:meth:`~Variable.set_dims`)
+- :py:func:`~xarray.concat` now requries the ``dim`` argument (using ``'concat_dim'`` as a default
+  was previouly deprecated)
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
