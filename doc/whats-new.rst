@@ -30,7 +30,10 @@ Breaking changes
   By `Maximilian Roos <https://github.com/max-sixty>`_ 
 - The ``inplace`` kwarg for public methods now raises an error, having been deprecated
   since v0.11.0.
-  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`~xarray.concat` now requires the ``dim`` argument. Its ``indexers``, ``mode``
+  and ``concat_over`` kwargs have now been removed.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - Most xarray objects now define ``__slots__``. This reduces overall RAM usage by ~22%
   (not counting the underlying numpy buffers); on CPython 3.7/x64, a trivial DataArray
   has gone down from 1.9kB to 1.5kB.
@@ -167,6 +170,8 @@ Bug fixes
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 - Prevent :py:meth:`~xarray.DataArray.argmax` and :py:meth:`~xarray.DataArray.argmin` from calling
   dask compute (:issue:`3237`). By `Ulrich Herter <https://github.com/ulijh>`_.
+- Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
+  array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.12.3:
 
