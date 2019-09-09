@@ -96,7 +96,7 @@ def last_item(array):
         return []
 
     indexer = (slice(-1, None),) * array.ndim
-    return np.ravel(array[indexer]).tolist()
+    return np.ravel(np.asarray(array[indexer])).tolist()
 
 
 def format_timestamp(t):

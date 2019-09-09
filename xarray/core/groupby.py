@@ -139,13 +139,24 @@ class _DummyGroup:
     Should not be user visible.
     """
 
+    __slots__ = ("name", "coords", "size")
+
     def __init__(self, obj, name, coords):
         self.name = name
         self.coords = coords
-        self.dims = (name,)
-        self.ndim = 1
         self.size = obj.sizes[name]
-        self.values = range(self.size)
+
+    @property
+    def dims(self):
+        return (self.name,)
+
+    @property
+    def ndim(self):
+        return 1
+
+    @property
+    def values(self):
+        return range(self.size)
 
 
 def _ensure_1d(group, obj):
@@ -215,6 +226,19 @@ class GroupBy(SupportsArithmetic):
     Dataset.groupby
     DataArray.groupby
     """
+
+    __slots__ = (
+        "_full_index",
+        "_inserted_dims",
+        "_group",
+        "_group_dim",
+        "_group_indices",
+        "_groups",
+        "_obj",
+        "_restore_coord_dims",
+        "_stacked_dim",
+        "_unique_coord",
+    )
 
     def __init__(
         self,

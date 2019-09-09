@@ -29,8 +29,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from .pycompat import dask_array_type
-
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
@@ -269,16 +267,20 @@ def either_dict_or_kwargs(
         return cast(Mapping[Hashable, T], kw_kwargs)
 
 
-def is_scalar(value: Any) -> bool:
+def is_scalar(value: Any, include_0d: bool = True) -> bool:
     """Whether to treat a value as a scalar.
 
     Any non-iterable, string, or 0-D array
     """
+    from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
+
+    if include_0d:
+        include_0d = getattr(value, "ndim", None) == 0
     return (
-        getattr(value, "ndim", None) == 0
+        include_0d
         or isinstance(value, (str, bytes))
         or not (
-            isinstance(value, (Iterable,) + dask_array_type)
+            isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
         )
     )
@@ -374,7 +376,7 @@ class Frozen(Mapping[K, V]):
     saved under the `mapping` attribute.
     """
 
-    __slots__ = ["mapping"]
+    __slots__ = ("mapping",)
 
     def __init__(self, mapping: Mapping[K, V]):
         self.mapping = mapping
@@ -405,7 +407,7 @@ class SortedKeysDict(MutableMapping[K, V]):
     mapping.
     """
 
-    __slots__ = ["mapping"]
+    __slots__ = ("mapping",)
 
     def __init__(self, mapping: MutableMapping[K, V] = None):
         self.mapping = {} if mapping is None else mapping
@@ -438,6 +440,8 @@ class OrderedSet(MutableSet[T]):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
+
+    __slots__ = ("_ordered_dict",)
 
     def __init__(self, values: AbstractSet[T] = None):
         self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
@@ -479,6 +483,8 @@ class NdimSizeLenMixin:
     one that also defines ``ndim``, ``size`` and ``__len__``.
     """
 
+    __slots__ = ()
+
     @property
     def ndim(self: Any) -> int:
         return len(self.shape)
@@ -502,6 +508,8 @@ class NDArrayMixin(NdimSizeLenMixin):
     A subclass should set the `array` property and override one or more of
     `dtype`, `shape` and `__getitem__`.
     """
+
+    __slots__ = ()
 
     @property
     def dtype(self: Any) -> np.dtype:
@@ -615,6 +623,8 @@ def ensure_us_time_resolution(val):
 class HiddenKeyDict(MutableMapping[K, V]):
     """Acts like a normal dictionary, but hides certain keys.
     """
+
+    __slots__ = ("_data", "_hidden_keys")
 
     # ``__init__`` method required to create instance from class.
 

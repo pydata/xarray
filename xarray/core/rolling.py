@@ -43,7 +43,8 @@ class Rolling:
     DataArray.rolling
     """
 
-    _attributes = ["window", "min_periods", "center", "dim"]
+    __slots__ = ("obj", "window", "min_periods", "center", "dim")
+    _attributes = ("window", "min_periods", "center", "dim")
 
     def __init__(self, obj, windows, min_periods=None, center=False):
         """
@@ -93,16 +94,16 @@ class Rolling:
 
         # attributes
         self.window = window
+        if min_periods is not None and min_periods <= 0:
+            raise ValueError("min_periods must be greater than zero or None")
         self.min_periods = min_periods
-        if min_periods is None:
-            self._min_periods = window
-        else:
-            if min_periods <= 0:
-                raise ValueError("min_periods must be greater than zero or None")
 
-            self._min_periods = min_periods
         self.center = center
         self.dim = dim
+
+    @property
+    def _min_periods(self):
+        return self.min_periods if self.min_periods is not None else self.window
 
     def __repr__(self):
         """provide a nice str repr of our rolling object"""
@@ -152,6 +153,8 @@ class Rolling:
 
 
 class DataArrayRolling(Rolling):
+    __slots__ = ("window_labels",)
+
     def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object for DataArray.
@@ -381,6 +384,8 @@ class DataArrayRolling(Rolling):
 
 
 class DatasetRolling(Rolling):
+    __slots__ = ("rollings",)
+
     def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object for Dataset.
@@ -516,7 +521,8 @@ class Coarsen:
     DataArray.coarsen
     """
 
-    _attributes = ["windows", "side", "trim_excess"]
+    __slots__ = ("obj", "boundary", "coord_func", "windows", "side", "trim_excess")
+    _attributes = ("windows", "side", "trim_excess")
 
     def __init__(self, obj, windows, boundary, side, coord_func):
         """
@@ -569,6 +575,8 @@ class Coarsen:
 
 
 class DataArrayCoarsen(Coarsen):
+    __slots__ = ()
+
     @classmethod
     def _reduce_method(cls, func):
         """
@@ -599,6 +607,8 @@ class DataArrayCoarsen(Coarsen):
 
 
 class DatasetCoarsen(Coarsen):
+    __slots__ = ()
+
     @classmethod
     def _reduce_method(cls, func):
         """
