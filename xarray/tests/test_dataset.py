@@ -1721,9 +1721,8 @@ class TestDataset:
         # regression test for #279
         expected = Dataset({"x": ("time", np.random.randn(5))}, {"time": range(5)})
         time2 = DataArray(np.arange(5), dims="time2")
-        with pytest.warns(FutureWarning):
+        with pytest.raises(ValueError):
             actual = expected.reindex(time=time2)
-        assert_identical(actual, expected)
 
         # another regression test
         ds = Dataset(
@@ -1739,11 +1738,10 @@ class TestDataset:
     def test_reindex_warning(self):
         data = create_test_data()
 
-        with pytest.warns(FutureWarning) as ws:
+        with pytest.raises(ValueError):
             # DataArray with different dimension raises Future warning
             ind = xr.DataArray([0.0, 1.0], dims=["new_dim"], name="ind")
             data.reindex(dim2=ind)
-            assert any(["Indexer has dimensions " in str(w.message) for w in ws])
 
         # Should not warn
         ind = xr.DataArray([0.0, 1.0], dims=["dim2"], name="ind")

@@ -1,6 +1,5 @@
 import functools
 import operator
-import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Dict, Hashable, Mapping, Optional, Tuple, Union
@@ -387,14 +386,9 @@ def reindex_variables(
 
     for dim, indexer in indexers.items():
         if isinstance(indexer, DataArray) and indexer.dims != (dim,):
-            warnings.warn(
+            raise ValueError(
                 "Indexer has dimensions {:s} that are different "
-                "from that to be indexed along {:s}. "
-                "This will behave differently in the future.".format(
-                    str(indexer.dims), dim
-                ),
-                FutureWarning,
-                stacklevel=3,
+                "from that to be indexed along {:s}".format(str(indexer.dims), dim)
             )
 
         target = new_indexes[dim] = utils.safe_cast_to_index(indexers[dim])
@@ -592,14 +586,3 @@ def broadcast(*args, exclude=None):
         result.append(_broadcast_helper(arg, exclude, dims_map, common_coords))
 
     return tuple(result)
-
-
-def broadcast_arrays(*args):
-    import warnings
-
-    warnings.warn(
-        "xarray.broadcast_arrays is deprecated: use " "xarray.broadcast instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return broadcast(*args)

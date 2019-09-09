@@ -30,7 +30,10 @@ Breaking changes
   By `Maximilian Roos <https://github.com/max-sixty>`_ 
 - The ``inplace`` kwarg for public methods now raises an error, having been deprecated
   since v0.11.0.
-  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`~xarray.concat` now requires the ``dim`` argument. Its ``indexers``, ``mode``
+  and ``concat_over`` kwargs have now been removed.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - Most xarray objects now define ``__slots__``. This reduces overall RAM usage by ~22%
   (not counting the underlying numpy buffers); on CPython 3.7/x64, a trivial DataArray
   has gone down from 1.9kB to 1.5kB.
@@ -45,10 +48,17 @@ Breaking changes
   - Any user code that defines custom subclasses of xarray classes must now explicitly
     define ``__slots__`` itself. Subclasses that don't add any attributes must state so
     by defining ``__slots__ = ()`` right after the class header.
-    Omitting ``__slots__`` will now cause a ``FutureWarning`` to be logged, and a hard
-    crash in a later release.
+    Omitting ``__slots__`` will now cause a ``FutureWarning`` to be logged, and will raise an
+    error in a later release.
 
   (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+- :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous 
+  positional arguments were deprecated)
+- Reindexing with variables of a different dimension now raise an error (previously deprecated)
+- :py:func:`~xarray.broadcast_array` is removed (previously deprecated in favor of 
+  :py:func:`~xarray.broadcast`)
+- :py:meth:`~Variable.expand_dims` is removed (previously deprecated in favor of 
+  :py:meth:`~Variable.set_dims`)
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -156,6 +166,10 @@ Bug fixes
 - Fix error that arises when using open_mfdataset on a series of netcdf files
   having differing values for a variable attribute of type list. (:issue:`3034`)
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+- Prevent :py:meth:`~xarray.DataArray.argmax` and :py:meth:`~xarray.DataArray.argmin` from calling
+  dask compute (:issue:`3237`). By `Ulrich Herter <https://github.com/ulijh>`_.
+- Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
+  array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.12.3:
 
