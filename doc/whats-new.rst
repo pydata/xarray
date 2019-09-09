@@ -59,8 +59,6 @@ Breaking changes
   :py:func:`~xarray.broadcast`)
 - :py:meth:`~Variable.expand_dims` is removed (previously deprecated in favor of 
   :py:meth:`~Variable.set_dims`)
-- :py:func:`~xarray.concat` now requries the ``dim`` argument (using ``'concat_dim'`` as a default
-  was previouly deprecated)
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
