@@ -80,7 +80,7 @@ def _make_dict(x):
     return to_return
 
 
-def map_blocks(func, obj, *args, chunks=None, **kwargs):
+def map_blocks(func, obj, *args, **kwargs):
     """
     Apply a function to each chunk of a DataArray or Dataset. This function is experimental
     and its signature may change.
@@ -102,8 +102,6 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
         shape of the provided DataArray.
     args:
         Passed on to func.
-    chunks:
-        dict mapping index name to chunk size.
     kwargs:
         Passed on to func.
 
@@ -157,13 +155,6 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
     # If two different variables have different chunking along the same dim
     # .chunks will raise an error.
     input_chunks = dataset.chunks
-    # get output chunks
-    if chunks is None:
-        # assume chunking doesn't change
-        chunks = input_chunks
-    for dim in chunks:
-        if dim not in template.dims:
-            chunks.pop(dim)
 
     indexes = dict(dataset.indexes)
     for dim in template.indexes:
@@ -267,8 +258,8 @@ def map_blocks(func, obj, *args, chunks=None, **kwargs):
         dims = template[var].dims
         var_chunks = []
         for dim in dims:
-            if dim in chunks:
-                var_chunks.append(chunks[dim])
+            if dim in input_chunks:
+                var_chunks.append(input_chunks[dim])
             else:
                 if dim in indexes:
                     var_chunks.append((len(indexes[dim]),))
