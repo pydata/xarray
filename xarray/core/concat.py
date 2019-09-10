@@ -120,7 +120,7 @@ def concat(
             "compat=%r invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
             % compat
         )
-        
+
     if isinstance(first_obj, DataArray):
         f = _dataarray_concat
     elif isinstance(first_obj, Dataset):
