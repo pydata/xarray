@@ -126,9 +126,7 @@ def unique_variable(name, variables, compat="broadcast_equals", equals=None):
 
     if combine_method:
         for var in variables[1:]:
-            # TODO: add preservation of attrs into fillna
             out = getattr(out, combine_method)(var)
-            out.attrs = var.attrs
 
     return out
 
