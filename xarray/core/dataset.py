@@ -345,6 +345,8 @@ def as_dataset(obj: Any) -> "Dataset":
 
 
 class DataVariables(Mapping[Hashable, "DataArray"]):
+    __slots__ = ("_dataset",)
+
     def __init__(self, dataset: "Dataset"):
         self._dataset = dataset
 
@@ -384,6 +386,8 @@ class DataVariables(Mapping[Hashable, "DataArray"]):
 
 
 class _LocIndexer:
+    __slots__ = ("dataset",)
+
     def __init__(self, dataset: "Dataset"):
         self.dataset = dataset
 
@@ -406,6 +410,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
+
+    __slots__ = (
+        "_accessors",
+        "_attrs",
+        "_coord_names",
+        "_dims",
+        "_encoding",
+        "_file_obj",
+        "_indexes",
+        "_variables",
+    )
 
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
@@ -474,7 +489,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if compat is not None:
             warnings.warn(
                 "The `compat` argument to Dataset is deprecated and will be "
-                "removed in 0.13."
+                "removed in 0.14."
                 "Instead, use `merge` to control how variables are combined",
                 FutureWarning,
                 stacklevel=2,
@@ -485,6 +500,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self._variables = OrderedDict()  # type: OrderedDict[Any, Variable]
         self._coord_names = set()  # type: Set[Hashable]
         self._dims = {}  # type: Dict[Any, int]
+        self._accessors = None  # type: Optional[Dict[str, Any]]
         self._attrs = None  # type: Optional[OrderedDict]
         self._file_obj = None
         if data_vars is None:
@@ -500,7 +516,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs = OrderedDict(attrs)
 
         self._encoding = None  # type: Optional[Dict]
-        self._initialized = True
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
         """Set the initial value of Dataset variables and dimensions
@@ -839,7 +854,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._attrs = attrs
         obj._file_obj = file_obj
         obj._encoding = encoding
-        obj._initialized = True
+        obj._accessors = None
         return obj
 
     __default = object()
@@ -1992,6 +2007,90 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         result = self.isel(indexers=pos_indexers, drop=drop)
         return result._overwrite_indexes(new_indexes)
+
+    def head(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with the first `n` values of each array
+        for the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and integer values `n`.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.tail
+        Dataset.thin
+        DataArray.head
+        """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
+        indexers = {k: slice(val) for k, val in indexers.items()}
+        return self.isel(indexers)
+
+    def tail(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with the last `n` values of each array
+        for the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and integer values `n`.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.thin
+        DataArray.tail
+        """
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
+        indexers = {
+            k: slice(-val, None) if val != 0 else slice(val)
+            for k, val in indexers.items()
+        }
+        return self.isel(indexers)
+
+    def thin(
+        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with each array indexed along every `n`th
+        value for the specified dimension(s)
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and integer values `n`.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.tail
+        DataArray.thin
+        """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
+        if 0 in indexers.values():
+            raise ValueError("step cannot be zero")
+        indexers = {k: slice(None, None, val) for k, val in indexers.items()}
+        return self.isel(indexers)
 
     def broadcast_like(
         self, other: Union["Dataset", "DataArray"], exclude: Iterable[Hashable] = None

@@ -267,6 +267,8 @@ class Variable(
     they can use more complete metadata in context of coordinate labels.
     """
 
+    __slots__ = ("_dims", "_data", "_attrs", "_encoding")
+
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         """
         Parameters
@@ -1224,16 +1226,6 @@ class Variable(
     def T(self) -> "Variable":
         return self.transpose()
 
-    def expand_dims(self, *args):
-        import warnings
-
-        warnings.warn(
-            "Variable.expand_dims is deprecated: use " "Variable.set_dims instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.expand_dims(*args)
-
     def set_dims(self, dims, shape=None):
         """Return a new variable with given set of dimensions.
         This method might be used to attach new dimension(s) to variable.
@@ -1935,6 +1927,8 @@ class IndexVariable(Variable):
     They also have a name property, which is the name of their sole dimension
     unless another name is given.
     """
+
+    __slots__ = ()
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)

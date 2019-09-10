@@ -11,6 +11,8 @@ from .variable import Variable
 class Indexes(collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArrary indexes."""
 
+    __slots__ = ("_indexes",)
+
     def __init__(self, indexes):
         """Not for public consumption.
 

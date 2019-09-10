@@ -1002,6 +1002,19 @@ class TestDataArray:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    def test_head(self):
+        assert_equal(self.dv.isel(x=slice(5)), self.dv.head(x=5))
+        assert_equal(self.dv.isel(x=slice(0)), self.dv.head(x=0))
+
+    def test_tail(self):
+        assert_equal(self.dv.isel(x=slice(-5, None)), self.dv.tail(x=5))
+        assert_equal(self.dv.isel(x=slice(0)), self.dv.tail(x=0))
+
+    def test_thin(self):
+        assert_equal(self.dv.isel(x=slice(None, None, 5)), self.dv.thin(x=5))
+        with raises_regex(ValueError, "cannot be zero"):
+            self.dv.thin(time=0)
+
     def test_loc(self):
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
@@ -1395,13 +1408,11 @@ class TestDataArray:
         with raises_regex(ValueError, "different size for unlabeled"):
             foo.reindex_like(bar)
 
-    @pytest.mark.filterwarnings("ignore:Indexer has dimensions")
     def test_reindex_regressions(self):
-        # regression test for #279
-        expected = DataArray(np.random.randn(5), coords=[("time", range(5))])
+        da = DataArray(np.random.randn(5), coords=[("time", range(5))])
         time2 = DataArray(np.arange(5), dims="time2")
-        actual = expected.reindex(time=time2)
-        assert_identical(actual, expected)
+        with pytest.raises(ValueError):
+            da.reindex(time=time2)
 
         # regression test for #736, reindex can not change complex nums dtype
         x = np.array([1, 2, 3], dtype=np.complex)
@@ -3672,10 +3683,8 @@ class TestDataArray:
         expected = Dataset({"foo": ("x", [1, 2])})
         assert_identical(expected, actual)
 
-        expected = Dataset({"bar": ("x", [1, 2])})
-        with pytest.warns(FutureWarning):
+        with pytest.raises(TypeError):
             actual = named.to_dataset("bar")
-        assert_identical(expected, actual)
 
     def test_to_dataset_split(self):
         array = DataArray([1, 2, 3], coords=[("x", list("abc"))], attrs={"a": 1})
@@ -4616,3 +4625,25 @@ def test_rolling_exp(da, dim, window_type, window):
     )
 
     assert_allclose(expected.variable, result.variable)
+
+
+def test_no_dict():
+    d = DataArray()
+    with pytest.raises(AttributeError):
+        d.__dict__
+
+
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
+def test_subclass_slots():
+    """Test that DataArray subclasses must explicitly define ``__slots__``.
+
+    .. note::
+       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
+       defined outside of the xarray package.
+    """
+    with pytest.raises(AttributeError) as e:
+
+        class MyArray(DataArray):
+            pass
+
+    assert str(e.value) == "MyArray must explicitly define __slots__"

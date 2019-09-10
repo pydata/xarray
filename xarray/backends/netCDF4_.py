@@ -30,6 +30,8 @@ NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
 
 class BaseNetCDF4Array(BackendArray):
+    __slots__ = ("datastore", "dtype", "shape", "variable_name")
+
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -52,8 +54,13 @@ class BaseNetCDF4Array(BackendArray):
             if self.datastore.autoclose:
                 self.datastore.close(needs_lock=False)
 
+    def get_array(self, needs_lock=True):
+        raise NotImplementedError("Virtual Method")
+
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
+    __slots__ = ()
+
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
         variable = ds.variables[self.variable_name]
@@ -293,6 +300,17 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
+
+    __slots__ = (
+        "autoclose",
+        "format",
+        "is_remote",
+        "lock",
+        "_filename",
+        "_group",
+        "_manager",
+        "_mode",
+    )
 
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False

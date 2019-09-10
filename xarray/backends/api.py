@@ -694,6 +694,8 @@ def open_dataarray(
 
 
 class _MultiFileCloser:
+    __slots__ = ("file_objs",)
+
     def __init__(self, file_objs):
         self.file_objs = file_objs
 

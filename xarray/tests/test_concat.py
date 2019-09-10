@@ -200,11 +200,6 @@ class TestConcatDataset:
         with raises_regex(ValueError, "coordinate in some datasets but not others"):
             concat([Dataset({"x": 0}), Dataset({}, {"x": 1})], dim="z")
 
-        with raises_regex(ValueError, "no longer a valid"):
-            concat([data, data], "new_dim", mode="different")
-        with raises_regex(ValueError, "no longer a valid"):
-            concat([data, data], "new_dim", concat_over="different")
-
     def test_concat_join_kwarg(self):
         ds1 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]})
         ds2 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]})
