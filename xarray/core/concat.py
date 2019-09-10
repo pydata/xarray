@@ -286,23 +286,21 @@ def _dataset_concat(
         *datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value
     )
 
-    result_dim_coords, dims_sizes, result_coord_names, data_names = _parse_datasets(
-        datasets
-    )
-    dim_names = set(result_dim_coords)
-    unlabeled_dims = dim_names - result_coord_names
+    dim_coords, dims_sizes, coord_names, data_names = _parse_datasets(datasets)
+    dim_names = set(dim_coords)
+    unlabeled_dims = dim_names - coord_names
 
-    both_data_and_coords = result_coord_names & data_names
+    both_data_and_coords = coord_names & data_names
     if both_data_and_coords:
         raise ValueError(
             "%r is a coordinate in some datasets but not others." % both_data_and_coords
         )
     # we don't want the concat dimension in the result dataset yet
-    result_dim_coords.pop(dim, None)
+    dim_coords.pop(dim, None)
     dims_sizes.pop(dim, None)
 
     # case where concat dimension is a coordinate but not a dimension
-    if dim in result_coord_names and dim not in dim_names:
+    if dim in coord_names and dim not in dim_names:
         datasets = [ds.expand_dims(dim) for ds in datasets]
 
     # determine which variables to concatentate
@@ -311,7 +309,7 @@ def _dataset_concat(
     )
 
     # determine which variables to merge, and then merge them according to compat
-    variables_to_merge = (result_coord_names | data_names) - concat_over - dim_names
+    variables_to_merge = (coord_names | data_names) - concat_over - dim_names
 
     result_vars = {}
     if variables_to_merge:
@@ -334,7 +332,7 @@ def _dataset_concat(
             )
     else:
         result_vars = OrderedDict()
-    result_vars.update(result_dim_coords)
+    result_vars.update(dim_coords)
 
     # assign attrs and encoding from first dataset
     result_attrs = datasets[0].attrs
@@ -372,7 +370,7 @@ def _dataset_concat(
             result_vars[k] = combined
 
     result = Dataset(result_vars, attrs=result_attrs)
-    result = result.set_coords(result_coord_names)
+    result = result.set_coords(coord_names)
     result.encoding = result_encoding
 
     result = result.drop(unlabeled_dims, errors="ignore")
