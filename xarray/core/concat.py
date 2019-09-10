@@ -299,8 +299,8 @@ def _dataset_concat(
     dim_coords.pop(dim, None)
     dims_sizes.pop(dim, None)
 
-    # case where concat dimension is a coordinate but not a dimension
-    if dim in coord_names and dim not in dim_names:
+    # case where concat dimension is a coordinate or data_var but not a dimension
+    if (dim in coord_names or dim in data_names) and dim not in dim_names:
         datasets = [ds.expand_dims(dim) for ds in datasets]
 
     # determine which variables to concatentate
