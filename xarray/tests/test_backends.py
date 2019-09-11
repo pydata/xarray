@@ -2163,6 +2163,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
 
 @requires_h5netcdf
 @requires_netCDF4
+@pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 class TestH5NetCDFData(NetCDF4Base):
     engine = "h5netcdf"
 
@@ -2171,10 +2172,11 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore(tmp_file, "w")
 
+    # TODO: Reduce num_warns by 1 when h5netcdf is updated to not issue the make_scale warning
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
         "invalid_netcdf, warns, num_warns",
-        [(None, FutureWarning, 1), (False, FutureWarning, 1), (True, None, 0)],
+        [(None, FutureWarning, 2), (False, FutureWarning, 2), (True, None, 1)],
     )
     def test_complex(self, invalid_netcdf, warns, num_warns):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
@@ -2451,6 +2453,7 @@ def skip_if_not_engine(engine):
 
 
 @requires_dask
+@pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
