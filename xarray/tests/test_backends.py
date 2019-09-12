@@ -2172,7 +2172,6 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore(tmp_file, "w")
 
-    # TODO: Reduce num_warns by 1 when h5netcdf is updated to not issue the make_scale warning
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
         "invalid_netcdf, warntype, num_warns",
