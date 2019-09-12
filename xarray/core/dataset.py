@@ -3905,7 +3905,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         max_gap : int, default None
             Maximum size of gap that will be filled. Must be greater than 0 or None
             for no limit.
-        kwargs : dict(), optional
+        kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
         Returns
