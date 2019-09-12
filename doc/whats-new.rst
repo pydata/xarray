@@ -26,8 +26,8 @@ Breaking changes
 
 - The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
   since v0.10.0. These are redundant with the ``isel`` / ``sel`` methods.
-  See :ref:`vectorized_indexing` for the details 
-  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+  See :ref:`vectorized_indexing` for the details
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - The ``inplace`` kwarg for public methods now raises an error, having been deprecated
   since v0.11.0.
   By `Maximilian Roos <https://github.com/max-sixty>`_
@@ -52,12 +52,12 @@ Breaking changes
     error in a later release.
 
   (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
-- :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous 
+- :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous
   positional arguments were deprecated)
 - Reindexing with variables of a different dimension now raise an error (previously deprecated)
-- :py:func:`~xarray.broadcast_array` is removed (previously deprecated in favor of 
+- :py:func:`~xarray.broadcast_array` is removed (previously deprecated in favor of
   :py:func:`~xarray.broadcast`)
-- :py:meth:`~Variable.expand_dims` is removed (previously deprecated in favor of 
+- :py:meth:`~Variable.expand_dims` is removed (previously deprecated in favor of
   :py:meth:`~Variable.set_dims`)
 
 New functions/methods
@@ -90,7 +90,7 @@ New functions/methods
   and `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
-  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz
   <http://github.com/DavidMertz>`_.
 
 - Dataset plotting API for visualizing dependencies between two `DataArray`s!
@@ -131,14 +131,14 @@ Enhancements
   :py:meth:`DataArray.set_index`, as well are more specific error messages
   when the user passes invalid arguments (:issue:`3176`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
-  
+
 - :py:func:`filter_by_attrs` now filters the coordinates as well as the variables. By `Spencer Jones <https://github.com/cspencerjones>`_.
 
 Bug fixes
 ~~~~~~~~~
 
-- Improve "missing dimensions" error message for :py:func:`~xarray.apply_ufunc` 
-  (:issue:`2078`). 
+- Improve "missing dimensions" error message for :py:func:`~xarray.apply_ufunc`
+  (:issue:`2078`).
   By `Rick Russotto <https://github.com/rdrussotto>`_.
 - :py:meth:`~xarray.DataArray.assign_coords` now supports dictionary arguments
   (:issue:`3231`).
@@ -170,6 +170,8 @@ Bug fixes
   dask compute (:issue:`3237`). By `Ulrich Herter <https://github.com/ulijh>`_.
 - Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
   array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fixed bug in :meth:`DataArray.quantile` failing to keep attributes when
+  `keep_attrs` was True (:issue:`3304`). By David Huard <https://github.com/huard>`_.
 
 .. _whats-new.0.12.3:
 
