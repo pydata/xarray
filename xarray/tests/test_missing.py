@@ -446,6 +446,7 @@ def test_bfill_dataset(ds):
     ds.ffill(dim="time")
 
 
+@requires_bottleneck
 def test_interpolate_na_maxgap(ds):
     arr = [
         [
