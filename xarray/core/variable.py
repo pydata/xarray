@@ -1616,9 +1616,9 @@ class Variable(
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
         keep_attrs : bool, optional
-            If True (default), the variable's attributes (`attrs`) will
-            be copied from the original object to the new one.  If False,
-            the new object will be returned without attributes.
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -1664,7 +1664,7 @@ class Variable(
         )
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=True)
+            keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
 
         return Variable(new_dims, qs, attrs)
