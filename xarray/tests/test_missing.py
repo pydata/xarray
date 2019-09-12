@@ -461,26 +461,47 @@ def test_interpolate_na_maxgap(ds):
             6,
             7,
             np.nan,
-            9,
+            np.nan,
+            np.nan,
+            11,
             np.nan,
             np.nan,
         ]
     ]
 
     da = xr.DataArray(
-        arr * 2, dims=["x", "y"], coords={"x": [0, 1], "y": np.arange(14)}
+        arr * 2, dims=["x", "y"], coords={"x": [0, 1], "y": np.arange(len(arr[0]))}
     )
 
-    expected = xr.DataArray(
-        [[np.nan, np.nan, np.nan, 1, 2, 3, 4, 5, 6, 7, 8, 9, np.nan, np.nan]] * 2,
-        dims=["x", "y"],
-        coords={"x": [0, 1], "y": np.arange(14)},
+    expected = da.copy(
+        data=[
+            [
+                np.nan,
+                np.nan,
+                np.nan,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                np.nan,
+                np.nan,
+                np.nan,
+                11,
+                np.nan,
+                np.nan,
+            ]
+        ]
+        * 2
     )
-
-    expected_lengths = da.copy(data=[[3, 3, 3, 0, 0, 0, 2, 2, 0, 0, 1, 0, 2, 2]] * 2)
-
-    actual_lengths = _get_nan_block_lengths(da, "y")
-    xr.testing.assert_equal(expected_lengths, actual_lengths)
 
     actual = da.interpolate_na("y", maxgap=2)
     xr.testing.assert_identical(expected, actual)
+
+    expected_lengths = da.copy(
+        data=[[3, 3, 3, 0, 0, 0, 2, 2, 0, 0, 3, 3, 3, 0, 2, 2]] * 2
+    )
+    actual_lengths = _get_nan_block_lengths(da, "y")
+    xr.testing.assert_equal(expected_lengths, actual_lengths)
