@@ -94,7 +94,8 @@ for filling missing values via 1D interpolation.
 
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
-of which values to use as the index in the interpolation.
+of which values to use as the index in the interpolation. xarray also provides the ``maxgap`` keyword argument to limit the interpolation to data gaps of length ``maxgap`` or smaller. See
+:py:meth:`~xarray.DataArray.interpolate_na` for more.
 
 Aggregation
 ===========
