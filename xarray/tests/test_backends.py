@@ -2176,15 +2176,22 @@ class TestH5NetCDFData(NetCDF4Base):
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
         "invalid_netcdf, warns, num_warns",
-        [(None, FutureWarning, 2), (False, FutureWarning, 2), (True, None, 1)],
+        [(None, FutureWarning, 1), (False, FutureWarning, 1), (True, None, 0)],
     )
-    def test_complex(self, invalid_netcdf, warns, num_warns):
+    def test_complex(self, invalid_netcdf, warntype, num_warns):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         save_kwargs = {"invalid_netcdf": invalid_netcdf}
-        with pytest.warns(warns) as record:
+        with pytest.warns(warntype) as record:
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
-        assert len(record) == num_warns
+
+        recorded_num_warns = 0
+        if warntype:
+            for warning in record:
+                if issubclass(warning.category, warntype):
+                    recorded_num_warns += 1
+
+        assert recorded_num_warns == num_warns
 
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
