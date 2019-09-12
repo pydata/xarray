@@ -2010,7 +2010,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def head(
         self,
-        indexers: Union[Mapping[Hashable, Any], int] = None,
+        indexers: Union[Mapping[Hashable, int], int] = None,
         **indexers_kwargs: Any
     ) -> "Dataset":
         """Returns a new dataset with the first `n` values of each array
@@ -2041,12 +2041,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
+        for v in indexers.values():
+            if not isinstance(v, int):
+                raise TypeError("indexer value must be an integer")
+            elif v < 0:
+                raise ValueError("indexer value must be positive")
         indexers = {k: slice(val) for k, val in indexers.items()}
         return self.isel(indexers)
 
     def tail(
         self,
-        indexers: Union[Mapping[Hashable, Any], int] = None,
+        indexers: Union[Mapping[Hashable, int], int] = None,
         **indexers_kwargs: Any
     ) -> "Dataset":
         """Returns a new dataset with the last `n` values of each array
@@ -2077,6 +2082,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
+        for v in indexers.values():
+            if not isinstance(v, int):
+                raise TypeError("indexer value must be an integer")
+            elif v < 0:
+                raise ValueError("indexer value must be positive")
         indexers = {
             k: slice(-val, None) if val != 0 else slice(val)
             for k, val in indexers.items()
@@ -2085,7 +2095,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def thin(
         self,
-        indexers: Union[Mapping[Hashable, Any], int] = None,
+        indexers: Union[Mapping[Hashable, int], int] = None,
         **indexers_kwargs: Any
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along every `n`th
@@ -2108,16 +2118,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.tail
         DataArray.thin
         """
-        if not indexers_kwargs:
-            if indexers is None:
-                indexers = 5
-            if not isinstance(indexers, int) and not is_dict_like(indexers):
-                raise TypeError("indexers must be a dict or a single integer")
+        if (
+            not indexers_kwargs
+            and not isinstance(indexers, int)
+            and not is_dict_like(indexers)
+        ):
+            raise TypeError("indexers must be a dict or a single integer")
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
-        if 0 in indexers.values():
-            raise ValueError("step cannot be zero")
+        for v in indexers.values():
+            if not isinstance(v, int):
+                raise TypeError("indexer value must be an integer")
+            elif v < 0:
+                raise ValueError("indexer value must be positive")
+            elif v == 0:
+                raise ValueError("step cannot be zero")
         indexers = {k: slice(None, None, val) for k, val in indexers.items()}
         return self.isel(indexers)
 

@@ -1036,7 +1036,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def head(
         self,
-        indexers: Union[Mapping[Hashable, Any], int] = None,
+        indexers: Union[Mapping[Hashable, int], int] = None,
         **indexers_kwargs: Any
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the first `n`
@@ -1053,7 +1053,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def tail(
         self,
-        indexers: Union[Mapping[Hashable, Any], int] = None,
+        indexers: Union[Mapping[Hashable, int], int] = None,
         **indexers_kwargs: Any
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the last `n`
@@ -1070,7 +1070,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def thin(
         self,
-        indexers: Union[Mapping[Hashable, Any], int] = None,
+        indexers: Union[Mapping[Hashable, int], int] = None,
         **indexers_kwargs: Any
     ) -> "DataArray":
         """Return a new DataArray whose data is given by each `n` value

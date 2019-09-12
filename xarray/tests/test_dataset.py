@@ -1431,7 +1431,11 @@ class TestDataset:
         assert_equal(expected, actual)
 
         with raises_regex(TypeError, "must be a dict or a single int"):
-            data.head(3.1)
+            data.head([3])
+        with raises_regex(TypeError, "must be an int"):
+            data.head(dim2=3.1)
+        with raises_regex(ValueError, "must be positive"):
+            data.head(time=-3)
 
     def test_tail(self):
         data = create_test_data()
@@ -1453,7 +1457,11 @@ class TestDataset:
         assert_equal(expected, actual)
 
         with raises_regex(TypeError, "must be a dict or a single int"):
-            data.tail(3.1)
+            data.tail([3])
+        with raises_regex(TypeError, "must be an int"):
+            data.tail(dim2=3.1)
+        with raises_regex(ValueError, "must be positive"):
+            data.tail(time=-3)
 
     def test_thin(self):
         data = create_test_data()
@@ -1466,14 +1474,14 @@ class TestDataset:
         actual = data.thin(6)
         assert_equal(expected, actual)
 
-        expected = data.isel({dim: slice(None, None, 5) for dim in data.dims})
-        actual = data.thin()
-        assert_equal(expected, actual)
-
+        with raises_regex(TypeError, "must be a dict or a single int"):
+            data.thin([3])
+        with raises_regex(TypeError, "must be an int"):
+            data.thin(dim2=3.1)
         with raises_regex(ValueError, "cannot be zero"):
             data.thin(time=0)
-        with raises_regex(TypeError, "must be a dict or a single int"):
-            data.thin(3.1)
+        with raises_regex(ValueError, "must be positive"):
+            data.thin(time=-3)
 
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_sel_fancy(self):
