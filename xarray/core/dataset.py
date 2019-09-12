@@ -4768,7 +4768,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             # the former is often more efficient
                             reduce_dims = None
                         variables[name] = var.quantile(
-                            q, dim=reduce_dims, interpolation=interpolation
+                            q, dim=reduce_dims, interpolation=interpolation, keep_attrs=keep_attrs
                         )
 
             else:
