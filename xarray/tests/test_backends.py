@@ -2175,7 +2175,7 @@ class TestH5NetCDFData(NetCDF4Base):
     # TODO: Reduce num_warns by 1 when h5netcdf is updated to not issue the make_scale warning
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
-        "invalid_netcdf, warns, num_warns",
+        "invalid_netcdf, warntype, num_warns",
         [(None, FutureWarning, 1), (False, FutureWarning, 1), (True, None, 0)],
     )
     def test_complex(self, invalid_netcdf, warntype, num_warns):
@@ -2188,7 +2188,9 @@ class TestH5NetCDFData(NetCDF4Base):
         recorded_num_warns = 0
         if warntype:
             for warning in record:
-                if issubclass(warning.category, warntype):
+                if issubclass(warning.category, warntype) and (
+                    "complex dtypes" in str(warning.message)
+                ):
                     recorded_num_warns += 1
 
         assert recorded_num_warns == num_warns
