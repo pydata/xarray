@@ -168,32 +168,82 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
-            method("all"),
-            method("any"),
-            method("argmax"),
-            method("argmin"),
-            function("all"),
-            function("any"),
-            function("argmax"),
-            function("argmin"),
+            pytest.param(
+                function("all"),
+                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
+            ),
+            pytest.param(
+                function("any"),
+                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
+            ),
+            pytest.param(
+                function("argmax"),
+                marks=pytest.mark.xfail(
+                    reason="comparison of quantity with ndarrays in nanops not implemented"
+                ),
+            ),
+            pytest.param(
+                function("argmin"),
+                marks=pytest.mark.xfail(
+                    reason="comparison of quantity with ndarrays in nanops not implemented"
+                ),
+            ),
             function("max"),
             function("mean"),
             function("median"),
             function("min"),
-            function("prod"),
-            function("sum"),
+            pytest.param(
+                function("prod"),
+                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
+            ),
+            pytest.param(
+                function("sum"),
+                marks=pytest.mark.xfail(
+                    reason="comparison of quantity with ndarrays in nanops not implemented"
+                ),
+            ),
             function("std"),
             function("var"),
+            pytest.param(
+                method("all"),
+                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
+            ),
+            pytest.param(
+                method("any"),
+                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
+            ),
+            pytest.param(
+                method("argmax"),
+                marks=pytest.mark.xfail(
+                    reason="comparison of quantities with ndarrays in nanops not implemented"
+                ),
+            ),
+            pytest.param(
+                method("argmin"),
+                marks=pytest.mark.xfail(
+                    reason="comparison of quantities with ndarrays in nanops not implemented"
+                ),
+            ),
             method("max"),
             method("mean"),
             method("median"),
             method("min"),
-            method("prod"),
-            method("sum"),
+            pytest.param(
+                method("prod"),
+                marks=pytest.mark.xfail(
+                    reason="comparison of quantity with ndarrays in nanops not implemented"
+                ),
+            ),
+            pytest.param(
+                method("sum"),
+                marks=pytest.mark.xfail(
+                    reason="comparison of quantity with ndarrays in nanops not implemented"
+                ),
+            ),
             method("std"),
             method("var"),
         ),
-        ids=str,
+        ids=repr,
     )
     def test_aggregation(self, func, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
