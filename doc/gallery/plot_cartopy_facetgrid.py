@@ -41,6 +41,6 @@ for ax in p.axes.flat:
     ax.set_extent([-160, -30, 5, 75])
     # Without this aspect attributes the maps will look chaotic and the
     # "extent" attribute above will be ignored
-    ax.set_aspect("equal", "box-forced")
+    ax.set_aspect("equal")
 
 plt.show()

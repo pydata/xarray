@@ -46,6 +46,7 @@ from . import (
     requires_dask,
     requires_numbagg,
     requires_scipy,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -1410,6 +1411,38 @@ class TestDataset:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    def test_head(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(5), dim2=slice(6))
+        actual = data.head(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel(time=slice(0))
+        actual = data.head(time=0)
+        assert_equal(expected, actual)
+
+    def test_tail(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(-5, None), dim2=slice(-6, None))
+        actual = data.tail(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel(dim1=slice(0))
+        actual = data.tail(dim1=0)
+        assert_equal(expected, actual)
+
+    def test_thin(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(None, None, 5), dim2=slice(None, None, 6))
+        actual = data.thin(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        with raises_regex(ValueError, "cannot be zero"):
+            data.thin(time=0)
+
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_sel_fancy(self):
         data = create_test_data()
@@ -1656,9 +1689,8 @@ class TestDataset:
         # regression test for #279
         expected = Dataset({"x": ("time", np.random.randn(5))}, {"time": range(5)})
         time2 = DataArray(np.arange(5), dims="time2")
-        with pytest.warns(FutureWarning):
+        with pytest.raises(ValueError):
             actual = expected.reindex(time=time2)
-        assert_identical(actual, expected)
 
         # another regression test
         ds = Dataset(
@@ -1674,11 +1706,10 @@ class TestDataset:
     def test_reindex_warning(self):
         data = create_test_data()
 
-        with pytest.warns(FutureWarning) as ws:
+        with pytest.raises(ValueError):
             # DataArray with different dimension raises Future warning
             ind = xr.DataArray([0.0, 1.0], dims=["new_dim"], name="ind")
             data.reindex(dim2=ind)
-            assert any(["Indexer has dimensions " in str(w.message) for w in ws])
 
         # Should not warn
         ind = xr.DataArray([0.0, 1.0], dims=["dim2"], name="ind")
@@ -2325,18 +2356,11 @@ class TestDataset:
         renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
-    @pytest.mark.filterwarnings("ignore:The inplace argument")
     def test_rename_inplace(self):
         times = pd.date_range("2000-01-01", periods=3)
         data = Dataset({"z": ("x", [2, 3, 4]), "t": ("t", times)})
-        copied = data.copy()
-        renamed = data.rename({"x": "y"})
-        data.rename({"x": "y"}, inplace=True)
-        assert_identical(data, renamed)
-        assert not data.equals(copied)
-        assert data.dims == {"y": 3, "t": 3}
-        # check virtual variables
-        assert_array_equal(data["t.dayofyear"], [1, 2, 3])
+        with pytest.raises(TypeError):
+            data.rename({"x": "y"}, inplace=True)
 
     def test_rename_dims(self):
         original = Dataset({"x": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42})
@@ -2599,7 +2623,7 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             ds.set_index(x=mindex.names, inplace=True)
             assert_identical(ds, expected)
 
@@ -2624,9 +2648,8 @@ class TestDataset:
         obj = ds.reset_index("x")
         assert_identical(obj, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             ds.reset_index("x", inplace=True)
-            assert_identical(ds, expected)
 
     def test_reorder_levels(self):
         ds = create_test_multiindex()
@@ -2637,9 +2660,8 @@ class TestDataset:
         reindexed = ds.reorder_levels(x=["level_2", "level_1"])
         assert_identical(reindexed, expected)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             ds.reorder_levels(x=["level_2", "level_1"], inplace=True)
-            assert_identical(ds, expected)
 
         ds = Dataset({}, coords={"x": [1, 2]})
         with raises_regex(ValueError, "has no MultiIndex"):
@@ -2779,11 +2801,8 @@ class TestDataset:
         assert actual_result is actual
         assert_identical(expected, actual)
 
-        with pytest.warns(FutureWarning, match="The inplace argument"):
+        with pytest.raises(TypeError):
             actual = data.update(data, inplace=False)
-            expected = data
-            assert actual is not expected
-            assert_identical(expected, actual)
 
         other = Dataset(attrs={"new": "attr"})
         actual = data.copy()
@@ -3664,6 +3683,28 @@ class TestDataset:
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=["x", "y"])
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
+
+    @requires_sparse
+    def test_from_dataframe_sparse(self):
+        import sparse
+
+        df_base = pd.DataFrame(
+            {"x": range(10), "y": list("abcdefghij"), "z": np.arange(0, 100, 10)}
+        )
+
+        ds_sparse = Dataset.from_dataframe(df_base.set_index("x"), sparse=True)
+        ds_dense = Dataset.from_dataframe(df_base.set_index("x"), sparse=False)
+        assert isinstance(ds_sparse["y"].data, sparse.COO)
+        assert isinstance(ds_sparse["z"].data, sparse.COO)
+        ds_sparse["y"].data = ds_sparse["y"].data.todense()
+        ds_sparse["z"].data = ds_sparse["z"].data.todense()
+        assert_identical(ds_dense, ds_sparse)
+
+        ds_sparse = Dataset.from_dataframe(df_base.set_index(["x", "y"]), sparse=True)
+        ds_dense = Dataset.from_dataframe(df_base.set_index(["x", "y"]), sparse=False)
+        assert isinstance(ds_sparse["z"].data, sparse.COO)
+        ds_sparse["z"].data = ds_sparse["z"].data.todense()
+        assert_identical(ds_dense, ds_sparse)
 
     def test_to_and_from_empty_dataframe(self):
         # GH697
@@ -5695,3 +5736,25 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual2 = da.integrate("time", datetime_unit="h")
     assert_allclose(actual, actual2 / 24.0)
+
+
+def test_no_dict():
+    d = Dataset()
+    with pytest.raises(AttributeError):
+        d.__dict__
+
+
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
+def test_subclass_slots():
+    """Test that Dataset subclasses must explicitly define ``__slots__``.
+
+    .. note::
+       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
+       defined outside of the xarray package.
+    """
+    with pytest.raises(AttributeError) as e:
+
+        class MyDS(Dataset):
+            pass
+
+    assert str(e.value) == "MyDS must explicitly define __slots__"

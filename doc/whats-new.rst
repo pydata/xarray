@@ -24,10 +24,41 @@ This release increases the minimum required Python version from 3.5.0 to 3.5.3
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-  The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
+- The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
   since v0.10.0. These are redundant with the ``isel`` / ``sel`` methods.
   See :ref:`vectorized_indexing` for the details 
   By `Maximilian Roos <https://github.com/max-sixty>`_ 
+- The ``inplace`` kwarg for public methods now raises an error, having been deprecated
+  since v0.11.0.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`~xarray.concat` now requires the ``dim`` argument. Its ``indexers``, ``mode``
+  and ``concat_over`` kwargs have now been removed.
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- Most xarray objects now define ``__slots__``. This reduces overall RAM usage by ~22%
+  (not counting the underlying numpy buffers); on CPython 3.7/x64, a trivial DataArray
+  has gone down from 1.9kB to 1.5kB.
+
+  Caveats:
+
+  - Pickle streams produced by older versions of xarray can't be loaded using this
+    release, and vice versa.
+  - Any user code that was accessing the ``__dict__`` attribute of
+    xarray objects will break. The best practice to attach custom metadata to xarray
+    objects is to use the ``attrs`` dictionary.
+  - Any user code that defines custom subclasses of xarray classes must now explicitly
+    define ``__slots__`` itself. Subclasses that don't add any attributes must state so
+    by defining ``__slots__ = ()`` right after the class header.
+    Omitting ``__slots__`` will now cause a ``FutureWarning`` to be logged, and will raise an
+    error in a later release.
+
+  (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+- :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous 
+  positional arguments were deprecated)
+- Reindexing with variables of a different dimension now raise an error (previously deprecated)
+- :py:func:`~xarray.broadcast_array` is removed (previously deprecated in favor of 
+  :py:func:`~xarray.broadcast`)
+- :py:meth:`~Variable.expand_dims` is removed (previously deprecated in favor of 
+  :py:meth:`~Variable.set_dims`)
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -36,9 +67,15 @@ New functions/methods
   `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
   numpy-like library (important: read notes about NUMPY_EXPERIMENTAL_ARRAY_FUNCTION in
   the above link). Added explicit test coverage for
-  `sparse <https://github.com/pydata/sparse>`_. (:issue:`3117`, :issue:`3202`)
-  By `Nezar Abdennur <https://github.com/nvictus>`_
+  `sparse <https://github.com/pydata/sparse>`_. (:issue:`3117`, :issue:`3202`).
+  This requires `sparse>=0.8.0`. By `Nezar Abdennur <https://github.com/nvictus>`_
   and `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- :py:meth:`~Dataset.from_dataframe` and :py:meth:`~DataArray.from_series` now
+  support ``sparse=True`` for converting pandas objects into xarray objects
+  wrapping sparse arrays. This is particularly useful with sparsely populated
+  hierarchical indexes. (:issue:`3206`)
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - The xarray package is now discoverable by mypy (although typing hints coverage is not
   complete yet). mypy type checking is now enforced by CI. Libraries that depend on
@@ -60,6 +97,9 @@ New functions/methods
   Currently only :py:meth:`Dataset.plot.scatter` is implemented.
   By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
 
+- Added `head`, `tail` and `thin` methods to `Dataset` and `DataArray`. (:issue:`319`)
+  By `Gerardo Rivera <https://github.com/dangomelon>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -72,6 +112,11 @@ Enhancements
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
   By `David Brochart <https://github.com/davidbrochart>`_.
+
+- Added the ability to initialize an empty or full DataArray
+  with a single value. (:issue:`277`)
+  By `Gerardo Rivera <https://github.com/dangomelon>`_.
+
 - :py:func:`~xarray.Dataset.to_netcdf()` now supports the ``invalid_netcdf`` kwarg when used
   with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
   By `Ulrich Herter <https://github.com/ulijh>`_.
@@ -121,6 +166,10 @@ Bug fixes
 - Fix error that arises when using open_mfdataset on a series of netcdf files
   having differing values for a variable attribute of type list. (:issue:`3034`)
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
+- Prevent :py:meth:`~xarray.DataArray.argmax` and :py:meth:`~xarray.DataArray.argmin` from calling
+  dask compute (:issue:`3237`). By `Ulrich Herter <https://github.com/ulijh>`_.
+- Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
+  array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.12.3:
 
@@ -130,6 +179,10 @@ Documentation
 - Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ as a quick reference for tasks before creating a new PR
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
+
+- Fixed documentation to clean up unwanted files created in ``ipython`` examples
+  (:issue:`3227`).
+  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
 
 v0.12.3 (10 July 2019)
 ----------------------

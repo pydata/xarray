@@ -1,4 +1,3 @@
-import warnings
 from collections import OrderedDict
 
 import pandas as pd
@@ -11,14 +10,11 @@ from .variable import concat as concat_vars
 
 def concat(
     objs,
-    dim=None,
+    dim,
     data_vars="all",
     coords="different",
     compat="equals",
     positions=None,
-    indexers=None,
-    mode=None,
-    concat_over=None,
     fill_value=dtypes.NA,
     join="outer",
 ):
@@ -110,38 +106,6 @@ def concat(
         first_obj, objs = utils.peek_at(objs)
     except StopIteration:
         raise ValueError("must supply at least one object to concatenate")
-
-    if dim is None:
-        warnings.warn(
-            "the `dim` argument to `concat` will be required "
-            "in a future version of xarray; for now, setting it to "
-            "the old default of 'concat_dim'",
-            FutureWarning,
-            stacklevel=2,
-        )
-        dim = "concat_dims"
-
-    if indexers is not None:  # pragma: no cover
-        warnings.warn(
-            "indexers has been renamed to positions; the alias "
-            "will be removed in a future version of xarray",
-            FutureWarning,
-            stacklevel=2,
-        )
-        positions = indexers
-
-    if mode is not None:
-        raise ValueError(
-            "`mode` is no longer a valid argument to "
-            "xarray.concat; it has been split into the "
-            "`data_vars` and `coords` arguments"
-        )
-    if concat_over is not None:
-        raise ValueError(
-            "`concat_over` is no longer a valid argument to "
-            "xarray.concat; it has been split into the "
-            "`data_vars` and `coords` arguments"
-        )
 
     if isinstance(first_obj, DataArray):
         f = _dataarray_concat

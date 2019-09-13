@@ -19,6 +19,14 @@ class _CachedAccessor:
         if obj is None:
             # we're accessing the attribute of the class, i.e., Dataset.geo
             return self._accessor
+
+        try:
+            return obj._accessors[self._name]
+        except TypeError:
+            obj._accessors = {}
+        except KeyError:
+            pass
+
         try:
             accessor_obj = self._accessor(obj)
         except AttributeError:
@@ -26,11 +34,8 @@ class _CachedAccessor:
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
             raise RuntimeError("error initializing %r accessor." % self._name)
-        # Replace the property with the accessor object. Inspired by:
-        # http://www.pydanny.com/cached-property.html
-        # We need to use object.__setattr__ because we overwrite __setattr__ on
-        # AttrAccessMixin.
-        object.__setattr__(obj, self._name, accessor_obj)
+
+        obj._accessors[self._name] = accessor_obj
         return accessor_obj
 
 
