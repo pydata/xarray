@@ -62,9 +62,8 @@ The power of the dataset over a plain dictionary is that, in addition to
 pulling out arrays by name, it is possible to select or combine data along a
 dimension across all arrays simultaneously. Like a
 :py:class:`~pandas.DataFrame`, datasets facilitate array operations with
-heterogeneous data -- the difference is that the arrays in a dataset can not
-only have different data types, but can also have different numbers of
-dimensions.
+heterogeneous data -- the difference is that the arrays in a dataset can have 
+not only different data types, but also different numbers of dimensions.
 
 This data model is borrowed from the netCDF_ file format, which also provides
 xarray with a natural and portable serialization format. NetCDF is very popular
