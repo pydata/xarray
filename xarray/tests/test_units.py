@@ -20,11 +20,11 @@ def use_pint_version_or_xfail(*, version, reason):
     return pytest.mark.xfail(LooseVersion(pint.__version__) < version, reason=reason)
 
 
-require_pint_array_function = use_pint_version_or_xfail(
-    version="0.10", reason="pint does not implement __array_function__ yet"
-)
-
 unit_registry = pint.UnitRegistry()
+require_pint_array_function = pytest.mark.xfail(
+    not hasattr(unit_registry.Quantity, "__array_function__"),
+    reason="pint does not implement __array_function__ yet",
+)
 
 
 def assert_equal_with_units(a, b):
