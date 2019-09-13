@@ -101,10 +101,23 @@ class method:
 class TestDataArray:
     @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
-    def test_init(self):
-        array = np.arange(10) * unit_registry.m
-        data_array = xr.DataArray(data=array)
+    @pytest.mark.parametrize(
+        "coords",
+        (
+            pytest.param(True, id="with coords"),
+            pytest.param(False, id="without coords"),
+        ),
+    )
+    def test_init(self, coords):
+        array = np.linspace(1, 2, 10) * unit_registry.m
+        parameters = {"data": array}
+        if coords:
+            x = np.arange(len(array)) * unit_registry.s
+            y = x.to(unit_registry.ms)
+            parameters["coords"] = {"x": x, "y": ("x", y)}
+            parameters["dims"] = ["x"]
 
+        data_array = xr.DataArray(**parameters)
         assert_equal_with_units(array, data_array)
 
     @require_pint_array_function
