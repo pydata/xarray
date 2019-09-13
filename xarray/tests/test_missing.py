@@ -447,7 +447,7 @@ def test_bfill_dataset(ds):
 
 
 @requires_bottleneck
-def test_interpolate_na_maxgap(ds):
+def test_interpolate_na_max_gap(ds):
     arr = [
         [
             np.nan,
@@ -497,7 +497,7 @@ def test_interpolate_na_maxgap(ds):
         * 2
     )
 
-    actual = da.interpolate_na("y", maxgap=2)
+    actual = da.interpolate_na("y", max_gap=2)
     xr.testing.assert_identical(expected, actual)
 
     expected_lengths = da.copy(

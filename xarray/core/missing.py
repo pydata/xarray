@@ -256,7 +256,7 @@ def interp_na(
     use_coordinate=True,
     method="linear",
     limit=None,
-    maxgap=None,
+    max_gap=None,
     **kwargs
 ):
     """Interpolate values according to different methods.
@@ -290,9 +290,9 @@ def interp_na(
     if limit is not None:
         arr = arr.where(valids)
 
-    if maxgap is not None:
+    if max_gap is not None:
         nan_block_lengths = _get_nan_block_lengths(self, dim)
-        arr = arr.where(nan_block_lengths <= maxgap)
+        arr = arr.where(nan_block_lengths <= max_gap)
 
     return arr
 

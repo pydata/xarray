@@ -3870,7 +3870,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, Hashable] = True,
-        maxgap: int = None,
+        max_gap: int = None,
         **kwargs: Any
     ) -> "Dataset":
         """Interpolate values according to different methods.
@@ -3902,7 +3902,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit. This filling is done regardless of the size of
             the gap in the data.
-        maxgap : int, default None
+        max_gap : int, default None
             Maximum size of gap that will be filled. Must be greater than 0 or None
             for no limit.
         kwargs : dict(), optional
@@ -3926,7 +3926,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             method=method,
             limit=limit,
             use_coordinate=use_coordinate,
-            **kwargs
+            max_gap=max_gap,
+            **kwargs,
         )
         return new
 
