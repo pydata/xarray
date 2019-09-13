@@ -28,7 +28,10 @@ require_pint_array_function = pytest.mark.xfail(
 
 
 def assert_equal_with_units(a, b):
-    from pint.quantity import BaseQuantity
+    try:
+        from pint.quantity import BaseQuantity
+    except ImportError:
+        BaseQuantity = unit_registry.Quantity
 
     a_ = a if not isinstance(a, (xr.Dataset, xr.DataArray, xr.Variable)) else a.data
     b_ = b if not isinstance(b, (xr.Dataset, xr.DataArray, xr.Variable)) else b.data
