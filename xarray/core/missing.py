@@ -291,6 +291,14 @@ def interp_na(
         arr = arr.where(valids)
 
     if max_gap is not None:
+        if use_coordinate:
+            delta_index = np.diff(index)
+            if not np.allclose(delta_index, delta_index[0] * np.ones_like(delta_index)):
+                coord_name = dim if use_coordinate is True else use_coordinate
+                raise ValueError(
+                    "Cannot specify max_gap with irregularly spaced coordinate %s"
+                    % coord_name
+                )
         nan_block_lengths = _get_nan_block_lengths(self, dim, index)
         arr = arr.where(nan_block_lengths <= max_gap)
 
