@@ -13,14 +13,14 @@ from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
 
-def _get_nan_block_lengths(obj, dim):
+def _get_nan_block_lengths(obj, dim, index):
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
     """
 
     # algorithm from https://stackoverflow.com/questions/53060003/how-to-get-the-maximum-time-of-gap-in-xarray-dataset/53075828#53075828
-    arange = ones_like(obj) * np.arange(len(obj.indexes[dim])) + 1
+    arange = ones_like(obj) * index + (index[1] - index[0])
     cumulative_nans = arange.where(obj.notnull()).ffill(dim=dim).fillna(0)
 
     num_nans = arange - cumulative_nans
@@ -291,7 +291,7 @@ def interp_na(
         arr = arr.where(valids)
 
     if max_gap is not None:
-        nan_block_lengths = _get_nan_block_lengths(self, dim)
+        nan_block_lengths = _get_nan_block_lengths(self, dim, index)
         arr = arr.where(nan_block_lengths <= max_gap)
 
     return arr

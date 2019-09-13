@@ -9,6 +9,7 @@ from xarray.core.missing import (
     NumpyInterpolator,
     ScipyInterpolator,
     SplineInterpolator,
+    get_clean_interp_index,
     _get_nan_block_lengths,
 )
 from xarray.core.pycompat import dask_array_type
@@ -447,7 +448,24 @@ def test_bfill_dataset(ds):
 
 
 @requires_bottleneck
-def test_interpolate_na_max_gap(ds):
+@pytest.mark.parametrize(
+    "y, lengths",
+    [
+        [np.arange(9), [[3, 3, 3, 0, 2, 2, 0, 2, 2]]],
+        [[0, 2, 5, 6, 7, 8, 10, 12, 14], [[6, 6, 6, 0, 2, 2, 0, 3, 3]]],
+    ],
+)
+def test_interpolate_na_nan_block_lengths(y, lengths):
+    arr = [[np.nan, np.nan, np.nan, 1, np.nan, np.nan, 4, np.nan, np.nan]]
+    da = xr.DataArray(arr * 2, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_nan_block_lengths(da, dim="y", index=index)
+    expected = da.copy(data=lengths * 2)
+    assert_equal(actual, expected)
+
+
+@requires_bottleneck
+def test_interpolate_na_max_gap():
     arr = [
         [
             np.nan,
@@ -498,10 +516,4 @@ def test_interpolate_na_max_gap(ds):
     )
 
     actual = da.interpolate_na("y", max_gap=2)
-    xr.testing.assert_identical(expected, actual)
-
-    expected_lengths = da.copy(
-        data=[[3, 3, 3, 0, 0, 0, 2, 2, 0, 0, 3, 3, 3, 0, 2, 2]] * 2
-    )
-    actual_lengths = _get_nan_block_lengths(da, "y")
-    xr.testing.assert_equal(expected_lengths, actual_lengths)
+    assert_equal(expected, actual)
