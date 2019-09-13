@@ -98,6 +98,18 @@ class method:
         return "method {self.name}".format(self=self)
 
 
+class function:
+    def __init__(self, name):
+        self.name = name
+        self.func = getattr(np, name)
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
+
+    def __repr__(self):
+        return "function {self.name}".format(self=self)
+
+
 class TestDataArray:
     @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
@@ -156,22 +168,22 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
-            np.all,
-            np.any,
-            np.argmax,
-            np.argmin,
-            np.max,
-            np.mean,
-            np.median,
-            np.min,
-            np.prod,
-            np.sum,
-            np.std,
-            np.var,
             method("all"),
             method("any"),
             method("argmax"),
             method("argmin"),
+            function("all"),
+            function("any"),
+            function("argmax"),
+            function("argmin"),
+            function("max"),
+            function("mean"),
+            function("median"),
+            function("min"),
+            function("prod"),
+            function("sum"),
+            function("std"),
+            function("var"),
             method("max"),
             method("mean"),
             method("median"),
