@@ -315,7 +315,7 @@ class DataArray(AbstractArray, DataWithCoords):
         if encoding is not None:
             warnings.warn(
                 "The `encoding` argument to `DataArray` is deprecated, and . "
-                "will be removed in 0.13. "
+                "will be removed in 0.14. "
                 "Instead, specify the encoding when writing to disk or "
                 "set the `encoding` attribute directly.",
                 FutureWarning,
