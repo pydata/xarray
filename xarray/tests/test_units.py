@@ -125,10 +125,28 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
     )
-    def test_repr(self, func):
+    @pytest.mark.parametrize(
+        "coords",
+        (
+            pytest.param(
+                True,
+                id="coords",
+                marks=pytest.mark.xfail(
+                    reason="formatting currently does not delegate for coordinates"
+                ),
+            ),
+            pytest.param(False, id="no coords"),
+        ),
+    )
+    def test_repr(self, func, coords):
         array = np.linspace(1, 2, 10) * unit_registry.m
         x = np.arange(len(array)) * unit_registry.s
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+
+        if coords:
+            data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+            print(data_array.x._variable._data)
+        else:
+            data_array = xr.DataArray(data=array)
 
         # FIXME: this just checks that the repr does not raise
         # warnings or errors, but does not check the result
