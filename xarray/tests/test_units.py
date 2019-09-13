@@ -341,6 +341,9 @@ class TestDataArray:
 
         assert_equal_with_units(array[indices], data_array.isel(x=indices))
 
+    @pytest.mark.xfail(
+        reason="xarray does not support duck arrays in dimension coordinates"
+    )
     @require_pint_array_function
     @pytest.mark.parametrize(
         "values",
@@ -374,6 +377,9 @@ class TestDataArray:
             result_data_array = data_array.sel(x=values_with_units)
             assert_equal_with_units(result_array, result_data_array)
 
+    @pytest.mark.xfail(
+        reason="xarray does not support duck arrays in dimension coordinates"
+    )
     @require_pint_array_function
     @pytest.mark.parametrize(
         "values",
