@@ -170,6 +170,8 @@ def _dsplot(plotfunc):
     ds : Dataset
     x, y : str
         Variable names for x, y axis.
+    u, v : string
+        Variable names for quiver plots
     hue: str, optional
         Variable by which to color scattered points
     hue_style: str, optional
@@ -250,6 +252,8 @@ def _dsplot(plotfunc):
         ds,
         x=None,
         y=None,
+        u=None,
+        v=None,
         hue=None,
         hue_style=None,
         col=None,
@@ -321,9 +325,11 @@ def _dsplot(plotfunc):
             ds=ds,
             x=x,
             y=y,
+            ax=ax,
+            u=u,
+            v=v,
             hue=hue,
             hue_style=hue_style,
-            ax=ax,
             cmap_params=cmap_params_subset,
             **kwargs,
         )
@@ -351,6 +357,8 @@ def _dsplot(plotfunc):
         _PlotMethods_obj,
         x=None,
         y=None,
+        u=None,
+        v=None,
         hue=None,
         hue_style=None,
         col=None,
@@ -398,7 +406,34 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, ax, **kwargs):
+def quiver(ds, x, y, ax, u, v, **kwargs):
+    if x is None or y is None or u is None or v is None:
+        raise ValueError("Must specify x, y, u, v for quiver plots.")
+
+    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
+
+    kwargs.pop("cmap_params")
+    kwargs.pop("hue")
+    kwargs.pop("hue_style")
+    hdl = ax.quiver(x.values, y.values, u.values, v.values, **kwargs)
+
+    # if plotfunc.__name__ == "quiver":
+    #         trans = ax._set_transform()
+    #         span, _y = trans.inverted().transform_point(
+    #             (ax.bbox.width, ax.bbox.height))
+    #         # matplotlib autoscaling algorithm
+    #         scale = kwargs.pop("scale")
+    #         if scale is None:
+    #             npts = ds.dims[x] * ds.dims[y]
+    #             # crude auto-scaling
+    #             # scale is typical arrow length as a multiple of the arrow width
+    #             scale = 1.8 * ds.mean() * np.max(10, np.sqrt(npts)) / span
+
+    return hdl
+
+
+@_dsplot
+def scatter(ds, x, y, ax, u, v, **kwargs):
     """
     Scatter Dataset data variables against each other.
     """
