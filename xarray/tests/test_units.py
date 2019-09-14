@@ -20,6 +20,7 @@ def use_pint_version_or_xfail(*, version, reason):
     return pytest.mark.xfail(LooseVersion(pint.__version__) < version, reason=reason)
 
 
+DimensionalityError = pint.errors.DimensionalityError
 unit_registry = pint.UnitRegistry()
 require_pint_array_function = pytest.mark.xfail(
     not hasattr(unit_registry.Quantity, "__array_function__"),
@@ -296,6 +297,46 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         assert_equal_with_units(func(array), func(data_array))
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "comparison",
+        (
+            pytest.param(operator.lt, id="less_than"),
+            pytest.param(operator.ge, id="greater_equal"),
+            pytest.param(operator.eq, id="equal"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "value,error",
+        (
+            pytest.param(8, ValueError, id="without_unit"),
+            pytest.param(
+                8 * unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(8 * unit_registry.s, DimensionalityError, id="incorrect_unit"),
+            pytest.param(8 * unit_registry.m, None, id="correct_unit"),
+        ),
+    )
+    def test_comparisons(self, comparison, value, error, dtype):
+        array = (
+            np.array([10.1, 5.2, 6.5, 8.0, 21.3, 7.1, 1.3]).astype(dtype)
+            * unit_registry.m
+        )
+        data_array = xr.DataArray(data=array)
+
+        # incompatible units are all not equal
+        if error is not None and comparison is not operator.eq:
+            with pytest.raises(error):
+                comparison(array, value)
+
+            with pytest.raises(error):
+                comparison(data_array, value)
+        else:
+            result_data_array = comparison(data_array, value)
+            result_array = comparison(array, value)
+
+            assert_equal_with_units(result_array, result_data_array)
 
     @require_pint_array_function
     @pytest.mark.parametrize(
