@@ -1005,13 +1005,48 @@ class TestDataArray:
     def test_head(self):
         assert_equal(self.dv.isel(x=slice(5)), self.dv.head(x=5))
         assert_equal(self.dv.isel(x=slice(0)), self.dv.head(x=0))
+        assert_equal(
+            self.dv.isel({dim: slice(6) for dim in self.dv.dims}), self.dv.head(6)
+        )
+        assert_equal(
+            self.dv.isel({dim: slice(5) for dim in self.dv.dims}), self.dv.head()
+        )
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            self.dv.head([3])
+        with raises_regex(TypeError, "expected integer type"):
+            self.dv.head(x=3.1)
+        with raises_regex(ValueError, "expected positive int"):
+            self.dv.head(-3)
 
     def test_tail(self):
         assert_equal(self.dv.isel(x=slice(-5, None)), self.dv.tail(x=5))
         assert_equal(self.dv.isel(x=slice(0)), self.dv.tail(x=0))
+        assert_equal(
+            self.dv.isel({dim: slice(-6, None) for dim in self.dv.dims}),
+            self.dv.tail(6),
+        )
+        assert_equal(
+            self.dv.isel({dim: slice(-5, None) for dim in self.dv.dims}), self.dv.tail()
+        )
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            self.dv.tail([3])
+        with raises_regex(TypeError, "expected integer type"):
+            self.dv.tail(x=3.1)
+        with raises_regex(ValueError, "expected positive int"):
+            self.dv.tail(-3)
 
     def test_thin(self):
         assert_equal(self.dv.isel(x=slice(None, None, 5)), self.dv.thin(x=5))
+        assert_equal(
+            self.dv.isel({dim: slice(None, None, 6) for dim in self.dv.dims}),
+            self.dv.thin(6),
+        )
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            self.dv.thin([3])
+        with raises_regex(TypeError, "expected integer type"):
+            self.dv.thin(x=3.1)
+        with raises_regex(ValueError, "expected positive int"):
+            self.dv.thin(-3)
         with raises_regex(ValueError, "cannot be zero"):
             self.dv.thin(time=0)
 

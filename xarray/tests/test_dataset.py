@@ -1422,6 +1422,21 @@ class TestDataset:
         actual = data.head(time=0)
         assert_equal(expected, actual)
 
+        expected = data.isel({dim: slice(6) for dim in data.dims})
+        actual = data.head(6)
+        assert_equal(expected, actual)
+
+        expected = data.isel({dim: slice(5) for dim in data.dims})
+        actual = data.head()
+        assert_equal(expected, actual)
+
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            data.head([3])
+        with raises_regex(TypeError, "expected integer type"):
+            data.head(dim2=3.1)
+        with raises_regex(ValueError, "expected positive int"):
+            data.head(time=-3)
+
     def test_tail(self):
         data = create_test_data()
 
@@ -1433,6 +1448,21 @@ class TestDataset:
         actual = data.tail(dim1=0)
         assert_equal(expected, actual)
 
+        expected = data.isel({dim: slice(-6, None) for dim in data.dims})
+        actual = data.tail(6)
+        assert_equal(expected, actual)
+
+        expected = data.isel({dim: slice(-5, None) for dim in data.dims})
+        actual = data.tail()
+        assert_equal(expected, actual)
+
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            data.tail([3])
+        with raises_regex(TypeError, "expected integer type"):
+            data.tail(dim2=3.1)
+        with raises_regex(ValueError, "expected positive int"):
+            data.tail(time=-3)
+
     def test_thin(self):
         data = create_test_data()
 
@@ -1440,8 +1470,18 @@ class TestDataset:
         actual = data.thin(time=5, dim2=6)
         assert_equal(expected, actual)
 
+        expected = data.isel({dim: slice(None, None, 6) for dim in data.dims})
+        actual = data.thin(6)
+        assert_equal(expected, actual)
+
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            data.thin([3])
+        with raises_regex(TypeError, "expected integer type"):
+            data.thin(dim2=3.1)
         with raises_regex(ValueError, "cannot be zero"):
             data.thin(time=0)
+        with raises_regex(ValueError, "expected positive int"):
+            data.thin(time=-3)
 
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_sel_fancy(self):
