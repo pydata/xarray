@@ -1035,10 +1035,12 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def head(
-        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the first `n`
-        values along the specified dimension(s).
+        values along the specified dimension(s). Default `n` = 5
 
         See Also
         --------
@@ -1046,16 +1048,16 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.tail
         DataArray.thin
         """
-
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
-        ds = self._to_temp_dataset().head(indexers=indexers)
+        ds = self._to_temp_dataset().head(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
     def tail(
-        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the last `n`
-        values along the specified dimension(s).
+        values along the specified dimension(s). Default `n` = 5
 
         See Also
         --------
@@ -1063,15 +1065,16 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.head
         DataArray.thin
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
-        ds = self._to_temp_dataset().tail(indexers=indexers)
+        ds = self._to_temp_dataset().tail(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
     def thin(
-        self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
     ) -> "DataArray":
         """Return a new DataArray whose data is given by each `n` value
-        along the specified dimension(s).
+        along the specified dimension(s). Default `n` = 5
 
         See Also
         --------
@@ -1079,8 +1082,7 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.head
         DataArray.tail
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
-        ds = self._to_temp_dataset().thin(indexers=indexers)
+        ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
     def broadcast_like(
