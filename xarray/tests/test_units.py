@@ -77,7 +77,7 @@ class method:
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self, obj):
+    def __call__(self, obj, *args, **kwargs):
         from collections.abc import Callable
         from functools import partial
 
@@ -92,7 +92,9 @@ class method:
                     "{obj} has no method named '{self.name}'".format(obj=obj, self=self)
                 )
 
-        return func(*self.args, **self.kwargs)
+        all_args = list(self.args) + list(args)
+        all_kwargs = {**self.kwargs, **kwargs}
+        return func(*all_args, **all_kwargs)
 
     def __repr__(self):
         return "method {self.name}".format(self=self)
