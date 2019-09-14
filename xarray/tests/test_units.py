@@ -369,6 +369,95 @@ class TestDataArray:
         assert_equal_with_units(result_array, np.maximum(data_array, 0 * unit))
         assert_equal_with_units(result_array, np.maximum(0 * unit, data_array))
 
+    @pytest.mark.parametrize(
+        "func", (method("isnull"), method("notnull"), method("count")), ids=repr
+    )
+    def test_missing_value_detection(self, func, dtype):
+        array = (
+            np.array(
+                [
+                    [1.4, 2.3, np.nan, 7.2],
+                    [np.nan, 9.7, np.nan, np.nan],
+                    [2.1, np.nan, np.nan, 4.6],
+                    [9.9, np.nan, 7.2, 9.1],
+                ]
+            )
+            * unit_registry.degK
+        )
+        x = np.arange(array.shape[0]) * unit_registry.m
+        y = np.arange(array.shape[1]) * unit_registry.m
+
+        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
+
+        results_with_units = func(data_array)
+        results_without_units = func(strip_units(data_array))
+
+        assert_equal_with_units(results_with_units, results_without_units)
+
+    @pytest.mark.xfail(reason="ffill and bfill lose units in data")
+    @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
+    def test_missing_value_filling(self, func, dtype):
+        array = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.degK
+        )
+        x = np.arange(len(array))
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+
+        result_with_units = func(data_array, dim="x")
+        result_without_units = func(strip_units(data_array), dim="x")
+        result = xr.DataArray(
+            data=result_without_units.data * unit_registry.degK,
+            coords={"x": x},
+            dims=["x"],
+        )
+
+        assert_equal_with_units(result, result_with_units)
+
+    @pytest.mark.xfail(reason="fillna drops the unit")
+    @pytest.mark.parametrize(
+        "fill_value",
+        (
+            pytest.param(
+                -1,
+                id="python scalar",
+                marks=pytest.mark.xfail(
+                    reason="python scalar cannot be converted using astype()"
+                ),
+            ),
+            pytest.param(np.array(-1), id="numpy scalar"),
+            pytest.param(np.array([-1]), id="numpy array"),
+        ),
+    )
+    def test_fillna(self, fill_value, dtype):
+        unit = unit_registry.m
+        array = np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype) * unit
+        data_array = xr.DataArray(data=array)
+
+        result_with_units = data_array.fillna(value=fill_value * unit)
+        result_without_units = strip_units(data_array).fillna(value=fill_value)
+        result = xr.DataArray(data=result_without_units.values * unit)
+
+        assert_equal_with_units(result, result_with_units)
+
+    def test_dropna(self, dtype):
+        array = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.m
+        )
+        x = np.arange(len(array))
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+
+        result_with_units = data_array.dropna(dim="x")
+        result_without_units = strip_units(data_array).dropna(dim="x")
+        result = xr.DataArray(
+            data=result_without_units.values * unit_registry.m,
+            coords=result_without_units.coords,
+            dims=result_without_units.dims,
+        )
+
+        assert_equal_with_units(result, result_with_units)
+
     @require_pint_array_function
     @pytest.mark.parametrize(
         "indices",
