@@ -2037,17 +2037,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if indexers is None:
                 indexers = 5
             if not isinstance(indexers, int) and not is_dict_like(indexers):
-                raise TypeError("indexers must be a dict or a single integer")
+                raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
-        for v in indexers.values():
+        for k, v in indexers.items():
             if not isinstance(v, int):
-                raise TypeError("indexer value must be an integer")
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
             elif v < 0:
-                raise ValueError("indexer value must be positive")
-        indexers = {k: slice(val) for k, val in indexers.items()}
-        return self.isel(indexers)
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
+        indexers_slices = {k: slice(val) for k, val in indexers.items()}
+        return self.isel(indexers_slices)
 
     def tail(
         self,
@@ -2078,20 +2084,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if indexers is None:
                 indexers = 5
             if not isinstance(indexers, int) and not is_dict_like(indexers):
-                raise TypeError("indexers must be a dict or a single integer")
+                raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
-        for v in indexers.values():
+        for k, v in indexers.items():
             if not isinstance(v, int):
-                raise TypeError("indexer value must be an integer")
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
             elif v < 0:
-                raise ValueError("indexer value must be positive")
-        indexers = {
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
+        indexers_slices = {
             k: slice(-val, None) if val != 0 else slice(val)
             for k, val in indexers.items()
         }
-        return self.isel(indexers)
+        return self.isel(indexers_slices)
 
     def thin(
         self,
@@ -2123,19 +2135,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             and not isinstance(indexers, int)
             and not is_dict_like(indexers)
         ):
-            raise TypeError("indexers must be a dict or a single integer")
+            raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
-        for v in indexers.values():
+        for k, v in indexers.items():
             if not isinstance(v, int):
-                raise TypeError("indexer value must be an integer")
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
             elif v < 0:
-                raise ValueError("indexer value must be positive")
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
             elif v == 0:
                 raise ValueError("step cannot be zero")
-        indexers = {k: slice(None, None, val) for k, val in indexers.items()}
-        return self.isel(indexers)
+        indexers_slices = {k: slice(None, None, val) for k, val in indexers.items()}
+        return self.isel(indexers_slices)
 
     def broadcast_like(
         self, other: Union["Dataset", "DataArray"], exclude: Iterable[Hashable] = None
