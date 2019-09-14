@@ -63,7 +63,7 @@ def strip_units(data_array):
     array = magnitude(data_array)
     coords = {name: magnitude(values) for name, values in data_array.coords.items()}
 
-    return xr.DataArray(data=array, coords=coords, dims=tuple(coords.keys()))
+    return xr.DataArray(data=array, coords=coords, dims=data_array.dims)
 
 
 @pytest.fixture(params=[float, int])
