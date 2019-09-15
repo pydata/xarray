@@ -2333,17 +2333,17 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
-    # skip due to bug in older versions of numpy.nanpercentile
     def test_quantile(self):
         for q in [0.25, [0.50], [0.25, 0.75]]:
             for axis, dim in zip(
                 [None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]
             ):
-                actual = self.dv.quantile(q, dim=dim)
+                actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True)
                 expected = np.nanpercentile(
                     self.dv.values, np.array(q) * 100, axis=axis
                 )
                 np.testing.assert_allclose(actual.values, expected)
+                assert actual.attrs == self.attrs
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
