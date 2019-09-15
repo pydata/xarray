@@ -866,7 +866,6 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    # TODO: what should these *_like functions even do for unit arrays?
     @require_pint_array_function
     @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
     def test_replication(self, func, dtype):
@@ -875,10 +874,13 @@ class TestDataArray:
 
         replicated = func(data_array)
         numpy_func = getattr(np, func.__name__)
-        expected = xr.DataArray(data=numpy_func(array) * unit_registry.s, dims="x")
+        expected = numpy_func(array)
 
         assert_equal_with_units(expected, replicated)
 
+    @pytest.mark.xfail(
+        reason="np.full_like on Variable strips the unit and pint does not allow mixed args"
+    )
     @require_pint_array_function
     @pytest.mark.parametrize(
         "unit,error",
@@ -902,6 +904,6 @@ class TestDataArray:
                 xr.full_like(data_array, fill_value=fill_value)
         else:
             replicated = xr.full_like(data_array, fill_value=fill_value)
-            expected = xr.DataArray(data=np.ones_like(array) * fill_value, dims="x")
+            expected = np.full_like(array, fill_value=fill_value)
 
             assert_equal_with_units(expected, replicated)
