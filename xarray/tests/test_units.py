@@ -712,10 +712,11 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="without unit"),
+            pytest.param(1, None, id="no_unit"),
             pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="with incorrect unit"),
-            pytest.param(unit_registry.m, None, id="with correct unit"),
+            pytest.param(unit_registry.s, None, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     def test_interp(self, unit, error):
@@ -747,10 +748,11 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="without unit"),
+            pytest.param(1, None, id="no_unit"),
             pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="with incorrect unit"),
-            pytest.param(unit_registry.m, None, id="with correct unit"),
+            pytest.param(unit_registry.s, None, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     def test_interp_like(self, unit, error):
@@ -790,10 +792,11 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="without unit"),
+            pytest.param(1, None, id="no_unit"),
             pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="with incorrect unit"),
-            pytest.param(unit_registry.m, None, id="with correct unit"),
+            pytest.param(unit_registry.s, None, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     def test_reindex(self, unit, error):
@@ -829,10 +832,11 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="without unit"),
+            pytest.param(1, None, id="no_unit"),
             pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="with incorrect unit"),
-            pytest.param(unit_registry.m, None, id="with correct unit"),
+            pytest.param(unit_registry.s, None, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     def test_reindex_like(self, unit, error):
