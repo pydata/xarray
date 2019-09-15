@@ -197,7 +197,12 @@ class TestDataArray:
             ),
             function("max"),
             function("mean"),
-            function("median"),
+            pytest.param(
+                function("median"),
+                marks=pytest.mark.xfail(
+                    reason="np.median on DataArray strips the units"
+                ),
+            ),
             function("min"),
             pytest.param(
                 function("prod"),
