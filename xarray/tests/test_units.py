@@ -363,6 +363,7 @@ class TestDataArray:
         else:
             assert_equal_with_units(np.sin(array), np.sin(data_array))
 
+    @pytest.mark.xfail(reason="pint's implementation of `np.maximum` strips units")
     @require_pint_array_function
     def test_bivariate_ufunc(self, dtype):
         unit = unit_registry.m
