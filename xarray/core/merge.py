@@ -114,7 +114,7 @@ def unique_variable(name, variables, compat="broadcast_equals", equals=None):
     if equals is None:
         out = out.compute()
         for var in variables[1:]:
-            equals = getattr(out, compat)(var.compute())
+            equals = getattr(out, compat)(var)
             if not equals:
                 break
 
