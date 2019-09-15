@@ -49,6 +49,13 @@ def assert_equal_with_units(a, b):
         assert (hasattr(a_, "units") and hasattr(b_, "units")) and a_.units == b_.units
 
 
+def array_strip_units(array):
+    try:
+        return array.magnitude
+    except AttributeError:
+        return array
+
+
 def strip_units(data_array):
     def magnitude(da):
         if isinstance(da, xr.Variable):
@@ -56,10 +63,7 @@ def strip_units(data_array):
         else:
             data = da
 
-        try:
-            return data.magnitude
-        except AttributeError:
-            return data
+        return array_strip_units(data)
 
     array = magnitude(data_array)
     coords = {name: magnitude(values) for name, values in data_array.coords.items()}
@@ -454,6 +458,123 @@ class TestDataArray:
 
         result_with_units = data_array.dropna(dim="x")
         result_without_units = strip_units(data_array).dropna(dim="x")
+        result = xr.DataArray(
+            data=result_without_units.values * unit_registry.m,
+            coords=result_without_units.coords,
+            dims=result_without_units.dims,
+        )
+
+        assert_equal_with_units(result, result_with_units)
+
+    @require_pint_array_function
+    @pytest.mark.xfail(reason="pint does not implement `numpy.isin`")
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="same_unit"),
+        ),
+    )
+    def test_isin(self, unit, dtype):
+        array = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.m
+        )
+        data_array = xr.DataArray(data=array, dims="x")
+
+        raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
+        values = raw_values * unit
+        result_without_units = strip_units(data_array).isin(raw_values)
+        if unit != unit_registry.m:
+            result_without_units[:] = False
+        result_with_units = data_array.isin(values)
+
+        assert_equal_with_units(result_without_units, result_with_units)
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            pytest.param(
+                "masking",
+                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
+            ),
+            pytest.param(
+                "replacing_scalar",
+                marks=pytest.mark.xfail(reason="scalar not convertible using astype"),
+            ),
+            pytest.param(
+                "replacing_array",
+                marks=pytest.mark.xfail(
+                    reason="replacing using an array drops the units"
+                ),
+            ),
+            pytest.param(
+                "dropping",
+                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
+            ),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="same_unit"),
+        ),
+    )
+    def test_where(self, variant, unit, error, dtype):
+        def attach_unit(array, unit):
+            return xr.DataArray(data=array.data * unit)
+
+        def _strip_units(mapping):
+            return {key: array_strip_units(value) for key, value in mapping.items()}
+
+        original_unit = unit_registry.m
+        array = np.linspace(0, 1, 10).astype(dtype) * original_unit
+        data_array = xr.DataArray(data=array)
+        array_without_units = strip_units(data_array)
+
+        condition = data_array < 0.5 * original_unit
+        other = np.linspace(-2, -1, 10).astype(dtype) * unit
+        variant_kwargs = {
+            "masking": {"cond": condition},
+            "replacing_scalar": {"cond": condition, "other": -1 * unit},
+            "replacing_array": {"cond": condition, "other": other},
+            "dropping": {"cond": condition, "drop": True},
+        }
+        kwargs = variant_kwargs.get(variant)
+
+        if variant not in ("masking", "dropping") and error is not None:
+            with pytest.raises(error):
+                data_array.where(**kwargs)
+        else:
+            result_with_units = data_array.where(**kwargs)
+            result = attach_unit(
+                array_without_units.where(**_strip_units(kwargs)), original_unit
+            )
+
+            assert_equal_with_units(result, result_with_units)
+
+    @pytest.mark.xfail(reason="interpolate strips units")
+    @require_pint_array_function
+    def test_interpolate_na(self, dtype):
+        array = (
+            np.array([-1.03, 0.1, 1.4, np.nan, 2.3, np.nan, np.nan, 9.1])
+            * unit_registry.m
+        )
+        x = np.arange(len(array))
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x").astype(dtype)
+
+        result_with_units = data_array.interpolate_na(dim="x")
+        result_without_units = strip_units(data_array).interpolate_na(dim="x")
         result = xr.DataArray(
             data=result_without_units.values * unit_registry.m,
             coords=result_without_units.coords,
