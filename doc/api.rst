@@ -282,9 +282,9 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
-   Dataset.head
-   Dataset.tail
-   Dataset.thin
+   DataArray.head
+   DataArray.tail
+   DataArray.thin
    DataArray.squeeze
    DataArray.interp
    DataArray.interp_like
