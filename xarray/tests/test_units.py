@@ -583,6 +583,47 @@ class TestDataArray:
 
         assert_equal_with_units(result, result_with_units)
 
+    @pytest.mark.xfail(reason="uses DataArray.where, which currently fails")
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_combine_first(self, unit, error, dtype):
+        array = np.zeros(shape=(2, 2), dtype=dtype) * unit_registry.m
+        other_array = np.ones_like(array) * unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": ["a", "b"], "y": [-1, 0]}, dims=["x", "y"]
+        )
+        other = xr.DataArray(
+            data=other_array, coords={"x": ["b", "c"], "y": [0, 1]}, dims=["x", "y"]
+        )
+
+        if error is not None:
+            with pytest.raises(error):
+                data_array.combine_first(other)
+        else:
+            result = data_array.combine_first(other)
+            expected_wo_units = strip_units(data_array).combine_first(
+                strip_units(other)
+            )
+            expected = xr.DataArray(
+                data=expected_wo_units.data,
+                coords=expected_wo_units.coords,
+                dims=["x", "y"],
+            )
+
+            assert_equal_with_units(expected, result)
+
     @require_pint_array_function
     @pytest.mark.parametrize(
         "indices",
