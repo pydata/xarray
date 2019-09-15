@@ -706,9 +706,6 @@ class TestDataArray:
             )
 
     @require_pint_array_function
-    @pytest.mark.xfail(
-        reason="interp() mistakes quantities as objects instead of numeric type arrays"
-    )
     @pytest.mark.parametrize(
         "unit,error",
         (
