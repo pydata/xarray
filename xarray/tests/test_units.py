@@ -369,6 +369,7 @@ class TestDataArray:
         assert_equal_with_units(result_array, np.maximum(data_array, 0 * unit))
         assert_equal_with_units(result_array, np.maximum(0 * unit, data_array))
 
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
     )
@@ -394,6 +395,7 @@ class TestDataArray:
 
         assert_equal_with_units(results_with_units, results_without_units)
 
+    @require_pint_array_function
     @pytest.mark.xfail(reason="ffill and bfill lose units in data")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
     def test_missing_value_filling(self, func, dtype):
@@ -414,6 +416,7 @@ class TestDataArray:
 
         assert_equal_with_units(result, result_with_units)
 
+    @require_pint_array_function
     @pytest.mark.xfail(reason="fillna drops the unit")
     @pytest.mark.parametrize(
         "fill_value",
@@ -440,6 +443,7 @@ class TestDataArray:
 
         assert_equal_with_units(result, result_with_units)
 
+    @require_pint_array_function
     def test_dropna(self, dtype):
         array = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
