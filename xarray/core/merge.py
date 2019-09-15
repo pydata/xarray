@@ -84,7 +84,7 @@ def unique_variable(name, variables, compat="broadcast_equals", equals=None):
         inputs.
     compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         Type of equality check to use.
-    equals : mapping variable name to None or bool, corresponding to result of compat test
+None or bool, corresponding to result of compat test
 
     Returns
     -------
