@@ -345,8 +345,6 @@ def _dataset_concat(
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
-    # seems like there should be a helper function for this. We would need to add
-    # an exclude kwarg to exclude comparing along concat_dim
     def ensure_common_dims(vars):
         # ensure each variable with the given name shares the same
         # dimensions and the same shape for all of them except along the
