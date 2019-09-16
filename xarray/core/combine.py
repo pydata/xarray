@@ -468,6 +468,22 @@ def combine_nested(
 def vars_as_keys(ds):
     return tuple(sorted(ds))
 
+def _iter_objects_to_ds(objects):
+    # Convert sequence of Dataset and/or DataArray objects to Dataset(s)
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
+    datasets = list()
+    for obj in objects:
+        if not (isinstance(obj, (DataArray, Dataset))):
+            raise TypeError(
+                "objects must be an iterable containing only "
+                "Dataset(s) and/or DataArray(s)"
+            )
+
+        obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
+        datasets.append(obj)
+    return datasets
 
 def combine_by_coords(
     objects,
@@ -582,21 +598,7 @@ def combine_by_coords(
         temperature     (x) float64 11.04 23.57 20.77 ...
     """
 
-    # Convert dict like objects to Dataset(s)
-    from .dataarray import DataArray
-    from .dataset import Dataset
-
-    dict_like_objects = list()
-    for obj in objects:
-        if not (isinstance(obj, (DataArray, Dataset))):
-            raise TypeError(
-                "objects must be an iterable containing only "
-                "Dataset(s) and/or DataArray(s)"
-            )
-
-        obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
-        dict_like_objects.append(obj)
-    datasets = dict_like_objects
+    datasets = _iter_objects_to_ds(objects)
 
     # Group by data vars
     sorted_datasets = sorted(datasets, key=vars_as_keys)
