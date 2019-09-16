@@ -825,7 +825,6 @@ def kernel(name):
     """Dask kernel to test pickling/unpickling and __repr__.
     Must be global to make it pickleable.
     """
-    print("kernel(%s)" % name)
     global kernel_call_count
     kernel_call_count += 1
     return np.ones(1, dtype=np.int64)

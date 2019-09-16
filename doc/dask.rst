@@ -75,13 +75,14 @@ entirely equivalent to opening a dataset using ``open_dataset`` and then
 chunking the data using the ``chunk`` method, e.g.,
 ``xr.open_dataset('example-data.nc').chunk({'time': 10})``.
 
-To open multiple files simultaneously, use :py:func:`~xarray.open_mfdataset`::
+To open multiple files simultaneously in parallel using Dask delayed,
+use :py:func:`~xarray.open_mfdataset`::
 
-    xr.open_mfdataset('my/files/*.nc')
+    xr.open_mfdataset('my/files/*.nc', parallel=True)
 
 This function will automatically concatenate and merge dataset into one in
 the simple cases that it understands (see :py:func:`~xarray.auto_combine`
-for the full disclaimer). By default, ``open_mfdataset`` will chunk each
+for the full disclaimer). By default, :py:func:`~xarray.open_mfdataset` will chunk each
 netCDF file into a single Dask array; again, supply the ``chunks`` argument to
 control the size of the resulting Dask arrays. In more complex cases, you can
 open each file individually using ``open_dataset`` and merge the result, as

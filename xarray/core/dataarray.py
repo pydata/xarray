@@ -1551,8 +1551,8 @@ class DataArray(AbstractArray, DataWithCoords):
         obj : DataArray
             Another DataArray, with this data but replaced coordinates.
 
-        Example
-        -------
+        Examples
+        --------
         >>> arr = xr.DataArray(data=np.ones((2, 3)),
         ...                    dims=['x', 'y'],
         ...                    coords={'x':
