@@ -470,7 +470,7 @@ def vars_as_keys(ds):
 
 
 def combine_by_coords(
-    datasets,
+    objects,
     compat="no_conflicts",
     data_vars="all",
     coords="different",
@@ -483,7 +483,9 @@ def combine_by_coords(
 
     This method attempts to combine a group of datasets along any number of
     dimensions into a single entity by inspecting coords and metadata and using
-    a combination of concat and merge.
+    a combination of concat and merge. If passed a DataArray, the object 
+    will be converted to Dataset before being combined with the remaining datasets
+    in the iterable.
 
     Will attempt to order the datasets such that the values in their dimension
     coordinates are monotonic along all dimensions. If it cannot determine the
@@ -503,8 +505,7 @@ def combine_by_coords(
 
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset
-        Dataset objects to combine.
+    objects : sequence of xarray.Dataset or xarray.DataArray objects
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
@@ -581,6 +582,22 @@ def combine_by_coords(
         temperature     (x) float64 11.04 23.57 20.77 ...
     """
 
+    # Convert dict like objects to Dataset(s)
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    
+    dict_like_objects = list()
+    for obj in objects:
+        if not (isinstance(obj, (DataArray, Dataset))):
+            raise TypeError(
+                "objects must be an iterable containing only "
+                "Dataset(s) and/or DataArray(s)"
+            )
+
+        obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
+        dict_like_objects.append(obj)
+    datasets = dict_like_objects
+        
     # Group by data vars
     sorted_datasets = sorted(datasets, key=vars_as_keys)
     grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
