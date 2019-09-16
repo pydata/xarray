@@ -483,7 +483,7 @@ def combine_by_coords(
 
     This method attempts to combine a group of datasets along any number of
     dimensions into a single entity by inspecting coords and metadata and using
-    a combination of concat and merge. If passed a DataArray, the object 
+    a combination of concat and merge. If passed a DataArray, the object
     will be converted to Dataset before being combined with the remaining datasets
     in the iterable.
 
@@ -585,7 +585,7 @@ def combine_by_coords(
     # Convert dict like objects to Dataset(s)
     from .dataarray import DataArray
     from .dataset import Dataset
-    
+
     dict_like_objects = list()
     for obj in objects:
         if not (isinstance(obj, (DataArray, Dataset))):
@@ -597,7 +597,7 @@ def combine_by_coords(
         obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
         dict_like_objects.append(obj)
     datasets = dict_like_objects
-        
+
     # Group by data vars
     sorted_datasets = sorted(datasets, key=vars_as_keys)
     grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
