@@ -737,11 +737,9 @@ def _process_cmap_cbar_kwargs(
     # we should not be getting a list of colors in cmap anymore
     # is there a better way to do this test?
     if isinstance(cmap, (list, tuple)):
-        warnings.warn(
+        raise ValueError(
             "Specifying a list of colors in cmap is deprecated. "
-            "Use colors keyword instead.",
-            DeprecationWarning,
-            stacklevel=3,
+            "Use colors keyword instead."
         )
 
     cmap_kwargs = {

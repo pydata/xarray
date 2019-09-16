@@ -1320,8 +1320,8 @@ class TestContour(Common2dMixin, PlotTestCase):
         with pytest.raises(ValueError):
             self.plotmethod(colors="k", cmap="RdBu")
 
-    def list_of_colors_in_cmap_deprecated(self):
-        with pytest.raises(Exception):
+    def list_of_colors_in_cmap_raises_error(self):
+        with raises_regex(ValueError, "list of colors"):
             self.plotmethod(cmap=["k", "b"])
 
     @pytest.mark.slow
