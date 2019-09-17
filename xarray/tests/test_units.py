@@ -260,6 +260,11 @@ class TestDataArray:
             ),
             function("std"),
             function("var"),
+            function("cumsum"),
+            pytest.param(
+                function("cumprod"),
+                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
+            ),
             pytest.param(
                 method("all"),
                 marks=pytest.mark.xfail(reason="not implemented by pint yet"),
@@ -298,6 +303,11 @@ class TestDataArray:
             ),
             method("std"),
             method("var"),
+            method("cumsum"),
+            pytest.param(
+                method("cumprod"),
+                marks=pytest.mark.xfail(reason="pint does not implement cumprod yet"),
+            ),
         ),
         ids=repr,
     )
