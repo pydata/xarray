@@ -37,6 +37,9 @@ Breaking changes
 - Most xarray objects now define ``__slots__``. This reduces overall RAM usage by ~22%
   (not counting the underlying numpy buffers); on CPython 3.7/x64, a trivial DataArray
   has gone down from 1.9kB to 1.5kB.
+- The default dimension for :py:meth:`~xarray.Dataset.groupby`, :py:meth:`~xarray.Dataset.resample`,
+  :py:meth:`~xarray.DataArray.groupby` and :py:meth:`~xarray.DataArray.resample` reductions is now the
+  grouping or resampling dimension.
 
   Caveats:
 

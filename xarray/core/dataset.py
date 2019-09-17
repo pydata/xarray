@@ -3875,9 +3875,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if dim is ALL_DIMS:
-            dim = None
-        if dim is None:
+        if dim is None or dim is ALL_DIMS:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
             dims = {dim}
@@ -4803,7 +4801,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if isinstance(dim, str):
             dims = {dim}
-        elif dim is None:
+        elif dim is None or dim is ALL_DIMS:
             dims = set(self.dims)
         else:
             dims = set(dim)
