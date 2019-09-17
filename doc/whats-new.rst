@@ -37,9 +37,6 @@ Breaking changes
 - Most xarray objects now define ``__slots__``. This reduces overall RAM usage by ~22%
   (not counting the underlying numpy buffers); on CPython 3.7/x64, a trivial DataArray
   has gone down from 1.9kB to 1.5kB.
-- The default dimension for :py:meth:`~xarray.Dataset.groupby`, :py:meth:`~xarray.Dataset.resample`,
-  :py:meth:`~xarray.DataArray.groupby` and :py:meth:`~xarray.DataArray.resample` reductions is now the
-  grouping or resampling dimension.
 
   Caveats:
 
@@ -55,6 +52,9 @@ Breaking changes
     error in a later release.
 
   (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+- The default dimension for :py:meth:`~xarray.Dataset.groupby`, :py:meth:`~xarray.Dataset.resample`,
+  :py:meth:`~xarray.DataArray.groupby` and :py:meth:`~xarray.DataArray.resample` reductions is now the
+  grouping or resampling dimension.
 - :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous
   positional arguments were deprecated)
 - Reindexing with variables of a different dimension now raise an error (previously deprecated)
