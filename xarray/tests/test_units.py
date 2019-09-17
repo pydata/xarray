@@ -86,19 +86,27 @@ class method:
         from collections.abc import Callable
         from functools import partial
 
+        all_args = list(self.args) + list(args)
+        all_kwargs = {**self.kwargs, **kwargs}
+
         func = getattr(obj, self.name, None)
         if func is None or not isinstance(func, Callable):
             # fall back to module level numpy functions if not a xarray object
             if not isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
                 numpy_func = getattr(np, self.name)
                 func = partial(numpy_func, obj)
+                # remove typical xr args like "dim"
+                exclude_kwargs = ("dim", "dims")
+                all_kwargs = {
+                    key: value
+                    for key, value in all_kwargs.items()
+                    if key not in exclude_kwargs
+                }
             else:
                 raise AttributeError(
                     "{obj} has no method named '{self.name}'".format(obj=obj, self=self)
                 )
 
-        all_args = list(self.args) + list(args)
-        all_kwargs = {**self.kwargs, **kwargs}
         return func(*all_args, **all_kwargs)
 
     def __repr__(self):
@@ -432,6 +440,76 @@ class TestDataArray:
         result_array = np.maximum(array, 0 * unit)
         assert_equal_with_units(result_array, np.maximum(data_array, 0 * unit))
         assert_equal_with_units(result_array, np.maximum(0 * unit, data_array))
+
+    @pytest.mark.parametrize("property", ("T", "imag", "real"))
+    def test_numpy_properties(self, property, dtype):
+        array = (
+            np.arange(5 * 10).astype(dtype)
+            + 1j * np.linspace(-1, 0, 5 * 10).astype(dtype)
+        ).reshape(5, 10) * unit_registry.s
+        data_array = xr.DataArray(data=array, dims=("x", "y"))
+
+        result_data_array = getattr(data_array, property)
+        result_array = getattr(array, property)
+
+        assert_equal_with_units(result_array, result_data_array)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("conj"),
+            method("argsort"),
+            method("conjugate"),
+            method("round"),
+            pytest.param(
+                method("rank", dim="x"),
+                marks=pytest.mark.xfail(reason="pint does not implement rank yet"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_numpy_methods(self, func, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.m
+        data_array = xr.DataArray(data=array, dims="x")
+
+        expected = func(array)
+        result_xarray = func(data_array)
+
+        assert_equal_with_units(expected, result_xarray)
+
+    @pytest.mark.parametrize(
+        "func", (method("clip", min=3, max=8), method("searchsorted", v=5)), ids=repr
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_numpy_methods_with_args(self, func, unit, error, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.m
+        data_array = xr.DataArray(data=array, dims="x")
+
+        scalar_types = (int, float)
+        kwargs = {
+            key: (value * unit if isinstance(value, scalar_types) else value)
+            for key, value in func.kwargs.items()
+        }
+
+        if error is not None:
+            with pytest.raises(error):
+                func(data_array, **kwargs)
+        else:
+            expected = func(array, **kwargs)
+            result_xarray = func(data_array, **kwargs)
+
+            assert_equal_with_units(expected, result_xarray)
 
     @require_pint_array_function
     @pytest.mark.parametrize(
