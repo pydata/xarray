@@ -34,6 +34,8 @@ Breaking changes
 - :py:func:`~xarray.concat` now requires the ``dim`` argument. Its ``indexers``, ``mode``
   and ``concat_over`` kwargs have now been removed.
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Passing a list of colors in ``cmap`` will now raise an error, having been deprecated since
+  v0.6.1.
 - Most xarray objects now define ``__slots__``. This reduces overall RAM usage by ~22%
   (not counting the underlying numpy buffers); on CPython 3.7/x64, a trivial DataArray
   has gone down from 1.9kB to 1.5kB.
