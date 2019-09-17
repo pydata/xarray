@@ -322,7 +322,7 @@ def combine_nested(
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
 
-    If passed a DataArray, the object will be converted to Dataset before being 
+    If passed a DataArray, the object will be converted to Dataset before being
     combined with the remaining datasets in the iterable.
 
     Does not sort the supplied datasets under any circumstances, so the
@@ -474,6 +474,7 @@ def combine_nested(
 def vars_as_keys(ds):
     return tuple(sorted(ds))
 
+
 def _iter_objects_to_ds(objects):
     # Convert sequence of Dataset and/or DataArray objects to Dataset(s)
     from .dataarray import DataArray
@@ -486,7 +487,7 @@ def _iter_objects_to_ds(objects):
             nested_datasets = _iter_objects_to_ds(obj)
             datasets.append(nested_datasets)
 
-        elif (isinstance(obj, (DataArray, Dataset))):
+        elif isinstance(obj, (DataArray, Dataset)):
             obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
             datasets.append(obj)
 
@@ -497,6 +498,7 @@ def _iter_objects_to_ds(objects):
             )
 
     return datasets
+
 
 def combine_by_coords(
     objects,
@@ -679,7 +681,7 @@ def auto_combine(
     This entire function is deprecated in favour of ``combine_nested`` and
     ``combine_by_coords``.
 
-    If passed a DataArray, the object will be converted to Dataset before being 
+    If passed a DataArray, the object will be converted to Dataset before being
     combined with the remaining datasets in the iterable.
 
     This method attempts to combine a list of datasets into a single entity by
