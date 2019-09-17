@@ -651,7 +651,7 @@ _CONCAT_DIM_DEFAULT = "__infer_concat_dim__"
 
 
 def auto_combine(
-    datasets,
+    objects,
     concat_dim="_not_supplied",
     compat="no_conflicts",
     data_vars="all",
@@ -666,6 +666,9 @@ def auto_combine(
     This entire function is deprecated in favour of ``combine_nested`` and
     ``combine_by_coords``.
 
+    If passed a DataArray, the object will be converted to Dataset before being 
+    combined with the remaining datasets in the iterable.
+
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
     It does not concatenate along more than one dimension or sort data under
@@ -678,8 +681,7 @@ def auto_combine(
 
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset
-        Dataset objects to merge.
+    objects : sequence of xarray.Dataset or xarray.DataArray objects
     concat_dim : str or DataArray or Index, optional
         Dimension along which to concatenate variables, as used by
         :py:func:`xarray.concat`. You only need to provide this argument if
@@ -731,6 +733,8 @@ def auto_combine(
     concat
     Dataset.merge
     """
+
+    datasets = _iter_objects_to_ds(objects)
 
     if not from_openmfds:
         basic_msg = dedent(
