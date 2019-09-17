@@ -2499,16 +2499,6 @@ class TestDataArray:
         assert_allclose(expected_sum_axis1, grouped.reduce(np.sum, "y"))
         assert_allclose(expected_sum_axis1, grouped.sum("y"))
 
-    def test_groupby_warning(self):
-        array = self.make_groupby_example_array()
-        grouped = array.groupby("y")
-        with pytest.warns(FutureWarning):
-            grouped.sum()
-
-    @pytest.mark.skipif(
-        LooseVersion(xr.__version__) < LooseVersion("0.13"),
-        reason="not to forget the behavior change",
-    )
     def test_groupby_sum_default(self):
         array = self.make_groupby_example_array()
         grouped = array.groupby("abc")
@@ -2529,7 +2519,7 @@ class TestDataArray:
             }
         )["foo"]
 
-        assert_allclose(expected_sum_all, grouped.sum())
+        assert_allclose(expected_sum_all, grouped.sum(dim="y"))
 
     def test_groupby_count(self):
         array = DataArray(

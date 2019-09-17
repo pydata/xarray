@@ -1,5 +1,5 @@
 from . import ops
-from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
+from .groupby import DataArrayGroupBy, DatasetGroupBy
 
 RESAMPLE_DIM = "__resample_dim__"
 
@@ -307,9 +307,6 @@ class DatasetResample(DatasetGroupBy, Resample):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if dim == DEFAULT_DIMS:
-            dim = None
-
         return super().reduce(func, dim, keep_attrs, **kwargs)
 
 

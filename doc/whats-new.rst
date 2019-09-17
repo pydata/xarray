@@ -54,6 +54,9 @@ Breaking changes
     error in a later release.
 
   (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+- The default dimension for :py:meth:`~xarray.Dataset.groupby`, :py:meth:`~xarray.Dataset.resample`,
+  :py:meth:`~xarray.DataArray.groupby` and :py:meth:`~xarray.DataArray.resample` reductions is now the
+  grouping or resampling dimension.
 - :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous
   positional arguments were deprecated)
 - Reindexing with variables of a different dimension now raise an error (previously deprecated)

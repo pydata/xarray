@@ -3367,18 +3367,6 @@ class TestDataset:
         actual = data.groupby("letters").mean(ALL_DIMS)
         assert_allclose(expected, actual)
 
-    def test_groupby_warn(self):
-        data = Dataset(
-            {
-                "xy": (["x", "y"], np.random.randn(3, 4)),
-                "xonly": ("x", np.random.randn(3)),
-                "yonly": ("y", np.random.randn(4)),
-                "letters": ("y", ["a", "a", "b", "b"]),
-            }
-        )
-        with pytest.warns(FutureWarning):
-            data.groupby("x").mean()
-
     def test_groupby_math(self):
         def reorder_dims(x):
             return x.transpose("dim1", "dim2", "dim3", "time")
