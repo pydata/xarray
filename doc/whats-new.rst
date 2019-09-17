@@ -20,8 +20,8 @@ v0.13.1 (unreleased)
 
 .. _whats-new.0.13.0:
 
-v0.13.0 (10 July 2019)
-----------------------
+v0.13.0 (17 Sep 2019)
+---------------------
 
 This release includes many exciting changes: wrapping of
 `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
