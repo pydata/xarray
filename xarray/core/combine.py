@@ -310,7 +310,7 @@ def _nested_combine(
 
 
 def combine_nested(
-    datasets,
+    objects,
     concat_dim,
     compat="no_conflicts",
     data_vars="all",
@@ -321,6 +321,9 @@ def combine_nested(
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
+
+    If passed a DataArray, the object will be converted to Dataset before being 
+    combined with the remaining datasets in the iterable.
 
     Does not sort the supplied datasets under any circumstances, so the
     datasets must be passed in the order you wish them to be concatenated. It
@@ -449,6 +452,9 @@ def combine_nested(
     merge
     auto_combine
     """
+
+    datasets = _iter_objects_to_ds(objects)
+
     if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
         concat_dim = [concat_dim]
 
@@ -475,14 +481,21 @@ def _iter_objects_to_ds(objects):
 
     datasets = list()
     for obj in objects:
-        if not (isinstance(obj, (DataArray, Dataset))):
+        # Handle nested lists of DataArrays or Datasets for combine_nested
+        if isinstance(obj, (list, tuple)):
+            nested_datasets = _iter_objects_to_ds(obj)
+            datasets.append(nested_datasets)
+
+        elif (isinstance(obj, (DataArray, Dataset))):
+            obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
+            datasets.append(obj)
+
+        else:
             raise TypeError(
                 "objects must be an iterable containing only "
                 "Dataset(s) and/or DataArray(s)"
             )
 
-        obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
-        datasets.append(obj)
     return datasets
 
 def combine_by_coords(
