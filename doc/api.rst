@@ -610,6 +610,7 @@ Plotting
 
    Dataset.plot
    DataArray.plot
+   Dataset.plot.scatter
    plot.plot
    plot.contourf
    plot.contour
