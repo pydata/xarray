@@ -117,6 +117,50 @@ class function:
         return "function {self.name}".format(self=self)
 
 
+@require_pint_array_function
+@pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
+def test_replication(func, dtype):
+    array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
+    data_array = xr.DataArray(data=array, dims="x")
+
+    replicated = func(data_array)
+    numpy_func = getattr(np, func.__name__)
+    expected = numpy_func(array)
+
+    assert_equal_with_units(expected, replicated)
+
+
+@pytest.mark.xfail(
+    reason="np.full_like on Variable strips the unit and pint does not allow mixed args"
+)
+@require_pint_array_function
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.m, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.ms, None, id="compatible_unit"),
+        pytest.param(unit_registry.s, None, id="identical_unit"),
+    ),
+)
+def test_replication_full_like(unit, error, dtype):
+    array = np.linspace(0, 5, 10) * unit_registry.s
+    data_array = xr.DataArray(data=array, dims="x")
+
+    fill_value = -1 * unit
+    if error is not None:
+        with pytest.raises(error):
+            xr.full_like(data_array, fill_value=fill_value)
+    else:
+        replicated = xr.full_like(data_array, fill_value=fill_value)
+        expected = np.full_like(array, fill_value=fill_value)
+
+        assert_equal_with_units(expected, replicated)
+
+
 class TestDataArray:
     @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
@@ -912,45 +956,3 @@ class TestDataArray:
             result_data_array = data_array.reindex_like(new_data_array)
 
             assert_equal_with_units(result_array, result_data_array)
-
-    @require_pint_array_function
-    @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
-    def test_replication(self, func, dtype):
-        array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
-        data_array = xr.DataArray(data=array, dims="x")
-
-        replicated = func(data_array)
-        numpy_func = getattr(np, func.__name__)
-        expected = numpy_func(array)
-
-        assert_equal_with_units(expected, replicated)
-
-    @pytest.mark.xfail(
-        reason="np.full_like on Variable strips the unit and pint does not allow mixed args"
-    )
-    @require_pint_array_function
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.m, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.ms, None, id="compatible_unit"),
-            pytest.param(unit_registry.s, None, id="identical_unit"),
-        ),
-    )
-    def test_replication_full_like(self, unit, error, dtype):
-        array = np.linspace(0, 5, 10) * unit_registry.s
-        data_array = xr.DataArray(data=array, dims="x")
-
-        fill_value = -1 * unit
-        if error is not None:
-            with pytest.raises(error):
-                xr.full_like(data_array, fill_value=fill_value)
-        else:
-            replicated = xr.full_like(data_array, fill_value=fill_value)
-            expected = np.full_like(array, fill_value=fill_value)
-
-            assert_equal_with_units(expected, replicated)
