@@ -20,7 +20,7 @@ v0.13.0 (17 Sep 2019)
 
 This release includes many exciting changes: wrapping of
 `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
-numpy-like arrays; new :py:meth:`~Dataset.plot.scatter` method that can scatter
+numpy-like arrays; new :py:meth:`~Dataset.plot.scatter` plotting method that can scatter
 two ``DataArrays`` in a ``Dataset`` against each other; support for converting pandas
 DataFrames to xarray objects that wrap ``pydata/sparse``; and more!
 
