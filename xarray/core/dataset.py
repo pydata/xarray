@@ -420,6 +420,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         "_file_obj",
         "_indexes",
         "_variables",
+        "__weakref__",
     )
 
     _groupby_cls = groupby.DatasetGroupBy
