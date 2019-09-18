@@ -42,11 +42,9 @@ def assert_equal_with_units(a, b):
         assert (hasattr(a_, "magnitude") and hasattr(b_, "magnitude")) and np.allclose(
             a_.magnitude, b_.magnitude, equal_nan=True
         )
+        assert (hasattr(a_, "units") and hasattr(b_, "units")) and a_.units == b_.units
     else:
         assert np.allclose(a_, b_, equal_nan=True)
-
-    if hasattr(a_, "units") or hasattr(b_, "units"):
-        assert (hasattr(a_, "units") and hasattr(b_, "units")) and a_.units == b_.units
 
 
 def array_strip_units(array):
