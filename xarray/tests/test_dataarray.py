@@ -4679,6 +4679,7 @@ def test_weakref():
     explicitly state __weakref__ among their slots
     """
     from weakref import ref
+
     a = DataArray(1)
     r = ref(a)
     assert r() is a

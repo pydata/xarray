@@ -5793,6 +5793,7 @@ def test_weakref():
     explicitly state __weakref__ among their slots
     """
     from weakref import ref
+
     ds = Dataset()
     r = ref(ds)
     assert r() is ds
