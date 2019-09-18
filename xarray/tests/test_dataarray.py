@@ -4672,3 +4672,13 @@ def test_subclass_slots():
             pass
 
     assert str(e.value) == "MyArray must explicitly define __slots__"
+
+
+def test_weakref():
+    """Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots
+    """
+    from weakref import ref
+    a = DataArray(1)
+    r = ref(a)
+    assert r() is a

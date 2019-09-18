@@ -5786,3 +5786,13 @@ def test_subclass_slots():
             pass
 
     assert str(e.value) == "MyDS must explicitly define __slots__"
+
+
+def test_weakref():
+    """Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots
+    """
+    from weakref import ref
+    ds = Dataset()
+    r = ref(ds)
+    assert r() is ds
