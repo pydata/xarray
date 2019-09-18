@@ -2364,7 +2364,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             kwargs = {}
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
         indexers = OrderedDict(
-            (k, v.to_index_variable() if v.ndim == 1 else v)
+            (k, v.to_index_variable() if isinstance(v, Variable) and v.ndim == 1 else v)
             for k, v in self._validate_indexers(coords)
         )
 
