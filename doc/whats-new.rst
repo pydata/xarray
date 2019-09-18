@@ -22,7 +22,7 @@ Bug fixes
 ~~~~~~~~~
 - Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
   reinstated for :class:`DataArray` and :class:`Dataset` objects only. Internal xarray
-  objects remain unaddressable by weakref in order to save RAM.
+  objects remain unaddressable by weakref in order to save memory.
   (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 
