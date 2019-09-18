@@ -125,3 +125,16 @@ class IndexingDask(Indexing):
         requires_dask()
         super().setup(key)
         self.ds = self.ds.chunk({"x": 100, "y": 50, "t": 50})
+
+
+class BooleanIndexing:
+    # https://github.com/pydata/xarray/issues/2227
+    def setup(self):
+        self.ds = xr.Dataset(
+            {"a": ("time", np.arange(10_000_000))},
+            coords={"time": np.arange(10_000_000)},
+        )
+        self.time_filter = self.ds.time > 50_000
+
+    def time_indexing(self):
+        self.ds.isel(time=self.time_filter)
