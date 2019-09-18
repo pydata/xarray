@@ -18,8 +18,6 @@ What's New
 v0.13.1 (unreleased)
 --------------------
 
-.. _whats-new.0.13.0:
-
 Bug fixes
 ~~~~~~~~~
 - Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
@@ -27,6 +25,8 @@ Bug fixes
   objects remain unaddressable by weakref in order to save RAM.
   (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
+
+.. _whats-new.0.13.0:
 
 v0.13.0 (17 Sep 2019)
 ---------------------
