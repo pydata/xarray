@@ -69,6 +69,23 @@ def strip_units(data_array):
     return xr.DataArray(data=array, coords=coords, dims=data_array.dims)
 
 
+def attach_units(data_array, units):
+    data_units = units.get("data", 1)
+
+    if not isinstance(data_array, (xr.DataArray,)):
+        return data_array * data_units
+
+    data = data_array.data * data_units
+
+    coords = {
+        name: value * units.get(name, 1) for name, value in data_array.coords.items()
+    }
+    dims = data_array.dims
+    attrs = data_array.attrs
+
+    return xr.DataArray(data=data, coords=coords, attrs=attrs, dims=dims)
+
+
 @pytest.fixture(params=[float, int])
 def dtype(request):
     return request.param
@@ -758,6 +775,109 @@ class TestDataArray:
                 dims=["x", "y"],
             )
 
+            assert_equal_with_units(expected, result)
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("pipe", lambda da: da * 10),
+            method("assign_coords", y2=("y", np.arange(10) * unit_registry.ms)),
+            method("assign_attrs", attr1="value"),
+            method("rename", x2="x_mm"),
+            method("swap_dims", {"x": "x2"}),
+            method(
+                "expand_dims",
+                dim={"z": np.linspace(10, 20, 12) * unit_registry.s},
+                axis=1,
+            ),
+            method("drop", labels="x"),
+            method("reset_coords", names="x2"),
+            method("copy"),
+            pytest.param(
+                method("astype", np.float32),
+                marks=pytest.mark.xfail(reason="units get stripped"),
+            ),
+            pytest.param(
+                method("item", 1), marks=pytest.mark.xfail(reason="units get stripped")
+            ),
+        ),
+        ids=repr,
+    )
+    def test_content_manipulation(self, func, dtype):
+        quantity = (
+            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
+            * unit_registry.pascal
+        )
+        x = np.arange(quantity.shape[0]) * unit_registry.m
+        y = np.arange(quantity.shape[1]) * unit_registry.m
+        x2 = x.to(unit_registry.mm)
+
+        data_array = xr.DataArray(
+            name="data",
+            data=quantity,
+            coords={"x": x, "x2": ("x", x2), "y": y},
+            dims=("x", "y"),
+        )
+
+        stripped_kwargs = {
+            key: array_strip_units(value) for key, value in func.kwargs.items()
+        }
+        expected = attach_units(
+            func(strip_units(data_array), **stripped_kwargs),
+            {"data": quantity.units, "x": x.units, "x2": x2.units, "y": y.units},
+        )
+        result = func(data_array)
+
+        assert_equal_with_units(expected, result)
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("drop", labels=np.array([1, 5]), dim="x"),
+                marks=pytest.mark.xfail(
+                    reason="selecting using incompatible units does not raise"
+                ),
+            ),
+            pytest.param(method("copy", data=np.arange(20))),
+        ),
+        ids=repr,
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_content_manipulation_with_units(self, func, unit, error, dtype):
+        quantity = np.linspace(0, 10, 20, dtype=dtype) * unit_registry.pascal
+        x = np.arange(len(quantity)) * unit_registry.m
+
+        data_array = xr.DataArray(name="data", data=quantity, coords={"x": x}, dims="x")
+
+        kwargs = {
+            key: (value * unit if isinstance(value, np.ndarray) else value)
+            for key, value in func.kwargs.items()
+        }
+        stripped_kwargs = func.kwargs
+
+        expected = attach_units(
+            func(strip_units(data_array), **stripped_kwargs),
+            {"data": quantity.units if func.name == "drop" else unit, "x": x.units},
+        )
+        if error is not None and func.name == "drop":
+            with pytest.raises(error):
+                func(data_array, **kwargs)
+        else:
+            result = func(data_array, **kwargs)
             assert_equal_with_units(expected, result)
 
     @require_pint_array_function
