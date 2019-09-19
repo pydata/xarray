@@ -891,7 +891,7 @@ def make_da():
 
 def make_ds():
     map_ds = xr.Dataset()
-    map_ds["a"] = map_da
+    map_ds["a"] = make_da()
     map_ds["b"] = map_ds.a + 50
     map_ds["c"] = map_ds.x + 20
     map_ds = map_ds.chunk({"x": 4, "y": 5})
@@ -907,6 +907,18 @@ def make_ds():
 # xarray/tests/test_dask.py:888: error: Dict entry 0 has incompatible type "str": "int"; expected "Hashable": "Union[None, Number, Tuple[Number, ...]]"
 map_da = make_da()
 map_ds = make_ds()
+
+
+# DataArray.chunks is not a dict but Dataset.chunks is!
+def assert_chunks_equal(a, b):
+
+    if isinstance(a, DataArray):
+        a = a._to_temp_dataset()
+
+    if isinstance(b, DataArray):
+        b = b._to_temp_dataset()
+
+    assert a.chunks == b.chunks
 
 
 def simple_func(obj):
@@ -933,6 +945,12 @@ def test_map_blocks_error():
     with raises_regex(ValueError, "Length of the.* has changed."):
         xr.map_blocks(bad_func, map_da).compute()
 
+    def returns_numpy(darray):
+        return (darray * darray.x + 5 * darray.y).values
+
+    with raises_regex(ValueError, "Function must return an xarray DataArray"):
+        xr.map_blocks(returns_numpy, map_da)
+
 
 @pytest.mark.parametrize(
     "func, obj",
@@ -942,6 +960,7 @@ def test_map_blocks(func, obj):
 
     actual = xr.map_blocks(func, obj)
     expected = func(obj)
+    assert_chunks_equal(expected, actual)
     xr.testing.assert_equal(expected, actual)
 
 
@@ -951,4 +970,31 @@ def test_map_blocks_args(obj):
 
     expected = obj + 10
     actual = xr.map_blocks(operator.add, obj, 10)
+    assert_chunks_equal(expected, actual)
     xr.testing.assert_equal(expected, actual)
+
+
+def da_to_ds(da):
+    return da.to_dataset()
+
+
+def ds_to_da(ds):
+    return ds.to_array()
+
+
+@pytest.mark.parametrize(
+    "func, obj, return_type",
+    [[da_to_ds, map_da, xr.Dataset], [ds_to_da, map_ds, xr.DataArray]],
+)
+def map_blocks_transformations(func, obj, return_type):
+    assert isinstance(xr.map_blocks(func, obj), return_type)
+
+
+# func(DataArray) -> Dataset
+# func(Dataset) -> DataArray
+# func output contains less variables
+# func output contains new variables
+# func changes dtypes
+# func output contains less (or more) dimensions
+# *args, **kwargs are passed through
+# IndexVariables don't accidentally cause the whole graph to be computed (the logic you wrote in the main function is quite subtle!)
