@@ -899,6 +899,7 @@ def make_ds():
     map_ds["z"] = [0, 1, 2, 3]
     map_ds["e"] = map_ds.x + map_ds.y + map_ds.z
     map_ds.attrs["test"] = "test"
+    map_ds["xx"] = (map_ds["a"] * map_ds.y).chunk({"y": 20})
 
     return map_ds
 
@@ -909,8 +910,29 @@ map_da = make_da()
 map_ds = make_ds()
 
 
-# DataArray.chunks is not a dict but Dataset.chunks is!
+def test_unify_chunks():
+    with raises_regex(ValueError, "inconsistent chunks"):
+        map_ds.chunks
+
+    expected = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
+    actual = map_ds.unify_chunks().chunks
+    assert expected == actual
+
+
+# TODO: DataArray.chunks is not a dict but Dataset.chunks is!
 def assert_chunks_equal(a, b):
+
+    # unchunked dimensions in input to map_blocks become 1 chunk.
+    # do this manually before comparing
+    def at_least_one_chunk(obj):
+        new_chunks = {}
+        for dim in obj.dims:
+            if dim not in obj.chunks:
+                new_chunks[dim] = len(obj[dim])
+            else:
+                # must preserve old chunks too
+                new_chunks[dim] = obj.chunks[dim][0]
+        return obj.chunk(new_chunks)
 
     if isinstance(a, DataArray):
         a = a._to_temp_dataset()
@@ -918,11 +940,14 @@ def assert_chunks_equal(a, b):
     if isinstance(b, DataArray):
         b = b._to_temp_dataset()
 
+    a = at_least_one_chunk(a.unify_chunks())
+    b = at_least_one_chunk(b.unify_chunks())
+
     assert a.chunks == b.chunks
 
 
 def simple_func(obj):
-    result = obj.x + 5 * obj.y
+    result = obj + obj.x + 5 * obj.y
     return result
 
 
@@ -959,7 +984,7 @@ def test_map_blocks_error():
 def test_map_blocks(func, obj):
 
     actual = xr.map_blocks(func, obj)
-    expected = func(obj)
+    expected = func(obj).unify_chunks()
     assert_chunks_equal(expected, actual)
     xr.testing.assert_equal(expected, actual)
 
@@ -968,7 +993,7 @@ def test_map_blocks(func, obj):
 def test_map_blocks_args(obj):
     import operator
 
-    expected = obj + 10
+    expected = obj.unify_chunks() + 10
     actual = xr.map_blocks(operator.add, obj, 10)
     assert_chunks_equal(expected, actual)
     xr.testing.assert_equal(expected, actual)

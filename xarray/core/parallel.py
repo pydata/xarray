@@ -174,7 +174,8 @@ def map_blocks(func, obj, *args, **kwargs):
         )
 
     # If two different variables have different chunking along the same dim
-    # .chunks will raise an error.
+    # fix that by "unifying chunks"
+    dataset = dataset.unify_chunks()
     input_chunks = dataset.chunks
 
     # TODO: add a test that fails when template and dataset are switched

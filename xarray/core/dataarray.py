@@ -2981,6 +2981,10 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().integrate(dim, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    def unify_chunks(self):
+        ds = self.copy()._to_temp_dataset().unify_chunks()
+        return self._from_temp_dataset(ds)
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names  # noqa
     str = property(StringAccessor)

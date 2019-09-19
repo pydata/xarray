@@ -1669,7 +1669,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if v.chunks is not None:
                 for dim, c in zip(v.dims, v.chunks):
                     if dim in chunks and c != chunks[dim]:
-                        raise ValueError("inconsistent chunks")
+                        raise ValueError(
+                            "Object has inconsistent chunks along dimension %r. This can be fixed by calling unify_chunks()."
+                            % dim
+                        )
                     chunks[dim] = c
         return Frozen(SortedKeysDict(chunks))
 
@@ -4996,6 +4999,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if has_value_flag is True:
                 selection.append(var_name)
         return self[selection]
+
+    def unify_chunks(self):
+        """ Unifies chunksize along all chunked dimensions of this Dataset.
+
+        Returns
+        -------
+
+        Dataset with consistent chunk sizes for all dask-array variables
+
+        See Also
+        --------
+
+        dask.array.core.unify_chunks
+        """
+        import dask.array
+
+        ds = self.copy()
+
+        alphabet = "abcdefghijklmnopqrstuvwxyz"  # this is stupid :)
+        alphamap = dict(zip(ds.dims, alphabet))
+
+        dask_arrays = {}
+        for name, variable in ds.variables.items():
+            if isinstance(variable.data, dask.array.Array):
+                index_string = "".join([alphamap[dim] for dim in variable.dims])
+                dask_arrays[name] = (variable.data, index_string)
+
+        args = []
+        for value in dask_arrays.values():
+            args.append(value[0])
+            args.append(value[1])
+
+        new_chunks, rechunked_arrays = dask.array.core.unify_chunks(*args)
+
+        # invert the map
+        for dim, alpha in alphamap.items():
+            if alpha not in new_chunks:
+                continue
+            new_chunks[dim] = new_chunks[alpha]
+            del new_chunks[alpha]
+
+        try:
+            if new_chunks == ds.chunks:
+                return ds
+        except ValueError:  # "inconsistent chunks"
+            pass
+
+        for name, new_array in zip(dask_arrays.keys(), rechunked_arrays):
+            ds.variables[name]._data = new_array
+
+        return ds
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
