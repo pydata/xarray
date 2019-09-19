@@ -315,7 +315,7 @@ class DataArray(AbstractArray, DataWithCoords):
         if encoding is not None:
             warnings.warn(
                 "The `encoding` argument to `DataArray` is deprecated, and . "
-                "will be removed in 0.13. "
+                "will be removed in 0.14. "
                 "Instead, specify the encoding when writing to disk or "
                 "set the `encoding` attribute directly.",
                 FutureWarning,
@@ -471,7 +471,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset = Dataset._from_vars_and_coord_names(variables, coord_names)
         return dataset
 
-    def to_dataset(self, dim: Hashable = None, name: Hashable = None) -> Dataset:
+    def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
         """Convert a DataArray to a Dataset.
 
         Parameters
@@ -489,15 +489,9 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset : Dataset
         """
         if dim is not None and dim not in self.dims:
-            warnings.warn(
-                "the order of the arguments on DataArray.to_dataset "
-                "has changed; you now need to supply ``name`` as "
-                "a keyword argument",
-                FutureWarning,
-                stacklevel=2,
+            raise TypeError(
+                "{} is not a dim. If supplying a ``name``, pass as a kwarg.".format(dim)
             )
-            name = dim
-            dim = None
 
         if dim is not None:
             if name is not None:
@@ -1040,6 +1034,57 @@ class DataArray(AbstractArray, DataWithCoords):
         )
         return self._from_temp_dataset(ds)
 
+    def head(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by the the first `n`
+        values along the specified dimension(s). Default `n` = 5
+
+        See Also
+        --------
+        Dataset.head
+        DataArray.tail
+        DataArray.thin
+        """
+        ds = self._to_temp_dataset().head(indexers, **indexers_kwargs)
+        return self._from_temp_dataset(ds)
+
+    def tail(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by the the last `n`
+        values along the specified dimension(s). Default `n` = 5
+
+        See Also
+        --------
+        Dataset.tail
+        DataArray.head
+        DataArray.thin
+        """
+        ds = self._to_temp_dataset().tail(indexers, **indexers_kwargs)
+        return self._from_temp_dataset(ds)
+
+    def thin(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "DataArray":
+        """Return a new DataArray whose data is given by each `n` value
+        along the specified dimension(s). Default `n` = 5
+
+        See Also
+        --------
+        Dataset.thin
+        DataArray.head
+        DataArray.tail
+        """
+        ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
+        return self._from_temp_dataset(ds)
+
     def broadcast_like(
         self, other: Union["DataArray", Dataset], exclude: Iterable[Hashable] = None
     ) -> "DataArray":
@@ -1506,8 +1551,8 @@ class DataArray(AbstractArray, DataWithCoords):
         obj : DataArray
             Another DataArray, with this data but replaced coordinates.
 
-        Example
-        -------
+        Examples
+        --------
         >>> arr = xr.DataArray(data=np.ones((2, 3)),
         ...                    dims=['x', 'y'],
         ...                    coords={'x':

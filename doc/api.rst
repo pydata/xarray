@@ -118,6 +118,9 @@ Indexing
    Dataset.loc
    Dataset.isel
    Dataset.sel
+   Dataset.head
+   Dataset.tail
+   Dataset.thin
    Dataset.squeeze
    Dataset.interp
    Dataset.interp_like
@@ -280,6 +283,9 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
+   DataArray.head
+   DataArray.tail
+   DataArray.thin
    DataArray.squeeze
    DataArray.interp
    DataArray.interp_like
@@ -605,6 +611,7 @@ Plotting
 
    Dataset.plot
    DataArray.plot
+   Dataset.plot.scatter
    plot.plot
    plot.contourf
    plot.contour

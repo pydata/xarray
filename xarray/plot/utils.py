@@ -731,17 +731,15 @@ def _process_cmap_cbar_kwargs(
 
     # colors is only valid when levels is supplied or the plot is of type
     # contour or contourf
-    if colors and (("contour" not in func.__name__) and (not levels)):
+    if colors and (("contour" not in func.__name__) and (levels is None)):
         raise ValueError("Can only specify colors with contour or levels")
 
     # we should not be getting a list of colors in cmap anymore
     # is there a better way to do this test?
     if isinstance(cmap, (list, tuple)):
-        warnings.warn(
+        raise ValueError(
             "Specifying a list of colors in cmap is deprecated. "
-            "Use colors keyword instead.",
-            DeprecationWarning,
-            stacklevel=3,
+            "Use colors keyword instead."
         )
 
     cmap_kwargs = {

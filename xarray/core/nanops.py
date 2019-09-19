@@ -88,38 +88,21 @@ def nanmax(a, axis=None, out=None):
 
 
 def nanargmin(a, axis=None):
-    fill_value = dtypes.get_pos_infinity(a.dtype)
     if a.dtype.kind == "O":
+        fill_value = dtypes.get_pos_infinity(a.dtype)
         return _nan_argminmax_object("argmin", fill_value, a, axis=axis)
-    a, mask = _replace_nan(a, fill_value)
-    if isinstance(a, dask_array_type):
-        res = dask_array.argmin(a, axis=axis)
-    else:
-        res = np.argmin(a, axis=axis)
 
-    if mask is not None:
-        mask = mask.all(axis=axis)
-        if mask.any():
-            raise ValueError("All-NaN slice encountered")
-    return res
+    module = dask_array if isinstance(a, dask_array_type) else nputils
+    return module.nanargmin(a, axis=axis)
 
 
 def nanargmax(a, axis=None):
-    fill_value = dtypes.get_neg_infinity(a.dtype)
     if a.dtype.kind == "O":
+        fill_value = dtypes.get_neg_infinity(a.dtype)
         return _nan_argminmax_object("argmax", fill_value, a, axis=axis)
 
-    a, mask = _replace_nan(a, fill_value)
-    if isinstance(a, dask_array_type):
-        res = dask_array.argmax(a, axis=axis)
-    else:
-        res = np.argmax(a, axis=axis)
-
-    if mask is not None:
-        mask = mask.all(axis=axis)
-        if mask.any():
-            raise ValueError("All-NaN slice encountered")
-    return res
+    module = dask_array if isinstance(a, dask_array_type) else nputils
+    return module.nanargmax(a, axis=axis)
 
 
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):

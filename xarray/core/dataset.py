@@ -489,7 +489,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if compat is not None:
             warnings.warn(
                 "The `compat` argument to Dataset is deprecated and will be "
-                "removed in 0.13."
+                "removed in 0.14."
                 "Instead, use `merge` to control how variables are combined",
                 FutureWarning,
                 stacklevel=2,
@@ -2010,6 +2010,153 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         result = self.isel(indexers=pos_indexers, drop=drop)
         return result._overwrite_indexes(new_indexes)
+
+    def head(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with the first `n` values of each array
+        for the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.tail
+        Dataset.thin
+        DataArray.head
+        """
+        if not indexers_kwargs:
+            if indexers is None:
+                indexers = 5
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
+                raise TypeError("indexers must be either dict-like or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
+        for k, v in indexers.items():
+            if not isinstance(v, int):
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
+            elif v < 0:
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
+        indexers_slices = {k: slice(val) for k, val in indexers.items()}
+        return self.isel(indexers_slices)
+
+    def tail(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with the last `n` values of each array
+        for the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.thin
+        DataArray.tail
+        """
+        if not indexers_kwargs:
+            if indexers is None:
+                indexers = 5
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
+                raise TypeError("indexers must be either dict-like or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
+        for k, v in indexers.items():
+            if not isinstance(v, int):
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
+            elif v < 0:
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
+        indexers_slices = {
+            k: slice(-val, None) if val != 0 else slice(val)
+            for k, val in indexers.items()
+        }
+        return self.isel(indexers_slices)
+
+    def thin(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with each array indexed along every `n`th
+        value for the specified dimension(s)
+
+        Parameters
+        ----------
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.tail
+        DataArray.thin
+        """
+        if (
+            not indexers_kwargs
+            and not isinstance(indexers, int)
+            and not is_dict_like(indexers)
+        ):
+            raise TypeError("indexers must be either dict-like or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
+        for k, v in indexers.items():
+            if not isinstance(v, int):
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
+            elif v < 0:
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
+            elif v == 0:
+                raise ValueError("step cannot be zero")
+        indexers_slices = {k: slice(None, None, val) for k, val in indexers.items()}
+        return self.isel(indexers_slices)
 
     def broadcast_like(
         self, other: Union["Dataset", "DataArray"], exclude: Iterable[Hashable] = None
@@ -3731,9 +3878,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if dim is ALL_DIMS:
-            dim = None
-        if dim is None:
+        if dim is None or dim is ALL_DIMS:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
             dims = {dim}
@@ -4659,7 +4804,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if isinstance(dim, str):
             dims = {dim}
-        elif dim is None:
+        elif dim is None or dim is ALL_DIMS:
             dims = set(self.dims)
         else:
             dims = set(dim)
@@ -4687,7 +4832,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             # the former is often more efficient
                             reduce_dims = None
                         variables[name] = var.quantile(
-                            q, dim=reduce_dims, interpolation=interpolation
+                            q,
+                            dim=reduce_dims,
+                            interpolation=interpolation,
+                            keep_attrs=keep_attrs,
                         )
 
             else:
