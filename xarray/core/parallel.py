@@ -250,8 +250,9 @@ def map_blocks(func, obj, *args, **kwargs):
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
-            # cannot tokenize "name" because the hash of <this-array> is not invariant!
-            # This happens when the user function does not set a name on the returned DataArray
+            # cannot tokenize "name" because the hash of ReprObject (<this-array>)
+            # is a function of its value. This happens when the user function does not
+            # set a name on the returned DataArray
             gname_l = "%s-%s" % (gname, name)
             var_key_map[name] = gname_l
 
