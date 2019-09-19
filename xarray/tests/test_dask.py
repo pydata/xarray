@@ -1029,7 +1029,8 @@ def test_map_blocks(func, obj):
     actual = xr.map_blocks(func, obj)
     expected = func(obj).unify_chunks()
     assert_chunks_equal(expected, actual)
-    xr.testing.assert_equal(expected, actual)
+    # why is compute needed?
+    xr.testing.assert_equal(expected.compute(), actual.compute())
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
@@ -1039,7 +1040,8 @@ def test_map_blocks_args(obj):
     expected = obj.unify_chunks() + 10
     actual = xr.map_blocks(operator.add, obj, 10)
     assert_chunks_equal(expected, actual)
-    xr.testing.assert_equal(expected, actual)
+    # why is compute needed?
+    xr.testing.assert_equal(expected.compute(), actual.compute())
 
 
 def da_to_ds(da):
