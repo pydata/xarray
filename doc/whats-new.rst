@@ -24,6 +24,13 @@ New functions/methods
 
 - Added :py:func:`~xarray.map_blocks`, modeled after :py:func:`dask.array.map_blocks`
   By `Deepak Cherian <https://github.com/dcherian>`_.
+Bug fixes
+~~~~~~~~~
+- Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
+  reinstated for :class:`DataArray` and :class:`Dataset` objects only. Internal xarray
+  objects remain unaddressable by weakref in order to save memory.
+  (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+
 
 .. _whats-new.0.13.0:
 
@@ -32,7 +39,7 @@ v0.13.0 (17 Sep 2019)
 
 This release includes many exciting changes: wrapping of
 `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
-numpy-like arrays; new :py:meth:`~Dataset.plot.scatter` method that can scatter
+numpy-like arrays; new :py:meth:`~Dataset.plot.scatter` plotting method that can scatter
 two ``DataArrays`` in a ``Dataset`` against each other; support for converting pandas
 DataFrames to xarray objects that wrap ``pydata/sparse``; and more!
 

@@ -420,6 +420,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         "_file_obj",
         "_indexes",
         "_variables",
+        "__weakref__",
     )
 
     _groupby_cls = groupby.DatasetGroupBy
@@ -1783,7 +1784,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             elif isinstance(v, Dataset):
                 raise TypeError("cannot use a Dataset as an indexer")
             elif isinstance(v, Sequence) and len(v) == 0:
-                v = IndexVariable((k,), np.zeros((0,), dtype="int64"))
+                v = Variable((k,), np.zeros((0,), dtype="int64"))
             else:
                 v = np.asarray(v)
 
@@ -1797,15 +1798,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if v.ndim == 0:
                     v = Variable((), v)
                 elif v.ndim == 1:
-                    v = IndexVariable((k,), v)
+                    v = Variable((k,), v)
                 else:
                     raise IndexError(
                         "Unlabeled multi-dimensional array cannot be "
                         "used for indexing: {}".format(k)
                     )
-
-            if v.ndim == 1:
-                v = v.to_index_variable()
 
             indexers_list.append((k, v))
 
@@ -2369,7 +2367,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if kwargs is None:
             kwargs = {}
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
-        indexers = OrderedDict(self._validate_indexers(coords))
+        indexers = OrderedDict(
+            (k, v.to_index_variable() if isinstance(v, Variable) and v.ndim == 1 else v)
+            for k, v in self._validate_indexers(coords)
+        )
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
 

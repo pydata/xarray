@@ -248,7 +248,15 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary for holding arbitrary metadata.
     """
 
-    __slots__ = ("_accessors", "_coords", "_file_obj", "_name", "_indexes", "_variable")
+    __slots__ = (
+        "_accessors",
+        "_coords",
+        "_file_obj",
+        "_name",
+        "_indexes",
+        "_variable",
+        "__weakref__",
+    )
 
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
