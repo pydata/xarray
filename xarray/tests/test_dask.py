@@ -937,6 +937,10 @@ def make_ds():
     map_ds["d"] = ("z", [1, 1, 1, 1])
     map_ds["z"] = [0, 1, 2, 3]
     map_ds["e"] = map_ds.x + map_ds.y + map_ds.z
+    map_ds.coords["c1"] = 0.5
+    map_ds.coords["cx"] = ("x", np.arange(len(map_da.x)))
+    map_ds.coords["cxy"] = (("x", "y"), map_da.x * map_da.y)
+    map_ds.coords["cxy"] = map_ds.cxy.chunk({"y": 10})
     map_ds.attrs["test"] = "test"
     map_ds["xx"] = (map_ds["a"] * map_ds.y).chunk({"y": 20})
 
