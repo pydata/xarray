@@ -500,6 +500,7 @@ Dataset methods
    Dataset.persist
    Dataset.load
    Dataset.chunk
+   Dataset.unify_chunks
    Dataset.filter_by_attrs
    Dataset.info
 
@@ -530,6 +531,7 @@ DataArray methods
    DataArray.persist
    DataArray.load
    DataArray.chunk
+   DataArray.unify_chunks
 
 GroupBy objects
 ===============
