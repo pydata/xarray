@@ -54,6 +54,21 @@ def array_strip_units(array):
         return array
 
 
+def array_attach_units(data, unit, convert=False):
+    data_ = data if not hasattr(data, "magnitude") else data.magnitude
+    # to make sure we also encounter the case of "equal if converted"
+    if (
+        convert
+        and isinstance(unit, unit_registry.Unit)
+        and "[length]" in unit.dimensionality
+    ):
+        quantity = (data_ * unit_registry.m).to(unit)
+    else:
+        quantity = data_ * unit
+
+    return quantity
+
+
 def strip_units(data_array):
     def magnitude(da):
         if isinstance(da, xr.Variable):
@@ -73,9 +88,9 @@ def attach_units(data_array, units):
     data_units = units.get("data", 1)
 
     if not isinstance(data_array, (xr.DataArray,)):
-        return data_array * data_units
+        return array_attach_units(data_array, data_units)
 
-    data = data_array.data * data_units
+    data = array_attach_units(data_array.data, data_units)
 
     coords = {
         name: value * units.get(name, 1) for name, value in data_array.coords.items()
@@ -810,17 +825,6 @@ class TestDataArray:
         ids=repr,
     )
     def test_comparisons(self, func, variation, unit, dtype):
-        def attach_unit(data, unit):
-            # to make sure we also encounter the case of "equal if converted"
-            if (
-                isinstance(unit, unit_registry.Unit)
-                and "[length]" in unit.dimensionality
-            ):
-                quantity = (data * unit_registry.m).to(unit)
-            else:
-                quantity = data * unit
-            return quantity
-
         data = np.linspace(0, 5, 10).astype(dtype)
         coord = np.arange(len(data)).astype(dtype)
 
@@ -839,10 +843,10 @@ class TestDataArray:
             data=quantity, coords={"x": x, "y": ("x", y)}, dims="x"
         )
         other = xr.DataArray(
-            data=attach_unit(data, data_unit),
+            data=array_attach_units(data, data_unit, convert=True),
             coords={
-                "x": attach_unit(coord, dim_unit),
-                "y": ("x", attach_unit(coord, coord_unit)),
+                "x": array_attach_units(coord, dim_unit, convert=True),
+                "y": ("x", array_attach_units(coord, coord_unit, convert=True)),
             },
             dims="x",
         )
@@ -860,6 +864,31 @@ class TestDataArray:
         )
         expected = equal_arrays and (func.name != "identical" or equal_units)
         result = func(data_array, other)
+
+        assert expected == result
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    def test_broadcast_equals(self, unit, dtype):
+        left_array = np.ones(shape=(2, 2), dtype=dtype) * unit_registry.m
+        right_array = array_attach_units(
+            np.ones(shape=(2,), dtype=dtype), unit, convert=True
+        )
+
+        left = xr.DataArray(data=left_array, dims=("x", "y"))
+        right = xr.DataArray(data=right_array, dims="x")
+
+        expected = np.all(left_array == right_array[:, None])
+        result = left.broadcast_equals(right)
 
         assert expected == result
 
