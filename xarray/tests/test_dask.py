@@ -920,12 +920,14 @@ def test_dask_layers_and_dependencies():
 
 
 def make_da():
-    return xr.DataArray(
+    da = xr.DataArray(
         np.ones((10, 20)),
         dims=["x", "y"],
         coords={"x": np.arange(10), "y": np.arange(100, 120)},
         name="a",
     ).chunk({"x": 4, "y": 5})
+    da.coords["c2"] = 0.5
+    return da
 
 
 def make_ds():

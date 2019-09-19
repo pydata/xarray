@@ -35,9 +35,13 @@ def make_meta(obj):
     from dask.array.utils import meta_from_array
 
     if isinstance(obj, DataArray):
-        meta = DataArray(obj.data._meta, dims=obj.dims, name=obj.name)
+        to_array = True
+        obj_array = obj.copy()
+        obj = obj._to_temp_dataset()
+    else:
+        to_array = False
 
-    elif isinstance(obj, Dataset):
+    if isinstance(obj, Dataset):
         meta = Dataset()
         for name, variable in obj.variables.items():
             if dask.is_dask_collection(variable):
@@ -49,11 +53,12 @@ def make_meta(obj):
     else:
         meta = obj
 
-    # TODO: DataArrays should have _coord_names!
-
-    if isinstance(obj, (DataArray, Dataset)):
+    if isinstance(obj, Dataset):
         for coord_name in set(obj.coords) - set(obj.dims):
             meta = meta.set_coords(coord_name)
+
+    if to_array:
+        meta = obj_array._from_temp_dataset(meta)
 
     return meta
 
