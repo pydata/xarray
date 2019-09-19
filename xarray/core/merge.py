@@ -79,7 +79,10 @@ class MergeError(ValueError):
 
 
 def unique_variable(
-    name: Hashable, variables: List[Variable], compat: str = "broadcast_equals", equals: bool = None,
+    name: Hashable,
+    variables: List[Variable],
+    compat: str = "broadcast_equals",
+    equals: bool = None,
 ) -> Variable:
     """Return the unique variable from a list of variables or raise MergeError.
 
@@ -129,8 +132,8 @@ def unique_variable(
 
     if not equals:
         raise MergeError(
-            "conflicting values for variable %r on objects to be combined. You can skip this check by specifying compat='override'."
-            % (name)
+            "conflicting values for variable {!r} on objects to be combined. "
+            "You can skip this check by specifying compat='override'.".format(name)
         )
 
     if combine_method:
