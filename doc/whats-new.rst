@@ -24,6 +24,7 @@ New functions/methods
 
 - Added :py:func:`~xarray.map_blocks`, modeled after :py:func:`dask.array.map_blocks`
   By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
