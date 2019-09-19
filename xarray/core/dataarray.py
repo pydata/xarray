@@ -248,7 +248,15 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary for holding arbitrary metadata.
     """
 
-    __slots__ = ("_accessors", "_coords", "_file_obj", "_name", "_indexes", "_variable")
+    __slots__ = (
+        "_accessors",
+        "_coords",
+        "_file_obj",
+        "_name",
+        "_indexes",
+        "_variable",
+        "__weakref__",
+    )
 
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
@@ -1551,8 +1559,8 @@ class DataArray(AbstractArray, DataWithCoords):
         obj : DataArray
             Another DataArray, with this data but replaced coordinates.
 
-        Example
-        -------
+        Examples
+        --------
         >>> arr = xr.DataArray(data=np.ones((2, 3)),
         ...                    dims=['x', 'y'],
         ...                    coords={'x':

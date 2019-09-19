@@ -2333,17 +2333,17 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
-    # skip due to bug in older versions of numpy.nanpercentile
     def test_quantile(self):
         for q in [0.25, [0.50], [0.25, 0.75]]:
             for axis, dim in zip(
                 [None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]
             ):
-                actual = self.dv.quantile(q, dim=dim)
+                actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True)
                 expected = np.nanpercentile(
                     self.dv.values, np.array(q) * 100, axis=axis
                 )
                 np.testing.assert_allclose(actual.values, expected)
+                assert actual.attrs == self.attrs
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
@@ -2499,16 +2499,6 @@ class TestDataArray:
         assert_allclose(expected_sum_axis1, grouped.reduce(np.sum, "y"))
         assert_allclose(expected_sum_axis1, grouped.sum("y"))
 
-    def test_groupby_warning(self):
-        array = self.make_groupby_example_array()
-        grouped = array.groupby("y")
-        with pytest.warns(FutureWarning):
-            grouped.sum()
-
-    @pytest.mark.skipif(
-        LooseVersion(xr.__version__) < LooseVersion("0.13"),
-        reason="not to forget the behavior change",
-    )
     def test_groupby_sum_default(self):
         array = self.make_groupby_example_array()
         grouped = array.groupby("abc")
@@ -2529,7 +2519,7 @@ class TestDataArray:
             }
         )["foo"]
 
-        assert_allclose(expected_sum_all, grouped.sum())
+        assert_allclose(expected_sum_all, grouped.sum(dim="y"))
 
     def test_groupby_count(self):
         array = DataArray(
@@ -4682,3 +4672,14 @@ def test_subclass_slots():
             pass
 
     assert str(e.value) == "MyArray must explicitly define __slots__"
+
+
+def test_weakref():
+    """Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots
+    """
+    from weakref import ref
+
+    a = DataArray(1)
+    r = ref(a)
+    assert r() is a

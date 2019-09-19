@@ -13,27 +13,47 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.13.0:
+.. _whats-new.0.13.1:
 
-v0.13.0 (unreleased)
+v0.13.1 (unreleased)
 --------------------
 
-This release increases the minimum required Python version from 3.5.0 to 3.5.3
-(:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+Bug fixes
+~~~~~~~~~
+- Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
+  reinstated for :class:`DataArray` and :class:`Dataset` objects only. Internal xarray
+  objects remain unaddressable by weakref in order to save memory.
+  (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+
+
+.. _whats-new.0.13.0:
+
+v0.13.0 (17 Sep 2019)
+---------------------
+
+This release includes many exciting changes: wrapping of
+`NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
+numpy-like arrays; new :py:meth:`~Dataset.plot.scatter` plotting method that can scatter
+two ``DataArrays`` in a ``Dataset`` against each other; support for converting pandas
+DataFrames to xarray objects that wrap ``pydata/sparse``; and more!
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- This release increases the minimum required Python version from 3.5.0 to 3.5.3
+  (:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
   since v0.10.0. These are redundant with the ``isel`` / ``sel`` methods.
-  See :ref:`vectorized_indexing` for the details 
-  By `Maximilian Roos <https://github.com/max-sixty>`_ 
+  See :ref:`vectorized_indexing` for the details
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - The ``inplace`` kwarg for public methods now raises an error, having been deprecated
   since v0.11.0.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:func:`~xarray.concat` now requires the ``dim`` argument. Its ``indexers``, ``mode``
   and ``concat_over`` kwargs have now been removed.
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Passing a list of colors in ``cmap`` will now raise an error, having been deprecated since
+  v0.6.1.
 - Most xarray objects now define ``__slots__``. This reduces overall RAM usage by ~22%
   (not counting the underlying numpy buffers); on CPython 3.7/x64, a trivial DataArray
   has gone down from 1.9kB to 1.5kB.
@@ -52,13 +72,16 @@ Breaking changes
     error in a later release.
 
   (:issue:`3250`) by `Guido Imperiale <https://github.com/crusaderky>`_.
-- :py:meth:`~Dataset.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous 
+- The default dimension for :py:meth:`Dataset.groupby`, :py:meth:`Dataset.resample`,
+  :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample` reductions is now the
+  grouping or resampling dimension.
+- :py:meth:`DataArray.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous
   positional arguments were deprecated)
 - Reindexing with variables of a different dimension now raise an error (previously deprecated)
-- :py:func:`~xarray.broadcast_array` is removed (previously deprecated in favor of 
+- :py:func:`~xarray.broadcast_array` is removed (previously deprecated in favor of
   :py:func:`~xarray.broadcast`)
-- :py:meth:`~Variable.expand_dims` is removed (previously deprecated in favor of 
-  :py:meth:`~Variable.set_dims`)
+- :py:meth:`Variable.expand_dims` is removed (previously deprecated in favor of
+  :py:meth:`Variable.set_dims`)
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -90,24 +113,43 @@ New functions/methods
   and `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
-  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz 
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz
   <http://github.com/DavidMertz>`_.
 
-- Dataset plotting API for visualizing dependencies between two `DataArray`s!
+- Dataset plotting API for visualizing dependencies between two DataArrays!
   Currently only :py:meth:`Dataset.plot.scatter` is implemented.
   By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
 
-- Added `head`, `tail` and `thin` methods to `Dataset` and `DataArray`. (:issue:`319`)
-  By `Gerardo Rivera <https://github.com/dangomelon>`_.
+- Added :py:meth:`DataArray.head`, :py:meth:`DataArray.tail` and :py:meth:`DataArray.thin`;
+  as well as :py:meth:`Dataset.head`, :py:meth:`Dataset.tail` and :py:meth:`Dataset.thin` methods.
+  (:issue:`319`) By `Gerardo Rivera <https://github.com/dangomelon>`_.
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Added ``join='override'``. This only checks that index sizes are equal among objects and skips
-  checking indexes for equality. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Multiple enhancements to :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset`.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
-- :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
-  It is passed down to :py:func:`~xarray.align`. By `Deepak Cherian <https://github.com/dcherian>`_.
+  - Added ``compat='override'``. When merging, this option picks the variable from the first dataset
+    and skips all comparisons.
+
+  - Added ``join='override'``. When aligning, this only checks that index sizes are equal among objects
+    and skips checking indexes for equality.
+
+  - :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset` now support the ``join`` kwarg.
+    It is passed down to :py:func:`~xarray.align`.
+
+  - :py:func:`~xarray.concat` now calls :py:func:`~xarray.merge` on variables that are not concatenated
+    (i.e. variables without ``concat_dim`` when ``data_vars`` or ``coords`` are ``"minimal"``).
+    :py:func:`~xarray.concat` passes its new ``compat`` kwarg down to :py:func:`~xarray.merge`.
+    (:issue:`2064`)
+
+  Users can avoid a common bottleneck when using :py:func:`~xarray.open_mfdataset` on a large number of
+  files with variables that are known to be aligned and some of which need not be concatenated.
+  Slow equality comparisons can now be avoided, for e.g.::
+
+    data = xr.open_mfdataset(files, concat_dim='time', data_vars='minimal',
+                             coords='minimal', compat='override', join='override')
 
 - In :py:meth:`~xarray.Dataset.to_zarr`, passing ``mode`` is not mandatory if
   ``append_dim`` is set, as it will automatically be set to ``'a'`` internally.
@@ -131,14 +173,15 @@ Enhancements
   :py:meth:`DataArray.set_index`, as well are more specific error messages
   when the user passes invalid arguments (:issue:`3176`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
-  
-- :py:func:`filter_by_attrs` now filters the coordinates as well as the variables. By `Spencer Jones <https://github.com/cspencerjones>`_.
+
+- :py:func:`filter_by_attrs` now filters the coordinates as well as the variables.
+  By `Spencer Jones <https://github.com/cspencerjones>`_.
 
 Bug fixes
 ~~~~~~~~~
 
-- Improve "missing dimensions" error message for :py:func:`~xarray.apply_ufunc` 
-  (:issue:`2078`). 
+- Improve "missing dimensions" error message for :py:func:`~xarray.apply_ufunc`
+  (:issue:`2078`).
   By `Rick Russotto <https://github.com/rdrussotto>`_.
 - :py:meth:`~xarray.DataArray.assign_coords` now supports dictionary arguments
   (:issue:`3231`).
@@ -170,8 +213,8 @@ Bug fixes
   dask compute (:issue:`3237`). By `Ulrich Herter <https://github.com/ulijh>`_.
 - Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
   array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
-
-.. _whats-new.0.12.3:
+- Fixed bug in :meth:`DataArray.quantile` failing to keep attributes when
+  `keep_attrs` was True (:issue:`3304`). By David Huard `<https://github.com/huard>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -183,6 +226,8 @@ Documentation
 - Fixed documentation to clean up unwanted files created in ``ipython`` examples
   (:issue:`3227`).
   By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+
+.. _whats-new.0.12.3:
 
 v0.12.3 (10 July 2019)
 ----------------------
@@ -198,13 +243,13 @@ New functions/methods
   as described in :ref:`reshape.stacking_different`.
   By `Noah Brenowitz <https://github.com/nbren12>`_.
 
+Enhancements
+~~~~~~~~~~~~
+
 - Support for renaming ``Dataset`` variables and dimensions independently
   with :py:meth:`~Dataset.rename_vars` and :py:meth:`~Dataset.rename_dims`
   (:issue:`3026`).
   By `Julia Kent <https://github.com/jukent>`_.
-
-Enhancements
-~~~~~~~~~~~~
 
 - Add ``scales``, ``offsets``, ``units`` and ``descriptions``
   attributes to :py:class:`~xarray.DataArray` returned by

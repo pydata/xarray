@@ -5,8 +5,7 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
-from xarray.core import dtypes
-
+from xarray.core import dtypes, merge
 from . import (
     InaccessibleArray,
     assert_array_equal,
@@ -16,6 +15,34 @@ from . import (
     requires_dask,
 )
 from .test_dataset import create_test_data
+
+
+def test_concat_compat():
+    ds1 = Dataset(
+        {
+            "has_x_y": (("y", "x"), [[1, 2]]),
+            "has_x": ("x", [1, 2]),
+            "no_x_y": ("z", [1, 2]),
+        },
+        coords={"x": [0, 1], "y": [0], "z": [-1, -2]},
+    )
+    ds2 = Dataset(
+        {
+            "has_x_y": (("y", "x"), [[3, 4]]),
+            "has_x": ("x", [1, 2]),
+            "no_x_y": (("q", "z"), [[1, 2]]),
+        },
+        coords={"x": [0, 1], "y": [1], "z": [-1, -2], "q": [0]},
+    )
+
+    result = concat([ds1, ds2], dim="y", data_vars="minimal", compat="broadcast_equals")
+    assert_equal(ds2.no_x_y, result.no_x_y.transpose())
+
+    for var in ["has_x", "no_x_y"]:
+        assert "y" not in result[var]
+
+    with raises_regex(ValueError, "'q' is not present in all datasets"):
+        concat([ds1, ds2], dim="q", data_vars="all", compat="broadcast_equals")
 
 
 class TestConcatDataset:
@@ -92,7 +119,7 @@ class TestConcatDataset:
             actual = concat(objs, dim="x", coords=coords)
             assert_identical(expected, actual)
         for coords in ["minimal", []]:
-            with raises_regex(ValueError, "not equal across"):
+            with raises_regex(merge.MergeError, "conflicting values"):
                 concat(objs, dim="x", coords=coords)
 
     def test_concat_constant_index(self):
@@ -103,8 +130,10 @@ class TestConcatDataset:
         for mode in ["different", "all", ["foo"]]:
             actual = concat([ds1, ds2], "y", data_vars=mode)
             assert_identical(expected, actual)
-        with raises_regex(ValueError, "not equal across datasets"):
-            concat([ds1, ds2], "y", data_vars="minimal")
+        with raises_regex(merge.MergeError, "conflicting values"):
+            # previously dim="y", and raised error which makes no sense.
+            # "foo" has dimension "y" so minimal should concatenate it?
+            concat([ds1, ds2], "new_dim", data_vars="minimal")
 
     def test_concat_size0(self):
         data = create_test_data()
@@ -137,6 +166,14 @@ class TestConcatDataset:
         with raises_regex(ValueError, "must supply at least one"):
             concat([], "dim1")
 
+        with raises_regex(ValueError, "Cannot specify both .*='different'"):
+            concat(
+                [data, data], dim="concat_dim", data_vars="different", compat="override"
+            )
+
+        with raises_regex(ValueError, "must supply at least one"):
+            concat([], "dim1")
+
         with raises_regex(ValueError, "are not coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
 
@@ -146,7 +183,7 @@ class TestConcatDataset:
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
 
-        with raises_regex(ValueError, "encountered unexpected"):
+        with raises_regex(ValueError, "present in some datasets"):
             data0, data1 = deepcopy(split_data)
             data1["foo"] = ("bar", np.random.randn(10))
             concat([data0, data1], "dim1")
