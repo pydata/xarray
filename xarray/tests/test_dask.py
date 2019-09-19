@@ -27,14 +27,49 @@ da = pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
 
 
+class CountingScheduler:
+    """ Simple dask scheduler counting the number of computes.
+
+    Reference: https://stackoverflow.com/questions/53289286/ """
+
+    def __init__(self, max_computes=0):
+        self.total_computes = 0
+        self.max_computes = max_computes
+
+    def __call__(self, dsk, keys, **kwargs):
+        self.total_computes += 1
+        if self.total_computes > self.max_computes:
+            raise RuntimeError(
+                "Too many computes. Total: %d > max: %d."
+                % (self.total_computes, self.max_computes)
+            )
+        return dask.get(dsk, keys, **kwargs)
+
+
+def _set_dask_scheduler(scheduler=dask.get):
+    """ Backwards compatible way of setting scheduler. """
+    if LooseVersion(dask.__version__) >= LooseVersion("0.18.0"):
+        return dask.config.set(scheduler=scheduler)
+    return dask.set_options(get=scheduler)
+
+
+def raise_if_dask_computes(max_computes=0):
+    scheduler = CountingScheduler(max_computes)
+    return _set_dask_scheduler(scheduler)
+
+
+def test_raise_if_dask_computes():
+    data = da.from_array(np.random.RandomState(0).randn(4, 6), chunks=(2, 2))
+    with raises_regex(RuntimeError, "Too many computes"):
+        with raise_if_dask_computes():
+            data.compute()
+
+
 class DaskTestCase:
     def assertLazyAnd(self, expected, actual, test):
-
-        with (
-            dask.config.set(scheduler="single-threaded")
-            if LooseVersion(dask.__version__) >= LooseVersion("0.18.0")
-            else dask.set_options(get=dask.get)
-        ):
+        with _set_dask_scheduler(dask.get):
+            # dask.get is the syncronous scheduler, which get's set also by
+            # dask.config.set(scheduler="syncronous") in current versions.
             test(actual, expected)
 
         if isinstance(actual, Dataset):
@@ -174,7 +209,12 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(u.mean(), v.mean())
         self.assertLazyAndAllClose(u.std(), v.std())
-        self.assertLazyAndAllClose(u.argmax(dim="x"), v.argmax(dim="x"))
+        with raise_if_dask_computes():
+            actual = v.argmax(dim="x")
+        self.assertLazyAndAllClose(u.argmax(dim="x"), actual)
+        with raise_if_dask_computes():
+            actual = v.argmin(dim="x")
+        self.assertLazyAndAllClose(u.argmin(dim="x"), actual)
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
         with raises_regex(NotImplementedError, "dask"):
@@ -785,7 +825,6 @@ def kernel(name):
     """Dask kernel to test pickling/unpickling and __repr__.
     Must be global to make it pickleable.
     """
-    print("kernel(%s)" % name)
     global kernel_call_count
     kernel_call_count += 1
     return np.ones(1, dtype=np.int64)

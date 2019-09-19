@@ -30,8 +30,8 @@ if TYPE_CHECKING:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class Coordinates(Mapping[Hashable, "DataArray"]):
-    _data = None  # type: Union["DataArray", "Dataset"]
+class AbstractCoordinates(Mapping[Hashable, "DataArray"]):
+    __slots__ = ()
 
     def __getitem__(self, key: Hashable) -> "DataArray":
         raise NotImplementedError()
@@ -49,7 +49,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
     @property
     def indexes(self) -> Indexes:
-        return self._data.indexes
+        return self._data.indexes  # type: ignore
 
     @property
     def variables(self):
@@ -104,9 +104,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             raise ValueError("no valid index for a 0-dimensional object")
         elif len(ordered_dims) == 1:
             (dim,) = ordered_dims
-            return self._data.get_index(dim)
+            return self._data.get_index(dim)  # type: ignore
         else:
-            indexes = [self._data.get_index(k) for k in ordered_dims]
+            indexes = [self._data.get_index(k) for k in ordered_dims]  # type: ignore
             names = list(ordered_dims)
             return pd.MultiIndex.from_product(indexes, names=names)
 
@@ -189,7 +189,7 @@ class DatasetCoordinates(Coordinates):
     objects.
     """
 
-    _data = None  # type: Dataset
+    __slots__ = ("_data",)
 
     def __init__(self, dataset: "Dataset"):
         self._data = dataset
@@ -269,7 +269,7 @@ class DataArrayCoordinates(Coordinates):
     dimensions and the values given by corresponding DataArray objects.
     """
 
-    _data = None  # type: DataArray
+    __slots__ = ("_data",)
 
     def __init__(self, dataarray: "DataArray"):
         self._data = dataarray
@@ -333,6 +333,8 @@ class LevelCoordinatesSource(Mapping[Hashable, Any]):
     Used for attribute style lookup with AttrAccessMixin. Not returned directly
     by any public methods.
     """
+
+    __slots__ = ("_data",)
 
     def __init__(self, data_object: "Union[DataArray, Dataset]"):
         self._data = data_object

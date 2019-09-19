@@ -245,9 +245,9 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
 
 
 def from_series_or_scalar(se):
-    try:
+    if isinstance(se, pd.Series):
         return DataArray.from_series(se)
-    except AttributeError:  # scalar case
+    else:  # scalar case
         return DataArray(se)
 
 

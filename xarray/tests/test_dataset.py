@@ -46,6 +46,7 @@ from . import (
     requires_dask,
     requires_numbagg,
     requires_scipy,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -1410,6 +1411,78 @@ class TestDataset:
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    def test_head(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(5), dim2=slice(6))
+        actual = data.head(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel(time=slice(0))
+        actual = data.head(time=0)
+        assert_equal(expected, actual)
+
+        expected = data.isel({dim: slice(6) for dim in data.dims})
+        actual = data.head(6)
+        assert_equal(expected, actual)
+
+        expected = data.isel({dim: slice(5) for dim in data.dims})
+        actual = data.head()
+        assert_equal(expected, actual)
+
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            data.head([3])
+        with raises_regex(TypeError, "expected integer type"):
+            data.head(dim2=3.1)
+        with raises_regex(ValueError, "expected positive int"):
+            data.head(time=-3)
+
+    def test_tail(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(-5, None), dim2=slice(-6, None))
+        actual = data.tail(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel(dim1=slice(0))
+        actual = data.tail(dim1=0)
+        assert_equal(expected, actual)
+
+        expected = data.isel({dim: slice(-6, None) for dim in data.dims})
+        actual = data.tail(6)
+        assert_equal(expected, actual)
+
+        expected = data.isel({dim: slice(-5, None) for dim in data.dims})
+        actual = data.tail()
+        assert_equal(expected, actual)
+
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            data.tail([3])
+        with raises_regex(TypeError, "expected integer type"):
+            data.tail(dim2=3.1)
+        with raises_regex(ValueError, "expected positive int"):
+            data.tail(time=-3)
+
+    def test_thin(self):
+        data = create_test_data()
+
+        expected = data.isel(time=slice(None, None, 5), dim2=slice(None, None, 6))
+        actual = data.thin(time=5, dim2=6)
+        assert_equal(expected, actual)
+
+        expected = data.isel({dim: slice(None, None, 6) for dim in data.dims})
+        actual = data.thin(6)
+        assert_equal(expected, actual)
+
+        with raises_regex(TypeError, "either dict-like or a single int"):
+            data.thin([3])
+        with raises_regex(TypeError, "expected integer type"):
+            data.thin(dim2=3.1)
+        with raises_regex(ValueError, "cannot be zero"):
+            data.thin(time=0)
+        with raises_regex(ValueError, "expected positive int"):
+            data.thin(time=-3)
+
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_sel_fancy(self):
         data = create_test_data()
@@ -1656,9 +1729,8 @@ class TestDataset:
         # regression test for #279
         expected = Dataset({"x": ("time", np.random.randn(5))}, {"time": range(5)})
         time2 = DataArray(np.arange(5), dims="time2")
-        with pytest.warns(FutureWarning):
+        with pytest.raises(ValueError):
             actual = expected.reindex(time=time2)
-        assert_identical(actual, expected)
 
         # another regression test
         ds = Dataset(
@@ -1674,11 +1746,10 @@ class TestDataset:
     def test_reindex_warning(self):
         data = create_test_data()
 
-        with pytest.warns(FutureWarning) as ws:
+        with pytest.raises(ValueError):
             # DataArray with different dimension raises Future warning
             ind = xr.DataArray([0.0, 1.0], dims=["new_dim"], name="ind")
             data.reindex(dim2=ind)
-            assert any(["Indexer has dimensions " in str(w.message) for w in ws])
 
         # Should not warn
         ind = xr.DataArray([0.0, 1.0], dims=["dim2"], name="ind")
@@ -3296,18 +3367,6 @@ class TestDataset:
         actual = data.groupby("letters").mean(ALL_DIMS)
         assert_allclose(expected, actual)
 
-    def test_groupby_warn(self):
-        data = Dataset(
-            {
-                "xy": (["x", "y"], np.random.randn(3, 4)),
-                "xonly": ("x", np.random.randn(3)),
-                "yonly": ("y", np.random.randn(4)),
-                "letters": ("y", ["a", "a", "b", "b"]),
-            }
-        )
-        with pytest.warns(FutureWarning):
-            data.groupby("x").mean()
-
     def test_groupby_math(self):
         def reorder_dims(x):
             return x.transpose("dim1", "dim2", "dim3", "time")
@@ -3652,6 +3711,28 @@ class TestDataset:
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=["x", "y"])
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
+
+    @requires_sparse
+    def test_from_dataframe_sparse(self):
+        import sparse
+
+        df_base = pd.DataFrame(
+            {"x": range(10), "y": list("abcdefghij"), "z": np.arange(0, 100, 10)}
+        )
+
+        ds_sparse = Dataset.from_dataframe(df_base.set_index("x"), sparse=True)
+        ds_dense = Dataset.from_dataframe(df_base.set_index("x"), sparse=False)
+        assert isinstance(ds_sparse["y"].data, sparse.COO)
+        assert isinstance(ds_sparse["z"].data, sparse.COO)
+        ds_sparse["y"].data = ds_sparse["y"].data.todense()
+        ds_sparse["z"].data = ds_sparse["z"].data.todense()
+        assert_identical(ds_dense, ds_sparse)
+
+        ds_sparse = Dataset.from_dataframe(df_base.set_index(["x", "y"]), sparse=True)
+        ds_dense = Dataset.from_dataframe(df_base.set_index(["x", "y"]), sparse=False)
+        assert isinstance(ds_sparse["z"].data, sparse.COO)
+        ds_sparse["z"].data = ds_sparse["z"].data.todense()
+        assert_identical(ds_dense, ds_sparse)
 
     def test_to_and_from_empty_dataframe(self):
         # GH697
@@ -5683,3 +5764,36 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual2 = da.integrate("time", datetime_unit="h")
     assert_allclose(actual, actual2 / 24.0)
+
+
+def test_no_dict():
+    d = Dataset()
+    with pytest.raises(AttributeError):
+        d.__dict__
+
+
+@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
+def test_subclass_slots():
+    """Test that Dataset subclasses must explicitly define ``__slots__``.
+
+    .. note::
+       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
+       defined outside of the xarray package.
+    """
+    with pytest.raises(AttributeError) as e:
+
+        class MyDS(Dataset):
+            pass
+
+    assert str(e.value) == "MyDS must explicitly define __slots__"
+
+
+def test_weakref():
+    """Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots
+    """
+    from weakref import ref
+
+    ds = Dataset()
+    r = ref(ds)
+    assert r() is ds

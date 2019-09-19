@@ -243,6 +243,7 @@ def _combine_1d(
                 dim=concat_dim,
                 data_vars=data_vars,
                 coords=coords,
+                compat=compat,
                 fill_value=fill_value,
                 join=join,
             )
@@ -351,7 +352,7 @@ def combine_nested(
         Must be the same length as the depth of the list passed to
         ``datasets``.
     compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+              'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential merge conflicts:
 
@@ -363,6 +364,7 @@ def combine_nested(
         - 'no_conflicts': only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
+        - 'override': skip comparing and pick variable from first dataset
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' or list of str}, optional
@@ -504,7 +506,7 @@ def combine_by_coords(
     datasets : sequence of xarray.Dataset
         Dataset objects to combine.
     compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+              'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -516,6 +518,7 @@ def combine_by_coords(
         - 'no_conflicts': only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
+        - 'override': skip comparing and pick variable from first dataset
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' or list of str}, optional
@@ -598,6 +601,7 @@ def combine_by_coords(
             concat_dims=concat_dims,
             data_vars=data_vars,
             coords=coords,
+            compat=compat,
             fill_value=fill_value,
             join=join,
         )
@@ -667,7 +671,7 @@ def auto_combine(
         component files. Set ``concat_dim=None`` explicitly to disable
         concatenation.
     compat : {'identical', 'equals', 'broadcast_equals',
-             'no_conflicts'}, optional
+             'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
         - 'broadcast_equals': all values must be equal when variables are
@@ -678,6 +682,7 @@ def auto_combine(
         - 'no_conflicts': only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
+        - 'override': skip comparing and pick variable from first dataset
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' o list of str}, optional
@@ -711,7 +716,7 @@ def auto_combine(
     if not from_openmfds:
         basic_msg = dedent(
             """\
-        In xarray version 0.13 `auto_combine` will be deprecated. See
+        In xarray version 0.14 `auto_combine` will be deprecated. See
         http://xarray.pydata.org/en/stable/combining.html#combining-multi"""
         )
         warnings.warn(basic_msg, FutureWarning, stacklevel=2)
@@ -753,7 +758,7 @@ def auto_combine(
         message += dedent(
             """\
         The datasets supplied require both concatenation and merging. From
-        xarray version 0.13 this will operation will require either using the
+        xarray version 0.14 this will operation will require either using the
         new `combine_nested` function (or the `combine='nested'` option to
         open_mfdataset), with a nested list structure such that you can combine
         along the dimensions {}. Alternatively if your datasets have global
@@ -832,6 +837,7 @@ def _old_auto_combine(
                 dim=dim,
                 data_vars=data_vars,
                 coords=coords,
+                compat=compat,
                 fill_value=fill_value,
                 join=join,
             )
@@ -850,6 +856,7 @@ def _auto_concat(
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
+    compat="no_conflicts",
 ):
     if len(datasets) == 1 and dim is None:
         # There is nothing more to combine, so kick out early.
@@ -876,5 +883,10 @@ def _auto_concat(
                 )
             dim, = concat_dims
         return concat(
-            datasets, dim=dim, data_vars=data_vars, coords=coords, fill_value=fill_value
+            datasets,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            fill_value=fill_value,
+            compat=compat,
         )

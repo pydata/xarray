@@ -196,6 +196,8 @@ class TestMergeMethod:
         with raises_regex(ValueError, "compat=.* invalid"):
             ds1.merge(ds2, compat="foobar")
 
+        assert ds1.identical(ds1.merge(ds2, compat="override"))
+
     def test_merge_auto_align(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = xr.Dataset({"b": ("x", [3, 4]), "x": [1, 2]})

@@ -51,6 +51,7 @@ _VALID_COMPAT = Frozen(
         "broadcast_equals": 2,
         "minimal": 3,
         "no_conflicts": 4,
+        "override": 5,
     }
 )
 
@@ -78,7 +79,7 @@ class MergeError(ValueError):
 
 
 def unique_variable(
-    name: Hashable, variables: List[Variable], compat: str = "broadcast_equals"
+    name: Hashable, variables: List[Variable], compat: str = "broadcast_equals", equals: bool = None,
 ) -> Variable:
     """Return the unique variable from a list of variables or raise MergeError.
 
@@ -89,8 +90,10 @@ def unique_variable(
     variables : list of xarray.Variable
         List of Variable objects, all of which go by the same name in different
         inputs.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         Type of equality check to use.
+    equals: None or bool,
+        corresponding to result of compat test
 
     Returns
     -------
@@ -101,30 +104,38 @@ def unique_variable(
     MergeError: if any of the variables are not equal.
     """  # noqa
     out = variables[0]
-    if len(variables) > 1:
-        combine_method = None
 
-        if compat == "minimal":
-            compat = "broadcast_equals"
+    if len(variables) == 1 or compat == "override":
+        return out
 
-        if compat == "broadcast_equals":
-            dim_lengths = broadcast_dimension_size(variables)
-            out = out.set_dims(dim_lengths)
+    combine_method = None
 
-        if compat == "no_conflicts":
-            combine_method = "fillna"
+    if compat == "minimal":
+        compat = "broadcast_equals"
 
+    if compat == "broadcast_equals":
+        dim_lengths = broadcast_dimension_size(variables)
+        out = out.set_dims(dim_lengths)
+
+    if compat == "no_conflicts":
+        combine_method = "fillna"
+
+    if equals is None:
+        out = out.compute()
         for var in variables[1:]:
-            if not getattr(out, compat)(var):
-                raise MergeError(
-                    "conflicting values for variable %r on "
-                    "objects to be combined:\n"
-                    "first value: %r\nsecond value: %r" % (name, out, var)
-                )
-            if combine_method:
-                # TODO: add preservation of attrs into fillna
-                out = getattr(out, combine_method)(var)
-                out.attrs = var.attrs
+            equals = getattr(out, compat)(var)
+            if not equals:
+                break
+
+    if not equals:
+        raise MergeError(
+            "conflicting values for variable %r on objects to be combined. You can skip this check by specifying compat='override'."
+            % (name)
+        )
+
+    if combine_method:
+        for var in variables[1:]:
+            out = getattr(out, combine_method)(var)
 
     return out
 
@@ -146,12 +157,7 @@ def merge_collected(
 
     Parameters
     ----------
-    grouped : mapping
-        Lists of variables of the same name to merge.
-    prioritized : mapping, optional
-        If provided, variables/indexes are always taken from this dict in
-        preference to the grouped dictionaries, without checking for conflicts.
-    compat : {'identical', 'equals', 'broadcast_equals', 'minimal', 'no_conflicts'}, optional
+
         Type of equality check to use when checking for conflicts.
 
     Returns
@@ -504,7 +510,7 @@ def merge_core(
     ----------
     objects : list of mappings
         All values must be convertable to labeled arrays.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         Compatibility checks to use when merging variables.
     join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
@@ -576,7 +582,7 @@ def merge(
     objects : Iterable[Union[xarray.Dataset, xarray.DataArray, dict]]
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -588,6 +594,7 @@ def merge(
         - 'no_conflicts': only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
+        - 'override': skip comparing and pick variable from first dataset
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         String indicating how to combine differing indexes in objects.
 

@@ -345,6 +345,8 @@ def as_dataset(obj: Any) -> "Dataset":
 
 
 class DataVariables(Mapping[Hashable, "DataArray"]):
+    __slots__ = ("_dataset",)
+
     def __init__(self, dataset: "Dataset"):
         self._dataset = dataset
 
@@ -384,6 +386,8 @@ class DataVariables(Mapping[Hashable, "DataArray"]):
 
 
 class _LocIndexer:
+    __slots__ = ("dataset",)
+
     def __init__(self, dataset: "Dataset"):
         self.dataset = dataset
 
@@ -406,6 +410,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
+
+    __slots__ = (
+        "_accessors",
+        "_attrs",
+        "_coord_names",
+        "_dims",
+        "_encoding",
+        "_file_obj",
+        "_indexes",
+        "_variables",
+        "__weakref__",
+    )
 
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
@@ -474,7 +490,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if compat is not None:
             warnings.warn(
                 "The `compat` argument to Dataset is deprecated and will be "
-                "removed in 0.13."
+                "removed in 0.14."
                 "Instead, use `merge` to control how variables are combined",
                 FutureWarning,
                 stacklevel=2,
@@ -485,6 +501,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self._variables = OrderedDict()  # type: OrderedDict[Any, Variable]
         self._coord_names = set()  # type: Set[Hashable]
         self._dims = {}  # type: Dict[Any, int]
+        self._accessors = None  # type: Optional[Dict[str, Any]]
         self._attrs = None  # type: Optional[OrderedDict]
         self._file_obj = None
         if data_vars is None:
@@ -499,7 +516,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs = OrderedDict(attrs)
 
         self._encoding = None  # type: Optional[Dict]
-        self._initialized = True
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
         """Set the initial value of Dataset variables and dimensions
@@ -841,7 +857,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._attrs = attrs
         obj._file_obj = file_obj
         obj._encoding = encoding
-        obj._initialized = True
+        obj._accessors = None
         return obj
 
     __default = object()
@@ -1215,12 +1231,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return _LocIndexer(self)
 
-    def __getitem__(self, key: object) -> "Union[DataArray, Dataset]":
+    def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
+        # TODO(shoyer): type this properly: https://github.com/python/mypy/issues/7328
         if utils.is_dict_like(key):
             return self.isel(**cast(Mapping, key))
 
@@ -1767,7 +1784,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             elif isinstance(v, Dataset):
                 raise TypeError("cannot use a Dataset as an indexer")
             elif isinstance(v, Sequence) and len(v) == 0:
-                v = IndexVariable((k,), np.zeros((0,), dtype="int64"))
+                v = Variable((k,), np.zeros((0,), dtype="int64"))
             else:
                 v = np.asarray(v)
 
@@ -1781,15 +1798,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if v.ndim == 0:
                     v = Variable((), v)
                 elif v.ndim == 1:
-                    v = IndexVariable((k,), v)
+                    v = Variable((k,), v)
                 else:
                     raise IndexError(
                         "Unlabeled multi-dimensional array cannot be "
                         "used for indexing: {}".format(k)
                     )
-
-            if v.ndim == 1:
-                v = v.to_index_variable()
 
             indexers_list.append((k, v))
 
@@ -1990,6 +2004,153 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         result = self.isel(indexers=pos_indexers, drop=drop)
         return result._overwrite_indexes(new_indexes)
+
+    def head(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with the first `n` values of each array
+        for the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.tail
+        Dataset.thin
+        DataArray.head
+        """
+        if not indexers_kwargs:
+            if indexers is None:
+                indexers = 5
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
+                raise TypeError("indexers must be either dict-like or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
+        for k, v in indexers.items():
+            if not isinstance(v, int):
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
+            elif v < 0:
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
+        indexers_slices = {k: slice(val) for k, val in indexers.items()}
+        return self.isel(indexers_slices)
+
+    def tail(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with the last `n` values of each array
+        for the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.thin
+        DataArray.tail
+        """
+        if not indexers_kwargs:
+            if indexers is None:
+                indexers = 5
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
+                raise TypeError("indexers must be either dict-like or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
+        for k, v in indexers.items():
+            if not isinstance(v, int):
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
+            elif v < 0:
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
+        indexers_slices = {
+            k: slice(-val, None) if val != 0 else slice(val)
+            for k, val in indexers.items()
+        }
+        return self.isel(indexers_slices)
+
+    def thin(
+        self,
+        indexers: Union[Mapping[Hashable, int], int] = None,
+        **indexers_kwargs: Any
+    ) -> "Dataset":
+        """Returns a new dataset with each array indexed along every `n`th
+        value for the specified dimension(s)
+
+        Parameters
+        ----------
+        indexers : dict or int, default: 5
+            A dict with keys matching dimensions and integer values `n`
+            or a single integer `n` applied over all dimensions.
+            One of indexers or indexers_kwargs must be provided.
+        **indexers_kwargs : {dim: n, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.tail
+        DataArray.thin
+        """
+        if (
+            not indexers_kwargs
+            and not isinstance(indexers, int)
+            and not is_dict_like(indexers)
+        ):
+            raise TypeError("indexers must be either dict-like or a single integer")
+        if isinstance(indexers, int):
+            indexers = {dim: indexers for dim in self.dims}
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
+        for k, v in indexers.items():
+            if not isinstance(v, int):
+                raise TypeError(
+                    "expected integer type indexer for "
+                    "dimension %r, found %r" % (k, type(v))
+                )
+            elif v < 0:
+                raise ValueError(
+                    "expected positive integer as indexer "
+                    "for dimension %r, found %s" % (k, v)
+                )
+            elif v == 0:
+                raise ValueError("step cannot be zero")
+        indexers_slices = {k: slice(None, None, val) for k, val in indexers.items()}
+        return self.isel(indexers_slices)
 
     def broadcast_like(
         self, other: Union["Dataset", "DataArray"], exclude: Iterable[Hashable] = None
@@ -2202,7 +2363,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if kwargs is None:
             kwargs = {}
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
-        indexers = OrderedDict(self._validate_indexers(coords))
+        indexers = OrderedDict(
+            (k, v.to_index_variable() if isinstance(v, Variable) and v.ndim == 1 else v)
+            for k, v in self._validate_indexers(coords)
+        )
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
 
@@ -3711,9 +3875,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if dim is ALL_DIMS:
-            dim = None
-        if dim is None:
+        if dim is None or dim is ALL_DIMS:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
             dims = {dim}
@@ -3915,8 +4077,61 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return self._to_dataframe(self.dims)
 
+    def _set_sparse_data_from_dataframe(
+        self, dataframe: pd.DataFrame, dims: tuple, shape: Tuple[int, ...]
+    ) -> None:
+        from sparse import COO
+
+        idx = dataframe.index
+        if isinstance(idx, pd.MultiIndex):
+            try:
+                codes = idx.codes
+            except AttributeError:
+                # deprecated since pandas 0.24
+                codes = idx.labels
+            coords = np.stack([np.asarray(code) for code in codes], axis=0)
+            is_sorted = idx.is_lexsorted
+        else:
+            coords = np.arange(idx.size).reshape(1, -1)
+            is_sorted = True
+
+        for name, series in dataframe.items():
+            # Cast to a NumPy array first, in case the Series is a pandas
+            # Extension array (which doesn't have a valid NumPy dtype)
+            values = np.asarray(series)
+
+            # In virtually all real use cases, the sparse array will now have
+            # missing values and needs a fill_value. For consistency, don't
+            # special case the rare exceptions (e.g., dtype=int without a
+            # MultiIndex).
+            dtype, fill_value = dtypes.maybe_promote(values.dtype)
+            values = np.asarray(values, dtype=dtype)
+
+            data = COO(
+                coords,
+                values,
+                shape,
+                has_duplicates=False,
+                sorted=is_sorted,
+                fill_value=fill_value,
+            )
+            self[name] = (dims, data)
+
+    def _set_numpy_data_from_dataframe(
+        self, dataframe: pd.DataFrame, dims: tuple, shape: Tuple[int, ...]
+    ) -> None:
+        idx = dataframe.index
+        if isinstance(idx, pd.MultiIndex):
+            # expand the DataFrame to include the product of all levels
+            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
+            dataframe = dataframe.reindex(full_idx)
+
+        for name, series in dataframe.items():
+            data = np.asarray(series).reshape(shape)
+            self[name] = (dims, data)
+
     @classmethod
-    def from_dataframe(cls, dataframe):
+    def from_dataframe(cls, dataframe: pd.DataFrame, sparse: bool = False) -> "Dataset":
         """Convert a pandas.DataFrame into an xarray.Dataset
 
         Each column will be converted into an independent variable in the
@@ -3925,7 +4140,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         values with NaN). This method will produce a Dataset very similar to
         that on which the 'to_dataframe' method was called, except with
         possibly redundant dimensions (since all dataset variables will have
-        the same dimensionality).
+        the same dimensionality)
+
+        Parameters
+        ----------
+        dataframe : pandas.DataFrame
+            DataFrame from which to copy data and indices.
+        sparse : bool
+            If true, create a sparse arrays instead of dense numpy arrays. This
+            can potentially save a large amount of memory if the DataFrame has
+            a MultiIndex. Requires the sparse package (sparse.pydata.org).
+
+        Returns
+        -------
+        New Dataset.
+
+        See also
+        --------
+        xarray.DataArray.from_series
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
@@ -3938,25 +4170,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
-            # it's a multi-index
-            # expand the DataFrame to include the product of all levels
-            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
-            dataframe = dataframe.reindex(full_idx)
-            dims = [
+            dims = tuple(
                 name if name is not None else "level_%i" % n
                 for n, name in enumerate(idx.names)
-            ]
+            )
             for dim, lev in zip(dims, idx.levels):
                 obj[dim] = (dim, lev)
-            shape = [lev.size for lev in idx.levels]
+            shape = tuple(lev.size for lev in idx.levels)
         else:
-            dims = (idx.name if idx.name is not None else "index",)
-            obj[dims[0]] = (dims, idx)
-            shape = -1
+            index_name = idx.name if idx.name is not None else "index"
+            dims = (index_name,)
+            obj[index_name] = (dims, idx)
+            shape = (idx.size,)
 
-        for name, series in dataframe.items():
-            data = np.asarray(series).reshape(shape)
-            obj[name] = (dims, data)
+        if sparse:
+            obj._set_sparse_data_from_dataframe(dataframe, dims, shape)
+        else:
+            obj._set_numpy_data_from_dataframe(dataframe, dims, shape)
         return obj
 
     def to_dask_dataframe(self, dim_order=None, set_index=False):
@@ -4571,7 +4801,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if isinstance(dim, str):
             dims = {dim}
-        elif dim is None:
+        elif dim is None or dim is ALL_DIMS:
             dims = set(self.dims)
         else:
             dims = set(dim)
@@ -4599,7 +4829,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             # the former is often more efficient
                             reduce_dims = None
                         variables[name] = var.quantile(
-                            q, dim=reduce_dims, interpolation=interpolation
+                            q,
+                            dim=reduce_dims,
+                            interpolation=interpolation,
+                            keep_attrs=keep_attrs,
                         )
 
             else:
