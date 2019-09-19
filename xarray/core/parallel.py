@@ -37,7 +37,7 @@ def make_meta(obj):
     if isinstance(obj, DataArray):
         meta = DataArray(obj.data._meta, dims=obj.dims, name=obj.name)
 
-    if isinstance(obj, Dataset):
+    elif isinstance(obj, Dataset):
         meta = Dataset()
         for name, variable in obj.variables.items():
             if dask.is_dask_collection(variable):
@@ -49,9 +49,11 @@ def make_meta(obj):
     else:
         meta = obj
 
-    # TODO: deal with non-dim coords
-    # for coord_name in (set(obj.coords) - set(obj.dims)):  # DataArrays should have _coord_names!
-    #    coord = obj[coord_name]
+    # TODO: DataArrays should have _coord_names!
+
+    if isinstance(obj, (DataArray, Dataset)):
+        for coord_name in set(obj.coords) - set(obj.dims):
+            meta = meta.set_coords(coord_name)
 
     return meta
 
@@ -268,7 +270,7 @@ def map_blocks(func, obj, *args, **kwargs):
     # a quicker way to assign indexes?
     # indexes need to be known
     # otherwise compute is called when DataArray is created
-    for name in template.indexes:
+    for name in template.dims:
         result[name] = indexes[name]
     for name, key in var_key_map.items():
         dims = template[name].dims

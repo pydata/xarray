@@ -990,6 +990,20 @@ def map_blocks_transformations(func, obj, return_type):
     assert isinstance(xr.map_blocks(func, obj), return_type)
 
 
+def test_make_meta():
+    from ..core.parallel import make_meta
+
+    meta = make_meta(map_ds)
+
+    for variable in map_ds._coord_names:
+        assert variable in meta._coord_names
+        assert meta.coords[variable].shape == (0,) * meta.coords[variable].ndim
+
+    for variable in map_ds.data_vars:
+        assert variable in meta.data_vars
+        assert meta.data_vars[variable].shape == (0,) * meta.data_vars[variable].ndim
+
+
 # func(DataArray) -> Dataset
 # func(Dataset) -> DataArray
 # func output contains less variables
