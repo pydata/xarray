@@ -404,7 +404,7 @@ class TestDataArray:
             pytest.param(8 * unit_registry.m, None, id="correct_unit"),
         ),
     )
-    def test_comparisons(self, comparison, value, error, dtype):
+    def test_comparison_operations(self, comparison, value, error, dtype):
         array = (
             np.array([10.1, 5.2, 6.5, 8.0, 21.3, 7.1, 1.3]).astype(dtype)
             * unit_registry.m
@@ -776,6 +776,92 @@ class TestDataArray:
             )
 
             assert_equal_with_units(expected, result)
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "variation",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.xfail(reason="units in indexes not supported")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("equals"),
+            pytest.param(
+                method("identical"),
+                marks=pytest.mark.xfail(reason="identical does not check units yet"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_comparisons(self, func, variation, unit, dtype):
+        def attach_unit(data, unit):
+            # to make sure we also encounter the case of "equal if converted"
+            if (
+                isinstance(unit, unit_registry.Unit)
+                and "[length]" in unit.dimensionality
+            ):
+                quantity = (data * unit_registry.m).to(unit)
+            else:
+                quantity = data * unit
+            return quantity
+
+        data = np.linspace(0, 5, 10).astype(dtype)
+        coord = np.arange(len(data)).astype(dtype)
+
+        quantity = data * unit_registry.m
+        x = coord * unit_registry.m
+        y = coord * unit_registry.m
+
+        units = {
+            "data": (unit, unit_registry.m, unit_registry.m),
+            "dims": (unit_registry.m, unit, unit_registry.m),
+            "coords": (unit_registry.m, unit_registry.m, unit),
+        }
+        data_unit, dim_unit, coord_unit = units.get(variation)
+
+        data_array = xr.DataArray(
+            data=quantity, coords={"x": x, "y": ("x", y)}, dims="x"
+        )
+        other = xr.DataArray(
+            data=attach_unit(data, data_unit),
+            coords={
+                "x": attach_unit(coord, dim_unit),
+                "y": ("x", attach_unit(coord, coord_unit)),
+            },
+            dims="x",
+        )
+
+        # TODO: test dim coord once indexes leave units intact
+        equal_arrays = (
+            np.all(quantity == other.data)
+            and (np.all(x == other.x.data) or True)  # dims can't be checked yet
+            and np.all(y == other.y.data)
+        )
+        equal_units = (
+            data_unit == unit_registry.m
+            and coord_unit == unit_registry.m
+            and dim_unit == unit_registry.m
+        )
+        expected = equal_arrays and (func.name != "identical" or equal_units)
+        result = func(data_array, other)
+
+        assert expected == result
 
     @require_pint_array_function
     @pytest.mark.parametrize(
