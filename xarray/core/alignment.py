@@ -226,8 +226,7 @@ def align(
 
     >>> a, b = xr.align(x, y, join='exact')
     Traceback (most recent call last):
-    File "<stdin>", line 1, in <module>
-    File "..../xarray/xarray/core/alignment.py", line 168, in align
+    ...
         "indexes along dimension {!r} are not equal".format(dim)
     ValueError: indexes along dimension 'lat' are not equal
 
