@@ -501,6 +501,7 @@ Dataset methods
    Dataset.load
    Dataset.chunk
    Dataset.unify_chunks
+   Dataset.map_blocks
    Dataset.filter_by_attrs
    Dataset.info
 
@@ -532,6 +533,7 @@ DataArray methods
    DataArray.load
    DataArray.chunk
    DataArray.unify_chunks
+   DataArray.map_blocks
 
 GroupBy objects
 ===============
