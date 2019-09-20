@@ -1172,6 +1172,57 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
         filled with fill_value. Coords will be copied from other.
         If other is based on dask, the new one will be as well, and will be
         split in the same chunks.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+          [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+    >>> xr.full_like(x, 1)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[1, 1, 1],
+        [1, 1, 1]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+    >>> xr.full_like(x, 0.5)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 0, 0],
+        [0, 0, 0]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+    >>> xr.full_like(x, 0.5, dtype=np.double)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0.5, 0.5, 0.5],
+        [0.5, 0.5, 0.5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+    >>> xr.full_like(x, np.nan, dtype=np.double)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[nan, nan, nan],
+        [nan, nan, nan]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    zeros_like
+    ones_like
+
     """
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -1217,13 +1268,82 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
 
 
 def zeros_like(other, dtype: DTypeLike = None):
-    """Shorthand for full_like(other, 0, dtype)
+    """Return a dataarray or dataset of zeros with the same shape and
+       type as a given dataarray or dataset.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+          [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+    >>> xr.zeros_like(x)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 0, 0],
+        [0, 0, 0]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+    >>> xr.zeros_like(x, dtype=np.float)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0., 0., 0.],
+        [0., 0., 0.]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    ones_like
+    full_like
+
     """
     return full_like(other, 0, dtype)
 
 
 def ones_like(other, dtype: DTypeLike = None):
-    """Shorthand for full_like(other, 1, dtype)
+    """Return a dataarray or dataset of ones with the same shape and
+       type as a given dataarray or dataset.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+          [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+    >>> >>> xr.ones_like(x)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[1, 1, 1],
+        [1, 1, 1]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    zeros_like
+    full_like
+
     """
     return full_like(other, 1, dtype)
 
