@@ -1,3 +1,4 @@
+import operator
 import pickle
 from collections import OrderedDict
 from contextlib import suppress
@@ -1004,6 +1005,12 @@ def test_map_blocks_error():
     with raises_regex(ValueError, "Function must return an xarray DataArray"):
         xr.map_blocks(returns_numpy, map_da)
 
+    with raises_regex(ValueError, "args must be"):
+        xr.map_blocks(operator.add, map_da, args=10)
+
+    with raises_regex(ValueError, "kwargs must be"):
+        xr.map_blocks(operator.add, map_da, args=[10], kwargs=[20])
+
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
 def test_map_blocks(obj):
@@ -1020,12 +1027,10 @@ def test_map_blocks(obj):
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
-def test_map_blocks_args(obj):
-    import operator
-
+def test_map_blocks_convert_args_to_list(obj):
     expected = obj.unify_chunks() + 10
     with raise_if_dask_computes():
-        actual = xr.map_blocks(operator.add, obj, 10)
+        actual = xr.map_blocks(operator.add, obj, [10])
     assert_chunks_equal(expected, actual)
     # why is compute needed?
     xr.testing.assert_equal(expected.compute(), actual.compute())
@@ -1035,7 +1040,7 @@ def test_map_blocks_args(obj):
 def test_map_blocks_kwargs(obj):
     expected = xr.full_like(obj, fill_value=np.nan)
     with raise_if_dask_computes():
-        actual = xr.map_blocks(xr.full_like, obj, fill_value=np.nan)
+        actual = xr.map_blocks(xr.full_like, obj, kwargs=dict(fill_value=np.nan))
     assert_chunks_equal(expected, actual)
     # why is compute needed?
     xr.testing.assert_equal(expected.compute(), actual.compute())

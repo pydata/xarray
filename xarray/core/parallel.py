@@ -92,7 +92,7 @@ def make_dict(x):
     return to_return
 
 
-def map_blocks(func, obj, *args, **kwargs):
+def map_blocks(func, obj, args=[], kwargs={}):
     """
     Apply a function to each chunk of a DataArray or Dataset. This function is experimental
     and its signature may change.
@@ -115,11 +115,10 @@ def map_blocks(func, obj, *args, **kwargs):
     obj: DataArray, Dataset
         Chunks of this object will be provided to 'func'. The function must not change
         shape of the provided DataArray.
-    args:
-        Passed on to func. Cannot include chunked xarray objects.
-    kwargs:
-        Passed on to func. Cannot include chunked xarray objects.
-
+    args: list
+        Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+    kwargs: dict
+        Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
 
     Returns
     -------
@@ -153,6 +152,12 @@ def map_blocks(func, obj, *args, **kwargs):
         to_return = make_dict(result)
 
         return to_return
+
+    if not isinstance(args, list):
+        raise ValueError("args must be a list.")
+
+    if not isinstance(kwargs, dict):
+        raise ValueError("kwargs must be a dictionary.")
 
     if not dask.is_dask_collection(obj):
         raise ValueError(
