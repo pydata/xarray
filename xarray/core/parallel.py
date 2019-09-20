@@ -100,17 +100,21 @@ def map_blocks(func, obj, args=[], kwargs={}):
     Parameters
     ----------
     func: callable
-        User-provided function that should accept DataArrays corresponding to one chunk.
+        User-provided function that should accept xarray objects.
+        This function will receive a subset of this dataset, corresponding to one chunk along
+        each chunked dimension.
         The function will be run on a small piece of data that looks like 'obj' to determine
         properties of the returned object such as dtype, variable names,
         new dimensions and new indexes (if any).
 
         This function must
-        - return either a DataArray or a Dataset
+        - return either a single DataArray or a single Dataset
 
         This function cannot
         - change size of existing dimensions.
         - add new chunked dimensions.
+
+        If your function expects numpy arrays, see `xarray.apply_ufunc`
 
     obj: DataArray, Dataset
         Chunks of this object will be provided to 'func'. The function must not change
@@ -122,7 +126,7 @@ def map_blocks(func, obj, args=[], kwargs={}):
 
     Returns
     -------
-    DataArray or Dataset
+    A single DataArray or Dataset
 
     Notes
     -----

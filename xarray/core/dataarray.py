@@ -3039,6 +3039,49 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def map_blocks(self, func, args=[], kwargs={}):
+        """
+        Apply a function to each chunk of this DataArray. This function is experimental
+        and its signature may change.
+
+        Parameters
+        ----------
+        func: callable
+            User-provided function that should accept xarray objects.
+            This function will receive a subset of this dataset, corresponding to one chunk along
+            each chunked dimension.
+            The function will be run on a small piece of data that looks like 'obj' to determine
+            properties of the returned object such as dtype, variable names,
+            new dimensions and new indexes (if any).
+
+            This function must
+            - return either a single DataArray or a single Dataset
+
+            This function cannot
+            - change size of existing dimensions.
+            - add new chunked dimensions.
+
+            If your function expects numpy arrays, see `xarray.apply_ufunc`
+
+        args: list
+            Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+        kwargs: dict
+            Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+
+        Returns
+        -------
+        A single DataArray or Dataset
+
+        Notes
+        -----
+
+        This function is designed to work with dask-backed xarray objects. See apply_ufunc for
+        a similar function that works with numpy arrays.
+
+        See Also
+        --------
+        dask.array.map_blocks, xarray.apply_ufunc
+        """
+
         from .parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs)
