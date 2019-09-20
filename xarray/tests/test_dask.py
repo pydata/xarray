@@ -1066,6 +1066,19 @@ def map_blocks_transformations(func, obj, expected):
         assert_equal(xr.map_blocks(func, obj), func(obj))
 
 
+@pytest.mark.parametrize("obj", [map_da, map_ds])
+def test_map_blocks_object_method(obj):
+    def func(obj):
+        result = obj + obj.x + 5 * obj.y
+        return result
+
+    with raise_if_dask_computes():
+        expected = xr.map_blocks(func, obj)
+        actual = obj.map_blocks(func)
+
+    assert_equal(expected.compute(), actual.compute())
+
+
 def test_make_meta():
     from ..core.parallel import make_meta
 

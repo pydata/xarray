@@ -5202,5 +5202,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return ds
 
+    def map_blocks(self, func, args=[], kwargs={}):
+        from .parallel import map_blocks
+
+        return map_blocks(func, self, args, kwargs)
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
