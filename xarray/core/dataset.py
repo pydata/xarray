@@ -5172,7 +5172,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         ds = self.copy()
 
-        alphabet = "abcdefghijklmnopqrstuvwxyz"  # this is stupid :)
+        # dask unify_chunks needs dimensions named using a single character
+        # map our dimension names to a single character
+        alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
         alphamap = dict(zip(ds.dims, alphabet))
 
         dask_arrays = {}
