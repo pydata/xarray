@@ -5164,6 +5164,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         import dask.array
 
+        try:
+            if self.chunks:
+                return self
+        except ValueError:  # "inconsistent chunks"
+            pass
+
         ds = self.copy()
 
         alphabet = "abcdefghijklmnopqrstuvwxyz"  # this is stupid :)
@@ -5188,12 +5194,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 continue
             new_chunks[dim] = new_chunks[alpha]
             del new_chunks[alpha]
-
-        try:
-            if new_chunks == ds.chunks:
-                return ds
-        except ValueError:  # "inconsistent chunks"
-            pass
 
         for name, new_array in zip(dask_arrays.keys(), rechunked_arrays):
             ds.variables[name]._data = new_array
