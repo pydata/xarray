@@ -2676,7 +2676,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Returns
         -------
-        renamed : Dataset
+        swapped : Dataset
             Dataset with swapped dimensions.
 
         See Also
