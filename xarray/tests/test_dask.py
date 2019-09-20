@@ -991,23 +991,6 @@ def assert_chunks_equal(a, b):
     assert a.chunks == b.chunks
 
 
-def simple_func(obj):
-    result = obj + obj.x + 5 * obj.y
-    return result
-
-
-def complicated_func(obj):
-    new = obj.copy()
-    new = (
-        new[["a", "b"]]
-        .rename({"a": "new_var1"})
-        .expand_dims(k=[0, 1, 2])
-        .transpose("k", "y", "x")
-    )
-    new["b"] = new.b.astype("int32")
-    return new
-
-
 def test_map_blocks_error():
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
@@ -1022,13 +1005,14 @@ def test_map_blocks_error():
         xr.map_blocks(returns_numpy, map_da)
 
 
-@pytest.mark.parametrize(
-    "func, obj",
-    [[simple_func, map_da], [simple_func, map_ds], [complicated_func, map_ds]],
-)
-def test_map_blocks(func, obj):
+@pytest.mark.parametrize("obj", [map_da, map_ds])
+def test_map_blocks(obj):
+    def func(obj):
+        result = obj + obj.x + 5 * obj.y
+        return result
 
-    actual = xr.map_blocks(func, obj)
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, obj)
     expected = func(obj).unify_chunks()
     assert_chunks_equal(expected, actual)
     # why is compute needed?
@@ -1040,26 +1024,41 @@ def test_map_blocks_args(obj):
     import operator
 
     expected = obj.unify_chunks() + 10
-    actual = xr.map_blocks(operator.add, obj, 10)
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(operator.add, obj, 10)
     assert_chunks_equal(expected, actual)
     # why is compute needed?
     xr.testing.assert_equal(expected.compute(), actual.compute())
 
 
-def da_to_ds(da):
-    return da.to_dataset()
-
-
-def ds_to_da(ds):
-    return ds.to_array()
+@pytest.mark.parametrize("obj", [map_da, map_ds])
+def test_map_blocks_kwargs(obj):
+    expected = xr.full_like(obj, fill_value=np.nan)
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(xr.full_like, obj, fill_value=np.nan)
+    assert_chunks_equal(expected, actual)
+    # why is compute needed?
+    xr.testing.assert_equal(expected.compute(), actual.compute())
 
 
 @pytest.mark.parametrize(
-    "func, obj, return_type",
-    [[da_to_ds, map_da, xr.Dataset], [ds_to_da, map_ds, xr.DataArray]],
+    "func, obj",
+    [
+        [lambda x: x.to_dataset(), map_da],
+        [lambda x: x.to_array(), map_ds],
+        [lambda x: x.drop("a"), map_ds],
+        [lambda x: x.expand_dims(k=[1, 2, 3]), map_ds],
+        [lambda x: x.expand_dims(k=[1, 2, 3]), map_da],
+        [lambda x: x.isel(x=1), map_ds],
+        [lambda x: x.isel(x=1).drop("x"), map_da],
+        [lambda x: x.assign_coords(new_coord=("y", x.y * 2)), map_da],
+        [lambda x: x.astype(np.int32), map_da],
+        [lambda x: x.rename({"a": "new1", "b": "new2"}), map_ds],
+    ],
 )
-def map_blocks_transformations(func, obj, return_type):
-    assert isinstance(xr.map_blocks(func, obj), return_type)
+def map_blocks_transformations(func, obj, expected):
+    with raise_if_dask_computes():
+        assert_equal(xr.map_blocks(func, obj), func(obj))
 
 
 def test_make_meta():
@@ -1074,13 +1073,3 @@ def test_make_meta():
     for variable in map_ds.data_vars:
         assert variable in meta.data_vars
         assert meta.data_vars[variable].shape == (0,) * meta.data_vars[variable].ndim
-
-
-# func(DataArray) -> Dataset
-# func(Dataset) -> DataArray
-# func output contains less variables
-# func output contains new variables
-# func changes dtypes
-# func output contains less (or more) dimensions
-# *args, **kwargs are passed through
-# IndexVariables don't accidentally cause the whole graph to be computed (the logic you wrote in the main function is quite subtle!)
