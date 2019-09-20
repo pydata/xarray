@@ -1268,8 +1268,20 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
 
 
 def zeros_like(other, dtype: DTypeLike = None):
-    """Return a dataarray or dataset of zeros with the same shape and
-       type as a given dataarray or dataset.
+    """Return a new object of zeros with the same shape and
+    type as a given dataarray or dataset.
+
+    Parameters
+    ----------
+    other : DataArray, Dataset, or Variable
+        The reference object in input
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
+
+    Returns
+    -------
+    out : same as object
+        New object of zeros with the same shape and type as other.
 
     Examples
     --------
@@ -1312,8 +1324,20 @@ def zeros_like(other, dtype: DTypeLike = None):
 
 
 def ones_like(other, dtype: DTypeLike = None):
-    """Return a dataarray or dataset of ones with the same shape and
-       type as a given dataarray or dataset.
+    """Return a new object of ones with the same shape and
+    type as a given dataarray or dataset.
+
+    Parameters
+    ----------
+    other : DataArray, Dataset, or Variable
+        The reference object in input
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
+
+    Returns
+    -------
+    out : same as object
+        New object of ones with the same shape and type as other.
 
     Examples
     --------
