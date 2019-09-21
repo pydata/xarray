@@ -409,33 +409,39 @@ class TestDataArray:
         ),
     )
     @pytest.mark.parametrize(
-        "value,error",
+        "unit,error",
         (
-            pytest.param(8, ValueError, id="without_unit"),
+            pytest.param(1, ValueError, id="without_unit"),
             pytest.param(
-                8 * unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
-            pytest.param(8 * unit_registry.s, DimensionalityError, id="incorrect_unit"),
-            pytest.param(8 * unit_registry.m, None, id="correct_unit"),
+            pytest.param(unit_registry.s, DimensionalityError, id="incorrect_unit"),
+            pytest.param(unit_registry.m, None, id="correct_unit"),
         ),
     )
-    def test_comparison_operations(self, comparison, value, error, dtype):
+    def test_comparison_operations(self, comparison, unit, error, dtype):
         array = (
             np.array([10.1, 5.2, 6.5, 8.0, 21.3, 7.1, 1.3]).astype(dtype)
             * unit_registry.m
         )
         data_array = xr.DataArray(data=array)
 
+        value = 8
+        to_compare_with = value * unit
+
         # incompatible units are all not equal
         if error is not None and comparison is not operator.eq:
             with pytest.raises(error):
-                comparison(array, value)
+                comparison(array, to_compare_with)
 
             with pytest.raises(error):
-                comparison(data_array, value)
+                comparison(data_array, to_compare_with)
         else:
-            result_data_array = comparison(data_array, value)
-            result_array = comparison(array, value)
+            result_data_array = comparison(data_array, to_compare_with)
+            # pint compares incompatible arrays to False, so we need to extend
+            result_array = comparison(array, to_compare_with) * np.ones_like(
+                array, dtype=bool
+            )
 
             assert_equal_with_units(result_array, result_data_array)
 
