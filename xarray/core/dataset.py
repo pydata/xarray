@@ -2679,6 +2679,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         swapped : Dataset
             Dataset with swapped dimensions.
 
+        Examples
+        --------
+        >>> ds = xr.Dataset(data_vars={"a": ("x", [5, 7]), "b": ("x", [0.1, 2.4])},
+                            coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+            y        (x) int64 0 1
+        Data variables:
+            a        (x) int64 5 7
+            b        (x) float64 0.1 2.4
+        >>> ds.swap_dims({"x": "y"})
+        <xarray.Dataset>
+        Dimensions:  (y: 2)
+        Coordinates:
+            x        (y) <U1 'a' 'b'
+          * y        (y) int64 0 1
+        Data variables:
+            a        (y) int64 5 7
+            b        (y) float64 0.1 2.4
+
+
         See Also
         --------
 
