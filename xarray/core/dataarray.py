@@ -1467,11 +1467,11 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) <U1 'a' 'b'
             y        (x) int64 0 1
         >>> arr.swap_dims({"x": "y"})
-        <xarray.DataArray (x2: 2)>
+        <xarray.DataArray (y: 2)>
         array([0, 1])
         Coordinates:
-            x        (x2) <U1 'a' 'b'
-          * y        (x2) int64 0 1
+            x        (y) <U1 'a' 'b'
+          * y        (y) int64 0 1
 
         See Also
         --------
