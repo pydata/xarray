@@ -1453,8 +1453,25 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        swapped : Dataset
+        swapped : DataArray
             DataArray with swapped dimensions.
+
+        Examples
+        --------
+        >>> arr = xr.DataArray(data=[0, 1], dims="x",
+                               coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        >>> arr
+        <xarray.DataArray (x: 2)>
+        array([0, 1])
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+            y        (x) int64 0 1
+        >>> arr.swap_dims({"x": "y"})
+        <xarray.DataArray (x2: 2)>
+        array([0, 1])
+        Coordinates:
+            x        (x2) <U1 'a' 'b'
+          * y        (x2) int64 0 1
 
         See Also
         --------
