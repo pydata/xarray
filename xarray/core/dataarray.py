@@ -1453,7 +1453,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        renamed : Dataset
+        swapped : Dataset
             DataArray with swapped dimensions.
 
         See Also
