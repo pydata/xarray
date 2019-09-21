@@ -27,24 +27,18 @@ require_pint_array_function = pytest.mark.xfail(
     reason="pint does not implement __array_function__ yet",
 )
 
+try:
+    from pint.quantity import BaseQuantity
+except ImportError:
+    BaseQuantity = unit_registry.Quantity
 
-def assert_equal_with_units(a, b):
+
+def array_extract_units(obj):
+    raw = obj.data if hasattr(obj, "data") else obj
     try:
-        from pint.quantity import BaseQuantity
-    except ImportError:
-        BaseQuantity = unit_registry.Quantity
-
-    a_ = a if not isinstance(a, (xr.Dataset, xr.DataArray, xr.Variable)) else a.data
-    b_ = b if not isinstance(b, (xr.Dataset, xr.DataArray, xr.Variable)) else b.data
-
-    # workaround until pint implements allclose in __array_function__
-    if isinstance(a_, BaseQuantity) or isinstance(b_, BaseQuantity):
-        assert (hasattr(a_, "magnitude") and hasattr(b_, "magnitude")) and np.allclose(
-            a_.magnitude, b_.magnitude, equal_nan=True
-        )
-        assert (hasattr(a_, "units") and hasattr(b_, "units")) and a_.units == b_.units
-    else:
-        assert np.allclose(a_, b_, equal_nan=True)
+        return raw.units
+    except AttributeError:
+        return None
 
 
 def array_strip_units(array):
@@ -69,36 +63,113 @@ def array_attach_units(data, unit, convert=False):
     return quantity
 
 
-def strip_units(data_array):
-    def magnitude(da):
-        if isinstance(da, xr.Variable):
-            data = da.data
+def extract_units(obj):
+    if isinstance(obj, xr.Dataset):
+        vars_units = {
+            name: array_extract_units(value) for name, value in obj.data_vars.items()
+        }
+        coords_units = {
+            name: array_extract_units(value) for name, value in obj.coords.items()
+        }
+
+        units = {**vars_units, **coords_units}
+    elif isinstance(obj, xr.DataArray):
+        vars_units = {obj.name: array_extract_units(obj)}
+        coords_units = {
+            name: array_extract_units(value) for name, value in obj.coords.items()
+        }
+
+        units = {**vars_units, **coords_units}
+    elif hasattr(obj, "units"):
+        vars_units = {"<array>": array_extract_units(obj)}
+
+        units = {**vars_units}
+    else:
+        units = {}
+
+    return units
+
+
+def strip_units(obj):
+    if isinstance(obj, xr.Dataset):
+        data_vars = {name: strip_units(value) for name, value in obj.data_vars.items()}
+        coords = {name: strip_units(value) for name, value in obj.coords.items()}
+
+        new_obj = xr.Dataset(data_vars=data_vars, coords=coords)
+    elif isinstance(obj, xr.DataArray):
+        data = array_strip_units(obj.data)
+        coords = {
+            name: (value.dims, array_strip_units(value.data))
+            for name, value in obj.coords.items()
+        }
+
+        new_obj = xr.DataArray(name=obj.name, data=data, coords=coords, dims=obj.dims)
+    elif hasattr(obj, "magnitude"):
+        new_obj = obj.magnitude
+    else:
+        new_obj = obj
+
+    return new_obj
+
+
+def attach_units(obj, units):
+    if not isinstance(obj, (xr.DataArray, xr.Dataset)):
+        return array_attach_units(obj, units.get("data", 1))
+
+    if isinstance(obj, xr.Dataset):
+        data_vars = {
+            name: attach_units(value, units) for name, value in obj.data_vars.items()
+        }
+
+        coords = {
+            name: attach_units(value, units) for name, value in obj.coords.items()
+        }
+
+        new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
+    else:
+        data_units = units.get(obj.name, 1)
+
+        data = array_attach_units(obj.data, data_units)
+
+        coords = {
+            name: (value.dims, array_attach_units(value, units.get(name, 1)))
+            for name, value in obj.coords.items()
+        }
+        dims = obj.dims
+        attrs = obj.attrs
+
+        new_obj = xr.DataArray(data=data, coords=coords, attrs=attrs, dims=dims)
+
+    return new_obj
+
+
+def assert_equal_with_units(a, b):
+    # works like xr.testing.assert_equal, but also explicitly checks units
+    # so, it is more like assert_identical
+    __tracebackhide__ = True
+
+    if isinstance(a, xr.Dataset) or isinstance(b, xr.Dataset):
+        a_units = extract_units(a)
+        b_units = extract_units(b)
+
+        a_without_units = strip_units(a)
+        b_without_units = strip_units(b)
+        assert a_without_units.equals(b_without_units)
+        assert a_units == b_units
+    else:
+        a = a if not isinstance(a, (xr.DataArray, xr.Variable)) else a.data
+        b = b if not isinstance(b, (xr.DataArray, xr.Variable)) else b.data
+
+        assert type(a) == type(b)
+
+        # workaround until pint implements allclose in __array_function__
+        if isinstance(a, BaseQuantity) or isinstance(b, BaseQuantity):
+            assert (
+                hasattr(a, "magnitude") and hasattr(b, "magnitude")
+            ) and np.allclose(a.magnitude, b.magnitude, equal_nan=True)
+            assert (hasattr(a, "units") and hasattr(b, "units")) and a.units == b.units
         else:
-            data = da
-
-        return array_strip_units(data)
-
-    array = magnitude(data_array)
-    coords = {name: magnitude(values) for name, values in data_array.coords.items()}
-
-    return xr.DataArray(data=array, coords=coords, dims=data_array.dims)
-
-
-def attach_units(data_array, units):
-    data_units = units.get("data", 1)
-
-    if not isinstance(data_array, (xr.DataArray,)):
-        return array_attach_units(data_array, data_units)
-
-    data = array_attach_units(data_array.data, data_units)
-
-    coords = {
-        name: value * units.get(name, 1) for name, value in data_array.coords.items()
-    }
-    dims = data_array.dims
-    attrs = data_array.attrs
-
-    return xr.DataArray(data=data, coords=coords, attrs=attrs, dims=dims)
+            assert np.allclose(a, b, equal_nan=True)
 
 
 @pytest.fixture(params=[float, int])
