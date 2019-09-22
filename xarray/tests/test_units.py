@@ -169,7 +169,9 @@ def assert_equal_with_units(a, b):
         a = a if not isinstance(a, (xr.DataArray, xr.Variable)) else a.data
         b = b if not isinstance(b, (xr.DataArray, xr.Variable)) else b.data
 
-        assert type(a) == type(b)
+        assert type(a) == type(b) or (
+            isinstance(a, BaseQuantity) and isinstance(b, BaseQuantity)
+        )
 
         # workaround until pint implements allclose in __array_function__
         if isinstance(a, BaseQuantity) or isinstance(b, BaseQuantity):
