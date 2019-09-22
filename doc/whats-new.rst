@@ -25,6 +25,10 @@ Bug fixes
   objects remain unaddressable by weakref in order to save memory.
   (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
+Documentation
+~~~~~~~~~~~~~
+- Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 .. _whats-new.0.13.0:
 
