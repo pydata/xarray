@@ -2702,7 +2702,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             a        (y) int64 5 7
             b        (y) float64 0.1 2.4
 
-
         See Also
         --------
 
