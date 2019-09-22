@@ -1372,3 +1372,67 @@ class TestDataArray:
             result_data_array = data_array.reindex_like(new_data_array)
 
             assert_equal_with_units(result_array, result_data_array)
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "func",
+        (method("unstack"), method("reset_index", "z"), method("reorder_levels")),
+        ids=repr,
+    )
+    def test_stacking_stacked(self, func, dtype):
+        array = (
+            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+        )
+        x = np.arange(array.shape[0])
+        y = np.arange(array.shape[1])
+
+        data_array = xr.DataArray(
+            name="data", data=array, coords={"x": x, "y": y}, dims=("x", "y")
+        )
+        stacked = data_array.stack(z=("x", "y"))
+
+        expected = attach_units(func(strip_units(stacked)), {"data": unit_registry.m})
+        result = func(stacked)
+
+        assert_equal_with_units(expected, result)
+
+    @require_pint_array_function
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("transpose", "y", "x", "z"),
+            method("stack", a=("x", "y")),
+            method("set_index", x="x2"),
+            pytest.param(
+                method("shift", x=2), marks=pytest.mark.xfail(reason="strips units")
+            ),
+            pytest.param(
+                method("roll", x=2), marks=pytest.mark.xfail(reason="strips units")
+            ),
+            method("sortby", "x2"),
+        ),
+        ids=repr,
+    )
+    def test_stacking_reordering(self, func, dtype):
+        array = (
+            np.linspace(0, 10, 2 * 5 * 10).reshape(2, 5, 10).astype(dtype)
+            * unit_registry.m
+        )
+        x = np.arange(array.shape[0])
+        y = np.arange(array.shape[1])
+        z = np.arange(array.shape[2])
+        x2 = np.linspace(0, 1, array.shape[0])[::-1]
+
+        data_array = xr.DataArray(
+            name="data",
+            data=array,
+            coords={"x": x, "y": y, "z": z, "x2": ("x", x2)},
+            dims=("x", "y", "z"),
+        )
+
+        expected = attach_units(
+            func(strip_units(data_array)), {"data": unit_registry.m}
+        )
+        result = func(data_array)
+
+        assert_equal_with_units(expected, result)
