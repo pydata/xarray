@@ -983,7 +983,7 @@ class TestDataArray:
         "func",
         (
             method("pipe", lambda da: da * 10),
-            method("assign_coords", y2=("y", np.arange(10) * unit_registry.ms)),
+            method("assign_coords", y2=("y", np.arange(10) * unit_registry.mm)),
             method("assign_attrs", attr1="value"),
             method("rename", x2="x_mm"),
             method("swap_dims", {"x": "x2"}),
@@ -1092,6 +1092,7 @@ class TestDataArray:
     def test_isel(self, indices, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.s
         x = np.arange(len(array)) * unit_registry.m
+
         data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
 
         assert_equal_with_units(array[indices], data_array.isel(x=indices))
