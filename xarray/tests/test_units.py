@@ -131,7 +131,7 @@ def attach_units(obj, units):
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
     else:
-        data_units = units.get(obj.name, 1)
+        data_units = units.get(obj.name or "data", 1)
 
         data = array_attach_units(obj.data, data_units)
 
