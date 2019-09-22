@@ -99,7 +99,11 @@ def strip_units(obj):
     elif isinstance(obj, xr.DataArray):
         data = array_strip_units(obj.data)
         coords = {
-            name: (value.dims, array_strip_units(value.data))
+            name: (
+                (value.dims, array_strip_units(value.data))
+                if isinstance(value.data, BaseQuantity)
+                else value  # to preserve multiindices
+            )
             for name, value in obj.coords.items()
         }
 
@@ -132,7 +136,12 @@ def attach_units(obj, units):
         data = array_attach_units(obj.data, data_units)
 
         coords = {
-            name: (value.dims, array_attach_units(value, units.get(name, 1)))
+            name: (
+                (value.dims, array_attach_units(value, units.get(name)))
+                if name in units
+                # to preserve multiindices
+                else value
+            )
             for name, value in obj.coords.items()
         }
         dims = obj.dims
