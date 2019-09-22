@@ -1097,7 +1097,13 @@ class TestDataArray:
 
         data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
 
-        assert_equal_with_units(array[indices], data_array.isel(x=indices))
+        expected = attach_units(
+            strip_units(data_array).isel(x=indices),
+            {"data": unit_registry.s, "x": unit_registry.m},
+        )
+        result = data_array.isel(x=indices)
+
+        assert_equal_with_units(expected, result)
 
     @pytest.mark.xfail(
         reason="xarray does not support duck arrays in dimension coordinates"
