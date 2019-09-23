@@ -11,11 +11,11 @@ intuitive, more concise, and less error-prone developer experience.
 The package includes a large and growing library of domain-agnostic functions
 for advanced analytics and visualization with these data structures.
 
-Xarray is particularly tailored to working with netCDF_ files, which were the
+Xarray is inspired by and borrows heavily from pandas_, the popular data
+analysis package focused on labelled tabular data.
+It is particularly tailored to working with netCDF_ files, which were the
 source of xarray's data model, and integrates tightly with dask_ for parallel
 computing.
-It is inspired by and borrows heavily from pandas_, the popular data
-analysis package focused on labelled tabular data.
 
 .. _NumPy: http://www.numpy.org
 .. _pandas: http://pandas.pydata.org

@@ -87,10 +87,8 @@ for the full disclaimer). By default, :py:meth:`~xarray.open_mfdataset` will chu
 netCDF file into a single Dask array; again, supply the ``chunks`` argument to
 control the size of the resulting Dask arrays. In more complex cases, you can
 open each file individually using :py:meth:`~xarray.open_dataset` and merge the result, as
-described in :ref:`combining data`. If you have a distributed cluster running,
-passing the keyword argument ``parallel=True`` to :py:meth:`~xarray.open_mfdataset`
-will speed up the reading of large multi-file datasets by executing those read tasks
-in parallel using ``dask.delayed``.
+described in :ref:`combining data`. Passing the keyword argument ``parallel=True`` to :py:meth:`~xarray.open_mfdataset` will speed up the reading of large multi-file datasets by
+executing those read tasks in parallel using ``dask.delayed``.
 
 You'll notice that printing a dataset still shows a preview of array values,
 even if they are actually Dask arrays. We can do this quickly with Dask because
@@ -156,6 +154,12 @@ data into memory. Converting a Dask array into memory generally requires an
 explicit conversion step. One notable exception is indexing operations: to
 enable label based indexing, xarray will automatically load coordinate labels
 into memory.
+
+.. tip::
+
+   By default, dask uses its multi-threaded scheduler, which distributes work across
+   multiple cores and allows for processing some datasets that do not fit into memory.
+   For running across a cluster, `setup the distributed scheduler <https://docs.dask.org/en/latest/setup.html>`_.
 
 The easiest way to convert an xarray data structure from lazy Dask arrays into
 *eager*, in-memory NumPy arrays is to use the :py:meth:`~xarray.Dataset.load` method:
@@ -417,7 +421,3 @@ With analysis pipelines involving both spatial subsetting and temporal resamplin
 
 6. The dask `diagnostics <https://docs.dask.org/en/latest/understanding-performance.html>`_ can be
    useful in identifying performance bottlenecks.
-
-7. Installing the optional `bottleneck <https://github.com/kwgoodman/bottleneck>`_ library
-   will result in greatly reduced memory usage when using :py:meth:`~xarray.Dataset.rolling`
-   on dask arrays,
