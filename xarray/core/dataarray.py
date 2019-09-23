@@ -3035,6 +3035,18 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def unify_chunks(self):
+        """ Unifies chunksize along all chunked dimensions of this DataArray.
+
+        Returns
+        -------
+
+        DataArray with consistent chunk sizes for all dask-array variables
+
+        See Also
+        --------
+
+        dask.array.core.unify_chunks
+        """
         ds = self.copy()._to_temp_dataset().unify_chunks()
         return self._from_temp_dataset(ds)
 

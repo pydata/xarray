@@ -5162,42 +5162,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         dask.array.core.unify_chunks
         """
-        import dask.array
-
         try:
-            if self.chunks:
-                return self
+            self.chunks
+            return self.copy()
         except ValueError:  # "inconsistent chunks"
             pass
 
+        import dask.array
+
         ds = self.copy()
 
-        # dask unify_chunks needs dimensions named using a single character
-        # map our dimension names to a single character
-        alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
-        alphamap = dict(zip(ds.dims, alphabet))
+        dims_pos_map = {dim: index for index, dim in enumerate(ds.dims)}
 
-        dask_arrays = {}
+        dask_array_names = []
+        dask_unify_args = []
         for name, variable in ds.variables.items():
             if isinstance(variable.data, dask.array.Array):
-                index_string = "".join([alphamap[dim] for dim in variable.dims])
-                dask_arrays[name] = (variable.data, index_string)
+                dims_tuple = [dims_pos_map[dim] for dim in variable.dims]
+                dask_array_names.append(name)
+                dask_unify_args.append(variable.data)
+                dask_unify_args.append(dims_tuple)
 
-        args = []
-        for value in dask_arrays.values():
-            args.append(value[0])
-            args.append(value[1])
+        _, rechunked_arrays = dask.array.core.unify_chunks(*dask_unify_args)
 
-        new_chunks, rechunked_arrays = dask.array.core.unify_chunks(*args)
-
-        # invert the map
-        for dim, alpha in alphamap.items():
-            if alpha not in new_chunks:
-                continue
-            new_chunks[dim] = new_chunks[alpha]
-            del new_chunks[alpha]
-
-        for name, new_array in zip(dask_arrays.keys(), rechunked_arrays):
+        for name, new_array in zip(dask_array_names, rechunked_arrays):
             ds.variables[name]._data = new_array
 
         return ds

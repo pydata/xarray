@@ -960,9 +960,10 @@ def test_unify_chunks():
     with raises_regex(ValueError, "inconsistent chunks"):
         map_ds.chunks
 
-    expected = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
-    actual = map_ds.unify_chunks().chunks
-    assert expected == actual
+    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
+    actual_chunks = map_ds.unify_chunks().chunks
+    assert expected_chunks == actual_chunks
+    assert_identical(map_ds, map_ds.unify_chunks())
 
 
 # TODO: DataArray.chunks is not a dict but Dataset.chunks is!
