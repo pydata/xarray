@@ -156,6 +156,7 @@ represented by a :py:class:`pandas.MultiIndex` object. These methods are used
 like this:
 
 .. ipython:: python
+
         data = xr.Dataset(
             data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
                       'b': ('x', [6, 7])},

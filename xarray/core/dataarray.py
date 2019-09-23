@@ -2558,10 +2558,12 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> d = DataArray([[1, 2], [3, 4]])
 
         For convenience just call this directly
+
         >>> d.plot()
 
         Or use it as a namespace to use xarray.plot functions as
         DataArray methods
+
         >>> d.plot.imshow()  # equivalent to xarray.plot.imshow(d)
 
         """
