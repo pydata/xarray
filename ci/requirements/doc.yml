@@ -6,6 +6,7 @@ dependencies:
   - python=3.7
   - bottleneck
   - cartopy
+  - cfgrib
   - h5netcdf
   - ipython
   - iris
