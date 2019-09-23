@@ -977,7 +977,7 @@ def test_map_blocks_error():
     def returns_numpy(darray):
         return (darray * darray.x + 5 * darray.y).values
 
-    with raises_regex(ValueError, "Function must return an xarray DataArray"):
+    with raises_regex(TypeError, "Function must return an xarray DataArray"):
         xr.map_blocks(returns_numpy, map_da)
 
     with raises_regex(TypeError, "args must be"):
