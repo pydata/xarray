@@ -2,6 +2,7 @@ try:
     import dask
     import dask.array
     from dask.highlevelgraph import HighLevelGraph
+    from dask.array.utils import meta_from_array
 
 except ImportError:
     pass
@@ -13,14 +14,16 @@ import operator
 from .dataarray import DataArray
 from .dataset import Dataset
 
+from typing import Sequence, Mapping
 
-def _to_array(obj):
+
+def dataset_to_dataarray(obj: Dataset) -> DataArray:
     if not isinstance(obj, Dataset):
-        raise ValueError("Trying to convert DataArray to DataArray!")
+        raise TypeError("Expected Dataset, got %s" % type(obj))
 
     if len(obj.data_vars) > 1:
-        raise ValueError(
-            "Trying to convert Dataset with more than one variable to DataArray"
+        raise TypeError(
+            "Trying to convert Dataset with more than one data variable to DataArray"
         )
 
     name = list(obj.data_vars)[0]
@@ -31,8 +34,6 @@ def _to_array(obj):
 
 
 def make_meta(obj):
-
-    from dask.array.utils import meta_from_array
 
     if isinstance(obj, DataArray):
         to_array = True
@@ -47,15 +48,13 @@ def make_meta(obj):
             if dask.is_dask_collection(variable):
                 meta_obj = obj[name].data._meta
             else:
-                meta_obj = meta_from_array(obj[name].data)
-            meta[name] = DataArray(meta_obj, dims=obj[name].dims)
-            # meta[name] = DataArray(obj[name].dims, meta_obj)
+                meta_obj = meta_from_array(variable.data)
+            meta[name] = DataArray(meta_obj, dims=variable.dims)
     else:
         meta = obj
 
     if isinstance(obj, Dataset):
-        for coord_name in set(obj.coords) - set(obj.dims):
-            meta = meta.set_coords(coord_name)
+        meta = meta.set_coords(obj.coords)
 
     if to_array:
         meta = obj_array._from_temp_dataset(meta)
@@ -65,14 +64,9 @@ def make_meta(obj):
 
 def infer_template(func, obj, *args, **kwargs):
     """ Infer return object by running the function on meta objects. """
-    meta_args = []
-    for arg in (obj,) + args:
-        meta_args.append(make_meta(arg))
+    meta_args = [make_meta(arg) for arg in (obj,) + args]
 
-    try:
-        template = func(*meta_args, **kwargs)
-    except ValueError:
-        raise ValueError("Cannot infer object returned by user-provided function.")
+    template = func(*meta_args, **kwargs)
 
     return template
 
@@ -83,13 +77,7 @@ def make_dict(x):
     if isinstance(x, DataArray):
         x = x._to_temp_dataset()
 
-    to_return = dict()
-    for var in x.variables:
-        # if var not in x:
-        #    raise ValueError("Variable %r not found in returned object." % var)
-        to_return[var] = x[var].values
-
-    return to_return
+    return {k: v.data for k, v in x.variables.items()}
 
 
 def map_blocks(func, obj, args=[], kwargs={}):
@@ -103,9 +91,10 @@ def map_blocks(func, obj, args=[], kwargs={}):
         User-provided function that should accept xarray objects.
         This function will receive a subset of this dataset, corresponding to one chunk along
         each chunked dimension.
-        The function will be run on a small piece of data that looks like 'obj' to determine
-        properties of the returned object such as dtype, variable names,
-        new dimensions and new indexes (if any).
+        To determine properties of the returned object such as type (DataArray or Dataset), dtypes,
+        and new/removed dimensions and/or variables, the function will be run on dummy data
+        with the same variables, dimension names, and data types as this DataArray, but zero-sized
+        dimensions.
 
         This function must
         - return either a single DataArray or a single Dataset
@@ -114,11 +103,11 @@ def map_blocks(func, obj, args=[], kwargs={}):
         - change size of existing dimensions.
         - add new chunked dimensions.
 
-        If your function expects numpy arrays, see `xarray.apply_ufunc`
-
+        This function is designed to work with whole xarray objects. If your function can be applied
+        to numpy or dask arrays (e.g. it doesn't need indices, variable names, etc.),
+        you should consider using :func:~xarray.apply_ufunc instead.
     obj: DataArray, Dataset
-        Chunks of this object will be provided to 'func'. The function must not change
-        shape of the provided DataArray.
+        Chunks of this object will be provided to 'func'.
     args: list
         Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
     kwargs: dict
@@ -136,12 +125,12 @@ def map_blocks(func, obj, args=[], kwargs={}):
 
     See Also
     --------
-    dask.array.map_blocks, xarray.apply_ufunc
+    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks, xarray.DataArray.map_blocks
     """
 
     def _wrapper(func, obj, to_array, args, kwargs):
         if to_array:
-            obj = _to_array(obj)
+            obj = dataset_to_dataarray(obj)
 
         result = func(obj, *args, **kwargs)
 
@@ -157,14 +146,14 @@ def map_blocks(func, obj, args=[], kwargs={}):
 
         return to_return
 
-    if not isinstance(args, list):
-        raise ValueError("args must be a list.")
+    if not isinstance(args, Sequence):
+        raise TypeError("args must be a sequence.")
 
-    if not isinstance(kwargs, dict):
-        raise ValueError("kwargs must be a dictionary.")
+    if not isinstance(kwargs, Mapping):
+        raise TypeError("kwargs must be a mapping.")
 
     if not dask.is_dask_collection(obj):
-        raise ValueError(
+        raise TypeError(
             "map_blocks can only be used with dask-backed DataArrays. Use .chunk() to convert to a Dask array."
         )
 
@@ -230,7 +219,7 @@ def map_blocks(func, obj, args=[], kwargs={}):
             else:
                 # non-dask array with possibly chunked dimensions
                 # index into variable appropriately
-                subsetter = dict()
+                subsetter = {}
                 for dim in variable.dims:
                     if dim in chunk_index_dict:
                         which_chunk = chunk_index_dict[dim]
@@ -264,9 +253,6 @@ def map_blocks(func, obj, args=[], kwargs={}):
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
-            # cannot tokenize "name" because the hash of ReprObject (<this-array>)
-            # is a function of its value. This happens when the user function does not
-            # set a name on the returned DataArray
             gname_l = "%s-%s" % (gname, name)
             var_key_map[name] = gname_l
 
@@ -305,6 +291,6 @@ def map_blocks(func, obj, args=[], kwargs={}):
     result = result.set_coords(template._coord_names)
 
     if result_is_array:
-        result = _to_array(result)
+        result = dataset_to_dataarray(result)
 
     return result
