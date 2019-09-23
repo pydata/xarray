@@ -274,7 +274,7 @@ def map_blocks(func, obj, args=[], kwargs={}):
 
     graph = HighLevelGraph.from_collections(name, graph, dependencies=[dataset])
 
-    result = Dataset()
+    result = Dataset(coords=indexes)
     # a quicker way to assign indexes?
     # indexes need to be known
     # otherwise compute is called when DataArray is created

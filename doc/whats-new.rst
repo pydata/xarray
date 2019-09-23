@@ -22,7 +22,9 @@ v0.13.1 (unreleased)
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
-- Added :py:func:`~xarray.map_blocks`, modeled after :py:func:`dask.array.map_blocks`
+- Added :py:func:`~xarray.map_blocks`, modeled after :py:func:`dask.array.map_blocks`.
+  Also added :py:meth:`Dataset.unify_chunks`, :py:meth:`DataArray.unify_chunks` and
+  :py:meth:`testing.assert_chunks_equal`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
