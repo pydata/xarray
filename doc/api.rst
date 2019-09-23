@@ -634,6 +634,7 @@ Testing
    testing.assert_equal
    testing.assert_identical
    testing.assert_allclose
+   testing.assert_chunks_equal
 
 Exceptions
 ==========

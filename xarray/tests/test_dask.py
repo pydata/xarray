@@ -13,6 +13,7 @@ import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.tests import mock
+from xarray.testing import assert_chunks_equal
 
 from . import (
     assert_allclose,
@@ -964,33 +965,6 @@ def test_unify_chunks():
     actual_chunks = map_ds.unify_chunks().chunks
     assert expected_chunks == actual_chunks
     assert_identical(map_ds, map_ds.unify_chunks())
-
-
-# TODO: DataArray.chunks is not a dict but Dataset.chunks is!
-def assert_chunks_equal(a, b):
-
-    # unchunked dimensions in input to map_blocks become 1 chunk.
-    # do this manually before comparing
-    def at_least_one_chunk(obj):
-        new_chunks = {}
-        for dim in obj.dims:
-            if dim not in obj.chunks:
-                new_chunks[dim] = len(obj[dim])
-            else:
-                # must preserve old chunks too
-                new_chunks[dim] = obj.chunks[dim][0]
-        return obj.chunk(new_chunks)
-
-    if isinstance(a, DataArray):
-        a = a._to_temp_dataset()
-
-    if isinstance(b, DataArray):
-        b = b._to_temp_dataset()
-
-    a = at_least_one_chunk(a.unify_chunks())
-    b = at_least_one_chunk(b.unify_chunks())
-
-    assert a.chunks == b.chunks
 
 
 def test_map_blocks_error():
