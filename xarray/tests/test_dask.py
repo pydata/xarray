@@ -986,6 +986,12 @@ def test_map_blocks_error():
     with raises_regex(TypeError, "kwargs must be"):
         xr.map_blocks(operator.add, map_da, args=[10], kwargs=[20])
 
+    def really_bad_func(darray):
+        raise ValueError("couldn't do anything.")
+
+    with raises_regex(Exception, "Cannot infer"):
+        xr.map_blocks(really_bad_func, map_da)
+
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
 def test_map_blocks(obj):

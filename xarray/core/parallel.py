@@ -66,7 +66,18 @@ def infer_template(func, obj, *args, **kwargs):
     """ Infer return object by running the function on meta objects. """
     meta_args = [make_meta(arg) for arg in (obj,) + args]
 
-    template = func(*meta_args, **kwargs)
+    try:
+        template = func(*meta_args, **kwargs)
+    except Exception as e:
+        raise Exception(
+            "Cannot infer object returned from running user provided function."
+        ) from e
+
+    if not isinstance(template, (Dataset, DataArray)):
+        raise TypeError(
+            "Function must return an xarray DataArray or Dataset. Instead it returned %r"
+            % type(template)
+        )
 
     return template
 
@@ -170,11 +181,6 @@ def map_blocks(func, obj, args=[], kwargs={}):
         template = template._to_temp_dataset()
     elif isinstance(template, Dataset):
         result_is_array = False
-    else:
-        raise ValueError(
-            "Function must return an xarray DataArray or Dataset. Instead it returned %r"
-            % type(template)
-        )
 
     # If two different variables have different chunking along the same dim
     # fix that by "unifying chunks"
