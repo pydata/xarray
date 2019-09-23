@@ -56,7 +56,7 @@ Extend xarray capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 - `Collocate <https://github.com/cistools/collocate>`_: Collocate xarray trajectories in arbitrary physical dimensions
 - `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
-- `hypothesis-gufunc <https://pypi.org/project/hypothesis-gufunc/0.0.5rc2>`_: Extension to hypothesis, to unit test functions with xarray objects as input.
+- `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
 - `xarray_extras <https://github.com/crusaderky/xarray_extras>`_: Advanced algorithms for xarray objects (e.g. integrations/interpolations).
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
 - `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
