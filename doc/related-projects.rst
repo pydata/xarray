@@ -11,7 +11,7 @@ Geosciences
 ~~~~~~~~~~~
 
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
-- `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction. 
+- `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meterology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
 - `MetPy <https://unidata.github.io/MetPy/dev/index.html>`_: A collection of tools in Python for reading, visualizing, and performing calculations with weather data.
@@ -26,7 +26,7 @@ Geosciences
   subclass.
 - `Regionmask <https://regionmask.readthedocs.io/>`_: plotting and creation of masks of spatial regions
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
-- `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats. 
+- `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
@@ -62,6 +62,7 @@ Extend xarray capabilities
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
 - `xskillscore <https://github.com/raybellwaves/xskillscore>`_: Metrics for verifying forecasts.
 - `xyzpy <http://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
+- `hypothesis-gufunc <https://pypi.org/project/hypothesis-gufunc/0.0.5rc2>`_: Extension to hypothesis, to unit test functions with xarray objects as input.
 
 Visualization
 ~~~~~~~~~~~~~
