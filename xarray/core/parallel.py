@@ -26,11 +26,7 @@ def dataset_to_dataarray(obj: Dataset) -> DataArray:
             "Trying to convert Dataset with more than one data variable to DataArray"
         )
 
-    name = list(obj.data_vars)[0]
-    # this should be easier
-    da = obj.to_array().squeeze().drop("variable")
-    da.name = name
-    return da
+    return next(iter(obj.data_vars.values()))
 
 
 def make_meta(obj):
