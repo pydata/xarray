@@ -656,7 +656,7 @@ class TestSparseDataArrayAndDataset:
         a = xr.DataArray(
             sparse.COO.from_numpy(np.ones(4)),
             dims=["x"],
-            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4)))},
+            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4, dtype='i8')))},
         )
         expected = dedent(
             """\
@@ -671,7 +671,7 @@ class TestSparseDataArrayAndDataset:
     def test_dataset_repr(self):
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))},
-            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4)))},
+            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4, dtype='i8')))},
         )
         expected = dedent(
             """\
