@@ -7,7 +7,7 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import SupportsArithmetic
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .options import _get_keep_attrs
@@ -771,7 +771,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        if dim not in peek_at(self._iter_grouped())[0].dims:
+        if dim is not ALL_DIMS and dim not in peek_at(self._iter_grouped())[0].dims:
             raise ValueError("Attempting to reduce over grouped dimension %r." % dim)
 
         def reduce_array(ar):
@@ -869,7 +869,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
 
-        if dim not in peek_at(self._iter_grouped())[0].dims:
+        if dim is not ALL_DIMS and dim not in peek_at(self._iter_grouped())[0].dims:
             raise ValueError("Attempting to reduce over grouped dimension %r" % dim)
 
         return self.apply(reduce_dataset)
