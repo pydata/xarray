@@ -505,8 +505,7 @@ def combine_by_coords(
     ----------
     datasets : sequence of xarray.Dataset
         Dataset objects to combine.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts', 'override'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -520,9 +519,33 @@ def combine_by_coords(
           of all non-null values.
         - 'override': skip comparing and pick variable from first dataset
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
-        Details are in the documentation of concat
+        These data variables will be concatenated together:
+
+        * 'minimal': Only data variables in which the dimension already
+          appears are included.
+        * 'different': Data variables which are not equal (ignoring
+          attributes) across all datasets are also concatenated (as well as
+          all for which dimension already appears). Beware: this option may
+          load the data payload of data variables into memory if they are not
+          already loaded.
+        * 'all': All data variables will be concatenated.
+        * list of str: The listed data variables will be concatenated, in
+          addition to the 'minimal' data variables.
+        If objects are DataArrays, `data_vars` must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
-        Details are in the documentation of concat
+        These coordinate variables will be concatenated together:
+
+        * 'minimal': Only coordinates in which the dimension already appears
+          are included.
+        * 'different': Coordinates which are not equal (ignoring attributes)
+          across all datasets are also concatenated (as well as all for which
+          dimension already appears). Beware: this option may load the data
+          payload of coordinate variables into memory if they are not already
+          loaded.
+        * 'all': All coordinate variables will be concatenated, except
+          those corresponding to other dimensions.
+        * list of str: The listed coordinate variables will be concatenated,
+          in addition to the 'minimal' coordinates.
     fill_value : scalar, optional
         Value to use for newly missing values
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
@@ -556,29 +579,83 @@ def combine_by_coords(
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.
 
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> import xarray as xr
+
+    >>> x1 = xr.Dataset({"temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...                  "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3))},
+    ...                 coords={"time": pd.date_range(start="2000-01", periods=2, freq='M'),
+    ...                         "x": [10, 20, 30]})
+    >>> x2 = xr.Dataset({"temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...                  "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3))},
+    ...                 coords={"time": pd.date_range(start="2000-03", periods=2, freq='M'),
+    ...                         "x": [10, 20, 30]})
+
+    >>> x3 = xr.Dataset({"temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...                  "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3))},
+    ...                 coords={"time": pd.date_range(start="2000-03", periods=2, freq='M'),
+    ...                         "x": [40, 50, 60]})
+
     >>> x1
     <xarray.Dataset>
-    Dimensions:         (x: 3)
-    Coords:
-      * position        (x) int64   0 1 2
+    Dimensions:        (time: 2, x: 3)
+    Coordinates:
+    * time           (time) datetime64[ns] 2000-01-31 2000-02-29
+    * x              (x) int64 10 20 30
     Data variables:
-        temperature     (x) float64 11.04 23.57 20.77 ...
+        temperature    (time, x) float64 9.022 4.041 7.246 3.474 16.26 3.05
+        precipitation  (time, x) float64 0.5777 0.3621 0.8043 0.5203 0.03721 0.3805
 
     >>> x2
     <xarray.Dataset>
-    Dimensions:         (x: 3)
-    Coords:
-      * position        (x) int64   3 4 5
+    Dimensions:        (time: 2, x: 3)
+    Coordinates:
+    * time           (time) datetime64[ns] 2000-03-31 2000-04-30
+    * x              (x) int64 10 20 30
     Data variables:
-        temperature     (x) float64 6.97 8.13 7.42 ...
+        temperature    (time, x) float64 1.88 2.184 7.438 3.046 6.719 7.501
+        precipitation  (time, x) float64 0.02079 0.8212 0.9924 0.405 0.16 0.2543
 
-    >>> combined = xr.combine_by_coords([x2, x1])
+    >>> x3
     <xarray.Dataset>
-    Dimensions:         (x: 6)
-    Coords:
-      * position        (x) int64   0 1 2 3 4 5
+    Dimensions:        (time: 2, x: 3)
+    Coordinates:
+    * time           (time) datetime64[ns] 2000-03-31 2000-04-30
+    * x              (x) int64 40 50 60
     Data variables:
-        temperature     (x) float64 11.04 23.57 20.77 ...
+        temperature    (time, x) float64 15.31 7.169 7.927 16.01 16.58 15.33
+        precipitation  (time, x) float64 0.2915 0.4556 0.2424 0.193 0.3184 0.6775
+
+    >>> xr.combine_by_coords([x2, x1])
+    <xarray.Dataset>
+    Dimensions:        (time: 4, x: 3)
+    Coordinates:
+    * x              (x) int64 10 20 30
+    * time           (time) datetime64[ns] 2000-01-31 2000-02-29 ... 2000-04-30
+    Data variables:
+        temperature    (time, x) float64 9.022 4.041 7.246 ... 3.046 6.719 7.501
+        precipitation  (time, x) float64 0.5777 0.3621 0.8043 ... 0.405 0.16 0.2543
+
+    >>> xr.combine_by_coords([x3, x1])
+    <xarray.Dataset>
+    Dimensions:        (time: 4, x: 6)
+    Coordinates:
+    * time           (time) datetime64[ns] 2000-01-31 2000-02-29 ... 2000-04-30
+    * x              (x) int64 10 20 30 40 50 60
+    Data variables:
+        temperature    (time, x) float64 9.022 4.041 7.246 nan ... 16.01 16.58 15.33
+        precipitation  (time, x) float64 0.5777 0.3621 0.8043 ... 0.3184 0.6775
+
+    >>> xr.combine_by_coords([x3, x1], join='override')
+    <xarray.Dataset>
+    Dimensions:        (time: 2, x: 6)
+    Coordinates:
+    * time           (time) datetime64[ns] 2000-01-31 2000-02-29
+    * x              (x) int64 10 20 30 40 50 60
+    Data variables:
+        temperature    (time, x) float64 9.022 4.041 7.246 ... 16.01 16.58 15.33
+        precipitation  (time, x) float64 0.5777 0.3621 0.8043 ... 0.3184 0.6775
     """
 
     # Group by data vars
