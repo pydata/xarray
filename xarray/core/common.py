@@ -1184,35 +1184,35 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     >>> x
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 1, 2],
-          [3, 4, 5]])
+           [3, 4, 5]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
     >>> xr.full_like(x, 1)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[1, 1, 1],
-        [1, 1, 1]])
+           [1, 1, 1]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
     >>> xr.full_like(x, 0.5)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 0, 0],
-        [0, 0, 0]])
+           [0, 0, 0]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
     >>> xr.full_like(x, 0.5, dtype=np.double)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0.5, 0.5, 0.5],
-        [0.5, 0.5, 0.5]])
+           [0.5, 0.5, 0.5]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
     >>> xr.full_like(x, np.nan, dtype=np.double)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[nan, nan, nan],
-        [nan, nan, nan]])
+           [nan, nan, nan]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
@@ -1294,21 +1294,21 @@ def zeros_like(other, dtype: DTypeLike = None):
     >>> x
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 1, 2],
-          [3, 4, 5]])
+           [3, 4, 5]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
     >>> xr.zeros_like(x)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 0, 0],
-        [0, 0, 0]])
+           [0, 0, 0]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
     >>> xr.zeros_like(x, dtype=np.float)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0., 0., 0.],
-        [0., 0., 0.]])
+           [0., 0., 0.]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
@@ -1350,14 +1350,14 @@ def ones_like(other, dtype: DTypeLike = None):
     >>> x
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 1, 2],
-          [3, 4, 5]])
+           [3, 4, 5]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
     >>> >>> xr.ones_like(x)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[1, 1, 1],
-        [1, 1, 1]])
+           [1, 1, 1]])
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2

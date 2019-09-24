@@ -584,11 +584,11 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
     ...     coords={"time": [30.0, 60.0], "lon": [100.0, 150.0]},
     ...     name="var3",
     ... )
-    
+
     >>> x
     <xarray.DataArray 'var1' (lat: 2, lon: 2)>
     array([[1., 2.],
-        [3., 5.]])
+           [3., 5.]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0
@@ -596,7 +596,7 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
     >>> y
     <xarray.DataArray 'var2' (lat: 2, lon: 2)>
     array([[5., 6.],
-        [7., 8.]])
+           [7., 8.]])
     Coordinates:
     * lat      (lat) float64 35.0 42.0
     * lon      (lon) float64 100.0 150.0
@@ -604,7 +604,7 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
     >>> z
     <xarray.DataArray 'var3' (time: 2, lon: 2)>
     array([[0., 3.],
-        [4., 9.]])
+           [4., 9.]])
     Coordinates:
     * time     (time) float64 30.0 60.0
     * lon      (lon) float64 100.0 150.0

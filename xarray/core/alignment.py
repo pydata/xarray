@@ -129,7 +129,7 @@ def align(
     >>> x
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
-        [10, 24]])
+           [10, 24]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0
@@ -137,7 +137,7 @@ def align(
     >>> y
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
-        [ 7, 13]])
+           [ 7, 13]])
     Coordinates:
     * lat      (lat) float64 35.0 42.0
     * lon      (lon) float64 100.0 120.0
@@ -160,16 +160,16 @@ def align(
     >>> a
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[25., 35.],
-        [10., 24.],
-        [nan, nan]])
+           [10., 24.],
+           [nan, nan]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0 42.0
     * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[20.,  5.],
-        [nan, nan],
-        [ 7., 13.]])
+           [nan, nan],
+           [ 7., 13.]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0 42.0
     * lon      (lon) float64 100.0 120.0
@@ -178,16 +178,16 @@ def align(
     >>> a
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[  25,   35],
-        [  10,   24],
-        [-999, -999]])
+           [  10,   24],
+           [-999, -999]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0 42.0
     * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[  20,    5],
-        [-999, -999],
-        [   7,   13]])
+           [-999, -999],
+           [   7,   13]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0 42.0
     * lon      (lon) float64 100.0 120.0
@@ -196,14 +196,14 @@ def align(
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
-        [10, 24]])
+           [10, 24]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20.,  5.],
-        [nan, nan]])
+           [nan, nan]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0
@@ -212,14 +212,14 @@ def align(
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25., 35.],
-        [nan, nan]])
+           [nan, nan]])
     Coordinates:
     * lat      (lat) float64 35.0 42.0
     * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
-        [ 7, 13]])
+           [ 7, 13]])
     Coordinates:
     * lat      (lat) float64 35.0 42.0
     * lon      (lon) float64 100.0 120.0
@@ -234,14 +234,14 @@ def align(
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
-        [10, 24]])
+           [10, 24]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
-        [ 7, 13]])
+           [ 7, 13]])
     Coordinates:
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0

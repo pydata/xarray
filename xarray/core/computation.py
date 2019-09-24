@@ -1094,17 +1094,17 @@ def dot(*arrays, dims=None, **kwargs):
     >>> da_a
     <xarray.DataArray (a: 3, b: 2)>
     array([[0, 1],
-        [2, 3],
-        [4, 5]])
+           [2, 3],
+           [4, 5]])
     Dimensions without coordinates: a, b
 
     >>> da_b
     <xarray.DataArray (a: 3, b: 2, c: 2)>
     array([[[ 0,  1],
             [ 2,  3]],
-        [[ 4,  5],
+           [[ 4,  5],
             [ 6,  7]],
-        [[ 8,  9],
+           [[ 8,  9],
             [10, 11]]])
     Dimensions without coordinates: a, b, c
 
@@ -1116,14 +1116,14 @@ def dot(*arrays, dims=None, **kwargs):
     >>> xr.dot(da_a, da_b, dims=['a'])
     <xarray.DataArray (b: 2, c: 2)>
     array([[40, 46],
-        [70, 79]])
+           [70, 79]])
     Dimensions without coordinates: b, c
 
     >>> xr.dot(da_a, da_b, da_c, dims=['b', 'c'])
     <xarray.DataArray (a: 3, d: 3)>
     array([[  9,  14,  19],
-        [ 93, 150, 207],
-        [273, 446, 619]])
+           [ 93, 150, 207],
+           [273, 446, 619]])
     Dimensions without coordinates: a, d
 
     """
@@ -1251,8 +1251,8 @@ def where(cond, x, y):
     >>> y
     <xarray.DataArray 'sst' (lat: 3, lon: 3)>
     array([[0. , 0.1, 0.2],
-        [0.3, 0.4, 0.5],
-        [0.6, 0.7, 0.8]])
+           [0.3, 0.4, 0.5],
+           [0.6, 0.7, 0.8]])
     Coordinates:
     * lat      (lat) int64 0 1 2
     * lon      (lon) int64 10 11 12
@@ -1260,8 +1260,8 @@ def where(cond, x, y):
     >>> xr.where(y.lat < 1, y, -1)
     <xarray.DataArray (lat: 3, lon: 3)>
     array([[ 0. ,  0.1,  0.2],
-        [-1. , -1. , -1. ],
-        [-1. , -1. , -1. ]])
+           [-1. , -1. , -1. ],
+           [-1. , -1. , -1. ]])
     Coordinates:
     * lat      (lat) int64 0 1 2
     * lon      (lon) int64 10 11 12
