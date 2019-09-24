@@ -1084,17 +1084,48 @@ def dot(*arrays, dims=None, **kwargs):
     Examples
     --------
 
-    >>> da_a = xr.DataArray(np.arange(3 * 4).reshape(3, 4), dims=['a', 'b'])
-    >>> da_b = xr.DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5),
-    >>>                     dims=['a', 'b', 'c'])
-    >>> da_c = xr.DataArray(np.arange(5 * 6).reshape(5, 6), dims=['c', 'd'])
-    >>>
-    >>> xr.dot(da_a, da_b, dims=['a', 'b']).dims
-    ('c', )
-    >>> xr.dot(da_a, da_b, dims=['a']).dims
-    ('b', 'c')
-    >>> xr.dot(da_a, da_b, da_c, dims=['b', 'c']).dims
-    ('a', 'd')
+    >>> import numpy as np
+    >>> import xarray as xp
+    >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=['a', 'b'])
+    >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2),
+    ...                     dims=['a', 'b', 'c'])
+    >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=['c', 'd'])
+
+    >>> da_a
+    <xarray.DataArray (a: 3, b: 2)>
+    array([[0, 1],
+        [2, 3],
+        [4, 5]])
+    Dimensions without coordinates: a, b
+
+    >>> da_b
+    <xarray.DataArray (a: 3, b: 2, c: 2)>
+    array([[[ 0,  1],
+            [ 2,  3]],
+        [[ 4,  5],
+            [ 6,  7]],
+        [[ 8,  9],
+            [10, 11]]])
+    Dimensions without coordinates: a, b, c
+
+    >>> xr.dot(da_a, da_b, dims=['a', 'b'])
+    <xarray.DataArray (c: 2)>
+    array([110, 125])
+    Dimensions without coordinates: c
+
+    >>> xr.dot(da_a, da_b, dims=['a'])
+    <xarray.DataArray (b: 2, c: 2)>
+    array([[40, 46],
+        [70, 79]])
+    Dimensions without coordinates: b, c
+
+    >>> xr.dot(da_a, da_b, da_c, dims=['b', 'c'])
+    <xarray.DataArray (a: 3, d: 3)>
+    array([[  9,  14,  19],
+        [ 93, 150, 207],
+        [273, 446, 619]])
+    Dimensions without coordinates: a, d
+
     """
     from .dataarray import DataArray
     from .variable import Variable
