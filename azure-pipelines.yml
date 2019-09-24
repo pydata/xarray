@@ -40,7 +40,7 @@ jobs:
   strategy:
     matrix:
       py37:
-        conda_env: py37
+        conda_env: py37-windows
   pool:
     vmImage: 'vs2017-win2016'
   steps:

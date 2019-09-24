@@ -1,0 +1,42 @@
+name: xarray-tests
+channels:
+  - conda-forge
+dependencies:
+  - python=3.7
+  - black
+  - boto3
+  - bottleneck
+  # - cdms2  # Not available on Windows
+  - cfgrib>=0.9.2
+  - cftime
+  - coveralls
+  - dask
+  - distributed
+  - flake8
+  - h5netcdf
+  - h5py
+  - hypothesis
+  - iris>=1.10
+  - lxml
+  - matplotlib
+  - mypy==0.720  # Must match .pre-commit-config.yaml
+  - nc-time-axis
+  - netcdf4
+  - numba
+  - numpy>=1.12
+  - pandas>=0.19
+  - pip
+  - pseudonetcdf>=3.0.1
+  - pydap
+  # - pynio  # Not available on Windows
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - rasterio
+  - scipy
+  - seaborn
+  - sparse
+  - toolz
+  - zarr
+  - pip:
+    - numbagg
