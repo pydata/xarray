@@ -566,16 +566,25 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
     Examples
     --------
     >>> import xarray as xr
-    >>> x = xr.DataArray([[1., 2.], [3., 5.]], dims=('lat', 'lon'), 
-    ...                 coords={'lat': [35., 40.], 'lon': [100., 120.]},
-    ...                 name='var1')
-    >>> y = xr.DataArray([[5., 6.], [7., 8.]], dims=('lat', 'lon'), 
-    ...                  coords={'lat': [35., 42.], 'lon': [100., 150.]},
-    ...                 name='var2')
-    >>> z = xr.DataArray([[0., 3.], [4., 9.]], dims=('time', 'lon'), 
-    ...                  coords={'time': [30., 60.], 'lon': [100., 150.]},
-    ...                 name='var3')
-
+    >>> x = xr.DataArray(
+    ...     [[1.0, 2.0], [3.0, 5.0]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 40.0], "lon": [100.0, 120.0]},
+    ...     name="var1",
+    ... )
+    >>> y = xr.DataArray(
+    ...     [[5.0, 6.0], [7.0, 8.0]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 42.0], "lon": [100.0, 150.0]},
+    ...     name="var2",
+    ... )
+    >>> z = xr.DataArray(
+    ...     [[0.0, 3.0], [4.0, 9.0]],
+    ...     dims=("time", "lon"),
+    ...     coords={"time": [30.0, 60.0], "lon": [100.0, 150.0]},
+    ...     name="var3",
+    ... )
+    
     >>> x
     <xarray.DataArray 'var1' (lat: 2, lon: 2)>
     array([[1., 2.],
