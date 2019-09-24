@@ -771,7 +771,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        if dim not in peek_at(self._iter_grouped())[0]:
+        if dim not in peek_at(self._iter_grouped())[0].dims:
             raise ValueError("Attempting to reduce over grouped dimension %r." % dim)
 
         def reduce_array(ar):
@@ -869,7 +869,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
 
-        if dim not in peek_at(self._iter_grouped())[0]:
+        if dim not in peek_at(self._iter_grouped())[0].dims:
             raise ValueError("Attempting to reduce over grouped dimension %r" % dim)
 
         return self.apply(reduce_dataset)
