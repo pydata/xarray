@@ -579,100 +579,91 @@ def combine_by_coords(
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.
 
-    >>> import pandas as pd
     >>> import numpy as np
     >>> import xarray as xr
 
     >>> x1 = xr.Dataset(
     ...     {
-    ...         "temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...         "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3)),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
     ...     },
-    ...     coords={
-    ...         "time": pd.date_range(start="2000-01", periods=2, freq="M"),
-    ...         "x": [10, 20, 30],
-    ...     },
+    ...     coords={"y": [0, 1], "x": [10, 20, 30]},
     ... )
     >>> x2 = xr.Dataset(
     ...     {
-    ...         "temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...         "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3)),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
     ...     },
-    ...     coords={
-    ...         "time": pd.date_range(start="2000-03", periods=2, freq="M"),
-    ...         "x": [10, 20, 30],
-    ...     },
+    ...     coords={"y": [2, 3], "x": [10, 20, 30]},
     ... )
     >>> x3 = xr.Dataset(
     ...     {
-    ...         "temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...         "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3)),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
     ...     },
-    ...     coords={
-    ...         "time": pd.date_range(start="2000-03", periods=2, freq="M"),
-    ...         "x": [40, 50, 60],
-    ...     },
+    ...     coords={"y": [2, 3], "x": [40, 50, 60]},
     ... )
 
     >>> x1
     <xarray.Dataset>
-    Dimensions:        (time: 2, x: 3)
+    Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * time           (time) datetime64[ns] 2000-01-31 2000-02-29
+    * y              (y) int64 0 1
     * x              (x) int64 10 20 30
     Data variables:
-        temperature    (time, x) float64 9.022 4.041 7.246 3.474 16.26 3.05
-        precipitation  (time, x) float64 0.5777 0.3621 0.8043 0.5203 0.03721 0.3805
+        temperature    (y, x) float64 1.654 10.63 7.015 2.543 13.93 9.436
+        precipitation  (y, x) float64 0.2136 0.9974 0.7603 0.4679 0.3115 0.945
 
     >>> x2
     <xarray.Dataset>
-    Dimensions:        (time: 2, x: 3)
+    Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * time           (time) datetime64[ns] 2000-03-31 2000-04-30
+    * y              (y) int64 2 3
     * x              (x) int64 10 20 30
     Data variables:
-        temperature    (time, x) float64 1.88 2.184 7.438 3.046 6.719 7.501
-        precipitation  (time, x) float64 0.02079 0.8212 0.9924 0.405 0.16 0.2543
+        temperature    (y, x) float64 9.341 0.1251 6.269 7.709 8.82 2.316
+        precipitation  (y, x) float64 0.1728 0.1178 0.03018 0.6509 0.06938 0.3792
 
     >>> x3
     <xarray.Dataset>
-    Dimensions:        (time: 2, x: 3)
+    Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * time           (time) datetime64[ns] 2000-03-31 2000-04-30
+    * y              (y) int64 2 3
     * x              (x) int64 40 50 60
     Data variables:
-        temperature    (time, x) float64 15.31 7.169 7.927 16.01 16.58 15.33
-        precipitation  (time, x) float64 0.2915 0.4556 0.2424 0.193 0.3184 0.6775
+        temperature    (y, x) float64 2.789 2.446 6.551 12.46 2.22 15.96
+        precipitation  (y, x) float64 0.4804 0.1902 0.2457 0.6125 0.4654 0.5953
 
     >>> xr.combine_by_coords([x2, x1])
     <xarray.Dataset>
-    Dimensions:        (time: 4, x: 3)
+    Dimensions:        (x: 3, y: 4)
     Coordinates:
     * x              (x) int64 10 20 30
-    * time           (time) datetime64[ns] 2000-01-31 2000-02-29 ... 2000-04-30
+    * y              (y) int64 0 1 2 3
     Data variables:
-        temperature    (time, x) float64 9.022 4.041 7.246 ... 3.046 6.719 7.501
-        precipitation  (time, x) float64 0.5777 0.3621 0.8043 ... 0.405 0.16 0.2543
+        temperature    (y, x) float64 1.654 10.63 7.015 2.543 ... 7.709 8.82 2.316
+        precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6509 0.06938 0.3792
 
     >>> xr.combine_by_coords([x3, x1])
     <xarray.Dataset>
-    Dimensions:        (time: 4, x: 6)
+    Dimensions:        (x: 6, y: 4)
     Coordinates:
-    * time           (time) datetime64[ns] 2000-01-31 2000-02-29 ... 2000-04-30
     * x              (x) int64 10 20 30 40 50 60
+    * y              (y) int64 0 1 2 3
     Data variables:
-        temperature    (time, x) float64 9.022 4.041 7.246 nan ... 16.01 16.58 15.33
-        precipitation  (time, x) float64 0.5777 0.3621 0.8043 ... 0.3184 0.6775
+        temperature    (y, x) float64 1.654 10.63 7.015 nan ... nan 12.46 2.22 15.96
+        precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
 
     >>> xr.combine_by_coords([x3, x1], join='override')
     <xarray.Dataset>
-    Dimensions:        (time: 2, x: 6)
+    Dimensions:        (x: 3, y: 4)
     Coordinates:
-    * time           (time) datetime64[ns] 2000-01-31 2000-02-29
-    * x              (x) int64 10 20 30 40 50 60
+    * x              (x) int64 10 20 30
+    * y              (y) int64 0 1 2 3
     Data variables:
-        temperature    (time, x) float64 9.022 4.041 7.246 ... 16.01 16.58 15.33
-        precipitation  (time, x) float64 0.5777 0.3621 0.8043 ... 0.3184 0.6775
+    temperature    (y, x) float64 1.654 10.63 7.015 2.543 ... 12.46 2.22 15.96
+    precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
+
     """
 
     # Group by data vars

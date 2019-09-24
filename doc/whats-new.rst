@@ -30,6 +30,10 @@ Documentation
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
   By `Justus Magin <https://github.com/keewis>`_.
 
+- Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`, 
+  :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`.
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 .. _whats-new.0.13.0:
 
 v0.13.0 (17 Sep 2019)
