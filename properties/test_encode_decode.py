@@ -27,6 +27,7 @@ an_array = npst.arrays(
 )
 
 
+@pytest.mark.slow
 @given(st.data(), an_array)
 def test_CFMask_coder_roundtrip(data, arr):
     names = data.draw(
@@ -40,6 +41,7 @@ def test_CFMask_coder_roundtrip(data, arr):
     xr.testing.assert_identical(original, roundtripped)
 
 
+@pytest.mark.slow
 @given(st.data(), an_array)
 def test_CFScaleOffset_coder_roundtrip(data, arr):
     names = data.draw(
