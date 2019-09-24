@@ -393,7 +393,7 @@ def combine_nested(
     --------
 
     A common task is collecting data from a parallelized simulation in which
-    each processor wrote out to a separate file. A domain which was decomposed
+    each process wrote out to a separate file. A domain which was decomposed
     into 4 parts, 2 each along both the x and y axes, requires organising the
     datasets into a doubly-nested list, e.g:
 
@@ -583,19 +583,36 @@ def combine_by_coords(
     >>> import numpy as np
     >>> import xarray as xr
 
-    >>> x1 = xr.Dataset({"temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...                  "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3))},
-    ...                 coords={"time": pd.date_range(start="2000-01", periods=2, freq='M'),
-    ...                         "x": [10, 20, 30]})
-    >>> x2 = xr.Dataset({"temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...                  "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3))},
-    ...                 coords={"time": pd.date_range(start="2000-03", periods=2, freq='M'),
-    ...                         "x": [10, 20, 30]})
-
-    >>> x3 = xr.Dataset({"temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...                  "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3))},
-    ...                 coords={"time": pd.date_range(start="2000-03", periods=2, freq='M'),
-    ...                         "x": [40, 50, 60]})
+    >>> x1 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3)),
+    ...     },
+    ...     coords={
+    ...         "time": pd.date_range(start="2000-01", periods=2, freq="M"),
+    ...         "x": [10, 20, 30],
+    ...     },
+    ... )
+    >>> x2 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3)),
+    ...     },
+    ...     coords={
+    ...         "time": pd.date_range(start="2000-03", periods=2, freq="M"),
+    ...         "x": [10, 20, 30],
+    ...     },
+    ... )
+    >>> x3 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("time", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("time", "x"), np.random.rand(6).reshape(2, 3)),
+    ...     },
+    ...     coords={
+    ...         "time": pd.date_range(start="2000-03", periods=2, freq="M"),
+    ...         "x": [40, 50, 60],
+    ...     },
+    ... )
 
     >>> x1
     <xarray.Dataset>
