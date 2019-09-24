@@ -1330,7 +1330,7 @@ def ones_like(other, dtype: DTypeLike = None):
     Parameters
     ----------
     other : DataArray, Dataset, or Variable
-        The reference object in input
+        The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
 
