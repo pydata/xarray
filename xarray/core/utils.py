@@ -249,7 +249,16 @@ def either_dict_or_kwargs(
     pos_kwargs: Optional[Mapping[Hashable, T]],
     kw_kwargs: Mapping[str, T],
     func_name: str,
+    func_args: Any = None,
+    dims: Any = None,
 ) -> Mapping[Hashable, T]:
+    if func_args is not None:
+        inter = func_args.intersection(dims)
+        if inter:
+            raise ValueError(
+                "the dimension name '%s' matches an argument "
+                "to .%s" % (inter.pop(), func_name)
+            )
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
             raise ValueError(
