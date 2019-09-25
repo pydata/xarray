@@ -3487,7 +3487,10 @@ class TestPseudoNetCDFFormat:
             "example.uamiv", engine="pseudonetcdf", backend_kwargs=fmtkw
         )
         with self.roundtrip(
-            expected, save_kwargs=fmtkw, open_kwargs={"backend_kwargs": fmtkw}
+            expected,
+            save_kwargs=fmtkw,
+            open_kwargs={"backend_kwargs": fmtkw},
+            allow_cleanup_failure=True,
         ) as actual:
             assert_identical(expected, actual)
 
