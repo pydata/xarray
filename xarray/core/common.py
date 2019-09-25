@@ -542,6 +542,77 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...    .pipe((f, 'arg2'), arg1=a, arg3=c)
         ...  )
 
+        Examples
+        --------
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> x = xr.Dataset(
+        ...     {
+        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
+        ...     },
+        ...     coords={"lat": [10, 20], "lon": [150, 160]},
+        ... )
+        >>> x
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
+            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+
+        >>> def adder(data, arg):
+        ...     return data + arg
+        ...
+        >>> def div(data, arg):
+        ...     return data / arg
+        ...
+        >>> def sub_mult(data, sub_arg, mult_arg):
+        ...     return (data * mult_arg) - sub_arg
+        ...
+        >>> x.pipe(adder, 2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
+            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+
+        >>> x.pipe(adder, arg=2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
+            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+
+        >>> x.pipe(adder, arg=2).pipe(div, arg=2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 8.264 6.923 10.63 9.185
+            precipitation  (lat, lon) float64 1.366 1.359 1.424 1.234
+
+        >>> x.pipe(adder, arg=2).pipe(div, arg=2).pipe(sub_mult, sub_arg=2, mult_arg=2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
+            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+
         See Also
         --------
         pandas.DataFrame.pipe

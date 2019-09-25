@@ -4043,6 +4043,54 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         pandas.DataFrame.assign
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> x = xr.Dataset(
+        ...     {
+        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
+        ...     },
+        ...     coords={"lat": [10, 20], "lon": [150, 160]},
+        ... )
+        >>> x
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
+            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
+
+        Where the value is a callable, evaluated on dataset:
+
+        >>> x.assign(temperature_f = lambda x: x.temperature_c * 9 / 5 + 32)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
+            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
+            temperature_f  (lat, lon) float64 64.47 54.51 63.75 48.76
+
+        Alternatively, the same behavior can be achieved by directly referencing an existing dataarray:
+
+        >>> x.assign(temperature_f=x["temperature_c"] * 9 / 5 + 32)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
+            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
+            temperature_f  (lat, lon) float64 64.47 54.51 63.75 48.76
+
         """
         variables = either_dict_or_kwargs(variables, variables_kwargs, "assign")
         data = self.copy()
