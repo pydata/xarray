@@ -2292,6 +2292,134 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.reindex_like
         align
         pandas.Index.get_indexer
+
+        Examples
+        --------
+
+        Create a dataset with some fictional data.
+
+        >>> import xarray as xr
+        >>> import pandas as pd
+        >>> x = xr.Dataset(
+        ...     {
+        ...         "temperature": ("station", 20 * np.random.rand(4)),
+        ...         "pressure": ("station", 500 * np.random.rand(4))
+        ...     },
+        ...     coords={"station": ["boston", "nyc", "seattle", "denver"]})
+        >>> x
+        <xarray.Dataset>
+        Dimensions:      (station: 4)
+        Coordinates:
+        * station      (station) <U7 'boston' 'nyc' 'seattle' 'denver'
+        Data variables:
+            temperature  (station) float64 18.84 14.59 19.22 17.16
+            pressure     (station) float64 324.1 194.3 122.8 244.3
+        >>> x.indexes
+        station: Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
+
+        Create a new index and reindex the dataset. By default values in the new index that
+        do not have corresponding records in the dataset are assigned `NaN`.
+
+        >>> new_index = ['boston', 'austin', 'seattle', 'lincoln']
+        >>> x.reindex({'station': new_index})
+        <xarray.Dataset>
+        Dimensions:      (station: 4)
+        Coordinates:
+        * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+        Data variables:
+            temperature  (station) float64 18.84 nan 19.22 nan
+            pressure     (station) float64 324.1 nan 122.8 nan
+
+        We can fill in the missing values by passing a value to the keyword `fill_value`.
+
+        >>> x.reindex({'station': new_index}, fill_value=0)
+        <xarray.Dataset>
+        Dimensions:      (station: 4)
+        Coordinates:
+        * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+        Data variables:
+            temperature  (station) float64 18.84 0.0 19.22 0.0
+            pressure     (station) float64 324.1 0.0 122.8 0.0
+
+        Because the index is not monotonically increasing or decreasing, we cannot use arguments
+        to the keyword method to fill the `NaN` values.
+
+        >>> x.reindex({'station': new_index}, method='nearest')
+        Traceback (most recent call last):
+        ...
+            raise ValueError('index must be monotonic increasing or decreasing')
+        ValueError: index must be monotonic increasing or decreasing
+
+        To further illustrate the filling functionality in reindex, we will create a
+        dataset with a monotonically increasing index (for example, a sequence of dates).
+
+        >>> x2 = xr.Dataset(
+        ...     {
+        ...         "temperature": ("time", [15.57, 12.77, np.nan, 0.3081, 16.59, 15.12]),
+        ...         "pressure": ("time", 500 * np.random.rand(6))
+        ...     },
+        ...     coords={"time": pd.date_range('01/01/2019', periods=6, freq='D')})
+        >>> x2
+        <xarray.Dataset>
+        Dimensions:      (time: 6)
+        Coordinates:
+        * time         (time) datetime64[ns] 2019-01-01 2019-01-02 ... 2019-01-06
+        Data variables:
+            temperature  (time) float64 15.57 12.77 nan 0.3081 16.59 15.12
+            pressure     (time) float64 103.4 122.7 452.0 444.0 399.2 486.0
+
+        Suppose we decide to expand the dataset to cover a wider date range.
+
+        >>> time_index2 = pd.date_range('12/29/2018', periods=10, freq='D')
+        >>> x2.reindex({'time': time_index2})
+        <xarray.Dataset>
+        Dimensions:      (time: 10)
+        Coordinates:
+        * time         (time) datetime64[ns] 2018-12-29 2018-12-30 ... 2019-01-07
+        Data variables:
+            temperature  (time) float64 nan nan nan 15.57 ... 0.3081 16.59 15.12 nan
+            pressure     (time) float64 nan nan nan 103.4 ... 444.0 399.2 486.0 nan
+
+        The index entries that did not have a value in the original data frame (for example, `2018-12-29`)
+        are by default filled with NaN. If desired, we can fill in the missing values using one of several options.
+
+        For example, to back-propagate the last valid value to fill the `NaN` values,
+        pass `bfill` as an argument to the `method` keyword.
+
+        >>> x3 = x2.reindex({'time': time_index2}, method='bfill')
+        >>> x3
+        <xarray.Dataset>
+        Dimensions:      (time: 10)
+        Coordinates:
+        * time         (time) datetime64[ns] 2018-12-29 2018-12-30 ... 2019-01-07
+        Data variables:
+            temperature  (time) float64 15.57 15.57 15.57 15.57 ... 16.59 15.12 nan
+            pressure     (time) float64 103.4 103.4 103.4 103.4 ... 399.2 486.0 nan
+
+        Please note that the `NaN` value present in the original dataset (at index value `2019-01-03`)
+        will not be filled by any of the value propagation schemes.
+
+        >>> x2.where(x2.temperature.isnull(), drop=True)
+        <xarray.Dataset>
+        Dimensions:      (time: 1)
+        Coordinates:
+        * time         (time) datetime64[ns] 2019-01-03
+        Data variables:
+            temperature  (time) float64 nan
+            pressure     (time) float64 452.0
+        >>> x3.where(x3.temperature.isnull(), drop=True)
+        <xarray.Dataset>
+        Dimensions:      (time: 2)
+        Coordinates:
+        * time         (time) datetime64[ns] 2019-01-03 2019-01-07
+        Data variables:
+            temperature  (time) float64 nan nan
+            pressure     (time) float64 452.0 nan
+
+        This is because filling while reindexing does not look at dataset values, but only compares
+        the original and desired indexes. If you do want to fill in the NaN values present in the
+        original dataset, use the `fillna()` method.
+
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
 

@@ -31,7 +31,8 @@ Documentation
   By `Justus Magin <https://github.com/keewis>`_.
 
 - Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`, 
-  :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, `pipe`, `assign`.
+  :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, :py:meth:`Dataset.pipe`, 
+  :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 .. _whats-new.0.13.0:

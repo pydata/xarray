@@ -533,19 +533,7 @@ def combine_by_coords(
           addition to the 'minimal' data variables.
         If objects are DataArrays, `data_vars` must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
-        These coordinate variables will be concatenated together:
-
-        * 'minimal': Only coordinates in which the dimension already appears
-          are included.
-        * 'different': Coordinates which are not equal (ignoring attributes)
-          across all datasets are also concatenated (as well as all for which
-          dimension already appears). Beware: this option may load the data
-          payload of coordinate variables into memory if they are not already
-          loaded.
-        * 'all': All coordinate variables will be concatenated, except
-          those corresponding to other dimensions.
-        * list of str: The listed coordinate variables will be concatenated,
-          in addition to the 'minimal' coordinates.
+        As per the 'data_vars' kwarg, for coords.
     fill_value : scalar, optional
         Value to use for newly missing values
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
