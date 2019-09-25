@@ -533,7 +533,7 @@ def combine_by_coords(
           addition to the 'minimal' data variables.
         If objects are DataArrays, `data_vars` must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
-        As per the 'data_vars' kwarg, for coords.
+        As per the 'data_vars' kwarg, but for coordinate variables.
     fill_value : scalar, optional
         Value to use for newly missing values
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
