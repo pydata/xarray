@@ -1108,6 +1108,12 @@ def dot(*arrays, dims=None, **kwargs):
             [10, 11]]])
     Dimensions without coordinates: a, b, c
 
+    >>> da_c
+    <xarray.DataArray (c: 2, d: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Dimensions without coordinates: c, d
+
     >>> xr.dot(da_a, da_b, dims=['a', 'b'])
     <xarray.DataArray (c: 2)>
     array([110, 125])

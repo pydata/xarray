@@ -593,17 +593,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
             precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
 
-        >>> x.pipe(adder, arg=2).pipe(div, arg=2)
-        <xarray.Dataset>
-        Dimensions:        (lat: 2, lon: 2)
-        Coordinates:
-        * lon            (lon) int64 150 160
-        * lat            (lat) int64 10 20
-        Data variables:
-            temperature_c  (lat, lon) float64 8.264 6.923 10.63 9.185
-            precipitation  (lat, lon) float64 1.366 1.359 1.424 1.234
-
-        >>> x.pipe(adder, arg=2).pipe(div, arg=2).pipe(sub_mult, sub_arg=2, mult_arg=2)
+        >>> (
+        ... x
+        ... .pipe(adder, arg=2)
+        ... .pipe(div, arg=2)
+        ... .pipe(sub_mult, sub_arg=2, mult_arg=2)
+        ... )
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
@@ -1259,6 +1254,7 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
+
     >>> xr.full_like(x, 1)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[1, 1, 1],
@@ -1266,6 +1262,7 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
+
     >>> xr.full_like(x, 0.5)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 0, 0],
@@ -1273,6 +1270,7 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
+
     >>> xr.full_like(x, 0.5, dtype=np.double)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0.5, 0.5, 0.5],
@@ -1280,6 +1278,7 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
+
     >>> xr.full_like(x, np.nan, dtype=np.double)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[nan, nan, nan],
@@ -1369,6 +1368,7 @@ def zeros_like(other, dtype: DTypeLike = None):
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
+
     >>> xr.zeros_like(x)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 0, 0],
@@ -1376,6 +1376,7 @@ def zeros_like(other, dtype: DTypeLike = None):
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
+
     >>> xr.zeros_like(x, dtype=np.float)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0., 0., 0.],
@@ -1425,6 +1426,7 @@ def ones_like(other, dtype: DTypeLike = None):
     Coordinates:
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
+
     >>> >>> xr.ones_like(x)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[1, 1, 1],
