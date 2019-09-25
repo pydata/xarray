@@ -202,4 +202,28 @@ def test_da_groupby_assign_coords():
     assert_identical(expected, actual2)
 
 
+test_da = xr.DataArray(
+    np.random.randn(10, 20, 6),
+    dims=["x", "y", "z"],
+    coords={"z": ["a", "b", "c", "a", "b", "c"], "x": [1, 1, 1, 2, 2, 3, 4, 5, 3, 4]},
+)
+
+
+@pytest.mark.parametrize("dim", ["x", "y", "z"])
+@pytest.mark.parametrize("obj", [test_da, test_da.to_dataset(name="a")])
+def test_groupby_repr(obj, dim):
+
+    actual = repr(obj.groupby(dim))
+    expected = "%sGroupBy" % obj.__class__.__name__
+    expected += ", grouped over %r " % dim
+    expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
+    if dim == "x":
+        expected += "1, 2, 3, 4, 5"
+    elif dim == "y":
+        expected += "0, 1, 2, 3, 4, 5, ..., 15, 16, 17, 18, 19"
+    elif dim == "z":
+        expected += "'a', 'b', 'c'"
+    assert actual == expected
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
