@@ -172,16 +172,19 @@ class TestPlot(PlotTestCase):
 
     def test_line_plot_along_1d_coord(self):
         # Test for bug in GH #3334
-        x_coord = xr.DataArray(data=[0.1, 0.2], dims=['x'])
-        t_coord = xr.DataArray(data=[10, 20], dims=['t'])
+        x_coord = xr.DataArray(data=[0.1, 0.2], dims=["x"])
+        t_coord = xr.DataArray(data=[10, 20], dims=["t"])
 
-        da = xr.DataArray(data=np.array([[0, 1], [5, 9]]), dims=['x', 't'],
-                          coords={'x': x_coord, 'time': t_coord})
+        da = xr.DataArray(
+            data=np.array([[0, 1], [5, 9]]),
+            dims=["x", "t"],
+            coords={"x": x_coord, "time": t_coord},
+        )
 
-        line = da.plot(x='time', hue='x')[0]
+        line = da.plot(x="time", hue="x")[0]
         assert_array_equal(line.get_xdata(), da.coords["time"].values)
 
-        line = da.plot(y='time', hue='x')[0]
+        line = da.plot(y="time", hue="x")[0]
         assert_array_equal(line.get_ydata(), da.coords["time"].values)
 
     def test_2d_line(self):
