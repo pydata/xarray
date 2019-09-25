@@ -8,8 +8,12 @@ jobs:
 - job: Linux
   strategy:
     matrix:
-      py35-min:
-        conda_env: py35-min
+      py35-bare-minimum:
+        conda_env: py35-bare-minimum
+      py36-min:
+        conda_env: py36-min
+      py36-min-nep18:
+        conda_env: py36-min-nep18
       py36:
         conda_env: py36
       py37:

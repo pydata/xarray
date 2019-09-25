@@ -15,9 +15,10 @@ dependencies:
   - flake8
   - h5netcdf
   - h5py
+  - hdf5
   - hypothesis
   - iris>=1.10
-  - lxml
+  - lxml  # FIXME what's the purpose? (added in #1776)
   - matplotlib
   - mypy==0.720  # Must match .pre-commit-config.yaml
   - nc-time-axis
