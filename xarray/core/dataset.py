@@ -2417,8 +2417,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             pressure     (time) float64 452.0 nan
 
         This is because filling while reindexing does not look at dataset values, but only compares
-        the original and desired indexes. If you do want to fill in the NaN values present in the
-        original dataset, use the `fillna()` method.
+        the original and desired indexes. If you do want to fill in the `NaN` values present in the
+        original dataset, use the :py:meth:`~Dataset.fillna()` method.
 
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
@@ -3846,6 +3846,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         Dataset
+
+        Examples
+        --------
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "A": ("x", [np.nan, 2, np.nan, 0]),
+        ...         "B": ("x", [3, 4, np.nan, 1]),
+        ...         "C": ("x", [np.nan, np.nan, np.nan, 5]),
+        ...         "D": ("x", [np.nan, 3, np.nan, 4])
+        ...     },
+        ...     coords={"x": [0, 1, 2, 3]})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+        * x        (x) int64 0 1 2 3
+        Data variables:
+            A        (x) float64 nan 2.0 nan 0.0
+            B        (x) float64 3.0 4.0 nan 1.0
+            C        (x) float64 nan nan nan 5.0
+            D        (x) float64 nan 3.0 nan 4.0
+
+        Replace all `NaN` values with 0s.
+
+        >>> ds.fillna(0)
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+        * x        (x) int64 0 1 2 3
+        Data variables:
+            A        (x) float64 0.0 2.0 0.0 0.0
+            B        (x) float64 3.0 4.0 0.0 1.0
+            C        (x) float64 0.0 0.0 0.0 5.0
+            D        (x) float64 0.0 3.0 0.0 4.0
+
+        Replace all `NaN` elements in column ‘A’, ‘B’, ‘C’, and ‘D’, with 0, 1, 2, and 3 respectively.
+
+        >>> values = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        >>> ds.fillna(value=values)
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+        * x        (x) int64 0 1 2 3
+        Data variables:
+            A        (x) float64 0.0 2.0 0.0 0.0
+            B        (x) float64 3.0 4.0 1.0 1.0
+            C        (x) float64 2.0 2.0 2.0 5.0
+            D        (x) float64 3.0 3.0 3.0 4.0
         """
         if utils.is_dict_like(value):
             value_keys = getattr(value, "data_vars", value).keys()
