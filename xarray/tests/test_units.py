@@ -570,6 +570,7 @@ class TestDataArray:
         assert_equal_with_units(expected, np.maximum(data_array, 0 * unit))
         assert_equal_with_units(expected, np.maximum(0 * unit, data_array))
 
+    @require_pint_array_function
     @pytest.mark.parametrize("property", ("T", "imag", "real"))
     def test_numpy_properties(self, property, dtype):
         array = (
@@ -586,6 +587,7 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -609,6 +611,7 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
+    @require_pint_array_function
     @pytest.mark.parametrize(
         "func", (method("clip", min=3, max=8), method("searchsorted", v=5)), ids=repr
     )
