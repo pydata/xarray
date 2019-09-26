@@ -18,7 +18,7 @@ dependencies:
   - hdf5=1.10.5
   - hypothesis
   - iris=2.2.0
-  - lxml=4.4.1  # FIXME what's the purpose? (added in #1776)
+  - lxml=4.4.1  # FIXME undeclared dep of pydap? (added in #1776)
   - matplotlib=3.1.1
   - mypy==0.720  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2.0
