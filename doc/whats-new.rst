@@ -24,6 +24,9 @@ Bug fixes
   reinstated for :class:`DataArray` and :class:`Dataset` objects only. Internal xarray
   objects remain unaddressable by weakref in order to save memory.
   (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+- Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
+  now plot the correct data for 2D DataArrays.
+  (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -544,8 +547,9 @@ Bug fixes
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
-- Line plots with the ``x`` argument set to a non-dimensional coord now plot the correct data for 1D DataArrays.
-  (:issue:`27251`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Line plots with the ``x`` argument set to a non-dimensional coord now plot
+  the correct data for 1D DataArrays.
+  (:issue:`2725`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Subtracting a scalar ``cftime.datetime`` object from a
   :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
   instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
