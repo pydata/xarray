@@ -5149,7 +5149,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 selection.append(var_name)
         return self[selection]
 
-    def unify_chunks(self):
+    def unify_chunks(self) -> "Dataset":
         """ Unifies chunksize along all chunked dimensions of this Dataset.
 
         Returns

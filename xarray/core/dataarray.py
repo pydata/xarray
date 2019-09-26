@@ -3034,7 +3034,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().integrate(dim, datetime_unit)
         return self._from_temp_dataset(ds)
 
-    def unify_chunks(self):
+    def unify_chunks(self) -> "DataArray":
         """ Unifies chunksize along all chunked dimensions of this DataArray.
 
         Returns
