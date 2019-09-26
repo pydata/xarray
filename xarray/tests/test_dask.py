@@ -929,7 +929,8 @@ def make_da():
         name="a",
     ).chunk({"x": 4, "y": 5})
     da.coords["c2"] = 0.5
-    da.coords["ndcoord"] = da.x ** 2
+    da.coords["ndcoord"] = (da.x ** 2).compute()
+    da.coords["cxy"] = da.x * da.y
 
     return da
 
@@ -944,7 +945,6 @@ def make_ds():
     map_ds["e"] = map_ds.x + map_ds.y
     map_ds.coords["c1"] = 0.5
     map_ds.coords["cx"] = ("x", np.arange(len(map_da.x)))
-    map_ds.coords["cxy"] = (("x", "y"), map_da.x * map_da.y)
     map_ds.attrs["test"] = "test"
     map_ds["xx"] = map_ds["a"] * map_ds.y
 
@@ -956,7 +956,11 @@ map_da = make_da()
 map_ds = make_ds()
 
 
-def test_unify_chunks():
+# DataArray.unify_chunks
+# invoke unify_chunks when chunks are already unified (returned object must be a shallow copy)
+# invoke unify_chunks when there are no chunks to begin with (returned object must be a shallow copy)
+@pytest.mark.parametrize("obj", [map_ds, map_da])
+def test_unify_chunks(obj):
     ds_copy = map_ds.copy()
     ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
