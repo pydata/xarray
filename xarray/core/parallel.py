@@ -41,11 +41,8 @@ def make_meta(obj):
     if isinstance(obj, Dataset):
         meta = Dataset()
         for name, variable in obj.variables.items():
-            if dask.is_dask_collection(variable):
-                meta_obj = obj[name].data._meta
-            else:
-                meta_obj = meta_from_array(variable.data)
-            meta[name] = DataArray(meta_obj, dims=variable.dims)
+            meta_obj = meta_from_array(variable.data)
+            meta[name] = (variable.dims, meta_obj)
     else:
         meta = obj
 
