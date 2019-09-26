@@ -929,6 +929,8 @@ def make_da():
         name="a",
     ).chunk({"x": 4, "y": 5})
     da.coords["c2"] = 0.5
+    da.coords["ndcoord"] = da.x ** 2
+
     return da
 
 
@@ -937,34 +939,34 @@ def make_ds():
     map_ds["a"] = make_da()
     map_ds["b"] = map_ds.a + 50
     map_ds["c"] = map_ds.x + 20
-    map_ds = map_ds.chunk({"x": 4, "y": 5})
     map_ds["d"] = ("z", [1, 1, 1, 1])
     map_ds["z"] = [0, 1, 2, 3]
-    map_ds["e"] = map_ds.x + map_ds.y + map_ds.z
+    map_ds["e"] = map_ds.x + map_ds.y
     map_ds.coords["c1"] = 0.5
     map_ds.coords["cx"] = ("x", np.arange(len(map_da.x)))
     map_ds.coords["cxy"] = (("x", "y"), map_da.x * map_da.y)
-    map_ds.coords["cxy"] = map_ds.cxy.chunk({"y": 10})
     map_ds.attrs["test"] = "test"
-    map_ds["xx"] = (map_ds["a"] * map_ds.y).chunk({"y": 20})
+    map_ds["xx"] = map_ds["a"] * map_ds.y
 
+    map_ds = map_ds.chunk({"x": 4, "y": 5})
     return map_ds
 
 
-# work around mypy error
-# xarray/tests/test_dask.py:888: error: Dict entry 0 has incompatible type "str": "int"; expected "Hashable": "Union[None, Number, Tuple[Number, ...]]"
 map_da = make_da()
 map_ds = make_ds()
 
 
 def test_unify_chunks():
-    with raises_regex(ValueError, "inconsistent chunks"):
-        map_ds.chunks
+    ds_copy = map_ds.copy()
+    ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
-    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
-    actual_chunks = map_ds.unify_chunks().chunks
-    assert expected_chunks == actual_chunks
-    assert_identical(map_ds, map_ds.unify_chunks())
+    with raises_regex(ValueError, "inconsistent chunks"):
+        ds_copy.chunks
+
+    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5), "z": (4,)}
+    actual_chunks = ds_copy.unify_chunks().chunks
+    expected_chunks == actual_chunks
+    assert_identical(map_ds, ds_copy.unify_chunks())
 
 
 def test_map_blocks_error():
@@ -1001,7 +1003,7 @@ def test_map_blocks(obj):
 
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj)
-    expected = func(obj).unify_chunks()
+    expected = func(obj)
     assert_chunks_equal(expected, actual)
     # why is compute needed?
     xr.testing.assert_equal(expected.compute(), actual.compute())
@@ -1009,7 +1011,7 @@ def test_map_blocks(obj):
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
 def test_map_blocks_convert_args_to_list(obj):
-    expected = obj.unify_chunks() + 10
+    expected = obj + 10
     with raise_if_dask_computes():
         actual = xr.map_blocks(operator.add, obj, [10])
     assert_chunks_equal(expected, actual)

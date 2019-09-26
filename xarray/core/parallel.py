@@ -178,9 +178,7 @@ def map_blocks(func, obj, args=[], kwargs={}):
     elif isinstance(template, Dataset):
         result_is_array = False
 
-    # If two different variables have different chunking along the same dim
-    # fix that by "unifying chunks"
-    dataset = dataset.unify_chunks()
+    # if chunks are inconsistent, this will raise an error.
     input_chunks = dataset.chunks
 
     # TODO: add a test that fails when template and dataset are switched
