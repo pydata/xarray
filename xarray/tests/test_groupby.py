@@ -202,7 +202,7 @@ def test_da_groupby_assign_coords():
     assert_identical(expected, actual2)
 
 
-test_da = xr.DataArray(
+repr_da = xr.DataArray(
     np.random.randn(10, 20, 6, 24),
     dims=["x", "y", "z", "t"],
     coords={
@@ -215,7 +215,7 @@ test_da = xr.DataArray(
 
 
 @pytest.mark.parametrize("dim", ["x", "y", "z", "month"])
-@pytest.mark.parametrize("obj", [test_da, test_da.to_dataset(name="a")])
+@pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
 def test_groupby_repr(obj, dim):
     actual = repr(obj.groupby(dim))
     expected = "%sGroupBy" % obj.__class__.__name__
@@ -232,7 +232,7 @@ def test_groupby_repr(obj, dim):
     assert actual == expected
 
 
-@pytest.mark.parametrize("obj", [test_da, test_da.to_dataset(name="a")])
+@pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
 def test_groupby_repr_datetime(obj):
     actual = repr(obj.groupby("t.month"))
     expected = "%sGroupBy" % obj.__class__.__name__
