@@ -5190,7 +5190,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return ds
 
-    def map_blocks(self, func, args=[], kwargs={}):
+    def map_blocks(self, func, args=(), kwargs=None):
         """
         Apply a function to each chunk of this Dataset. This function is experimental
         and its signature may change.
@@ -5214,9 +5214,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             If your function expects numpy arrays, see `xarray.apply_ufunc`
 
-        args: list
+        args: Sequence
             Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
-        kwargs: dict
+        kwargs: Mapping
             Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
 
         Returns

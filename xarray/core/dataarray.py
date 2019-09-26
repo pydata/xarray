@@ -3050,7 +3050,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self.copy()._to_temp_dataset().unify_chunks()
         return self._from_temp_dataset(ds)
 
-    def map_blocks(self, func, args=[], kwargs={}):
+    def map_blocks(self, func, args=(), kwargs=None):
         """
         Apply a function to each chunk of this DataArray. This function is experimental
         and its signature may change.
@@ -3074,9 +3074,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
             If your function expects numpy arrays, see `xarray.apply_ufunc`
 
-        args: list
+        args: Sequence
             Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
-        kwargs: dict
+        kwargs: Mapping
             Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
 
         Returns

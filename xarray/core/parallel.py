@@ -87,7 +87,7 @@ def make_dict(x):
     return {k: v.data for k, v in x.variables.items()}
 
 
-def map_blocks(func, obj, args=[], kwargs={}):
+def map_blocks(func, obj, args=(), kwargs=None):
     """
     Apply a function to each chunk of a DataArray or Dataset. This function is experimental
     and its signature may change.
@@ -156,7 +156,10 @@ def map_blocks(func, obj, args=[], kwargs={}):
     if not isinstance(args, Sequence):
         raise TypeError("args must be a sequence (for example, a list).")
 
-    if not isinstance(kwargs, Mapping):
+    if kwargs is None:
+        kwargs = {}
+
+    elif not isinstance(kwargs, Mapping):
         raise TypeError("kwargs must be a mapping (for example, a dict)")
 
     if not dask.is_dask_collection(obj):
@@ -178,13 +181,8 @@ def map_blocks(func, obj, args=[], kwargs={}):
     elif isinstance(template, Dataset):
         result_is_array = False
 
-    # if chunks are inconsistent, this will raise an error.
     input_chunks = dataset.chunks
-
-    # TODO: add a test that fails when template and dataset are switched
-    indexes = dict(template.indexes)
-    indexes.update(dataset.indexes)
-
+    indexes = {dim: dataset.indexes[dim] for dim in template.dims}
     graph = {}
     gname = "%s-%s" % (dask.utils.funcname(func), dask.base.tokenize(dataset))
 
@@ -269,11 +267,6 @@ def map_blocks(func, obj, args=[], kwargs={}):
     graph = HighLevelGraph.from_collections(name, graph, dependencies=[dataset])
 
     result = Dataset(coords=indexes)
-    # a quicker way to assign indexes?
-    # indexes need to be known
-    # otherwise compute is called when DataArray is created
-    for name in template.dims:
-        result[name] = indexes[name]
     for name, key in var_key_map.items():
         dims = template[name].dims
         var_chunks = []
