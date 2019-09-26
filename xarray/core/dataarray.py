@@ -3059,7 +3059,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         func: callable
             User-provided function that should accept xarray objects.
-            This function will receive a subset of this dataset, corresponding to one chunk along
+            This function will receive a subset of this DataArray, corresponding to one chunk along
             each chunked dimension.
             The function will be run on a small piece of data that looks like 'obj' to determine
             properties of the returned object such as dtype, variable names,
@@ -3091,7 +3091,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc
+        dask.array.map_blocks, xarray.apply_ufunc, xarray.map_blocks, xarray.Dataset.map_blocks
         """
 
         from .parallel import map_blocks

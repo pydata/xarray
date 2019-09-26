@@ -114,9 +114,9 @@ def map_blocks(func, obj, args=[], kwargs={}):
         - change size of existing dimensions.
         - add new chunked dimensions.
 
-        This function is designed to work with whole xarray objects. If your function can be applied
-        to numpy or dask arrays (e.g. it doesn't need indices, variable names, etc.),
-        you should consider using :func:~xarray.apply_ufunc instead.
+        This function should work with whole xarray objects. If your function can be applied
+        to numpy or dask arrays (e.g. it doesn't need additional metadata such as dimension names,
+        variable names, etc.), you should consider using :py:func:`~xarray.apply_ufunc` instead.
     obj: DataArray, Dataset
         Chunks of this object will be provided to 'func'.
     args: list
@@ -158,10 +158,10 @@ def map_blocks(func, obj, args=[], kwargs={}):
         return to_return
 
     if not isinstance(args, Sequence):
-        raise TypeError("args must be a sequence.")
+        raise TypeError("args must be a sequence (for example, a list).")
 
     if not isinstance(kwargs, Mapping):
-        raise TypeError("kwargs must be a mapping.")
+        raise TypeError("kwargs must be a mapping (for example, a dict)")
 
     if not dask.is_dask_collection(obj):
         raise TypeError(

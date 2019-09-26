@@ -5231,7 +5231,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc
+        dask.array.map_blocks, xarray.apply_ufunc, xarray.map_blocks, xarray.DataArray.map_blocks
         """
 
         from .parallel import map_blocks
