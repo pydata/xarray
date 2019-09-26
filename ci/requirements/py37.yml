@@ -3,34 +3,41 @@ channels:
   - conda-forge
 dependencies:
   - python=3.7
+  - black
+  - boto3
+  - bottleneck
+  - cdms2
+  - cfgrib>=0.9.2
   - cftime
-  - nc-time-axis
+  - coveralls
   - dask
   - distributed
-  - h5py
-  - h5netcdf
-  - matplotlib
-  - netcdf4
-  - pytest
-  - pytest-cov
-  - pytest-env
-  - coveralls
   - flake8
+  - h5netcdf
+  - h5py
+  - hdf5
+  - hypothesis
+  - iris>=1.10
+  - lxml    # optional dep of pydap
+  - matplotlib
   - mypy==0.720  # Must match .pre-commit-config.yaml
+  - nc-time-axis
+  - netcdf4
+  - numba
   - numpy>=1.12
   - pandas>=0.19
   - pip
+  - pseudonetcdf>=3.0.1
+  - pydap
+  - pynio
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - rasterio
   - scipy
   - seaborn
   - sparse
   - toolz
-  - rasterio
-  - boto3
-  - bottleneck
   - zarr
-  - pseudonetcdf>=3.0.1
-  - cfgrib>=0.9.2
-  - lxml
-  - pydap
   - pip:
     - numbagg
