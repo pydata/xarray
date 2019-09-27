@@ -2244,7 +2244,7 @@ class DataArray(AbstractArray, DataWithCoords):
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
-    def to_netcdf(self, *args, **kwargs) -> Optional["Delayed"]:
+    def to_netcdf(self, *args, **kwargs) -> Union[bytes, "Delayed", None]:
         """Write DataArray contents to a netCDF file.
 
         All parameters are passed directly to `xarray.Dataset.to_netcdf`.
