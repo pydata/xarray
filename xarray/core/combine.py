@@ -310,7 +310,7 @@ def _nested_combine(
 
 
 def combine_nested(
-    datasets,
+    objects,
     concat_dim,
     compat="no_conflicts",
     data_vars="all",
@@ -321,6 +321,9 @@ def combine_nested(
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
+
+    If passed a DataArray, the object will be converted to Dataset before being
+    combined with the remaining datasets in the iterable.
 
     Does not sort the supplied datasets under any circumstances, so the
     datasets must be passed in the order you wish them to be concatenated. It
@@ -449,6 +452,9 @@ def combine_nested(
     merge
     auto_combine
     """
+
+    datasets = _iter_objects_to_ds(objects)
+
     if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
         concat_dim = [concat_dim]
 
@@ -469,8 +475,33 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
+def _iter_objects_to_ds(objects):
+    # Convert sequence of Dataset and/or DataArray objects to Dataset(s)
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
+    datasets = list()
+    for obj in objects:
+        # Handle nested lists of DataArrays or Datasets for combine_nested
+        if isinstance(obj, (list, tuple)):
+            nested_datasets = _iter_objects_to_ds(obj)
+            datasets.append(nested_datasets)
+
+        elif isinstance(obj, (DataArray, Dataset)):
+            obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
+            datasets.append(obj)
+
+        else:
+            raise TypeError(
+                "objects must be an iterable containing only "
+                "Dataset(s) and/or DataArray(s)"
+            )
+
+    return datasets
+
+
 def combine_by_coords(
-    datasets,
+    objects,
     compat="no_conflicts",
     data_vars="all",
     coords="different",
@@ -483,7 +514,9 @@ def combine_by_coords(
 
     This method attempts to combine a group of datasets along any number of
     dimensions into a single entity by inspecting coords and metadata and using
-    a combination of concat and merge.
+    a combination of concat and merge. If passed a DataArray, the object
+    will be converted to Dataset before being combined with the remaining datasets
+    in the iterable.
 
     Will attempt to order the datasets such that the values in their dimension
     coordinates are monotonic along all dimensions. If it cannot determine the
@@ -503,8 +536,7 @@ def combine_by_coords(
 
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset
-        Dataset objects to combine.
+    objects : sequence of xarray.Dataset or xarray.DataArray objects
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
@@ -581,6 +613,8 @@ def combine_by_coords(
         temperature     (x) float64 11.04 23.57 20.77 ...
     """
 
+    datasets = _iter_objects_to_ds(objects)
+
     # Group by data vars
     sorted_datasets = sorted(datasets, key=vars_as_keys)
     grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
@@ -632,7 +666,7 @@ _CONCAT_DIM_DEFAULT = "__infer_concat_dim__"
 
 
 def auto_combine(
-    datasets,
+    objects,
     concat_dim="_not_supplied",
     compat="no_conflicts",
     data_vars="all",
@@ -647,6 +681,9 @@ def auto_combine(
     This entire function is deprecated in favour of ``combine_nested`` and
     ``combine_by_coords``.
 
+    If passed a DataArray, the object will be converted to Dataset before being
+    combined with the remaining datasets in the iterable.
+
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
     It does not concatenate along more than one dimension or sort data under
@@ -659,8 +696,7 @@ def auto_combine(
 
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset
-        Dataset objects to merge.
+    objects : sequence of xarray.Dataset or xarray.DataArray objects
     concat_dim : str or DataArray or Index, optional
         Dimension along which to concatenate variables, as used by
         :py:func:`xarray.concat`. You only need to provide this argument if
@@ -712,6 +748,8 @@ def auto_combine(
     concat
     Dataset.merge
     """
+
+    datasets = _iter_objects_to_ds(objects)
 
     if not from_openmfds:
         basic_msg = dedent(

@@ -134,6 +134,11 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
+- Functions :py:func:`~xarray.combine.combine_nested`, :py:func:`~xarray.combine.combine_by_coords`, 
+  and :py:func:`~xarray.combine.auto_combine` now accept :py:class:`~xarray.DataArray` as input. 
+  The DataArray will be converted to :py:class:`~xarray.DataSet` before proceeding.
+  By `Friedrich Knuth <https://github.com/friedrichknuth>`_.
+
 - Multiple enhancements to :py:func:`~xarray.concat` and :py:func:`~xarray.open_mfdataset`.
   By `Deepak Cherian <https://github.com/dcherian>`_
 
