@@ -111,7 +111,8 @@ def map_blocks(func, obj, args=(), kwargs=None):
         to numpy or dask arrays (e.g. it doesn't need additional metadata such as dimension names,
         variable names, etc.), you should consider using :py:func:`~xarray.apply_ufunc` instead.
     obj: DataArray, Dataset
-        Chunks of this object will be provided to 'func'.
+        Chunks of this object will be provided to 'func'. If passed a numpy object, the function will
+        be run eagerly.
     args: list
         Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
     kwargs: dict
@@ -151,7 +152,7 @@ def map_blocks(func, obj, args=(), kwargs=None):
         return to_return
 
     if not isinstance(args, Sequence):
-        raise TypeError("args must be a sequence (for example, a list).")
+        raise TypeError("args must be a sequence (for example, a list or tuple).")
 
     if kwargs is None:
         kwargs = {}
@@ -160,9 +161,7 @@ def map_blocks(func, obj, args=(), kwargs=None):
         raise TypeError("kwargs must be a mapping (for example, a dict)")
 
     if not dask.is_dask_collection(obj):
-        raise TypeError(
-            "map_blocks can only be used with dask-backed DataArrays. Use .chunk() to convert to a Dask array."
-        )
+        return func(obj, *args, **kwargs)
 
     if isinstance(obj, DataArray):
         dataset = obj._to_temp_dataset()
