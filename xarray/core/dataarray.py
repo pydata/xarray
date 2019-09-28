@@ -3047,7 +3047,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         dask.array.core.unify_chunks
         """
-        ds = self.copy()._to_temp_dataset().unify_chunks()
+        ds = self._to_temp_dataset().unify_chunks()
         return self._from_temp_dataset(ds)
 
     def map_blocks(self, func, args=(), kwargs=None):
