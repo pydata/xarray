@@ -2,7 +2,7 @@ try:
     import dask
     import dask.array
     from dask.highlevelgraph import HighLevelGraph
-    from dask.array.utils import meta_from_array
+    from .dask_array_compat import meta_from_array
 
 except ImportError:
     pass
