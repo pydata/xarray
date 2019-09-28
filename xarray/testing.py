@@ -154,14 +154,11 @@ def assert_chunks_equal(a, b):
         The second object to compare.
     """
 
-    if isinstance(a, DataArray):
-        a = a._to_temp_dataset()
+    if isinstance(a, DataArray) != isinstance(b, DataArray):
+        raise TypeError("a and b have mismatched types")
 
-    if isinstance(b, DataArray):
-        b = b._to_temp_dataset()
-
-    left = a.chunk().unify_chunks()
-    right = b.chunk().unify_chunks()
+    left = a.unify_chunks()
+    right = b.unify_chunks()
     assert left.chunks == right.chunks
 
 

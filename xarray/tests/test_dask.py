@@ -1014,7 +1014,7 @@ def test_map_blocks(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj)
     expected = func(obj)
-    assert_chunks_equal(expected, actual)
+    assert_chunks_equal(expected.chunk(), actual)
     xr.testing.assert_equal(actual, expected)
 
 
@@ -1023,7 +1023,7 @@ def test_map_blocks_convert_args_to_list(obj):
     expected = obj + 10
     with raise_if_dask_computes():
         actual = xr.map_blocks(operator.add, obj, [10])
-    assert_chunks_equal(expected, actual)
+    assert_chunks_equal(expected.chunk(), actual)
     xr.testing.assert_equal(actual, expected)
 
 
@@ -1032,7 +1032,7 @@ def test_map_blocks_kwargs(obj):
     expected = xr.full_like(obj, fill_value=np.nan)
     with raise_if_dask_computes():
         actual = xr.map_blocks(xr.full_like, obj, kwargs=dict(fill_value=np.nan))
-    assert_chunks_equal(expected, actual)
+    assert_chunks_equal(expected.chunk(), actual)
     xr.testing.assert_equal(actual, expected)
 
 
