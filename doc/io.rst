@@ -516,6 +516,11 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
     # Reading it back
     xr.open_dataarray("complex.nc", engine="h5netcdf")
 
+.. ipython:: python
+    :suppress:
+
+    import os
+    os.remove('complex.nc')
 
 .. warning::
 
