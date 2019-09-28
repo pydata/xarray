@@ -6,7 +6,7 @@
 Terminology
 ===========
 
-*Xarray terminology differs slightly from CF and mathematical conventions, and therefore using xarray, understanding the documentation, and parsing error messages is easier once key terminology is defined. This glossary was designed so that more fundamental concepts come first. Thus for new users, this page is best read top-to-bottom. Throughout the glossary,* ``arr`` *will refer to an xarray* :py:class:`DataArray` *in any small examples. For more complete examples, consult the relevant documentation.*
+*Xarray terminology differs slightly from CF and mathematical conventions, and therefore using xarray, understanding the documentation, and parsing error messages is easier once key terminology is defined. This glossary was designed so that more fundamental concepts come first. Thus for new users, this page is best read top-to-bottom. Throughout the glossary,* ``arr`` *will refer to an xarray* :py:class:`DataArray` *in any small examples. For more complete examples, please consult the relevant documentation.*
 
 ----
 
@@ -18,19 +18,21 @@ Terminology
 
 ----
 
-**Coordinate:** A one-dimensional array that labels a dimension of another ``DataArray``. There are two types of coordinate arrays: *dimension coordinates* and *non-dimension coordinates* (see below). A coordinate named ``x`` can be retrieved from ``arr.coords[x]``. A ``DataArray`` can have more coordinates than dimensions because a single dimension can be assigned multiple coordinate arrays. However, only one coordinate array can be a assigned as a particular dimension's *dimension coordinate* array. As a consequence, ``len(arr.dims) <= len(arr.coords)`` in general.
+**Coordinate:** A one-dimensional array that labels a dimension of another ``DataArray``. There are two types of coordinate arrays: *dimension coordinates* and *non-dimension coordinates* (see below). A coordinate named ``x`` can be retrieved from ``arr.coords[x]``. A ``DataArray`` can have more coordinates than dimensions because a single dimension can be assigned multiple coordinate arrays. However, only one coordinate array can be a assigned as a particular dimension's dimension coordinate    array. As a consequence, ``len(arr.dims) <= len(arr.coords)`` in general.
 
 ----
 
-**Dimension coordinate:** A coordinate array with both a name and dimension name equal to a ``DataArray``'s dimension. Dimension coordinates are used for label-based indexing and alignment, like the index found on a :py:class:`pandas.DataFrame` or :py:class:`pandas.Series`. In fact, dimension coordinates use :py:class:`pandas.Index` objects under the hood for efficient computation. Dimension coordinates are marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
+**Dimension coordinate:** A coordinate array assigned to ``arr`` with both a name and dimension name in ``arr.dims`` (see **Name matching rules** below). Dimension coordinates are used for label-based indexing and alignment, like the index found on a :py:class:`pandas.DataFrame` or :py:class:`pandas.Series`. In fact, dimension coordinates use :py:class:`pandas.Index` objects under the hood for efficient computation. Dimension coordinates are marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
 
 ----
 
-**Non-dimension coordinate:** A coordinate array with a dimension name not matching any dimension name on its assigned ``DataArray``. These coordinate arrays are useful for auxiliary labeling. However, non-dimension coordinates are not indexed, and any operation on non-dimension coordinates that leverages indexing will fail. Printing ``arr.coords`` will pretty print all the array's coordinate arrays, with the assigned dimensions in parentheses.
+**Non-dimension coordinate:** A coordinate array assigned to `arr`` with a name in ``arr.dims`` but a dimension name *not* in ``arr.dims`` (see **Name matching rules** below). These coordinate arrays are useful for auxiliary labeling. However, non-dimension coordinates are not indexed, and any operation on non-dimension coordinates that leverages indexing will fail. Printing ``arr.coords`` will print all of ``arr``'s coordinate names, with the assigned dimensions in parentheses. For example, ``coord_name   (dim_name) 1 2 3 ...``.
 
 .. note::
 
-    Xarray follows simple but important name matching rules: if ``arr`` is assigned new coordinates ``new_coords``, the coordinates are dimension coordinates if both ``new_coords``'s name and only dimension match any dimension name in ``arr.dims``. If ``new_coords``'s name matches a name in ``arr.dims`` but its own dimension name does not, it is a non-dimension coordinate with name ``new_coords.dims[0]``. Otherwise, an exception is raised.
+    **Name matching rules:** Xarray follows simple but important-to-grok name matching rules for dimensions and coordinates. Let ``arr`` be an array with an existing dimension ``x`` and assigned new coordinates ``new_coords``. If ``new_coords`` is a list-like collection, then they must be assigned a name that matches an existing dimension. For example, if ``arr.assign_coords({'x': new_coords}).``
+
+    However, if ``new_coords`` is a one-dimensional ``DataArray``, then the rules are slightly more complex. In this case, if both ``new_coords``'s name and only dimension match any dimension name in ``arr.dims``, it is assigned as a dimension coordinate to ``arr``. If ``new_coords``'s name matches a name in ``arr.dims`` but its own dimension name does not, it is assigned as a non-dimension coordinate with name ``new_coords.dims[0]`` to ``arr``. Otherwise, an exception is raised.
 
 ----
 
