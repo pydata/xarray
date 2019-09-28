@@ -956,9 +956,6 @@ map_da = make_da()
 map_ds = make_ds()
 
 
-# DataArray.unify_chunks
-# invoke unify_chunks when chunks are already unified (returned object must be a shallow copy)
-# invoke unify_chunks when there are no chunks to begin with (returned object must be a shallow copy)
 @pytest.mark.parametrize("obj", [map_ds, map_da])
 def test_unify_chunks(obj):
     ds_copy = map_ds.copy()
@@ -971,6 +968,15 @@ def test_unify_chunks(obj):
     actual_chunks = ds_copy.unify_chunks().chunks
     expected_chunks == actual_chunks
     assert_identical(map_ds, ds_copy.unify_chunks())
+
+
+@pytest.mark.parametrize(
+    "obj",
+    [map_ds.compute(), map_da.compute(), map_ds.unify_chunks(), map_da.unify_chunks()],
+)
+def test_unify_chunks_shallow_copy(obj):
+    unified = obj.unify_chunks()
+    assert_identical(obj, unified) and obj is not obj.unify_chunks()
 
 
 def test_map_blocks_error():
