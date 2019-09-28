@@ -947,7 +947,7 @@ def make_ds():
     map_ds.coords["c1"] = 0.5
     map_ds.coords["cx"] = ("x", np.arange(len(map_da.x)))
     map_ds.attrs["test"] = "test"
-    map_ds["xx"] = (map_ds["a"] * map_ds.y).chunk()
+    map_ds["xx"] = map_ds["a"] * map_ds.y
 
     return map_ds
 
@@ -1003,6 +1003,12 @@ def test_map_blocks_error():
 
     with raises_regex(Exception, "Cannot infer"):
         xr.map_blocks(really_bad_func, map_da)
+
+    ds_copy = map_ds.copy()
+    ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
+
+    with raises_regex(ValueError, "inconsistent chunks"):
+        xr.map_blocks(bad_func, ds_copy)
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])

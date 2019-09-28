@@ -170,6 +170,8 @@ def map_blocks(func, obj, args=(), kwargs=None):
         dataset = obj
         input_is_array = False
 
+    input_chunks = dataset.chunks
+
     template = infer_template(func, obj, *args, **kwargs)
     if isinstance(template, DataArray):
         result_is_array = True
@@ -177,7 +179,6 @@ def map_blocks(func, obj, args=(), kwargs=None):
     elif isinstance(template, Dataset):
         result_is_array = False
 
-    input_chunks = dataset.chunks
     indexes = {dim: dataset.indexes[dim] for dim in template.dims}
     graph = {}
     gname = "%s-%s" % (dask.utils.funcname(func), dask.base.tokenize(dataset))
