@@ -33,6 +33,10 @@ Documentation
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
   By `Justus Magin <https://github.com/keewis>`_.
 
+- Fixed documentation to clean up an unwanted file created in ``ipython`` example
+  (:pull:`3353`).
+  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+
 .. _whats-new.0.13.0:
 
 v0.13.0 (17 Sep 2019)
