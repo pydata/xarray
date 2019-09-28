@@ -940,15 +940,15 @@ def make_ds():
     map_ds["a"] = make_da()
     map_ds["b"] = map_ds.a + 50
     map_ds["c"] = map_ds.x + 20
+    map_ds = map_ds.chunk({"x": 4, "y": 5})
     map_ds["d"] = ("z", [1, 1, 1, 1])
     map_ds["z"] = [0, 1, 2, 3]
     map_ds["e"] = map_ds.x + map_ds.y
     map_ds.coords["c1"] = 0.5
     map_ds.coords["cx"] = ("x", np.arange(len(map_da.x)))
     map_ds.attrs["test"] = "test"
-    map_ds["xx"] = map_ds["a"] * map_ds.y
+    map_ds["xx"] = (map_ds["a"] * map_ds.y).chunk()
 
-    map_ds = map_ds.chunk({"x": 4, "y": 5})
     return map_ds
 
 
@@ -1009,8 +1009,7 @@ def test_map_blocks(obj):
         actual = xr.map_blocks(func, obj)
     expected = func(obj)
     assert_chunks_equal(expected, actual)
-    # why is compute needed?
-    xr.testing.assert_equal(expected.compute(), actual.compute())
+    xr.testing.assert_equal(actual, expected)
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
@@ -1019,8 +1018,7 @@ def test_map_blocks_convert_args_to_list(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(operator.add, obj, [10])
     assert_chunks_equal(expected, actual)
-    # why is compute needed?
-    xr.testing.assert_equal(expected.compute(), actual.compute())
+    xr.testing.assert_equal(actual, expected)
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
@@ -1029,8 +1027,7 @@ def test_map_blocks_kwargs(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(xr.full_like, obj, kwargs=dict(fill_value=np.nan))
     assert_chunks_equal(expected, actual)
-    # why is compute needed?
-    xr.testing.assert_equal(expected.compute(), actual.compute())
+    xr.testing.assert_equal(actual, expected)
 
 
 @pytest.mark.parametrize(
