@@ -30,6 +30,10 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Created a glossary of important xarray terms (:issue:`2410`, :pull:`3352`).
+  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
   By `Justus Magin <https://github.com/keewis>`_.
 - Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`, 
