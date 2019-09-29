@@ -11,7 +11,8 @@ dependency in a future version of xarray.
 
 For a full example of how to use xarray's Dask integration, read the
 `blog post introducing xarray and Dask`_. More up-to-date examples
-may be found at the `Pangeo project's use-cases <http://pangeo.io/use_cases/index.html>`_.
+may be found at the `Pangeo project's use-cases <http://pangeo.io/use_cases/index.html>`_
+and at the `Dask examples website <https://examples.dask.org/xarray.html>`_.
 
 .. _blog post introducing xarray and Dask: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
@@ -81,7 +82,7 @@ use :py:func:`~xarray.open_mfdataset`::
 
     xr.open_mfdataset('my/files/*.nc', parallel=True)
 
-This function will automatically concatenate and merge dataset into one in
+This function will automatically concatenate and merge datasets into one in
 the simple cases that it understands (see :py:func:`~xarray.auto_combine`
 for the full disclaimer). By default, :py:meth:`~xarray.open_mfdataset` will chunk each
 netCDF file into a single Dask array; again, supply the ``chunks`` argument to
