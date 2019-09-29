@@ -32,7 +32,10 @@ Documentation
 ~~~~~~~~~~~~~
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`, 
+  :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, :py:meth:`Dataset.pipe`, 
+  :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`, :py:meth:`Dataset.fillna`.
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fixed documentation to clean up an unwanted file created in ``ipython`` example
   (:pull:`3353`).
   By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
