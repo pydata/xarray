@@ -46,6 +46,7 @@ Documentation
 
 **User Guide**
 
+* :doc:`terminology`
 * :doc:`data-structures`
 * :doc:`indexing`
 * :doc:`interpolation`
@@ -65,6 +66,7 @@ Documentation
    :hidden:
    :caption: User Guide
 
+   terminology
    data-structures
    indexing
    interpolation
