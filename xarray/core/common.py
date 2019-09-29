@@ -542,6 +542,72 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...    .pipe((f, 'arg2'), arg1=a, arg3=c)
         ...  )
 
+        Examples
+        --------
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> x = xr.Dataset(
+        ...     {
+        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
+        ...     },
+        ...     coords={"lat": [10, 20], "lon": [150, 160]},
+        ... )
+        >>> x
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
+            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+
+        >>> def adder(data, arg):
+        ...     return data + arg
+        ...
+        >>> def div(data, arg):
+        ...     return data / arg
+        ...
+        >>> def sub_mult(data, sub_arg, mult_arg):
+        ...     return (data * mult_arg) - sub_arg
+        ...
+        >>> x.pipe(adder, 2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
+            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+
+        >>> x.pipe(adder, arg=2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
+            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+
+        >>> (
+        ... x
+        ... .pipe(adder, arg=2)
+        ... .pipe(div, arg=2)
+        ... .pipe(sub_mult, sub_arg=2, mult_arg=2)
+        ... )
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
+            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+
         See Also
         --------
         pandas.DataFrame.pipe
@@ -1172,6 +1238,61 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
         filled with fill_value. Coords will be copied from other.
         If other is based on dask, the new one will be as well, and will be
         split in the same chunks.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 1)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[1, 1, 1],
+           [1, 1, 1]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 0.5)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 0, 0],
+           [0, 0, 0]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 0.5, dtype=np.double)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0.5, 0.5, 0.5],
+           [0.5, 0.5, 0.5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, np.nan, dtype=np.double)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[nan, nan, nan],
+           [nan, nan, nan]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    zeros_like
+    ones_like
+
     """
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -1217,13 +1338,109 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
 
 
 def zeros_like(other, dtype: DTypeLike = None):
-    """Shorthand for full_like(other, 0, dtype)
+    """Return a new object of zeros with the same shape and
+    type as a given dataarray or dataset.
+
+    Parameters
+    ----------
+    other : DataArray, Dataset, or Variable
+        The reference object. The output will have the same dimensions and coordinates as this object.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
+
+    Returns
+    -------
+    out : same as object
+        New object of zeros with the same shape and type as other.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.zeros_like(x)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 0, 0],
+           [0, 0, 0]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.zeros_like(x, dtype=np.float)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    ones_like
+    full_like
+
     """
     return full_like(other, 0, dtype)
 
 
 def ones_like(other, dtype: DTypeLike = None):
-    """Shorthand for full_like(other, 1, dtype)
+    """Return a new object of ones with the same shape and
+    type as a given dataarray or dataset.
+
+    Parameters
+    ----------
+    other : DataArray, Dataset, or Variable
+        The reference object. The output will have the same dimensions and coordinates as this object.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
+
+    Returns
+    -------
+    out : same as object
+        New object of ones with the same shape and type as other.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> >>> xr.ones_like(x)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[1, 1, 1],
+           [1, 1, 1]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    zeros_like
+    full_like
+
     """
     return full_like(other, 1, dtype)
 

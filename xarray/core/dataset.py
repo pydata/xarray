@@ -2292,6 +2292,134 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.reindex_like
         align
         pandas.Index.get_indexer
+
+        Examples
+        --------
+
+        Create a dataset with some fictional data.
+
+        >>> import xarray as xr
+        >>> import pandas as pd
+        >>> x = xr.Dataset(
+        ...     {
+        ...         "temperature": ("station", 20 * np.random.rand(4)),
+        ...         "pressure": ("station", 500 * np.random.rand(4))
+        ...     },
+        ...     coords={"station": ["boston", "nyc", "seattle", "denver"]})
+        >>> x
+        <xarray.Dataset>
+        Dimensions:      (station: 4)
+        Coordinates:
+        * station      (station) <U7 'boston' 'nyc' 'seattle' 'denver'
+        Data variables:
+            temperature  (station) float64 18.84 14.59 19.22 17.16
+            pressure     (station) float64 324.1 194.3 122.8 244.3
+        >>> x.indexes
+        station: Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
+
+        Create a new index and reindex the dataset. By default values in the new index that
+        do not have corresponding records in the dataset are assigned `NaN`.
+
+        >>> new_index = ['boston', 'austin', 'seattle', 'lincoln']
+        >>> x.reindex({'station': new_index})
+        <xarray.Dataset>
+        Dimensions:      (station: 4)
+        Coordinates:
+        * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+        Data variables:
+            temperature  (station) float64 18.84 nan 19.22 nan
+            pressure     (station) float64 324.1 nan 122.8 nan
+
+        We can fill in the missing values by passing a value to the keyword `fill_value`.
+
+        >>> x.reindex({'station': new_index}, fill_value=0)
+        <xarray.Dataset>
+        Dimensions:      (station: 4)
+        Coordinates:
+        * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+        Data variables:
+            temperature  (station) float64 18.84 0.0 19.22 0.0
+            pressure     (station) float64 324.1 0.0 122.8 0.0
+
+        Because the index is not monotonically increasing or decreasing, we cannot use arguments
+        to the keyword method to fill the `NaN` values.
+
+        >>> x.reindex({'station': new_index}, method='nearest')
+        Traceback (most recent call last):
+        ...
+            raise ValueError('index must be monotonic increasing or decreasing')
+        ValueError: index must be monotonic increasing or decreasing
+
+        To further illustrate the filling functionality in reindex, we will create a
+        dataset with a monotonically increasing index (for example, a sequence of dates).
+
+        >>> x2 = xr.Dataset(
+        ...     {
+        ...         "temperature": ("time", [15.57, 12.77, np.nan, 0.3081, 16.59, 15.12]),
+        ...         "pressure": ("time", 500 * np.random.rand(6))
+        ...     },
+        ...     coords={"time": pd.date_range('01/01/2019', periods=6, freq='D')})
+        >>> x2
+        <xarray.Dataset>
+        Dimensions:      (time: 6)
+        Coordinates:
+        * time         (time) datetime64[ns] 2019-01-01 2019-01-02 ... 2019-01-06
+        Data variables:
+            temperature  (time) float64 15.57 12.77 nan 0.3081 16.59 15.12
+            pressure     (time) float64 103.4 122.7 452.0 444.0 399.2 486.0
+
+        Suppose we decide to expand the dataset to cover a wider date range.
+
+        >>> time_index2 = pd.date_range('12/29/2018', periods=10, freq='D')
+        >>> x2.reindex({'time': time_index2})
+        <xarray.Dataset>
+        Dimensions:      (time: 10)
+        Coordinates:
+        * time         (time) datetime64[ns] 2018-12-29 2018-12-30 ... 2019-01-07
+        Data variables:
+            temperature  (time) float64 nan nan nan 15.57 ... 0.3081 16.59 15.12 nan
+            pressure     (time) float64 nan nan nan 103.4 ... 444.0 399.2 486.0 nan
+
+        The index entries that did not have a value in the original data frame (for example, `2018-12-29`)
+        are by default filled with NaN. If desired, we can fill in the missing values using one of several options.
+
+        For example, to back-propagate the last valid value to fill the `NaN` values,
+        pass `bfill` as an argument to the `method` keyword.
+
+        >>> x3 = x2.reindex({'time': time_index2}, method='bfill')
+        >>> x3
+        <xarray.Dataset>
+        Dimensions:      (time: 10)
+        Coordinates:
+        * time         (time) datetime64[ns] 2018-12-29 2018-12-30 ... 2019-01-07
+        Data variables:
+            temperature  (time) float64 15.57 15.57 15.57 15.57 ... 16.59 15.12 nan
+            pressure     (time) float64 103.4 103.4 103.4 103.4 ... 399.2 486.0 nan
+
+        Please note that the `NaN` value present in the original dataset (at index value `2019-01-03`)
+        will not be filled by any of the value propagation schemes.
+
+        >>> x2.where(x2.temperature.isnull(), drop=True)
+        <xarray.Dataset>
+        Dimensions:      (time: 1)
+        Coordinates:
+        * time         (time) datetime64[ns] 2019-01-03
+        Data variables:
+            temperature  (time) float64 nan
+            pressure     (time) float64 452.0
+        >>> x3.where(x3.temperature.isnull(), drop=True)
+        <xarray.Dataset>
+        Dimensions:      (time: 2)
+        Coordinates:
+        * time         (time) datetime64[ns] 2019-01-03 2019-01-07
+        Data variables:
+            temperature  (time) float64 nan nan
+            pressure     (time) float64 452.0 nan
+
+        This is because filling while reindexing does not look at dataset values, but only compares
+        the original and desired indexes. If you do want to fill in the `NaN` values present in the
+        original dataset, use the :py:meth:`~Dataset.fillna()` method.
+
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
 
@@ -3718,6 +3846,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         Dataset
+
+        Examples
+        --------
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "A": ("x", [np.nan, 2, np.nan, 0]),
+        ...         "B": ("x", [3, 4, np.nan, 1]),
+        ...         "C": ("x", [np.nan, np.nan, np.nan, 5]),
+        ...         "D": ("x", [np.nan, 3, np.nan, 4])
+        ...     },
+        ...     coords={"x": [0, 1, 2, 3]})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+        * x        (x) int64 0 1 2 3
+        Data variables:
+            A        (x) float64 nan 2.0 nan 0.0
+            B        (x) float64 3.0 4.0 nan 1.0
+            C        (x) float64 nan nan nan 5.0
+            D        (x) float64 nan 3.0 nan 4.0
+
+        Replace all `NaN` values with 0s.
+
+        >>> ds.fillna(0)
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+        * x        (x) int64 0 1 2 3
+        Data variables:
+            A        (x) float64 0.0 2.0 0.0 0.0
+            B        (x) float64 3.0 4.0 0.0 1.0
+            C        (x) float64 0.0 0.0 0.0 5.0
+            D        (x) float64 0.0 3.0 0.0 4.0
+
+        Replace all `NaN` elements in column ‘A’, ‘B’, ‘C’, and ‘D’, with 0, 1, 2, and 3 respectively.
+
+        >>> values = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        >>> ds.fillna(value=values)
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+        * x        (x) int64 0 1 2 3
+        Data variables:
+            A        (x) float64 0.0 2.0 0.0 0.0
+            B        (x) float64 3.0 4.0 1.0 1.0
+            C        (x) float64 2.0 2.0 2.0 5.0
+            D        (x) float64 3.0 3.0 3.0 4.0
         """
         if utils.is_dict_like(value):
             value_keys = getattr(value, "data_vars", value).keys()
@@ -4043,6 +4222,54 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         pandas.DataFrame.assign
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> x = xr.Dataset(
+        ...     {
+        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
+        ...     },
+        ...     coords={"lat": [10, 20], "lon": [150, 160]},
+        ... )
+        >>> x
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
+            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
+
+        Where the value is a callable, evaluated on dataset:
+
+        >>> x.assign(temperature_f = lambda x: x.temperature_c * 9 / 5 + 32)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
+            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
+            temperature_f  (lat, lon) float64 64.47 54.51 63.75 48.76
+
+        Alternatively, the same behavior can be achieved by directly referencing an existing dataarray:
+
+        >>> x.assign(temperature_f=x["temperature_c"] * 9 / 5 + 32)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
+            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
+            temperature_f  (lat, lon) float64 64.47 54.51 63.75 48.76
+
         """
         variables = either_dict_or_kwargs(variables, variables_kwargs, "assign")
         data = self.copy()

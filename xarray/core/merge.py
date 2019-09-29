@@ -565,18 +565,150 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
 
     Examples
     --------
-    >>> arrays = [xr.DataArray(n, name='var%d' % n) for n in range(5)]
-    >>> xr.merge(arrays)
-    <xarray.Dataset>
-    Dimensions:  ()
+    >>> import xarray as xr
+    >>> x = xr.DataArray(
+    ...     [[1.0, 2.0], [3.0, 5.0]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 40.0], "lon": [100.0, 120.0]},
+    ...     name="var1",
+    ... )
+    >>> y = xr.DataArray(
+    ...     [[5.0, 6.0], [7.0, 8.0]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 42.0], "lon": [100.0, 150.0]},
+    ...     name="var2",
+    ... )
+    >>> z = xr.DataArray(
+    ...     [[0.0, 3.0], [4.0, 9.0]],
+    ...     dims=("time", "lon"),
+    ...     coords={"time": [30.0, 60.0], "lon": [100.0, 150.0]},
+    ...     name="var3",
+    ... )
+
+    >>> x
+    <xarray.DataArray 'var1' (lat: 2, lon: 2)>
+    array([[1., 2.],
+           [3., 5.]])
     Coordinates:
-        *empty*
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+    
+    >>> y
+    <xarray.DataArray 'var2' (lat: 2, lon: 2)>
+    array([[5., 6.],
+           [7., 8.]])
+    Coordinates:
+    * lat      (lat) float64 35.0 42.0
+    * lon      (lon) float64 100.0 150.0
+
+    >>> z
+    <xarray.DataArray 'var3' (time: 2, lon: 2)>
+    array([[0., 3.],
+           [4., 9.]])
+    Coordinates:
+    * time     (time) float64 30.0 60.0
+    * lon      (lon) float64 100.0 150.0
+
+    >>> xr.merge([x, y, z])
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0 150.0
+    * time     (time) float64 30.0 60.0
     Data variables:
-        var0     int64 0
-        var1     int64 1
-        var2     int64 2
-        var3     int64 3
-        var4     int64 4
+        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+
+    >>> xr.merge([x, y, z], compat='identical')
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0 150.0
+    * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+        
+    >>> xr.merge([x, y, z], compat='equals')
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0 150.0
+    * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+
+    >>> xr.merge([x, y, z], compat='equals', fill_value=-999.)
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0 150.0
+    * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 -999.0 3.0 ... -999.0 -999.0 -999.0
+        var2     (lat, lon) float64 5.0 -999.0 6.0 -999.0 ... -999.0 7.0 -999.0 8.0
+        var3     (time, lon) float64 0.0 -999.0 3.0 4.0 -999.0 9.0
+
+    >>> xr.merge([x, y, z], join='override')
+    <xarray.Dataset>
+    Dimensions:  (lat: 2, lon: 2, time: 2)
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+    * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 3.0 5.0
+        var2     (lat, lon) float64 5.0 6.0 7.0 8.0
+        var3     (time, lon) float64 0.0 3.0 4.0 9.0
+
+    >>> xr.merge([x, y, z], join='inner')
+    <xarray.Dataset>
+    Dimensions:  (lat: 1, lon: 1, time: 2)
+    Coordinates:
+    * lat      (lat) float64 35.0
+    * lon      (lon) float64 100.0
+    * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0
+        var2     (lat, lon) float64 5.0
+        var3     (time, lon) float64 0.0 4.0
+
+    >>> xr.merge([x, y, z], compat='identical', join='inner')
+    <xarray.Dataset>
+    Dimensions:  (lat: 1, lon: 1, time: 2)
+    Coordinates:
+    * lat      (lat) float64 35.0
+    * lon      (lon) float64 100.0
+    * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0
+        var2     (lat, lon) float64 5.0
+        var3     (time, lon) float64 0.0 4.0
+
+    >>> xr.merge([x, y, z], compat='broadcast_equals', join='outer')
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0 150.0
+    * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+
+    >>> xr.merge([x, y, z], join='exact')
+    Traceback (most recent call last):
+    ...
+    ValueError: indexes along dimension 'lat' are not equal
 
     Raises
     ------
