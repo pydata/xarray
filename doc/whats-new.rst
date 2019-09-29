@@ -24,16 +24,21 @@ Bug fixes
   reinstated for :class:`DataArray` and :class:`Dataset` objects only. Internal xarray
   objects remain unaddressable by weakref in order to save memory.
   (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+- Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
+  now plot the correct data for 2D DataArrays.
+  (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
   By `Justus Magin <https://github.com/keewis>`_.
-
 - Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`, 
   :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, :py:meth:`Dataset.pipe`, 
   :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`, :py:meth:`Dataset.fillna`.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Fixed documentation to clean up an unwanted file created in ``ipython`` example
+  (:pull:`3353`).
+  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
 
 .. _whats-new.0.13.0:
 
@@ -549,8 +554,9 @@ Bug fixes
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
-- Line plots with the ``x`` argument set to a non-dimensional coord now plot the correct data for 1D DataArrays.
-  (:issue:`27251`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Line plots with the ``x`` argument set to a non-dimensional coord now plot
+  the correct data for 1D DataArrays.
+  (:issue:`2725`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Subtracting a scalar ``cftime.datetime`` object from a
   :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
   instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
