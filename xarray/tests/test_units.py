@@ -49,16 +49,25 @@ def array_strip_units(array):
 
 
 def array_attach_units(data, unit, convert=False):
-    data_ = data if not hasattr(data, "magnitude") else data.magnitude
+    if isinstance(data, BaseQuantity):
+        if convert:
+            return data.to(unit if unit != 1 else unit_registry.dimensionless)
+        else:
+            raise RuntimeError(
+                "cannot attach unit {unit} to quantity with {data.units}".format(
+                    unit=unit, data=data
+                )
+            )
+
     # to make sure we also encounter the case of "equal if converted"
     if (
         convert
         and isinstance(unit, unit_registry.Unit)
         and "[length]" in unit.dimensionality
     ):
-        quantity = (data_ * unit_registry.m).to(unit)
+        quantity = (data * unit_registry.m).to(unit)
     else:
-        quantity = data_ * unit
+        quantity = data * unit
 
     return quantity
 
