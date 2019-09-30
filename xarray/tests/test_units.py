@@ -231,7 +231,7 @@ class method:
         return func(*all_args, **all_kwargs)
 
     def __repr__(self):
-        return "method {self.name}".format(self=self)
+        return "method_{self.name}".format(self=self)
 
 
 class function:
@@ -243,7 +243,7 @@ class function:
         return self.func(*args, **kwargs)
 
     def __repr__(self):
-        return "function {self.name}".format(self=self)
+        return "function_{self.name}".format(self=self)
 
 
 @require_pint_array_function
