@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _howdoi:
+
 How do I ...
 ============
 
@@ -21,8 +23,8 @@ How do I ...
      - :py:meth:`DataArray.transpose`, :py:meth:`Dataset.transpose`
    * - remove a variable from my object
      - :py:meth:`Dataset.drop`, :py:meth:`DataArray.drop`
-   *  - remove dimensions of length 1 or 0
-      - :py:meth:`DataArray.squeeze`, :py:meth:`Dataset.squeeze`
+   * - remove dimensions of length 1 or 0
+     - :py:meth:`DataArray.squeeze`, :py:meth:`Dataset.squeeze`
    * - convert non-dimension coordinates to data variables or remove them
      - :py:meth:`DataArray.reset_coords`, :py:meth:`Dataset.reset_coords`
    * - rename a variable, dimension or coordinate
@@ -44,4 +46,6 @@ How do I ...
    * - write xarray objects with complex values to a netCDF file
      - :py:func:`Dataset.to_netcdf`, :py:func:`DataArray.to_netcdf` specifying ``engine="h5netcdf", invalid_netcdf=True``
    * - make xarray objects look like other xarray objects
-     - :py:func:`~xarray.ones_like`, :py:func:`~xarray.zeros_like`, :py:func:`~xarray.full_like`, :py:func:`Dataset.reindex_like`, :py:meth:`Dataset.interpolate_like`, :py:meth:`Dataset.broadcast_like`, :py:func:`DataArray.reindex_like`, :py:meth:`DataArray.interpolate_like`, :py:meth:`DataArray.broadcast_like`
+     - :py:func:`~xarray.ones_like`, :py:func:`~xarray.zeros_like`, :py:func:`~xarray.full_like`, :py:meth:`Dataset.reindex_like`, :py:meth:`Dataset.interpolate_like`, :py:meth:`Dataset.broadcast_like`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interpolate_like`, :py:meth:`DataArray.broadcast_like`
+   * - replace NaNs with other values
+     - :py:meth:`~Dataset.fillna`, :py:meth:`Dataset.interpolate_na`, :py:meth:`~DataArray.fillna`, :py:meth:`DataArray.interpolate_na`
