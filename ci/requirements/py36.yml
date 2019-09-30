@@ -6,6 +6,7 @@ dependencies:
   - black
   - boto3
   - bottleneck
+  - cartopy
   - cdms2
   - cfgrib>=0.9.2
   - cftime

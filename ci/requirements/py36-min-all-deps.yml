@@ -1,43 +1,45 @@
 name: xarray-tests
 channels:
+  - defaults
   - conda-forge
 dependencies:
-  - python=3.6.7
+  - python=3.6
   - black
-  - boto3=1.9.235
-  - bottleneck=1.2.1
-  - cdms2=3.1.3
-  - cfgrib=0.9.7.2
-  - cftime=1.0.3.4
+  - boto3=1.9.23
+  - bottleneck=1.2
+  - cartopy=0.17
+  - cdms2=3.1
+  - cfgrib=0.9.7
+  - cftime=1.0.3
   - coveralls
-  - dask=2.4.0
-  - distributed=2.4.0
+  - dask=1.1
+  - distributed=1.28
   - flake8
-  - h5netcdf=0.7.4
-  - h5py=2.10.0
-  - hdf5=1.10.5
+  - h5netcdf=0.7
+  - h5py=2.9
+  - hdf5=1.10
   - hypothesis
-  - iris=2.2.0
-  - lxml=4.4.1  # optional dep of pydap
-  - matplotlib=3.1.1
+  - iris=2.2
+  - lxml=4.4  # optional dep of pydap
+  - matplotlib=3.1
   - mypy==0.720  # Must match .pre-commit-config.yaml
-  - nc-time-axis=1.2.0
-  - netcdf4=1.5.1.2
-  - numba=0.45.1
-  - numpy=1.17.2
-  - pandas=0.25.1
+  - nc-time-axis=1.2
+  - netcdf4=1.4
+  - numba=0.45
+  - numpy=1.14
+  - pandas=0.20
   - pip
-  - pseudonetcdf=3.0.2
-  - pydap=3.2.2
-  - pynio=1.5.5
+  - pseudonetcdf=3.0
+  - pydap=3.2
+  - pynio=1.5
   - pytest
   - pytest-cov
   - pytest-env
   - rasterio=1.0.28
-  - scipy=1.3.1
-  - seaborn=0.9.0
+  - scipy=0.19
+  - seaborn=0.9
   # - sparse  # See py36-min-nep18.yml
-  - toolz=0.10.0
-  - zarr=2.3.2
+  - toolz=0.10
+  - zarr=2.3
   - pip:
     - numbagg==0.1

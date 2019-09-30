@@ -543,7 +543,7 @@ class TestDataArrayAndDataset(DaskTestCase):
             <xarray.DataArray 'data' (x: 1)>
             {!r}
             Coordinates:
-                y        (x) int64 dask.array<chunksize=(1,)>
+                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
             Dimensions without coordinates: x""".format(
                 data
             )
