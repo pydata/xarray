@@ -21,7 +21,7 @@ How do I ...
      - :py:meth:`DataArray.transpose`, :py:meth:`Dataset.transpose`
    * - remove a variable from my object
      - :py:meth:`Dataset.drop`, :py:meth:`DataArray.drop`
-   *  - remove dimensions of length 1
+   *  - remove dimensions of length 1 or 0
       - :py:meth:`DataArray.squeeze`, :py:meth:`Dataset.squeeze`
    * - convert non-dimension coordinates to data variables or remove them
      - :py:meth:`DataArray.reset_coords`, :py:meth:`Dataset.reset_coords`
