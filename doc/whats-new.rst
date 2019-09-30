@@ -33,7 +33,8 @@ Documentation
 
 - Created a glossary of important xarray terms (:issue:`2410`, :pull:`3352`).
   By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
-
+- Created a "How do I..." section (:ref:`howdoi`) for solutions to common questions. (:pull:`3357`).
+  By `Deepak Cherian <https://github.com/dcherian/>`_.
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
   By `Justus Magin <https://github.com/keewis>`_.
 - Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`, 

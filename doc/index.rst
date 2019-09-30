@@ -84,6 +84,7 @@ Documentation
 **Help & reference**
 
 * :doc:`whats-new`
+* :doc:`howdoi`
 * :doc:`api`
 * :doc:`internals`
 * :doc:`roadmap`
@@ -96,6 +97,7 @@ Documentation
    :caption: Help & reference
 
    whats-new
+   howdoi
    api
    internals
    roadmap

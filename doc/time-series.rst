@@ -101,6 +101,8 @@ You can also select a particular time by indexing with a
 
 For more details, read the pandas documentation.
 
+.. _dt_accessor:
+
 Datetime components
 -------------------
 
