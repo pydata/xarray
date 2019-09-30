@@ -26,7 +26,7 @@ How do I ...
    * - convert non-dimension coordinates to data variables or remove them
      - :py:meth:`DataArray.reset_coords`, :py:meth:`Dataset.reset_coords`
    * - rename a variable, dimension or coordinate
-     - :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename_dims`, :py:meth:`DataArray.rename_coords`
+     - :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename`, :py:meth:`Dataset.rename_vars`, :py:meth:`Dataset.rename_dims`,
    * - convert a DataArray to Dataset or vice versa
      - :py:meth:`DataArray.to_dataset`, :py:meth:`Dataset.to_array`
    * - extract the underlying array (e.g. numpy or Dask arrays)
