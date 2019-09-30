@@ -25,6 +25,8 @@ How do I ...
      - :py:meth:`Dataset.drop`, :py:meth:`DataArray.drop`
    * - remove dimensions of length 1 or 0
      - :py:meth:`DataArray.squeeze`, :py:meth:`Dataset.squeeze`
+   * - remove all variables with a particular dimension
+     - :py:meth:`Dataset.drop_dims`
    * - convert non-dimension coordinates to data variables or remove them
      - :py:meth:`DataArray.reset_coords`, :py:meth:`Dataset.reset_coords`
    * - rename a variable, dimension or coordinate
@@ -40,7 +42,7 @@ How do I ...
    * - know how much memory my object requires
      - :py:attr:`DataArray.nbytes`, :py:attr:`Dataset.nbytes`
    * - convert a possibly irregularly sampled timeseries to a regularly sampled timeseries
-     - :py:meth:`DataArray.resample`, :py:meth:`Dataset.resample`
+     - :py:meth:`DataArray.resample`, :py:meth:`Dataset.resample` (see :ref:`resampling` for more)
    * - apply a function on all data variables in a Dataset
      - :py:meth:`Dataset.apply`
    * - write xarray objects with complex values to a netCDF file
@@ -48,4 +50,10 @@ How do I ...
    * - make xarray objects look like other xarray objects
      - :py:func:`~xarray.ones_like`, :py:func:`~xarray.zeros_like`, :py:func:`~xarray.full_like`, :py:meth:`Dataset.reindex_like`, :py:meth:`Dataset.interpolate_like`, :py:meth:`Dataset.broadcast_like`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interpolate_like`, :py:meth:`DataArray.broadcast_like`
    * - replace NaNs with other values
-     - :py:meth:`~Dataset.fillna`, :py:meth:`Dataset.interpolate_na`, :py:meth:`~DataArray.fillna`, :py:meth:`DataArray.interpolate_na`
+     - :py:meth:`Dataset.fillna`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill`, :py:meth:`Dataset.interpolate_na`, :py:meth:`DataArray.fillna`, :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`DataArray.interpolate_na`
+   * - extract the year, month, day or similar from a DataArray of time values
+     - ``obj.dt.month`` for example where ``obj`` is a :py:class:`~xarray.DataArray` containing ``datetime64`` or ``cftime`` values. See :ref:`dt_accessor` for more.
+   * - round off time values to a specified frequency
+     - ``obj.dt.ceil``, ``obj.dt.floor``, ``obj.dt.round``. See :ref:`dt_accessor` for more.
+   * - make a mask that is ``True`` where an object contains any of the values in a array
+     - :py:meth:`Dataset.isin`, :py:meth:`DataArray.isin`
