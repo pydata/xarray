@@ -15,7 +15,7 @@ How do I ...
      - :py:meth:`DataArray.expand_dims`, :py:meth:`Dataset.expand_dims`
    * - add a new coordinate variable
      - :py:meth:`DataArray.assign_coords`
-   * - change a data variable to a coordinate variables
+   * - change a data variable to a coordinate variable
      - :py:meth:`Dataset.set_coords`
    * - change the order of dimensions
      - :py:meth:`DataArray.transpose`, :py:meth:`Dataset.transpose`
