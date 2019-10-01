@@ -3,20 +3,35 @@ channels:
   - defaults
   - conda-forge
 dependencies:
+  # MINIMUM VERSIONS POLICY
+  # -----------------------
+  # Python         : 42 months (NEP-29)
+  # numpy          : 24 months (NEP-29)
+  # pandas         : 24 months
+  # scipy          : 24 months
+  # NEP18 packages : latest available only
+  # everything else: 6 months
+  #
+  # All the above must be interpreted as
+  # "the minor version (X.Y) initially published no more than N months ago".
+  # Patch versions (x.y.Z) should never be pinned.
+  #
+  # Run ci/min_deps_check.py to verify that this file respects the policy.
+
   - python=3.6
   - black
-  - boto3=1.9.23
+  - boto3=1.9
   - bottleneck=1.2
   - cartopy=0.17
   - cdms2=3.1
-  - cfgrib=0.9.7
-  - cftime=1.0.3
+  - cfgrib=0.9
+  - cftime=1.0
   - coveralls
-  - dask=1.1
-  - distributed=1.28
+  - dask=1.2
+  - distributed=1.27
   - flake8
   - h5netcdf=0.7
-  - h5py=2.9
+  - h5py=2.9  # policy would allow for 2.10, but it's a conflict-fest
   - hdf5=1.10
   - hypothesis
   - iris=2.2
@@ -25,9 +40,9 @@ dependencies:
   - mypy==0.720  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2
   - netcdf4=1.4
-  - numba=0.45
+  - numba=0.44
   - numpy=1.14
-  - pandas=0.20
+  - pandas=0.21
   - pip
   - pseudonetcdf=3.0
   - pydap=3.2
@@ -35,8 +50,8 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
-  - rasterio=1.0.28
-  - scipy=0.19
+  - rasterio=1.0
+  - scipy=1.0
   - seaborn=0.9
   # - sparse  # See py36-min-nep18.yml
   - toolz=0.10
