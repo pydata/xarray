@@ -177,8 +177,6 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
             if dim not in ds.dims:
                 if dim in ds:
                     ds = ds.set_coords(dim)
-                else:
-                    raise ValueError("%r is not present in all datasets" % dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
         concat_dim_lengths.append(ds.dims.get(dim, 1))
 
