@@ -294,23 +294,38 @@ class TestDataArray:
     @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
     @pytest.mark.parametrize(
-        "coords",
+        "variant",
         (
-            pytest.param(True, id="with coords"),
-            pytest.param(False, id="without coords"),
+            pytest.param(
+                "with_dims",
+                marks=pytest.mark.xfail(reason="units in indexes are not supported"),
+            ),
+            pytest.param("with_coords"),
+            pytest.param("without_coords"),
         ),
     )
-    def test_init(self, coords):
-        array = np.linspace(1, 2, 10) * unit_registry.m
-        parameters = {"data": array}
-        if coords:
-            x = np.arange(len(array)) * unit_registry.s
-            y = x.to(unit_registry.ms)
-            parameters["coords"] = {"x": x, "y": ("x", y)}
-            parameters["dims"] = ["x"]
+    def test_init(self, variant, dtype):
+        array = np.linspace(1, 2, 10, dtype=dtype) * unit_registry.m
 
-        data_array = xr.DataArray(**parameters)
-        assert_equal_with_units(array, data_array)
+        x = np.arange(len(array)) * unit_registry.s
+        y = x.to(unit_registry.ms)
+
+        variants = {
+            "with_dims": {"x": x},
+            "with_coords": {"y": ("x", y)},
+            "without_coords": {},
+        }
+
+        kwargs = {"data": array, "dims": "x", "coords": variants.get(variant)}
+        data_array = xr.DataArray(**kwargs)
+
+        assert isinstance(data_array.data, BaseQuantity)
+        assert all(
+            {
+                name: isinstance(coord.data, BaseQuantity)
+                for name, coord in data_array.coords.items()
+            }.values()
+        )
 
     @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
@@ -318,27 +333,29 @@ class TestDataArray:
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
     )
     @pytest.mark.parametrize(
-        "coords",
+        "variant",
         (
             pytest.param(
-                True,
-                id="coords",
-                marks=pytest.mark.xfail(
-                    reason="formatting currently does not delegate for coordinates"
-                ),
+                "with_dims",
+                marks=pytest.mark.xfail(reason="units in indexes are not supported"),
             ),
-            pytest.param(False, id="no coords"),
+            pytest.param("with_coords"),
+            pytest.param("without_coords"),
         ),
     )
-    def test_repr(self, func, coords):
-        array = np.linspace(1, 2, 10) * unit_registry.m
+    def test_repr(self, func, variant, dtype):
+        array = np.linspace(1, 2, 10, dtype=dtype) * unit_registry.m
         x = np.arange(len(array)) * unit_registry.s
+        y = x.to(unit_registry.ms)
 
-        if coords:
-            data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
-            print(data_array.x._variable._data)
-        else:
-            data_array = xr.DataArray(data=array)
+        variants = {
+            "with_dims": {"x": x},
+            "with_coords": {"y": ("x", y)},
+            "without_coords": {},
+        }
+
+        kwargs = {"data": array, "dims": "x", "coords": variants.get(variant)}
+        data_array = xr.DataArray(**kwargs)
 
         # FIXME: this just checks that the repr does not raise
         # warnings or errors, but does not check the result
