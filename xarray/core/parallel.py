@@ -192,7 +192,9 @@ def map_blocks(
 
     input_chunks = dataset.chunks
 
-    template: Union[DataArray, Dataset] = infer_template(func, obj, *args, **kwargs)
+    template = infer_template(
+        func, obj, *args, **kwargs
+    )  # type: Union[DataArray, Dataset]
     if isinstance(template, DataArray):
         result_is_array = True
         template = template._to_temp_dataset()
