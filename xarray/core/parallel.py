@@ -184,7 +184,13 @@ def map_blocks(
         return func(obj, *args, **kwargs)
 
     if isinstance(obj, DataArray):
-        dataset = obj._to_temp_dataset()
+        # only using _to_temp_dataset would break
+        # func = lambda x: x.to_dataset()
+        # since that relies on preserving name.
+        if obj.name is None:
+            dataset = obj._to_temp_dataset()
+        else:
+            dataset = obj.to_dataset()
         input_is_array = True
     else:
         dataset = obj
@@ -205,7 +211,13 @@ def map_blocks(
             "func output must be DataArray or Dataset; got %s" % type(template)
         )
 
-    indexes = {dim: dataset.indexes[dim] for dim in template.dims}
+    template_indexes = set(template.indexes)
+    dataset_indexes = set(dataset.indexes)
+    preserved_indexes = template_indexes.intersection(dataset_indexes)
+    new_indexes = set(template_indexes) - set(dataset_indexes)
+    indexes = {dim: dataset.indexes[dim] for dim in preserved_indexes}
+    indexes.update({k: template.indexes[k] for k in new_indexes})
+
     graph = {}  # type: Dict[Any, Any]
     gname = "%s-%s" % (dask.utils.funcname(func), dask.base.tokenize(dataset))
 
@@ -287,7 +299,7 @@ def map_blocks(
 
             graph[key] = (operator.getitem, from_wrapper, name)
 
-    graph = HighLevelGraph.from_collections(name, graph, dependencies=[dataset])
+    graph = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
 
     result = Dataset(coords=indexes)
     for name, gname_l in var_key_map.items():
