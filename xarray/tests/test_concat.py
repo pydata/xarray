@@ -65,15 +65,11 @@ class TestConcatDataset:
         datasets = [g for _, g in data.groupby(dim, squeeze=False)]
         assert_identical(data, concat(datasets, dim, coords=coords))
 
-    @pytest.mark.parametrize(
-        "compat",
-        ["equals", "broadcast_equals", "no_conflicts", "override", "identical"],
-    )
-    def test_concat_merge_variables_present_in_some_datasets(self, data, compat):
+    def test_concat_merge_variables_present_in_some_datasets(self, data):
         # coordinates present in some datasets but not others
         ds1 = Dataset(data_vars={"a": ("y", [0.1])}, coords={"x": 0.1})
         ds2 = Dataset(data_vars={"a": ("y", [0.2])}, coords={"z": 0.2})
-        actual = concat([ds1, ds2], dim="y", coords="minimal", compat=compat)
+        actual = concat([ds1, ds2], dim="y", coords="minimal")
         expected = Dataset({"a": ("y", [0.1, 0.2])}, coords={"x": 0.1, "z": 0.2})
         assert_identical(expected, actual)
 
