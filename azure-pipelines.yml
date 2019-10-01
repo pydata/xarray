@@ -82,7 +82,7 @@ jobs:
       mypy .
     displayName: mypy type checks
 
-- job: MinimumVersions
+- job: MinimumVersionsPolicy
   variables:
     conda_env: min_deps_check
   pool:
