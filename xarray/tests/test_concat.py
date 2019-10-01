@@ -41,6 +41,9 @@ def test_concat_compat():
     for var in ["has_x", "no_x_y"]:
         assert "y" not in result[var]
 
+    with raises_regex(ValueError, "One or more of the specified variables"):
+        concat([ds1, ds2], dim="q")
+
 
 class TestConcatDataset:
     @pytest.fixture
