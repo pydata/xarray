@@ -783,7 +783,7 @@ class TestAutoCombineOldAPI:
         actual = auto_combine(datasets, concat_dim="t")
         assert_identical(expected, actual)
 
-    def test_auto_combine_still_fails(self):
+    def test_auto_combine_with_new_variables(self):
         datasets = [Dataset({"x": 0}, {"y": 0}), Dataset({"x": 1}, {"y": 1, "z": 1})]
         actual = auto_combine(datasets, "y")
         expected = Dataset({"x": ("y", [0, 1])}, {"y": [0, 1], "z": 1})
