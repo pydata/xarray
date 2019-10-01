@@ -41,8 +41,10 @@ def test_concat_compat():
     for var in ["has_x", "no_x_y"]:
         assert "y" not in result[var]
 
-    with raises_regex(ValueError, "One or more of the specified variables"):
+    with raises_regex(ValueError, "coordinates in some datasets but not others"):
         concat([ds1, ds2], dim="q")
+    with raises_regex(ValueError, "'q' is not present in all datasets"):
+        concat([ds2, ds1], dim="q")
 
 
 class TestConcatDataset:
