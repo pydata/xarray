@@ -2492,13 +2492,8 @@ class TestDataset:
         )
         with raises_regex(TypeError, "value of new dimension"):
             original.expand_dims(OrderedDict((("d", 3.2),)))
-
-        # TODO: only the code under the if-statement is needed when python 3.5
-        #   is no longer supported.
-        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
-        if python36_plus:
-            with raises_regex(ValueError, "both keyword and positional"):
-                original.expand_dims(OrderedDict((("d", 4),)), e=4)
+        with raises_regex(ValueError, "both keyword and positional"):
+            original.expand_dims(OrderedDict((("d", 4),)), e=4)
 
     def test_expand_dims_int(self):
         original = Dataset(
@@ -2605,21 +2600,6 @@ class TestDataset:
         )
         assert_identical(actual, expected)
 
-    @pytest.mark.skipif(
-        sys.version_info[:2] > (3, 5),
-        reason="we only raise these errors for Python 3.5",
-    )
-    def test_expand_dims_kwargs_python35(self):
-        original = Dataset({"x": ("a", np.random.randn(3))})
-        with raises_regex(ValueError, "dim_kwargs isn't"):
-            original.expand_dims(e=["l", "m", "n"])
-        with raises_regex(TypeError, "must be an OrderedDict"):
-            original.expand_dims({"e": ["l", "m", "n"]})
-
-    @pytest.mark.skipif(
-        sys.version_info[:2] < (3, 6),
-        reason="keyword arguments are only ordered on Python 3.6+",
-    )
     def test_expand_dims_kwargs_python36plus(self):
         original = Dataset(
             {"x": ("a", np.random.randn(3)), "y": (["b", "a"], np.random.randn(4, 3))},
@@ -5772,7 +5752,6 @@ def test_no_dict():
         d.__dict__
 
 
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
 def test_subclass_slots():
     """Test that Dataset subclasses must explicitly define ``__slots__``.
 

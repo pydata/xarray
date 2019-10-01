@@ -2923,14 +2923,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         expanded : same type as caller
             This object, but with an additional dimension(s).
         """
-        # TODO: get rid of the below code block when python 3.5 is no longer
-        #   supported.
-        if sys.version < "3.6":
-            if isinstance(dim, Mapping) and not isinstance(dim, OrderedDict):
-                raise TypeError("dim must be an OrderedDict for python <3.6")
-            if dim_kwargs:
-                raise ValueError("dim_kwargs isn't available for python <3.6")
-
         if dim is None:
             pass
         elif isinstance(dim, Mapping):

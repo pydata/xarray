@@ -2,13 +2,12 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - python=3.5.3
+  - python=3.6
   - pytest
   - flake8
-  - mock
   - pip
-  - numpy=1.12
-  - pandas=0.19.2
+  - numpy=1.14
+  - pandas=0.21
   - pip:
     - pytest-env
     - pytest-cov

@@ -1504,9 +1504,7 @@ class DataArray(AbstractArray, DataWithCoords):
             with length 1. If provided as a dict, then the keys are the new
             dimensions and the values are either integers (giving the length of
             the new dimensions) or sequence/ndarray (giving the coordinates of
-            the new dimensions). **WARNING** for python 3.5, if ``dim`` is
-            dict-like, then it must be an ``OrderedDict``. This is to ensure
-            that the order in which the dims are given is maintained.
+            the new dimensions).
         axis : integer, list (or tuple) of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
@@ -1517,8 +1515,7 @@ class DataArray(AbstractArray, DataWithCoords):
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
             coordinates. Note, this is an alternative to passing a dict to the
-            dim kwarg and will only be used if dim is None. **WARNING** for
-            python 3.5 ``dim_kwargs`` is not available.
+            dim kwarg and will only be used if dim is None.
 
         Returns
         -------
@@ -1533,16 +1530,6 @@ class DataArray(AbstractArray, DataWithCoords):
             dim = OrderedDict((d, 1) for d in dim)
         elif dim is not None and not isinstance(dim, Mapping):
             dim = OrderedDict(((cast(Hashable, dim), 1),))
-
-        # TODO: get rid of the below code block when python 3.5 is no longer
-        #   supported.
-        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
-        not_ordereddict = dim is not None and not isinstance(dim, OrderedDict)
-        if not python36_plus and not_ordereddict:
-            raise TypeError("dim must be an OrderedDict for python <3.6")
-        elif not python36_plus and dim_kwargs:
-            raise ValueError("dim_kwargs isn't available for python <3.6")
-        dim_kwargs = OrderedDict(dim_kwargs)
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         ds = self._to_temp_dataset().expand_dims(dim, axis)

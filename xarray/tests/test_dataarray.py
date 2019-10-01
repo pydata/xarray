@@ -4658,7 +4658,6 @@ def test_no_dict():
         d.__dict__
 
 
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
 def test_subclass_slots():
     """Test that DataArray subclasses must explicitly define ``__slots__``.
 

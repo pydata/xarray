@@ -4,6 +4,7 @@ policy on obsolete dependencies is being followed. Print a pretty report :)
 """
 import os.path
 import subprocess
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, Iterator, Tuple
 
@@ -33,16 +34,13 @@ def error(msg: str) -> None:
     print("ERROR:", msg)
 
 
-def parse_requirements() -> Iterator[Tuple[str, int, int]]:
+def parse_requirements(fname) -> Iterator[Tuple[str, int, int]]:
     """Load requirements/py36-min-all-deps.yml
 
     Yield (package name, major version, minor version)
     """
     global has_errors
 
-    fname = os.path.join(
-        os.path.dirname(__file__), "requirements", "py36-min-all-deps.yml"
-    )
     with open(fname) as fh:
         contents = yaml.safe_load(fh)
     for row in contents["dependencies"]:
@@ -158,9 +156,10 @@ def process_pkg(
 
 
 def main() -> None:
+    fname = sys.argv[1]
     rows = [
         process_pkg(pkg, major, minor, query_conda(pkg))
-        for pkg, major, minor in parse_requirements()
+        for pkg, major, minor in parse_requirements(fname)
     ]
     print("Package       Required          Policy            Status")
     print("------------- ----------------- ----------------- ------")
