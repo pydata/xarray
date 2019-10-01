@@ -170,6 +170,23 @@ class TestPlot(PlotTestCase):
         line = current.plot.line()[0]
         assert_array_equal(line.get_xdata(), current.coords["t"].values)
 
+    def test_line_plot_along_1d_coord(self):
+        # Test for bug in GH #3334
+        x_coord = xr.DataArray(data=[0.1, 0.2], dims=["x"])
+        t_coord = xr.DataArray(data=[10, 20], dims=["t"])
+
+        da = xr.DataArray(
+            data=np.array([[0, 1], [5, 9]]),
+            dims=["x", "t"],
+            coords={"x": x_coord, "time": t_coord},
+        )
+
+        line = da.plot(x="time", hue="x")[0]
+        assert_array_equal(line.get_xdata(), da.coords["time"].values)
+
+        line = da.plot(y="time", hue="x")[0]
+        assert_array_equal(line.get_ydata(), da.coords["time"].values)
+
     def test_2d_line(self):
         with raises_regex(ValueError, "hue"):
             self.darray[:, :, 0].plot.line()
@@ -1945,7 +1962,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
 
     def test_facetgrid_hue_style(self):
-        # Can't move this to pytest.mark.parametrize because py35-min
+        # Can't move this to pytest.mark.parametrize because py35-bare-minimum
         # doesn't have mpl.
         for hue_style, map_type in zip(
             ["discrete", "continuous"], [list, mpl.collections.PathCollection]

@@ -3,37 +3,42 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - black
+  - boto3
+  - bottleneck
+  - cdms2
+  - cfgrib>=0.9.2
   - cftime
+  - coveralls
   - dask
   - distributed
-  - h5py
+  - flake8
   - h5netcdf
+  - h5py
+  - hdf5
+  - hypothesis
+  - iris>=1.10
+  - lxml    # optional dep of pydap
   - matplotlib
+  - mypy==0.720  # Must match .pre-commit-config.yaml
+  - nc-time-axis
   - netcdf4
+  - numba
+  - numpy>=1.12
+  - pandas>=0.19
+  - pint
+  - pip
+  - pseudonetcdf>=3.0.1
+  - pydap
+  - pynio
   - pytest
   - pytest-cov
   - pytest-env
-  - coveralls
-  - flake8
-  - mypy==0.720  # Must match .pre-commit-config.yaml
-  - numpy>=1.12
-  - pandas>=0.19
-  - pip
+  - rasterio
   - scipy
   - seaborn
+  - sparse
   - toolz
-  - rasterio
-  - boto3
-  - bottleneck
   - zarr
-  - pseudonetcdf>=3.0.1
-  - cfgrib>=0.9.2
-  - cdms2
-  # Disabled due to conflicting dependencies:
-  # https://github.com/pydata/xarray/issues/3154
-  # - pynio
-  - iris>=1.10
-  - pydap
-  - lxml
-  - pint
-
+  - pip:
+    - numbagg
