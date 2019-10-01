@@ -20,26 +20,19 @@ def _get_nan_block_lengths(obj, dim, index):
     """
 
     # algorithm from https://stackoverflow.com/questions/53060003/how-to-get-the-maximum-time-of-gap-in-xarray-dataset/53075828#53075828
-    arange = ones_like(obj) * index + (index[1] - index[0])
-    cumulative_nans = arange.where(obj.notnull()).ffill(dim=dim).fillna(0)
+    arange = ones_like(obj) * index
+    valid = obj.notnull()
+    valid_arange = arange.where(valid)
+    cumulative_nans = valid_arange.ffill(dim=dim).fillna(index[0])
 
-    num_nans = arange - cumulative_nans
-
-    block_lengths_at_peaks = num_nans.where(
-        num_nans.diff(dim=dim, label="lower") < 0
-    ).reindex({dim: obj[dim]})
-
-    # nans at the end
-    maybe_nans_at_end = (
-        block_lengths_at_peaks.isel({dim: -1})
-        .where(obj.isel({dim: -1}).notnull(), num_nans.isel({dim: -1}))
-        .expand_dims(dim)
-        .reindex_like(obj)
+    nan_block_lengths = (
+        cumulative_nans.diff(dim=dim, label="upper")
+        .reindex({dim: obj[dim]})
+        .where(valid)
+        .bfill(dim=dim)
+        .where(~valid, 0)
+        .fillna(index[-1] - valid_arange.max())
     )
-
-    block_lengths_at_peaks = block_lengths_at_peaks.fillna(maybe_nans_at_end)
-
-    nan_block_lengths = block_lengths_at_peaks.bfill(dim).where(obj.isnull()).fillna(0)
 
     return nan_block_lengths
 
