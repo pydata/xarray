@@ -81,7 +81,7 @@ class RollingExp:
     Returns
     -------
     RollingExp : type of input argument
-    """  # noqa
+    """
 
     def __init__(self, obj, windows, window_type="span"):
         self.obj = obj

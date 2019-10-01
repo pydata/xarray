@@ -13,8 +13,8 @@ from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray  # noqa: F401
-    from .dataset import Dataset  # noqa: F401
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 def _get_joiner(join):
@@ -350,8 +350,8 @@ def deep_align(
 
     This function is not public API.
     """
-    from .dataarray import DataArray  # noqa: F811
-    from .dataset import Dataset  # noqa: F811
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     if indexes is None:
         indexes = {}
@@ -411,7 +411,7 @@ def deep_align(
 
 
 def reindex_like_indexers(
-    target: Union["DataArray", "Dataset"], other: Union["DataArray", "Dataset"]
+    target: "Union[DataArray, Dataset]", other: "Union[DataArray, Dataset]"
 ) -> Dict[Hashable, pd.Index]:
     """Extract indexers to align target with other.
 
@@ -503,7 +503,7 @@ def reindex_variables(
     new_indexes : OrderedDict
         Dict of indexes associated with the reindexed variables.
     """
-    from .dataarray import DataArray  # noqa: F811
+    from .dataarray import DataArray
 
     # create variables for the new dataset
     reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
@@ -600,8 +600,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 
 def _broadcast_helper(arg, exclude, dims_map, common_coords):
 
-    from .dataarray import DataArray  # noqa: F811
-    from .dataset import Dataset  # noqa: F811
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     def _set_dims(var):
         # Add excluded dims to a copy of dims_map

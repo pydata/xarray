@@ -738,9 +738,7 @@ def test_encode_time_bounds():
     with pytest.raises(AssertionError):
         assert_equal(encoded["time_bounds"], expected["time_bounds"])
     assert "calendar" not in encoded["time_bounds"].attrs
-    assert (
-        encoded["time_bounds"].attrs["units"] == ds.time_bounds.encoding["units"]
-    )  # noqa
+    assert encoded["time_bounds"].attrs["units"] == ds.time_bounds.encoding["units"]
 
     ds.time.encoding = {}
     with pytest.warns(UserWarning):

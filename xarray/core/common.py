@@ -293,7 +293,7 @@ class AttrAccessMixin:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
-        """  # noqa
+        """
         item_lists = [
             item
             for sublist in self._item_sources
@@ -669,7 +669,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
-        """  # noqa
+        """
         return self._groupby_cls(
             self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
         )
@@ -732,7 +732,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         References
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
-        """  # noqa
+        """
         return self._groupby_cls(
             self,
             group,
@@ -808,7 +808,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
-        """  # noqa
+        """
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
 
@@ -1005,7 +1005,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
-        """  # noqa
+        """
         # TODO support non-string indexer after removing the old API.
 
         from .dataarray import DataArray

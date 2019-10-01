@@ -557,7 +557,7 @@ class TestDataset:
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
         assert isinstance(ds.dims.mapping, utils.SortedKeysDict)
-        assert type(ds.dims.mapping.mapping) is dict  # noqa
+        assert type(ds.dims.mapping.mapping) is dict
 
         assert list(ds) == list(ds.data_vars)
         assert list(ds.keys()) == list(ds.data_vars)
@@ -2359,7 +2359,7 @@ class TestDataset:
                 renamed[k].variable.to_base_variable(),
             )
             assert v.encoding == renamed[k].encoding
-            assert type(v) == type(renamed.variables[k])  # noqa: E721
+            assert type(v) is type(renamed.variables[k])  # noqa: E721
 
         assert "var1" not in renamed
         assert "dim2" not in renamed

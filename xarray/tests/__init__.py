@@ -4,7 +4,7 @@ import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
-from unittest import mock  # noqa
+from unittest import mock  # noqa: F401
 
 import numpy as np
 import pytest
@@ -12,7 +12,7 @@ from numpy.testing import assert_array_equal  # noqa: F401
 
 import xarray.testing
 from xarray.core import utils
-from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
+from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
 from xarray.plot.utils import import_seaborn
@@ -127,7 +127,7 @@ network = pytest.mark.network
 
 @contextmanager
 def raises_regex(error, pattern):
-    __tracebackhide__ = True  # noqa: F841
+    __tracebackhide__ = True
     with pytest.raises(error) as excinfo:
         yield
     message = str(excinfo.value)

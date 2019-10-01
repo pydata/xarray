@@ -50,8 +50,8 @@ def assert_equal(a, b):
     assert_identical, assert_allclose, Dataset.equals, DataArray.equals,
     numpy.testing.assert_array_equal
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     if isinstance(a, (Variable, DataArray)):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -77,8 +77,8 @@ def assert_identical(a, b):
     --------
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
@@ -115,8 +115,8 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     --------
     assert_identical, assert_equal, numpy.testing.assert_allclose
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
     if isinstance(a, Variable):
         assert a.dims == b.dims

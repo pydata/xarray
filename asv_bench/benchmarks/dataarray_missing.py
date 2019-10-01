@@ -5,7 +5,7 @@ import xarray as xr
 from . import randn, requires_dask
 
 try:
-    import dask  # noqa
+    import dask  # noqa: F401
 except ImportError:
     pass
 

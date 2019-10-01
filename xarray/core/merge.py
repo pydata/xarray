@@ -94,7 +94,7 @@ def unique_variable(name, variables, compat="broadcast_equals", equals=None):
     Raises
     ------
     MergeError: if any of the variables are not equal.
-    """  # noqa
+    """
     out = variables[0]
 
     if len(variables) == 1 or compat == "override":
@@ -171,7 +171,7 @@ def merge_variables(
     OrderedDict with keys taken by the union of keys on list_of_variable_dicts,
     and Variable values corresponding to those that should be found on the
     merged result.
-    """  # noqa
+    """
     if priority_vars is None:
         priority_vars = {}
 
@@ -231,7 +231,7 @@ def expand_variable_dicts(
     an input's values. The values of each ordered dictionary are all
     xarray.Variable objects.
     """
-    from .dataarray import DataArray  # noqa: F811
+    from .dataarray import DataArray
     from .dataset import Dataset
 
     var_dicts = []
@@ -278,7 +278,7 @@ def determine_coords(
         All variable found in the input should appear in either the set of
         coordinate or non-coordinate names.
     """
-    from .dataarray import DataArray  # noqa: F811
+    from .dataarray import DataArray
     from .dataset import Dataset
 
     coord_names = set()  # type: set
@@ -313,7 +313,7 @@ def coerce_pandas_values(objects: Iterable["DatasetLike"]) -> List["DatasetLike"
     List of Dataset or OrderedDict objects. Any inputs or values in the inputs
     that were pandas objects have been converted into native xarray objects.
     """
-    from .dataarray import DataArray  # noqa: F811
+    from .dataarray import DataArray
     from .dataset import Dataset
 
     out = []
@@ -363,7 +363,7 @@ def _get_priority_vars(objects, priority_arg, compat="equals"):
     -------
     None, if priority_arg is None, or an OrderedDict with Variable objects as
     values indicating priority variables.
-    """  # noqa
+    """
     if priority_arg is None:
         priority_vars = {}
     else:
@@ -485,7 +485,7 @@ def merge_core(
     Raises
     ------
     MergeError if the merge cannot be done successfully.
-    """  # noqa
+    """
     from .dataset import calculate_dimensions
 
     _assert_compat_valid(compat)
@@ -592,7 +592,7 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
     Coordinates:
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0
-    
+
     >>> y
     <xarray.DataArray 'var2' (lat: 2, lon: 2)>
     array([[5., 6.],
@@ -632,7 +632,7 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
         var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
         var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
-        
+
     >>> xr.merge([x, y, z], compat='equals')
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
@@ -718,8 +718,8 @@ def merge(objects, compat="no_conflicts", join="outer", fill_value=dtypes.NA):
     See also
     --------
     concat
-    """  # noqa
-    from .dataarray import DataArray  # noqa: F811
+    """
+    from .dataarray import DataArray
     from .dataset import Dataset
 
     dict_like_objects = list()
@@ -793,7 +793,7 @@ def dataset_update_method(
     `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
     GH2180).
     """
-    from .dataarray import DataArray  # noqa: F811
+    from .dataarray import DataArray
     from .dataset import Dataset
 
     if not isinstance(other, Dataset):
