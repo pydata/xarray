@@ -22,6 +22,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    TypeVar,
     Union,
     cast,
     overload,
@@ -86,6 +87,8 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import DatasetLike
+
+    T_DSorDA = TypeVar("T_DSorDA", DataArray, "Dataset")
 
     try:
         from dask.delayed import Delayed
@@ -5196,7 +5199,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return ds
 
-    def map_blocks(self, func, args=(), kwargs=None):
+    def map_blocks(
+        self,
+        func: "Callable[..., T_DSorDA]",
+        args: Sequence[Any] = (),
+        kwargs: Mapping[str, Any] = None,
+    ) -> "T_DSorDA":
         """
         Apply a function to each chunk of this Dataset. This function is experimental
         and its signature may change.

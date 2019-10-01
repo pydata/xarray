@@ -14,7 +14,19 @@ import operator
 from .dataarray import DataArray
 from .dataset import Dataset
 
-from typing import Sequence, Mapping
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Hashable,
+    Mapping,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
+T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
 
 def dataset_to_dataarray(obj: Dataset) -> DataArray:
@@ -55,7 +67,9 @@ def make_meta(obj):
     return meta
 
 
-def infer_template(func, obj, *args, **kwargs):
+def infer_template(
+    func: Callable[..., T_DSorDA], obj: Union[DataArray, Dataset], *args, **kwargs
+) -> T_DSorDA:
     """ Infer return object by running the function on meta objects. """
     meta_args = [make_meta(arg) for arg in (obj,) + args]
 
@@ -75,30 +89,34 @@ def infer_template(func, obj, *args, **kwargs):
     return template
 
 
-def make_dict(x):
-    # Dataset.to_dict() is too complicated
-    # maps variable name to numpy array
+def make_dict(x: Union[DataArray, Dataset]) -> Dict[Hashable, Any]:
+    """Map variable name to numpy(-like) data
+    (Dataset.to_dict() is too complicated).
+    """
     if isinstance(x, DataArray):
         x = x._to_temp_dataset()
 
     return {k: v.data for k, v in x.variables.items()}
 
 
-def map_blocks(func, obj, args=(), kwargs=None):
-    """
-    Apply a function to each chunk of a DataArray or Dataset. This function is experimental
-    and its signature may change.
+def map_blocks(
+    func: Callable[..., T_DSorDA],
+    obj: Union[DataArray, Dataset],
+    args: Sequence[Any] = (),
+    kwargs: Mapping[str, Any] = None,
+) -> T_DSorDA:
+    """Apply a function to each chunk of a DataArray or Dataset. This function is
+    experimental and its signature may change.
 
     Parameters
     ----------
     func: callable
-        User-provided function that should accept xarray objects.
-        This function will receive a subset of this dataset, corresponding to one chunk along
-        each chunked dimension.
-        To determine properties of the returned object such as type (DataArray or Dataset), dtypes,
-        and new/removed dimensions and/or variables, the function will be run on dummy data
-        with the same variables, dimension names, and data types as this DataArray, but zero-sized
-        dimensions.
+        User-provided function that should accept xarray objects. This function will
+        receive a subset of this dataset, corresponding to one chunk along each chunked
+        dimension. To determine properties of the returned object such as type
+        (DataArray or Dataset), dtypes, and new/removed dimensions and/or variables, the
+        function will be run on dummy data with the same variables, dimension names, and
+        data types as this DataArray, but zero-sized dimensions.
 
         This function must
         - return either a single DataArray or a single Dataset
@@ -107,16 +125,19 @@ def map_blocks(func, obj, args=(), kwargs=None):
         - change size of existing dimensions.
         - add new chunked dimensions.
 
-        This function should work with whole xarray objects. If your function can be applied
-        to numpy or dask arrays (e.g. it doesn't need additional metadata such as dimension names,
-        variable names, etc.), you should consider using :py:func:`~xarray.apply_ufunc` instead.
+        This function should work with whole xarray objects. If your function can be
+        applied to numpy or dask arrays (e.g. it doesn't need additional metadata such
+        as dimension names, variable names, etc.), you should consider using
+        :py:func:`~xarray.apply_ufunc` instead.
     obj: DataArray, Dataset
-        Chunks of this object will be provided to 'func'. If passed a numpy object, the function will
-        be run eagerly.
-    args: list
-        Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+        Chunks of this object will be provided to 'func'. If passed a numpy object, the
+        function will be run eagerly.
+    args: tuple
+        Passed on to func after unpacking. xarray objects, if any, will not be split by
+        chunks.
     kwargs: dict
-        Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+        Passed on to func after unpacking. xarray objects, if any, will not be split by
+        chunks.
 
     Returns
     -------
@@ -125,12 +146,13 @@ def map_blocks(func, obj, args=(), kwargs=None):
     Notes
     -----
 
-    This function is designed to work with dask-backed xarray objects. See apply_ufunc for
-    a similar function that works with numpy arrays.
+    This function is designed to work with dask-backed xarray objects. See apply_ufunc
+    for a similar function that works with numpy arrays.
 
     See Also
     --------
-    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks, xarray.DataArray.map_blocks
+    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
+    xarray.DataArray.map_blocks
     """
 
     def _wrapper(func, obj, to_array, args, kwargs):
@@ -147,9 +169,7 @@ def map_blocks(func, obj, args=(), kwargs=None):
                         % name
                     )
 
-        to_return = make_dict(result)
-
-        return to_return
+        return make_dict(result)
 
     if not isinstance(args, Sequence):
         raise TypeError("args must be a sequence (for example, a list or tuple).")
@@ -172,15 +192,19 @@ def map_blocks(func, obj, args=(), kwargs=None):
 
     input_chunks = dataset.chunks
 
-    template = infer_template(func, obj, *args, **kwargs)
+    template: Union[DataArray, Dataset] = infer_template(func, obj, *args, **kwargs)
     if isinstance(template, DataArray):
         result_is_array = True
         template = template._to_temp_dataset()
     elif isinstance(template, Dataset):
         result_is_array = False
+    else:
+        raise TypeError(
+            "func output must be DataArray or Dataset; got %s" % type(template)
+        )
 
     indexes = {dim: dataset.indexes[dim] for dim in template.dims}
-    graph = {}
+    graph = {}  # type: Dict[Any, Any]
     gname = "%s-%s" % (dask.utils.funcname(func), dask.base.tokenize(dataset))
 
     # map dims to list of chunk indexes
@@ -244,14 +268,14 @@ def map_blocks(func, obj, args=(), kwargs=None):
         )
 
         # mapping from variable name to dask graph key
-        var_key_map = {}
+        var_key_map = {}  # type: Dict[Hashable, str]
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
             gname_l = "%s-%s" % (gname, name)
             var_key_map[name] = gname_l
 
-            key = (gname_l,)
+            key = (gname_l,)  # type: Tuple[Any, ...]
             for dim in variable.dims:
                 if dim in chunk_index_dict:
                     key += (chunk_index_dict[dim],)
@@ -264,7 +288,7 @@ def map_blocks(func, obj, args=(), kwargs=None):
     graph = HighLevelGraph.from_collections(name, graph, dependencies=[dataset])
 
     result = Dataset(coords=indexes)
-    for name, key in var_key_map.items():
+    for name, gname_l in var_key_map.items():
         dims = template[name].dims
         var_chunks = []
         for dim in dims:
@@ -274,13 +298,12 @@ def map_blocks(func, obj, args=(), kwargs=None):
                 var_chunks.append((len(indexes[dim]),))
 
         data = dask.array.Array(
-            graph, name=key, chunks=var_chunks, dtype=template[name].dtype
+            graph, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
         )
         result[name] = (dims, data)
 
     result = result.set_coords(template._coord_names)
 
     if result_is_array:
-        result = dataset_to_dataarray(result)
-
-    return result
+        return dataset_to_dataarray(result)  # type: ignore
+    return result  # type: ignore

@@ -15,6 +15,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
     cast,
     overload,
@@ -64,6 +65,8 @@ from .variable import (
 )
 
 if TYPE_CHECKING:
+    T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
+
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -3050,7 +3053,12 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unify_chunks()
         return self._from_temp_dataset(ds)
 
-    def map_blocks(self, func, args=(), kwargs=None):
+    def map_blocks(
+        self,
+        func: "Callable[..., T_DSorDA]",
+        args: Sequence[Any] = (),
+        kwargs: Mapping[str, Any] = None,
+    ) -> "T_DSorDA":
         """
         Apply a function to each chunk of this DataArray. This function is experimental
         and its signature may change.

@@ -1057,7 +1057,7 @@ def test_map_blocks_kwargs(obj):
         [lambda x: x.rename({"a": "new1", "b": "new2"}), map_ds],
     ],
 )
-def map_blocks_transformations(func, obj, expected):
+def test_map_blocks_transformations(func, obj):
     with raise_if_dask_computes():
         assert_equal(xr.map_blocks(func, obj), func(obj))
 
