@@ -2,7 +2,6 @@
 publication date. Compare it against requirements/py36-min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
-import os.path
 import subprocess
 import sys
 from datetime import datetime, timedelta

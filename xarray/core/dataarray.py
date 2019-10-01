@@ -1,5 +1,4 @@
 import functools
-import sys
 import warnings
 from collections import OrderedDict
 from numbers import Number
