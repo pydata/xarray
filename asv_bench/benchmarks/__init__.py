@@ -16,7 +16,7 @@ def parameterized(names, params):
 
 def requires_dask():
     try:
-        import dask  # noqa
+        import dask  # noqa: F401
     except ImportError:
         raise NotImplementedError
 

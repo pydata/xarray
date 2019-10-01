@@ -331,7 +331,7 @@ class ExplicitIndexer:
     __slots__ = ("_key",)
 
     def __init__(self, key):
-        if type(self) is ExplicitIndexer:  # noqa
+        if type(self) is ExplicitIndexer:
             raise TypeError("cannot instantiate base ExplicitIndexer objects")
         self._key = tuple(key)
 
@@ -1261,7 +1261,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             array = self.array
             # We want 0d slices rather than scalars. This is achieved by
             # appending an ellipsis (see
-            # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes).  # noqa
+            # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes).
             key = key.tuple + (Ellipsis,)
         else:
             raise TypeError("unexpected key type: {}".format(type(key)))
