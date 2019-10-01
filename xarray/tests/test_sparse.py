@@ -176,7 +176,7 @@ def test_variable_property(prop):
         ),
         param(
             do("pad_with_fill_value", pad_widths={"x": (1, 1)}, fill_value=5),
-            True,  # noqa
+            True,
             marks=xfail(reason="Missing implementation for np.pad"),
         ),
         (do("prod"), False),
@@ -430,7 +430,7 @@ def test_dataarray_property(prop):
             ),
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
-        ),  # noqa
+        ),
         param(do("interpolate_na", "x"), True, marks=xfail(reason="Coercion to dense")),
         param(
             do("isin", [1, 2, 3]),
@@ -477,13 +477,13 @@ def test_dataarray_property(prop):
             ),
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
-        ),  # noqa
+        ),
         (do("roll", x=2, roll_coords=True), True),
         param(
             do("sel", x=[0, 1, 2], y=[2, 3]),
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
-        ),  # noqa
+        ),
         param(
             do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
         ),
@@ -495,7 +495,7 @@ def test_dataarray_property(prop):
             do("where", make_xrarray({"x": 10, "y": 5}) > 0.5),
             False,
             marks=xfail(reason="Conversion of dense to sparse when using sparse mask"),
-        ),  # noqa
+        ),
     ],
     ids=repr,
 )
