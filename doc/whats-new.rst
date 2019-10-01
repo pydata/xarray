@@ -29,7 +29,7 @@ Enhancements
 
       >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
-      4 groups with labels 'DJF', 'JJA', 'MAM', 'SON
+      4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
 Bug fixes
 ~~~~~~~~~
