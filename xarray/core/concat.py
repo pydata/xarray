@@ -315,16 +315,10 @@ def _dataset_concat(
     if variables_to_merge:
         to_merge = {var: [] for var in variables_to_merge}
 
-        for ds in datasets:
-            absent_merge_vars = variables_to_merge - set(ds.variables)
-            if absent_merge_vars:
-                raise ValueError(
-                    "variables %r are present in some datasets but not others. "
-                    % absent_merge_vars
-                )
-
-            for var in variables_to_merge:
-                to_merge[var].append(ds.variables[var])
+        for var in variables_to_merge:
+            for ds in datasets:
+                if var in ds:
+                    to_merge[var].append(ds.variables[var])
 
         for var in variables_to_merge:
             result_vars[var] = unique_variable(

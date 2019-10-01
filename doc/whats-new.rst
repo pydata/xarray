@@ -27,6 +27,8 @@ Bug fixes
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays.
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Make :py:func:`~xarray.concat` more robust when merging variables present in some datasets but
+  not others (:issue:`508`). By `Deepak Cherian <http://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
