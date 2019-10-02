@@ -25,7 +25,7 @@ from xarray import (
     open_dataset,
     set_options,
 )
-from xarray.core import dtypes, indexing, npcompat, utils
+from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
@@ -5534,7 +5534,7 @@ def test_differentiate(dask, edge_order):
     # along x
     actual = da.differentiate("x", edge_order)
     expected_x = xr.DataArray(
-        npcompat.gradient(da, da["x"], axis=0, edge_order=edge_order),
+        np.gradient(da, da["x"], axis=0, edge_order=edge_order),
         dims=da.dims,
         coords=da.coords,
     )
@@ -5549,7 +5549,7 @@ def test_differentiate(dask, edge_order):
     # along y
     actual = da.differentiate("y", edge_order)
     expected_y = xr.DataArray(
-        npcompat.gradient(da, da["y"], axis=1, edge_order=edge_order),
+        np.gradient(da, da["y"], axis=1, edge_order=edge_order),
         dims=da.dims,
         coords=da.coords,
     )
@@ -5592,7 +5592,7 @@ def test_differentiate_datetime(dask):
     # along x
     actual = da.differentiate("x", edge_order=1, datetime_unit="D")
     expected_x = xr.DataArray(
-        npcompat.gradient(
+        np.gradient(
             da, da["x"].variable._to_numeric(datetime_unit="D"), axis=0, edge_order=1
         ),
         dims=da.dims,
@@ -5629,7 +5629,7 @@ def test_differentiate_cftime(dask):
         da = da.chunk({"time": 4})
 
     actual = da.differentiate("time", edge_order=1, datetime_unit="D")
-    expected_data = npcompat.gradient(
+    expected_data = np.gradient(
         da, da["time"].variable._to_numeric(datetime_unit="D"), axis=0, edge_order=1
     )
     expected = xr.DataArray(expected_data, coords=da.coords, dims=da.dims)
