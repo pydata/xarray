@@ -32,7 +32,7 @@ For netCDF and IO
   for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
   (ffi1001) and many other.
 - `rasterio <https://github.com/mapbox/rasterio>`__: for reading GeoTiffs and
-  other gridded raster datasets. (version 1.0 or later)
+  other gridded raster datasets.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
 - `cfgrib <https://github.com/ecmwf/cfgrib>`__: for reading GRIB files via the
@@ -41,30 +41,66 @@ For netCDF and IO
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-- `scipy <http://scipy.org/>`__: necessary to enable the interpolation features for xarray objects
+- `scipy <http://scipy.org/>`__: necessary to enable the interpolation features for
+  xarray objects
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
-  (1.1 or later)
 - `numbagg <https://github.com/shoyer/numbagg>`_: for exponential rolling
   window operations
 
 For parallel computing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-- `dask.array <http://dask.pydata.org>`__ (0.16 or later): required for
-  :ref:`dask`.
+- `dask.array <http://dask.pydata.org>`__: required for :ref:`dask`.
 
 For plotting
 ~~~~~~~~~~~~
 
 - `matplotlib <http://matplotlib.org/>`__: required for :ref:`plotting`
-  (1.5 or later)
-- `cartopy <http://scitools.org.uk/cartopy/>`__: recommended for
-  :ref:`plot-maps`
+- `cartopy <http://scitools.org.uk/cartopy/>`__: recommended for :ref:`plot-maps`
 - `seaborn <https://stanford.edu/~mwaskom/software/seaborn/>`__: for better
   color palettes
 - `nc-time-axis <https://github.com/SciTools/nc-time-axis>`__: for plotting
-  cftime.datetime objects (1.2.0 or later)
+  cftime.datetime objects
+
+Alternative data containers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- `sparse <https://sparse.pydata.org/>`_: for sparse arrays
+- Any numpy-like objects that support
+  `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_.
+  Note that while such libraries theoretically should work, they are untested.
+  Integration tests are in the process of being written for individual libraries.
+
+
+.. _mindeps_policy:
+
+Minimum dependency versions
+---------------------------
+xarray adopts a rolling policy regarding the minimum supported version of its
+dependencies:
+
+- **Python:** 42 months
+  (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
+- **numpy:** 24 months
+  (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
+- **pandas:** 24 months
+- **scipy:** 24 months
+- **sparse** and other libraries that rely on
+  `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
+  for integration: very latest available versions only, until the technology will have
+  matured. This extends to dask when used in conjunction with any of these libraries.
+  numpy >=1.17.
+- **all other libraries:** 6 months
+
+The above should be interpreted as *the minor version (X.Y) initially published no more
+than N months ago*. Patch versions (x.y.Z) are not pinned, and only the latest available
+at the moment of publishing the xarray release is guaranteed to work.
+
+You can see the actual minimum tested versions:
+- `For NEP-18 libraries
+  <https://github.com/pydata/xarray/blob/master/ci/requirements/py36-min-nep18.yml>`_
+- `For everything else
+  <https://github.com/pydata/xarray/blob/master/ci/requirements/py36-min-all-deps.yml>`_
 
 
 Instructions
@@ -93,13 +129,9 @@ pandas) installed first. Then, install xarray with pip::
 Testing
 -------
 
-To run the test suite after installing xarray, first install (via pypi or conda)
-
-- `py.test <https://pytest.org>`__: Simple unit testing library
-- `mock <https://pypi.python.org/pypi/mock>`__: additional testing library required for python version 2
-
-and run
-``py.test --pyargs xarray``.
+To run the test suite after installing xarray, install (via pypi or conda) `py.test
+<https://pytest.org>`__ and run ``pytest`` in the root directory of the xarray
+repository.
 
 
 Performance Monitoring
@@ -110,7 +142,8 @@ A fixed-point performance monitoring of (a part of) our codes can be seen on
 
 To run these benchmark tests in a local machine, first install
 
-- `airspeed-velocity <https://asv.readthedocs.io/en/latest/>`__: a tool for benchmarking Python packages over their lifetime.
+- `airspeed-velocity <https://asv.readthedocs.io/en/latest/>`__: a tool for benchmarking
+  Python packages over their lifetime.
 
 and run
 ``asv run  # this will install some conda environments in ./.asv/envs``
