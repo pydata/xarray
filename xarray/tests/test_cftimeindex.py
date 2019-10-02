@@ -850,7 +850,7 @@ def test_strftime_of_cftime_array(calendar):
     date_format = "%Y%m%d%H%M"
     cf_values = xr.cftime_range("2000", periods=5, calendar=calendar)
     dt_values = pd.date_range("2000", periods=5)
-    expected = dt_values.strftime(date_format)
+    expected = pd.Index(dt_values.strftime(date_format))
     result = cf_values.strftime(date_format)
     assert result.equals(expected)
 
