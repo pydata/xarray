@@ -17,11 +17,7 @@ from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
 from xarray.plot.utils import import_seaborn
 
-try:
-    from pandas.testing import assert_frame_equal
-except ImportError:
-    # old location, for pandas < 0.20
-    from pandas.util.testing import assert_frame_equal  # noqa: F401
+from pandas.testing import assert_frame_equal  # noqa: F401
 
 # import mpl and change the backend before other mpl imports
 try:

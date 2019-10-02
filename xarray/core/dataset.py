@@ -41,7 +41,6 @@ from . import (
     formatting,
     groupby,
     ops,
-    pdcompat,
     resample,
     rolling,
     utils,
@@ -3170,13 +3169,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # consider dropping levels that are unused?
         levels = [self.get_index(dim) for dim in dims]
-        if LooseVersion(pd.__version__) < LooseVersion("0.19.0"):
-            # RangeIndex levels in a MultiIndex are broken for appending in
-            # pandas before v0.19.0
-            levels = [
-                pd.Int64Index(level) if isinstance(level, pd.RangeIndex) else level
-                for level in levels
-            ]
         idx = utils.multiindex_from_product_levels(levels, names=dims)
         variables[new_dim] = IndexVariable(new_dim, idx)
 
@@ -3344,12 +3336,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _unstack_once(self, dim: Hashable) -> "Dataset":
         index = self.get_index(dim)
-        # GH2619. For MultiIndex, we need to call remove_unused.
-        if LooseVersion(pd.__version__) >= "0.20":
-            index = index.remove_unused_levels()
-        else:  # for pandas 0.19
-            index = pdcompat.remove_unused_levels(index)
-
+        index = index.remove_unused_levels()
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
 
         # take a shortcut in case the MultiIndex was not modified.

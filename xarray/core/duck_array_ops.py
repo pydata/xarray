@@ -118,7 +118,7 @@ def notnull(data):
 
 transpose = _dask_or_eager_func("transpose")
 _where = _dask_or_eager_func("where", array_args=slice(3))
-isin = _dask_or_eager_func("isin", eager_module=npcompat, array_args=slice(2))
+isin = _dask_or_eager_func("isin", array_args=slice(2))
 take = _dask_or_eager_func("take")
 broadcast_to = _dask_or_eager_func("broadcast_to")
 
@@ -137,7 +137,7 @@ einsum = _dask_or_eager_func(
 def gradient(x, coord, axis, edge_order):
     if isinstance(x, dask_array_type):
         return dask_array.gradient(x, coord, axis=axis, edge_order=edge_order)
-    return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
+    return np.gradient(x, coord, axis=axis, edge_order=edge_order)
 
 
 def trapz(y, x, axis):
