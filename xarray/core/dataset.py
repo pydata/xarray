@@ -1710,13 +1710,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         chunked : xarray.Dataset
         """
-        try:
-            from dask.base import tokenize
-        except ImportError:
-            # raise the usual error if dask is entirely missing
-            import dask  # noqa
-
-            raise ImportError("xarray requires dask version 0.9 or newer")
+        from dask.base import tokenize
 
         if isinstance(chunks, Number):
             chunks = dict.fromkeys(self.dims, chunks)

@@ -4186,12 +4186,12 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     assert_equal(actual, da["time"])
 
 
+@requires_dask
 @pytest.mark.parametrize("name", ("mean", "count"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
 def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
-    pytest.importorskip("dask.array")
     # dask version
     rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()

@@ -116,10 +116,7 @@ set_options(warn_for_unclosed_files=True)
 if has_dask:
     import dask
 
-    if LooseVersion(dask.__version__) < "0.18":
-        dask.set_options(get=dask.get)
-    else:
-        dask.config.set(scheduler="single-threaded")
+    dask.config.set(scheduler="single-threaded")
 
 flaky = pytest.mark.flaky
 network = pytest.mark.network

@@ -46,16 +46,9 @@ class CountingScheduler:
         return dask.get(dsk, keys, **kwargs)
 
 
-def _set_dask_scheduler(scheduler=dask.get):
-    """ Backwards compatible way of setting scheduler. """
-    if LooseVersion(dask.__version__) >= LooseVersion("0.18.0"):
-        return dask.config.set(scheduler=scheduler)
-    return dask.set_options(get=scheduler)
-
-
 def raise_if_dask_computes(max_computes=0):
     scheduler = CountingScheduler(max_computes)
-    return _set_dask_scheduler(scheduler)
+    return dask.config.set(scheduler=scheduler)
 
 
 def test_raise_if_dask_computes():
@@ -67,9 +60,7 @@ def test_raise_if_dask_computes():
 
 class DaskTestCase:
     def assertLazyAnd(self, expected, actual, test):
-        with _set_dask_scheduler(dask.get):
-            # dask.get is the syncronous scheduler, which get's set also by
-            # dask.config.set(scheduler="syncronous") in current versions.
+        with dask.config.set(scheduler="synchronous"):
             test(actual, expected)
 
         if isinstance(actual, Dataset):
@@ -512,10 +503,7 @@ class TestDataArrayAndDataset(DaskTestCase):
             count[0] += 1
             return dask.get(*args, **kwargs)
 
-        if dask.__version__ < "0.19.4":
-            ds.load(get=counting_get)
-        else:
-            ds.load(scheduler=counting_get)
+        ds.load(scheduler=counting_get)
 
         assert count[0] == 1
 
@@ -838,8 +826,6 @@ def build_dask_array(name):
     )
 
 
-# test both the perist method and the dask.persist function
-# the dask.persist function requires a new version of dask
 @pytest.mark.parametrize(
     "persist", [lambda x: x.persist(), lambda x: dask.persist(x)[0]]
 )
@@ -892,13 +878,7 @@ def test_dataarray_with_dask_coords():
 def test_basic_compute():
     ds = Dataset({"foo": ("x", range(5)), "bar": ("x", range(5))}).chunk({"x": 2})
     for get in [dask.threaded.get, dask.multiprocessing.get, dask.local.get_sync, None]:
-        with (
-            dask.config.set(scheduler=get)
-            if LooseVersion(dask.__version__) >= LooseVersion("0.19.4")
-            else dask.config.set(scheduler=get)
-            if LooseVersion(dask.__version__) >= LooseVersion("0.18.0")
-            else dask.set_options(get=get)
-        ):
+        with dask.config.set(scheduler=get):
             ds.compute()
             ds.foo.compute()
             ds.foo.variable.compute()

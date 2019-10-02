@@ -657,7 +657,7 @@ def apply_variable_ufunc(
 def _apply_blockwise(
     func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None
 ):
-    from .dask_array_compat import blockwise
+    import dask.array
 
     if signature.num_outputs > 1:
         raise NotImplementedError(
@@ -720,7 +720,7 @@ def _apply_blockwise(
         trimmed_dims = dims[-ndim:] if ndim else ()
         blockwise_args.extend([arg, trimmed_dims])
 
-    return blockwise(
+    return dask.array.blockwise(
         func,
         out_ind,
         *blockwise_args,
@@ -1171,25 +1171,6 @@ def dot(*arrays, dims=None, **kwargs):
         [d for d in arr.dims if d not in broadcast_dims] for arr in arrays
     ]
     output_core_dims = [tuple(d for d in all_dims if d not in dims + broadcast_dims)]
-
-    # older dask than 0.17.4, we use tensordot if possible.
-    if isinstance(arr.data, dask_array_type):
-        import dask
-
-        if LooseVersion(dask.__version__) < LooseVersion("0.17.4"):
-            if len(broadcast_dims) == 0 and len(arrays) == 2:
-                axes = [
-                    [arr.get_axis_num(d) for d in arr.dims if d in dims]
-                    for arr in arrays
-                ]
-                return apply_ufunc(
-                    duck_array_ops.tensordot,
-                    *arrays,
-                    dask="allowed",
-                    input_core_dims=input_core_dims,
-                    output_core_dims=output_core_dims,
-                    kwargs={"axes": axes}
-                )
 
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position

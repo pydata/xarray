@@ -17,10 +17,8 @@ from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array
-    from . import dask_array_compat
 except ImportError:
     dask_array = None  # type: ignore
-    dask_array_compat = None  # type: ignore
 
 
 def _dask_or_eager_func(
@@ -120,9 +118,7 @@ def notnull(data):
 
 transpose = _dask_or_eager_func("transpose")
 _where = _dask_or_eager_func("where", array_args=slice(3))
-isin = _dask_or_eager_func(
-    "isin", eager_module=npcompat, dask_module=dask_array_compat, array_args=slice(2)
-)
+isin = _dask_or_eager_func("isin", eager_module=npcompat, array_args=slice(2))
 take = _dask_or_eager_func("take")
 broadcast_to = _dask_or_eager_func("broadcast_to")
 
@@ -140,7 +136,7 @@ einsum = _dask_or_eager_func(
 
 def gradient(x, coord, axis, edge_order):
     if isinstance(x, dask_array_type):
-        return dask_array_compat.gradient(x, coord, axis=axis, edge_order=edge_order)
+        return dask_array.gradient(x, coord, axis=axis, edge_order=edge_order)
     return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
 
 
