@@ -912,7 +912,7 @@ def open_mfdataset(
             # Remove this after deprecation cycle from #2616 is complete
             basic_msg = dedent(
                 """\
-            In xarray version 0.14 the default behaviour of `open_mfdataset`
+            In xarray version 0.15 the default behaviour of `open_mfdataset`
             will change. To retain the existing behavior, pass
             combine='nested'. To use future default behavior, pass
             combine='by_coords'. See

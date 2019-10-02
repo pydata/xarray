@@ -492,7 +492,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if compat is not None:
             warnings.warn(
                 "The `compat` argument to Dataset is deprecated and will be "
-                "removed in 0.14."
+                "removed in 0.15."
                 "Instead, use `merge` to control how variables are combined",
                 FutureWarning,
                 stacklevel=2,
