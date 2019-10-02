@@ -53,7 +53,6 @@ from . import (
     requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
-    requires_pathlib,
     requires_pseudonetcdf,
     requires_pydap,
     requires_pynio,
@@ -2753,7 +2752,6 @@ class TestDask(DatasetIOBase):
                                 (2, 2, 2, 2),
                             )
 
-    @requires_pathlib
     def test_open_mfdataset_pathlib(self):
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp1:
@@ -2767,7 +2765,6 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(original, actual)
 
-    @requires_pathlib
     def test_open_mfdataset_2d_pathlib(self):
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
         with create_tmp_file() as tmp1:
@@ -2902,7 +2899,6 @@ class TestDask(DatasetIOBase):
         with raises_regex(TypeError, "supports writing Dataset"):
             save_mfdataset([da], ["dataarray"])
 
-    @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({"foo": ("x", np.random.randn(10))})
         datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
@@ -4230,7 +4226,6 @@ class TestDataArrayToNetCDF:
         output = data.to_netcdf()
         assert isinstance(output, bytes)
 
-    @requires_pathlib
     def test_dataarray_to_netcdf_no_name_pathlib(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)))
 
