@@ -91,9 +91,6 @@ jobs:
   - template: ci/azure/install.yml
   - bash: |
       source activate xarray-tests
-      which python
-      which conda
-      python -c 'import sys; print(sys.path)'
       python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
       python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
     displayName: minimum versions policy
