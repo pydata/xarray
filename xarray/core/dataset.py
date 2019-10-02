@@ -1960,7 +1960,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
-            Method to use for inexact matches (requires pandas>=0.16):
+            Method to use for inexact matches:
 
             * None (default): only exact matches
             * pad / ffill: propagate last valid index value forward
@@ -1970,7 +1970,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         drop : bool, optional
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
@@ -2200,12 +2199,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -2261,12 +2259,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed

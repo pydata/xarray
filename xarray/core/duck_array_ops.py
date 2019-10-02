@@ -129,9 +129,7 @@ array_all = _dask_or_eager_func("all")
 array_any = _dask_or_eager_func("any")
 
 tensordot = _dask_or_eager_func("tensordot", array_args=slice(2))
-einsum = _dask_or_eager_func(
-    "einsum", array_args=slice(1, None), requires_dask="0.17.3"
-)
+einsum = _dask_or_eager_func("einsum", array_args=slice(1, None))
 
 
 def gradient(x, coord, axis, edge_order):

@@ -1183,12 +1183,11 @@ class DataArray(AbstractArray, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -1249,7 +1248,7 @@ class DataArray(AbstractArray, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
