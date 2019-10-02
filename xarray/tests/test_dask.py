@@ -884,9 +884,6 @@ def test_basic_compute():
             ds.foo.variable.compute()
 
 
-@pytest.mark.skipif(
-    LooseVersion(dask.__version__) < LooseVersion("0.20.0"), reason="needs newer dask"
-)
 def test_dask_layers_and_dependencies():
     ds = Dataset({"foo": ("x", range(5)), "bar": ("x", range(5))}).chunk()
 
