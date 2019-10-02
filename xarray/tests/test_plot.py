@@ -25,7 +25,6 @@ from . import (
     raises_regex,
     requires_cftime,
     requires_matplotlib,
-    requires_matplotlib2,
     requires_nc_time_axis,
     requires_seaborn,
 )
@@ -360,7 +359,6 @@ class TestPlot(PlotTestCase):
             d[0].plot(x="x", y="y", col="z", ax=plt.gca())
 
     @pytest.mark.slow
-    @requires_matplotlib2
     def test_subplot_kws(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=["y", "x", "z"])

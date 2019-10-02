@@ -51,7 +51,6 @@ from . import (
     requires_cfgrib,
     requires_cftime,
     requires_dask,
-    requires_h5fileobj,
     requires_h5netcdf,
     requires_netCDF4,
     requires_pathlib,
@@ -2334,7 +2333,7 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding["compression_opts"] is None
 
 
-@requires_h5fileobj
+@requires_h5netcdf
 class TestH5NetCDFFileObject(TestH5NetCDFData):
     engine = "h5netcdf"
 

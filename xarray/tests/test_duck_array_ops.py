@@ -28,7 +28,6 @@ from . import (
     arm_xfail,
     assert_array_equal,
     has_dask,
-    has_np113,
     raises_regex,
     requires_cftime,
     requires_dask,
@@ -353,7 +352,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         warnings.filterwarnings("ignore", "All-NaN slice")
         warnings.filterwarnings("ignore", "invalid value encountered in")
 
-        if has_np113 and da.dtype.kind == "O" and skipna:
+        if da.dtype.kind == "O" and skipna:
             # Numpy < 1.13 does not handle object-type array.
             try:
                 if skipna:

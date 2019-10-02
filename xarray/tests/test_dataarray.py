@@ -26,7 +26,6 @@ from xarray.tests import (
     requires_bottleneck,
     requires_dask,
     requires_iris,
-    requires_np113,
     requires_numbagg,
     requires_scipy,
     requires_sparse,
@@ -4297,7 +4296,6 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-@requires_np113
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
