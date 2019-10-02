@@ -1453,8 +1453,25 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        renamed : Dataset
+        swapped : DataArray
             DataArray with swapped dimensions.
+
+        Examples
+        --------
+        >>> arr = xr.DataArray(data=[0, 1], dims="x",
+                               coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        >>> arr
+        <xarray.DataArray (x: 2)>
+        array([0, 1])
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+            y        (x) int64 0 1
+        >>> arr.swap_dims({"x": "y"})
+        <xarray.DataArray (y: 2)>
+        array([0, 1])
+        Coordinates:
+            x        (y) <U1 'a' 'b'
+          * y        (y) int64 0 1
 
         See Also
         --------
@@ -2227,7 +2244,7 @@ class DataArray(AbstractArray, DataWithCoords):
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
-    def to_netcdf(self, *args, **kwargs) -> Optional["Delayed"]:
+    def to_netcdf(self, *args, **kwargs) -> Union[bytes, "Delayed", None]:
         """Write DataArray contents to a netCDF file.
 
         All parameters are passed directly to `xarray.Dataset.to_netcdf`.
@@ -2541,10 +2558,12 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> d = DataArray([[1, 2], [3, 4]])
 
         For convenience just call this directly
+
         >>> d.plot()
 
         Or use it as a namespace to use xarray.plot functions as
         DataArray methods
+
         >>> d.plot.imshow()  # equivalent to xarray.plot.imshow(d)
 
         """
@@ -3035,7 +3054,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     # this needs to be at the end, or mypy will confuse with `str`
-    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names  # noqa
+    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
 
 

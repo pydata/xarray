@@ -12,7 +12,7 @@ and aspect ratio.
 For more details see `this discussion`_ on github.
 
 .. _this discussion: https://github.com/pydata/xarray/issues/1397#issuecomment-299190567
-"""  # noqa
+"""
 
 
 import cartopy.crs as ccrs

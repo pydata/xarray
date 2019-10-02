@@ -11,7 +11,7 @@ steps:
 # https://github.com/microsoft/azure-pipelines-tasks/issues/9302
 - bash: |
     source activate xarray-tests
-    pytest xarray \
+    pytest \
     --junitxml=junit/test-results.xml \
     --cov=xarray \
     --cov-report=xml \
@@ -19,7 +19,8 @@ steps:
   displayName: Run tests
 
 - bash: |
-    bash <(curl https://codecov.io/bash) -t 688f4d53-31bb-49b5-8370-4ce6f792cf3d
+    curl https://codecov.io/bash > codecov.sh
+    bash codecov.sh -t 688f4d53-31bb-49b5-8370-4ce6f792cf3d
   displayName: Upload coverage to codecov.io
 
 # TODO: publish coverage results to Azure, once we can merge them across

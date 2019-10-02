@@ -13,8 +13,8 @@ from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray  # noqa: F401
-    from .dataset import Dataset  # noqa: F401
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 def _get_joiner(join):
@@ -116,6 +116,136 @@ def align(
     ValueError
         If any dimensions without labels on the arguments have different sizes,
         or a different size than the size of the aligned dimension labels.
+
+    Examples
+    --------
+
+    >>> import xarray as xr
+    >>> x = xr.DataArray([[25, 35], [10, 24]], dims=('lat', 'lon'),
+    ...              coords={'lat': [35., 40.], 'lon': [100., 120.]})
+    >>> y = xr.DataArray([[20, 5], [7, 13]], dims=('lat', 'lon'),
+    ...              coords={'lat': [35., 42.], 'lon': [100., 120.]})
+
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[25, 35],
+           [10, 24]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> y
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[20,  5],
+           [ 7, 13]])
+    Coordinates:
+    * lat      (lat) float64 35.0 42.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y)
+    >>> a
+    <xarray.DataArray (lat: 1, lon: 2)>
+    array([[25, 35]])
+    Coordinates:
+    * lat      (lat) float64 35.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 1, lon: 2)>
+    array([[20,  5]])
+    Coordinates:
+    * lat      (lat) float64 35.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='outer')
+    >>> a
+    <xarray.DataArray (lat: 3, lon: 2)>
+    array([[25., 35.],
+           [10., 24.],
+           [nan, nan]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 3, lon: 2)>
+    array([[20.,  5.],
+           [nan, nan],
+           [ 7., 13.]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='outer', fill_value=-999)
+    >>> a
+    <xarray.DataArray (lat: 3, lon: 2)>
+    array([[  25,   35],
+           [  10,   24],
+           [-999, -999]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 3, lon: 2)>
+    array([[  20,    5],
+           [-999, -999],
+           [   7,   13]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='left')
+    >>> a
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[25, 35],
+           [10, 24]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[20.,  5.],
+           [nan, nan]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='right')
+    >>> a
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[25., 35.],
+           [nan, nan]])
+    Coordinates:
+    * lat      (lat) float64 35.0 42.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[20,  5],
+           [ 7, 13]])
+    Coordinates:
+    * lat      (lat) float64 35.0 42.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='exact')
+    Traceback (most recent call last):
+    ...
+        "indexes along dimension {!r} are not equal".format(dim)
+    ValueError: indexes along dimension 'lat' are not equal
+
+    >>> a, b = xr.align(x, y, join='override')
+    >>> a
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[25, 35],
+           [10, 24]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[20,  5],
+           [ 7, 13]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+
     """
     if indexes is None:
         indexes = {}
@@ -220,8 +350,8 @@ def deep_align(
 
     This function is not public API.
     """
-    from .dataarray import DataArray  # noqa: F811
-    from .dataset import Dataset  # noqa: F811
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     if indexes is None:
         indexes = {}
@@ -285,7 +415,7 @@ def deep_align(
 
 
 def reindex_like_indexers(
-    target: Union["DataArray", "Dataset"], other: Union["DataArray", "Dataset"]
+    target: "Union[DataArray, Dataset]", other: "Union[DataArray, Dataset]"
 ) -> Dict[Hashable, pd.Index]:
     """Extract indexers to align target with other.
 
@@ -377,7 +507,7 @@ def reindex_variables(
     new_indexes : OrderedDict
         Dict of indexes associated with the reindexed variables.
     """
-    from .dataarray import DataArray  # noqa: F811
+    from .dataarray import DataArray
 
     # create variables for the new dataset
     reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
@@ -474,8 +604,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 
 def _broadcast_helper(arg, exclude, dims_map, common_coords):
 
-    from .dataarray import DataArray  # noqa: F811
-    from .dataset import Dataset  # noqa: F811
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     def _set_dims(var):
         # Add excluded dims to a copy of dims_map
