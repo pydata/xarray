@@ -3,20 +3,12 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  # MINIMUM VERSIONS POLICY
-  # -----------------------
-  # Python         : 42 months (NEP-29)
-  # numpy          : 24 months (NEP-29)
-  # pandas         : 24 months
-  # scipy          : 24 months
-  # NEP18 packages : latest available only
-  # everything else: 6 months
-  #
-  # All the above must be interpreted as
-  # "the minor version (X.Y) initially published no more than N months ago".
-  # Patch versions (x.y.Z) should never be pinned.
-  #
+  # MINIMUM VERSIONS POLICY: see doc/installing.rst
   # Run ci/min_deps_check.py to verify that this file respects the policy.
+
+  # When upgrading python, numpy, or pandas, must also change
+  # - doc/installing.rst
+  # - setup.py
 
   - python=3.6
   - black
