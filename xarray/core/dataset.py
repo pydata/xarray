@@ -1063,7 +1063,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         pandas.DataFrame.copy
-        """  # noqa
+        """
         if data is None:
             variables = OrderedDict(
                 (k, v.copy(deep=deep)) for k, v in self._variables.items()
@@ -4164,7 +4164,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) float64 0.3751 1.951 1.945 0.2948 0.711 0.3948
             bar      (x) float64 1.0 2.0
-        """  # noqa
+        """
         variables = OrderedDict(
             (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
             for k, v in self.data_vars.items()
@@ -5367,7 +5367,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             temperature     (x, y, time) float64 25.86 20.82 6.954 23.13 10.25 11.68 ...
             precipitation   (x, y, time) float64 5.702 0.9422 2.075 1.178 3.284 ...
 
-        """  # noqa
+        """
         selection = []
         for var_name, variable in self.variables.items():
             has_value_flag = False

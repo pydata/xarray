@@ -2860,11 +2860,9 @@ class TestDask(DatasetIOBase):
                 ds1.to_netcdf(tmp1)
                 ds2.to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2], combine="nested") as actual:
-                    assert (
-                        actual.t.encoding["units"] == original.t.encoding["units"]
-                    )  # noqa
-                    assert actual.t.encoding["units"] == ds1.t.encoding["units"]  # noqa
-                    assert actual.t.encoding["units"] != ds2.t.encoding["units"]  # noqa
+                    assert actual.t.encoding["units"] == original.t.encoding["units"]
+                    assert actual.t.encoding["units"] == ds1.t.encoding["units"]
+                    assert actual.t.encoding["units"] != ds2.t.encoding["units"]
 
     def test_preprocess_mfdataset(self):
         original = Dataset({"foo": ("x", np.random.randn(10))})

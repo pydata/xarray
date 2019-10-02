@@ -85,7 +85,7 @@ Learn more
 - Issue tracker: http://github.com/pydata/xarray/issues
 - Source code: http://github.com/pydata/xarray
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
-"""  # noqa
+"""
 
 
 setup(

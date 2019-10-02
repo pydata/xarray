@@ -485,32 +485,32 @@ class TestDataArray:
         assert_identical(self.ds["x"], x)
         assert_identical(self.ds["y"], y)
 
-        I = ReturnItem()  # noqa
+        arr = ReturnItem()
         for i in [
-            I[:],
-            I[...],
-            I[x.values],
-            I[x.variable],
-            I[x],
-            I[x, y],
-            I[x.values > -1],
-            I[x.variable > -1],
-            I[x > -1],
-            I[x > -1, y > -1],
+            arr[:],
+            arr[...],
+            arr[x.values],
+            arr[x.variable],
+            arr[x],
+            arr[x, y],
+            arr[x.values > -1],
+            arr[x.variable > -1],
+            arr[x > -1],
+            arr[x > -1, y > -1],
         ]:
             assert_equal(self.dv, self.dv[i])
         for i in [
-            I[0],
-            I[:, 0],
-            I[:3, :2],
-            I[x.values[:3]],
-            I[x.variable[:3]],
-            I[x[:3]],
-            I[x[:3], y[:4]],
-            I[x.values > 3],
-            I[x.variable > 3],
-            I[x > 3],
-            I[x > 3, y > 3],
+            arr[0],
+            arr[:, 0],
+            arr[:3, :2],
+            arr[x.values[:3]],
+            arr[x.variable[:3]],
+            arr[x[:3]],
+            arr[x[:3], y[:4]],
+            arr[x.values > 3],
+            arr[x.variable > 3],
+            arr[x > 3],
+            arr[x > 3, y > 3],
         ]:
             assert_array_equal(self.v[i], self.dv[i])
 

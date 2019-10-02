@@ -100,7 +100,7 @@ class VariableSubclassobjects:
         ind = Variable(("a", "b"), [[0, 1], [0, 1]])
         v_new = v[ind]
         assert v_new.dims == ("a", "b")
-        expected = np.array(v._data)[([0, 1], [0, 1]),]  # noqa
+        expected = np.array(v._data)[([0, 1], [0, 1]), ...]
         assert_array_equal(v_new, expected)
 
         # boolean indexing
