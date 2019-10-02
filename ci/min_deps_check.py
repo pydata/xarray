@@ -4,6 +4,7 @@ policy on obsolete dependencies is being followed. Print a pretty report :)
 """
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Dict, Iterator, Tuple
 
@@ -67,8 +68,6 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
 
     Return map of {(major version, minor version): publication date}
     """
-    print("Analyzing %s..." % pkg)
-
     stdout = subprocess.check_output(
         ["conda", "search", pkg, "--info", "-c", "defaults", "-c", "conda-forge"]
     )
@@ -110,16 +109,28 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
 
 
 def process_pkg(
-    pkg: str, req_major: int, req_minor: int, versions: Dict[Tuple[int, int], datetime]
-) -> list:
+    pkg: str, req_major: int, req_minor: int
+) -> Tuple[str, int, int, str, int, int, str, str]:
     """Compare package version from requirements file to available versions in conda.
-    Return row to build pandas dataframe.
+    Return row to build pandas dataframe:
+
+    - package name
+    - major version in requirements file
+    - minor version in requirements file
+    - publication date of version in requirements file (YYYY-MM-DD)
+    - major version suggested by policy
+    - minor version suggested by policy
+    - publication date of version suggested by policy (YYYY-MM-DD)
+    - status ("<", "=", "> (!)")
     """
+    print("Analyzing %s..." % pkg)
+    versions = query_conda(pkg)
+
     try:
         req_published = versions[req_major, req_minor]
     except KeyError:
         error("not found in conda: " + pkg)
-        return [pkg, req_major, req_minor, "-", 0, 0, "-", "(!)"]
+        return pkg, req_major, req_minor, "-", 0, 0, "-", "(!)"
 
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
     policy_published = datetime.now() - timedelta(days=policy_months * 30)
@@ -142,7 +153,7 @@ def process_pkg(
     else:
         status = "="
 
-    return [
+    return (
         pkg,
         req_major,
         req_minor,
@@ -151,15 +162,18 @@ def process_pkg(
         policy_minor,
         policy_published_actual.strftime("%Y-%m-%d"),
         status,
-    ]
+    )
 
 
 def main() -> None:
     fname = sys.argv[1]
-    rows = [
-        process_pkg(pkg, major, minor, query_conda(pkg))
-        for pkg, major, minor in parse_requirements(fname)
-    ]
+    with ThreadPoolExecutor(8) as ex:
+        futures = [
+            ex.submit(process_pkg, pkg, major, minor)
+            for pkg, major, minor in parse_requirements(fname)
+        ]
+        rows = [f.result() for f in futures]
+
     print("Package       Required          Policy            Status")
     print("------------- ----------------- ----------------- ------")
     fmt = "{:13} {:>1d}.{:<2d} ({:10}) {:>1d}.{:<2d} ({:10}) {}"
