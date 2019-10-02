@@ -545,7 +545,7 @@ def reindex_variables(
 
         if dim in variables:
             var = variables[dim]
-            args = (var.attrs, var.encoding)  # type: tuple
+            args: tuple = (var.attrs, var.encoding)
         else:
             args = ()
         reindexed[dim] = IndexVariable((dim,), target, *args)

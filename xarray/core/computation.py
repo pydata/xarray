@@ -11,6 +11,7 @@ from typing import (
     AbstractSet,
     Any,
     Callable,
+    Hashable,
     Iterable,
     List,
     Mapping,
@@ -32,7 +33,6 @@ from .variable import Variable
 if TYPE_CHECKING:
     from .dataset import Dataset
 
-_DEFAULT_FROZEN_SET = frozenset()  # type: frozenset
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
@@ -495,8 +495,11 @@ def unified_dim_sizes(
 SLICE_NONE = slice(None)
 
 
-def broadcast_compat_data(variable, broadcast_dims, core_dims):
-    # type: (Variable, tuple, tuple) -> Any
+def broadcast_compat_data(
+    variable: Variable,
+    broadcast_dims: Tuple[Hashable, ...],
+    core_dims: Tuple[Hashable, ...],
+) -> Any:
     data = variable.data
 
     old_dims = variable.dims

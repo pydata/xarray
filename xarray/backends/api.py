@@ -963,11 +963,11 @@ def open_mfdataset(
     return combined
 
 
-WRITEABLE_STORES = {
+WRITEABLE_STORES: Dict[str, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
     "h5netcdf": backends.H5NetCDFStore,
-}  # type: Dict[str, Callable]
+}
 
 
 def to_netcdf(

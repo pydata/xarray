@@ -43,7 +43,7 @@
 import re
 from datetime import timedelta
 from functools import partial
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import numpy as np
 
@@ -73,8 +73,8 @@ def get_date_type(calendar):
 
 
 class BaseCFTimeOffset:
-    _freq = None  # type: ClassVar[str]
-    _day_option = None  # type: ClassVar[str]
+    _freq: ClassVar[Optional[str]] = None
+    _day_option: ClassVar[Optional[str]] = None
 
     def __init__(self, n=1):
         if not isinstance(n, int):
@@ -350,8 +350,8 @@ class QuarterOffset(BaseCFTimeOffset):
     """Quarter representation copied off of pandas/tseries/offsets.py
     """
 
-    _freq = None  # type: ClassVar[str]
-    _default_month = None  # type: ClassVar[int]
+    _freq: ClassVar[str]
+    _default_month: ClassVar[int]
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
@@ -447,9 +447,9 @@ class QuarterEnd(QuarterOffset):
 
 
 class YearOffset(BaseCFTimeOffset):
-    _freq = None  # type: ClassVar[str]
-    _day_option = None  # type: ClassVar[str]
-    _default_month = None  # type: ClassVar[int]
+    _freq: ClassVar[str]
+    _day_option: ClassVar[str]
+    _default_month: ClassVar[int]
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)

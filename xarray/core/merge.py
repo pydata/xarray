@@ -71,8 +71,12 @@ class MergeError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def unique_variable(name, variables, compat="broadcast_equals", equals=None):
-    # type: (Any, List[Variable], str, bool) -> Variable
+def unique_variable(
+    name: Hashable,
+    variables: List[Variable],
+    compat: str = "broadcast_equals",
+    equals: bool = None,
+) -> Variable:
     """Return the unique variable from a list of variables or raise MergeError.
 
     Parameters
@@ -281,8 +285,8 @@ def determine_coords(
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    coord_names = set()  # type: set
-    noncoord_names = set()  # type: set
+    coord_names: Set[Hashable] = set()
+    noncoord_names: Set[Hashable] = set()
 
     for variables in list_of_variable_dicts:
         if isinstance(variables, Dataset):
@@ -769,8 +773,8 @@ def dataset_merge_method(
         objs = [dataset, other]
         priority_arg = 1
     else:
-        other_overwrite = OrderedDict()  # type: MutableDatasetLike
-        other_no_overwrite = OrderedDict()  # type: MutableDatasetLike
+        other_overwrite: "MutableDatasetLike" = OrderedDict()
+        other_no_overwrite: "MutableDatasetLike" = OrderedDict()
         for k, v in other.items():
             if k in overwrite_vars:
                 other_overwrite[k] = v

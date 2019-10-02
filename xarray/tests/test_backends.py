@@ -232,8 +232,8 @@ class NetCDF3Only:
 
 
 class DatasetIOBase:
-    engine = None  # type: Optional[str]
-    file_format = None  # type: Optional[str]
+    engine: Optional[str] = None
+    file_format: Optional[str] = None
 
     def create_store(self):
         raise NotImplementedError

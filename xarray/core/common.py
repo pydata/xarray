@@ -382,7 +382,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
     ) -> MutableMapping[Hashable, T]:
-        results = SortedKeysDict()  # type: SortedKeysDict[Hashable, T]
+        results: MutableMapping[Hashable, T] = SortedKeysDict()
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)

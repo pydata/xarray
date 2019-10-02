@@ -131,8 +131,9 @@ def _get_virtual_variable(
         raise KeyError(key)
 
     split_key = key.split(".", 1)
+    var_name: Optional[str]
     if len(split_key) == 2:
-        ref_name, var_name = split_key  # type: str, Optional[str]
+        ref_name, var_name = split_key
     elif len(split_key) == 1:
         ref_name, var_name = key, None
     else:
@@ -164,7 +165,7 @@ def calculate_dimensions(variables: Mapping[Hashable, Variable]) -> "Dict[Any, i
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = {}  # type: Dict[Any, int]
+    dims: Dict[Any, int] = {}
     last_used = {}
     scalar_vars = {k for k, v in variables.items() if not v.dims}
     for k, var in variables.items():
@@ -196,15 +197,17 @@ def merge_indexes(
     Not public API. Used in Dataset and DataArray set_index
     methods.
     """
-    vars_to_replace = {}  # Dict[Any, Variable]
-    vars_to_remove = []  # type: list
+    vars_to_replace: Dict[Hashable, Variable] = {}
+    vars_to_remove: List[Hashable] = []
     error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, str) or not isinstance(var_names, Sequence):
             var_names = [var_names]
 
-        names, codes, levels = [], [], []  # type: (list, list, list)
+        names: List[Hashable] = []
+        codes: List[List[int]] = []
+        levels: List[List[int]] = []
         current_index_variable = variables.get(dim)
 
         for n in var_names:
@@ -962,7 +965,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj = self._replace(variables, indexes=new_indexes)
 
         # switch from dimension to level names, if necessary
-        dim_names = {}  # type: Dict[Hashable, str]
+        dim_names: Dict[Hashable, str] = {}
         for dim, idx in indexes.items():
             if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
                 dim_names[dim] = idx.name
@@ -1127,7 +1130,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if (var_name,) == var.dims:
                     indexes[var_name] = var.to_index()
 
-        needed_dims = set()  # type: set
+        needed_dims: Set[Hashable] = set()
         for v in variables.values():
             needed_dims.update(v.dims)
 
@@ -1664,7 +1667,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Block dimensions for this dataset's data or None if it's not a dask
         array.
         """
-        chunks = {}  # type: Dict[Hashable, Tuple[int, ...]]
+        chunks: Dict[Hashable, Tuple[int, ...]] = {}
         for v in self.variables.values():
             if v.chunks is not None:
                 for dim, c in zip(v.dims, v.chunks):
@@ -1759,7 +1762,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # all indexers should be int, slice, np.ndarrays, or Variable
-        indexers_list = []  # type: List[Tuple[Any, Union[slice, Variable]]]
+        indexers_list: List[Tuple[Any, Union[slice, Variable]]] = []
         for k, v in indexers.items():
             if isinstance(v, slice):
                 indexers_list.append((k, v))

@@ -418,7 +418,7 @@ class DataArray(AbstractArray, DataWithCoords):
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
-        dim_names = {}  # type: Dict[Any, str]
+        dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
             if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
                 dim_names[dim] = idx.name
