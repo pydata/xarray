@@ -41,6 +41,17 @@ from distutils.version import LooseVersion
 
 import pandas as pd
 
+if LooseVersion(pd.__version__) >= "0.23.4":
+    count_not_none = pd.core.common.count_not_none
+else:
+
+    def count_not_none(*args):
+        """
+        Returns the count of arguments that are not None.
+        """
+        return sum(x is not None for x in args)
+
+
 # allow ourselves to type checks for Panel even after it's removed
 if LooseVersion(pd.__version__) < "0.25.0":
     Panel = pd.Panel

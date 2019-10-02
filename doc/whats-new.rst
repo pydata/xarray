@@ -51,6 +51,8 @@ Bug fixes
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays.
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fix :meth:`Dataset.rolling_exp` on pandas < 0.23.4 (:issue:`3358`)
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Documentation
 ~~~~~~~~~~~~~
