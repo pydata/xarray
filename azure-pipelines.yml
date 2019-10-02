@@ -83,14 +83,12 @@ jobs:
     displayName: mypy type checks
 
 - job: MinimumVersionsPolicy
-  variables:
-    conda_env: min_deps_check
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
-  - template: ci/azure/install.yml
+  - template: ci/azure/add-conda-to-path.yml
   - bash: |
-      source activate xarray-tests
+      conda install -y pyyaml
       python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
       python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
     displayName: minimum versions policy
