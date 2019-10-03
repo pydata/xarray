@@ -222,6 +222,14 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
                     "Coordinates used for interpolation must be 1D, "
                     "%s is %dD." % (use_coordinate, index.ndim)
                 )
+            index = index.to_index()
+
+        # check index sorting now so we can skip it later
+        if not index.is_monotonic:
+            raise ValueError("Index must be monotonically increasing")
+
+        if not index.is_unique:
+            raise ValueError("Index must be unique")
 
         # raise if index cannot be cast to a float (e.g. MultiIndex)
         try:
@@ -233,9 +241,6 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
                 "Index must be castable to float64 to support"
                 "interpolation, got: %s" % type(index)
             )
-        # check index sorting now so we can skip it later
-        if not (np.diff(index) > 0).all():
-            raise ValueError("Index must be monotonicly increasing")
     else:
         axis = arr.get_axis_num(dim)
         index = np.arange(arr.shape[axis], dtype=np.float64)
