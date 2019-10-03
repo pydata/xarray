@@ -54,7 +54,8 @@ def make_meta(obj):
         meta = Dataset()
         for name, variable in obj.variables.items():
             meta_obj = meta_from_array(variable.data)
-            meta[name] = (variable.dims, meta_obj)
+            meta[name] = (variable.dims, meta_obj, variable.attrs)
+        meta.attrs = obj.attrs
     else:
         meta = obj
 
@@ -301,7 +302,7 @@ def map_blocks(
 
     graph = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
 
-    result = Dataset(coords=indexes)
+    result = Dataset(coords=indexes, attrs=template.attrs)
     for name, gname_l in var_key_map.items():
         dims = template[name].dims
         var_chunks = []
@@ -314,7 +315,7 @@ def map_blocks(
         data = dask.array.Array(
             graph, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
         )
-        result[name] = (dims, data)
+        result[name] = (dims, data, template[name].attrs)
 
     result = result.set_coords(template._coord_names)
 

@@ -928,9 +928,10 @@ def make_da():
         coords={"x": np.arange(10), "y": np.arange(100, 120)},
         name="a",
     ).chunk({"x": 4, "y": 5})
+    da.attrs["test"] = "test"
     da.coords["c2"] = 0.5
-    da.coords["ndcoord"] = (da.x ** 2).compute()
-    da.coords["cxy"] = da.x * da.y
+    da.coords["ndcoord"] = da.x * 2
+    da.coords["cxy"] = (da.x * da.y).chunk({"x": 4, "y": 5})
 
     return da
 
@@ -946,8 +947,9 @@ def make_ds():
     map_ds["e"] = map_ds.x + map_ds.y
     map_ds.coords["c1"] = 0.5
     map_ds.coords["cx"] = ("x", np.arange(len(map_da.x)))
+    map_ds.coords["cx"].attrs["test2"] = "test2"
     map_ds.attrs["test"] = "test"
-    map_ds["xx"] = map_ds["a"] * map_ds.y
+    map_ds.coords["xx"] = map_ds["a"] * map_ds.y
 
     return map_ds
 
@@ -1022,7 +1024,7 @@ def test_map_blocks(obj):
         actual = xr.map_blocks(func, obj)
     expected = func(obj)
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_equal(actual.compute(), expected.compute())
+    xr.testing.assert_identical(actual.compute(), expected.compute())
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
@@ -1031,7 +1033,7 @@ def test_map_blocks_convert_args_to_list(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(operator.add, obj, [10])
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_equal(actual.compute(), expected.compute())
+    xr.testing.assert_identical(actual.compute(), expected.compute())
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
@@ -1046,6 +1048,8 @@ def test_map_blocks_kwargs(obj):
 @pytest.mark.parametrize(
     "func, obj",
     [
+        [lambda x: x, map_da],
+        [lambda x: x, map_ds],
         [lambda x: x.to_dataset(), map_da],
         [lambda x: x.to_array(), map_ds],
         [lambda x: x.drop("cxy"), map_ds],
@@ -1065,7 +1069,7 @@ def test_map_blocks_transformations(func, obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj)
 
-    assert_equal(actual.compute(), func(obj).compute())
+    assert_identical(actual.compute(), func(obj).compute())
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
