@@ -80,7 +80,9 @@ def array_attach_units(data, unit, convert_from=None):
     # to make sure we also encounter the case of "equal if converted"
     if convert_from is not None:
         quantity = (data * convert_from).to(
-            unit if isinstance(unit, unit_registry.Unit) else unit.dimensionless
+            unit
+            if isinstance(unit, unit_registry.Unit)
+            else unit_registry.dimensionless
         )
     else:
         quantity = data * unit
