@@ -42,6 +42,18 @@ Breaking changes
 
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+New functions/methods
+~~~~~~~~~~~~~~~~~~~~~
+
+Enhancements
+~~~~~~~~~~~~
+
+- Add a repr for :py:class:`~xarray.core.GroupBy` objects. By `Deepak Cherian <https://github.com/dcherian>`_.
+  Example::
+
+      >>> da.groupby("time.season")
+      DataArrayGroupBy, grouped over 'season'
+      4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
 Bug fixes
 ~~~~~~~~~
