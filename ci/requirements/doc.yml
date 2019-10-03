@@ -1,51 +1,23 @@
 name: xarray-docs
 channels:
+  - pkgs/main  # Keep the env identical to readthedocs CI
   - conda-forge
 dependencies:
-  - python=3.6
-  - black
-  - boto3
+  - python=3.7
   - bottleneck
   - cartopy
-  - cdms2
-  - cfgrib
-  - cftime
-  - coveralls
-  - dask
-  - distributed
-  - flake8
   - h5netcdf
-  - h5py
-  - hdf5
-  - hypothesis
-  - iris
-  - lxml    # Optional dep of pydap
-  - matplotlib
-  - mypy=0.720  # Must match .pre-commit-config.yaml
-  - nc-time-axis
-  - netcdf4
-  - numba
-  - numpy
-  - pandas
-  - pip
-  - pseudonetcdf
-  - pydap
-  - pynio
-  - pytest
-  - pytest-cov
-  - pytest-env
-  - rasterio
-  - scipy
-  - seaborn
-  - sparse
-  - toolz
-  - zarr
-  - pip:
-    - numbagg
-
-  # Extra dependencies for Sphinx
   - ipython
+  - iris
+  - mock  # Keep the env identical to readthedocs CI
+  - netcdf4
+  - numpy
   - numpydoc
+  - pandas
+  - pillow  # Keep the env identical to readthedocs CI
+  - rasterio
+  - seaborn
   - sphinx
   - sphinx-gallery
   - sphinx_rtd_theme
+  - zarr
