@@ -8,6 +8,9 @@ import xarray as xr
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 pint = pytest.importorskip("pint")
+DimensionalityError = pint.errors.DimensionalityError
+
+
 pytestmark = [
     pytest.mark.skipif(
         not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
@@ -20,7 +23,6 @@ def use_pint_version_or_xfail(*, version, reason):
     return pytest.mark.xfail(LooseVersion(pint.__version__) < version, reason=reason)
 
 
-DimensionalityError = pint.errors.DimensionalityError
 unit_registry = pint.UnitRegistry()
 require_pint_array_function = pytest.mark.xfail(
     not hasattr(unit_registry.Quantity, "__array_function__"),
@@ -579,9 +581,7 @@ class TestDataArray:
         "units,error",
         (
             pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(
-                unit_registry.m, pint.errors.DimensionalityError, id="incorrect unit"
-            ),
+            pytest.param(unit_registry.m, DimensionalityError, id="incorrect unit"),
             pytest.param(unit_registry.degree, None, id="correct unit"),
         ),
     )
