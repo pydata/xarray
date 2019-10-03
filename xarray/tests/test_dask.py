@@ -1041,6 +1041,7 @@ def test_map_blocks_add_attrs(obj):
     def add_attrs(obj):
         obj = obj.copy(deep=True)
         obj.attrs["new"] = "new"
+        obj.cxy.attrs["new2"] = "new2"
         return obj
 
     expected = add_attrs(obj)
