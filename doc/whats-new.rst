@@ -26,6 +26,18 @@ New functions/methods
   Also added :py:meth:`Dataset.unify_chunks`, :py:meth:`DataArray.unify_chunks` and
   :py:meth:`testing.assert_chunks_equal`. By `Deepak Cherian <https://github.com/dcherian>`_
   and `Guido Imperiale <https://github.com/crusaderky>`_.
+New functions/methods
+~~~~~~~~~~~~~~~~~~~~~
+
+Enhancements
+~~~~~~~~~~~~
+
+- Add a repr for :py:class:`~xarray.core.GroupBy` objects. By `Deepak Cherian <https://github.com/dcherian>`_.
+  Example::
+
+      >>> da.groupby("time.season")
+      DataArrayGroupBy, grouped over 'season'
+      4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
 Bug fixes
 ~~~~~~~~~
