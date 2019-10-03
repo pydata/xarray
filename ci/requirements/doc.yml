@@ -1,6 +1,6 @@
 name: xarray-docs
 channels:
-  - pkgs/main  # Keep the env identical to readthedocs CI
+  # Don't change to pkgs/main, as it causes random timeouts in readthedocs
   - conda-forge
 dependencies:
   - python=3.7
@@ -9,12 +9,10 @@ dependencies:
   - h5netcdf
   - ipython
   - iris
-  - mock  # Keep the env identical to readthedocs CI
   - netcdf4
   - numpy
   - numpydoc
   - pandas<0.25  # Hack around https://github.com/pydata/xarray/issues/3369
-  - pillow  # Keep the env identical to readthedocs CI
   - rasterio
   - seaborn
   - sphinx
