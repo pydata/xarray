@@ -18,6 +18,19 @@ What's New
 v0.13.1 (unreleased)
 --------------------
 
+New functions/methods
+~~~~~~~~~~~~~~~~~~~~~
+
+Enhancements
+~~~~~~~~~~~~
+
+- Add a repr for :py:class:`~xarray.core.GroupBy` objects. By `Deepak Cherian <https://github.com/dcherian>`_.
+  Example::
+
+      >>> da.groupby("time.season")
+      DataArrayGroupBy, grouped over 'season'
+      4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
+
 Bug fixes
 ~~~~~~~~~
 - Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
