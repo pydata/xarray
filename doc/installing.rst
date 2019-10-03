@@ -8,7 +8,7 @@ Required dependencies
 
 - Python (3.6 or later)
 - `numpy <http://www.numpy.org/>`__ (1.14 or later)
-- `pandas <http://pandas.pydata.org/>`__ (0.21 or later)
+- `pandas <http://pandas.pydata.org/>`__ (0.24 or later)
 
 Optional dependencies
 ---------------------
@@ -83,8 +83,8 @@ dependencies:
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **numpy:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **pandas:** 24 months
-- **scipy:** 24 months
+- **pandas:** 12 months
+- **scipy:** 12 months
 - **sparse** and other libraries that rely on
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
   for integration: very latest available versions only, until the technology will have

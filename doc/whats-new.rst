@@ -29,15 +29,15 @@ Breaking changes
   ------------ ------------------ ----
   Python       3.5.3              3.6
   numpy        1.12               1.14
-  pandas       0.19.2             0.21
+  pandas       0.19.2             0.24
   dask         0.16 (tested: 2.4) 1.2
   bottleneck   1.1 (tested: 1.2)  1.2
   matplotlib   1.5 (tested: 3.1)  3.1
   ------------ ------------------ ----
 
   Obsolete patch versions (x.y.Z) are not tested anymore.
-  Optional dependencies up to 6 months old are now covered by automated tests
-  (before, only the very latest versions were tested).
+  The oldest supported versions of all optional dependencies are now covered by
+  automated tests (before, only the very latest versions were tested).
 
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -51,8 +51,6 @@ Bug fixes
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays.
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
-- Fix :meth:`Dataset.rolling_exp` on pandas < 0.23.4 (:issue:`3358`)
-  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Documentation
 ~~~~~~~~~~~~~

@@ -7,7 +7,7 @@ dependencies:
   - flake8
   - pip
   - numpy=1.14
-  - pandas=0.21
+  - pandas=0.24
   - pip:
     - pytest-env
     - pytest-cov
