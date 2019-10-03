@@ -13,7 +13,7 @@ dependencies:
   - netcdf4
   - numpy
   - numpydoc
-  - pandas
+  - pandas<0.25  # Hack around https://github.com/pydata/xarray/issues/3369
   - pillow  # Keep the env identical to readthedocs CI
   - rasterio
   - seaborn
