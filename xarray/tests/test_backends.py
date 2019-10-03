@@ -2861,11 +2861,9 @@ class TestDask(DatasetIOBase):
                 ds1.to_netcdf(tmp1)
                 ds2.to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2], combine="nested") as actual:
-                    assert (
-                        actual.t.encoding["units"] == original.t.encoding["units"]
-                    )  # noqa
-                    assert actual.t.encoding["units"] == ds1.t.encoding["units"]  # noqa
-                    assert actual.t.encoding["units"] != ds2.t.encoding["units"]  # noqa
+                    assert actual.t.encoding["units"] == original.t.encoding["units"]
+                    assert actual.t.encoding["units"] == ds1.t.encoding["units"]
+                    assert actual.t.encoding["units"] != ds2.t.encoding["units"]
 
     def test_preprocess_mfdataset(self):
         original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -3487,7 +3485,10 @@ class TestPseudoNetCDFFormat:
             "example.uamiv", engine="pseudonetcdf", backend_kwargs=fmtkw
         )
         with self.roundtrip(
-            expected, save_kwargs=fmtkw, open_kwargs={"backend_kwargs": fmtkw}
+            expected,
+            save_kwargs=fmtkw,
+            open_kwargs={"backend_kwargs": fmtkw},
+            allow_cleanup_failure=True,
         ) as actual:
             assert_identical(expected, actual)
 

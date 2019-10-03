@@ -8,8 +8,12 @@ jobs:
 - job: Linux
   strategy:
     matrix:
-      py35-min:
-        conda_env: py35-min
+      py35-bare-minimum:
+        conda_env: py35-bare-minimum
+      py36-min-all-deps:
+        conda_env: py36-min-all-deps
+      py36-min-nep18:
+        conda_env: py36-min-nep18
       py36:
         conda_env: py36
       py37:
@@ -17,7 +21,7 @@ jobs:
       py37-upstream-dev:
         conda_env: py37
         upstream_dev: true
-      py36-flakey:
+      py36-flaky:
         conda_env: py36
         pytest_extra_flags: --run-flaky --run-network-tests
         allow_failure: true
@@ -90,15 +94,3 @@ jobs:
       cd doc
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs
-
-- job: LinuxHypothesis
-  variables:
-    conda_env: py36-hypothesis
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/install.yml
-  - bash: |
-      source activate xarray-tests
-      pytest properties
-    displayName: Property based tests

@@ -46,6 +46,7 @@ Documentation
 
 **User Guide**
 
+* :doc:`terminology`
 * :doc:`data-structures`
 * :doc:`indexing`
 * :doc:`interpolation`
@@ -65,6 +66,7 @@ Documentation
    :hidden:
    :caption: User Guide
 
+   terminology
    data-structures
    indexing
    interpolation
@@ -82,6 +84,7 @@ Documentation
 **Help & reference**
 
 * :doc:`whats-new`
+* :doc:`howdoi`
 * :doc:`api`
 * :doc:`internals`
 * :doc:`roadmap`
@@ -94,6 +97,7 @@ Documentation
    :caption: Help & reference
 
    whats-new
+   howdoi
    api
    internals
    roadmap

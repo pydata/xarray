@@ -753,7 +753,7 @@ def cf_encoder(variables, attributes):
     for var in new_vars.values():
         bounds = var.attrs["bounds"] if "bounds" in var.attrs else None
         if bounds and bounds in new_vars:
-            # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries # noqa
+            # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries
             for attr in [
                 "units",
                 "standard_name",
