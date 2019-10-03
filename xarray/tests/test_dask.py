@@ -1070,7 +1070,7 @@ def test_map_blocks_kwargs(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(xr.full_like, obj, kwargs=dict(fill_value=np.nan))
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_equal(actual.compute(), expected.compute())
+    xr.testing.assert_identical(actual.compute(), expected.compute())
 
 
 def test_map_blocks_to_array():
@@ -1117,7 +1117,7 @@ def test_map_blocks_object_method(obj):
         expected = xr.map_blocks(func, obj)
         actual = obj.map_blocks(func)
 
-    assert_equal(expected.compute(), actual.compute())
+    assert_identical(expected.compute(), actual.compute())
 
 
 def test_make_meta():
