@@ -451,15 +451,9 @@ def test_bfill_dataset(ds):
 @pytest.mark.parametrize(
     "y, lengths",
     [
-        [np.arange(9), [[3, 3, 3, 0, 2, 2, 0, 2, 2]]],
-        [np.arange(9) * 3, [[9, 9, 9, 0, 6, 6, 0, 6, 6]]],
-        pytest.param(
-            [0, 2, 5, 6, 7, 8, 10, 12, 14],
-            [[6, 6, 6, 0, 2, 2, 0, 3, 3]],
-            marks=pytest.mark.xfail(
-                reason="max_gap with irregularly spaced coordinate."
-            ),
-        ),
+        [np.arange(9), [[3, 3, 3, 0, 3, 3, 0, 2, 2]]],
+        [np.arange(9) * 3, [[9, 9, 9, 0, 9, 9, 0, 6, 6]]],
+        [[0, 2, 5, 6, 7, 8, 10, 12, 14], [[6, 6, 6, 0, 4, 4, 0, 4, 4]]],
     ],
 )
 def test_interpolate_na_nan_block_lengths(y, lengths):
@@ -522,5 +516,19 @@ def test_interpolate_na_max_gap():
         * 2
     )
 
-    actual = da.interpolate_na("y", max_gap=2)
+    actual = da.interpolate_na("y", max_gap=3)
     assert_equal(expected, actual)
+
+
+def test_interpolate_na_max_gap_datetime_errors():
+    da = xr.DataArray(
+        [np.nan, 1, 2, np.nan, np.nan, 4],
+        dims=["t"],
+        coords={"t": pd.date_range("2001-01-01", freq="H", periods=6)},
+    )
+
+    with raises_regex(TypeError, "expected max_gap of type"):
+        da.interpolate_na("t", max_gap=1)
+
+    with raises_regex(ValueError, "but use_coordinate=False"):
+        da.interpolate_na("t", max_gap="1H", use_coordinate=False)

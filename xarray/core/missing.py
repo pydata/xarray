@@ -265,6 +265,28 @@ def interp_na(
     if limit is not None:
         valids = _get_valid_fill_mask(self, dim, limit)
 
+    if max_gap is not None:
+        max_type = type(max_gap)
+        if isinstance(self.indexes[dim], pd.DatetimeIndex) and not isinstance(
+            max_gap, (np.timedelta64, str)
+        ):
+            raise TypeError(
+                "expected max_gap of type str or timedelta64 since underlying index is DatetimeIndex but received %r"
+                % max_type
+            )
+
+        # TODO: better time offset checks
+        if isinstance(max_gap, (np.timedelta64, str)):
+            if not use_coordinate:
+                raise ValueError(
+                    "provided max_gap of type %r but use_coordinate=False. Set use_coordinate=True instead."
+                    % max_type
+                )
+            if isinstance(max_gap, str):
+                max_gap = pd.to_timedelta(max_gap).to_numpy().astype(np.float64)
+            else:
+                max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
+
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
     interp_class, kwargs = _get_interpolator(method, **kwargs)
@@ -289,14 +311,6 @@ def interp_na(
         arr = arr.where(valids)
 
     if max_gap is not None:
-        if use_coordinate:
-            delta_index = np.diff(index)
-            if not np.allclose(delta_index, delta_index[0] * np.ones_like(delta_index)):
-                coord_name = dim if use_coordinate is True else use_coordinate
-                raise ValueError(
-                    "Cannot specify max_gap with irregularly spaced coordinate %s"
-                    % coord_name
-                )
         nan_block_lengths = _get_nan_block_lengths(self, dim, index)
         arr = arr.where(nan_block_lengths <= max_gap)
 
