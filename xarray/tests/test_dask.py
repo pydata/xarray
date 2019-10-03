@@ -1037,6 +1037,34 @@ def test_map_blocks_convert_args_to_list(obj):
 
 
 @pytest.mark.parametrize("obj", [map_da, map_ds])
+def test_map_blocks_add_attrs(obj):
+    def add_attrs(obj):
+        obj = obj.copy(deep=True)
+        obj.attrs["new"] = "new"
+        return obj
+
+    expected = add_attrs(obj)
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(add_attrs, obj)
+
+    xr.testing.assert_identical(actual.compute(), expected.compute())
+
+
+@pytest.mark.parametrize("obj", [map_da])
+def test_map_blocks_change_name(obj):
+    def change_name(obj):
+        obj = obj.copy(deep=True)
+        obj.name = "new"
+        return obj
+
+    expected = change_name(obj)
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(change_name, obj)
+
+    xr.testing.assert_identical(actual.compute(), expected.compute())
+
+
+@pytest.mark.parametrize("obj", [map_da, map_ds])
 def test_map_blocks_kwargs(obj):
     expected = xr.full_like(obj, fill_value=np.nan)
     with raise_if_dask_computes():
@@ -1045,13 +1073,20 @@ def test_map_blocks_kwargs(obj):
     xr.testing.assert_equal(actual.compute(), expected.compute())
 
 
+def test_map_blocks_to_array():
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(lambda x: x.to_array(), map_ds)
+
+    # to_array does not preserve name, so cannot use assert_identical
+    assert_equal(actual.compute(), map_ds.to_array().compute())
+
+
 @pytest.mark.parametrize(
     "func, obj",
     [
         [lambda x: x, map_da],
         [lambda x: x, map_ds],
         [lambda x: x.to_dataset(), map_da],
-        [lambda x: x.to_array(), map_ds],
         [lambda x: x.drop("cxy"), map_ds],
         [lambda x: x.drop("a"), map_ds],
         [lambda x: x.drop("x"), map_da],

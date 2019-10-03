@@ -204,6 +204,7 @@ def map_blocks(
     )  # type: Union[DataArray, Dataset]
     if isinstance(template, DataArray):
         result_is_array = True
+        template_name = template.name
         template = template._to_temp_dataset()
     elif isinstance(template, Dataset):
         result_is_array = False
@@ -249,7 +250,10 @@ def map_blocks(
                     chunk = chunk[chunk_index_dict[dim]]
 
                 chunk_variable_task = ("tuple-" + dask.base.tokenize(chunk),) + v
-                graph[chunk_variable_task] = (tuple, [variable.dims, chunk])
+                graph[chunk_variable_task] = (
+                    tuple,
+                    [variable.dims, chunk, variable.attrs],
+                )
             else:
                 # non-dask array with possibly chunked dimensions
                 # index into variable appropriately
@@ -264,7 +268,10 @@ def map_blocks(
 
                 subset = variable.isel(subsetter)
                 chunk_variable_task = (name + dask.base.tokenize(subset),) + v
-                graph[chunk_variable_task] = (tuple, [subset.dims, subset])
+                graph[chunk_variable_task] = (
+                    tuple,
+                    [subset.dims, subset, subset.attrs],
+                )
 
             # this task creates dict mapping variable name to above tuple
             if name in dataset._coord_names:
@@ -320,5 +327,7 @@ def map_blocks(
     result = result.set_coords(template._coord_names)
 
     if result_is_array:
-        return dataset_to_dataarray(result)  # type: ignore
+        da = dataset_to_dataarray(result)
+        da.name = template_name
+        return da  # type: ignore
     return result  # type: ignore
