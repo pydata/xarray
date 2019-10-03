@@ -1,6 +1,5 @@
 name: xarray-tests
 channels:
-  - defaults
   - conda-forge
 dependencies:
   # MINIMUM VERSIONS POLICY: see doc/installing.rst
