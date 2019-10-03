@@ -25,15 +25,16 @@ Breaking changes
 
   Several minimum versions have been increased:
 
+  ============ ================== ====
   Package      Old                New
-  ------------ ------------------ ----
+  ============ ================== ====
   Python       3.5.3              3.6
   numpy        1.12               1.14
   pandas       0.19.2             0.24
   dask         0.16 (tested: 2.4) 1.2
   bottleneck   1.1 (tested: 1.2)  1.2
   matplotlib   1.5 (tested: 3.1)  3.1
-  ------------ ------------------ ----
+  ============ ================== ====
 
   Obsolete patch versions (x.y.Z) are not tested anymore.
   The oldest supported versions of all optional dependencies are now covered by
