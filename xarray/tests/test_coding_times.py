@@ -4,6 +4,8 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.errors import OutOfBoundsDatetime
+
 
 from xarray import DataArray, Dataset, Variable, coding, decode_cf
 from xarray.coding.times import (
@@ -28,11 +30,6 @@ from . import (
     requires_cftime_or_netCDF4,
 )
 
-try:
-    from pandas.errors import OutOfBoundsDatetime
-except ImportError:
-    # pandas < 0.20
-    from pandas.tslib import OutOfBoundsDatetime
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",
@@ -831,8 +828,7 @@ def test_encode_cf_datetime_overflow(shape):
 
 
 def test_encode_cf_datetime_pandas_min():
-    # Test that encode_cf_datetime does not fail for versions
-    # of pandas < 0.21.1 (GH 2623).
+    # GH 2623
     dates = pd.date_range("2000", periods=3)
     num, units, calendar = encode_cf_datetime(dates)
     expected_num = np.array([0.0, 1.0, 2.0])

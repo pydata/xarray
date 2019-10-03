@@ -1368,7 +1368,6 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
 
     @property
     def shape(self) -> Tuple[int]:
-        # .shape is broken on pandas prior to v0.15.2
         return (len(self.array),)
 
     def __getitem__(

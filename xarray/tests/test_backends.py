@@ -14,6 +14,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from pandas.errors import OutOfBoundsDatetime
 import pytest
 
 import xarray as xr
@@ -77,13 +78,6 @@ try:
     import dask.array as da
 except ImportError:
     pass
-
-try:
-    from pandas.errors import OutOfBoundsDatetime
-except ImportError:
-    # pandas < 0.20
-    from pandas.tslib import OutOfBoundsDatetime
-
 
 ON_WINDOWS = sys.platform == "win32"
 
@@ -1352,19 +1346,6 @@ class TestNetCDF4Data(NetCDF4Base):
                 ds2.randovar.values
             except IndexError as err:
                 assert "first by calling .load" in str(err)
-
-    def test_88_character_filename_segmentation_fault(self):
-        # should be fixed in netcdf4 v1.3.1
-        with mock.patch("netCDF4.__version__", "1.2.4"):
-            with warnings.catch_warnings():
-                message = (
-                    "A segmentation fault may occur when the "
-                    "file path has exactly 88 characters"
-                )
-                warnings.filterwarnings("error", message)
-                with pytest.raises(Warning):
-                    # Need to construct 88 character filepath
-                    xr.Dataset().to_netcdf("a" * (88 - len(os.getcwd()) - 1))
 
     def test_setncattr_string(self):
         list_of_strings = ["list", "of", "strings"]

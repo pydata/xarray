@@ -1,5 +1,4 @@
 import warnings
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -530,12 +529,8 @@ def test_min_count(dim_num, dtype, dask, func, aggdim):
     min_count = 3
 
     actual = getattr(da, func)(dim=aggdim, skipna=True, min_count=min_count)
-
-    if LooseVersion(pd.__version__) >= LooseVersion("0.22.0"):
-        # min_count is only implenented in pandas > 0.22
-        expected = series_reduce(da, func, skipna=True, dim=aggdim, min_count=min_count)
-        assert_allclose(actual, expected)
-
+    expected = series_reduce(da, func, skipna=True, dim=aggdim, min_count=min_count)
+    assert_allclose(actual, expected)
     assert_dask_array(actual, dask)
 
 

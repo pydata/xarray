@@ -1032,11 +1032,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         else:
             # TODO: to_offset() call required for pandas==0.19.2
             grouper = pd.Grouper(
-                freq=freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=pd.tseries.frequencies.to_offset(loffset),
+                freq=freq, closed=closed, label=label, base=base, loffset=loffset
             )
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM

@@ -3,7 +3,6 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict, defaultdict
-from distutils.version import LooseVersion
 from numbers import Number
 from pathlib import Path
 from typing import (
@@ -227,13 +226,8 @@ def merge_indexes(
         if current_index_variable is not None and append:
             current_index = current_index_variable.to_index()
             if isinstance(current_index, pd.MultiIndex):
-                try:
-                    current_codes = current_index.codes
-                except AttributeError:
-                    # fpr pandas<0.24
-                    current_codes = current_index.labels
                 names.extend(current_index.names)
-                codes.extend(current_codes)
+                codes.extend(current_index.codes)
                 levels.extend(current_index.levels)
             else:
                 names.append("%s_level_0" % dim)
@@ -4960,13 +4954,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         for data_array in aligned_other_vars:
             if data_array.ndim != 1:
                 raise ValueError("Input DataArray is not 1-D.")
-            if data_array.dtype == object and LooseVersion(
-                np.__version__
-            ) < LooseVersion("1.11.0"):
-                raise NotImplementedError(
-                    "sortby uses np.lexsort under the hood, which requires "
-                    "numpy 1.11.0 or later to support object data-type."
-                )
             (key,) = data_array.dims
             vars_by_dim[key].append(data_array)
 

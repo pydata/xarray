@@ -5,7 +5,6 @@ import functools
 import itertools
 import operator
 from collections import Counter, OrderedDict
-from distutils.version import LooseVersion
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -1001,13 +1000,6 @@ def apply_ufunc(
 
     if vectorize:
         if signature.all_core_dims:
-            # we need the signature argument
-            if LooseVersion(np.__version__) < "1.12":  # pragma: no cover
-                raise NotImplementedError(
-                    "numpy 1.12 or newer required when using vectorize=True "
-                    "in xarray.apply_ufunc with non-scalar output core "
-                    "dimensions."
-                )
             func = np.vectorize(
                 func, otypes=output_dtypes, signature=signature.to_gufunc_string()
             )

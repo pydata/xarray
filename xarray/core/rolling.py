@@ -1,7 +1,5 @@
 import functools
-import warnings
 from collections import OrderedDict
-from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -71,17 +69,6 @@ class Rolling:
         -------
         rolling : type of input argument
         """
-
-        if bottleneck is not None and (
-            LooseVersion(bottleneck.__version__) < LooseVersion("1.0")
-        ):
-            warnings.warn(
-                "xarray requires bottleneck version of 1.0 or "
-                "greater for rolling operations. Rolling "
-                "aggregation methods will use numpy instead"
-                "of bottleneck."
-            )
-
         if len(windows) != 1:
             raise ValueError("exactly one dim/window should be provided")
 
@@ -332,14 +319,6 @@ class DataArrayRolling(Rolling):
 
         padded = self.obj.variable
         if self.center:
-            if (
-                LooseVersion(np.__version__) < LooseVersion("1.13")
-                and self.obj.dtype.kind == "b"
-            ):
-                # with numpy < 1.13 bottleneck cannot handle np.nan-Boolean
-                # mixed array correctly. We cast boolean array to float.
-                padded = padded.astype(float)
-
             if isinstance(padded.data, dask_array_type):
                 # Workaround to make the padded chunk size is larger than
                 # self.window-1

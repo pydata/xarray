@@ -7,16 +7,11 @@ from itertools import zip_longest
 
 import numpy as np
 import pandas as pd
+from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
 from .pycompat import dask_array_type, sparse_array_type
-
-try:
-    from pandas.errors import OutOfBoundsDatetime
-except ImportError:
-    # pandas < 0.20
-    from pandas.tslib import OutOfBoundsDatetime
 
 
 def pretty_print(x, numchars):

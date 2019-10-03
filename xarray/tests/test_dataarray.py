@@ -158,9 +158,7 @@ class TestDataArray:
         when dimension is a structured array.
         """
         # GH837, GH861
-        # checking array subraction when dims are the same
-        # note: names need to be in sorted order to align consistently with
-        # pandas < 0.24 and >= 0.24.
+        # checking array subtraction when dims are the same
         p_data = np.array(
             [("Abe", 180), ("Stacy", 150), ("Dick", 200)],
             dtype=[("name", "|S256"), ("height", object)],
@@ -3371,7 +3369,7 @@ class TestDataArray:
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
-            if len(shape) > 2 and not LooseVersion(pd.__version__) < "0.25.0":
+            if len(shape) > 2 and LooseVersion(pd.__version__) >= "0.25.0":
                 continue
             dims = list("abc")[: len(shape)]
             da = DataArray(np.random.randn(*shape), dims=dims)
