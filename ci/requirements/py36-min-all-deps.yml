@@ -5,11 +5,8 @@ channels:
 dependencies:
   # MINIMUM VERSIONS POLICY: see doc/installing.rst
   # Run ci/min_deps_check.py to verify that this file respects the policy.
-
   # When upgrading python, numpy, or pandas, must also change
-  # - doc/installing.rst
-  # - setup.py
-
+  # doc/installing.rst and setup.py.
   - python=3.6
   - black
   - boto3=1.9
@@ -29,7 +26,7 @@ dependencies:
   - iris=2.2
   - lxml=4.4  # Optional dep of pydap
   - matplotlib=3.1
-  - mypy==0.720  # Must match .pre-commit-config.yaml
+  - mypy=0.720  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2
   - netcdf4=1.4
   - numba=0.44
