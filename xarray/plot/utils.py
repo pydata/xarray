@@ -48,9 +48,7 @@ def register_pandas_datetime_converter_if_needed():
     # based on https://github.com/pandas-dev/pandas/pull/17710
     global _registered
     if not _registered:
-        from pandas.plotting import register_matplotlib_converters
-
-        register_matplotlib_converters()
+        pd.plotting.register_matplotlib_converters()
         _registered = True
 
 

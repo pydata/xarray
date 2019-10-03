@@ -1030,7 +1030,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
             grouper = CFTimeGrouper(freq, closed, label, base, loffset)
         else:
-            # TODO: to_offset() call required for pandas==0.19.2
             grouper = pd.Grouper(
                 freq=freq, closed=closed, label=label, base=base, loffset=loffset
             )
