@@ -1,0 +1,51 @@
+name: xarray-docs
+channels:
+  - conda-forge
+dependencies:
+  - python=3.6
+  - black
+  - boto3
+  - bottleneck
+  - cartopy
+  - cdms2
+  - cfgrib
+  - cftime
+  - coveralls
+  - dask
+  - distributed
+  - flake8
+  - h5netcdf
+  - h5py
+  - hdf5
+  - hypothesis
+  - iris
+  - lxml    # Optional dep of pydap
+  - matplotlib
+  - mypy=0.720  # Must match .pre-commit-config.yaml
+  - nc-time-axis
+  - netcdf4
+  - numba
+  - numpy
+  - pandas
+  - pip
+  - pseudonetcdf
+  - pydap
+  - pynio
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - rasterio
+  - scipy
+  - seaborn
+  - sparse
+  - toolz
+  - zarr
+  - pip:
+    - numbagg
+
+  # Extra dependencies for Sphinx
+  - ipython
+  - numpydoc
+  - sphinx
+  - sphinx-gallery
+  - sphinx_rtd_theme

@@ -99,7 +99,13 @@ jobs:
   steps:
   - template: ci/azure/install.yml
     parameters:
-      env_file: doc/environment.yml
+      env_file: ci/requirements/doc.yml
+  - bash: |
+      source activate xarray-tests
+      # Replicate the exact environment created by the readthedocs CI
+      conda install --yes --quiet -c pkgs/main mock pillow sphinx sphinx_rtd_theme
+      conda list
+    displayName: Replicate readthedocs CI environment
   - bash: |
       source activate xarray-tests
       cd doc

@@ -97,6 +97,7 @@ than N months ago*. Patch versions (x.y.Z) are not pinned, and only the latest a
 at the moment of publishing the xarray release is guaranteed to work.
 
 You can see the actual minimum tested versions:
+
 - `For NEP-18 libraries
   <https://github.com/pydata/xarray/blob/master/ci/requirements/py36-min-nep18.yml>`_
 - `For everything else

@@ -508,6 +508,7 @@ This feature is availabe through :py:func:`DataArray.to_netcdf` and
 and currently raises a warning unless ``invalid_netcdf=True`` is set:
 
 .. ipython:: python
+    :okwarning:
 
     # Writing complex valued data
     da = xr.DataArray([1.+1.j, 2.+2.j, 3.+3.j])
