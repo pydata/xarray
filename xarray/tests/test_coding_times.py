@@ -119,8 +119,9 @@ def test_cf_datetime(num_dates, units, calendar):
         warnings.filterwarnings("ignore", "Unable to decode time axis")
         actual = coding.times.decode_cf_datetime(num_dates, units, calendar)
 
-    abs_diff = np.atleast_1d(abs(actual - expected))
+    abs_diff = np.asarray(abs(actual - expected)).ravel()
     abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
+
     # once we no longer support versions of netCDF4 older than 1.1.5,
     # we could do this check with near microsecond accuracy:
     # https://github.com/Unidata/netcdf4-python/issues/355
