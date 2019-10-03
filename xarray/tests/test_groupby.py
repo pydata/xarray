@@ -202,4 +202,44 @@ def test_da_groupby_assign_coords():
     assert_identical(expected, actual2)
 
 
+repr_da = xr.DataArray(
+    np.random.randn(10, 20, 6, 24),
+    dims=["x", "y", "z", "t"],
+    coords={
+        "z": ["a", "b", "c", "a", "b", "c"],
+        "x": [1, 1, 1, 2, 2, 3, 4, 5, 3, 4],
+        "t": pd.date_range("2001-01-01", freq="M", periods=24),
+        "month": ("t", list(range(1, 13)) * 2),
+    },
+)
+
+
+@pytest.mark.parametrize("dim", ["x", "y", "z", "month"])
+@pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
+def test_groupby_repr(obj, dim):
+    actual = repr(obj.groupby(dim))
+    expected = "%sGroupBy" % obj.__class__.__name__
+    expected += ", grouped over %r " % dim
+    expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
+    if dim == "x":
+        expected += "1, 2, 3, 4, 5"
+    elif dim == "y":
+        expected += "0, 1, 2, 3, 4, 5, ..., 15, 16, 17, 18, 19"
+    elif dim == "z":
+        expected += "'a', 'b', 'c'"
+    elif dim == "month":
+        expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
+    assert actual == expected
+
+
+@pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
+def test_groupby_repr_datetime(obj):
+    actual = repr(obj.groupby("t.month"))
+    expected = "%sGroupBy" % obj.__class__.__name__
+    expected += ", grouped over 'month' "
+    expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
+    expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
+    assert actual == expected
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

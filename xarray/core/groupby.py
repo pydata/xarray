@@ -9,6 +9,7 @@ from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import SupportsArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
+from .formatting import format_array_flat
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -157,6 +158,15 @@ class _DummyGroup:
     @property
     def values(self):
         return range(self.size)
+
+    @property
+    def shape(self):
+        return (self.size,)
+
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            key = key[0]
+        return self.values[key]
 
 
 def _ensure_1d(group, obj):
@@ -382,6 +392,14 @@ class GroupBy(SupportsArithmetic):
 
     def __iter__(self):
         return zip(self._unique_coord.values, self._iter_grouped())
+
+    def __repr__(self):
+        return "%s, grouped over %r \n%r groups with labels %s" % (
+            self.__class__.__name__,
+            self._unique_coord.name,
+            self._unique_coord.size,
+            ", ".join(format_array_flat(self._unique_coord, 30).split()),
+        )
 
     def _get_index_and_items(self, index, grouper):
         from .resample_cftime import CFTimeGrouper
