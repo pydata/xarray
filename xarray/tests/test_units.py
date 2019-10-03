@@ -48,24 +48,38 @@ def array_strip_units(array):
         return array
 
 
-def array_attach_units(data, unit, convert=False):
+def array_attach_units(data, unit, convert_from=None):
     if isinstance(data, BaseQuantity):
-        if convert:
-            return data.to(unit if unit != 1 else unit_registry.dimensionless)
-        else:
-            raise RuntimeError(
-                "cannot attach unit {unit} to quantity with {data.units}".format(
+        if not convert_from:
+            raise ValueError(
+                "cannot attach unit {unit} to quantity ({data.units})".format(
                     unit=unit, data=data
+                )
+            )
+        elif isinstance(convert_from, unit_registry.Unit):
+            data = data.magnitude
+        elif convert_from is True:  # intentionally accept exactly true
+            if data.check(unit):
+                convert_from = data.units
+                data = data.magnitude
+            else:
+                raise ValueError(
+                    "cannot convert quantity ({data.units}) to {unit}".format(
+                        unit=unit, data=data
+                    )
+                )
+        else:
+            raise ValueError(
+                "cannot convert from invalid unit {convert_from}".format(
+                    convert_from=convert_from
                 )
             )
 
     # to make sure we also encounter the case of "equal if converted"
-    if (
-        convert
-        and isinstance(unit, unit_registry.Unit)
-        and "[length]" in unit.dimensionality
-    ):
-        quantity = (data * unit_registry.m).to(unit)
+    if convert_from is not None:
+        quantity = (data * convert_from).to(
+            unit if isinstance(unit, unit_registry.Unit) else unit.dimensionless
+        )
     else:
         quantity = data * unit
 
@@ -969,10 +983,13 @@ class TestDataArray:
             data=quantity, coords={"x": x, "y": ("x", y)}, dims="x"
         )
         other = xr.DataArray(
-            data=array_attach_units(data, data_unit, convert=True),
+            data=array_attach_units(data, data_unit, convert_from=unit_registry.m),
             coords={
-                "x": array_attach_units(coord, dim_unit, convert=True),
-                "y": ("x", array_attach_units(coord, coord_unit, convert=True)),
+                "x": array_attach_units(coord, dim_unit, convert_from=unit_registry.m),
+                "y": (
+                    "x",
+                    array_attach_units(coord, coord_unit, convert_from=unit_registry.m),
+                ),
             },
             dims="x",
         )
@@ -1009,7 +1026,7 @@ class TestDataArray:
     def test_broadcast_equals(self, unit, dtype):
         left_array = np.ones(shape=(2, 2), dtype=dtype) * unit_registry.m
         right_array = array_attach_units(
-            np.ones(shape=(2,), dtype=dtype), unit, convert=True
+            np.ones(shape=(2,), dtype=dtype), unit, convert_from=unit_registry.m
         )
 
         left = xr.DataArray(data=left_array, dims=("x", "y"))
