@@ -105,7 +105,7 @@ def extract_units(obj):
         }
 
         units = {**vars_units, **coords_units}
-    elif hasattr(obj, "units"):
+    elif isinstance(obj, BaseQuantity):
         vars_units = {"<array>": array_extract_units(obj)}
 
         units = {**vars_units}
