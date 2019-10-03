@@ -42,27 +42,30 @@ Breaking changes
 
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Add a repr for :py:class:`~xarray.core.GroupBy` objects. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add a repr for :py:class:`~xarray.core.GroupBy` objects (:issue:`3344`).
   Example::
 
       >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
   reinstated for :class:`DataArray` and :class:`Dataset` objects only. Internal xarray
-  objects remain unaddressable by weakref in order to save memory.
-  (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+  objects remain unaddressable by weakref in order to save memory
+  (:issue:`3317`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
-  now plot the correct data for 2D DataArrays.
+  now plot the correct data for 2D DataArrays
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 Documentation
