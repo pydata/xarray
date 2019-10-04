@@ -21,6 +21,19 @@ def test_consolidate_slices():
         _consolidate_slices([slice(3), 4])
 
 
+def test_groupby_dims_property():
+    ds = xr.Dataset(
+        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
+        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
+    )
+
+    assert ds.groupby("x").dims == ds.sel(x="a").dims
+    assert ds.groupby("y").dims == ds.sel(y=1).dims
+
+    stacked = ds.stack({"xy": ("x", "y")})
+    assert stacked.groupby("xy").dims == stacked.isel(xy=0).dims
+
+
 def test_multi_index_groupby_apply():
     # regression test for GH873
     ds = xr.Dataset(
