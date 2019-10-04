@@ -215,4 +215,4 @@ applying your function, and then unstacking the result:
 .. ipython:: python
 
    stacked = da.stack(gridcell=['ny', 'nx'])
-   stacked.groupby('gridcell').sum().unstack('gridcell')
+   stacked.groupby('gridcell').sum(xr.ALL_DIMS).unstack('gridcell')
