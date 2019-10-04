@@ -62,8 +62,8 @@ from .indexes import Indexes, default_indexes, isel_variable_and_index, roll_ind
 from .merge import (
     dataset_merge_method,
     dataset_update_method,
-    merge_data_and_coords,
     merge_coordinates_without_align,
+    merge_data_and_coords,
 )
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
@@ -74,9 +74,9 @@ from .utils import (
     decode_numpy_dict_values,
     either_dict_or_kwargs,
     hashable,
-    maybe_wrap_array,
     is_dict_like,
     is_list_like,
+    maybe_wrap_array,
 )
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
@@ -610,8 +610,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self.dims
 
     def load(self, **kwargs) -> "Dataset":
-        """Manually trigger loading of this dataset's data from disk or a
-        remote source into memory and return this dataset.
+        """Manually trigger loading and/or computation of this dataset's data
+        from disk or a remote source into memory and return this dataset.
+        Unlike compute, the original dataset is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -767,9 +768,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return Dataset._construct_direct(variables, *args)
 
     def compute(self, **kwargs) -> "Dataset":
-        """Manually trigger loading of this dataset's data from disk or a
-        remote source into memory and return a new dataset. The original is
-        left unaltered.
+        """Manually trigger loading and/or computation of this dataset's data
+        from disk or a remote source into memory and return a new dataset.
+        Unlike load, the original dataset is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -812,10 +813,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """ Trigger computation, keeping data as dask arrays
 
         This operation can be used to trigger computation on underlying dask
-        arrays, similar to ``.compute()``.  However this operation keeps the
-        data as dask arrays.  This is particularly useful when using the
-        dask.distributed scheduler and you want to load a large amount of data
-        into distributed memory.
+        arrays, similar to ``.compute()`` or ``.load()``.  However this
+        operation keeps the data as dask arrays. This is particularly useful
+        when using the dask.distributed scheduler and you want to load a large
+        amount of data into distributed memory.
 
         Parameters
         ----------

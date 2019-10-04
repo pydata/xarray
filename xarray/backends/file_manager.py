@@ -28,7 +28,7 @@ class FileManager:
 
     def acquire(self, needs_lock=True):
         """Acquire the file object from this manager."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def acquire_context(self, needs_lock=True):
         """Context manager for acquiring a file. Yields a file object.
@@ -37,11 +37,11 @@ class FileManager:
         (i.e., removes it from any cache) if an exception is raised from the
         context. It *does not* automatically close the file.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def close(self, needs_lock=True):
         """Close the file object associated with this manager, if needed."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class CachingFileManager(FileManager):

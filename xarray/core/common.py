@@ -1201,7 +1201,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def __getitem__(self, value):
         # implementations of this class should implement this method
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 def full_like(other, fill_value, dtype: DTypeLike = None):
