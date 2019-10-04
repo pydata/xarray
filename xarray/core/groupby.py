@@ -191,7 +191,10 @@ def _unique_and_monotonic(group):
         return True
     else:
         index = safe_cast_to_index(group)
-        return index.is_unique and index.is_monotonic
+        if index.dtype == "O":
+            return index.is_unique
+        else:
+            return index.is_unique and index.is_monotonic
 
 
 def _apply_loffset(grouper, result):
