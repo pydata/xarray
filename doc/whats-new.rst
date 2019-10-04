@@ -24,12 +24,16 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
-- Add a repr for :py:class:`~xarray.core.GroupBy` objects. By `Deepak Cherian <https://github.com/dcherian>`_.
-  Example::
+- :py:class:`~xarray.core.GroupBy` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
+
+  - Added a repr. Example::
 
       >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
+
+  - Added a ``GroupBy.dims`` property that mirrors the dimensions
+    of each group.
 
 Bug fixes
 ~~~~~~~~~
@@ -40,6 +44,9 @@ Bug fixes
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays.
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fix deprecation of default reduction dimension for :py:class:`DataArray.GroupBy` objects.
+  (:issue:`3337`). Also make sure that dimensions with ``dtype='object'`` indexes are treated
+  the same as other indexes. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
