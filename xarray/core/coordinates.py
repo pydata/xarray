@@ -6,8 +6,8 @@ from typing import (
     Hashable,
     Iterator,
     Mapping,
-    Set,
     Sequence,
+    Set,
     Tuple,
     Union,
     cast,
@@ -17,7 +17,7 @@ import pandas as pd
 
 from . import formatting, indexing
 from .indexes import Indexes
-from .merge import merge_coords, merge_coordinates_without_align
+from .merge import merge_coordinates_without_align, merge_coords
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
 
@@ -53,10 +53,10 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
     @property
     def variables(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _update_coords(self, coords, indexes):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __iter__(self) -> Iterator["Hashable"]:
         # needs to be in the same order as the dataset variables

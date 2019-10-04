@@ -4,7 +4,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
-from .merge import unique_variable, _VALID_COMPAT
+from .merge import _VALID_COMPAT, unique_variable
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 

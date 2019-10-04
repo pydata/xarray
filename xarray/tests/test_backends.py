@@ -237,7 +237,7 @@ class DatasetIOBase:
     file_format = None  # type: Optional[str]
 
     def create_store(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @contextlib.contextmanager
     def roundtrip(
