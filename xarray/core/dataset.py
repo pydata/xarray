@@ -64,8 +64,8 @@ from .indexes import Indexes, default_indexes, isel_variable_and_index, roll_ind
 from .merge import (
     dataset_merge_method,
     dataset_update_method,
-    merge_data_and_coords,
     merge_coordinates_without_align,
+    merge_data_and_coords,
 )
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
@@ -76,9 +76,9 @@ from .utils import (
     decode_numpy_dict_values,
     either_dict_or_kwargs,
     hashable,
-    maybe_wrap_array,
     is_dict_like,
     is_list_like,
+    maybe_wrap_array,
 )
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
