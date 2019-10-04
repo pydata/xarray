@@ -159,7 +159,7 @@ def test_interpolate_pd_compat_polynomial():
 def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x", coords={"x": [2, 1, 3]})
-    with raises_regex(ValueError, "Index must be monotonicly increasing"):
+    with raises_regex(ValueError, "Index 'x' must be monotonically increasing"):
         expected.interpolate_na(dim="x", method="index")
 
 
@@ -175,12 +175,19 @@ def test_interpolate_invalid_interpolator_raises():
         da.interpolate_na(dim="x", method="foo")
 
 
+def test_interpolate_duplicate_values_raises():
+    data = np.random.randn(2, 3)
+    da = xr.DataArray(data, coords=[("x", ["a", "a"]), ("y", [0, 1, 2])])
+    with raises_regex(ValueError, "Index 'x' has duplicate values"):
+        da.interpolate_na(dim="x", method="foo")
+
+
 def test_interpolate_multiindex_raises():
     data = np.random.randn(2, 3)
     data[1, 1] = np.nan
     da = xr.DataArray(data, coords=[("x", ["a", "b"]), ("y", [0, 1, 2])])
     das = da.stack(z=("x", "y"))
-    with raises_regex(TypeError, "Index must be castable to float64"):
+    with raises_regex(TypeError, "Index 'z' must be castable to float64"):
         das.interpolate_na(dim="z")
 
 

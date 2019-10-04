@@ -95,7 +95,7 @@ class NumpyInterpolator(BaseInterpolator):
             self._yi,
             left=self._left,
             right=self._right,
-            **self.call_kwargs
+            **self.call_kwargs,
         )
 
 
@@ -117,7 +117,7 @@ class ScipyInterpolator(BaseInterpolator):
         copy=False,
         bounds_error=False,
         order=None,
-        **kwargs
+        **kwargs,
     ):
         from scipy.interpolate import interp1d
 
@@ -150,7 +150,7 @@ class ScipyInterpolator(BaseInterpolator):
             bounds_error=False,
             assume_sorted=assume_sorted,
             copy=copy,
-            **self.cons_kwargs
+            **self.cons_kwargs,
         )
 
 
@@ -171,7 +171,7 @@ class SplineInterpolator(BaseInterpolator):
         order=3,
         nu=0,
         ext=None,
-        **kwargs
+        **kwargs,
     ):
         from scipy.interpolate import UnivariateSpline
 
@@ -224,12 +224,15 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
                 )
             index = index.to_index()
 
-        # check index sorting now so we can skip it later
+        # TODO: index.name is None for multiindexes
+        if isinstance(index, pd.MultiIndex):
+            index.name = dim
+
         if not index.is_monotonic:
-            raise ValueError("Index must be monotonically increasing")
+            raise ValueError(f"Index {index.name} must be monotonically increasing")
 
         if not index.is_unique:
-            raise ValueError("Index must be unique")
+            raise ValueError(f"Index {index.name} has duplicate values")
 
         # raise if index cannot be cast to a float (e.g. MultiIndex)
         try:
@@ -238,9 +241,10 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
             # pandas raises a TypeError
             # xarray/nuppy raise a ValueError
             raise TypeError(
-                "Index must be castable to float64 to support"
-                "interpolation, got: %s" % type(index)
+                f"Index {index.name} must be castable to float64 to support"
+                "interpolation, got {type(index)}"
             )
+
     else:
         axis = arr.get_axis_num(dim)
         index = np.arange(arr.shape[axis], dtype=np.float64)
@@ -255,7 +259,7 @@ def interp_na(
     method="linear",
     limit=None,
     max_gap=None,
-    **kwargs
+    **kwargs,
 ):
     """Interpolate values according to different methods.
     """
