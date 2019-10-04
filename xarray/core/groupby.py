@@ -251,6 +251,7 @@ class GroupBy(SupportsArithmetic):
         "_restore_coord_dims",
         "_stacked_dim",
         "_unique_coord",
+        "dims",
     )
 
     def __init__(
@@ -382,6 +383,9 @@ class GroupBy(SupportsArithmetic):
 
         # cached attributes
         self._groups = None
+
+        example = obj.isel(**{group_dim: group_indices[0]})
+        self.dims = example.dims
 
     @property
     def groups(self):
@@ -774,8 +778,11 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        if dim is not ALL_DIMS and dim not in peek_at(self._iter_grouped())[0].dims:
-            raise ValueError("Attempting to reduce over grouped dimension %r." % dim)
+        if dim is not ALL_DIMS and dim not in self.dims:
+            raise ValueError(
+                "cannot reduce over dimension %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
+                % (dim, self.dims)
+            )
 
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
@@ -872,8 +879,11 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
 
-        if dim is not ALL_DIMS and dim not in peek_at(self._iter_grouped())[0].dims:
-            raise ValueError("Attempting to reduce over grouped dimension %r" % dim)
+        if dim is not ALL_DIMS and dim not in self.dims:
+            raise ValueError(
+                "cannot reduce over dimension %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
+                % (dim, self.dims)
+            )
 
         return self.apply(reduce_dataset)
 
