@@ -179,7 +179,9 @@ a value when aggregating:
     r = arr.rolling(y=3, center=True, min_periods=2)
     r.mean()
 
-Note that rolling window aggregations are faster when bottleneck_ is installed.
+.. tip::
+
+   Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects.
 
 .. _bottleneck: https://github.com/kwgoodman/bottleneck/
 
