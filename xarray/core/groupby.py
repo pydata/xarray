@@ -696,7 +696,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         q : float in range of [0,1] (or sequence of floats)
             Quantile to compute, which must be between 0 and 1
             inclusive.
-        dim : str or sequence of str, optional
+        dim : xarray.ALL_DIMS, str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
@@ -753,7 +753,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
+        dim : xarray.ALL_DIMS, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -851,7 +851,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
+        dim : xarray.ALL_DIMS, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
