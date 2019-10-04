@@ -24,12 +24,13 @@ import numpy as np
 
 from . import duck_array_ops, utils
 from .alignment import deep_align
-from .merge import expand_and_merge_variables
+from .merge import merge_coordinates_without_align
 from .pycompat import dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
 
 if TYPE_CHECKING:
+    from .coordinates import Coordinates  # noqa
     from .dataset import Dataset
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
@@ -151,17 +152,16 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coord_variables(args):
-    input_coords = []
+def _get_coords_list(args) -> List["Coordinates"]:
+    coords_list = []
     for arg in args:
         try:
             coords = arg.coords
         except AttributeError:
             pass  # skip this argument
         else:
-            coord_vars = getattr(coords, "variables", coords)
-            input_coords.append(coord_vars)
-    return input_coords
+            coords_list.append(coords)
+    return coords_list
 
 
 def build_output_coords(
@@ -184,32 +184,29 @@ def build_output_coords(
     -------
     OrderedDict of Variable objects with merged coordinates.
     """
-    input_coords = _get_coord_variables(args)
+    coords_list = _get_coords_list(args)
 
-    if exclude_dims:
-        input_coords = [
-            OrderedDict(
-                (k, v) for k, v in coord_vars.items() if exclude_dims.isdisjoint(v.dims)
-            )
-            for coord_vars in input_coords
-        ]
-
-    if len(input_coords) == 1:
+    if len(coords_list) == 1 and not exclude_dims:
         # we can skip the expensive merge
-        unpacked_input_coords, = input_coords
-        merged = OrderedDict(unpacked_input_coords)
+        unpacked_coords, = coords_list
+        merged_vars = OrderedDict(unpacked_coords.variables)
     else:
-        merged = expand_and_merge_variables(input_coords)
+        # TODO: save these merged indexes, instead of re-computing them later
+        merged_vars, unused_indexes = merge_coordinates_without_align(
+            coords_list, exclude_dims=exclude_dims
+        )
 
     output_coords = []
     for output_dims in signature.output_core_dims:
         dropped_dims = signature.all_input_core_dims - set(output_dims)
         if dropped_dims:
             filtered = OrderedDict(
-                (k, v) for k, v in merged.items() if dropped_dims.isdisjoint(v.dims)
+                (k, v)
+                for k, v in merged_vars.items()
+                if dropped_dims.isdisjoint(v.dims)
             )
         else:
-            filtered = merged
+            filtered = merged_vars
         output_coords.append(filtered)
 
     return output_coords
