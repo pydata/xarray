@@ -44,9 +44,9 @@ Bug fixes
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays.
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
-- Fix deprecation of default reduction dimension for :py:class:`DataArray.GroupBy` objects.
-  (:issue:`3337`). Also make sure that dimensions with ``dtype='object'`` indexes are treated
-  the same as other indexes. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix deprecation of default reduction dimension for :py:class:`~xarray.core.groupby.DataArrayGroupBy` objects.
+  (:issue:`3337`). Also make sure that grouping dimensions with ``dtype='object'`` indexes
+  is squeezed just as for other indexes. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
