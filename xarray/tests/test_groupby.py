@@ -30,6 +30,9 @@ def test_groupby_dims_property():
     assert ds.groupby("x").dims == ds.sel(x="a").dims
     assert ds.groupby("y").dims == ds.sel(y=1).dims
 
+    assert ds.groupby("x", squeeze=False).dims == ds.isel(x=[1]).dims
+    assert ds.groupby("y", squeeze=False).dims == ds.isel(y=[1]).dims
+
     stacked = ds.stack({"xy": ("x", "y")})
     assert stacked.groupby("xy").dims == stacked.isel(xy=0).dims
 
