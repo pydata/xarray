@@ -820,7 +820,6 @@ def dataset_merge_method(
         priority_arg = 1
     else:
         other_overwrite = OrderedDict()  # type: OrderedDict[Hashable, CoercibleValue]
-        other_overwrite = OrderedDict()  # type: OrderedDict[Hashable, CoercibleValue]
         other_no_overwrite = (
             OrderedDict()
         )  # type: OrderedDict[Hashable, CoercibleValue]
