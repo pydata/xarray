@@ -4,7 +4,7 @@ Property-based tests for encoding/decoding methods.
 These ones pass, just as you'd hope!
 
 """
-import pytest
+import pytest  # isort:skip
 
 pytest.importorskip("hypothesis")
 

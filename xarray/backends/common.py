@@ -88,13 +88,13 @@ class AbstractDataStore(Mapping):
         return len(self.variables)
 
     def get_dimensions(self):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_attrs(self):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_variables(self):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_encoding(self):
         return {}
@@ -247,13 +247,13 @@ class AbstractWritableDataStore(AbstractDataStore):
         return a
 
     def set_dimension(self, d, l):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def set_attribute(self, k, v):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def set_variable(self, k, v):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def store_dataset(self, dataset):
         """
