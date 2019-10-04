@@ -36,12 +36,12 @@ class VariableCoder:
     def encode(self, variable, name=None):  # pragma: no cover
         # type: (Variable, Any) -> Variable
         """Convert an encoded variable to a decoded variable."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def decode(self, variable, name=None):  # pragma: no cover
         # type: (Variable, Any) -> Variable
         """Convert an decoded variable to a encoded variable."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):

@@ -53,10 +53,10 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
     @property
     def variables(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _update_coords(self, coords, indexes):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __iter__(self) -> Iterator["Hashable"]:
         # needs to be in the same order as the dataset variables

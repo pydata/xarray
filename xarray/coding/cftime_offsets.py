@@ -181,7 +181,7 @@ def _get_day_of_month(other, day_option):
     elif day_option is None:
         # Note: unlike `_shift_month`, _get_day_of_month does not
         # allow day_option = None
-        raise NotImplementedError
+        raise NotImplementedError()
     else:
         raise ValueError(day_option)
 
