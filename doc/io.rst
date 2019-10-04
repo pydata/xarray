@@ -440,6 +440,17 @@ supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'nol
 By default, xarray uses the 'proleptic_gregorian' calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
 
+Coordinates
+...........
+
+You can control the ``coordinates`` attribute written to disk by specifying ``encoding["coordinates"]``.
+If not specified, xarray automatically sets the ``"coordinates"`` attribute to a space-delimited list
+of names of coordinate variables that share dimensions with the variable.
+This allows perfect roundtripping of xarray datasets but may not be desirable.
+When an xarray dataset contains non-dimensional coordinates that do not share dimensions with any of
+the variables, these coordinate variable names are saved under a global ``"coordinates"`` attribute.
+This is not CF-compliant but again facilitates roundtripping of xarray datasets.
+
 Invalid netCDF files
 ~~~~~~~~~~~~~~~~~~~~
 

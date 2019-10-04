@@ -810,6 +810,17 @@ class CFEncodedBase(DatasetIOBase):
                 assert "coordinates" not in ds["lat"].attrs
                 assert "coordinates" not in ds["lon"].attrs
 
+        original["temp"].encoding["coordinates"] = "lat"
+        with self.roundtrip(original) as actual:
+            assert_identical(actual, original)
+        with create_tmp_file() as tmp_file:
+            original.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, decode_coords=False) as ds:
+                assert equals_latlon(ds.precip.attrs["coordinates"])
+                assert "lon" not in ds["temp"].attrs["coordinates"]
+                assert "coordinates" not in ds["lat"].attrs
+                assert "coordinates" not in ds["lon"].attrs
+
     def test_roundtrip_endian(self):
         ds = Dataset(
             {

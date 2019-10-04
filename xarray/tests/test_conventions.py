@@ -136,6 +136,21 @@ class TestEncodeCFVariable:
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
+    def test_do_not_overwrite_user_coordinates(self):
+        orig = Dataset(
+            coords={"x": [0, 1, 2], "y": ("x", [5, 6, 7]), "z": ("x", [8, 9, 10])},
+            data_vars={"a": ("x", [1, 2, 3]), "b": ("x", [3, 5, 6])},
+        )
+        orig["a"].encoding["coordinates"] = "y"
+        orig["b"].encoding["coordinates"] = "z"
+        with pytest.warns(UserWarning, match="'coordinates' attribute"):
+            enc, _ = conventions.encode_dataset_coordinates(orig)
+        assert enc["a"].attrs["coordinates"] == "y"
+        assert enc["b"].attrs["coordinates"] == "z"
+        orig["a"].attrs["coordinates"] = "foo"
+        with raises_regex(ValueError, "'coordinates' found in both"):
+            conventions.encode_dataset_coordinates(orig)
+
     @requires_dask
     def test_string_object_warning(self):
         original = Variable(("x",), np.array(["foo", "bar"], dtype=object)).chunk()

@@ -663,31 +663,41 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 global_coordinates.discard(coord_name)
 
     variables = {k: v.copy(deep=False) for k, v in variables.items()}
-
-    # These coordinates are saved according to CF conventions
-    for var_name, coord_names in variable_coordinates.items():
-        attrs = variables[var_name].attrs
-        if "coordinates" in attrs:
+    for name, var in variables.items():
+        encoding = var.encoding
+        attrs = var.attrs
+        if "coordinates" in encoding and "coordinates" in attrs:
             raise ValueError(
-                "cannot serialize coordinates because variable "
-                "%s already has an attribute 'coordinates'" % var_name
+                f"'coordinates' found in both encoding and attrs for variable {name!r}. Please specify the 'coordinates' string in encoding."
             )
-        attrs["coordinates"] = " ".join(map(str, coord_names))
+
+        if "coordinates" in encoding:
+            warnings.warn(
+                f"'coordinates' attribute detected on variable {name!r}. This may prevent faithful roundtripping of xarray Datasets.",
+                UserWarning,
+            )
+            attrs["coordinates"] = encoding["coordinates"]
+        else:
+            if variable_coordinates[name]:
+                attrs["coordinates"] = " ".join(map(str, variable_coordinates[name]))
 
     # These coordinates are not associated with any particular variables, so we
     # save them under a global 'coordinates' attribute so xarray can roundtrip
     # the dataset faithfully. Because this serialization goes beyond CF
     # conventions, only do it if necessary.
     # Reference discussion:
-    # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/057771.html
+    # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/007571.html
     if global_coordinates:
         attributes = dict(attributes)
         if "coordinates" in attributes:
-            raise ValueError(
-                "cannot serialize coordinates because the global "
-                "attribute 'coordinates' already exists"
+            warnings.warn(
+                f"cannot serialize global coordinates {global_coordinates!r} because the global "
+                f"attribute 'coordinates' already exists. This may prevent faithful roundtripping"
+                f"of xarray datasets",
+                UserWarning,
             )
-        attributes["coordinates"] = " ".join(map(str, global_coordinates))
+        else:
+            attributes["coordinates"] = " ".join(map(str, global_coordinates))
 
     return variables, attributes
 
