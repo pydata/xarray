@@ -65,7 +65,7 @@ from .merge import (
     dataset_merge_method,
     dataset_update_method,
     merge_data_and_coords,
-    merge_variables,
+    merge_coordinates_without_align,
 )
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
@@ -85,7 +85,7 @@ from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
-    from .merge import DatasetLike
+    from .merge import CoercibleMapping
 
     try:
         from dask.delayed import Delayed
@@ -508,10 +508,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             data_vars = {}
         if coords is None:
             coords = {}
-        self._set_init_vars_and_dims(data_vars, coords, compat)
 
         # TODO(shoyer): expose indexes as a public argument in __init__
-        self._indexes = None  # type: Optional[OrderedDict[Any, pd.Index]]
+        self._set_init_vars_and_dims(data_vars, coords, compat)
 
         if attrs is not None:
             self._attrs = OrderedDict(attrs)
@@ -531,13 +530,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if isinstance(coords, Dataset):
             coords = coords.variables
 
-        variables, coord_names, dims = merge_data_and_coords(
+        variables, coord_names, dims, indexes = merge_data_and_coords(
             data_vars, coords, compat=compat
         )
 
         self._variables = variables
         self._coord_names = coord_names
         self._dims = dims
+        self._indexes = indexes
 
     @classmethod
     def load_store(cls, store, decoder=None) -> "Dataset":
@@ -838,7 +838,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         cls,
         variables,
         coord_names,
-        dims,
+        dims=None,
         attrs=None,
         indexes=None,
         encoding=None,
@@ -847,6 +847,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
+        if dims is None:
+            dims = calculate_dimensions(variables)
         obj = object.__new__(cls)
         obj._variables = variables
         obj._coord_names = coord_names
@@ -862,8 +864,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @classmethod
     def _from_vars_and_coord_names(cls, variables, coord_names, attrs=None):
-        dims = calculate_dimensions(variables)
-        return cls._construct_direct(variables, coord_names, dims, attrs)
+        return cls._construct_direct(variables, coord_names, attrs=attrs)
 
     # TODO(shoyer): renable type checking on this signature when pytype has a
     # good way to handle defaulting arguments to a sentinel value:
@@ -1268,6 +1269,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         del self._variables[key]
         self._coord_names.discard(key)
+        if key in self.indexes:
+            del self._indexes[key]
         self._dims = calculate_dimensions(self._variables)
 
     # mutable objects should not be hashable
@@ -1807,20 +1810,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return indexers_list
 
     def _get_indexers_coords_and_indexes(self, indexers):
-        """  Extract coordinates from indexers.
-        Returns an OrderedDict mapping from coordinate name to the
-        coordinate variable.
+        """Extract coordinates and indexes from indexers.
 
         Only coordinate with a name different from any of self.variables will
         be attached.
         """
         from .dataarray import DataArray
 
-        coord_list = []
-        indexes = OrderedDict()
+        coords_list = []
         for k, v in indexers.items():
             if isinstance(v, DataArray):
-                v_coords = v.coords
                 if v.dtype.kind == "b":
                     if v.ndim != 1:  # we only support 1-d boolean array
                         raise ValueError(
@@ -1831,14 +1830,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     # Make sure in case of boolean DataArray, its
                     # coordinate also should be indexed.
                     v_coords = v[v.values.nonzero()[0]].coords
-
-                coord_list.append({d: v_coords[d].variable for d in v.coords})
-                indexes.update(v.indexes)
+                else:
+                    v_coords = v.coords
+                coords_list.append(v_coords)
 
         # we don't need to call align() explicitly or check indexes for
         # alignment, because merge_variables already checks for exact alignment
         # between dimension coordinates
-        coords = merge_variables(coord_list)
+        coords, indexes = merge_coordinates_without_align(coords_list)
         assert_coordinate_consistent(self, coords)
 
         # silently drop the conflicted variables.
@@ -2644,12 +2643,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _rename_dims(self, name_dict):
         return {name_dict.get(k, k): v for k, v in self.dims.items()}
 
-    def _rename_indexes(self, name_dict):
+    def _rename_indexes(self, name_dict, dims_set):
         if self._indexes is None:
             return None
         indexes = OrderedDict()
         for k, v in self.indexes.items():
             new_name = name_dict.get(k, k)
+            if new_name not in dims_set:
+                continue
             if isinstance(v, pd.MultiIndex):
                 new_names = [name_dict.get(k, k) for k in v.names]
                 index = pd.MultiIndex(
@@ -2667,7 +2668,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _rename_all(self, name_dict, dims_dict):
         variables, coord_names = self._rename_vars(name_dict, dims_dict)
         dims = self._rename_dims(dims_dict)
-        indexes = self._rename_indexes(name_dict)
+        indexes = self._rename_indexes(name_dict, dims.keys())
         return variables, coord_names, dims, indexes
 
     def rename(
@@ -3448,7 +3449,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._unstack_once(dim)
         return result
 
-    def update(self, other: "DatasetLike", inplace: bool = None) -> "Dataset":
+    def update(self, other: "CoercibleMapping", inplace: bool = None) -> "Dataset":
         """Update this dataset's variables with those from another dataset.
 
         Parameters
@@ -3475,13 +3476,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             dataset.
         """
         _check_inplace(inplace)
-        variables, coord_names, dims = dataset_update_method(self, other)
-
-        return self._replace_vars_and_dims(variables, coord_names, dims, inplace=True)
+        merge_result = dataset_update_method(self, other)
+        return self._replace(inplace=True, **merge_result._asdict())
 
     def merge(
         self,
-        other: "DatasetLike",
+        other: "CoercibleMapping",
         inplace: bool = None,
         overwrite_vars: Union[Hashable, Iterable[Hashable]] = frozenset(),
         compat: str = "no_conflicts",
@@ -3536,7 +3536,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If any variables conflict (see ``compat``).
         """
         _check_inplace(inplace)
-        variables, coord_names, dims = dataset_merge_method(
+        merge_result = dataset_merge_method(
             self,
             other,
             overwrite_vars=overwrite_vars,
@@ -3544,8 +3544,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             join=join,
             fill_value=fill_value,
         )
-
-        return self._replace_vars_and_dims(variables, coord_names, dims)
+        return self._replace(**merge_result._asdict())
 
     def _assert_all_in_dataset(
         self, names: Iterable[Hashable], virtual_okay: bool = False
