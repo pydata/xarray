@@ -24,7 +24,7 @@ def use_pint_version_or_xfail(*, version, reason):
 
 
 unit_registry = pint.UnitRegistry()
-require_pint_array_function = pytest.mark.xfail(
+require_pint_array_function = pytest.mark.skipif(
     not hasattr(unit_registry.Quantity, "__array_function__"),
     reason="pint does not implement __array_function__ yet",
 )
