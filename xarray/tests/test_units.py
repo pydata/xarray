@@ -952,7 +952,11 @@ class TestDataArray:
             pytest.param(1, id="no_unit"),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(
+                unit_registry.cm,
+                id="compatible_unit",
+                marks=pytest.mark.xfail(reason="identical does not check units yet"),
+            ),
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
@@ -966,17 +970,7 @@ class TestDataArray:
             "coords",
         ),
     )
-    @pytest.mark.parametrize(
-        "func",
-        (
-            method("equals"),
-            pytest.param(
-                method("identical"),
-                marks=pytest.mark.xfail(reason="identical does not check units yet"),
-            ),
-        ),
-        ids=repr,
-    )
+    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
     def test_comparisons(self, func, variation, unit, dtype):
         data = np.linspace(0, 5, 10).astype(dtype)
         coord = np.arange(len(data)).astype(dtype)
