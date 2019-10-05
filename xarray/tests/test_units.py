@@ -51,6 +51,11 @@ def array_strip_units(array):
 
 
 def array_attach_units(data, unit, convert_from=None):
+    try:
+        unit, convert_from = unit
+    except TypeError:
+        pass
+
     if isinstance(data, BaseQuantity):
         if not convert_from:
             raise ValueError(
@@ -271,7 +276,7 @@ def test_replication(func, dtype):
     data_array = xr.DataArray(data=array, dims="x")
 
     numpy_func = getattr(np, func.__name__)
-    expected = numpy_func(array)
+    expected = xr.DataArray(data=numpy_func(array), dims="x")
     result = func(data_array)
 
     assert_equal_with_units(expected, result)
@@ -479,7 +484,7 @@ class TestDataArray:
         array = np.arange(10).astype(dtype) * unit_registry.m
         data_array = xr.DataArray(data=array)
 
-        expected = func(array)
+        expected = xr.DataArray(data=func(array))
         result = func(data_array)
 
         assert_equal_with_units(expected, result)
@@ -572,8 +577,9 @@ class TestDataArray:
             result = comparison(data_array, to_compare_with)
             # pint compares incompatible arrays to False, so we need to extend
             # the multiplication works for both scalar and array results
-            expected = comparison(array, to_compare_with) * np.ones_like(
-                array, dtype=bool
+            expected = xr.DataArray(
+                data=comparison(array, to_compare_with)
+                * np.ones_like(array, dtype=bool)
             )
 
             assert_equal_with_units(expected, result)
@@ -671,7 +677,7 @@ class TestDataArray:
     )
     def test_numpy_methods_with_args(self, func, unit, error, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
-        data_array = xr.DataArray(data=array, dims="x")
+        data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
         kwargs = {
@@ -684,9 +690,14 @@ class TestDataArray:
                 func(data_array, **kwargs)
         else:
             expected = func(array, **kwargs)
+            if func.name not in ["searchsorted"]:
+                expected = xr.DataArray(data=expected)
             result = func(data_array, **kwargs)
 
-            assert_equal_with_units(expected, result)
+            if func.name in ["searchsorted"]:
+                assert np.allclose(expected, result)
+            else:
+                assert_equal_with_units(expected, result)
 
     @require_pint_array_function
     @pytest.mark.parametrize(
@@ -970,28 +981,31 @@ class TestDataArray:
         data = np.linspace(0, 5, 10).astype(dtype)
         coord = np.arange(len(data)).astype(dtype)
 
-        quantity = data * unit_registry.m
-        x = coord * unit_registry.m
-        y = coord * unit_registry.m
+        base_unit = unit_registry.m
+        quantity = data * base_unit
+        x = coord * base_unit
+        y = coord * base_unit
 
         units = {
-            "data": (unit, unit_registry.m, unit_registry.m),
-            "dims": (unit_registry.m, unit, unit_registry.m),
-            "coords": (unit_registry.m, unit_registry.m, unit),
+            "data": (unit, base_unit, base_unit),
+            "dims": (base_unit, unit, base_unit),
+            "coords": (base_unit, base_unit, unit),
         }
         data_unit, dim_unit, coord_unit = units.get(variation)
 
         data_array = xr.DataArray(
             data=quantity, coords={"x": x, "y": ("x", y)}, dims="x"
         )
+
+        data_kwargs = {"convert_from": base_unit if quantity.check(data_unit) else None}
+        dim_kwargs = {"convert_from": base_unit if x.check(dim_unit) else None}
+        coord_kwargs = {"convert_from": base_unit if y.check(coord_unit) else None}
+
         other = xr.DataArray(
-            data=array_attach_units(data, data_unit, convert_from=unit_registry.m),
+            data=array_attach_units(data, data_unit, **data_kwargs),
             coords={
-                "x": array_attach_units(coord, dim_unit, convert_from=unit_registry.m),
-                "y": (
-                    "x",
-                    array_attach_units(coord, coord_unit, convert_from=unit_registry.m),
-                ),
+                "x": array_attach_units(coord, dim_unit, **dim_kwargs),
+                "y": ("x", array_attach_units(coord, coord_unit, **coord_kwargs)),
             },
             dims="x",
         )
@@ -1028,7 +1042,9 @@ class TestDataArray:
     def test_broadcast_equals(self, unit, dtype):
         left_array = np.ones(shape=(2, 2), dtype=dtype) * unit_registry.m
         right_array = array_attach_units(
-            np.ones(shape=(2,), dtype=dtype), unit, convert_from=unit_registry.m
+            np.ones(shape=(2,), dtype=dtype),
+            unit,
+            convert_from=unit_registry.m if left_array.check(unit) else None,
         )
 
         left = xr.DataArray(data=left_array, dims=("x", "y"))
