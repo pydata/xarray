@@ -957,7 +957,7 @@ class Variable(
 
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
-    def isel(self, indexers=None, drop=False, **indexers_kwargs):
+    def isel(self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any):
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -976,15 +976,12 @@ class Variable(
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
-        invalid = [k for k in indexers if k not in self.dims]
+        invalid = indexers.keys() - set(self.dims)
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        key = [slice(None)] * self.ndim
-        for i, dim in enumerate(self.dims):
-            if dim in indexers:
-                key[i] = indexers[dim]
-        return self[tuple(key)]
+        key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
+        return self[key]
 
     def squeeze(self, dim=None):
         """Return a new object with squeezed data.
