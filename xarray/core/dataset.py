@@ -1791,6 +1791,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     elif isinstance(index, xr.CFTimeIndex):
                         v = _parse_array_of_cftime_strings(v, index.date_type)
 
+                if v.ndim > 1:
+                    raise IndexError(
+                        "Unlabeled multi-dimensional array cannot be "
+                        "used for indexing: {}".format(k)
+                    )
                 yield k, v
 
     def _validate_interp_indexers(
@@ -1812,7 +1817,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 elif v.ndim == 1:
                     yield k, IndexVariable((k,), v)
                 else:
-                    raise ValueError("Bare multi-dimensional index")
+                    raise AssertionError()  # Already tested by _validate_indexers
             else:
                 raise TypeError(type(v))
 
