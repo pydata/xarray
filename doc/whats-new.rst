@@ -31,6 +31,9 @@ Enhancements
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
+- Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25%
+  (:issue:`2799`, :pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
