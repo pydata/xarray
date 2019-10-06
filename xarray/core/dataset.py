@@ -1925,8 +1925,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
                 if new_index is not None:
                     indexes[name] = new_index
-            else:
+            elif var_indexers:
                 new_var = var.isel(indexers=var_indexers)
+            else:
+                new_var = var
 
             variables[name] = new_var
 
