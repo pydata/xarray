@@ -1755,8 +1755,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping
-    ) -> List[Tuple[Any, Union[slice, Variable]]]:
+        self, indexers: Mapping[Hashable, Any]
+    ) -> Iterator[Tuple[Hashable, Union[slice, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
@@ -1765,27 +1765,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from .dataarray import DataArray
 
-        invalid = [k for k in indexers if k not in self.dims]
+        invalid = indexers.keys() - self.dims.keys()
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # all indexers should be int, slice, np.ndarrays, or Variable
-        indexers_list = []  # type: List[Tuple[Any, Union[slice, Variable]]]
         for k, v in indexers.items():
-            if isinstance(v, slice):
-                indexers_list.append((k, v))
-                continue
-
-            if isinstance(v, Variable):
-                pass
+            if isinstance(v, (slice, Variable)):
+                yield k, v
             elif isinstance(v, DataArray):
-                v = v.variable
+                yield k, v.variable
             elif isinstance(v, tuple):
-                v = as_variable(v)
+                yield k, as_variable(v)
             elif isinstance(v, Dataset):
                 raise TypeError("cannot use a Dataset as an indexer")
             elif isinstance(v, Sequence) and len(v) == 0:
-                v = Variable((k,), np.zeros((0,), dtype="int64"))
+                yield k, Variable((k,), np.zeros((0,), dtype="int64"))
             else:
                 v = np.asarray(v)
 
@@ -1797,18 +1792,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         v = _parse_array_of_cftime_strings(v, index.date_type)
 
                 if v.ndim == 0:
-                    v = Variable((), v)
+                    yield k, Variable((), v)
                 elif v.ndim == 1:
-                    v = Variable((k,), v)
+                    yield k, Variable((k,), v)
                 else:
                     raise IndexError(
                         "Unlabeled multi-dimensional array cannot be "
                         "used for indexing: {}".format(k)
                     )
-
-            indexers_list.append((k, v))
-
-        return indexers_list
 
     def _get_indexers_coords_and_indexes(self, indexers):
         """Extract coordinates and indexes from indexers.
@@ -1895,10 +1886,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.sel
         DataArray.isel
         """
-
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
-
-        indexers_list = self._validate_indexers(indexers)
+        # Note: we need to preserve the original indexers variable in order to merge the
+        # coords below
+        indexers_list = list(self._validate_indexers(indexers))
 
         variables = OrderedDict()  # type: OrderedDict[Hashable, Variable]
         indexes = OrderedDict()  # type: OrderedDict[Hashable, pd.Index]
@@ -1919,14 +1910,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             variables[name] = new_var
 
-        coord_names = set(variables).intersection(self._coord_names)
+        coord_names = self._coord_names & variables.keys()
         selected = self._replace_with_new_dims(variables, coord_names, indexes)
 
         # Extract coordinates from indexers
         coord_vars, new_indexes = selected._get_indexers_coords_and_indexes(indexers)
         variables.update(coord_vars)
         indexes.update(new_indexes)
-        coord_names = set(variables).intersection(self._coord_names).union(coord_vars)
+        coord_names = self._coord_names & variables.keys() | coord_vars.keys()
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
     def sel(
