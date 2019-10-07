@@ -47,6 +47,7 @@ from typing import ClassVar, Optional
 
 import numpy as np
 
+from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
 
@@ -774,11 +775,6 @@ def _generate_range(start, end, periods, offset):
             current = next_date
 
 
-def _count_not_none(*args):
-    """Compute the number of non-None arguments."""
-    return sum([arg is not None for arg in args])
-
-
 def cftime_range(
     start=None,
     end=None,
@@ -957,7 +953,7 @@ def cftime_range(
     pandas.date_range
     """
     # Adapted from pandas.core.indexes.datetimes._generate_range.
-    if _count_not_none(start, end, periods, freq) != 3:
+    if count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
             "Of the arguments 'start', 'end', 'periods', and 'freq', three "
             "must be specified at a time."

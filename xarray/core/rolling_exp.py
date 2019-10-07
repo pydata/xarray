@@ -1,6 +1,6 @@
 import numpy as np
-from pandas.core.common import count_not_none
 
+from .pdcompat import count_not_none
 from .pycompat import dask_array_type
 
 

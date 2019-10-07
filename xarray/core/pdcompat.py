@@ -49,3 +49,11 @@ else:
 
     class Panel:  # type: ignore
         pass
+
+
+def count_not_none(*args) -> int:
+    """Compute the number of non-None arguments.
+
+    Copied from pandas.core.common.count_not_none (not part of the public API)
+    """
+    return sum([arg is not None for arg in args])
