@@ -946,7 +946,7 @@ def make_ds():
     map_ds["z"] = [0, 1, 2, 3]
     map_ds["e"] = map_ds.x + map_ds.y
     map_ds.coords["c1"] = 0.5
-    map_ds.coords["cx"] = ("x", np.arange(len(map_da.x)))
+    map_ds.coords["cx"] = ("x", np.arange(len(map_ds.x)))
     map_ds.coords["cx"].attrs["test2"] = "test2"
     map_ds.attrs["test"] = "test"
     map_ds.coords["xx"] = map_ds["a"] * map_ds.y
@@ -954,12 +954,20 @@ def make_ds():
     return map_ds
 
 
-map_da = make_da()
-map_ds = make_ds()
+# fixtures cannot be used in parametrize statements
+# instead use this workaround
+# https://docs.pytest.org/en/latest/deprecations.html#calling-fixtures-directly
+@pytest.fixture()
+def map_da():
+    return make_da()
 
 
-@pytest.mark.parametrize("obj", [map_ds, map_da])
-def test_unify_chunks(obj):
+@pytest.fixture()
+def map_ds():
+    return make_ds()
+
+
+def test_unify_chunks(map_ds):
     ds_copy = map_ds.copy()
     ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
@@ -973,16 +981,17 @@ def test_unify_chunks(obj):
     assert_identical(map_ds, ds_copy.unify_chunks())
 
 
+@pytest.mark.parametrize("obj", [make_ds(), make_da()])
 @pytest.mark.parametrize(
-    "obj",
-    [map_ds.compute(), map_da.compute(), map_ds.unify_chunks(), map_da.unify_chunks()],
+    "transform", [lambda x: x.compute(), lambda x: x.unify_chunks()]
 )
-def test_unify_chunks_shallow_copy(obj):
+def test_unify_chunks_shallow_copy(obj, transform):
+    obj = transform(obj)
     unified = obj.unify_chunks()
     assert_identical(obj, unified) and obj is not obj.unify_chunks()
 
 
-def test_map_blocks_error():
+def test_map_blocks_error(map_da, map_ds):
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
 
@@ -1014,7 +1023,7 @@ def test_map_blocks_error():
         xr.map_blocks(bad_func, ds_copy)
 
 
-@pytest.mark.parametrize("obj", [map_da, map_ds])
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks(obj):
     def func(obj):
         result = obj + obj.x + 5 * obj.y
@@ -1027,7 +1036,7 @@ def test_map_blocks(obj):
     xr.testing.assert_identical(actual.compute(), expected.compute())
 
 
-@pytest.mark.parametrize("obj", [map_da, map_ds])
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_convert_args_to_list(obj):
     expected = obj + 10
     with raise_if_dask_computes():
@@ -1036,7 +1045,7 @@ def test_map_blocks_convert_args_to_list(obj):
     xr.testing.assert_identical(actual.compute(), expected.compute())
 
 
-@pytest.mark.parametrize("obj", [map_da, map_ds])
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_add_attrs(obj):
     def add_attrs(obj):
         obj = obj.copy(deep=True)
@@ -1051,21 +1060,20 @@ def test_map_blocks_add_attrs(obj):
     xr.testing.assert_identical(actual.compute(), expected.compute())
 
 
-@pytest.mark.parametrize("obj", [map_da])
-def test_map_blocks_change_name(obj):
+def test_map_blocks_change_name(map_da):
     def change_name(obj):
         obj = obj.copy(deep=True)
         obj.name = "new"
         return obj
 
-    expected = change_name(obj)
+    expected = change_name(map_da)
     with raise_if_dask_computes():
-        actual = xr.map_blocks(change_name, obj)
+        actual = xr.map_blocks(change_name, map_da)
 
     xr.testing.assert_identical(actual.compute(), expected.compute())
 
 
-@pytest.mark.parametrize("obj", [map_da, map_ds])
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_kwargs(obj):
     expected = xr.full_like(obj, fill_value=np.nan)
     with raise_if_dask_computes():
@@ -1074,7 +1082,7 @@ def test_map_blocks_kwargs(obj):
     xr.testing.assert_identical(actual.compute(), expected.compute())
 
 
-def test_map_blocks_to_array():
+def test_map_blocks_to_array(map_ds):
     with raise_if_dask_computes():
         actual = xr.map_blocks(lambda x: x.to_array(), map_ds)
 
@@ -1083,32 +1091,44 @@ def test_map_blocks_to_array():
 
 
 @pytest.mark.parametrize(
-    "func, obj",
+    "func",
     [
-        [lambda x: x, map_da],
-        [lambda x: x, map_ds],
-        [lambda x: x.to_dataset(), map_da],
-        [lambda x: x.drop("cxy"), map_ds],
-        [lambda x: x.drop("a"), map_ds],
-        [lambda x: x.drop("x"), map_da],
-        [lambda x: x.drop("x"), map_ds],
-        [lambda x: x.expand_dims(k=[1, 2, 3]), map_ds],
-        [lambda x: x.expand_dims(k=[1, 2, 3]), map_da],
-        # TODO: [lambda x: x.isel(x=1), map_ds],
+        lambda x: x,
+        lambda x: x.to_dataset(),
+        lambda x: x.drop("x"),
+        lambda x: x.expand_dims(k=[1, 2, 3]),
+        lambda x: x.assign_coords(new_coord=("y", x.y * 2)),
+        lambda x: x.astype(np.int32),
         # TODO: [lambda x: x.isel(x=1).drop("x"), map_da],
-        [lambda x: x.assign_coords(new_coord=("y", x.y * 2)), map_da],
-        [lambda x: x.astype(np.int32), map_da],
-        [lambda x: x.rename({"a": "new1", "b": "new2"}), map_ds],
     ],
 )
-def test_map_blocks_transformations(func, obj):
+def test_map_blocks_da_transformations(func, map_da):
     with raise_if_dask_computes():
-        actual = xr.map_blocks(func, obj)
+        actual = xr.map_blocks(func, map_da)
 
-    assert_identical(actual.compute(), func(obj).compute())
+    assert_identical(actual.compute(), func(map_da).compute())
 
 
-@pytest.mark.parametrize("obj", [map_da, map_ds])
+@pytest.mark.parametrize(
+    "func",
+    [
+        lambda x: x,
+        lambda x: x.drop("cxy"),
+        lambda x: x.drop("a"),
+        lambda x: x.drop("x"),
+        lambda x: x.expand_dims(k=[1, 2, 3]),
+        lambda x: x.rename({"a": "new1", "b": "new2"}),
+        # TODO: [lambda x: x.isel(x=1)],
+    ],
+)
+def test_map_blocks_ds_transformations(func, map_ds):
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, map_ds)
+
+    assert_identical(actual.compute(), func(map_ds).compute())
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_object_method(obj):
     def func(obj):
         result = obj + obj.x + 5 * obj.y
@@ -1121,7 +1141,7 @@ def test_map_blocks_object_method(obj):
     assert_identical(expected.compute(), actual.compute())
 
 
-def test_make_meta():
+def test_make_meta(map_ds):
     from ..core.parallel import make_meta
 
     meta = make_meta(map_ds)
