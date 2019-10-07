@@ -31,7 +31,7 @@ Enhancements
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
-- Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25%
+- Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small arrays
   (:issue:`2799`, :pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
