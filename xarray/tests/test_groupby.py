@@ -24,7 +24,7 @@ def test_consolidate_slices():
 def test_groupby_dims_property():
     ds = xr.Dataset(
         {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
-        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
+        {"x": ["a", "sdb", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
     )
 
     assert ds.groupby("x").dims == ds.sel(x="a").dims
