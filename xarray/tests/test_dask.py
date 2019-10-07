@@ -957,12 +957,12 @@ def make_ds():
 # fixtures cannot be used in parametrize statements
 # instead use this workaround
 # https://docs.pytest.org/en/latest/deprecations.html#calling-fixtures-directly
-@pytest.fixture()
+@pytest.fixture
 def map_da():
     return make_da()
 
 
-@pytest.fixture()
+@pytest.fixture
 def map_ds():
     return make_ds()
 
