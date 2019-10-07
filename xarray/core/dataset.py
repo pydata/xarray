@@ -5416,14 +5416,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dask.array.core.unify_chunks
         """
 
-        import dask
-
-        if not dask.is_dask_collection(self):
-            return self.copy()
-
         try:
-            self.chunks
-            return self.copy()
+            # if pure numpy
+            if len(self.chunks) == 0:
+                return self.copy()
         except ValueError:  # "inconsistent chunks"
             pass
 
