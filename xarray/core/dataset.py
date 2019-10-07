@@ -5403,7 +5403,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self[selection]
 
     def unify_chunks(self) -> "Dataset":
-        """ Unifies chunksize along all chunked dimensions of this Dataset.
+        """ Unify chunk size along all chunked dimensions of this Dataset.
 
         Returns
         -------
@@ -5480,8 +5480,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         args: Sequence
             Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+            Passing dask objects will raise an error.
         kwargs: Mapping
             Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+            Passing dask objects will raise an error.
 
         Returns
         -------

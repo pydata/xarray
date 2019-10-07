@@ -135,10 +135,10 @@ def map_blocks(
         function will be run eagerly.
     args: tuple
         Passed on to func after unpacking. xarray objects, if any, will not be split by
-        chunks.
+        chunks. Passing dask objects will raise an error.
     kwargs: dict
         Passed on to func after unpacking. xarray objects, if any, will not be split by
-        chunks.
+        chunks. Passing dask objects will raise an error.
 
     Returns
     -------
@@ -181,6 +181,12 @@ def map_blocks(
     elif not isinstance(kwargs, Mapping):
         raise TypeError("kwargs must be a mapping (for example, a dict)")
 
+    for value in list(args) + list(kwargs.values()):
+        if dask.is_dask_collection(value):
+            raise ValueError(
+                "Cannot pass dask variables in args or kwargs yet. Please compute or load values before passing to map_blocks"
+            )
+
     if not dask.is_dask_collection(obj):
         return func(obj, *args, **kwargs)
 
@@ -221,7 +227,10 @@ def map_blocks(
     indexes.update({k: template.indexes[k] for k in new_indexes})
 
     graph = {}  # type: Dict[Any, Any]
-    gname = "%s-%s" % (dask.utils.funcname(func), dask.base.tokenize(dataset))
+    gname = "%s-%s" % (
+        dask.utils.funcname(func),
+        dask.base.tokenize(dataset, args, kwargs),
+    )
 
     # map dims to list of chunk indexes
     ichunk = {dim: range(len(chunks_v)) for dim, chunks_v in input_chunks.items()}
@@ -249,7 +258,7 @@ def map_blocks(
                 for dim in variable.dims:
                     chunk = chunk[chunk_index_dict[dim]]
 
-                chunk_variable_task = ("tuple-" + dask.base.tokenize(chunk),) + v
+                chunk_variable_task = ("%s-%s" % (gname, chunk[0]),) + v
                 graph[chunk_variable_task] = (
                     tuple,
                     [variable.dims, chunk, variable.attrs],
@@ -267,7 +276,9 @@ def map_blocks(
                         )
 
                 subset = variable.isel(subsetter)
-                chunk_variable_task = (name + dask.base.tokenize(subset),) + v
+                chunk_variable_task = (
+                    "%s-%s" % (gname, dask.base.tokenize(subset)),
+                ) + v
                 graph[chunk_variable_task] = (
                     tuple,
                     [subset.dims, subset, subset.attrs],

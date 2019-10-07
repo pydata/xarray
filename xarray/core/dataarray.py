@@ -3057,7 +3057,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def unify_chunks(self) -> "DataArray":
-        """ Unifies chunksize along all chunked dimensions of this DataArray.
+        """ Unify chunk size along all chunked dimensions of this DataArray.
 
         Returns
         -------
@@ -3103,8 +3103,10 @@ class DataArray(AbstractArray, DataWithCoords):
 
         args: Sequence
             Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+            Passing dask objects will raise an error.
         kwargs: Mapping
             Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
+            Passing dask objects will raise an error.
 
         Returns
         -------
