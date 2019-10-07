@@ -3,7 +3,7 @@ import itertools
 from collections import OrderedDict, defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Hashable, Mapping, Union
+from typing import Any, Hashable, Mapping, Union, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -40,6 +40,18 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 ) + dask_array_type
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
+
+VariableType = TypeVar("VariableType", bound="Variable")
+"""Type annotation to be used when methods of Variable return self or a copy of self.
+When called from an instance of a subclass, e.g. IndexVariable, mypy identifies the
+output as an instance of the subclass.
+
+Usage::
+
+   class Variable:
+       def f(self: VariableType, ...) -> VariableType:
+           ...
+"""
 
 
 class MissingDimensionsError(ValueError):
@@ -663,8 +675,8 @@ class Variable(
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
-    def __getitem__(self, key):
-        """Return a new Array object whose contents are consistent with
+    def __getitem__(self: VariableType, key) -> VariableType:
+        """Return a new Variable object whose contents are consistent with
         getting the provided key from the underlying data.
 
         NB. __getitem__ and __setitem__ implement xarray-style indexing,
@@ -682,7 +694,7 @@ class Variable(
             data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
-    def _finalize_indexing_result(self, dims, data):
+    def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
         """Used by IndexVariable to return IndexVariable objects when possible.
         """
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
@@ -957,7 +969,11 @@ class Variable(
 
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
-    def isel(self, indexers: Mapping[Hashable, Any] = None, **indexers_kwargs: Any):
+    def isel(
+        self: VariableType,
+        indexers: Mapping[Hashable, Any] = None,
+        **indexers_kwargs: Any
+    ) -> VariableType:
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
