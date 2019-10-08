@@ -5417,12 +5417,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
 
         try:
-            # if pure numpy
-            if len(self.chunks) == 0:
-                return self.copy()
+            self.chunks
         except ValueError:  # "inconsistent chunks"
             pass
+        else:
+            # No variables with dask backend, or all chunks are already aligned
+            return self.copy()
 
+        # import dask is placed after the quick exit test above to allow
+        # running this method if dask isn't installed and there are no chunks
         import dask.array
 
         ds = self.copy()
