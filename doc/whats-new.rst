@@ -17,11 +17,6 @@ What's New
 
 v0.14.0 (unreleased)
 --------------------
-Breaking changes
-~~~~~~~~~~~~~~~~
-- Dropped the 'drop=False' optional parameter from :meth:`Variable.isel`.
-  It was unused and doesn't make sense for a Variable.
-  (:pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -47,6 +42,9 @@ Breaking changes
 
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Dropped the 'drop=False' optional parameter from :meth:`Variable.isel`.
+  It was unused and doesn't make sense for a Variable.
+  (:pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -54,16 +52,17 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
-- Add a repr for :py:class:`~xarray.core.GroupBy` objects (:issue:`3344`).
+- Add a repr for :py:class:`~xarray.core.GroupBy` objects.
   Example::
 
       >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
-- Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small arrays
-  (:issue:`2799`, :pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
+  (:issue:`3344`) by `Deepak Cherian <https://github.com/dcherian>`_.
+- Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small
+  arrays (:issue:`2799`, :pull:`3375`) by
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
