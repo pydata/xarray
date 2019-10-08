@@ -17,6 +17,11 @@ What's New
 
 v0.13.1 (unreleased)
 --------------------
+Breaking changes
+~~~~~~~~~~~~~~~~
+- Dropped the 'drop=False' optional parameter from :meth:`Variable.isel`.
+  It was unused and doesn't make sense for a Variable.
+  (:pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
