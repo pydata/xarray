@@ -179,7 +179,9 @@ def attach_units(obj, units):
         dims = obj.dims
         attrs = obj.attrs
 
-        new_obj = xr.DataArray(data=data, coords=coords, attrs=attrs, dims=dims)
+        new_obj = xr.DataArray(
+            name=obj.name, data=data, coords=coords, attrs=attrs, dims=dims
+        )
 
     return new_obj
 
