@@ -268,7 +268,7 @@ def align(
                     all_indexes[dim].append(index)
 
     if join == "override":
-        objects = _override_indexes(list(objects), all_indexes, exclude)
+        objects = _override_indexes(objects, all_indexes, exclude)
 
     # We don't reindex over dimensions with all equal indexes for two reasons:
     # - It's faster for the usual case (already aligned objects).
@@ -365,26 +365,27 @@ def deep_align(
     targets = []
     no_key = object()
     not_replaced = object()
-    for n, variables in enumerate(objects):
+    for position, variables in enumerate(objects):
         if is_alignable(variables):
-            positions.append(n)
+            positions.append(position)
             keys.append(no_key)
             targets.append(variables)
             out.append(not_replaced)
         elif is_dict_like(variables):
+            current_out = OrderedDict()
             for k, v in variables.items():
-                if is_alignable(v) and k not in indexes:
-                    # Skip variables in indexes for alignment, because these
-                    # should to be overwritten instead:
-                    # https://github.com/pydata/xarray/issues/725
-                    positions.append(n)
+                if is_alignable(v):
+                    positions.append(position)
                     keys.append(k)
                     targets.append(v)
-            out.append(OrderedDict(variables))
+                    current_out[k] = not_replaced
+                else:
+                    current_out[k] = v
+            out.append(current_out)
         elif raise_on_invalid:
             raise ValueError(
                 "object to align is neither an xarray.Dataset, "
-                "an xarray.DataArray nor a dictionary: %r" % variables
+                "an xarray.DataArray nor a dictionary: {!r}".format(variables)
             )
         else:
             out.append(variables)
@@ -405,7 +406,10 @@ def deep_align(
             out[position][key] = aligned_obj
 
     # something went wrong: we should have replaced all sentinel values
-    assert all(arg is not not_replaced for arg in out)
+    for arg in out:
+        assert arg is not not_replaced
+        if is_dict_like(arg):
+            assert all(value is not not_replaced for value in arg.values())
 
     return out
 
@@ -545,7 +549,7 @@ def reindex_variables(
 
         if dim in variables:
             var = variables[dim]
-            args = (var.attrs, var.encoding)  # type: tuple
+            args: tuple = (var.attrs, var.encoding)
         else:
             args = ()
         reindexed[dim] = IndexVariable((dim,), target, *args)

@@ -8,7 +8,6 @@ import xarray as xr
 from xarray.core.resample_cftime import CFTimeGrouper
 
 pytest.importorskip("cftime")
-pytest.importorskip("pandas", minversion="0.24")
 
 
 # Create a list of pairs of similar-length initial and resample frequencies

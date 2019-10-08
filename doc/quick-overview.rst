@@ -48,21 +48,21 @@ Here are the key properties for a ``DataArray``:
 Indexing
 --------
 
-xarray supports four kind of indexing. Since we have assigned coordinate labels to the x dimension we can use label-based indexing along that dimension just like pandas. The four examples below all yield the same result but at varying levels of convenience and intuitiveness.
+xarray supports four kind of indexing. Since we have assigned coordinate labels to the x dimension we can use label-based indexing along that dimension just like pandas. The four examples below all yield the same result (the value at `x=10`) but at varying levels of convenience and intuitiveness.
 
 .. ipython:: python
 
     # positional and by integer label, like numpy
-    data[[0, 1]]
+    data[0, :]
 
-    # positional and by coordinate label, like pandas
-    data.loc[10:20]
+    # loc or "location": positional and coordinate label, like pandas
+    data.loc[10]
 
-    # by dimension name and integer label
-    data.isel(x=slice(2))
+    # isel or "integer select":  by dimension name and integer label
+    data.isel(x=0)
 
-    # by dimension name and coordinate label
-    data.sel(x=[10, 20])
+    # sel or "select": by dimension name and coordinate label
+    data.sel(x=10)
 
 
 Unlike positional indexing, label-based indexing frees us from having to know how our array is organized. All we need to know are the dimension name and the label we wish to index i.e. ``data.sel(x=10)`` works regardless of whether ``x`` is the first or second dimension of the array and regardless of whether ``10`` is the first or second element of ``x``. We have already told xarray that x is the first dimension when we created ``data``: xarray keeps track of this so we don't have to. For more, see :ref:`indexing`.

@@ -1,5 +1,4 @@
 import functools
-import sys
 import warnings
 from collections import OrderedDict
 from numbers import Number
@@ -323,7 +322,7 @@ class DataArray(AbstractArray, DataWithCoords):
         if encoding is not None:
             warnings.warn(
                 "The `encoding` argument to `DataArray` is deprecated, and . "
-                "will be removed in 0.14. "
+                "will be removed in 0.15. "
                 "Instead, specify the encoding when writing to disk or "
                 "set the `encoding` attribute directly.",
                 FutureWarning,
@@ -419,7 +418,7 @@ class DataArray(AbstractArray, DataWithCoords):
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
-        dim_names = {}  # type: Dict[Any, str]
+        dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
             if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
                 dim_names[dim] = idx.name
@@ -1184,12 +1183,11 @@ class DataArray(AbstractArray, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -1250,7 +1248,7 @@ class DataArray(AbstractArray, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
@@ -1504,9 +1502,7 @@ class DataArray(AbstractArray, DataWithCoords):
             with length 1. If provided as a dict, then the keys are the new
             dimensions and the values are either integers (giving the length of
             the new dimensions) or sequence/ndarray (giving the coordinates of
-            the new dimensions). **WARNING** for python 3.5, if ``dim`` is
-            dict-like, then it must be an ``OrderedDict``. This is to ensure
-            that the order in which the dims are given is maintained.
+            the new dimensions).
         axis : integer, list (or tuple) of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
@@ -1517,8 +1513,7 @@ class DataArray(AbstractArray, DataWithCoords):
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
             coordinates. Note, this is an alternative to passing a dict to the
-            dim kwarg and will only be used if dim is None. **WARNING** for
-            python 3.5 ``dim_kwargs`` is not available.
+            dim kwarg and will only be used if dim is None.
 
         Returns
         -------
@@ -1533,16 +1528,6 @@ class DataArray(AbstractArray, DataWithCoords):
             dim = OrderedDict((d, 1) for d in dim)
         elif dim is not None and not isinstance(dim, Mapping):
             dim = OrderedDict(((cast(Hashable, dim), 1),))
-
-        # TODO: get rid of the below code block when python 3.5 is no longer
-        #   supported.
-        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
-        not_ordereddict = dim is not None and not isinstance(dim, OrderedDict)
-        if not python36_plus and not_ordereddict:
-            raise TypeError("dim must be an OrderedDict for python <3.6")
-        elif not python36_plus and dim_kwargs:
-            raise ValueError("dim_kwargs isn't available for python <3.6")
-        dim_kwargs = OrderedDict(dim_kwargs)
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         ds = self._to_temp_dataset().expand_dims(dim, axis)
@@ -2519,7 +2504,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 if not reflexive
                 else f(other_variable, self.variable)
             )
-            coords = self.coords._merge_raw(other_coords)
+            coords, indexes = self.coords._merge_raw(other_coords)
             name = self._result_name(other)
 
             return self._replace(variable, coords, name)
