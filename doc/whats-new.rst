@@ -67,6 +67,8 @@ Bug fixes
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fix error in concatenating unlabeled dimensions (:pull:`3362`).
+  By `Deepak Cherian <https://github.com/dcherian/>`_.
 
 Documentation
 ~~~~~~~~~~~~~
