@@ -398,11 +398,15 @@ class GroupBy(SupportsArithmetic):
         return zip(self._unique_coord.values, self._iter_grouped())
 
     def __repr__(self):
-        return "%s, grouped over %r \n%r groups with labels %s" % (
-            self.__class__.__name__,
-            self._unique_coord.name,
-            self._unique_coord.size,
-            ", ".join(format_array_flat(self._unique_coord, 30).split()),
+        return (
+            "%s, grouped over %r \n%r groups with labels %s. \nEach group has dimensions: %r"
+            % (
+                self.__class__.__name__,
+                self._unique_coord.name,
+                self._unique_coord.size,
+                ", ".join(format_array_flat(self._unique_coord, 30).split()),
+                list(self.dims),
+            )
         )
 
     def _get_index_and_items(self, index, grouper):
