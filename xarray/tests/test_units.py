@@ -1099,7 +1099,13 @@ class TestDataArray:
         }
         expected = attach_units(
             func(strip_units(data_array), **stripped_kwargs),
-            {"data": quantity.units, "x": x.units, "x2": x2.units, "y": y.units},
+            {
+                "data": quantity.units,
+                "x": x.units,
+                "x_mm": x2.units,
+                "x2": x2.units,
+                "y": y.units,
+            },
         )
         result = func(data_array)
 
