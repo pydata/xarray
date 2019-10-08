@@ -177,8 +177,6 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
             if dim not in ds.dims:
                 if dim in ds:
                     ds = ds.set_coords(dim)
-                else:
-                    raise ValueError("%r is not present in all datasets" % dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
         concat_dim_lengths.append(ds.dims.get(dim, 1))
 
@@ -362,12 +360,21 @@ def _dataset_concat(
     # n.b. this loop preserves variable order, needed for groupby.
     for k in datasets[0].variables:
         if k in concat_over:
-            vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+            try:
+                vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+            except KeyError:
+                raise ValueError("%r is not present in all datasets." % k)
             combined = concat_vars(vars, dim, positions)
             assert isinstance(combined, Variable)
             result_vars[k] = combined
 
     result = Dataset(result_vars, attrs=result_attrs)
+    absent_coord_names = coord_names - set(result.variables)
+    if absent_coord_names:
+        raise ValueError(
+            "Variables %r are coordinates in some datasets but not others."
+            % absent_coord_names
+        )
     result = result.set_coords(coord_names)
     result.encoding = result_encoding
 
