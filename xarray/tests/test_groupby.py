@@ -264,7 +264,13 @@ def test_groupby_grouping_errors():
         dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
     with raises_regex(ValueError, "All bin edges are NaN."):
+        dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
+
+    with raises_regex(ValueError, "All bin edges are NaN."):
         dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
+
+    with raises_regex(ValueError, "Failed to group data."):
+        dataset.groupby(dataset.foo * np.nan)
 
     with raises_regex(ValueError, "Failed to group data."):
         dataset.to_array().groupby(dataset.foo * np.nan)
