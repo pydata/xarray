@@ -2,7 +2,6 @@ import functools
 import operator
 import pickle
 from collections import OrderedDict
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -942,12 +941,6 @@ def test_dot(use_dask):
     assert (actual.data == np.einsum("ij,ijk->k", a, b)).all()
     assert isinstance(actual.variable.data, type(da_a.variable.data))
 
-    if use_dask:
-        import dask
-
-        if LooseVersion(dask.__version__) < LooseVersion("0.17.3"):
-            pytest.skip("needs dask.array.einsum")
-
     # for only a single array is passed without dims argument, just return
     # as is
     actual = xr.dot(da_a)
@@ -1008,7 +1001,7 @@ def test_dot(use_dask):
     assert (actual.data == np.zeros(actual.shape)).all()
 
     # Invalid cases
-    if not use_dask or LooseVersion(dask.__version__) > LooseVersion("0.17.4"):
+    if not use_dask:
         with pytest.raises(TypeError):
             xr.dot(da_a, dims="a", invalid=None)
     with pytest.raises(TypeError):

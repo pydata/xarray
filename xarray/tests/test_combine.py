@@ -714,7 +714,7 @@ class TestCombineAuto:
 
 
 @pytest.mark.filterwarnings(
-    "ignore:In xarray version 0.14 `auto_combine` " "will be deprecated"
+    "ignore:In xarray version 0.15 `auto_combine` " "will be deprecated"
 )
 @pytest.mark.filterwarnings("ignore:Also `open_mfdataset` will no longer")
 @pytest.mark.filterwarnings("ignore:The datasets supplied")

@@ -193,10 +193,9 @@ class AttrAccessMixin:
         """Verify that all subclasses explicitly define ``__slots__``. If they don't,
         raise error in the core xarray module and a FutureWarning in third-party
         extensions.
-        This check is only triggered in Python 3.6+.
         """
         if not hasattr(object.__new__(cls), "__dict__"):
-            cls.__setattr__ = cls._setattr_slots
+            pass
         elif cls.__module__.startswith("xarray."):
             raise AttributeError("%s must explicitly define __slots__" % cls.__name__)
         else:
@@ -230,12 +229,11 @@ class AttrAccessMixin:
             "%r object has no attribute %r" % (type(self).__name__, name)
         )
 
-    # This complicated three-method design boosts overall performance of simple
-    # operations - particularly DataArray methods that perform a _to_temp_dataset()
-    # round-trip - by a whopping 8% compared to a single method that checks
-    # hasattr(self, "__dict__") at runtime before every single assignment (like
-    # _setattr_py35 does). All of this is just temporary until the FutureWarning can be
-    # changed into a hard crash.
+    # This complicated two-method design boosts overall performance of simple operations
+    # - particularly DataArray methods that perform a _to_temp_dataset() round-trip - by
+    # a whopping 8% compared to a single method that checks hasattr(self, "__dict__") at
+    # runtime before every single assignment. All of this is just temporary until the
+    # FutureWarning can be changed into a hard crash.
     def _setattr_dict(self, name: str, value: Any) -> None:
         """Deprecated third party subclass (see ``__init_subclass__`` above)
         """
@@ -251,7 +249,7 @@ class AttrAccessMixin:
                 stacklevel=2,
             )
 
-    def _setattr_slots(self, name: str, value: Any) -> None:
+    def __setattr__(self, name: str, value: Any) -> None:
         """Objects with ``__slots__`` raise AttributeError if you try setting an
         undeclared attribute. This is desirable, but the error message could use some
         improvement.
@@ -268,14 +266,6 @@ class AttrAccessMixin:
                 "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
                 % (name, type(self).__name__)
             ) from e
-
-    def _setattr_py35(self, name: str, value: Any) -> None:
-        if hasattr(self, "__dict__"):
-            return self._setattr_dict(name, value)
-        return self._setattr_slots(name, value)
-
-    # Overridden in Python >=3.6 by __init_subclass__
-    __setattr__ = _setattr_py35
 
     def __dir__(self) -> List[str]:
         """Provide method name lookup and completion. Only provide 'public'
@@ -392,7 +382,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
     ) -> MutableMapping[Hashable, T]:
-        results = SortedKeysDict()  # type: SortedKeysDict[Hashable, T]
+        results: MutableMapping[Hashable, T] = SortedKeysDict()
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)
@@ -1040,13 +1030,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
             grouper = CFTimeGrouper(freq, closed, label, base, loffset)
         else:
-            # TODO: to_offset() call required for pandas==0.19.2
             grouper = pd.Grouper(
-                freq=freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=pd.tseries.frequencies.to_offset(loffset),
+                freq=freq, closed=closed, label=label, base=base, loffset=loffset
             )
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM

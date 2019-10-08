@@ -249,6 +249,7 @@ As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
 made using 1D data.
 
 .. ipython:: python
+    :okwarning:
 
     @savefig plotting_example_step.png width=4in
     air1d[:20].plot.step(where='mid')
