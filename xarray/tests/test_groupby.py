@@ -234,24 +234,29 @@ def test_groupby_repr(obj, dim):
     expected = "%sGroupBy" % obj.__class__.__name__
     expected += ", grouped over %r " % dim
     expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
+    dims = list(obj.dims)
     if dim == "x":
-        expected += "1, 2, 3, 4, 5"
+        expected += "1, 2, 3, 4, 5. "
     elif dim == "y":
-        expected += "0, 1, 2, 3, 4, 5, ..., 15, 16, 17, 18, 19"
+        expected += "0, 1, 2, 3, 4, 5, ..., 15, 16, 17, 18, 19. "
+        dims = list(obj.isel(y=1).dims)
     elif dim == "z":
-        expected += "'a', 'b', 'c'"
+        expected += "'a', 'b', 'c'. "
     elif dim == "month":
-        expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
+        expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12. "
+    expected += "\nEach group has dimensions: %r" % dims
     assert actual == expected
 
 
 @pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
 def test_groupby_repr_datetime(obj):
+    dims = list(obj.dims)
     actual = repr(obj.groupby("t.month"))
     expected = "%sGroupBy" % obj.__class__.__name__
     expected += ", grouped over 'month' "
     expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
-    expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
+    expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12. "
+    expected += "\nEach group has dimensions: %r" % dims
     assert actual == expected
 
 

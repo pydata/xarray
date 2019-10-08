@@ -383,7 +383,7 @@ class GroupBy(SupportsArithmetic):
         # cached attributes
         self._groups = None
 
-        if not group_indices:
+        if len(group_indices) == 0:
             if bins is not None:
                 raise ValueError(
                     "None of the data falls within bins with edges %r" % bins
