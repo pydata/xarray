@@ -381,6 +381,9 @@ class GroupBy(SupportsArithmetic):
         # cached attributes
         self._groups = None
 
+        if not group_indices and bins is not None:
+            raise ValueError("None of the data falls within bins with edges %r" % bins)
+
         example = obj.isel(**{group_dim: group_indices[0]})
         self.dims = example.dims
 
