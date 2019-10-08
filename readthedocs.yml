@@ -1,8 +1,8 @@
 build:
     image: latest
 conda:
-    file: doc/environment.yml
+    file: ci/requirements/doc.yml
 python:
-    version: 3.6
+    version: 3.7
     setup_py_install: true
 formats: []

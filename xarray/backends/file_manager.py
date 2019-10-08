@@ -13,7 +13,7 @@ FILE_CACHE = LRUCache(OPTIONS["file_cache_maxsize"], on_evict=lambda k, v: v.clo
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
 
-REF_COUNTS = {}  # type: Dict[Any, int]
+REF_COUNTS: Dict[Any, int] = {}
 
 _DEFAULT_MODE = utils.ReprObject("<unused>")
 
