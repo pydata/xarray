@@ -5,12 +5,12 @@ import functools
 import itertools
 import operator
 from collections import Counter, OrderedDict
-from distutils.version import LooseVersion
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
     Any,
     Callable,
+    Hashable,
     Iterable,
     List,
     Mapping,
@@ -24,15 +24,15 @@ import numpy as np
 
 from . import duck_array_ops, utils
 from .alignment import deep_align
-from .merge import expand_and_merge_variables
+from .merge import merge_coordinates_without_align
 from .pycompat import dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
 
 if TYPE_CHECKING:
+    from .coordinates import Coordinates  # noqa
     from .dataset import Dataset
 
-_DEFAULT_FROZEN_SET = frozenset()  # type: frozenset
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
@@ -152,17 +152,16 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coord_variables(args):
-    input_coords = []
+def _get_coords_list(args) -> List["Coordinates"]:
+    coords_list = []
     for arg in args:
         try:
             coords = arg.coords
         except AttributeError:
             pass  # skip this argument
         else:
-            coord_vars = getattr(coords, "variables", coords)
-            input_coords.append(coord_vars)
-    return input_coords
+            coords_list.append(coords)
+    return coords_list
 
 
 def build_output_coords(
@@ -185,32 +184,29 @@ def build_output_coords(
     -------
     OrderedDict of Variable objects with merged coordinates.
     """
-    input_coords = _get_coord_variables(args)
+    coords_list = _get_coords_list(args)
 
-    if exclude_dims:
-        input_coords = [
-            OrderedDict(
-                (k, v) for k, v in coord_vars.items() if exclude_dims.isdisjoint(v.dims)
-            )
-            for coord_vars in input_coords
-        ]
-
-    if len(input_coords) == 1:
+    if len(coords_list) == 1 and not exclude_dims:
         # we can skip the expensive merge
-        unpacked_input_coords, = input_coords
-        merged = OrderedDict(unpacked_input_coords)
+        unpacked_coords, = coords_list
+        merged_vars = OrderedDict(unpacked_coords.variables)
     else:
-        merged = expand_and_merge_variables(input_coords)
+        # TODO: save these merged indexes, instead of re-computing them later
+        merged_vars, unused_indexes = merge_coordinates_without_align(
+            coords_list, exclude_dims=exclude_dims
+        )
 
     output_coords = []
     for output_dims in signature.output_core_dims:
         dropped_dims = signature.all_input_core_dims - set(output_dims)
         if dropped_dims:
             filtered = OrderedDict(
-                (k, v) for k, v in merged.items() if dropped_dims.isdisjoint(v.dims)
+                (k, v)
+                for k, v in merged_vars.items()
+                if dropped_dims.isdisjoint(v.dims)
             )
         else:
-            filtered = merged
+            filtered = merged_vars
         output_coords.append(filtered)
 
     return output_coords
@@ -495,8 +491,11 @@ def unified_dim_sizes(
 SLICE_NONE = slice(None)
 
 
-def broadcast_compat_data(variable, broadcast_dims, core_dims):
-    # type: (Variable, tuple, tuple) -> Any
+def broadcast_compat_data(
+    variable: Variable,
+    broadcast_dims: Tuple[Hashable, ...],
+    core_dims: Tuple[Hashable, ...],
+) -> Any:
     data = variable.data
 
     old_dims = variable.dims
@@ -657,7 +656,7 @@ def apply_variable_ufunc(
 def _apply_blockwise(
     func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None
 ):
-    from .dask_array_compat import blockwise
+    import dask.array
 
     if signature.num_outputs > 1:
         raise NotImplementedError(
@@ -720,7 +719,7 @@ def _apply_blockwise(
         trimmed_dims = dims[-ndim:] if ndim else ()
         blockwise_args.extend([arg, trimmed_dims])
 
-    return blockwise(
+    return dask.array.blockwise(
         func,
         out_ind,
         *blockwise_args,
@@ -998,13 +997,6 @@ def apply_ufunc(
 
     if vectorize:
         if signature.all_core_dims:
-            # we need the signature argument
-            if LooseVersion(np.__version__) < "1.12":  # pragma: no cover
-                raise NotImplementedError(
-                    "numpy 1.12 or newer required when using vectorize=True "
-                    "in xarray.apply_ufunc with non-scalar output core "
-                    "dimensions."
-                )
             func = np.vectorize(
                 func, otypes=output_dtypes, signature=signature.to_gufunc_string()
             )
@@ -1171,25 +1163,6 @@ def dot(*arrays, dims=None, **kwargs):
         [d for d in arr.dims if d not in broadcast_dims] for arr in arrays
     ]
     output_core_dims = [tuple(d for d in all_dims if d not in dims + broadcast_dims)]
-
-    # older dask than 0.17.4, we use tensordot if possible.
-    if isinstance(arr.data, dask_array_type):
-        import dask
-
-        if LooseVersion(dask.__version__) < LooseVersion("0.17.4"):
-            if len(broadcast_dims) == 0 and len(arrays) == 2:
-                axes = [
-                    [arr.get_axis_num(d) for d in arr.dims if d in dims]
-                    for arr in arrays
-                ]
-                return apply_ufunc(
-                    duck_array_ops.tensordot,
-                    *arrays,
-                    dask="allowed",
-                    input_core_dims=input_core_dims,
-                    output_core_dims=output_core_dims,
-                    kwargs={"axes": axes}
-                )
 
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position

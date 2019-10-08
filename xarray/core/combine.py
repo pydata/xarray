@@ -789,7 +789,7 @@ def auto_combine(
     if not from_openmfds:
         basic_msg = dedent(
             """\
-        In xarray version 0.14 `auto_combine` will be deprecated. See
+        In xarray version 0.15 `auto_combine` will be deprecated. See
         http://xarray.pydata.org/en/stable/combining.html#combining-multi"""
         )
         warnings.warn(basic_msg, FutureWarning, stacklevel=2)
@@ -831,7 +831,7 @@ def auto_combine(
         message += dedent(
             """\
         The datasets supplied require both concatenation and merging. From
-        xarray version 0.14 this will operation will require either using the
+        xarray version 0.15 this will operation will require either using the
         new `combine_nested` function (or the `combine='nested'` option to
         open_mfdataset), with a nested list structure such that you can combine
         along the dimensions {}. Alternatively if your datasets have global

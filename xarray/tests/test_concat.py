@@ -6,6 +6,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes, merge
+
 from . import (
     InaccessibleArray,
     assert_array_equal,
@@ -41,8 +42,10 @@ def test_concat_compat():
     for var in ["has_x", "no_x_y"]:
         assert "y" not in result[var]
 
+    with raises_regex(ValueError, "coordinates in some datasets but not others"):
+        concat([ds1, ds2], dim="q")
     with raises_regex(ValueError, "'q' is not present in all datasets"):
-        concat([ds1, ds2], dim="q", data_vars="all", compat="broadcast_equals")
+        concat([ds2, ds1], dim="q")
 
 
 class TestConcatDataset:
@@ -89,7 +92,11 @@ class TestConcatDataset:
             assert_equal(data["extra"], actual["extra"])
 
     def test_concat(self, data):
-        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
+        split_data = [
+            data.isel(dim1=slice(3)),
+            data.isel(dim1=3),
+            data.isel(dim1=slice(4, None)),
+        ]
         assert_identical(data, concat(split_data, "dim1"))
 
     def test_concat_dim_precedence(self, data):

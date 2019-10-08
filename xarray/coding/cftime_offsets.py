@@ -43,10 +43,11 @@
 import re
 from datetime import timedelta
 from functools import partial
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import numpy as np
 
+from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
 
@@ -73,8 +74,8 @@ def get_date_type(calendar):
 
 
 class BaseCFTimeOffset:
-    _freq = None  # type: ClassVar[str]
-    _day_option = None  # type: ClassVar[str]
+    _freq: ClassVar[Optional[str]] = None
+    _day_option: ClassVar[Optional[str]] = None
 
     def __init__(self, n=1):
         if not isinstance(n, int):
@@ -181,7 +182,7 @@ def _get_day_of_month(other, day_option):
     elif day_option is None:
         # Note: unlike `_shift_month`, _get_day_of_month does not
         # allow day_option = None
-        raise NotImplementedError
+        raise NotImplementedError()
     else:
         raise ValueError(day_option)
 
@@ -350,8 +351,8 @@ class QuarterOffset(BaseCFTimeOffset):
     """Quarter representation copied off of pandas/tseries/offsets.py
     """
 
-    _freq = None  # type: ClassVar[str]
-    _default_month = None  # type: ClassVar[int]
+    _freq: ClassVar[str]
+    _default_month: ClassVar[int]
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
@@ -447,9 +448,9 @@ class QuarterEnd(QuarterOffset):
 
 
 class YearOffset(BaseCFTimeOffset):
-    _freq = None  # type: ClassVar[str]
-    _day_option = None  # type: ClassVar[str]
-    _default_month = None  # type: ClassVar[int]
+    _freq: ClassVar[str]
+    _day_option: ClassVar[str]
+    _default_month: ClassVar[int]
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
@@ -774,11 +775,6 @@ def _generate_range(start, end, periods, offset):
             current = next_date
 
 
-def _count_not_none(*args):
-    """Compute the number of non-None arguments."""
-    return sum([arg is not None for arg in args])
-
-
 def cftime_range(
     start=None,
     end=None,
@@ -957,7 +953,7 @@ def cftime_range(
     pandas.date_range
     """
     # Adapted from pandas.core.indexes.datetimes._generate_range.
-    if _count_not_none(start, end, periods, freq) != 3:
+    if count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
             "Of the arguments 'start', 'end', 'periods', and 'freq', three "
             "must be specified at a time."
