@@ -255,13 +255,19 @@ def test_groupby_repr_datetime(obj):
     assert actual == expected
 
 
-def test_groupby_no_groups():
+def test_groupby_grouping_errors():
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
     with raises_regex(ValueError, "None of the data falls within bins with edges"):
         dataset.groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
     with raises_regex(ValueError, "None of the data falls within bins with edges"):
         dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
+
+    with raises_regex(ValueError, "All bin edges are NaN."):
+        dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
+
+    with raises_regex(ValueError, "Failed to group data."):
+        dataset.to_array().groupby(dataset.foo * np.nan)
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

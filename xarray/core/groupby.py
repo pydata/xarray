@@ -321,6 +321,8 @@ class GroupBy(SupportsArithmetic):
         full_index = None
 
         if bins is not None:
+            if np.isnan(bins).all():
+                raise ValueError("All bin edges are NaN.")
             binned = pd.cut(group.values, bins, **cut_kwargs)
             new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
@@ -387,7 +389,9 @@ class GroupBy(SupportsArithmetic):
                     "None of the data falls within bins with edges %r" % bins
                 )
             else:
-                raise ValueError("Failed to group data.")
+                raise ValueError(
+                    "Failed to group data. Are you grouping by a variable that is all NaN?"
+                )
 
         example = obj.isel(**{group_dim: group_indices[0]})
         self.dims = example.dims
