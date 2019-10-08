@@ -8,18 +8,17 @@ import xarray.ufuncs as xu
 
 from . import assert_array_equal
 from . import assert_identical as assert_identical_
-from . import mock, raises_regex, requires_np113
+from . import mock, raises_regex
 
 
 def assert_identical(a, b):
-    assert type(a) is type(b) or (float(a) == float(b))  # noqa
+    assert type(a) is type(b) or float(a) == float(b)
     if isinstance(a, (xr.DataArray, xr.Dataset, xr.Variable)):
         assert_identical_(a, b)
     else:
         assert_array_equal(a, b)
 
 
-@requires_np113
 def test_unary():
     args = [
         0,
@@ -32,7 +31,6 @@ def test_unary():
         assert_identical(a + 1, np.cos(a))
 
 
-@requires_np113
 def test_binary():
     args = [
         0,
@@ -49,7 +47,6 @@ def test_binary():
             assert_identical(t2 + 1, np.maximum(t2 + 1, t1))
 
 
-@requires_np113
 def test_binary_out():
     args = [
         1,
@@ -64,7 +61,6 @@ def test_binary_out():
         assert_identical(actual_exponent, arg)
 
 
-@requires_np113
 def test_groupby():
     ds = xr.Dataset({"a": ("x", [0, 0, 0])}, {"c": ("x", [0, 0, 1])})
     ds_grouped = ds.groupby("c")
@@ -87,7 +83,6 @@ def test_groupby():
         np.maximum(ds.a.variable, ds_grouped)
 
 
-@requires_np113
 def test_alignment():
     ds1 = xr.Dataset({"a": ("x", [1, 2])}, {"x": [0, 1]})
     ds2 = xr.Dataset({"a": ("x", [2, 3]), "b": 4}, {"x": [1, 2]})
@@ -104,14 +99,12 @@ def test_alignment():
         assert_identical_(actual, expected)
 
 
-@requires_np113
 def test_kwargs():
     x = xr.DataArray(0)
     result = np.add(x, 1, dtype=np.float64)
     assert result.dtype == np.float64
 
 
-@requires_np113
 def test_xarray_defers_to_unrecognized_type():
     class Other:
         def __array_ufunc__(self, *args, **kwargs):
@@ -123,7 +116,6 @@ def test_xarray_defers_to_unrecognized_type():
     assert np.sin(xarray_obj, out=other) == "other"
 
 
-@requires_np113
 def test_xarray_handles_dask():
     da = pytest.importorskip("dask.array")
     x = xr.DataArray(np.ones((2, 2)), dims=["x", "y"])
@@ -133,7 +125,6 @@ def test_xarray_handles_dask():
     assert isinstance(result, xr.DataArray)
 
 
-@requires_np113
 def test_dask_defers_to_xarray():
     da = pytest.importorskip("dask.array")
     x = xr.DataArray(np.ones((2, 2)), dims=["x", "y"])
@@ -143,14 +134,12 @@ def test_dask_defers_to_xarray():
     assert isinstance(result, xr.DataArray)
 
 
-@requires_np113
 def test_gufunc_methods():
     xarray_obj = xr.DataArray([1, 2, 3])
     with raises_regex(NotImplementedError, "reduce method"):
         np.add.reduce(xarray_obj, 1)
 
 
-@requires_np113
 def test_out():
     xarray_obj = xr.DataArray([1, 2, 3])
 
@@ -164,7 +153,6 @@ def test_out():
     assert_identical(other, np.array([1, 2, 3]))
 
 
-@requires_np113
 def test_gufuncs():
     xarray_obj = xr.DataArray([1, 2, 3])
     fake_gufunc = mock.Mock(signature="(n)->()", autospec=np.sin)
@@ -182,7 +170,6 @@ def test_xarray_ufuncs_deprecation():
     assert len(record) == 0
 
 
-@requires_np113
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize(
     "name",

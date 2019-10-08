@@ -1,15 +1,14 @@
 """ isort:skip_file """
-# flake8: noqa: E402 - ignore linters re order of imports
 import pickle
 
 import pytest
 
-dask = pytest.importorskip("dask", minversion="0.18")  # isort:skip
-distributed = pytest.importorskip("distributed", minversion="1.21")  # isort:skip
+dask = pytest.importorskip("dask")  # isort:skip
+distributed = pytest.importorskip("distributed")  # isort:skip
 
 from dask.distributed import Client, Lock
 from distributed.utils_test import cluster, gen_cluster
-from distributed.utils_test import loop  # noqa
+from distributed.utils_test import loop
 from distributed.client import futures_of
 
 import xarray as xr
@@ -74,7 +73,7 @@ ENGINES_AND_FORMATS = [
 ]
 
 
-@pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)  # noqa
+@pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
 def test_dask_distributed_netcdf_roundtrip(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
@@ -106,7 +105,7 @@ def test_dask_distributed_netcdf_roundtrip(
                 assert_allclose(original, computed)
 
 
-@pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)  # noqa
+@pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
 def test_dask_distributed_read_netcdf_integration_test(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
@@ -130,7 +129,7 @@ def test_dask_distributed_read_netcdf_integration_test(
                 assert_allclose(original, computed)
 
 
-@requires_zarr  # noqar
+@requires_zarr
 @pytest.mark.parametrize("consolidated", [True, False])
 @pytest.mark.parametrize("compute", [True, False])
 def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
@@ -158,7 +157,7 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
                     assert_allclose(original, computed)
 
 
-@requires_rasterio  # noqa
+@requires_rasterio
 def test_dask_distributed_rasterio_integration_test(loop):
     with create_tmp_geotiff() as (tmp_file, expected):
         with cluster() as (s, [a, b]):
@@ -169,7 +168,7 @@ def test_dask_distributed_rasterio_integration_test(loop):
                 assert_allclose(actual, expected)
 
 
-@requires_cfgrib  # noqa
+@requires_cfgrib
 def test_dask_distributed_cfgrib_integration_test(loop):
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):

@@ -26,7 +26,6 @@ from xarray.tests import (
     requires_bottleneck,
     requires_dask,
     requires_iris,
-    requires_np113,
     requires_numbagg,
     requires_scipy,
     requires_sparse,
@@ -159,9 +158,7 @@ class TestDataArray:
         when dimension is a structured array.
         """
         # GH837, GH861
-        # checking array subraction when dims are the same
-        # note: names need to be in sorted order to align consistently with
-        # pandas < 0.24 and >= 0.24.
+        # checking array subtraction when dims are the same
         p_data = np.array(
             [("Abe", 180), ("Stacy", 150), ("Dick", 200)],
             dtype=[("name", "|S256"), ("height", object)],
@@ -486,32 +483,32 @@ class TestDataArray:
         assert_identical(self.ds["x"], x)
         assert_identical(self.ds["y"], y)
 
-        I = ReturnItem()  # noqa
+        arr = ReturnItem()
         for i in [
-            I[:],
-            I[...],
-            I[x.values],
-            I[x.variable],
-            I[x],
-            I[x, y],
-            I[x.values > -1],
-            I[x.variable > -1],
-            I[x > -1],
-            I[x > -1, y > -1],
+            arr[:],
+            arr[...],
+            arr[x.values],
+            arr[x.variable],
+            arr[x],
+            arr[x, y],
+            arr[x.values > -1],
+            arr[x.variable > -1],
+            arr[x > -1],
+            arr[x > -1, y > -1],
         ]:
             assert_equal(self.dv, self.dv[i])
         for i in [
-            I[0],
-            I[:, 0],
-            I[:3, :2],
-            I[x.values[:3]],
-            I[x.variable[:3]],
-            I[x[:3]],
-            I[x[:3], y[:4]],
-            I[x.values > 3],
-            I[x.variable > 3],
-            I[x > 3],
-            I[x > 3, y > 3],
+            arr[0],
+            arr[:, 0],
+            arr[:3, :2],
+            arr[x.values[:3]],
+            arr[x.variable[:3]],
+            arr[x[:3]],
+            arr[x[:3], y[:4]],
+            arr[x.values > 3],
+            arr[x.variable > 3],
+            arr[x > 3],
+            arr[x > 3, y > 3],
         ]:
             assert_array_equal(self.v[i], self.dv[i])
 
@@ -3372,7 +3369,7 @@ class TestDataArray:
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
-            if len(shape) > 2 and not LooseVersion(pd.__version__) < "0.25.0":
+            if len(shape) > 2 and LooseVersion(pd.__version__) >= "0.25.0":
                 continue
             dims = list("abc")[: len(shape)]
             da = DataArray(np.random.randn(*shape), dims=dims)
@@ -4186,12 +4183,12 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     assert_equal(actual, da["time"])
 
 
+@requires_dask
 @pytest.mark.parametrize("name", ("mean", "count"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
 def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
-    pytest.importorskip("dask.array")
     # dask version
     rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
@@ -4297,7 +4294,6 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-@requires_np113
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
@@ -4658,7 +4654,6 @@ def test_no_dict():
         d.__dict__
 
 
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
 def test_subclass_slots():
     """Test that DataArray subclasses must explicitly define ``__slots__``.
 

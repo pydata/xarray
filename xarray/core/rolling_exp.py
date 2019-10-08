@@ -1,5 +1,6 @@
 import numpy as np
 
+from .pdcompat import count_not_none
 from .pycompat import dask_array_type
 
 
@@ -24,13 +25,11 @@ def move_exp_nanmean(array, *, axis, alpha):
 
 def _get_center_of_mass(comass, span, halflife, alpha):
     """
-    Vendored from pandas.core.window._get_center_of_mass
+    Vendored from pandas.core.window.common._get_center_of_mass
 
     See licenses/PANDAS_LICENSE for the function's license
     """
-    from pandas.core import common as com
-
-    valid_count = com.count_not_none(comass, span, halflife, alpha)
+    valid_count = count_not_none(comass, span, halflife, alpha)
     if valid_count > 1:
         raise ValueError("comass, span, halflife, and alpha " "are mutually exclusive")
 
@@ -81,7 +80,7 @@ class RollingExp:
     Returns
     -------
     RollingExp : type of input argument
-    """  # noqa
+    """
 
     def __init__(self, obj, windows, window_type="span"):
         self.obj = obj

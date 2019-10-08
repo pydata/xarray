@@ -25,7 +25,7 @@ from xarray import (
     open_dataset,
     set_options,
 )
-from xarray.core import dtypes, indexing, npcompat, utils
+from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
@@ -557,7 +557,7 @@ class TestDataset:
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
         assert isinstance(ds.dims.mapping, utils.SortedKeysDict)
-        assert type(ds.dims.mapping.mapping) is dict  # noqa
+        assert type(ds.dims.mapping.mapping) is dict
 
         assert list(ds) == list(ds.data_vars)
         assert list(ds.keys()) == list(ds.data_vars)
@@ -2142,9 +2142,7 @@ class TestDataset:
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
-        # This exception raised by pandas changed from ValueError -> KeyError
-        # in pandas 0.23.
-        with pytest.raises((ValueError, KeyError)):
+        with pytest.raises(KeyError):
             # not contained in axis
             data.drop(["c"], dim="x")
 
@@ -2359,7 +2357,7 @@ class TestDataset:
                 renamed[k].variable.to_base_variable(),
             )
             assert v.encoding == renamed[k].encoding
-            assert type(v) == type(renamed.variables[k])  # noqa: E721
+            assert type(v) is type(renamed.variables[k])  # noqa: E721
 
         assert "var1" not in renamed
         assert "dim2" not in renamed
@@ -2492,13 +2490,8 @@ class TestDataset:
         )
         with raises_regex(TypeError, "value of new dimension"):
             original.expand_dims(OrderedDict((("d", 3.2),)))
-
-        # TODO: only the code under the if-statement is needed when python 3.5
-        #   is no longer supported.
-        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
-        if python36_plus:
-            with raises_regex(ValueError, "both keyword and positional"):
-                original.expand_dims(OrderedDict((("d", 4),)), e=4)
+        with raises_regex(ValueError, "both keyword and positional"):
+            original.expand_dims(OrderedDict((("d", 4),)), e=4)
 
     def test_expand_dims_int(self):
         original = Dataset(
@@ -2605,21 +2598,6 @@ class TestDataset:
         )
         assert_identical(actual, expected)
 
-    @pytest.mark.skipif(
-        sys.version_info[:2] > (3, 5),
-        reason="we only raise these errors for Python 3.5",
-    )
-    def test_expand_dims_kwargs_python35(self):
-        original = Dataset({"x": ("a", np.random.randn(3))})
-        with raises_regex(ValueError, "dim_kwargs isn't"):
-            original.expand_dims(e=["l", "m", "n"])
-        with raises_regex(TypeError, "must be an OrderedDict"):
-            original.expand_dims({"e": ["l", "m", "n"]})
-
-    @pytest.mark.skipif(
-        sys.version_info[:2] < (3, 6),
-        reason="keyword arguments are only ordered on Python 3.6+",
-    )
     def test_expand_dims_kwargs_python36plus(self):
         original = Dataset(
             {"x": ("a", np.random.randn(3)), "y": (["b", "a"], np.random.randn(4, 3))},
@@ -5554,7 +5532,7 @@ def test_differentiate(dask, edge_order):
     # along x
     actual = da.differentiate("x", edge_order)
     expected_x = xr.DataArray(
-        npcompat.gradient(da, da["x"], axis=0, edge_order=edge_order),
+        np.gradient(da, da["x"], axis=0, edge_order=edge_order),
         dims=da.dims,
         coords=da.coords,
     )
@@ -5569,7 +5547,7 @@ def test_differentiate(dask, edge_order):
     # along y
     actual = da.differentiate("y", edge_order)
     expected_y = xr.DataArray(
-        npcompat.gradient(da, da["y"], axis=1, edge_order=edge_order),
+        np.gradient(da, da["y"], axis=1, edge_order=edge_order),
         dims=da.dims,
         coords=da.coords,
     )
@@ -5612,7 +5590,7 @@ def test_differentiate_datetime(dask):
     # along x
     actual = da.differentiate("x", edge_order=1, datetime_unit="D")
     expected_x = xr.DataArray(
-        npcompat.gradient(
+        np.gradient(
             da, da["x"].variable._to_numeric(datetime_unit="D"), axis=0, edge_order=1
         ),
         dims=da.dims,
@@ -5649,7 +5627,7 @@ def test_differentiate_cftime(dask):
         da = da.chunk({"time": 4})
 
     actual = da.differentiate("time", edge_order=1, datetime_unit="D")
-    expected_data = npcompat.gradient(
+    expected_data = np.gradient(
         da, da["time"].variable._to_numeric(datetime_unit="D"), axis=0, edge_order=1
     )
     expected = xr.DataArray(expected_data, coords=da.coords, dims=da.dims)
@@ -5772,7 +5750,6 @@ def test_no_dict():
         d.__dict__
 
 
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
 def test_subclass_slots():
     """Test that Dataset subclasses must explicitly define ``__slots__``.
 

@@ -1,6 +1,6 @@
 """Testing functions exposed to the user API"""
 from collections import OrderedDict
-from typing import Hashable, Union
+from typing import Hashable, Set, Union
 
 import numpy as np
 import pandas as pd
@@ -50,8 +50,8 @@ def assert_equal(a, b):
     assert_identical, assert_allclose, Dataset.equals, DataArray.equals,
     numpy.testing.assert_array_equal
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     if isinstance(a, (Variable, DataArray)):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -77,8 +77,8 @@ def assert_identical(a, b):
     --------
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
@@ -115,8 +115,8 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     --------
     assert_identical, assert_equal, numpy.testing.assert_allclose
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
     if isinstance(a, Variable):
         assert a.dims == b.dims
@@ -162,7 +162,7 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
 
 def _assert_variable_invariants(var: Variable, name: Hashable = None):
     if name is None:
-        name_or_empty = ()  # type: tuple
+        name_or_empty: tuple = ()
     else:
         name_or_empty = (name,)
     assert isinstance(var._dims, tuple), name_or_empty + (var._dims,)
@@ -212,7 +212,7 @@ def _assert_dataset_invariants(ds: Dataset):
 
     assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
-    var_dims = set()  # type: set
+    var_dims: Set[Hashable] = set()
     for v in ds._variables.values():
         var_dims.update(v.dims)
     assert ds._dims.keys() == var_dims, (set(ds._dims), var_dims)

@@ -2,7 +2,6 @@ import warnings
 from collections import OrderedDict
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -101,7 +100,7 @@ class VariableSubclassobjects:
         ind = Variable(("a", "b"), [[0, 1], [0, 1]])
         v_new = v[ind]
         assert v_new.dims == ("a", "b")
-        expected = np.array(v._data)[([0, 1], [0, 1]),]  # noqa
+        expected = np.array(v._data)[([0, 1], [0, 1]), ...]
         assert_array_equal(v_new, expected)
 
         # boolean indexing
@@ -1836,13 +1835,6 @@ class TestVariableWithDask(VariableSubclassobjects):
 
     def test_getitem_1d_fancy(self):
         super().test_getitem_1d_fancy()
-
-    def test_equals_all_dtypes(self):
-        import dask
-
-        if "0.18.2" <= LooseVersion(dask.__version__) < "0.19.1":
-            pytest.xfail("https://github.com/pydata/xarray/issues/2318")
-        super().test_equals_all_dtypes()
 
     def test_getitem_with_mask_nd_indexer(self):
         import dask.array as da

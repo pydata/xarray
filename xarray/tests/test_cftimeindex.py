@@ -15,13 +15,7 @@ from xarray.coding.cftimeindex import (
 )
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import (
-    has_cftime,
-    has_cftime_1_0_2_1,
-    has_cftime_or_netCDF4,
-    raises_regex,
-    requires_cftime,
-)
+from . import has_cftime, has_cftime_or_netCDF4, raises_regex, requires_cftime
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
@@ -175,14 +169,14 @@ def index_with_name(date_type):
     return CFTimeIndex(dates, name="foo")
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(("name", "expected_name"), [("bar", "bar"), (None, "foo")])
 def test_constructor_with_name(index_with_name, name, expected_name):
     result = CFTimeIndex(index_with_name, name=name).name
     assert result == expected_name
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_assert_all_valid_date_type(date_type, index):
     import cftime
 
@@ -203,7 +197,7 @@ def test_assert_all_valid_date_type(date_type, index):
     assert_all_valid_date_type(np.array([date_type(1, 1, 1), date_type(1, 2, 1)]))
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     ("field", "expected"),
     [
@@ -221,21 +215,21 @@ def test_cftimeindex_field_accessors(index, field, expected):
     assert_array_equal(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime_1_0_2_1, reason="cftime not installed")
+@requires_cftime
 def test_cftimeindex_dayofyear_accessor(index):
     result = index.dayofyear
     expected = [date.dayofyr for date in index]
     assert_array_equal(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime_1_0_2_1, reason="cftime not installed")
+@requires_cftime
 def test_cftimeindex_dayofweek_accessor(index):
     result = index.dayofweek
     expected = [date.dayofwk for date in index]
     assert_array_equal(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     ("string", "date_args", "reso"),
     [
@@ -255,7 +249,7 @@ def test_parse_iso8601_with_reso(date_type, string, date_args, reso):
     assert result_reso == expected_reso
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_parse_string_to_bounds_year(date_type, dec_days):
     parsed = date_type(2, 2, 10, 6, 2, 8, 1)
     expected_start = date_type(2, 1, 1)
@@ -265,7 +259,7 @@ def test_parse_string_to_bounds_year(date_type, dec_days):
     assert result_end == expected_end
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_parse_string_to_bounds_month_feb(date_type, feb_days):
     parsed = date_type(2, 2, 10, 6, 2, 8, 1)
     expected_start = date_type(2, 2, 1)
@@ -275,7 +269,7 @@ def test_parse_string_to_bounds_month_feb(date_type, feb_days):
     assert result_end == expected_end
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_parse_string_to_bounds_month_dec(date_type, dec_days):
     parsed = date_type(2, 12, 1)
     expected_start = date_type(2, 12, 1)
@@ -285,7 +279,7 @@ def test_parse_string_to_bounds_month_dec(date_type, dec_days):
     assert result_end == expected_end
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     ("reso", "ex_start_args", "ex_end_args"),
     [
@@ -307,13 +301,13 @@ def test_parsed_string_to_bounds_sub_monthly(
     assert result_end == expected_end
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_parsed_string_to_bounds_raises(date_type):
     with pytest.raises(KeyError):
         _parsed_string_to_bounds(date_type, "a", date_type(1, 1, 1))
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_get_loc(date_type, index):
     result = index.get_loc("0001")
     assert result == slice(0, 2)
@@ -328,7 +322,7 @@ def test_get_loc(date_type, index):
         index.get_loc("1234")
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("kind", ["loc", "getitem"])
 def test_get_slice_bound(date_type, index, kind):
     result = index.get_slice_bound("0001", "left", kind)
@@ -348,7 +342,7 @@ def test_get_slice_bound(date_type, index, kind):
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("kind", ["loc", "getitem"])
 def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index, kind):
     result = monotonic_decreasing_index.get_slice_bound("0001", "left", kind)
@@ -372,7 +366,7 @@ def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index,
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("kind", ["loc", "getitem"])
 def test_get_slice_bound_length_one_index(date_type, length_one_index, kind):
     result = length_one_index.get_slice_bound("0001", "left", kind)
@@ -392,19 +386,19 @@ def test_get_slice_bound_length_one_index(date_type, length_one_index, kind):
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_string_slice_length_one_index(length_one_index):
     da = xr.DataArray([1], coords=[length_one_index], dims=["time"])
     result = da.sel(time=slice("0001", "0001"))
     assert_identical(result, da)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_date_type_property(date_type, index):
     assert index.date_type is date_type
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_contains(date_type, index):
     assert "0001-01-01" in index
     assert "0001" in index
@@ -413,7 +407,7 @@ def test_contains(date_type, index):
     assert date_type(3, 1, 1) not in index
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_groupby(da):
     result = da.groupby("time.month").sum("time")
     expected = xr.DataArray([4, 6], coords=[[1, 2]], dims=["month"])
@@ -427,7 +421,7 @@ SEL_STRING_OR_LIST_TESTS = {
 }
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_arg",
     list(SEL_STRING_OR_LIST_TESTS.values()),
@@ -439,7 +433,7 @@ def test_sel_string_or_list(da, index, sel_arg):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_sel_date_slice_or_list(da, index, date_type):
     expected = xr.DataArray([1, 2], coords=[index[:2]], dims=["time"])
     result = da.sel(time=slice(date_type(1, 1, 1), date_type(1, 12, 30)))
@@ -449,14 +443,14 @@ def test_sel_date_slice_or_list(da, index, date_type):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_sel_date_scalar(da, date_type, index):
     expected = xr.DataArray(1).assign_coords(time=index[0])
     result = da.sel(time=date_type(1, 1, 1))
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [{"method": "nearest"}, {"method": "nearest", "tolerance": timedelta(days=70)}],
@@ -471,7 +465,7 @@ def test_sel_date_scalar_nearest(da, date_type, index, sel_kwargs):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [{"method": "pad"}, {"method": "pad", "tolerance": timedelta(days=365)}],
@@ -486,7 +480,7 @@ def test_sel_date_scalar_pad(da, date_type, index, sel_kwargs):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [{"method": "backfill"}, {"method": "backfill", "tolerance": timedelta(days=365)}],
@@ -501,7 +495,7 @@ def test_sel_date_scalar_backfill(da, date_type, index, sel_kwargs):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [
@@ -515,7 +509,7 @@ def test_sel_date_scalar_tolerance_raises(da, date_type, sel_kwargs):
         da.sel(time=date_type(1, 5, 1), **sel_kwargs)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [{"method": "nearest"}, {"method": "nearest", "tolerance": timedelta(days=70)}],
@@ -534,7 +528,7 @@ def test_sel_date_list_nearest(da, date_type, index, sel_kwargs):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [{"method": "pad"}, {"method": "pad", "tolerance": timedelta(days=365)}],
@@ -545,7 +539,7 @@ def test_sel_date_list_pad(da, date_type, index, sel_kwargs):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [{"method": "backfill"}, {"method": "backfill", "tolerance": timedelta(days=365)}],
@@ -556,7 +550,7 @@ def test_sel_date_list_backfill(da, date_type, index, sel_kwargs):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [
@@ -570,7 +564,7 @@ def test_sel_date_list_tolerance_raises(da, date_type, sel_kwargs):
         da.sel(time=[date_type(1, 2, 1), date_type(1, 5, 1)], **sel_kwargs)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_isel(da, index):
     expected = xr.DataArray(1).assign_coords(time=index[0])
     result = da.isel(time=0)
@@ -597,7 +591,7 @@ def range_args(date_type):
     ]
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_indexing_in_series_getitem(series, index, scalar_args, range_args):
     for arg in scalar_args:
         assert series[arg] == 1
@@ -607,7 +601,7 @@ def test_indexing_in_series_getitem(series, index, scalar_args, range_args):
         assert series[arg].equals(expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_indexing_in_series_loc(series, index, scalar_args, range_args):
     for arg in scalar_args:
         assert series.loc[arg] == 1
@@ -617,7 +611,7 @@ def test_indexing_in_series_loc(series, index, scalar_args, range_args):
         assert series.loc[arg].equals(expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_indexing_in_series_iloc(series, index):
     expected = 1
     assert series.iloc[0] == expected
@@ -626,7 +620,7 @@ def test_indexing_in_series_iloc(series, index):
     assert series.iloc[:2].equals(expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_series_dropna(index):
     series = pd.Series([0.0, 1.0, np.nan, np.nan], index=index)
     expected = series.iloc[:2]
@@ -634,7 +628,7 @@ def test_series_dropna(index):
     assert result.equals(expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_indexing_in_dataframe_loc(df, index, scalar_args, range_args):
     expected = pd.Series([1], name=index[0])
     for arg in scalar_args:
@@ -647,7 +641,7 @@ def test_indexing_in_dataframe_loc(df, index, scalar_args, range_args):
         assert result.equals(expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_indexing_in_dataframe_iloc(df, index):
     expected = pd.Series([1], name=index[0])
     result = df.iloc[0]
@@ -676,13 +670,13 @@ def test_concat_cftimeindex(date_type):
         assert not isinstance(da.indexes["time"], CFTimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_empty_cftimeindex():
     index = CFTimeIndex([])
     assert index.date_type is None
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_cftimeindex_add(index):
     date_type = index.date_type
     expected_dates = [
@@ -697,7 +691,7 @@ def test_cftimeindex_add(index):
     assert isinstance(result, CFTimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_add_timedeltaindex(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
@@ -708,7 +702,7 @@ def test_cftimeindex_add_timedeltaindex(calendar):
     assert isinstance(result, CFTimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_cftimeindex_radd(index):
     date_type = index.date_type
     expected_dates = [
@@ -723,7 +717,7 @@ def test_cftimeindex_radd(index):
     assert isinstance(result, CFTimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_timedeltaindex_add_cftimeindex(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
@@ -734,7 +728,7 @@ def test_timedeltaindex_add_cftimeindex(calendar):
     assert isinstance(result, CFTimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_cftimeindex_sub(index):
     date_type = index.date_type
     expected_dates = [
@@ -750,7 +744,7 @@ def test_cftimeindex_sub(index):
     assert isinstance(result, CFTimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_sub_cftimeindex(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
@@ -761,7 +755,7 @@ def test_cftimeindex_sub_cftimeindex(calendar):
     assert isinstance(result, pd.TimedeltaIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_sub_cftime_datetime(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
@@ -771,7 +765,7 @@ def test_cftimeindex_sub_cftime_datetime(calendar):
     assert isinstance(result, pd.TimedeltaIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftime_datetime_sub_cftimeindex(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
@@ -781,7 +775,7 @@ def test_cftime_datetime_sub_cftimeindex(calendar):
     assert isinstance(result, pd.TimedeltaIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_sub_timedeltaindex(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
@@ -792,13 +786,13 @@ def test_cftimeindex_sub_timedeltaindex(calendar):
     assert isinstance(result, CFTimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_cftimeindex_rsub(index):
     with pytest.raises(TypeError):
         timedelta(days=1) - index
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("freq", ["D", timedelta(days=1)])
 def test_cftimeindex_shift(index, freq):
     date_type = index.date_type
@@ -814,14 +808,14 @@ def test_cftimeindex_shift(index, freq):
     assert isinstance(result, CFTimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_cftimeindex_shift_invalid_n():
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
         index.shift("a", "D")
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_cftimeindex_shift_invalid_freq():
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
@@ -850,18 +844,18 @@ def test_parse_array_of_cftime_strings():
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_strftime_of_cftime_array(calendar):
     date_format = "%Y%m%d%H%M"
     cf_values = xr.cftime_range("2000", periods=5, calendar=calendar)
     dt_values = pd.date_range("2000", periods=5)
-    expected = dt_values.strftime(date_format)
+    expected = pd.Index(dt_values.strftime(date_format))
     result = cf_values.strftime(date_format)
     assert result.equals(expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 @pytest.mark.parametrize("unsafe", [False, True])
 def test_to_datetimeindex(calendar, unsafe):
@@ -879,7 +873,7 @@ def test_to_datetimeindex(calendar, unsafe):
     assert isinstance(result, pd.DatetimeIndex)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_to_datetimeindex_out_of_range(calendar):
     index = xr.cftime_range("0001", periods=5, calendar=calendar)
@@ -887,7 +881,7 @@ def test_to_datetimeindex_out_of_range(calendar):
         index.to_datetimeindex()
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", ["all_leap", "360_day"])
 def test_to_datetimeindex_feb_29(calendar):
     index = xr.cftime_range("2001-02-28", periods=2, calendar=calendar)
@@ -895,7 +889,7 @@ def test_to_datetimeindex_feb_29(calendar):
         index.to_datetimeindex()
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/24263")
 def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")

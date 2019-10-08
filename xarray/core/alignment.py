@@ -13,8 +13,8 @@ from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray  # noqa: F401
-    from .dataset import Dataset  # noqa: F401
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 def _get_joiner(join):
@@ -268,7 +268,7 @@ def align(
                     all_indexes[dim].append(index)
 
     if join == "override":
-        objects = _override_indexes(list(objects), all_indexes, exclude)
+        objects = _override_indexes(objects, all_indexes, exclude)
 
     # We don't reindex over dimensions with all equal indexes for two reasons:
     # - It's faster for the usual case (already aligned objects).
@@ -350,8 +350,8 @@ def deep_align(
 
     This function is not public API.
     """
-    from .dataarray import DataArray  # noqa: F811
-    from .dataset import Dataset  # noqa: F811
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     if indexes is None:
         indexes = {}
@@ -365,26 +365,27 @@ def deep_align(
     targets = []
     no_key = object()
     not_replaced = object()
-    for n, variables in enumerate(objects):
+    for position, variables in enumerate(objects):
         if is_alignable(variables):
-            positions.append(n)
+            positions.append(position)
             keys.append(no_key)
             targets.append(variables)
             out.append(not_replaced)
         elif is_dict_like(variables):
+            current_out = OrderedDict()
             for k, v in variables.items():
-                if is_alignable(v) and k not in indexes:
-                    # Skip variables in indexes for alignment, because these
-                    # should to be overwritten instead:
-                    # https://github.com/pydata/xarray/issues/725
-                    positions.append(n)
+                if is_alignable(v):
+                    positions.append(position)
                     keys.append(k)
                     targets.append(v)
-            out.append(OrderedDict(variables))
+                    current_out[k] = not_replaced
+                else:
+                    current_out[k] = v
+            out.append(current_out)
         elif raise_on_invalid:
             raise ValueError(
                 "object to align is neither an xarray.Dataset, "
-                "an xarray.DataArray nor a dictionary: %r" % variables
+                "an xarray.DataArray nor a dictionary: {!r}".format(variables)
             )
         else:
             out.append(variables)
@@ -405,13 +406,16 @@ def deep_align(
             out[position][key] = aligned_obj
 
     # something went wrong: we should have replaced all sentinel values
-    assert all(arg is not not_replaced for arg in out)
+    for arg in out:
+        assert arg is not not_replaced
+        if is_dict_like(arg):
+            assert all(value is not not_replaced for value in arg.values())
 
     return out
 
 
 def reindex_like_indexers(
-    target: Union["DataArray", "Dataset"], other: Union["DataArray", "Dataset"]
+    target: "Union[DataArray, Dataset]", other: "Union[DataArray, Dataset]"
 ) -> Dict[Hashable, pd.Index]:
     """Extract indexers to align target with other.
 
@@ -503,7 +507,7 @@ def reindex_variables(
     new_indexes : OrderedDict
         Dict of indexes associated with the reindexed variables.
     """
-    from .dataarray import DataArray  # noqa: F811
+    from .dataarray import DataArray
 
     # create variables for the new dataset
     reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
@@ -545,7 +549,7 @@ def reindex_variables(
 
         if dim in variables:
             var = variables[dim]
-            args = (var.attrs, var.encoding)  # type: tuple
+            args: tuple = (var.attrs, var.encoding)
         else:
             args = ()
         reindexed[dim] = IndexVariable((dim,), target, *args)
@@ -600,8 +604,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 
 def _broadcast_helper(arg, exclude, dims_map, common_coords):
 
-    from .dataarray import DataArray  # noqa: F811
-    from .dataset import Dataset  # noqa: F811
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     def _set_dims(var):
         # Add excluded dims to a copy of dims_map

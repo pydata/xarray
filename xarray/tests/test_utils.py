@@ -73,9 +73,7 @@ def test_multiindex_from_product_levels():
         [pd.Index(["b", "a"]), pd.Index([1, 3, 2])]
     )
     np.testing.assert_array_equal(
-        # compat for pandas < 0.24
-        result.codes if hasattr(result, "codes") else result.labels,
-        [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+        result.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
     )
     np.testing.assert_array_equal(result.levels[0], ["b", "a"])
     np.testing.assert_array_equal(result.levels[1], [1, 3, 2])
@@ -89,9 +87,7 @@ def test_multiindex_from_product_levels_non_unique():
         [pd.Index(["b", "a"]), pd.Index([1, 1, 2])]
     )
     np.testing.assert_array_equal(
-        # compat for pandas < 0.24
-        result.codes if hasattr(result, "codes") else result.labels,
-        [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]],
+        result.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]
     )
     np.testing.assert_array_equal(result.levels[0], ["b", "a"])
     np.testing.assert_array_equal(result.levels[1], [1, 2])

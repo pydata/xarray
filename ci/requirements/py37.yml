@@ -6,8 +6,9 @@ dependencies:
   - black
   - boto3
   - bottleneck
+  - cartopy
   - cdms2
-  - cfgrib>=0.9.2
+  - cfgrib
   - cftime
   - coveralls
   - dask
@@ -17,17 +18,17 @@ dependencies:
   - h5py
   - hdf5
   - hypothesis
-  - iris>=1.10
-  - lxml    # optional dep of pydap
+  - iris
+  - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy==0.720  # Must match .pre-commit-config.yaml
+  - mypy=0.730  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy>=1.12
-  - pandas>=0.19
+  - numpy
+  - pandas
   - pip
-  - pseudonetcdf>=3.0.1
+  - pseudonetcdf
   - pydap
   - pynio
   - pytest
