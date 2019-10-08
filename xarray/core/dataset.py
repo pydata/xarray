@@ -3,7 +3,6 @@ import functools
 import sys
 import warnings
 from collections import OrderedDict, defaultdict
-from distutils.version import LooseVersion
 from numbers import Number
 from pathlib import Path
 from typing import (
@@ -41,7 +40,6 @@ from . import (
     formatting,
     groupby,
     ops,
-    pdcompat,
     resample,
     rolling,
     utils,
@@ -132,8 +130,9 @@ def _get_virtual_variable(
         raise KeyError(key)
 
     split_key = key.split(".", 1)
+    var_name: Optional[str]
     if len(split_key) == 2:
-        ref_name, var_name = split_key  # type: str, Optional[str]
+        ref_name, var_name = split_key
     elif len(split_key) == 1:
         ref_name, var_name = key, None
     else:
@@ -165,7 +164,7 @@ def calculate_dimensions(variables: Mapping[Hashable, Variable]) -> "Dict[Any, i
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = {}  # type: Dict[Any, int]
+    dims: Dict[Any, int] = {}
     last_used = {}
     scalar_vars = {k for k, v in variables.items() if not v.dims}
     for k, var in variables.items():
@@ -197,15 +196,17 @@ def merge_indexes(
     Not public API. Used in Dataset and DataArray set_index
     methods.
     """
-    vars_to_replace = {}  # Dict[Any, Variable]
-    vars_to_remove = []  # type: list
+    vars_to_replace: Dict[Hashable, Variable] = {}
+    vars_to_remove: List[Hashable] = []
     error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, str) or not isinstance(var_names, Sequence):
             var_names = [var_names]
 
-        names, codes, levels = [], [], []  # type: (list, list, list)
+        names: List[Hashable] = []
+        codes: List[List[int]] = []
+        levels: List[List[int]] = []
         current_index_variable = variables.get(dim)
 
         for n in var_names:
@@ -225,13 +226,8 @@ def merge_indexes(
         if current_index_variable is not None and append:
             current_index = current_index_variable.to_index()
             if isinstance(current_index, pd.MultiIndex):
-                try:
-                    current_codes = current_index.codes
-                except AttributeError:
-                    # fpr pandas<0.24
-                    current_codes = current_index.labels
                 names.extend(current_index.names)
-                codes.extend(current_codes)
+                codes.extend(current_index.codes)
                 levels.extend(current_index.levels)
             else:
                 names.append("%s_level_0" % dim)
@@ -490,7 +486,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if compat is not None:
             warnings.warn(
                 "The `compat` argument to Dataset is deprecated and will be "
-                "removed in 0.14."
+                "removed in 0.15."
                 "Instead, use `merge` to control how variables are combined",
                 FutureWarning,
                 stacklevel=2,
@@ -965,7 +961,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj = self._replace(variables, indexes=new_indexes)
 
         # switch from dimension to level names, if necessary
-        dim_names = {}  # type: Dict[Hashable, str]
+        dim_names: Dict[Hashable, str] = {}
         for dim, idx in indexes.items():
             if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
                 dim_names[dim] = idx.name
@@ -1130,7 +1126,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if (var_name,) == var.dims:
                     indexes[var_name] = var.to_index()
 
-        needed_dims = set()  # type: set
+        needed_dims: Set[Hashable] = set()
         for v in variables.values():
             needed_dims.update(v.dims)
 
@@ -1669,7 +1665,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Block dimensions for this dataset's data or None if it's not a dask
         array.
         """
-        chunks = {}  # type: Dict[Hashable, Tuple[int, ...]]
+        chunks: Dict[Hashable, Tuple[int, ...]] = {}
         for v in self.variables.values():
             if v.chunks is not None:
                 for dim, c in zip(v.dims, v.chunks):
@@ -1714,13 +1710,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         chunked : xarray.Dataset
         """
-        try:
-            from dask.base import tokenize
-        except ImportError:
-            # raise the usual error if dask is entirely missing
-            import dask  # noqa: F401
-
-            raise ImportError("xarray requires dask version 0.9 or newer")
+        from dask.base import tokenize
 
         if isinstance(chunks, Number):
             chunks = dict.fromkeys(self.dims, chunks)
@@ -1770,7 +1760,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # all indexers should be int, slice, np.ndarrays, or Variable
-        indexers_list = []  # type: List[Tuple[Any, Union[slice, Variable]]]
+        indexers_list: List[Tuple[Any, Union[slice, Variable]]] = []
         for k, v in indexers.items():
             if isinstance(v, slice):
                 indexers_list.append((k, v))
@@ -1964,7 +1954,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
-            Method to use for inexact matches (requires pandas>=0.16):
+            Method to use for inexact matches:
 
             * None (default): only exact matches
             * pad / ffill: propagate last valid index value forward
@@ -1974,7 +1964,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         drop : bool, optional
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
@@ -2204,12 +2193,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -2265,12 +2253,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -2925,14 +2912,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         expanded : same type as caller
             This object, but with an additional dimension(s).
         """
-        # TODO: get rid of the below code block when python 3.5 is no longer
-        #   supported.
-        if sys.version < "3.6":
-            if isinstance(dim, Mapping) and not isinstance(dim, OrderedDict):
-                raise TypeError("dim must be an OrderedDict for python <3.6")
-            if dim_kwargs:
-                raise ValueError("dim_kwargs isn't available for python <3.6")
-
         if dim is None:
             pass
         elif isinstance(dim, Mapping):
@@ -3186,13 +3165,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # consider dropping levels that are unused?
         levels = [self.get_index(dim) for dim in dims]
-        if LooseVersion(pd.__version__) < LooseVersion("0.19.0"):
-            # RangeIndex levels in a MultiIndex are broken for appending in
-            # pandas before v0.19.0
-            levels = [
-                pd.Int64Index(level) if isinstance(level, pd.RangeIndex) else level
-                for level in levels
-            ]
         idx = utils.multiindex_from_product_levels(levels, names=dims)
         variables[new_dim] = IndexVariable(new_dim, idx)
 
@@ -3360,12 +3332,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _unstack_once(self, dim: Hashable) -> "Dataset":
         index = self.get_index(dim)
-        # GH2619. For MultiIndex, we need to call remove_unused.
-        if LooseVersion(pd.__version__) >= "0.20":
-            index = index.remove_unused_levels()
-        else:  # for pandas 0.19
-            index = pdcompat.remove_unused_levels(index)
-
+        index = index.remove_unused_levels()
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
 
         # take a shortcut in case the MultiIndex was not modified.
@@ -4987,13 +4954,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         for data_array in aligned_other_vars:
             if data_array.ndim != 1:
                 raise ValueError("Input DataArray is not 1-D.")
-            if data_array.dtype == object and LooseVersion(
-                np.__version__
-            ) < LooseVersion("1.11.0"):
-                raise NotImplementedError(
-                    "sortby uses np.lexsort under the hood, which requires "
-                    "numpy 1.11.0 or later to support object data-type."
-                )
             (key,) = data_array.dims
             vars_by_dim[key].append(data_array)
 

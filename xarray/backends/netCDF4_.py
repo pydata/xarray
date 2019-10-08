@@ -1,9 +1,7 @@
 import functools
 import operator
-import warnings
 from collections import OrderedDict
 from contextlib import suppress
-from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -354,16 +352,6 @@ class NetCDF4DataStore(WritableCFDataStore):
     ):
         import netCDF4
 
-        if len(filename) == 88 and LooseVersion(netCDF4.__version__) < "1.3.1":
-            warnings.warn(
-                "A segmentation fault may occur when the "
-                "file path has exactly 88 characters as it does "
-                "in this case. The issue is known to occur with "
-                "version 1.2.4 of netCDF4 and can be addressed by "
-                "upgrading netCDF4 to at least version 1.3.1. "
-                "More details can be found here: "
-                "https://github.com/pydata/xarray/issues/1745"
-            )
         if format is None:
             format = "NETCDF4"
 

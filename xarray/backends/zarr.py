@@ -1,6 +1,5 @@
 import warnings
 from collections import OrderedDict
-from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -253,25 +252,6 @@ class ZarrStore(AbstractWritableDataStore):
         consolidate_on_close=False,
     ):
         import zarr
-
-        min_zarr = "2.2"
-
-        if LooseVersion(zarr.__version__) < min_zarr:  # pragma: no cover
-            raise NotImplementedError(
-                "Zarr version %s or greater is "
-                "required by xarray. See zarr "
-                "installation "
-                "http://zarr.readthedocs.io/en/stable/"
-                "#installation" % min_zarr
-            )
-
-        if consolidated or consolidate_on_close:
-            if LooseVersion(zarr.__version__) <= "2.2.1.dev2":  # pragma: no cover
-                raise NotImplementedError(
-                    "Zarr version 2.2.1.dev2 or greater "
-                    "is required by for consolidated "
-                    "metadata."
-                )
 
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
         if consolidated:

@@ -1,6 +1,4 @@
-import warnings
 from collections import OrderedDict
-from distutils.version import LooseVersion
 from io import BytesIO
 
 import numpy as np
@@ -113,18 +111,6 @@ class ScipyDataStore(WritableCFDataStore):
     def __init__(
         self, filename_or_obj, mode="r", format=None, group=None, mmap=None, lock=None
     ):
-        import scipy
-        import scipy.io
-
-        if mode != "r" and scipy.__version__ < LooseVersion("0.13"):  # pragma: no cover
-            warnings.warn(
-                "scipy %s detected; "
-                "the minimal recommended version is 0.13. "
-                "Older version of this library do not reliably "
-                "read and write files." % scipy.__version__,
-                ImportWarning,
-            )
-
         if group is not None:
             raise ValueError(
                 "cannot save to a group with the " "scipy.io.netcdf backend"

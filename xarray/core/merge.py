@@ -342,8 +342,8 @@ def determine_coords(
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    coord_names = set()  # type: set
-    noncoord_names = set()  # type: set
+    coord_names: Set[Hashable] = set()
+    noncoord_names: Set[Hashable] = set()
 
     for mapping in list_of_mappings:
         if isinstance(mapping, Dataset):

@@ -444,7 +444,7 @@ class OrderedSet(MutableSet[T]):
     __slots__ = ("_ordered_dict",)
 
     def __init__(self, values: AbstractSet[T] = None):
-        self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
+        self._ordered_dict: MutableMapping[T, None] = OrderedDict()
         if values is not None:
             # Disable type checking - both mypy and PyCharm believes that
             # we're altering the type of self in place (see signature of

@@ -1,7 +1,7 @@
 """Coders for individual Variable objects."""
 import warnings
 from functools import partial
-from typing import Any
+from typing import Any, Hashable
 
 import numpy as np
 import pandas as pd
@@ -33,14 +33,18 @@ class VariableCoder:
     variables in the underlying store.
     """
 
-    def encode(self, variable, name=None):  # pragma: no cover
-        # type: (Variable, Any) -> Variable
-        """Convert an encoded variable to a decoded variable."""
+    def encode(
+        self, variable: Variable, name: Hashable = None
+    ) -> Variable:  # pragma: no cover
+        """Convert an encoded variable to a decoded variable
+        """
         raise NotImplementedError()
 
-    def decode(self, variable, name=None):  # pragma: no cover
-        # type: (Variable, Any) -> Variable
-        """Convert an decoded variable to a encoded variable."""
+    def decode(
+        self, variable: Variable, name: Hashable = None
+    ) -> Variable:  # pragma: no cover
+        """Convert an decoded variable to a encoded variable
+        """
         raise NotImplementedError()
 
 

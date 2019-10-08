@@ -56,7 +56,7 @@ def dtype(request):
 def test_dask():
     import dask.array as da
 
-    arr = da.from_array(["a", "b", "c"])
+    arr = da.from_array(["a", "b", "c"], chunks=-1)
     xarr = xr.DataArray(arr)
 
     result = xarr.str.len().compute()

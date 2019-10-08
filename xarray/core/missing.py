@@ -17,10 +17,10 @@ class BaseInterpolator:
     """Generic interpolator class for normalizing interpolation methods
     """
 
-    cons_kwargs = None  # type: Dict[str, Any]
-    call_kwargs = None  # type: Dict[str, Any]
-    f = None  # type: Callable
-    method = None  # type: str
+    cons_kwargs: Dict[str, Any]
+    call_kwargs: Dict[str, Any]
+    f: Callable
+    method: str
 
     def __call__(self, x):
         return self.f(x, **self.call_kwargs)

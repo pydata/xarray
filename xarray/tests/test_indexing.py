@@ -83,8 +83,7 @@ class TestIndexers:
             indexing.convert_label_indexer(mindex, 0)
         with pytest.raises(ValueError):
             indexing.convert_label_indexer(index, {"three": 0})
-        with pytest.raises((KeyError, IndexError)):
-            # pandas 0.21 changed this from KeyError to IndexError
+        with pytest.raises(IndexError):
             indexing.convert_label_indexer(mindex, (slice(None), 1, "no_level"))
 
     def test_convert_unsorted_datetime_index_raises(self):
