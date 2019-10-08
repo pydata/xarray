@@ -45,8 +45,7 @@ Bug fixes
   now plot the correct data for 2D DataArrays.
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Fix deprecation of default reduction dimension for :py:class:`~xarray.core.groupby.DataArrayGroupBy` objects.
-  (:issue:`3337`). Also make sure that grouping dimensions with ``dtype='object'`` indexes
-  is squeezed just as for other indexes. By `Deepak Cherian <https://github.com/dcherian>`_.
+  (:issue:`3337`). Also raise nicer error message when no groups are created (:issue:`1764`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
