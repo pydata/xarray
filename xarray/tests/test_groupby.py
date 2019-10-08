@@ -5,7 +5,7 @@ import pytest
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_identical
+from . import assert_identical, raises_regex
 
 
 def test_consolidate_slices():
@@ -253,6 +253,15 @@ def test_groupby_repr_datetime(obj):
     expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
     assert actual == expected
+
+
+def test_groupby_no_groups():
+    dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
+    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+        dataset.groupby_bins("x", bins=[0.1, 0.2, 0.3])
+
+    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+        dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
