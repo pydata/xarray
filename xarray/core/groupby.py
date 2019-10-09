@@ -248,7 +248,7 @@ class GroupBy(SupportsArithmetic):
         "_restore_coord_dims",
         "_stacked_dim",
         "_unique_coord",
-        "dims",
+        "_dims",
     )
 
     def __init__(
@@ -354,6 +354,16 @@ class GroupBy(SupportsArithmetic):
             )
             unique_coord = IndexVariable(group.name, unique_values)
 
+        if len(group_indices) == 0:
+            if bins is not None:
+                raise ValueError(
+                    "None of the data falls within bins with edges %r" % bins
+                )
+            else:
+                raise ValueError(
+                    "Failed to group data. Are you grouping by a variable that is all NaN?"
+                )
+
         if (
             isinstance(obj, DataArray)
             and restore_coord_dims is None
@@ -382,19 +392,16 @@ class GroupBy(SupportsArithmetic):
 
         # cached attributes
         self._groups = None
+        self._dims = None
 
-        if len(group_indices) == 0:
-            if bins is not None:
-                raise ValueError(
-                    "None of the data falls within bins with edges %r" % bins
-                )
-            else:
-                raise ValueError(
-                    "Failed to group data. Are you grouping by a variable that is all NaN?"
-                )
+    @property
+    def dims(self):
+        if self._dims is None:
+            self._dims = self._obj.isel(
+                **{self._group_dim: self._group_indices[0]}
+            ).dims
 
-        example = obj.isel(**{group_dim: group_indices[0]})
-        self.dims = example.dims
+        return self._dims
 
     @property
     def groups(self):
@@ -410,15 +417,11 @@ class GroupBy(SupportsArithmetic):
         return zip(self._unique_coord.values, self._iter_grouped())
 
     def __repr__(self):
-        return (
-            "%s, grouped over %r \n%r groups with labels %s. \nEach group has dimensions: %r"
-            % (
-                self.__class__.__name__,
-                self._unique_coord.name,
-                self._unique_coord.size,
-                ", ".join(format_array_flat(self._unique_coord, 30).split()),
-                list(self.dims),
-            )
+        return "%s, grouped over %r \n%r groups with labels %s." % (
+            self.__class__.__name__,
+            self._unique_coord.name,
+            self._unique_coord.size,
+            ", ".join(format_array_flat(self._unique_coord, 30).split()),
         )
 
     def _get_index_and_items(self, index, grouper):
