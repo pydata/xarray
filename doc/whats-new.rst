@@ -42,6 +42,9 @@ Breaking changes
 
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Dropped the 'drop=False' optional parameter from :meth:`Variable.isel`.
+  It was unused and doesn't make sense for a Variable.
+  (:pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -58,7 +61,11 @@ Enhancements
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
   - Added a ``GroupBy.dims`` property that mirrors the dimensions
-    of each group.
+    of each group.(:issue:`3344`)
+    
+- Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small
+  arrays (:issue:`2799`, :pull:`3375`) by
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
