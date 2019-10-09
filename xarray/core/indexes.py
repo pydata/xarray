@@ -2,6 +2,7 @@ import collections.abc
 from collections import OrderedDict
 from typing import Any, Hashable, Iterable, Mapping, Optional, Tuple, Union
 
+import numpy as np
 import pandas as pd
 
 from . import formatting
@@ -63,7 +64,7 @@ def isel_variable_and_index(
     name: Hashable,
     variable: Variable,
     index: pd.Index,
-    indexers: Mapping[Any, Union[slice, Variable]],
+    indexers: Mapping[Hashable, Union[int, slice, np.ndarray, Variable]],
 ) -> Tuple[Variable, Optional[pd.Index]]:
     """Index a Variable and pandas.Index together."""
     if not indexers:
