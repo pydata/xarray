@@ -912,7 +912,7 @@ def open_mfdataset(
             # Remove this after deprecation cycle from #2616 is complete
             basic_msg = dedent(
                 """\
-            In xarray version 0.14 the default behaviour of `open_mfdataset`
+            In xarray version 0.15 the default behaviour of `open_mfdataset`
             will change. To retain the existing behavior, pass
             combine='nested'. To use future default behavior, pass
             combine='by_coords'. See
@@ -963,11 +963,11 @@ def open_mfdataset(
     return combined
 
 
-WRITEABLE_STORES = {
+WRITEABLE_STORES: Dict[str, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
     "h5netcdf": backends.H5NetCDFStore,
-}  # type: Dict[str, Callable]
+}
 
 
 def to_netcdf(

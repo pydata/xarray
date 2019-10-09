@@ -458,7 +458,7 @@ class IOWriteNetCDFDaskDistributed:
         try:
             import distributed
         except ImportError:
-            raise NotImplementedError
+            raise NotImplementedError()
         self.client = distributed.Client()
         self.write = create_delayed_write()
 

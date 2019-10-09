@@ -2,7 +2,6 @@ import itertools
 import textwrap
 import warnings
 from datetime import datetime
-from distutils.version import LooseVersion
 from inspect import getfullargspec
 from typing import Any, Iterable, Mapping, Tuple, Union
 
@@ -13,12 +12,9 @@ from ..core.options import OPTIONS
 from ..core.utils import is_scalar
 
 try:
-    import nc_time_axis
+    import nc_time_axis  # noqa: F401
 
-    if LooseVersion(nc_time_axis.__version__) < LooseVersion("1.2.0"):
-        nc_time_axis_available = False
-    else:
-        nc_time_axis_available = True
+    nc_time_axis_available = True
 except ImportError:
     nc_time_axis_available = False
 
@@ -52,15 +48,7 @@ def register_pandas_datetime_converter_if_needed():
     # based on https://github.com/pandas-dev/pandas/pull/17710
     global _registered
     if not _registered:
-        try:
-            from pandas.plotting import register_matplotlib_converters
-
-            register_matplotlib_converters()
-        except ImportError:
-            # register_matplotlib_converters new in pandas 0.22
-            from pandas.tseries import converter
-
-            converter.register()
+        pd.plotting.register_matplotlib_converters()
         _registered = True
 
 

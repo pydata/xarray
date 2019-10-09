@@ -12,6 +12,7 @@ Geosciences
 
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
+- `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meterology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
 - `MetPy <https://unidata.github.io/MetPy/dev/index.html>`_: A collection of tools in Python for reading, visualizing, and performing calculations with weather data.
@@ -25,6 +26,7 @@ Geosciences
   accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
   subclass.
 - `Regionmask <https://regionmask.readthedocs.io/>`_: plotting and creation of masks of spatial regions
+- `rioxarray <https://corteva.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
 - `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere

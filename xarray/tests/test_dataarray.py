@@ -26,7 +26,6 @@ from xarray.tests import (
     requires_bottleneck,
     requires_dask,
     requires_iris,
-    requires_np113,
     requires_numbagg,
     requires_scipy,
     requires_sparse,
@@ -159,9 +158,7 @@ class TestDataArray:
         when dimension is a structured array.
         """
         # GH837, GH861
-        # checking array subraction when dims are the same
-        # note: names need to be in sorted order to align consistently with
-        # pandas < 0.24 and >= 0.24.
+        # checking array subtraction when dims are the same
         p_data = np.array(
             [("Abe", 180), ("Stacy", 150), ("Dick", 200)],
             dtype=[("name", "|S256"), ("height", object)],
@@ -3381,7 +3378,7 @@ class TestDataArray:
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
-            if len(shape) > 2 and not LooseVersion(pd.__version__) < "0.25.0":
+            if len(shape) > 2 and LooseVersion(pd.__version__) >= "0.25.0":
                 continue
             dims = list("abc")[: len(shape)]
             da = DataArray(np.random.randn(*shape), dims=dims)
@@ -4195,12 +4192,12 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     assert_equal(actual, da["time"])
 
 
+@requires_dask
 @pytest.mark.parametrize("name", ("mean", "count"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
 def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
-    pytest.importorskip("dask.array")
     # dask version
     rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
@@ -4306,7 +4303,6 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-@requires_np113
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
@@ -4667,7 +4663,6 @@ def test_no_dict():
         d.__dict__
 
 
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
 def test_subclass_slots():
     """Test that DataArray subclasses must explicitly define ``__slots__``.
 

@@ -65,8 +65,7 @@ For datasets containing dask arrays where the data should be lazily loaded, see 
 
 To create a ``Dataset`` from a ``DataFrame``, use the
 :py:meth:`~xarray.Dataset.from_dataframe` class method or the equivalent
-:py:meth:`pandas.DataFrame.to_xarray <DataFrame.to_xarray>` method (pandas
-v0.18 or later):
+:py:meth:`pandas.DataFrame.to_xarray <DataFrame.to_xarray>` method:
 
 .. ipython:: python
 

@@ -13,10 +13,35 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.13.1:
+.. _whats-new.0.14.0:
 
-v0.13.1 (unreleased)
+v0.14.0 (unreleased)
 --------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- This release introduces a rolling policy for minimum dependency versions:
+  :ref:`mindeps_policy`.
+
+  Several minimum versions have been increased:
+
+  ============ ================== ====
+  Package      Old                New
+  ============ ================== ====
+  Python       3.5.3              3.6
+  numpy        1.12               1.14
+  pandas       0.19.2             0.24
+  dask         0.16 (tested: 2.4) 1.2
+  bottleneck   1.1 (tested: 1.2)  1.2
+  matplotlib   1.5 (tested: 3.1)  3.1
+  ============ ================== ====
+
+  Obsolete patch versions (x.y.Z) are not tested anymore.
+  The oldest supported versions of all optional dependencies are now covered by
+  automated tests (before, only the very latest versions were tested).
+
+  (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -39,10 +64,10 @@ Bug fixes
 ~~~~~~~~~
 - Reintroduce support for :mod:`weakref` (broken in v0.13.0). Support has been
   reinstated for :class:`DataArray` and :class:`Dataset` objects only. Internal xarray
-  objects remain unaddressable by weakref in order to save memory.
-  (:issue:`3317`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+  objects remain unaddressable by weakref in order to save memory
+  (:issue:`3317`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
-  now plot the correct data for 2D DataArrays.
+  now plot the correct data for 2D DataArrays
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - The default behaviour of reducing across all dimensions for
   :py:class:`~xarray.core.groupby.DataArrayGroupBy` objects has now been properly removed
@@ -51,6 +76,11 @@ Bug fixes
   Also raise nicer error message when no groups are created (:issue:`1764`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- Fix deprecation of default reduction dimension for :py:class:`~xarray.core.groupby.DataArrayGroupBy` objects.
+  (:issue:`3337`). Also raise nicer error message when no groups are created (:issue:`1764`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix error in concatenating unlabeled dimensions (:pull:`3362`).
+  By `Deepak Cherian <https://github.com/dcherian/>`_.
+  
 Documentation
 ~~~~~~~~~~~~~
 
@@ -67,6 +97,7 @@ Documentation
 - Fixed documentation to clean up an unwanted file created in ``ipython`` example
   (:pull:`3353`).
   By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+
 
 .. _whats-new.0.13.0:
 
