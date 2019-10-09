@@ -1,6 +1,6 @@
 """Testing functions exposed to the user API"""
 from collections import OrderedDict
-from typing import Hashable, Union
+from typing import Hashable, Set, Union
 
 import numpy as np
 import pandas as pd
@@ -182,7 +182,7 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
 
 def _assert_variable_invariants(var: Variable, name: Hashable = None):
     if name is None:
-        name_or_empty = ()  # type: tuple
+        name_or_empty: tuple = ()
     else:
         name_or_empty = (name,)
     assert isinstance(var._dims, tuple), name_or_empty + (var._dims,)
@@ -232,7 +232,7 @@ def _assert_dataset_invariants(ds: Dataset):
 
     assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
-    var_dims = set()  # type: set
+    var_dims: Set[Hashable] = set()
     for v in ds._variables.values():
         var_dims.update(v.dims)
     assert ds._dims.keys() == var_dims, (set(ds._dims), var_dims)
