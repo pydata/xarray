@@ -80,7 +80,7 @@ Bug fixes
   (:issue:`3337`). Also raise nicer error message when no groups are created (:issue:`1764`). By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian/>`_.
-  
+
 Documentation
 ~~~~~~~~~~~~~
 
