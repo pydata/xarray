@@ -1745,8 +1745,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping
-    ) -> List[Tuple[Any, Union[slice, Variable]]]:
+        self, indexers: Mapping[Hashable, Any]
+    ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
@@ -1755,50 +1755,61 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from .dataarray import DataArray
 
-        invalid = [k for k in indexers if k not in self.dims]
+        invalid = indexers.keys() - self.dims.keys()
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # all indexers should be int, slice, np.ndarrays, or Variable
-        indexers_list: List[Tuple[Any, Union[slice, Variable]]] = []
         for k, v in indexers.items():
-            if isinstance(v, slice):
-                indexers_list.append((k, v))
-                continue
-
-            if isinstance(v, Variable):
-                pass
+            if isinstance(v, (int, slice, Variable)):
+                yield k, v
             elif isinstance(v, DataArray):
-                v = v.variable
+                yield k, v.variable
             elif isinstance(v, tuple):
-                v = as_variable(v)
+                yield k, as_variable(v)
             elif isinstance(v, Dataset):
                 raise TypeError("cannot use a Dataset as an indexer")
             elif isinstance(v, Sequence) and len(v) == 0:
-                v = Variable((k,), np.zeros((0,), dtype="int64"))
+                yield k, np.empty((0,), dtype="int64")
             else:
                 v = np.asarray(v)
 
-                if v.dtype.kind == "U" or v.dtype.kind == "S":
+                if v.dtype.kind in "US":
                     index = self.indexes[k]
                     if isinstance(index, pd.DatetimeIndex):
                         v = v.astype("datetime64[ns]")
                     elif isinstance(index, xr.CFTimeIndex):
                         v = _parse_array_of_cftime_strings(v, index.date_type)
 
-                if v.ndim == 0:
-                    v = Variable((), v)
-                elif v.ndim == 1:
-                    v = Variable((k,), v)
-                else:
+                if v.ndim > 1:
                     raise IndexError(
                         "Unlabeled multi-dimensional array cannot be "
                         "used for indexing: {}".format(k)
                     )
+                yield k, v
 
-            indexers_list.append((k, v))
-
-        return indexers_list
+    def _validate_interp_indexers(
+        self, indexers: Mapping[Hashable, Any]
+    ) -> Iterator[Tuple[Hashable, Variable]]:
+        """Variant of _validate_indexers to be used for interpolation
+        """
+        for k, v in self._validate_indexers(indexers):
+            if isinstance(v, Variable):
+                if v.ndim == 1:
+                    yield k, v.to_index_variable()
+                else:
+                    yield k, v
+            elif isinstance(v, int):
+                yield k, Variable((), v)
+            elif isinstance(v, np.ndarray):
+                if v.ndim == 0:
+                    yield k, Variable((), v)
+                elif v.ndim == 1:
+                    yield k, IndexVariable((k,), v)
+                else:
+                    raise AssertionError()  # Already tested by _validate_indexers
+            else:
+                raise TypeError(type(v))
 
     def _get_indexers_coords_and_indexes(self, indexers):
         """Extract coordinates and indexes from indexers.
@@ -1885,10 +1896,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.sel
         DataArray.isel
         """
-
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
-
-        indexers_list = self._validate_indexers(indexers)
+        # Note: we need to preserve the original indexers variable in order to merge the
+        # coords below
+        indexers_list = list(self._validate_indexers(indexers))
 
         variables = OrderedDict()  # type: OrderedDict[Hashable, Variable]
         indexes = OrderedDict()  # type: OrderedDict[Hashable, pd.Index]
@@ -1904,19 +1915,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
                 if new_index is not None:
                     indexes[name] = new_index
-            else:
+            elif var_indexers:
                 new_var = var.isel(indexers=var_indexers)
+            else:
+                new_var = var.copy(deep=False)
 
             variables[name] = new_var
 
-        coord_names = set(variables).intersection(self._coord_names)
+        coord_names = self._coord_names & variables.keys()
         selected = self._replace_with_new_dims(variables, coord_names, indexes)
 
         # Extract coordinates from indexers
         coord_vars, new_indexes = selected._get_indexers_coords_and_indexes(indexers)
         variables.update(coord_vars)
         indexes.update(new_indexes)
-        coord_names = set(variables).intersection(self._coord_names).union(coord_vars)
+        coord_names = self._coord_names & variables.keys() | coord_vars.keys()
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
     def sel(
@@ -2478,11 +2491,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if kwargs is None:
             kwargs = {}
+
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
-        indexers = OrderedDict(
-            (k, v.to_index_variable() if isinstance(v, Variable) and v.ndim == 1 else v)
-            for k, v in self._validate_indexers(coords)
-        )
+        indexers = OrderedDict(self._validate_interp_indexers(coords))
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
 
@@ -2507,26 +2518,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     "strings or datetimes. "
                     "Instead got\n{}".format(new_x)
                 )
-            else:
-                return (x, new_x)
+            return x, new_x
 
         variables = OrderedDict()  # type: OrderedDict[Hashable, Variable]
         for name, var in obj._variables.items():
-            if name not in indexers:
-                if var.dtype.kind in "uifc":
-                    var_indexers = {
-                        k: _validate_interp_indexer(maybe_variable(obj, k), v)
-                        for k, v in indexers.items()
-                        if k in var.dims
-                    }
-                    variables[name] = missing.interp(
-                        var, var_indexers, method, **kwargs
-                    )
-                elif all(d not in indexers for d in var.dims):
-                    # keep unrelated object array
-                    variables[name] = var
+            if name in indexers:
+                continue
 
-        coord_names = set(variables).intersection(obj._coord_names)
+            if var.dtype.kind in "uifc":
+                var_indexers = {
+                    k: _validate_interp_indexer(maybe_variable(obj, k), v)
+                    for k, v in indexers.items()
+                    if k in var.dims
+                }
+                variables[name] = missing.interp(var, var_indexers, method, **kwargs)
+            elif all(d not in indexers for d in var.dims):
+                # keep unrelated object array
+                variables[name] = var
+
+        coord_names = obj._coord_names & variables.keys()
         indexes = OrderedDict(
             (k, v) for k, v in obj.indexes.items() if k not in indexers
         )
@@ -2546,7 +2556,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables.update(coord_vars)
         indexes.update(new_indexes)
 
-        coord_names = set(variables).intersection(obj._coord_names).union(coord_vars)
+        coord_names = obj._coord_names & variables.keys() | coord_vars.keys()
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
     def interp_like(
