@@ -43,8 +43,12 @@ Breaking changes
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
-New functions/methods
-~~~~~~~~~~~~~~~~~~~~~
+New features
+~~~~~~~~~~~~
+- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
+  Note that, at the moment of writing, there are issues when pint interacts
+  with non-numpy array libraries, e.g. dask or sparse.
+  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
 
 Enhancements
 ~~~~~~~~~~~~
