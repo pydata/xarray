@@ -299,7 +299,7 @@ in the dictionary:
 Where a pandas object is supplied as a value, the names of its indexes are used as dimension
 names, and its data is aligned to any existing dimensions.
 
-You can also create an dataset from:
+You can also create a dataset from:
 
 - A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
   respectively, by passing it into the :py:class:`~xarray.Dataset` directly
