@@ -1918,7 +1918,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             elif var_indexers:
                 new_var = var.isel(indexers=var_indexers)
             else:
-                new_var = var
+                new_var = var.copy(deep=False)
 
             variables[name] = new_var
 
