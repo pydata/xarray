@@ -201,9 +201,7 @@ def map_blocks(
 
     input_chunks = dataset.chunks
 
-    template = infer_template(
-        func, obj, *args, **kwargs
-    )  # type: Union[DataArray, Dataset]
+    template: Union[DataArray, Dataset] = infer_template(func, obj, *args, **kwargs)
     if isinstance(template, DataArray):
         result_is_array = True
         template_name = template.name
@@ -212,17 +210,17 @@ def map_blocks(
         result_is_array = False
     else:
         raise TypeError(
-            "func output must be DataArray or Dataset; got %s" % type(template)
+            f"func output must be DataArray or Dataset; got {type(template)}"
         )
 
     template_indexes = set(template.indexes)
     dataset_indexes = set(dataset.indexes)
-    preserved_indexes = template_indexes.intersection(dataset_indexes)
-    new_indexes = set(template_indexes) - set(dataset_indexes)
+    preserved_indexes = template_indexes & dataset_indexes
+    new_indexes = template_indexes - dataset_indexes
     indexes = {dim: dataset.indexes[dim] for dim in preserved_indexes}
     indexes.update({k: template.indexes[k] for k in new_indexes})
 
-    graph = {}  # type: Dict[Any, Any]
+    graph: Dict[Any, Any] = {}
     gname = "%s-%s" % (
         dask.utils.funcname(func),
         dask.base.tokenize(dataset, args, kwargs),
@@ -297,14 +295,14 @@ def map_blocks(
         )
 
         # mapping from variable name to dask graph key
-        var_key_map = {}  # type: Dict[Hashable, str]
+        var_key_map: Dict[Hashable, str] = {}
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
             gname_l = "%s-%s" % (gname, name)
             var_key_map[name] = gname_l
 
-            key = (gname_l,)  # type: Tuple[Any, ...]
+            key: Tuple[Any, ...] = (gname_l,)
             for dim in variable.dims:
                 if dim in chunk_index_dict:
                     key += (chunk_index_dict[dim],)
