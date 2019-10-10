@@ -12,8 +12,8 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
-from xarray.tests import mock
 from xarray.testing import assert_chunks_equal
+from xarray.tests import mock
 
 from . import (
     assert_allclose,
