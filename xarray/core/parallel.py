@@ -53,7 +53,7 @@ def make_meta(obj):
     if isinstance(obj, Dataset):
         meta = Dataset()
         for name, variable in obj.variables.items():
-            meta_obj = meta_from_array(variable.data)
+            meta_obj = meta_from_array(variable.data, ndim=variable.ndim)
             meta[name] = (variable.dims, meta_obj, variable.attrs)
         meta.attrs = obj.attrs
     else:
