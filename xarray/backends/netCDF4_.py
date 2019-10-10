@@ -493,11 +493,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                 fill_value=fill_value,
             )
 
-        for k, v in attrs.items():
-            # TODO: update now that we dont support this old version of netCDF4
-            # set attributes one-by-one since netCDF4<1.0.10 can't handle
-            # OrderedDict as the input to setncatts
-            _set_nc_attribute(nc4_var, k, v)
+        nc4_var.setncattrs(attrs)
 
         target = NetCDF4ArrayWrapper(name, self)
 

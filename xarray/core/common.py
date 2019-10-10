@@ -24,7 +24,7 @@ from .npcompat import DTypeLike
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
+from .utils import Frozen, ReprObject, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject("<all-dims>")
@@ -381,7 +381,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
     ) -> MutableMapping[Hashable, T]:
-        results: MutableMapping[Hashable, T] = SortedKeysDict()
+        results: MutableMapping[Hashable, T] = {}
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)
