@@ -42,7 +42,11 @@ def dataset_to_dataarray(obj: Dataset) -> DataArray:
 
 
 def make_meta(obj):
-
+    """If obj is a DataArray or Dataset, return a new object of the same type and with
+    the same variables and dtypes, but where all variables have size 0 and numpy
+    backend.
+    If obj is neither a DataArray nor Dataset, return it unaltered.
+    """
     if isinstance(obj, DataArray):
         to_array = True
         obj_array = obj.copy()
@@ -71,7 +75,8 @@ def make_meta(obj):
 def infer_template(
     func: Callable[..., T_DSorDA], obj: Union[DataArray, Dataset], *args, **kwargs
 ) -> T_DSorDA:
-    """ Infer return object by running the function on meta objects. """
+    """Infer return object by running the function on meta objects.
+    """
     meta_args = [make_meta(arg) for arg in (obj,) + args]
 
     try:
@@ -112,43 +117,40 @@ def map_blocks(
     Parameters
     ----------
     func: callable
-        User-provided function that should accept xarray objects. This function will
-        receive a subset of this dataset, corresponding to one chunk along each chunked
-        dimension. To determine properties of the returned object such as type
-        (DataArray or Dataset), dtypes, and new/removed dimensions and/or variables, the
-        function will be run on dummy data with the same variables, dimension names, and
-        data types as this DataArray, but zero-sized dimensions.
+        User-provided function that accepts a DataArray or Dataset as its first
+        parameter. The function will receive a subset of 'obj' (see below),
+        corresponding to one chunk along each chunked dimension.
 
-        This function must
-        - return either a single DataArray or a single Dataset
+        The function will be first run on mocked-up data, that looks like 'obj' but
+        has sizes 0, to determine properties of the returned object such as dtype,
+        variable names, new dimensions and new indexes (if any).
 
-        This function cannot
-        - change size of existing dimensions.
-        - add new chunked dimensions.
+        This function must return either a single DataArray or a single Dataset.
 
-        This function should work with whole xarray objects. If your function can be
-        applied to numpy or dask arrays (e.g. it doesn't need additional metadata such
-        as dimension names, variable names, etc.), you should consider using
-        :py:func:`~xarray.apply_ufunc` instead.
+        This function cannot change size of existing dimensions, or add new chunked
+        dimensions.
     obj: DataArray, Dataset
-        Chunks of this object will be provided to 'func'. If passed a numpy object, the
-        function will be run eagerly.
-    args: tuple
-        Passed on to func after unpacking. xarray objects, if any, will not be split by
-        chunks. Passing dask objects will raise an error.
-    kwargs: dict
-        Passed on to func after unpacking. xarray objects, if any, will not be split by
-        chunks. Passing dask objects will raise an error.
+        Passed to the function as its first argument, one dask chunk at a time.
+    args: Sequence
+        Passed verbatim to func after unpacking, after the sliced obj. xarray objects,
+        if any, will not be split by chunks. Passing dask collections is not allowed.
+    kwargs: Mapping
+        Passed verbatim to func after unpacking. xarray objects, if any, will not be
+        split by chunks. Passing dask collections is not allowed.
 
     Returns
     -------
-    A single DataArray or Dataset
+    A single DataArray or Dataset with dask backend, reassembled from the outputs of the
+    function.
 
     Notes
     -----
+    This function is designed for when one needs to manipulate a whole xarray object
+    within each chunk. In the more common case where one can work on numpy arrays, it is
+    recommended to use apply_ufunc.
 
-    This function is designed to work with dask-backed xarray objects. See apply_ufunc
-    for a similar function that works with numpy arrays.
+    If none of the variables in obj is backed by dask, calling this function is
+    equivalent to calling ``func(obj, *args, **kwargs)``.
 
     See Also
     --------

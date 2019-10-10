@@ -5425,50 +5425,51 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         kwargs: Mapping[str, Any] = None,
     ) -> "T_DSorDA":
         """
-        Apply a function to each chunk of this Dataset. This function is experimental
-        and its signature may change.
+        Apply a function to each chunk of this Dataset. This method is experimental and
+        its signature may change.
 
         Parameters
         ----------
         func: callable
-            User-provided function that should accept xarray objects.
-            This function will receive a subset of this dataset, corresponding to one chunk along
-            each chunked dimension.
-            The function will be run on a small piece of data that looks like 'obj' to determine
-            properties of the returned object such as dtype, variable names,
-            new dimensions and new indexes (if any).
+            User-provided function that accepts a Dataset as its first parameter. The
+            function will receive a subset of this Dataset, corresponding to one chunk
+            along each chunked dimension.
 
-            This function must
-            - return either a single DataArray or a single Dataset
+            The function will be first run on mocked-up data, that looks like this
+            Dataset but has sizes 0, to determine properties of the returned object such
+            as dtype, variable names, new dimensions and new indexes (if any).
 
-            This function cannot
-            - change size of existing dimensions.
-            - add new chunked dimensions.
+            This function must return either a single DataArray or a single Dataset.
 
-            If your function expects numpy arrays, see `xarray.apply_ufunc`
-
+            This function cannot change size of existing dimensions, or add new chunked
+            dimensions.
         args: Sequence
-            Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
-            Passing dask objects will raise an error.
+            Passed verbatim to func after unpacking, after the sliced DataArray. xarray
+            objects, if any, will not be split by chunks. Passing dask collections is
+            not allowed.
         kwargs: Mapping
-            Passed on to func after unpacking. xarray objects, if any, will not be split by chunks.
-            Passing dask objects will raise an error.
+            Passed verbatim to func after unpacking. xarray objects, if any, will not be
+            split by chunks. Passing dask collections is not allowed.
 
         Returns
         -------
-        A single DataArray or Dataset
+        A single DataArray or Dataset with dask backend, reassembled from the outputs of
+        the function.
 
         Notes
         -----
+        This method is designed for when one needs to manipulate a whole xarray object
+        within each chunk. In the more common case where one can work on numpy arrays,
+        it is recommended to use apply_ufunc.
 
-        This function is designed to work with dask-backed xarray objects. See apply_ufunc for
-        a similar function that works with numpy arrays.
+        If none of the variables in this Dataset is backed by dask, calling this method
+        is equivalent to calling ``func(self, *args, **kwargs)``.
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc, xarray.map_blocks, xarray.DataArray.map_blocks
+        dask.array.map_blocks, xarray.apply_ufunc, xarray.map_blocks,
+        xarray.DataArray.map_blocks
         """
-
         from .parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs)
