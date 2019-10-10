@@ -4,7 +4,6 @@ import dask.array as da
 import numpy as np
 from dask import __version__ as dask_version
 
-
 if LooseVersion(dask_version) >= LooseVersion("2.0.0"):
     meta_from_array = da.utils.meta_from_array
 else:

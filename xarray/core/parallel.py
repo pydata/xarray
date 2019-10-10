@@ -8,12 +8,7 @@ except ImportError:
     pass
 
 import itertools
-import numpy as np
 import operator
-
-from .dataarray import DataArray
-from .dataset import Dataset
-
 from typing import (
     Any,
     Callable,
@@ -25,6 +20,11 @@ from typing import (
     TypeVar,
     Union,
 )
+
+import numpy as np
+
+from .dataarray import DataArray
+from .dataset import Dataset
 
 T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
