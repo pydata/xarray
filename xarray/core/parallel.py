@@ -114,7 +114,8 @@ def map_blocks(
     func: callable
         User-provided function that accepts a DataArray or Dataset as its first
         parameter. The function will receive a subset of 'obj' (see below),
-        corresponding to one chunk along each chunked dimension.
+        corresponding to one chunk along each chunked dimension. ``func`` will be
+        executed as ``func(obj_subset, *args, **kwargs)``.
 
         The function will be first run on mocked-up data, that looks like 'obj' but
         has sizes 0, to determine properties of the returned object such as dtype,
