@@ -148,9 +148,9 @@ def assert_chunks_equal(a, b):
 
     Parameters
     ----------
-    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+    a : xarray.Dataset or xarray.DataArray
         The first object to compare.
-    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+    b : xarray.Dataset or xarray.DataArray
         The second object to compare.
     """
 

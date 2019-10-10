@@ -171,17 +171,16 @@ def map_blocks(
 
     if not isinstance(args, Sequence):
         raise TypeError("args must be a sequence (for example, a list or tuple).")
-
     if kwargs is None:
         kwargs = {}
-
     elif not isinstance(kwargs, Mapping):
         raise TypeError("kwargs must be a mapping (for example, a dict)")
 
     for value in list(args) + list(kwargs.values()):
         if dask.is_dask_collection(value):
-            raise ValueError(
-                "Cannot pass dask variables in args or kwargs yet. Please compute or load values before passing to map_blocks"
+            raise TypeError(
+                "Cannot pass dask collections in args or kwargs yet. Please compute or "
+                "load values before passing to map_blocks."
             )
 
     if not dask.is_dask_collection(obj):

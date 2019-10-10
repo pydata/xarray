@@ -1674,8 +1674,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 for dim, c in zip(v.dims, v.chunks):
                     if dim in chunks and c != chunks[dim]:
                         raise ValueError(
-                            "Object has inconsistent chunks along dimension %r. This can be fixed by calling unify_chunks()."
-                            % dim
+                            f"Object has inconsistent chunks along dimension {dim}. "
+                            "This can be fixed by calling unify_chunks()."
                         )
                     chunks[dim] = c
         return Frozen(SortedKeysDict(chunks))
@@ -1861,7 +1861,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         indexers: Mapping[Hashable, Any] = None,
         drop: bool = False,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along the specified
         dimension(s).
@@ -1944,7 +1944,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = None,
         tolerance: Number = None,
         drop: bool = False,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
@@ -2017,7 +2017,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def head(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with the first `n` values of each array
         for the specified dimension(s).
@@ -2064,7 +2064,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def tail(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with the last `n` values of each array
         for the specified dimension(s).
@@ -2114,7 +2114,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def thin(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along every `n`th
         value for the specified dimension(s)
@@ -2252,7 +2252,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         tolerance: Number = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Conform this object onto a new set of indexes, filling in
         missing values with ``fill_value``. The default fill value is NaN.
@@ -2453,7 +2453,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
-        **coords_kwargs: Any
+        **coords_kwargs: Any,
     ) -> "Dataset":
         """ Multidimensional interpolation of Dataset.
 
@@ -2679,7 +2679,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         name_dict: Mapping[Hashable, Hashable] = None,
         inplace: bool = None,
-        **names: Hashable
+        **names: Hashable,
     ) -> "Dataset":
         """Returns a new object with renamed variables and dimensions.
 
@@ -2882,7 +2882,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dim: Union[None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]] = None,
         axis: Union[None, int, Sequence[int]] = None,
-        **dim_kwargs: Any
+        **dim_kwargs: Any,
     ) -> "Dataset":
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape.  The new object is a
@@ -3028,7 +3028,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         inplace: bool = None,
-        **indexes_kwargs: Union[Hashable, Sequence[Hashable]]
+        **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
     ) -> "Dataset":
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
@@ -3130,7 +3130,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dim_order: Mapping[Hashable, Sequence[int]] = None,
         inplace: bool = None,
-        **dim_order_kwargs: Sequence[int]
+        **dim_order_kwargs: Sequence[int],
     ) -> "Dataset":
         """Rearrange index levels using input order.
 
@@ -3196,7 +3196,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def stack(
         self,
         dimensions: Mapping[Hashable, Sequence[Hashable]] = None,
-        **dimensions_kwargs: Sequence[Hashable]
+        **dimensions_kwargs: Sequence[Hashable],
     ) -> "Dataset":
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -3897,7 +3897,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, Hashable] = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "Dataset":
         """Interpolate values according to different methods.
 
@@ -3948,7 +3948,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             method=method,
             limit=limit,
             use_coordinate=use_coordinate,
-            **kwargs
+            **kwargs,
         )
         return new
 
@@ -4029,7 +4029,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         keepdims: bool = False,
         numeric_only: bool = False,
         allow_lazy: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "Dataset":
         """Reduce this dataset by applying `func` along some dimension(s).
 
@@ -4104,7 +4104,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         keep_attrs=keep_attrs,
                         keepdims=keepdims,
                         allow_lazy=allow_lazy,
-                        **kwargs
+                        **kwargs,
                     )
 
         coord_names = {k for k in self.coords if k in variables}
@@ -4119,7 +4119,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         func: Callable,
         keep_attrs: bool = None,
         args: Iterable[Any] = (),
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "Dataset":
         """Apply a function over the data variables in this dataset.
 
