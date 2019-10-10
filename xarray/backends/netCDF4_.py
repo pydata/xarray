@@ -1,6 +1,5 @@
 import functools
 import operator
-from collections import OrderedDict
 from contextlib import suppress
 
 import numpy as np
@@ -8,7 +7,7 @@ import numpy as np
 from .. import Variable, coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, is_remote_uri
+from ..core.utils import FrozenDict, is_remote_uri
 from .common import (
     BackendArray,
     WritableCFDataStore,
@@ -388,7 +387,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     def open_store_variable(self, name, var):
         dimensions = var.dimensions
         data = indexing.LazilyOuterIndexedArray(NetCDF4ArrayWrapper(name, self))
-        attributes = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs())
+        attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
         encoding = {}
@@ -415,17 +414,17 @@ class NetCDF4DataStore(WritableCFDataStore):
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
-        dsvars = FrozenOrderedDict(
+        dsvars = FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
         return dsvars
 
     def get_attrs(self):
-        attrs = FrozenOrderedDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
+        attrs = FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
         return attrs
 
     def get_dimensions(self):
-        dims = FrozenOrderedDict((k, len(v)) for k, v in self.ds.dimensions.items())
+        dims = FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
         return dims
 
     def get_encoding(self):
@@ -495,6 +494,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             )
 
         for k, v in attrs.items():
+            # TODO: update now that we dont support this old version of netCDF4
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
             _set_nc_attribute(nc4_var, k, v)

@@ -1,5 +1,4 @@
 import warnings
-from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
 from typing import (
@@ -180,7 +179,7 @@ class AbstractArray(ImplementsArrayReduce):
         --------
         Dataset.sizes
         """
-        return Frozen(OrderedDict(zip(self.dims, self.shape)))
+        return Frozen(dict(zip(self.dims, self.shape)))
 
 
 class AttrAccessMixin:
@@ -1284,10 +1283,10 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     from .variable import Variable
 
     if isinstance(other, Dataset):
-        data_vars = OrderedDict(
-            (k, _full_like_variable(v, fill_value, dtype))
+        data_vars = {
+            k: _full_like_variable(v, fill_value, dtype)
             for k, v in other.data_vars.items()
-        )
+        }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
     elif isinstance(other, DataArray):
         return DataArray(

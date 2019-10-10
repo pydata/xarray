@@ -1,6 +1,6 @@
 import functools
 import itertools
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
 from typing import Any, Hashable, Mapping, Union
@@ -756,16 +756,16 @@ class Variable(
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> "OrderedDict[Any, Any]":
+    def attrs(self) -> "Dict[Any, Any]":
         """Dictionary of local attributes on this variable.
         """
         if self._attrs is None:
-            self._attrs = OrderedDict()
+            self._attrs = {}
         return self._attrs
 
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
-        self._attrs = OrderedDict(value)
+        self._attrs = dict(value)
 
     @property
     def encoding(self):
@@ -1534,8 +1534,8 @@ class Variable(
             dims = (dim,) + first_var.dims
             data = duck_array_ops.stack(arrays, axis=axis)
 
-        attrs = OrderedDict(first_var.attrs)
-        encoding = OrderedDict(first_var.encoding)
+        attrs = dict(first_var.attrs)
+        encoding = dict(first_var.encoding)
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
@@ -2003,7 +2003,7 @@ class IndexVariable(Variable):
                 indices = nputils.inverse_permutation(np.concatenate(positions))
                 data = data.take(indices)
 
-        attrs = OrderedDict(first_var.attrs)
+        attrs = dict(first_var.attrs)
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
@@ -2120,7 +2120,7 @@ Coordinate = utils.alias(IndexVariable, "Coordinate")
 
 def _unified_dims(variables):
     # validate dimensions
-    all_dims = OrderedDict()
+    all_dims = {}
     for var in variables:
         var_dims = var.dims
         if len(set(var_dims)) < len(var_dims):

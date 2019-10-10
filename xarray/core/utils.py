@@ -6,7 +6,6 @@ import itertools
 import os.path
 import re
 import warnings
-from collections import OrderedDict
 from typing import (
     AbstractSet,
     Any,
@@ -347,7 +346,7 @@ def ordered_dict_intersection(
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> MutableMapping[K, V]:
-    """Return the intersection of two dictionaries as a new OrderedDict.
+    """Return the intersection of two dictionaries as a new dictionary.
 
     Items are retained if their keys are found in both dictionaries and the
     values are compatible.
@@ -362,10 +361,10 @@ def ordered_dict_intersection(
 
     Returns
     -------
-    intersection : OrderedDict
+    intersection : dict
         Intersection of the contents.
     """
-    new_dict = OrderedDict(first_dict)
+    new_dict = dict(first_dict)
     remove_incompatible_items(new_dict, second_dict, compat)
     return new_dict
 
@@ -397,8 +396,8 @@ class Frozen(Mapping[K, V]):
         return "%s(%r)" % (type(self).__name__, self.mapping)
 
 
-def FrozenOrderedDict(*args, **kwargs) -> Frozen:
-    return Frozen(OrderedDict(*args, **kwargs))
+def FrozenDict(*args, **kwargs) -> Frozen:
+    return Frozen(dict(*args, **kwargs))
 
 
 class SortedKeysDict(MutableMapping[K, V]):
@@ -444,7 +443,7 @@ class OrderedSet(MutableSet[T]):
     __slots__ = ("_ordered_dict",)
 
     def __init__(self, values: AbstractSet[T] = None):
-        self._ordered_dict: MutableMapping[T, None] = OrderedDict()
+        self._ordered_dict: MutableMapping[T, None] = {}
         if values is not None:
             # Disable type checking - both mypy and PyCharm believes that
             # we're altering the type of self in place (see signature of

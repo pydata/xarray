@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import pandas as pd
 
 from . import dtypes, utils
@@ -331,7 +329,7 @@ def _dataset_concat(
                 var, to_merge[var], compat=compat, equals=equals.get(var, None)
             )
     else:
-        result_vars = OrderedDict()
+        result_vars = {}
     result_vars.update(dim_coords)
 
     # assign attrs and encoding from first dataset

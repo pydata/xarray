@@ -2,7 +2,6 @@
 import pickle
 import sys
 import warnings
-from collections import OrderedDict
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
@@ -461,9 +460,9 @@ class TestDataset:
     def test_constructor_pandas_sequence(self):
 
         ds = self.make_example_math_dataset()
-        pandas_objs = OrderedDict(
-            (var_name, ds[var_name].to_pandas()) for var_name in ["foo", "bar"]
-        )
+        pandas_objs = {
+            var_name: ds[var_name].to_pandas() for var_name in ["foo", "bar"]
+        }
         ds_based_on_pandas = Dataset(pandas_objs, ds.coords, attrs=ds.attrs)
         del ds_based_on_pandas["x"]
         assert_equal(ds, ds_based_on_pandas)
@@ -494,16 +493,12 @@ class TestDataset:
                     assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self):
-        data = OrderedDict(
-            [("x", DataArray(0, coords={"y": 1})), ("y", ("z", [1, 1, 1]))]
-        )
+        data = {"x": DataArray(0, coords={"y": 1}), "y": ("z", [1, 1, 1])}
         expected = Dataset({"x": 0}, {"y": ("z", [1, 1, 1])})
         actual = Dataset(data)
         assert_identical(expected, actual)
 
-        data = OrderedDict(
-            [("y", ("z", [1, 1, 1])), ("x", DataArray(0, coords={"y": 1}))]
-        )
+        data = {"y": ("z", [1, 1, 1]), "x": DataArray(0, coords={"y": 1})}
         actual = Dataset(data)
         assert_identical(expected, actual)
 
@@ -515,12 +510,8 @@ class TestDataset:
             {"a": ("x", np.ones(2)), "b": ("y", np.ones(3))},
             {"c": (("x", "y"), np.zeros((2, 3))), "x": [0, 1]},
         )
-        # use an OrderedDict to ensure test results are reproducible; otherwise
-        # the order of appearance of x and y matters for the order of
-        # dimensions in 'c'
-        actual = Dataset(
-            OrderedDict([("a", original["a"][:, 0]), ("b", original["a"][0].drop("x"))])
-        )
+
+        actual = Dataset({"a": original["a"][:, 0], "b": original["a"][0].drop("x")})
         assert_identical(expected, actual)
 
         data = {"x": DataArray(0, coords={"y": 3}), "y": ("z", [1, 1, 1])}
@@ -657,20 +648,14 @@ class TestDataset:
         assert "y" not in a.dims
 
     def test_coords_properties(self):
-        # use an OrderedDict for coordinates to ensure order across python
-        # versions
         # use int64 for repr consistency on windows
         data = Dataset(
-            OrderedDict(
-                [
-                    ("x", ("x", np.array([-1, -2], "int64"))),
-                    ("y", ("y", np.array([0, 1, 2], "int64"))),
-                    ("foo", (["x", "y"], np.random.randn(2, 3))),
-                ]
-            ),
-            OrderedDict(
-                [("a", ("x", np.array([4, 5], "int64"))), ("b", np.int64(-10))]
-            ),
+            {
+                "x": ("x", np.array([-1, -2], "int64")),
+                "y": ("y", np.array([0, 1, 2], "int64")),
+                "foo": (["x", "y"], np.random.randn(2, 3)),
+            },
+            {"a": ("x", np.array([4, 5], "int64")), "b": np.int64(-10)},
         )
 
         assert 4 == len(data.coords)
@@ -915,7 +900,7 @@ class TestDataset:
         data = create_test_data(seed=42)
         data.attrs = {"foobar": "baz"}
         assert data.attrs["foobar"], "baz"
-        assert isinstance(data.attrs, OrderedDict)
+        assert isinstance(data.attrs, dict)
 
     @requires_dask
     def test_chunk(self):
@@ -2342,7 +2327,7 @@ class TestDataset:
         newnames = {"var1": "renamed_var1", "dim2": "renamed_dim2"}
         renamed = data.rename(newnames)
 
-        variables = OrderedDict(data.variables)
+        variables = dict(data.variables)
         for k, v in newnames.items():
             variables[v] = variables.pop(k)
 
@@ -2489,9 +2474,9 @@ class TestDataset:
             attrs={"key": "entry"},
         )
         with raises_regex(TypeError, "value of new dimension"):
-            original.expand_dims(OrderedDict((("d", 3.2),)))
+            original.expand_dims({"d": 3.2})
         with raises_regex(ValueError, "both keyword and positional"):
-            original.expand_dims(OrderedDict((("d", 4),)), e=4)
+            original.expand_dims({"d": 4}, e=4)
 
     def test_expand_dims_int(self):
         original = Dataset(
@@ -2546,7 +2531,7 @@ class TestDataset:
         expected = Dataset(
             {"x": (("b", "a"), np.array([[1, 2, 3], [1, 2, 3]]))}, coords={"b": [1, 2]}
         )
-        actual = original.expand_dims(OrderedDict(b=[1, 2]))
+        actual = original.expand_dims(dict(b=[1, 2]))
         assert_identical(expected, actual)
         assert "b" not in original._coord_names
 
@@ -2574,7 +2559,7 @@ class TestDataset:
             },
         )
 
-        actual = original.expand_dims(OrderedDict((("d", 4), ("e", ["l", "m", "n"]))))
+        actual = original.expand_dims({"d": 4, "e": ["l", "m", "n"]})
 
         expected = Dataset(
             {
@@ -3606,7 +3591,7 @@ class TestDataset:
 
     def test_to_array(self):
         ds = Dataset(
-            OrderedDict([("a", 1), ("b", ("x", [1, 2, 3]))]),
+            {"a": 1, "b": ("x", [1, 2, 3])},
             coords={"c": 42},
             attrs={"Conventions": "None"},
         )
@@ -3625,7 +3610,7 @@ class TestDataset:
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list("abcdefghij")
-        ds = Dataset(OrderedDict([("a", ("t", x)), ("b", ("t", y)), ("t", ("t", t))]))
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
         expected = pd.DataFrame(
             np.array([x, y]).T, columns=["a", "b"], index=pd.Index(t, name="t")
         )
@@ -3760,7 +3745,7 @@ class TestDataset:
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list("abcdefghij")
-        ds = Dataset(OrderedDict([("a", ("t", x)), ("b", ("t", y)), ("t", ("t", t))]))
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
         expected = {
             "coords": {"t": {"dims": ("t",), "data": t, "attrs": {}}},
             "attrs": {},
@@ -3831,14 +3816,12 @@ class TestDataset:
         t = pd.date_range("20130101", periods=10)
         lat = [77.7, 83.2, 76]
         ds = Dataset(
-            OrderedDict(
-                [
-                    ("a", (["t", "lat"], x)),
-                    ("b", (["t", "lat"], y)),
-                    ("t", ("t", t)),
-                    ("lat", ("lat", lat)),
-                ]
-            )
+            {
+                "a": (["t", "lat"], x),
+                "b": (["t", "lat"], y),
+                "t": ("t", t),
+                "lat": ("lat", lat),
+            }
         )
         roundtripped = Dataset.from_dict(ds.to_dict())
         assert_identical(ds, roundtripped)
@@ -3852,14 +3835,12 @@ class TestDataset:
 
         lat = [77.7, 83.2, 76]
         ds = Dataset(
-            OrderedDict(
-                [
-                    ("a", (["t", "lat"], x)),
-                    ("b", (["t", "lat"], y)),
-                    ("t", ("t", t)),
-                    ("lat", ("lat", lat)),
-                ]
-            )
+            {
+                "a": (["t", "lat"], x),
+                "b": (["t", "lat"], y),
+                "t": ("t", t),
+                "lat": ("lat", lat),
+            }
         )
         roundtripped = Dataset.from_dict(ds.to_dict())
         assert_identical(ds, roundtripped)
@@ -3874,11 +3855,7 @@ class TestDataset:
             "coords": np.array([37, -110.1, 100]),
             "maintainer": "bar",
         }
-        ds = Dataset(
-            OrderedDict(
-                [("a", ("t", x, attrs)), ("b", ("t", y, attrs)), ("t", ("t", t))]
-            )
-        )
+        ds = Dataset({"a": ("t", x, attrs), "b": ("t", y, attrs), "t": ("t", t)})
         expected_attrs = {
             "created": attrs["created"].item(),
             "coords": attrs["coords"].tolist(),
@@ -4351,7 +4328,7 @@ class TestDataset:
         data = create_test_data()
         _attrs = {"attr1": "value1", "attr2": 2929}
 
-        attrs = OrderedDict(_attrs)
+        attrs = dict(_attrs)
         data.attrs = attrs
 
         # Test dropped attrs
@@ -4509,12 +4486,10 @@ class TestDataset:
         assert_equal(expected, actual)
 
     def make_example_math_dataset(self):
-        variables = OrderedDict(
-            [
-                ("bar", ("x", np.arange(100, 400, 100))),
-                ("foo", (("x", "y"), 1.0 * np.arange(12).reshape(3, 4))),
-            ]
-        )
+        variables = {
+            "bar": ("x", np.arange(100, 400, 100)),
+            "foo": (("x", "y"), 1.0 * np.arange(12).reshape(3, 4)),
+        }
         coords = {"abc": ("x", ["a", "b", "c"]), "y": 10 * np.arange(4)}
         ds = Dataset(variables, coords)
         ds["foo"][0, 0] = np.nan

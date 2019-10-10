@@ -1,5 +1,4 @@
 """Testing functions exposed to the user API"""
-from collections import OrderedDict
 from typing import Hashable, Set, Union
 
 import numpy as np
@@ -143,7 +142,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
 
 
 def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
-    assert isinstance(indexes, OrderedDict), indexes
+    assert isinstance(indexes, dict), indexes
     assert all(isinstance(v, pd.Index) for v in indexes.values()), {
         k: type(v) for k, v in indexes.items()
     }
@@ -173,16 +172,14 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
     assert isinstance(var._encoding, (type(None), dict)), name_or_empty + (
         var._encoding,
     )
-    assert isinstance(var._attrs, (type(None), OrderedDict)), name_or_empty + (
-        var._attrs,
-    )
+    assert isinstance(var._attrs, (type(None), dict)), name_or_empty + (var._attrs,)
 
 
 def _assert_dataarray_invariants(da: DataArray):
     assert isinstance(da._variable, Variable), da._variable
     _assert_variable_invariants(da._variable)
 
-    assert isinstance(da._coords, OrderedDict), da._coords
+    assert isinstance(da._coords, dict), da._coords
     assert all(isinstance(v, Variable) for v in da._coords.values()), da._coords
     assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
         da.dims,
@@ -199,7 +196,7 @@ def _assert_dataarray_invariants(da: DataArray):
 
 
 def _assert_dataset_invariants(ds: Dataset):
-    assert isinstance(ds._variables, OrderedDict), type(ds._variables)
+    assert isinstance(ds._variables, dict), type(ds._variables)
     assert all(isinstance(v, Variable) for v in ds._variables.values()), ds._variables
     for k, v in ds._variables.items():
         _assert_variable_invariants(v, k)
@@ -232,7 +229,7 @@ def _assert_dataset_invariants(ds: Dataset):
         _assert_indexes_invariants_checks(ds._indexes, ds._variables, ds._dims)
 
     assert isinstance(ds._encoding, (type(None), dict))
-    assert isinstance(ds._attrs, (type(None), OrderedDict))
+    assert isinstance(ds._attrs, (type(None), dict))
 
 
 def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable],):

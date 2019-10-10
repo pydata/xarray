@@ -1,5 +1,4 @@
 import functools
-from collections import OrderedDict
 
 import numpy as np
 
@@ -402,8 +401,8 @@ class DatasetRolling(Rolling):
         super().__init__(obj, windows, min_periods, center)
         if self.dim not in self.obj.dims:
             raise KeyError(self.dim)
-        # Keep each Rolling object as an OrderedDict
-        self.rollings = OrderedDict()
+        # Keep each Rolling object as a dictionary
+        self.rollings = {}
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
             if self.dim in da.dims:
@@ -412,7 +411,7 @@ class DatasetRolling(Rolling):
     def _dataset_implementation(self, func, **kwargs):
         from .dataset import Dataset
 
-        reduced = OrderedDict()
+        reduced = {}
         for key, da in self.obj.data_vars.items():
             if self.dim in da.dims:
                 reduced[key] = func(self.rollings[key], **kwargs)
@@ -478,7 +477,7 @@ class DatasetRolling(Rolling):
 
         from .dataset import Dataset
 
-        dataset = OrderedDict()
+        dataset = {}
         for key, da in self.obj.data_vars.items():
             if self.dim in da.dims:
                 dataset[key] = self.rollings[key].construct(
@@ -598,7 +597,7 @@ class DatasetCoarsen(Coarsen):
         def wrapped_func(self, **kwargs):
             from .dataset import Dataset
 
-            reduced = OrderedDict()
+            reduced = {}
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
                     self.windows, func, self.boundary, self.side

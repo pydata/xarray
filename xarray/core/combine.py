@@ -1,6 +1,6 @@
 import itertools
 import warnings
-from collections import Counter, OrderedDict
+from collections import Counter
 from textwrap import dedent
 
 import pandas as pd
@@ -13,7 +13,7 @@ from .merge import merge
 
 
 def _infer_concat_order_from_positions(datasets):
-    combined_ids = OrderedDict(_infer_tile_ids_from_nested_list(datasets, ()))
+    combined_ids = dict(_infer_tile_ids_from_nested_list(datasets, ()))
     return combined_ids
 
 
@@ -110,7 +110,7 @@ def _infer_concat_order_from_coords(datasets):
             "order the datasets for concatenation"
         )
 
-    combined_ids = OrderedDict(zip(tile_ids, datasets))
+    combined_ids = dict(zip(tile_ids, datasets))
 
     return combined_ids, concat_dims
 
@@ -207,14 +207,14 @@ def _combine_all_along_first_dim(
 
     # Group into lines of datasets which must be combined along dim
     # need to sort by _new_tile_id first for groupby to work
-    # TODO remove all these sorted OrderedDicts once python >= 3.6 only
-    combined_ids = OrderedDict(sorted(combined_ids.items(), key=_new_tile_id))
+    # TODO: ask for help here
+    combined_ids = dict(sorted(combined_ids.items(), key=_new_tile_id))
     grouped = itertools.groupby(combined_ids.items(), key=_new_tile_id)
 
     # Combine all of these datasets along dim
     new_combined_ids = {}
     for new_id, group in grouped:
-        combined_ids = OrderedDict(sorted(group))
+        combined_ids = dict(sorted(group))
         datasets = combined_ids.values()
         new_combined_ids[new_id] = _combine_1d(
             datasets, dim, compat, data_vars, coords, fill_value, join
@@ -291,7 +291,7 @@ def _nested_combine(
         combined_ids = _infer_concat_order_from_positions(datasets)
     else:
         # Already sorted so just use the ids already passed
-        combined_ids = OrderedDict(zip(ids, datasets))
+        combined_ids = dict(zip(ids, datasets))
 
     # Check that the inferred shape is combinable
     _check_shape_tile_ids(combined_ids)

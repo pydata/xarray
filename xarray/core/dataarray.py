@@ -1,6 +1,5 @@
 import functools
 import warnings
-from collections import OrderedDict
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -79,7 +78,7 @@ if TYPE_CHECKING:
 
 def _infer_coords_and_dims(
     shape, coords, dims
-) -> "Tuple[OrderedDict[Any, Variable], Tuple[Hashable, ...]]":
+) -> "Tuple[Dict[Any, Variable], Tuple[Hashable, ...]]":
     """All the logic for creating a new DataArray"""
 
     if (
@@ -122,7 +121,7 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError("dimension %s is not a string" % d)
 
-    new_coords = OrderedDict()  # type: OrderedDict[Any, Variable]
+    new_coords = dict()  # type: Dict[Any, Variable]
 
     if utils.is_dict_like(coords):
         for k, v in coords.items():
@@ -243,7 +242,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary of DataArray objects that label values along each dimension.
     name : str or None
         Name of this array.
-    attrs : OrderedDict
+    attrs : dict
         Dictionary for holding arbitrary metadata.
     """
 
@@ -364,8 +363,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
         # These fully describe a DataArray
         self._variable = variable  # type: Variable
-        assert isinstance(coords, OrderedDict)
-        self._coords = coords  # type: OrderedDict[Any, Variable]
+        assert isinstance(coords, dict)
+        self._coords = coords  # type: Dict[Any, Variable]
         self._name = name  # type: Optional[Hashable]
         self._accessors = None  # type: Optional[Dict[str, Any]]
 
@@ -397,16 +396,16 @@ class DataArray(AbstractArray, DataWithCoords):
         elif variable.dims == self.dims:
             # Shape has changed (e.g. from reduce(..., keepdims=True)
             new_sizes = dict(zip(self.dims, variable.shape))
-            coords = OrderedDict(
-                (k, v)
+            coords = {
+                k: v
                 for k, v in self._coords.items()
                 if v.shape == tuple(new_sizes[d] for d in v.dims)
-            )
+            }
         else:
             allowed_dims = set(variable.dims)
-            coords = OrderedDict(
-                (k, v) for k, v in self._coords.items() if set(v.dims) <= allowed_dims
-            )
+            coords = {
+                k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
+            }
         return self._replace(variable, coords, name)
 
     def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
@@ -444,9 +443,8 @@ class DataArray(AbstractArray, DataWithCoords):
             array.attrs = {}
             return array
 
-        variables = OrderedDict(
-            [(label, subset(dim, label)) for label in self.get_index(dim)]
-        )
+        variables = {label: subset(dim, label) for label in self.get_index(dim)}
+
         coords = self.coords.to_dataset()
         if dim in coords:
             del coords[dim]
@@ -599,11 +597,11 @@ class DataArray(AbstractArray, DataWithCoords):
             return dict(zip(self.dims, key))
 
     @property
-    def _level_coords(self) -> "OrderedDict[Any, Hashable]":
+    def _level_coords(self) -> "Dict[Any, Hashable]":
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
-        level_coords = OrderedDict()  # type: OrderedDict[Any, Hashable]
+        level_coords = {}  # type: Dict[Any, Hashable]
 
         for cname, var in self._coords.items():
             if var.ndim == 1 and isinstance(var, IndexVariable):
@@ -679,7 +677,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return _LocIndexer(self)
 
     @property
-    def attrs(self) -> "OrderedDict[Any, Any]":
+    def attrs(self) -> "Dict[Any, Any]":
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
@@ -689,7 +687,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self.variable.attrs = value  # type: ignore
 
     @property
-    def encoding(self) -> "OrderedDict[Any, Any]":
+    def encoding(self) -> "Dict[Any, Any]":
         """Dictionary of format-specific settings for how this array should be
         serialized."""
         return self.variable.encoding
@@ -915,7 +913,7 @@ class DataArray(AbstractArray, DataWithCoords):
         pandas.DataFrame.copy
         """
         variable = self.variable.copy(deep=deep, data=data)
-        coords = OrderedDict((k, v.copy(deep=deep)) for k, v in self._coords.items())
+        coords = {k: v.copy(deep=deep) for k, v in self._coords.items()}
         return self._replace(variable, coords)
 
     def __copy__(self) -> "DataArray":
@@ -1525,9 +1523,9 @@ class DataArray(AbstractArray, DataWithCoords):
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
-            dim = OrderedDict((d, 1) for d in dim)
+            dim = dict.fromkeys(dim, 1)
         elif dim is not None and not isinstance(dim, Mapping):
-            dim = OrderedDict(((cast(Hashable, dim), 1),))
+            dim = {cast(Hashable, dim): 1}
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         ds = self._to_temp_dataset().expand_dims(dim, axis)
@@ -1821,7 +1819,7 @@ class DataArray(AbstractArray, DataWithCoords):
         variable_dim = idx.names[level_number]
 
         # pull variables out of datarray
-        data_dict = OrderedDict()
+        data_dict = {}
         for k in variables:
             data_dict[k] = self.sel({variable_dim: k}).squeeze(drop=True)
 
@@ -1864,7 +1862,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = OrderedDict()  # type: OrderedDict[Any, Variable]
+            coords = {}  # type: Dict[Any, Variable]
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
@@ -2190,7 +2188,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 "DataFrame: use the ``name`` parameter"
             )
 
-        dims = OrderedDict(zip(self.dims, self.shape))
+        dims = dict(zip(self.dims, self.shape))
         # By using a unique name, we can convert a DataArray into a DataFrame
         # even if it shares a name with one of its coordinates.
         # I would normally use unique_name = object() but that results in a
@@ -2318,12 +2316,10 @@ class DataArray(AbstractArray, DataWithCoords):
         coords = None
         if "coords" in d:
             try:
-                coords = OrderedDict(
-                    [
-                        (k, (v["dims"], v["data"], v.get("attrs")))
-                        for k, v in d["coords"].items()
-                    ]
-                )
+                coords = {
+                    k: (v["dims"], v["data"], v.get("attrs"))
+                    for k, v in d["coords"].items()
+                }
             except KeyError as e:
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
