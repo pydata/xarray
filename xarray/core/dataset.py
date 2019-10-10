@@ -21,6 +21,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    TypeVar,
     Union,
     cast,
     overload,
@@ -84,6 +85,8 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import CoercibleMapping
+
+    T_DSorDA = TypeVar("T_DSorDA", DataArray, "Dataset")
 
     try:
         from dask.delayed import Delayed
@@ -1670,7 +1673,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if v.chunks is not None:
                 for dim, c in zip(v.dims, v.chunks):
                     if dim in chunks and c != chunks[dim]:
-                        raise ValueError("inconsistent chunks")
+                        raise ValueError(
+                            f"Object has inconsistent chunks along dimension {dim}. "
+                            "This can be fixed by calling unify_chunks()."
+                        )
                     chunks[dim] = c
         return Frozen(SortedKeysDict(chunks))
 
@@ -1855,7 +1861,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         indexers: Mapping[Hashable, Any] = None,
         drop: bool = False,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along the specified
         dimension(s).
@@ -1938,7 +1944,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = None,
         tolerance: Number = None,
         drop: bool = False,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
@@ -2011,7 +2017,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def head(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with the first `n` values of each array
         for the specified dimension(s).
@@ -2058,7 +2064,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def tail(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with the last `n` values of each array
         for the specified dimension(s).
@@ -2108,7 +2114,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def thin(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along every `n`th
         value for the specified dimension(s)
@@ -2246,7 +2252,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         tolerance: Number = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "Dataset":
         """Conform this object onto a new set of indexes, filling in
         missing values with ``fill_value``. The default fill value is NaN.
@@ -2447,7 +2453,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
-        **coords_kwargs: Any
+        **coords_kwargs: Any,
     ) -> "Dataset":
         """ Multidimensional interpolation of Dataset.
 
@@ -2673,7 +2679,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         name_dict: Mapping[Hashable, Hashable] = None,
         inplace: bool = None,
-        **names: Hashable
+        **names: Hashable,
     ) -> "Dataset":
         """Returns a new object with renamed variables and dimensions.
 
@@ -2876,7 +2882,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dim: Union[None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]] = None,
         axis: Union[None, int, Sequence[int]] = None,
-        **dim_kwargs: Any
+        **dim_kwargs: Any,
     ) -> "Dataset":
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape.  The new object is a
@@ -3022,7 +3028,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         inplace: bool = None,
-        **indexes_kwargs: Union[Hashable, Sequence[Hashable]]
+        **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
     ) -> "Dataset":
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
@@ -3124,7 +3130,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dim_order: Mapping[Hashable, Sequence[int]] = None,
         inplace: bool = None,
-        **dim_order_kwargs: Sequence[int]
+        **dim_order_kwargs: Sequence[int],
     ) -> "Dataset":
         """Rearrange index levels using input order.
 
@@ -3190,7 +3196,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def stack(
         self,
         dimensions: Mapping[Hashable, Sequence[Hashable]] = None,
-        **dimensions_kwargs: Sequence[Hashable]
+        **dimensions_kwargs: Sequence[Hashable],
     ) -> "Dataset":
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -3891,7 +3897,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, Hashable] = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "Dataset":
         """Interpolate values according to different methods.
 
@@ -3942,7 +3948,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             method=method,
             limit=limit,
             use_coordinate=use_coordinate,
-            **kwargs
+            **kwargs,
         )
         return new
 
@@ -4023,7 +4029,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         keepdims: bool = False,
         numeric_only: bool = False,
         allow_lazy: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "Dataset":
         """Reduce this dataset by applying `func` along some dimension(s).
 
@@ -4098,7 +4104,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         keep_attrs=keep_attrs,
                         keepdims=keepdims,
                         allow_lazy=allow_lazy,
-                        **kwargs
+                        **kwargs,
                     )
 
         coord_names = {k for k in self.coords if k in variables}
@@ -4113,7 +4119,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         func: Callable,
         keep_attrs: bool = None,
         args: Iterable[Any] = (),
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "Dataset":
         """Apply a function over the data variables in this dataset.
 
@@ -5365,6 +5371,109 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if has_value_flag is True:
                 selection.append(var_name)
         return self[selection]
+
+    def unify_chunks(self) -> "Dataset":
+        """ Unify chunk size along all chunked dimensions of this Dataset.
+
+        Returns
+        -------
+
+        Dataset with consistent chunk sizes for all dask-array variables
+
+        See Also
+        --------
+
+        dask.array.core.unify_chunks
+        """
+
+        try:
+            self.chunks
+        except ValueError:  # "inconsistent chunks"
+            pass
+        else:
+            # No variables with dask backend, or all chunks are already aligned
+            return self.copy()
+
+        # import dask is placed after the quick exit test above to allow
+        # running this method if dask isn't installed and there are no chunks
+        import dask.array
+
+        ds = self.copy()
+
+        dims_pos_map = {dim: index for index, dim in enumerate(ds.dims)}
+
+        dask_array_names = []
+        dask_unify_args = []
+        for name, variable in ds.variables.items():
+            if isinstance(variable.data, dask.array.Array):
+                dims_tuple = [dims_pos_map[dim] for dim in variable.dims]
+                dask_array_names.append(name)
+                dask_unify_args.append(variable.data)
+                dask_unify_args.append(dims_tuple)
+
+        _, rechunked_arrays = dask.array.core.unify_chunks(*dask_unify_args)
+
+        for name, new_array in zip(dask_array_names, rechunked_arrays):
+            ds.variables[name]._data = new_array
+
+        return ds
+
+    def map_blocks(
+        self,
+        func: "Callable[..., T_DSorDA]",
+        args: Sequence[Any] = (),
+        kwargs: Mapping[str, Any] = None,
+    ) -> "T_DSorDA":
+        """
+        Apply a function to each chunk of this Dataset. This method is experimental and
+        its signature may change.
+
+        Parameters
+        ----------
+        func: callable
+            User-provided function that accepts a Dataset as its first parameter. The
+            function will receive a subset of this Dataset, corresponding to one chunk
+            along each chunked dimension. ``func`` will be executed as
+            ``func(obj_subset, *args, **kwargs)``.
+
+            The function will be first run on mocked-up data, that looks like this
+            Dataset but has sizes 0, to determine properties of the returned object such
+            as dtype, variable names, new dimensions and new indexes (if any).
+
+            This function must return either a single DataArray or a single Dataset.
+
+            This function cannot change size of existing dimensions, or add new chunked
+            dimensions.
+        args: Sequence
+            Passed verbatim to func after unpacking, after the sliced DataArray. xarray
+            objects, if any, will not be split by chunks. Passing dask collections is
+            not allowed.
+        kwargs: Mapping
+            Passed verbatim to func after unpacking. xarray objects, if any, will not be
+            split by chunks. Passing dask collections is not allowed.
+
+        Returns
+        -------
+        A single DataArray or Dataset with dask backend, reassembled from the outputs of
+        the function.
+
+        Notes
+        -----
+        This method is designed for when one needs to manipulate a whole xarray object
+        within each chunk. In the more common case where one can work on numpy arrays,
+        it is recommended to use apply_ufunc.
+
+        If none of the variables in this Dataset is backed by dask, calling this method
+        is equivalent to calling ``func(self, *args, **kwargs)``.
+
+        See Also
+        --------
+        dask.array.map_blocks, xarray.apply_ufunc, xarray.map_blocks,
+        xarray.DataArray.map_blocks
+        """
+        from .parallel import map_blocks
+
+        return map_blocks(func, self, args, kwargs)
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

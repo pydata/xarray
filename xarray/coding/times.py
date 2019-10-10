@@ -22,7 +22,6 @@ from .variables import (
     unpack_for_encoding,
 )
 
-
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
 

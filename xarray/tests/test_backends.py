@@ -14,8 +14,8 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from pandas.errors import OutOfBoundsDatetime
 import pytest
+from pandas.errors import OutOfBoundsDatetime
 
 import xarray as xr
 from xarray import (

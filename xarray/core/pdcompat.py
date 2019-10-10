@@ -41,7 +41,6 @@ from distutils.version import LooseVersion
 
 import pandas as pd
 
-
 # allow ourselves to type checks for Panel even after it's removed
 if LooseVersion(pd.__version__) < "0.25.0":
     Panel = pd.Panel
