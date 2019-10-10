@@ -24,10 +24,7 @@ require_pint_array_function = pytest.mark.skipif(
     reason="pint does not implement __array_function__ yet",
 )
 
-try:
-    from pint.quantity import BaseQuantity
-except ImportError:
-    BaseQuantity = unit_registry.Quantity
+Quantity = unit_registry.Quantity
 
 
 def array_extract_units(obj):
@@ -51,7 +48,7 @@ def array_attach_units(data, unit, convert_from=None):
     except TypeError:
         pass
 
-    if isinstance(data, BaseQuantity):
+    if isinstance(data, Quantity):
         if not convert_from:
             raise ValueError(
                 "cannot attach unit {unit} to quantity ({data.units})".format(
@@ -107,7 +104,7 @@ def extract_units(obj):
         }
 
         units = {**vars_units, **coords_units}
-    elif isinstance(obj, BaseQuantity):
+    elif isinstance(obj, Quantity):
         vars_units = {"<array>": array_extract_units(obj)}
 
         units = {**vars_units}
@@ -128,7 +125,7 @@ def strip_units(obj):
         coords = {
             name: (
                 (value.dims, array_strip_units(value.data))
-                if isinstance(value.data, BaseQuantity)
+                if isinstance(value.data, Quantity)
                 else value  # to preserve multiindexes
             )
             for name, value in obj.coords.items()
@@ -199,11 +196,11 @@ def assert_equal_with_units(a, b):
         b = b if not isinstance(b, (xr.DataArray, xr.Variable)) else b.data
 
         assert type(a) == type(b) or (
-            isinstance(a, BaseQuantity) and isinstance(b, BaseQuantity)
+            isinstance(a, Quantity) and isinstance(b, Quantity)
         )
 
         # workaround until pint implements allclose in __array_function__
-        if isinstance(a, BaseQuantity) or isinstance(b, BaseQuantity):
+        if isinstance(a, Quantity) or isinstance(b, Quantity):
             assert (
                 hasattr(a, "magnitude") and hasattr(b, "magnitude")
             ) and np.allclose(a.magnitude, b.magnitude, equal_nan=True)
@@ -339,10 +336,10 @@ class TestDataArray:
         kwargs = {"data": array, "dims": "x", "coords": variants.get(variant)}
         data_array = xr.DataArray(**kwargs)
 
-        assert isinstance(data_array.data, BaseQuantity)
+        assert isinstance(data_array.data, Quantity)
         assert all(
             {
-                name: isinstance(coord.data, BaseQuantity)
+                name: isinstance(coord.data, Quantity)
                 for name, coord in data_array.coords.items()
             }.values()
         )
