@@ -1,5 +1,5 @@
 import collections.abc
-from typing import Any, Hashable, Iterable, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Hashable, Iterable, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd

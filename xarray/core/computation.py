@@ -10,6 +10,7 @@ from typing import (
     AbstractSet,
     Any,
     Callable,
+    Dict,
     Hashable,
     Iterable,
     List,

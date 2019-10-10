@@ -2,6 +2,7 @@ from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     Hashable,
     Iterator,
     Mapping,
@@ -397,6 +398,8 @@ def remap_label_indexers(
         elif isinstance(v, DataArray):
             # drop coordinates found in indexers since .sel() already
             # ensures alignments
-            coords = {k: v for k, v in v._coords.items() if k not in indexers}
+            coords = {
+                k: v for k, v in v._coords.items() if k not in indexers
+            }  # type: Dict
             pos_indexers[k] = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
     return pos_indexers, new_indexes
