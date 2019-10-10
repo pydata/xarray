@@ -1,5 +1,4 @@
 import operator
-from distutils.version import LooseVersion
 
 import numpy as np
 import pytest
@@ -17,10 +16,6 @@ pytestmark = [
     ),
     # pytest.mark.filterwarnings("ignore:::pint[.*]"),
 ]
-
-
-def use_pint_version_or_xfail(*, version, reason):
-    return pytest.mark.xfail(LooseVersion(pint.__version__) < version, reason=reason)
 
 
 unit_registry = pint.UnitRegistry()
