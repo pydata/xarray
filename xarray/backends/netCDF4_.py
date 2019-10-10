@@ -493,7 +493,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                 fill_value=fill_value,
             )
 
-        nc4_var.setncattrs(attrs)
+        nc4_var.setncatts(attrs)
 
         target = NetCDF4ArrayWrapper(name, self)
 
