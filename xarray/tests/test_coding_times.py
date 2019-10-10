@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 from pandas.errors import OutOfBoundsDatetime
 
-
 from xarray import DataArray, Dataset, Variable, coding, decode_cf
 from xarray.coding.times import (
     _import_cftime,
@@ -29,7 +28,6 @@ from . import (
     requires_cftime,
     requires_cftime_or_netCDF4,
 )
-
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",
