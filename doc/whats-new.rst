@@ -52,14 +52,17 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
-- Add a repr for :py:class:`~xarray.core.GroupBy` objects.
-  Example::
+- :py:class:`~xarray.core.GroupBy` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
+
+  - Added a repr. Example::
 
       >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
-  (:issue:`3344`) by `Deepak Cherian <https://github.com/dcherian>`_.
+  - Added a ``GroupBy.dims`` property that mirrors the dimensions
+    of each group.(:issue:`3344`)
+    
 - Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small
   arrays (:issue:`2799`, :pull:`3375`) by
   `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -73,6 +76,12 @@ Bug fixes
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- The default behaviour of reducing across all dimensions for
+  :py:class:`~xarray.core.groupby.DataArrayGroupBy` objects has now been properly removed
+  as was done for :py:class:`~xarray.core.groupby.DatasetGroupBy` in 0.13.0 (:issue:`3337`).
+  Use `xarray.ALL_DIMS` if you need to replicate previous behaviour.
+  Also raise nicer error message when no groups are created (:issue:`1764`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian/>`_.
 
