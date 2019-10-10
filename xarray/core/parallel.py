@@ -48,27 +48,22 @@ def make_meta(obj):
     If obj is neither a DataArray nor Dataset, return it unaltered.
     """
     if isinstance(obj, DataArray):
-        to_array = True
-        obj_array = obj.copy()
+        obj_array = obj
         obj = obj._to_temp_dataset()
+    elif isinstance(obj, Dataset):
+        obj_array = None
     else:
-        to_array = False
+        return obj
 
-    if isinstance(obj, Dataset):
-        meta = Dataset()
-        for name, variable in obj.variables.items():
-            meta_obj = meta_from_array(variable.data, ndim=variable.ndim)
-            meta[name] = (variable.dims, meta_obj, variable.attrs)
-        meta.attrs = obj.attrs
-    else:
-        meta = obj
+    meta = Dataset()
+    for name, variable in obj.variables.items():
+        meta_obj = meta_from_array(variable.data, ndim=variable.ndim)
+        meta[name] = (variable.dims, meta_obj, variable.attrs)
+    meta.attrs = obj.attrs
+    meta = meta.set_coords(obj.coords)
 
-    if isinstance(obj, Dataset):
-        meta = meta.set_coords(obj.coords)
-
-    if to_array:
-        meta = obj_array._from_temp_dataset(meta)
-
+    if obj_array is not None:
+        return obj_array._from_temp_dataset(meta)
     return meta
 
 
@@ -88,8 +83,8 @@ def infer_template(
 
     if not isinstance(template, (Dataset, DataArray)):
         raise TypeError(
-            "Function must return an xarray DataArray or Dataset. Instead it returned %r"
-            % type(template)
+            "Function must return an xarray DataArray or Dataset. Instead it returned "
+            f"{type(template)}"
         )
 
     return template
