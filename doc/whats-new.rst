@@ -42,6 +42,9 @@ Breaking changes
 
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Dropped the 'drop=False' optional parameter from :meth:`Variable.isel`.
+  It was unused and doesn't make sense for a Variable.
+  (:pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - Remove internal usage of `collections.OrderedDict`. After dropping support for
   Python <=3.5, most uses of `OrderedDict` in Xarray were no longer necessary. We
@@ -57,14 +60,17 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
-- Add a repr for :py:class:`~xarray.core.GroupBy` objects (:issue:`3344`).
+- Add a repr for :py:class:`~xarray.core.GroupBy` objects.
   Example::
 
       >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
-  By `Deepak Cherian <https://github.com/dcherian>`_.
+  (:issue:`3344`) by `Deepak Cherian <https://github.com/dcherian>`_.
+- Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small
+  arrays (:issue:`2799`, :pull:`3375`) by
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -75,6 +81,8 @@ Bug fixes
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fix error in concatenating unlabeled dimensions (:pull:`3362`).
+  By `Deepak Cherian <https://github.com/dcherian/>`_.
 
 Documentation
 ~~~~~~~~~~~~~
