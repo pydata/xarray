@@ -15,6 +15,8 @@ an_array = npst.arrays(
         # NetCDF does not support float16
         # https://www.unidata.ucar.edu/software/netcdf/docs/data_type.html
         npst.floating_dtypes(sizes=(32, 64)),
+        npst.byte_string_dtypes(),
+        npst.unicode_string_dtypes(),
     ),
     shape=npst.array_shapes(max_side=3),  # max_side specified for performance
 )
