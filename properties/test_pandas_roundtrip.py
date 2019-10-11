@@ -73,6 +73,7 @@ def test_roundtrip_pandas_series(ser, ix_name):
     arr = xr.DataArray(ser)
     roundtripped = arr.to_pandas()
     pd.testing.assert_series_equal(ser, roundtripped)
+    xr.testing.assert_identical(arr, roundtripped.to_xarray())
 
 
 # Dataframes with columns of all the same dtype - for roundtrip to DataArray
