@@ -90,3 +90,4 @@ def test_roundtrip_pandas_dataframe(df):
     arr = xr.DataArray(df)
     roundtripped = arr.to_pandas()
     pd.testing.assert_frame_equal(df, roundtripped)
+    xr.testing.assert_identical(arr, roundtripped.to_xarray())
