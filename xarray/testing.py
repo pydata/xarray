@@ -141,6 +141,26 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+def assert_chunks_equal(a, b):
+    """
+    Assert that chunksizes along chunked dimensions are equal.
+
+    Parameters
+    ----------
+    a : xarray.Dataset or xarray.DataArray
+        The first object to compare.
+    b : xarray.Dataset or xarray.DataArray
+        The second object to compare.
+    """
+
+    if isinstance(a, DataArray) != isinstance(b, DataArray):
+        raise TypeError("a and b have mismatched types")
+
+    left = a.unify_chunks()
+    right = b.unify_chunks()
+    assert left.chunks == right.chunks
+
+
 def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
     assert isinstance(indexes, dict), indexes
     assert all(isinstance(v, pd.Index) for v in indexes.values()), {
