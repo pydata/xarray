@@ -3047,6 +3047,21 @@ class TestDataset:
         expected = Dataset({"x": ("y", [4, 5, 6])}, {"y": range(3)})
         assert_identical(ds, expected)
 
+    def test_setitem_dimension_override(self):
+        # regression test for GH-3377
+        ds = xr.Dataset({"x": [0, 1, 2]})
+        ds["x"] = ds["x"][:2]
+        expected = Dataset({"x": [0, 1]})
+        assert_identical(ds, expected)
+
+        ds = xr.Dataset({"x": [0, 1, 2]})
+        ds["x"] = np.array([0, 1])
+        assert_identical(ds, expected)
+
+        ds = xr.Dataset({"x": [0, 1, 2]})
+        ds.coords["x"] = [0, 1]
+        assert_identical(ds, expected)
+
     def test_setitem_with_coords(self):
         # Regression test for GH:2068
         ds = create_test_data()
