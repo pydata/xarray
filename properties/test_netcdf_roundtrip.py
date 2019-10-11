@@ -21,9 +21,11 @@ an_array = npst.arrays(
 
 compatible_names = st.text(
     alphabet=st.characters(
+        # Limit characters to upper & lowercase letters and decimal digits
         whitelist_categories=("Ll", "Lu", "Nd"),
         # It looks like netCDF should allow unicode names, but removing
         # this causes a failure with 'ά'
+        # https://www.unidata.ucar.edu/software/netcdf/docs/netcdf_data_set_components.html#Permitted
         max_codepoint=255,
     ),
     min_size=1,
