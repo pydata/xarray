@@ -17,6 +17,8 @@ an_array = npst.arrays(
         npst.floating_dtypes(sizes=(32, 64)),
         npst.byte_string_dtypes(),
         npst.unicode_string_dtypes(),
+        npst.datetime64_dtypes(),
+        npst.timedelta64_dtypes(),
     ),
     shape=npst.array_shapes(max_side=3),  # max_side specified for performance
 )
