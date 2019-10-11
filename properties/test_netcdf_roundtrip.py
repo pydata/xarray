@@ -43,5 +43,5 @@ def test_netcdf_roundtrip(tmp_path, data, arr):
     original = xr.Dataset({"data": var})
     original.to_netcdf(tmp_path / "test.nc")
 
-    roundtripped = xr.open_dataset(tmp_path / "test.nc")
-    xr.testing.assert_identical(original, roundtripped)
+    with xr.open_dataset(tmp_path / "test.nc") as roundtripped:
+        xr.testing.assert_identical(original, roundtripped)
