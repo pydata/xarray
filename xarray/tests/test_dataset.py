@@ -5779,19 +5779,19 @@ def test_weakref():
 def test_replacing_coordinates_dim_size():
     # regression test for GH#3377
     x = np.arange(5)
-    data = xr.DataArray(np.random.rand(5), coords={'x': x}, dims=['x'])
-    
+    data = xr.DataArray(np.random.rand(5), coords={"x": x}, dims=["x"])
+
     x_c = np.arange(5) + 0.5
-    data_c = xr.DataArray(np.random.rand(5), coords={'x_c': x_c}, dims=['x_c'])
-    
-    ds = xr.Dataset({'data':data, 'data_c': data_c})
+    data_c = xr.DataArray(np.random.rand(5), coords={"x_c": x_c}, dims=["x_c"])
 
-    assert ds.sizes['x_c'] == 5
+    ds = xr.Dataset({"data": data, "data_c": data_c})
 
-    del ds['data_c']
+    assert ds.sizes["x_c"] == 5
+
+    del ds["data_c"]
     print(ds)
-    assert 'x_c' not in ds.dims
+    assert "x_c" not in ds.dims
 
-    ds['x_c'] = ds['x_c'][:3]
-    assert ds.sizes['x_c'] == 3
-    assert np.nan not in ds['x_c']
+    ds["x_c"] = ds["x_c"][:3]
+    assert ds.sizes["x_c"] == 3
+    assert np.nan not in ds["x_c"]
