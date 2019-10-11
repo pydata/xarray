@@ -374,7 +374,13 @@ def deep_align(
         elif is_dict_like(variables):
             current_out = {}
             for k, v in variables.items():
-                if is_alignable(v):
+                if is_alignable(v) and k not in indexes:
+                    # Skip variables in indexes for alignment, because these
+                    # should to be overwritten instead:
+                    # https://github.com/pydata/xarray/issues/725
+                    # https://github.com/pydata/xarray/issues/3377
+                    # TODO(shoyer): doing this here feels super-hacky -- can we
+                    # move it explicitly into merge instead?
                     positions.append(position)
                     keys.append(k)
                     targets.append(v)
