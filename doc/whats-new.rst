@@ -52,7 +52,7 @@ Breaking changes
   `dict` object which is now ordered itself. This change will be most obvious when
   interacting with the `attrs` property on the Dataset and DataArray objects.
 
-  (:issue:`3380`, :issue:`XXXX`). By `Joe Hamman <https://github.com/jhamman>`_.
+  (:issue:`3380`, :issue:`3389`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~

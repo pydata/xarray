@@ -207,7 +207,7 @@ def _combine_all_along_first_dim(
 
     # Group into lines of datasets which must be combined along dim
     # need to sort by _new_tile_id first for groupby to work
-    # TODO: ask for help here
+    # TODO: is the sorted need?
     combined_ids = dict(sorted(combined_ids.items(), key=_new_tile_id))
     grouped = itertools.groupby(combined_ids.items(), key=_new_tile_id)
 
