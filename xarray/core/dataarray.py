@@ -686,7 +686,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return _LocIndexer(self)
 
     @property
-    def attrs(self) -> "Dict[Any, Any]":
+    def attrs(self) -> Dict[Hashable, Any]:
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
@@ -696,7 +696,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self.variable.attrs = value  # type: ignore
 
     @property
-    def encoding(self) -> "Dict[Any, Any]":
+    def encoding(self) -> Dict[Hashable, Any]:
         """Dictionary of format-specific settings for how this array should be
         serialized."""
         return self.variable.encoding

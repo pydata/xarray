@@ -161,13 +161,13 @@ def _get_virtual_variable(
     return ref_name, var_name, virtual_var
 
 
-def calculate_dimensions(variables: Mapping[Hashable, Variable]) -> "Dict[Any, int]":
+def calculate_dimensions(variables: Mapping[Hashable, Variable]) -> Dict[Hashable, int]:
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims: Dict[Any, int] = {}
+    dims: Dict[Hashable, int] = {}
     last_used = {}
     scalar_vars = {k for k, v in variables.items() if not v.dims}
     for k, var in variables.items():
@@ -557,7 +557,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> "Dict[Any, Any]":
+    def attrs(self) -> Dict[Hashable, Any]:
         """Dictionary of global attributes on this dataset
         """
         if self._attrs is None:
@@ -866,11 +866,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     # https://github.com/python/mypy/issues/1803
     def _replace(  # type: ignore
         self,
-        variables: "Dict[Any, Variable]" = None,
+        variables: Dict[Hashable, Variable] = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
-        attrs: "Optional[Dict]" = __default,
-        indexes: "Optional[Dict[Any, pd.Index]]" = __default,
+        attrs: Optional[Dict[Hashable, Any]] = __default,
+        indexes: Optional[Dict[Any, pd.Index]] = __default,
         encoding: Optional[dict] = __default,
         inplace: bool = False,
     ) -> "Dataset":

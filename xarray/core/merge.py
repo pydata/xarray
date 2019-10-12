@@ -390,7 +390,7 @@ def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["Dataset
 
 def _get_priority_vars_and_indexes(
     objects: List["DatasetLike"], priority_arg: Optional[int], compat: str = "equals"
-) -> "Dict[Hashable, MergeElement]":
+) -> Dict[Hashable, MergeElement]:
     """Extract the priority variable from a list of mappings.
 
     We need this method because in some cases the priority argument itself

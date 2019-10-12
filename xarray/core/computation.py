@@ -334,7 +334,7 @@ def apply_dict_of_variables_vfunc(
 
 
 def _fast_dataset(
-    variables: "Dict[Any, Variable]", coord_variables: Mapping[Any, Variable]
+    variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
 ) -> "Dataset":
     """Create a dataset as quickly as possible.
 

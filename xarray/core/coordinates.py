@@ -219,7 +219,7 @@ class DatasetCoordinates(Coordinates):
         return self._data._copy_listed(self._names)
 
     def _update_coords(
-        self, coords: "Dict[Hashable, Variable]", indexes: Mapping[Hashable, pd.Index]
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
     ) -> None:
         from .dataset import calculate_dimensions
 
