@@ -4714,7 +4714,7 @@ class TestDataset:
     def test_dataset_diff_n1(self):
         ds = create_test_data(seed=1)
         actual = ds.diff("dim2")
-        expected = dict()
+        expected = {}
         expected["var1"] = DataArray(
             np.diff(ds["var1"].values, axis=1),
             {"dim2": ds["dim2"].values[1:]},
@@ -4733,7 +4733,7 @@ class TestDataset:
     def test_dataset_diff_n2(self):
         ds = create_test_data(seed=1)
         actual = ds.diff("dim2", n=2)
-        expected = dict()
+        expected = {}
         expected["var1"] = DataArray(
             np.diff(ds["var1"].values, axis=1, n=2),
             {"dim2": ds["dim2"].values[2:]},

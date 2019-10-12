@@ -49,7 +49,7 @@ def _override_indexes(objects, all_indexes, exclude):
 
     objects = list(objects)
     for idx, obj in enumerate(objects[1:]):
-        new_indexes = dict()
+        new_indexes = {}
         for dim in obj.dims:
             if dim not in exclude:
                 new_indexes[dim] = all_indexes[dim][0]

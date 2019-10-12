@@ -124,7 +124,7 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError("dimension %s is not a string" % d)
 
-    new_coords = dict()  # type: Dict[Any, Variable]
+    new_coords: Dict[Any, Variable] = {}
 
     if utils.is_dict_like(coords):
         for k, v in coords.items():

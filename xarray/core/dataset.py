@@ -280,7 +280,7 @@ def split_indexes(
     if isinstance(dims_or_levels, str) or not isinstance(dims_or_levels, Sequence):
         dims_or_levels = [dims_or_levels]
 
-    dim_levels = defaultdict(list)  # type: DefaultDict[Any, List[Hashable]]
+    dim_levels: DefaultDict[Any, List[Hashable]] = defaultdict(list)
     dims = []
     for k in dims_or_levels:
         if k in level_coords:

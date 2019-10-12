@@ -244,7 +244,7 @@ def _parse_datasets(datasets):
     dims = set()
     all_coord_names = set()
     data_vars = set()  # list of data_vars
-    dim_coords = dict()  # maps dim name to variable
+    dim_coords = {}  # maps dim name to variable
     dims_sizes = {}  # shared dimension sizes to expand variables
 
     for ds in datasets:

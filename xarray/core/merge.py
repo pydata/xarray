@@ -278,7 +278,7 @@ def collect_from_coordinates(
     list_of_coords: "List[Coordinates]"
 ) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes to be merged from Coordinate objects."""
-    grouped = {}  # type: Dict[Hashable, List[Tuple[Variable, pd.Index]]]
+    grouped: Dict[Hashable, List[Tuple[Variable, pd.Index]]] = {}
 
     for coords in list_of_coords:
         variables = coords.variables
@@ -375,7 +375,7 @@ def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["Dataset
     out = []
     for obj in objects:
         if isinstance(obj, Dataset):
-            variables = obj  # type: DatasetLike
+            variables: "DatasetLike" = obj
         else:
             variables = {}
             if isinstance(obj, PANDAS_TYPES):

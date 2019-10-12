@@ -275,7 +275,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             )
 
     # Attributes
-    attrs = dict()
+    attrs = {}
     # Affine transformation matrix (always available)
     # This describes coefficients mapping pixel coordinates to CRS
     # For serialization store as tuple of 6 floats, the last row being
