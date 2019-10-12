@@ -4,12 +4,13 @@ Functions for applying functions that act on arrays to xarray's labeled data.
 import functools
 import itertools
 import operator
-from collections import Counter, OrderedDict
+from collections import Counter
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
     Any,
     Callable,
+    Dict,
     Hashable,
     Iterable,
     List,
@@ -166,7 +167,7 @@ def _get_coords_list(args) -> List["Coordinates"]:
 
 def build_output_coords(
     args: list, signature: _UFuncSignature, exclude_dims: AbstractSet = frozenset()
-) -> "List[OrderedDict[Any, Variable]]":
+) -> "List[Dict[Any, Variable]]":
     """Build output coordinates for an operation.
 
     Parameters
@@ -182,14 +183,14 @@ def build_output_coords(
 
     Returns
     -------
-    OrderedDict of Variable objects with merged coordinates.
+    Dictionary of Variable objects with merged coordinates.
     """
     coords_list = _get_coords_list(args)
 
     if len(coords_list) == 1 and not exclude_dims:
         # we can skip the expensive merge
         unpacked_coords, = coords_list
-        merged_vars = OrderedDict(unpacked_coords.variables)
+        merged_vars = dict(unpacked_coords.variables)
     else:
         # TODO: save these merged indexes, instead of re-computing them later
         merged_vars, unused_indexes = merge_coordinates_without_align(
@@ -200,11 +201,9 @@ def build_output_coords(
     for output_dims in signature.output_core_dims:
         dropped_dims = signature.all_input_core_dims - set(output_dims)
         if dropped_dims:
-            filtered = OrderedDict(
-                (k, v)
-                for k, v in merged_vars.items()
-                if dropped_dims.isdisjoint(v.dims)
-            )
+            filtered = {
+                k: v for k, v in merged_vars.items() if dropped_dims.isdisjoint(v.dims)
+            }
         else:
             filtered = merged_vars
         output_coords.append(filtered)
@@ -247,11 +246,7 @@ def apply_dataarray_vfunc(
 
 
 def ordered_set_union(all_keys: List[Iterable]) -> Iterable:
-    result_dict = OrderedDict()  # type: OrderedDict[Any, None]
-    for keys in all_keys:
-        for key in keys:
-            result_dict[key] = None
-    return result_dict.keys()
+    return {key: None for keys in all_keys for key in keys}.keys()
 
 
 def ordered_set_intersection(all_keys: List[Iterable]) -> Iterable:
@@ -309,9 +304,9 @@ def _as_variables_or_variable(arg):
 
 
 def _unpack_dict_tuples(
-    result_vars: Mapping[Any, Tuple[Variable]], num_outputs: int
-) -> "Tuple[OrderedDict[Any, Variable], ...]":
-    out = tuple(OrderedDict() for _ in range(num_outputs))  # type: ignore
+    result_vars: Mapping[Hashable, Tuple[Variable, ...]], num_outputs: int
+) -> Tuple[Dict[Hashable, Variable], ...]:
+    out = tuple({} for _ in range(num_outputs))  # type: ignore
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
@@ -328,7 +323,7 @@ def apply_dict_of_variables_vfunc(
     names = join_dict_keys(args, how=join)
     grouped_by_name = collect_dict_values(args, names, fill_value)
 
-    result_vars = OrderedDict()
+    result_vars = {}
     for name, variable_args in zip(names, grouped_by_name):
         result_vars[name] = func(*variable_args)
 
@@ -339,11 +334,11 @@ def apply_dict_of_variables_vfunc(
 
 
 def _fast_dataset(
-    variables: "OrderedDict[Any, Variable]", coord_variables: Mapping[Any, Variable]
+    variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
 ) -> "Dataset":
     """Create a dataset as quickly as possible.
 
-    Beware: the `variables` OrderedDict is modified INPLACE.
+    Beware: the `variables` dict is modified INPLACE.
     """
     from .dataset import Dataset
 
@@ -465,9 +460,9 @@ def apply_groupby_func(func, *args):
 
 def unified_dim_sizes(
     variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
-) -> "OrderedDict[Any, int]":
+) -> Dict[Hashable, int]:
 
-    dim_sizes = OrderedDict()  # type: OrderedDict[Any, int]
+    dim_sizes: Dict[Hashable, int] = {}
 
     for var in variables:
         if len(set(var.dims)) < len(var.dims):

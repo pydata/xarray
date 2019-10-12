@@ -6,7 +6,6 @@ import itertools
 import os.path
 import re
 import warnings
-from collections import OrderedDict
 from typing import (
     AbstractSet,
     Any,
@@ -347,7 +346,7 @@ def ordered_dict_intersection(
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> MutableMapping[K, V]:
-    """Return the intersection of two dictionaries as a new OrderedDict.
+    """Return the intersection of two dictionaries as a new dictionary.
 
     Items are retained if their keys are found in both dictionaries and the
     values are compatible.
@@ -362,10 +361,10 @@ def ordered_dict_intersection(
 
     Returns
     -------
-    intersection : OrderedDict
+    intersection : dict
         Intersection of the contents.
     """
-    new_dict = OrderedDict(first_dict)
+    new_dict = dict(first_dict)
     remove_incompatible_items(new_dict, second_dict, compat)
     return new_dict
 
@@ -397,8 +396,8 @@ class Frozen(Mapping[K, V]):
         return "%s(%r)" % (type(self).__name__, self.mapping)
 
 
-def FrozenOrderedDict(*args, **kwargs) -> Frozen:
-    return Frozen(OrderedDict(*args, **kwargs))
+def FrozenDict(*args, **kwargs) -> Frozen:
+    return Frozen(dict(*args, **kwargs))
 
 
 class SortedKeysDict(MutableMapping[K, V]):
@@ -437,16 +436,18 @@ class SortedKeysDict(MutableMapping[K, V]):
 class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 
-    The API matches the builtin set, but it preserves insertion order of
-    elements, like an OrderedDict.
+    The API matches the builtin set, but it preserves insertion order of elements, like
+    a dict. Note that, unlike in an OrderedDict, equality tests are not order-sensitive.
     """
 
-    __slots__ = ("_ordered_dict",)
+    _d: Dict[T, None]
+
+    __slots__ = ("_d",)
 
     def __init__(self, values: AbstractSet[T] = None):
-        self._ordered_dict: MutableMapping[T, None] = OrderedDict()
+        self._d = {}
         if values is not None:
-            # Disable type checking - both mypy and PyCharm believes that
+            # Disable type checking - both mypy and PyCharm believe that
             # we're altering the type of self in place (see signature of
             # MutableSet.__ior__)
             self |= values  # type: ignore
@@ -454,19 +455,19 @@ class OrderedSet(MutableSet[T]):
     # Required methods for MutableSet
 
     def __contains__(self, value: object) -> bool:
-        return value in self._ordered_dict
+        return value in self._d
 
     def __iter__(self) -> Iterator[T]:
-        return iter(self._ordered_dict)
+        return iter(self._d)
 
     def __len__(self) -> int:
-        return len(self._ordered_dict)
+        return len(self._d)
 
     def add(self, value: T) -> None:
-        self._ordered_dict[value] = None
+        self._d[value] = None
 
     def discard(self, value: T) -> None:
-        del self._ordered_dict[value]
+        del self._d[value]
 
     # Additional methods
 
