@@ -1,6 +1,7 @@
 """
 Property-based tests for roundtripping between xarray and pandas objects.
 """
+from functools import partial
 import hypothesis.extra.numpy as npst
 import hypothesis.extra.pandas as pdst
 import hypothesis.strategies as st
@@ -28,21 +29,18 @@ def datasets_1d_vars(draw):
 
     Suitable for converting to pandas dataframes.
     """
-    n_vars = draw(st.integers(min_value=1, max_value=3))
-    n_entries = draw(st.integers(min_value=0, max_value=100))
-    dims = ("rows",)
-    vars = {}
-    for _ in range(n_vars):
-        name = draw(st.text(min_size=0))
-        dt = draw(numeric_dtypes)
-        arr = draw(npst.arrays(dtype=dt, shape=(n_entries,)))
-        vars[name] = xr.Variable(dims, arr)
+    # Generate an index for the dataset
+    idx = draw(pdst.indexes(dtype="u8", min_size=0, max_size=100))
 
-    coords = {
-        dims[0]: draw(pdst.indexes(dtype="u8", min_size=n_entries, max_size=n_entries))
-    }
-
-    return xr.Dataset(vars, coords=coords)
+    # Generate 1-3 variables, 1D with the same length as the index
+    vars_strategy = st.dictionaries(
+        keys=st.text(),
+        values=npst.arrays(dtype=numeric_dtypes, shape=len(idx))
+            .map(partial(xr.Variable, ("rows",))),
+        min_size=1,
+        max_size=3,
+    )
+    return xr.Dataset(draw(vars_strategy), coords={"rows": idx})
 
 
 @given(st.data(), an_array)
