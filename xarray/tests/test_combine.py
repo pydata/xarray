@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from datetime import datetime
 from itertools import product
 
@@ -359,8 +358,8 @@ class TestNestedCombine:
 
         # ensure combine_nested handles non-sorted variables
         objs = [
-            Dataset(OrderedDict([("x", ("a", [0])), ("y", ("a", [0]))])),
-            Dataset(OrderedDict([("y", ("a", [1])), ("x", ("a", [1]))])),
+            Dataset({"x": ("a", [0]), "y": ("a", [0])}),
+            Dataset({"y": ("a", [1]), "x": ("a", [1])}),
         ]
         actual = combine_nested(objs, concat_dim="a")
         expected = Dataset({"x": ("a", [0, 1]), "y": ("a", [0, 1])})
@@ -740,8 +739,8 @@ class TestAutoCombineOldAPI:
 
         # ensure auto_combine handles non-sorted variables
         objs = [
-            Dataset(OrderedDict([("x", ("a", [0])), ("y", ("a", [0]))])),
-            Dataset(OrderedDict([("y", ("a", [1])), ("x", ("a", [1]))])),
+            Dataset({"x": ("a", [0]), "y": ("a", [0])}),
+            Dataset({"y": ("a", [1]), "x": ("a", [1])}),
         ]
         actual = auto_combine(objs)
         expected = Dataset({"x": ("a", [0, 1]), "y": ("a", [0, 1])})

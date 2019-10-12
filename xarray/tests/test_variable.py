@@ -1,5 +1,4 @@
 import warnings
-from collections import OrderedDict
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
@@ -59,7 +58,7 @@ class VariableSubclassobjects:
         attrs = {"foo": "bar"}
         v.attrs = attrs
         assert v.attrs == attrs
-        assert isinstance(v.attrs, OrderedDict)
+        assert isinstance(v.attrs, dict)
         v.attrs["foo"] = "baz"
         assert v.attrs["foo"] == "baz"
 
@@ -1330,7 +1329,7 @@ class TestVariable(VariableSubclassobjects):
         actual = v.set_dims(["y", "x"])
         assert_identical(actual, expected.T)
 
-        actual = v.set_dims(OrderedDict([("x", 2), ("y", 2)]))
+        actual = v.set_dims({"x": 2, "y": 2})
         expected = Variable(["x", "y"], [[0, 0], [1, 1]])
         assert_identical(actual, expected)
 
@@ -1378,15 +1377,15 @@ class TestVariable(VariableSubclassobjects):
 
     def test_unstack(self):
         v = Variable("z", [0, 1, 2, 3], {"foo": "bar"})
-        actual = v.unstack(z=OrderedDict([("x", 2), ("y", 2)]))
+        actual = v.unstack(z={"x": 2, "y": 2})
         expected = Variable(("x", "y"), [[0, 1], [2, 3]], v.attrs)
         assert_identical(actual, expected)
 
-        actual = v.unstack(z=OrderedDict([("x", 4), ("y", 1)]))
+        actual = v.unstack(z={"x": 4, "y": 1})
         expected = Variable(("x", "y"), [[0], [1], [2], [3]], v.attrs)
         assert_identical(actual, expected)
 
-        actual = v.unstack(z=OrderedDict([("x", 4)]))
+        actual = v.unstack(z={"x": 4})
         expected = Variable("x", [0, 1, 2, 3], v.attrs)
         assert_identical(actual, expected)
 
@@ -1411,7 +1410,7 @@ class TestVariable(VariableSubclassobjects):
 
     def test_stack_unstack_consistency(self):
         v = Variable(["x", "y"], [[0, 1], [2, 3]])
-        actual = v.stack(z=("x", "y")).unstack(z=OrderedDict([("x", 2), ("y", 2)]))
+        actual = v.stack(z=("x", "y")).unstack(z={"x": 2, "y": 2})
         assert_identical(actual, v)
 
     def test_broadcasting_math(self):
@@ -1607,7 +1606,7 @@ class TestVariable(VariableSubclassobjects):
         # Test dropped attrs
         vm = v.mean()
         assert len(vm.attrs) == 0
-        assert vm.attrs == OrderedDict()
+        assert vm.attrs == {}
 
         # Test kept attrs
         vm = v.mean(keep_attrs=True)
@@ -1620,7 +1619,7 @@ class TestVariable(VariableSubclassobjects):
         b = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
         # Test dropped attrs
         d = a - b  # just one operation
-        assert d.attrs == OrderedDict()
+        assert d.attrs == {}
         # Test kept attrs
         with set_options(keep_attrs=True):
             d = a - b

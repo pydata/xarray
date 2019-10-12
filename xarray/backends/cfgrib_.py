@@ -2,7 +2,7 @@ import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenDict
 from .common import AbstractDataStore, BackendArray
 from .locks import SerializableLock, ensure_lock
 
@@ -55,7 +55,7 @@ class CfGribDataStore(AbstractDataStore):
         return Variable(var.dimensions, data, var.attributes, encoding)
 
     def get_variables(self):
-        return FrozenOrderedDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 

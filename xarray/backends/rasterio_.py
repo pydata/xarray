@@ -1,6 +1,5 @@
 import os
 import warnings
-from collections import OrderedDict
 
 import numpy as np
 
@@ -244,7 +243,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     if cache is None:
         cache = chunks is None
 
-    coords = OrderedDict()
+    coords = {}
 
     # Get bands
     if riods.count < 1:
@@ -276,7 +275,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             )
 
     # Attributes
-    attrs = dict()
+    attrs = {}
     # Affine transformation matrix (always available)
     # This describes coefficients mapping pixel coordinates to CRS
     # For serialization store as tuple of 6 floats, the last row being

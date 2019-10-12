@@ -1,6 +1,5 @@
 import operator
 import pickle
-from collections import OrderedDict
 from contextlib import suppress
 from distutils.version import LooseVersion
 from textwrap import dedent
@@ -656,7 +655,7 @@ class TestToDaskDataFrame:
         y = np.arange(10, dtype="uint8")
         t = list("abcdefghij")
 
-        ds = Dataset(OrderedDict([("a", ("t", x)), ("b", ("t", y)), ("t", ("t", t))]))
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
 
         expected_pd = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
 
@@ -715,7 +714,7 @@ class TestToDaskDataFrame:
         x = da.from_array(np.random.randn(10), chunks=4)
         t = da.from_array(np.arange(10) * 2, chunks=4)
 
-        ds = Dataset(OrderedDict([("a", ("t", x)), ("t", ("t", t))]))
+        ds = Dataset({"a": ("t", x), "t": ("t", t)})
 
         expected_pd = pd.DataFrame({"a": x}, index=pd.Index(t, name="t"))
         expected = dd.from_pandas(expected_pd, chunksize=4)
@@ -729,7 +728,7 @@ class TestToDaskDataFrame:
         y = np.arange(10, dtype="uint8")
         t = list("abcdefghij")
 
-        ds = Dataset(OrderedDict([("a", ("t", x)), ("b", ("t", y)), ("t", ("t", t))]))
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
 
         expected = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
 

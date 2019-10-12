@@ -1,16 +1,15 @@
 import warnings
-from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
 from typing import (
     Any,
     Callable,
+    Dict,
     Hashable,
     Iterable,
     Iterator,
     List,
     Mapping,
-    MutableMapping,
     Tuple,
     TypeVar,
     Union,
@@ -25,7 +24,7 @@ from .npcompat import DTypeLike
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
+from .utils import Frozen, ReprObject, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject("<all-dims>")
@@ -180,7 +179,7 @@ class AbstractArray(ImplementsArrayReduce):
         --------
         Dataset.sizes
         """
-        return Frozen(OrderedDict(zip(self.dims, self.shape)))
+        return Frozen(dict(zip(self.dims, self.shape)))
 
 
 class AttrAccessMixin:
@@ -381,14 +380,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
-    ) -> MutableMapping[Hashable, T]:
-        results: MutableMapping[Hashable, T] = SortedKeysDict()
-        for k, v in kwargs.items():
-            if callable(v):
-                results[k] = v(self)
-            else:
-                results[k] = v
-        return results
+    ) -> Dict[Hashable, T]:
+        return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign new coordinates to this object.
@@ -1284,10 +1277,10 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     from .variable import Variable
 
     if isinstance(other, Dataset):
-        data_vars = OrderedDict(
-            (k, _full_like_variable(v, fill_value, dtype))
+        data_vars = {
+            k: _full_like_variable(v, fill_value, dtype)
             for k, v in other.data_vars.items()
-        )
+        }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
     elif isinstance(other, DataArray):
         return DataArray(

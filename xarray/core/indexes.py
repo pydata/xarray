@@ -1,6 +1,5 @@
 import collections.abc
-from collections import OrderedDict
-from typing import Any, Hashable, Iterable, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Hashable, Iterable, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -42,7 +41,7 @@ class Indexes(collections.abc.Mapping):
 
 def default_indexes(
     coords: Mapping[Any, Variable], dims: Iterable
-) -> "OrderedDict[Any, pd.Index]":
+) -> Dict[Hashable, pd.Index]:
     """Default indexes for a Dataset/DataArray.
 
     Parameters
@@ -57,7 +56,7 @@ def default_indexes(
     Mapping from indexing keys (levels/dimension names) to indexes used for
     indexing along that dimension.
     """
-    return OrderedDict((key, coords[key].to_index()) for key in dims if key in coords)
+    return {key: coords[key].to_index() for key in dims if key in coords}
 
 
 def isel_variable_and_index(

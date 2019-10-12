@@ -1,7 +1,6 @@
 import functools
 import operator
 import pickle
-from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -72,7 +71,7 @@ def test_ordered_set_intersection():
 
 
 def test_join_dict_keys():
-    dicts = [OrderedDict.fromkeys(keys) for keys in [["x", "y"], ["y", "z"]]]
+    dicts = [dict.fromkeys(keys) for keys in [["x", "y"], ["y", "z"]]]
     assert list(join_dict_keys(dicts, "left")) == ["x", "y"]
     assert list(join_dict_keys(dicts, "right")) == ["y", "z"]
     assert list(join_dict_keys(dicts, "inner")) == ["y"]
@@ -446,17 +445,16 @@ def test_apply_groupby_add():
 
 
 def test_unified_dim_sizes():
-    assert unified_dim_sizes([xr.Variable((), 0)]) == OrderedDict()
-    assert unified_dim_sizes(
-        [xr.Variable("x", [1]), xr.Variable("x", [1])]
-    ) == OrderedDict([("x", 1)])
-    assert unified_dim_sizes(
-        [xr.Variable("x", [1]), xr.Variable("y", [1, 2])]
-    ) == OrderedDict([("x", 1), ("y", 2)])
+    assert unified_dim_sizes([xr.Variable((), 0)]) == {}
+    assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1])]) == {"x": 1}
+    assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("y", [1, 2])]) == {
+        "x": 1,
+        "y": 2,
+    }
     assert unified_dim_sizes(
         [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
         exclude_dims={"z"},
-    ) == OrderedDict([("x", 1), ("y", 2)])
+    ) == {"x": 1, "y": 2}
 
     # duplicate dimensions
     with pytest.raises(ValueError):

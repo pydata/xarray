@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from datetime import datetime
 from typing import Hashable
 
@@ -131,10 +130,10 @@ class TestDictionaries:
         assert {} == utils.ordered_dict_intersection(self.x, self.z)
 
     def test_dict_equiv(self):
-        x = OrderedDict()
+        x = {}
         x["a"] = 3
         x["b"] = np.array([1, 2, 3])
-        y = OrderedDict()
+        y = {}
         y["b"] = np.array([1.0, 2.0, 3.0])
         y["a"] = 3
         assert utils.dict_equiv(x, y)  # two nparrays are equal

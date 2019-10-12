@@ -1,11 +1,10 @@
-from collections import OrderedDict
 from io import BytesIO
 
 import numpy as np
 
 from .. import Variable
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenDict
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
@@ -21,9 +20,7 @@ def _decode_string(s):
 def _decode_attrs(d):
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
-    return OrderedDict(
-        (k, v if k == "_FillValue" else _decode_string(v)) for (k, v) in d.items()
-    )
+    return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
 
 
 class ScipyArrayWrapper(BackendArray):
@@ -156,7 +153,7 @@ class ScipyDataStore(WritableCFDataStore):
         )
 
     def get_variables(self):
-        return FrozenOrderedDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 

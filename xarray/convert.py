@@ -1,6 +1,6 @@
 """Functions for converting to and from xarray objects
 """
-from collections import Counter, OrderedDict
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -118,7 +118,7 @@ def to_cdms2(dataarray, copy=True):
     # Curvilinear and unstructured grids
     if dataarray.name not in dataarray.coords:
 
-        cdms2_axes = OrderedDict()
+        cdms2_axes = {}
         for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
 
             coord_array = dataarray.coords[coord_name].to_cdms2()
@@ -273,7 +273,7 @@ def from_iris(cube):
         duplicates = [k for k, v in Counter(dims).items() if v > 1]
         raise ValueError("Duplicate coordinate name {}.".format(duplicates))
 
-    coords = OrderedDict()
+    coords = {}
 
     for coord in cube.coords():
         coord_attrs = _iris_obj_to_attrs(coord)

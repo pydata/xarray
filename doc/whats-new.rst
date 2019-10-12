@@ -46,6 +46,14 @@ Breaking changes
   It was unused and doesn't make sense for a Variable.
   (:pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- Remove internal usage of `collections.OrderedDict`. After dropping support for
+  Python <=3.5, most uses of `OrderedDict` in Xarray were no longer necessary. We
+  have removed the internal use of the `OrderedDict` in favor of Python's builtin
+  `dict` object which is now ordered itself. This change will be most obvious when
+  interacting with the `attrs` property on the Dataset and DataArray objects.
+
+  (:issue:`3380`, :issue:`3389`). By `Joe Hamman <https://github.com/jhamman>`_.
+
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
