@@ -1,6 +1,6 @@
 import functools
 import operator
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Dict, Hashable, Mapping, Optional, Tuple, Union
 
@@ -49,7 +49,7 @@ def _override_indexes(objects, all_indexes, exclude):
 
     objects = list(objects)
     for idx, obj in enumerate(objects[1:]):
-        new_indexes = dict()
+        new_indexes = {}
         for dim in obj.dims:
             if dim not in exclude:
                 new_indexes[dim] = all_indexes[dim][0]
@@ -372,9 +372,15 @@ def deep_align(
             targets.append(variables)
             out.append(not_replaced)
         elif is_dict_like(variables):
-            current_out = OrderedDict()
+            current_out = {}
             for k, v in variables.items():
-                if is_alignable(v):
+                if is_alignable(v) and k not in indexes:
+                    # Skip variables in indexes for alignment, because these
+                    # should to be overwritten instead:
+                    # https://github.com/pydata/xarray/issues/725
+                    # https://github.com/pydata/xarray/issues/3377
+                    # TODO(shoyer): doing this here feels super-hacky -- can we
+                    # move it explicitly into merge instead?
                     positions.append(position)
                     keys.append(k)
                     targets.append(v)
@@ -462,7 +468,7 @@ def reindex_variables(
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
-) -> "Tuple[OrderedDict[Any, Variable], OrderedDict[Any, pd.Index]]":
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -502,19 +508,19 @@ def reindex_variables(
 
     Returns
     -------
-    reindexed : OrderedDict
+    reindexed : dict
         Dict of reindexed variables.
-    new_indexes : OrderedDict
+    new_indexes : dict
         Dict of indexes associated with the reindexed variables.
     """
     from .dataarray import DataArray
 
     # create variables for the new dataset
-    reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
+    reindexed: Dict[Hashable, Variable] = {}
 
     # build up indexers for assignment along each dimension
     int_indexers = {}
-    new_indexes = OrderedDict(indexes)
+    new_indexes = dict(indexes)
     masked_dims = set()
     unchanged_dims = set()
 
@@ -590,8 +596,8 @@ def reindex_variables(
 
 def _get_broadcast_dims_map_common_coords(args, exclude):
 
-    common_coords = OrderedDict()
-    dims_map = OrderedDict()
+    common_coords = {}
+    dims_map = {}
     for arg in args:
         for dim in arg.dims:
             if dim not in common_coords and dim not in exclude:
@@ -619,13 +625,13 @@ def _broadcast_helper(arg, exclude, dims_map, common_coords):
 
     def _broadcast_array(array):
         data = _set_dims(array.variable)
-        coords = OrderedDict(array.coords)
+        coords = dict(array.coords)
         coords.update(common_coords)
         return DataArray(data, coords, data.dims, name=array.name, attrs=array.attrs)
 
     def _broadcast_dataset(ds):
-        data_vars = OrderedDict((k, _set_dims(ds.variables[k])) for k in ds.data_vars)
-        coords = OrderedDict(ds.coords)
+        data_vars = {k: _set_dims(ds.variables[k]) for k in ds.data_vars}
+        coords = dict(ds.coords)
         coords.update(common_coords)
         return Dataset(data_vars, coords, ds.attrs)
 

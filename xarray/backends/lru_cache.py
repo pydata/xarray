@@ -1,9 +1,12 @@
-import collections
-import collections.abc
 import threading
+from collections import OrderedDict
+from typing import Any, Callable, Iterator, MutableMapping, Optional, TypeVar
+
+K = TypeVar("K")
+V = TypeVar("V")
 
 
-class LRUCache(collections.abc.MutableMapping):
+class LRUCache(MutableMapping[K, V]):
     """Thread-safe LRUCache based on an OrderedDict.
 
     All dict operations (__getitem__, __setitem__, __contains__) update the
@@ -18,7 +21,14 @@ class LRUCache(collections.abc.MutableMapping):
     the cache, e.g., ``cache.maxsize = new_size``.
     """
 
-    def __init__(self, maxsize, on_evict=None):
+    _cache: "OrderedDict[K, V]"
+    _maxsize: int
+    _lock: threading.RLock
+    _on_evict: Optional[Callable[[K, V], Any]]
+
+    __slots__ = ("_cache", "_lock", "_maxsize", "_on_evict")
+
+    def __init__(self, maxsize: int, on_evict: Callable[[K, V], Any] = None):
         """
         Parameters
         ----------
@@ -33,25 +43,26 @@ class LRUCache(collections.abc.MutableMapping):
         if maxsize < 0:
             raise ValueError("maxsize must be non-negative")
         self._maxsize = maxsize
-        self._on_evict = on_evict
-        self._cache = collections.OrderedDict()
+        self._cache = OrderedDict()
         self._lock = threading.RLock()
+        self._on_evict = on_evict
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: K) -> V:
         # record recent use of the key by moving it to the front of the list
         with self._lock:
             value = self._cache[key]
             self._cache.move_to_end(key)
             return value
 
-    def _enforce_size_limit(self, capacity):
-        """Shrink the cache if necessary, evicting the oldest items."""
+    def _enforce_size_limit(self, capacity: int) -> None:
+        """Shrink the cache if necessary, evicting the oldest items.
+        """
         while len(self._cache) > capacity:
             key, value = self._cache.popitem(last=False)
             if self._on_evict is not None:
                 self._on_evict(key, value)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: K, value: V) -> None:
         with self._lock:
             if key in self._cache:
                 # insert the new value at the end
@@ -65,24 +76,24 @@ class LRUCache(collections.abc.MutableMapping):
                 # not saving, immediately evict
                 self._on_evict(key, value)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: K) -> None:
         del self._cache[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[K]:
         # create a list, so accessing the cache during iteration cannot change
         # the iteration order
         return iter(list(self._cache))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._cache)
 
     @property
-    def maxsize(self):
+    def maxsize(self) -> int:
         """Maximum number of items can be held in the cache."""
         return self._maxsize
 
     @maxsize.setter
-    def maxsize(self, size):
+    def maxsize(self, size: int) -> None:
         """Resize the cache, evicting the oldest items if necessary."""
         if size < 0:
             raise ValueError("maxsize must be non-negative")

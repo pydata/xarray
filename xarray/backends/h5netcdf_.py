@@ -1,11 +1,10 @@
 import functools
-from collections import OrderedDict
 
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict
+from ..core.utils import FrozenDict
 from .common import WritableCFDataStore
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
@@ -49,7 +48,7 @@ def _read_attributes(h5netcdf_var):
     # GH451
     # to ensure conventions decoding works properly on Python 3, decode all
     # bytes attributes to strings
-    attrs = OrderedDict()
+    attrs = {}
     for k, v in h5netcdf_var.attrs.items():
         if k not in ["_FillValue", "missing_value"]:
             v = maybe_decode_bytes(v)
@@ -153,12 +152,12 @@ class H5NetCDFStore(WritableCFDataStore):
         return Variable(dimensions, data, attrs, encoding)
 
     def get_variables(self):
-        return FrozenOrderedDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 
     def get_attrs(self):
-        return FrozenOrderedDict(_read_attributes(self.ds))
+        return FrozenDict(_read_attributes(self.ds))
 
     def get_dimensions(self):
         return self.ds.dimensions

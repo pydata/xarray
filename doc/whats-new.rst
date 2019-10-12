@@ -42,21 +42,43 @@ Breaking changes
 
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Dropped the 'drop=False' optional parameter from :meth:`Variable.isel`.
+  It was unused and doesn't make sense for a Variable.
+  (:pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Remove internal usage of `collections.OrderedDict`. After dropping support for
+  Python <=3.5, most uses of `OrderedDict` in Xarray were no longer necessary. We
+  have removed the internal use of the `OrderedDict` in favor of Python's builtin
+  `dict` object which is now ordered itself. This change will be most obvious when
+  interacting with the `attrs` property on the Dataset and DataArray objects.
+
+  (:issue:`3380`, :issue:`3389`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
+- Added :py:func:`~xarray.map_blocks`, modeled after :py:func:`dask.array.map_blocks`.
+  Also added :py:meth:`Dataset.unify_chunks`, :py:meth:`DataArray.unify_chunks` and
+  :py:meth:`testing.assert_chunks_equal`. By `Deepak Cherian <https://github.com/dcherian>`_
+  and `Guido Imperiale <https://github.com/crusaderky>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
-- Add a repr for :py:class:`~xarray.core.GroupBy` objects (:issue:`3344`).
-  Example::
+- :py:class:`~xarray.core.GroupBy` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
+
+  - Added a repr. Example::
 
       >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
-  By `Deepak Cherian <https://github.com/dcherian>`_.
+  - Added a ``GroupBy.dims`` property that mirrors the dimensions
+    of each group.(:issue:`3344`)
+    
+- Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small
+  arrays (:issue:`2799`, :pull:`3375`) by
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -69,6 +91,12 @@ Bug fixes
   (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Make :py:func:`~xarray.concat` more robust when merging variables present in some datasets but
   not others (:issue:`508`). By `Deepak Cherian <http://github.com/dcherian>`_.
+- The default behaviour of reducing across all dimensions for
+  :py:class:`~xarray.core.groupby.DataArrayGroupBy` objects has now been properly removed
+  as was done for :py:class:`~xarray.core.groupby.DatasetGroupBy` in 0.13.0 (:issue:`3337`).
+  Use `xarray.ALL_DIMS` if you need to replicate previous behaviour.
+  Also raise nicer error message when no groups are created (:issue:`1764`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian/>`_.
 

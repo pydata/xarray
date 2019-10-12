@@ -1,9 +1,9 @@
 import functools
 import itertools
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Hashable, Mapping, Union
+from typing import Any, Dict, Hashable, Mapping, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -40,6 +40,18 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 ) + dask_array_type
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
+
+VariableType = TypeVar("VariableType", bound="Variable")
+"""Type annotation to be used when methods of Variable return self or a copy of self.
+When called from an instance of a subclass, e.g. IndexVariable, mypy identifies the
+output as an instance of the subclass.
+
+Usage::
+
+   class Variable:
+       def f(self: VariableType, ...) -> VariableType:
+           ...
+"""
 
 
 class MissingDimensionsError(ValueError):
@@ -663,8 +675,8 @@ class Variable(
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
-    def __getitem__(self, key):
-        """Return a new Array object whose contents are consistent with
+    def __getitem__(self: VariableType, key) -> VariableType:
+        """Return a new Variable object whose contents are consistent with
         getting the provided key from the underlying data.
 
         NB. __getitem__ and __setitem__ implement xarray-style indexing,
@@ -682,7 +694,7 @@ class Variable(
             data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
-    def _finalize_indexing_result(self, dims, data):
+    def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
         """Used by IndexVariable to return IndexVariable objects when possible.
         """
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
@@ -756,16 +768,16 @@ class Variable(
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> "OrderedDict[Any, Any]":
+    def attrs(self) -> Dict[Hashable, Any]:
         """Dictionary of local attributes on this variable.
         """
         if self._attrs is None:
-            self._attrs = OrderedDict()
+            self._attrs = {}
         return self._attrs
 
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
-        self._attrs = OrderedDict(value)
+        self._attrs = dict(value)
 
     @property
     def encoding(self):
@@ -957,7 +969,11 @@ class Variable(
 
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
-    def isel(self, indexers=None, drop=False, **indexers_kwargs):
+    def isel(
+        self: VariableType,
+        indexers: Mapping[Hashable, Any] = None,
+        **indexers_kwargs: Any
+    ) -> VariableType:
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -976,15 +992,12 @@ class Variable(
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
-        invalid = [k for k in indexers if k not in self.dims]
+        invalid = indexers.keys() - set(self.dims)
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        key = [slice(None)] * self.ndim
-        for i, dim in enumerate(self.dims):
-            if dim in indexers:
-                key[i] = indexers[dim]
-        return self[tuple(key)]
+        key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
+        return self[key]
 
     def squeeze(self, dim=None):
         """Return a new object with squeezed data.
@@ -1534,8 +1547,8 @@ class Variable(
             dims = (dim,) + first_var.dims
             data = duck_array_ops.stack(arrays, axis=axis)
 
-        attrs = OrderedDict(first_var.attrs)
-        encoding = OrderedDict(first_var.encoding)
+        attrs = dict(first_var.attrs)
+        encoding = dict(first_var.encoding)
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
@@ -2003,7 +2016,7 @@ class IndexVariable(Variable):
                 indices = nputils.inverse_permutation(np.concatenate(positions))
                 data = data.take(indices)
 
-        attrs = OrderedDict(first_var.attrs)
+        attrs = dict(first_var.attrs)
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
@@ -2120,7 +2133,7 @@ Coordinate = utils.alias(IndexVariable, "Coordinate")
 
 def _unified_dims(variables):
     # validate dimensions
-    all_dims = OrderedDict()
+    all_dims = {}
     for var in variables:
         var_dims = var.dims
         if len(set(var_dims)) < len(var_dims):
