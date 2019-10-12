@@ -273,25 +273,6 @@ def _is_list_of_strings(value):
         return False
 
 
-def _set_nc_attribute(obj, key, value):
-    if _is_list_of_strings(value):
-        # encode as NC_STRING if attr is list of strings
-        try:
-            obj.setncattr_string(key, value)
-        except AttributeError:
-            # Inform users with old netCDF that does not support
-            # NC_STRING that we can't serialize lists of strings
-            # as attrs
-            msg = (
-                "Attributes which are lists of strings are not "
-                "supported with this version of netCDF. Please "
-                "upgrade to netCDF4-python 1.2.4 or greater."
-            )
-            raise AttributeError(msg)
-    else:
-        obj.setncattr(key, value)
-
-
 class NetCDF4DataStore(WritableCFDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -441,7 +422,11 @@ class NetCDF4DataStore(WritableCFDataStore):
     def set_attribute(self, key, value):
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
-        _set_nc_attribute(self.ds, key, value)
+        if _is_list_of_strings(value):
+            # encode as NC_STRING if attr is list of strings
+            self.ds.setncattr_string(key, value)
+        else:
+            self.ds.setncattr(key, value)
 
     def encode_variable(self, variable):
         variable = _force_native_endianness(variable)

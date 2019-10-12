@@ -246,11 +246,7 @@ def apply_dataarray_vfunc(
 
 
 def ordered_set_union(all_keys: List[Iterable]) -> Iterable:
-    result_dict = {}  # type: Dict[Any, None]
-    for keys in all_keys:
-        for key in keys:
-            result_dict[key] = None
-    return result_dict.keys()
+    return {key: None for keys in all_keys for key in keys}.keys()
 
 
 def ordered_set_intersection(all_keys: List[Iterable]) -> Iterable:

@@ -4,12 +4,12 @@ from textwrap import dedent
 from typing import (
     Any,
     Callable,
+    Dict,
     Hashable,
     Iterable,
     Iterator,
     List,
     Mapping,
-    MutableMapping,
     Tuple,
     TypeVar,
     Union,
@@ -380,14 +380,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
-    ) -> MutableMapping[Hashable, T]:
-        results: MutableMapping[Hashable, T] = {}
-        for k, v in kwargs.items():
-            if callable(v):
-                results[k] = v(self)
-            else:
-                results[k] = v
-        return results
+    ) -> Dict[Hashable, T]:
+        return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign new coordinates to this object.

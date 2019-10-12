@@ -249,12 +249,18 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary for holding arbitrary metadata.
     """
 
+    _accessors: Optional[Dict[str, Any]]
+    _coords: Dict[Any, Variable]
+    _indexes: Optional[Dict[Hashable, pd.Index]]
+    _name: Optional[Hashable]
+    _variable: Variable
+
     __slots__ = (
         "_accessors",
         "_coords",
         "_file_obj",
-        "_name",
         "_indexes",
+        "_name",
         "_variable",
         "__weakref__",
     )
@@ -278,7 +284,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # deprecated parameters
         encoding=None,
         # internal parameters
-        indexes=None,
+        indexes: Dict[Hashable, pd.Index] = None,
         fastpath: bool = False,
     ):
         """
@@ -365,11 +371,11 @@ class DataArray(AbstractArray, DataWithCoords):
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
 
         # These fully describe a DataArray
-        self._variable = variable  # type: Variable
+        self._variable = variable
         assert isinstance(coords, dict)
-        self._coords = coords  # type: Dict[Any, Variable]
-        self._name = name  # type: Optional[Hashable]
-        self._accessors = None  # type: Optional[Dict[str, Any]]
+        self._coords = coords
+        self._name = name
+        self._accessors = None
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.

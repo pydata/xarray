@@ -408,6 +408,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     coordinates used for label based indexing.
     """
 
+    _accessors: Optional[Dict[str, Any]]
+    _attrs: Optional[Dict[Hashable, Any]]
+    _coord_names: Set[Hashable]
+    _dims: Dict[Hashable, int]
+    _encoding: Optional[Dict[Hashable, Any]]
+    _indexes: Optional[Dict[Hashable, pd.Index]]
+    _variables: Dict[Hashable, Variable]
+
     __slots__ = (
         "_accessors",
         "_attrs",
@@ -495,33 +503,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             compat = "broadcast_equals"
 
-        self._variables = {}  # type: Dict[Any, Variable]
-        self._coord_names = set()  # type: Set[Hashable]
-        self._dims = {}  # type: Dict[Any, int]
-        self._accessors = None  # type: Optional[Dict[str, Any]]
-        self._attrs = None  # type: Optional[Dict]
-        self._file_obj = None
+        # TODO(shoyer): expose indexes as a public argument in __init__
+
         if data_vars is None:
             data_vars = {}
         if coords is None:
             coords = {}
 
-        # TODO(shoyer): expose indexes as a public argument in __init__
-        self._set_init_vars_and_dims(data_vars, coords, compat)
-
-        if attrs is not None:
-            self._attrs = dict(attrs)
-
-        self._encoding = None  # type: Optional[Dict]
-
-    def _set_init_vars_and_dims(self, data_vars, coords, compat):
-        """Set the initial value of Dataset variables and dimensions
-        """
-        both_data_and_coords = [k for k in data_vars if k in coords]
+        both_data_and_coords = set(data_vars) & set(coords)
         if both_data_and_coords:
             raise ValueError(
-                "variables %r are found in both data_vars and "
-                "coords" % both_data_and_coords
+                "variables %r are found in both data_vars and coords"
+                % both_data_and_coords
             )
 
         if isinstance(coords, Dataset):
@@ -531,6 +524,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             data_vars, coords, compat=compat
         )
 
+        self._accessors = None
+        self._attrs = dict(attrs) if attrs is not None else None
+        self._file_obj = None
+        self._encoding = None
         self._variables = variables
         self._coord_names = coord_names
         self._dims = dims
@@ -1264,6 +1261,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         del self._variables[key]
         self._coord_names.discard(key)
         if key in self.indexes:
+            assert self._indexes is not None
             del self._indexes[key]
         self._dims = calculate_dimensions(self._variables)
 
