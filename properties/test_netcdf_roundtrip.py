@@ -3,7 +3,7 @@ Property-based tests for round-tripping data to netCDF
 """
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
-from hypothesis import given, settings
+from hypothesis import given
 
 import xarray as xr
 
