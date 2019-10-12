@@ -36,7 +36,7 @@ def datasets_1d_vars(draw):
     vars_strategy = st.dictionaries(
         keys=st.text(),
         values=npst.arrays(dtype=numeric_dtypes, shape=len(idx))
-            .map(partial(xr.Variable, ("rows",))),
+               .map(partial(xr.Variable, ("rows",))),
         min_size=1,
         max_size=3,
     )
