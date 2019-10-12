@@ -261,7 +261,7 @@ class DatasetCoordinates(Coordinates):
 class DataArrayCoordinates(Coordinates):
     """Dictionary like container for DataArray coordinates.
 
-    Essentially an OrderedDict with keys given by the array's
+    Essentially a dict with keys given by the array's
     dimensions and the values given by corresponding DataArray objects.
     """
 
