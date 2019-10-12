@@ -464,9 +464,9 @@ def apply_groupby_func(func, *args):
 
 def unified_dim_sizes(
     variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
-) -> "Dict[Any, int]":
+) -> Dict[Hashable, int]:
 
-    dim_sizes = {}  # type: Dict[Any, int]
+    dim_sizes: Dict[Hashable, int] = {}
 
     for var in variables:
         if len(set(var.dims)) < len(var.dims):

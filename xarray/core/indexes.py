@@ -41,7 +41,7 @@ class Indexes(collections.abc.Mapping):
 
 def default_indexes(
     coords: Mapping[Any, Variable], dims: Iterable
-) -> "Dict[Any, pd.Index]":
+) -> Dict[Hashable, pd.Index]:
     """Default indexes for a Dataset/DataArray.
 
     Parameters

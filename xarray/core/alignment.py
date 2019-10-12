@@ -468,7 +468,7 @@ def reindex_variables(
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
-) -> "Tuple[Dict[Any, Variable], Dict[Any, pd.Index]]":
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -516,7 +516,7 @@ def reindex_variables(
     from .dataarray import DataArray
 
     # create variables for the new dataset
-    reindexed = {}  # type: Dict[Any, Variable]
+    reindexed: Dict[Hashable, Variable] = {}
 
     # build up indexers for assignment along each dimension
     int_indexers = {}

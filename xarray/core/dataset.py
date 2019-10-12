@@ -193,7 +193,7 @@ def merge_indexes(
     variables: Mapping[Hashable, Variable],
     coord_names: Set[Hashable],
     append: bool = False,
-) -> "Tuple[Dict[Any, Variable], Set[Hashable]]":
+) -> Tuple[Dict[Hashable, Variable], Set[Hashable]]:
     """Merge variables into multi-indexes.
 
     Not public API. Used in Dataset and DataArray set_index
@@ -271,7 +271,7 @@ def split_indexes(
     coord_names: Set[Hashable],
     level_coords: Mapping[Hashable, Hashable],
     drop: bool = False,
-) -> "Tuple[Dict[Any, Variable], Set[Hashable]]":
+) -> Tuple[Dict[Hashable, Variable], Set[Hashable]]:
     """Extract (multi-)indexes (levels) as variables.
 
     Not public API. Used in Dataset and DataArray reset_index
@@ -289,7 +289,7 @@ def split_indexes(
             dims.append(k)
 
     vars_to_replace = {}
-    vars_to_create = {}  # type: Dict[Any, Variable]
+    vars_to_create: Dict[Hashable, Variable] = {}
     vars_to_remove = []
 
     for d in dims:
@@ -919,10 +919,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _replace_with_new_dims(  # type: ignore
         self,
-        variables: "Dict[Any, Variable]",
+        variables: Dict[Hashable, Variable],
         coord_names: set = None,
-        attrs: Optional["Dict"] = __default,
-        indexes: "Dict[Any, pd.Index]" = __default,
+        attrs: Optional[Dict[Hashable, Any]] = __default,
+        indexes: Dict[Hashable, pd.Index] = __default,
         inplace: bool = False,
     ) -> "Dataset":
         """Replace variables with recalculated dimensions."""
@@ -933,10 +933,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _replace_vars_and_dims(  # type: ignore
         self,
-        variables: "Dict[Any, Variable]",
+        variables: Dict[Hashable, Variable],
         coord_names: set = None,
-        dims: Dict[Any, int] = None,
-        attrs: "Dict" = __default,
+        dims: Dict[Hashable, int] = None,
+        attrs: Dict[Hashable, Any] = __default,
         inplace: bool = False,
     ) -> "Dataset":
         """Deprecated version of _replace_with_new_dims().
@@ -1092,11 +1092,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables, attrs=attrs)
 
     @property
-    def _level_coords(self) -> "Dict[str, Hashable]":
+    def _level_coords(self) -> Dict[str, Hashable]:
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
-        level_coords = {}  # type: Dict[str, Hashable]
+        level_coords: Dict[str, Hashable] = {}
         for name, index in self.indexes.items():
             if isinstance(index, pd.MultiIndex):
                 level_names = index.names
@@ -1108,9 +1108,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
         """
-        variables = {}  # type: Dict[Any, Variable]
+        variables: Dict[Hashable, Variable] = {}
         coord_names = set()
-        indexes = {}  # type: Dict[Any, pd.Index]
+        indexes: Dict[Hashable, pd.Index] = {}
 
         for name in names:
             try:
@@ -1154,7 +1154,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         needed_dims = set(variable.dims)
 
-        coords = {}  # type: Dict[Any, Variable]
+        coords: Dict[Hashable, Variable] = {}
         for k in self.coords:
             if set(self.variables[k].dims) <= needed_dims:
                 coords[k] = self.variables[k]
@@ -1897,8 +1897,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # coords below
         indexers_list = list(self._validate_indexers(indexers))
 
-        variables = {}  # type: Dict[Hashable, Variable]
-        indexes = {}  # type: Dict[Hashable, pd.Index]
+        variables: Dict[Hashable, Variable] = {}
+        indexes: Dict[Hashable, pd.Index] = {}
 
         for name, var in self.variables.items():
             var_indexers = {k: v for k, v in indexers_list if k in var.dims}
@@ -2516,7 +2516,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
             return x, new_x
 
-        variables = {}  # type: Dict[Hashable, Variable]
+        variables: Dict[Hashable, Variable] = {}
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
@@ -2602,8 +2602,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             kwargs = {}
         coords = alignment.reindex_like_indexers(self, other)
 
-        numeric_coords = {}  # type: Dict[Hashable, pd.Index]
-        object_coords = {}  # type: Dict[Hashable, pd.Index]
+        numeric_coords: Dict[Hashable, pd.Index] = {}
+        object_coords: Dict[Hashable, pd.Index] = {}
         for k, v in coords.items():
             if v.dtype.kind in "uifcMm":
                 numeric_coords[k] = v
@@ -2849,8 +2849,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names = self._coord_names.copy()
         coord_names.update(dims_dict.values())
 
-        variables = {}  # type: Dict[Hashable, Variable]
-        indexes = {}  # type: Dict[Hashable, pd.Index]
+        variables: Dict[Hashable, Variable] = {}
+        indexes: Dict[Hashable, pd.Index] = {}
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             if k in result_dims:
@@ -2888,7 +2888,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             and the values are either integers (giving the length of the new
             dimensions) or array-like (giving the coordinates of the new
             dimensions).
-
         axis : integer, sequence of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
@@ -2942,7 +2941,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     " variable name.".format(dim=d)
                 )
 
-        variables = {}  # type: Dict[Hashable, Variable]
+        variables: Dict[Hashable, Variable] = {}
         coord_names = self._coord_names.copy()
         # If dim is a dict, then ensure that the values are either integers
         # or iterables.
@@ -3338,7 +3337,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
 
-        variables = {}  # type: Dict[Hashable, Variable]
+        variables: Dict[Hashable, Variable] = {}
         indexes = {k: v for k, v in self.indexes.items() if k != dim}
 
         for name, var in obj.variables.items():
@@ -4053,7 +4052,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        variables = {}  # type: Dict[Hashable, Variable]
+        variables: Dict[Hashable, Variable] = {}
         for name, var in self._variables.items():
             reduce_dims = [d for d in var.dims if d in dims]
             if name in self.coords:

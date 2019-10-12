@@ -600,11 +600,11 @@ class DataArray(AbstractArray, DataWithCoords):
             return dict(zip(self.dims, key))
 
     @property
-    def _level_coords(self) -> "Dict[Any, Hashable]":
+    def _level_coords(self) -> Dict[Hashable, Hashable]:
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
-        level_coords = {}  # type: Dict[Any, Hashable]
+        level_coords: Dict[Hashable, Hashable] = {}
 
         for cname, var in self._coords.items():
             if var.ndim == 1 and isinstance(var, IndexVariable):
@@ -1865,7 +1865,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = {}  # type: Dict[Any, Variable]
+            coords: Dict[Hashable, Variable] = {}
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)

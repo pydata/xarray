@@ -282,7 +282,7 @@ class DataArrayCoordinates(Coordinates):
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: "Dict[Hashable, Variable]", indexes: Mapping[Hashable, pd.Index]
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
     ) -> None:
         from .dataset import calculate_dimensions
 
@@ -398,8 +398,6 @@ def remap_label_indexers(
         elif isinstance(v, DataArray):
             # drop coordinates found in indexers since .sel() already
             # ensures alignments
-            coords = {
-                k: v for k, v in v._coords.items() if k not in indexers
-            }  # type: Dict
+            coords = {k: var for k, var in v._coords.items() if k not in indexers}
             pos_indexers[k] = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
     return pos_indexers, new_indexes
