@@ -437,15 +437,17 @@ class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 
     The API matches the builtin set, but it preserves insertion order of
-    elements, like an OrderedDict.
+    elements, like a dict.
     """
+
+    _d: Dict[T, None]
 
     __slots__ = ("_ordered_dict",)
 
     def __init__(self, values: AbstractSet[T] = None):
-        self._ordered_dict: MutableMapping[T, None] = {}
+        self._d = {}
         if values is not None:
-            # Disable type checking - both mypy and PyCharm believes that
+            # Disable type checking - both mypy and PyCharm believe that
             # we're altering the type of self in place (see signature of
             # MutableSet.__ior__)
             self |= values  # type: ignore
@@ -453,19 +455,19 @@ class OrderedSet(MutableSet[T]):
     # Required methods for MutableSet
 
     def __contains__(self, value: object) -> bool:
-        return value in self._ordered_dict
+        return value in self._d
 
     def __iter__(self) -> Iterator[T]:
-        return iter(self._ordered_dict)
+        return iter(self._d)
 
     def __len__(self) -> int:
-        return len(self._ordered_dict)
+        return len(self._d)
 
     def add(self, value: T) -> None:
-        self._ordered_dict[value] = None
+        self._d[value] = None
 
     def discard(self, value: T) -> None:
-        del self._ordered_dict[value]
+        del self._d[value]
 
     # Additional methods
 

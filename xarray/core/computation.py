@@ -308,8 +308,8 @@ def _as_variables_or_variable(arg):
 
 
 def _unpack_dict_tuples(
-    result_vars: Mapping[Any, Tuple[Variable]], num_outputs: int
-) -> "Tuple[Dict[Any, Variable], ...]":
+    result_vars: Mapping[Hashable, Tuple[Variable, ...]], num_outputs: int
+) -> Tuple[Dict[Hashable, Variable], ...]:
     out = tuple({} for _ in range(num_outputs))  # type: ignore
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):

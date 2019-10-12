@@ -768,7 +768,7 @@ class Variable(
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> "Dict[Any, Any]":
+    def attrs(self) -> Dict[Hashable, Any]:
         """Dictionary of local attributes on this variable.
         """
         if self._attrs is None:
