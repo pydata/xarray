@@ -436,13 +436,13 @@ class SortedKeysDict(MutableMapping[K, V]):
 class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 
-    The API matches the builtin set, but it preserves insertion order of
-    elements, like a dict.
+    The API matches the builtin set, but it preserves insertion order of elements, like
+    a dict. Note that, unlike in an OrderedDict, equality tests are not order-sensitive.
     """
 
     _d: Dict[T, None]
 
-    __slots__ = ("_ordered_dict",)
+    __slots__ = ("_d",)
 
     def __init__(self, values: AbstractSet[T] = None):
         self._d = {}
