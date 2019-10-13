@@ -55,9 +55,9 @@ natively represented as an array with four dimensions: time, row, column and
 color.
 
 Pandas has historically supported N-dimensional panels, but deprecated them in
-version 0.20 in favor of Xarray data structures.  There are now built-in methods
-on both sides to convert between pandas and Xarray, allowing for more focussed
-development effort.  Xarray objects have a much richer model of dimensionality -
+version 0.20 in favor of Xarray data structures. There are now built-in methods
+on both sides to convert between pandas and Xarray, allowing for more focused
+development effort. Xarray objects have a much richer model of dimensionality -
 if you were using Panels:
 
 - You need to create a new factory type for each dimensionality.
