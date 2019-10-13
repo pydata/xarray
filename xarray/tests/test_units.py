@@ -1476,7 +1476,8 @@ class TestDataArray:
                 method("shift", x=2), marks=pytest.mark.xfail(reason="strips units")
             ),
             pytest.param(
-                method("roll", x=2), marks=pytest.mark.xfail(reason="strips units")
+                method("roll", x=2, roll_coords=False),
+                marks=pytest.mark.xfail(reason="strips units"),
             ),
             method("sortby", "x2"),
         ),
