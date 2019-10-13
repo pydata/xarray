@@ -67,7 +67,7 @@ The power of the dataset over a plain dictionary is that, in addition to
 pulling out arrays by name, it is possible to select or combine data along a
 dimension across all arrays simultaneously. Like a
 :py:class:`~pandas.DataFrame`, datasets facilitate array operations with
-heterogeneous data -- the difference is that the arrays in a dataset can have 
+heterogeneous data -- the difference is that the arrays in a dataset can have
 not only different data types, but also different numbers of dimensions.
 
 This data model is borrowed from the netCDF_ file format, which also provides
@@ -87,7 +87,7 @@ Xarray contributes domain-agnostic data-structures and tools for labeled
 multi-dimensional arrays to Python's SciPy_ ecosystem for numerical computing.
 In particular, xarray builds upon and integrates with NumPy_ and pandas_:
 
-- Our user-facing interfaces aim to be more explicit verisons of those found in
+- Our user-facing interfaces aim to be more explicit versions of those found in
   NumPy/pandas.
 - Compatibility with the broader ecosystem is a major goal: it should be easy
   to get your data in and out.

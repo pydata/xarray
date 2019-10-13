@@ -75,7 +75,7 @@ Enhancements
 
   - Added a ``GroupBy.dims`` property that mirrors the dimensions
     of each group.(:issue:`3344`)
-    
+
 - Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small
   arrays (:issue:`2799`, :pull:`3375`) by
   `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -107,8 +107,8 @@ Documentation
   By `Deepak Cherian <https://github.com/dcherian/>`_.
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
   By `Justus Magin <https://github.com/keewis>`_.
-- Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`, 
-  :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, :py:meth:`Dataset.pipe`, 
+- Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`,
+  :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, :py:meth:`Dataset.pipe`,
   :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`, :py:meth:`Dataset.fillna`.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fixed documentation to clean up an unwanted file created in ``ipython`` example
@@ -3740,7 +3740,7 @@ Enhancements
 
   .. ipython:: python
 
-     ds = xray.Dataset({'tmin': ([], 25, {'units': 'celcius'})})
+     ds = xray.Dataset({'tmin': ([], 25, {'units': 'celsius'})})
      ds.tmin.units
 
   Tab-completion for these variables should work in editors such as IPython.
