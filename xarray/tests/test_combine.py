@@ -782,12 +782,11 @@ class TestAutoCombineOldAPI:
         actual = auto_combine(datasets, concat_dim="t")
         assert_identical(expected, actual)
 
-    def test_auto_combine_still_fails(self):
-        # concat can't handle new variables (yet):
-        # https://github.com/pydata/xarray/issues/508
+    def test_auto_combine_with_new_variables(self):
         datasets = [Dataset({"x": 0}, {"y": 0}), Dataset({"x": 1}, {"y": 1, "z": 1})]
-        with pytest.raises(ValueError):
-            auto_combine(datasets, "y")
+        actual = auto_combine(datasets, "y")
+        expected = Dataset({"x": ("y", [0, 1])}, {"y": [0, 1], "z": 1})
+        assert_identical(expected, actual)
 
     def test_auto_combine_no_concat(self):
         objs = [Dataset({"x": 0}), Dataset({"y": 1})]

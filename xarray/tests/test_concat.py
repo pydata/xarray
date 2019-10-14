@@ -68,6 +68,22 @@ class TestConcatDataset:
         datasets = [g for _, g in data.groupby(dim, squeeze=False)]
         assert_identical(data, concat(datasets, dim, coords=coords))
 
+    def test_concat_merge_variables_present_in_some_datasets(self, data):
+        # coordinates present in some datasets but not others
+        ds1 = Dataset(data_vars={"a": ("y", [0.1])}, coords={"x": 0.1})
+        ds2 = Dataset(data_vars={"a": ("y", [0.2])}, coords={"z": 0.2})
+        actual = concat([ds1, ds2], dim="y", coords="minimal")
+        expected = Dataset({"a": ("y", [0.1, 0.2])}, coords={"x": 0.1, "z": 0.2})
+        assert_identical(expected, actual)
+
+        # data variables present in some datasets but not others
+        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
+        data0, data1 = deepcopy(split_data)
+        data1["foo"] = ("bar", np.random.randn(10))
+        actual = concat([data0, data1], "dim1")
+        expected = data.copy().assign(foo=data1.foo)
+        assert_identical(expected, actual)
+
     def test_concat_2(self, data):
         dim = "dim2"
         datasets = [g for _, g in data.groupby(dim, squeeze=True)]
@@ -189,11 +205,6 @@ class TestConcatDataset:
             data1.attrs["foo"] = "bar"
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
-
-        with raises_regex(ValueError, "present in some datasets"):
-            data0, data1 = deepcopy(split_data)
-            data1["foo"] = ("bar", np.random.randn(10))
-            concat([data0, data1], "dim1")
 
         with raises_regex(ValueError, "compat.* invalid"):
             concat(split_data, "dim1", compat="foobar")
