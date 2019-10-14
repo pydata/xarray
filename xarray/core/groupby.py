@@ -348,6 +348,13 @@ class GroupBy(SupportsArithmetic):
                 group_indices = [slice(i, i + 1) for i in group_indices]
             unique_coord = group
         else:
+            if group.isnull().any():
+                # drop any NaN valued groups.
+                # also drop obj values where group was NaN
+                # Use where instead of reindex to account for duplicate coordinate labels.
+                obj = obj.where(group.notnull(), drop=True)
+                group = group.dropna(group_dim)
+
             # look through group to find the unique values
             unique_values, group_indices = unique_value_groups(
                 safe_cast_to_index(group), sort=(bins is None)
