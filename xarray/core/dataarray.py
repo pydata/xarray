@@ -2543,7 +2543,7 @@ class DataArray(AbstractArray, DataWithCoords):
     @property
     def plot(self) -> _PlotMethods:
         """
-        Access plotting functions
+        Access plotting functions for DataArray's
 
         >>> d = DataArray([[1, 2], [3, 4]])
 

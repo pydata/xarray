@@ -15,8 +15,8 @@ What's New
 
 .. _whats-new.0.14.0:
 
-v0.14.0 (unreleased)
---------------------
+v0.14.0 (14 Oct 2019)
+---------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -42,42 +42,43 @@ Breaking changes
 
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-- Dropped the 'drop=False' optional parameter from :meth:`Variable.isel`.
-  It was unused and doesn't make sense for a Variable.
-  (:pull:`3375`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Dropped the `drop=False` optional parameter from :meth:`Variable.isel`.
+  It was unused and doesn't make sense for a Variable. (:pull:`3375`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - Remove internal usage of `collections.OrderedDict`. After dropping support for
   Python <=3.5, most uses of `OrderedDict` in Xarray were no longer necessary. We
   have removed the internal use of the `OrderedDict` in favor of Python's builtin
   `dict` object which is now ordered itself. This change will be most obvious when
   interacting with the `attrs` property on the Dataset and DataArray objects.
-
-  (:issue:`3380`, :issue:`3389`). By `Joe Hamman <https://github.com/jhamman>`_.
+  (:issue:`3380`, :pull:`3389`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
 
 - Added :py:func:`~xarray.map_blocks`, modeled after :py:func:`dask.array.map_blocks`.
   Also added :py:meth:`Dataset.unify_chunks`, :py:meth:`DataArray.unify_chunks` and
-  :py:meth:`testing.assert_chunks_equal`. By `Deepak Cherian <https://github.com/dcherian>`_
-  and `Guido Imperiale <https://github.com/crusaderky>`_.
+  :py:meth:`testing.assert_chunks_equal`. (:pull:`3276`).
+  By `Deepak Cherian <https://github.com/dcherian>`_ and
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Enhancements
 ~~~~~~~~~~~~
 
 - :py:class:`~xarray.core.GroupBy` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
 
-  - Added a repr. Example::
+  - Added a repr (:pull:`3344`). Example::
 
       >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
   - Added a ``GroupBy.dims`` property that mirrors the dimensions
-    of each group.(:issue:`3344`)
+    of each group (:issue:`3344`).
 
 - Speed up :meth:`Dataset.isel` up to 33% and :meth:`DataArray.isel` up to 25% for small
-  arrays (:issue:`2799`, :pull:`3375`) by
+  arrays (:issue:`2799`, :pull:`3375`). By
   `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
@@ -107,16 +108,14 @@ Documentation
   By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
 - Created a "How do I..." section (:ref:`howdoi`) for solutions to common questions. (:pull:`3357`).
   By `Deepak Cherian <https://github.com/dcherian/>`_.
-- Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`.
-  By `Justus Magin <https://github.com/keewis>`_.
+- Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
+  (pull:`3331`, pull:`3331`). By `Justus Magin <https://github.com/keewis>`_.
 - Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`,
   :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, :py:meth:`Dataset.pipe`,
-  :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`, :py:meth:`Dataset.fillna`.
+  :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`, :py:meth:`Dataset.fillna` (pull:`3328`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fixed documentation to clean up an unwanted file created in ``ipython`` example
-  (:pull:`3353`).
-  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
-
+  (:pull:`3353`). By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
 
 .. _whats-new.0.13.0:
 

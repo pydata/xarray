@@ -614,8 +614,8 @@ Plotting
    :toctree: generated/
 
    Dataset.plot
+   plot.scatter
    DataArray.plot
-   Dataset.plot.scatter
    plot.plot
    plot.contourf
    plot.contour
