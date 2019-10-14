@@ -5243,8 +5243,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     @property
     def plot(self):
         """
-        Access plotting functions. Use it as a namespace to use
-        xarray.plot functions as Dataset methods
+        Access plotting functions for Datasets.
+        Use it as a namespace to use xarray.plot functions as Dataset methods
 
         >>> ds.plot.scatter(...)  # equivalent to xarray.plot.scatter(ds,...)
 
