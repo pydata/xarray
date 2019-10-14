@@ -12,5 +12,5 @@ __all__ = [
     "imshow",
     "pcolormesh",
     "FacetGrid",
-    "scatter"
+    "scatter",
 ]
