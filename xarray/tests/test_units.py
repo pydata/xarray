@@ -10,21 +10,19 @@ pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
 
+unit_registry = pint.UnitRegistry()
+Quantity = unit_registry.Quantity
+
 pytestmark = [
     pytest.mark.skipif(
         not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
     ),
+    pytest.mark.skipif(
+        not hasattr(unit_registry.Quantity, "__array_function__"),
+        reason="pint does not implement __array_function__ yet",
+    ),
     # pytest.mark.filterwarnings("ignore:::pint[.*]"),
 ]
-
-
-unit_registry = pint.UnitRegistry()
-require_pint_array_function = pytest.mark.skipif(
-    not hasattr(unit_registry.Quantity, "__array_function__"),
-    reason="pint does not implement __array_function__ yet",
-)
-
-Quantity = unit_registry.Quantity
 
 
 def array_extract_units(obj):
@@ -263,7 +261,6 @@ class function:
         return "function_{self.name}".format(self=self)
 
 
-@require_pint_array_function
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
 def test_replication(func, dtype):
     array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
@@ -279,7 +276,6 @@ def test_replication(func, dtype):
 @pytest.mark.xfail(
     reason="np.full_like on Variable strips the unit and pint does not allow mixed args"
 )
-@require_pint_array_function
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -308,7 +304,6 @@ def test_replication_full_like(unit, error, dtype):
 
 
 class TestDataArray:
-    @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
     @pytest.mark.parametrize(
         "variant",
@@ -344,7 +339,6 @@ class TestDataArray:
             }.values()
         )
 
-    @require_pint_array_function
     @pytest.mark.filterwarnings("error:::pint[.*]")
     @pytest.mark.parametrize(
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
@@ -378,7 +372,6 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -483,7 +476,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -505,7 +497,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -530,7 +521,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "comparison",
         (
@@ -578,7 +568,6 @@ class TestDataArray:
 
             assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "units,error",
         (
@@ -601,7 +590,6 @@ class TestDataArray:
             assert_equal_with_units(expected, result)
 
     @pytest.mark.xfail(reason="pint's implementation of `np.maximum` strips units")
-    @require_pint_array_function
     def test_bivariate_ufunc(self, dtype):
         unit = unit_registry.m
         array = np.arange(10).astype(dtype) * unit
@@ -612,7 +600,6 @@ class TestDataArray:
         assert_equal_with_units(expected, np.maximum(data_array, 0 * unit))
         assert_equal_with_units(expected, np.maximum(0 * unit, data_array))
 
-    @require_pint_array_function
     @pytest.mark.parametrize("property", ("T", "imag", "real"))
     def test_numpy_properties(self, property, dtype):
         array = (
@@ -629,7 +616,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -653,7 +639,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func", (method("clip", min=3, max=8), method("searchsorted", v=5)), ids=repr
     )
@@ -693,7 +678,6 @@ class TestDataArray:
             else:
                 assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
     )
@@ -719,7 +703,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.xfail(reason="ffill and bfill lose units in data")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
     def test_missing_value_filling(self, func, dtype):
@@ -744,7 +727,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.xfail(reason="fillna drops the unit")
     @pytest.mark.parametrize(
         "fill_value",
@@ -772,7 +754,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     def test_dropna(self, dtype):
         array = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
@@ -788,7 +769,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.xfail(reason="pint does not implement `numpy.isin`")
     @pytest.mark.parametrize(
         "unit",
@@ -817,7 +797,6 @@ class TestDataArray:
 
         assert_equal_with_units(result_without_units, result_with_units)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "variant",
         (
@@ -886,7 +865,6 @@ class TestDataArray:
             assert_equal_with_units(expected, result)
 
     @pytest.mark.xfail(reason="interpolate strips units")
-    @require_pint_array_function
     def test_interpolate_na(self, dtype):
         array = (
             np.array([-1.03, 0.1, 1.4, np.nan, 2.3, np.nan, np.nan, 9.1])
@@ -903,7 +881,6 @@ class TestDataArray:
         assert_equal_with_units(expected, result)
 
     @pytest.mark.xfail(reason="uses DataArray.where, which currently fails")
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -939,7 +916,6 @@ class TestDataArray:
 
             assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "unit",
         (
@@ -1016,7 +992,6 @@ class TestDataArray:
 
         assert expected == result
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "unit",
         (
@@ -1043,7 +1018,6 @@ class TestDataArray:
 
         assert expected == result
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -1103,7 +1077,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
@@ -1152,7 +1125,6 @@ class TestDataArray:
             result = func(data_array, **kwargs)
             assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "indices",
         (
@@ -1177,7 +1149,6 @@ class TestDataArray:
     @pytest.mark.xfail(
         reason="xarray does not support duck arrays in dimension coordinates"
     )
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "values",
         (
@@ -1213,7 +1184,6 @@ class TestDataArray:
     @pytest.mark.xfail(
         reason="xarray does not support duck arrays in dimension coordinates"
     )
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "values",
         (
@@ -1246,7 +1216,6 @@ class TestDataArray:
             result_data_array = data_array.loc[values_with_units]
             assert_equal_with_units(result_array, result_data_array)
 
-    @require_pint_array_function
     @pytest.mark.xfail(reason="tries to coerce using asarray")
     @pytest.mark.parametrize(
         "shape",
@@ -1281,7 +1250,6 @@ class TestDataArray:
                 np.squeeze(array, axis=index), data_array.squeeze(dim=name)
             )
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -1316,7 +1284,6 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    @require_pint_array_function
     @pytest.mark.xfail(reason="tries to coerce using asarray")
     @pytest.mark.parametrize(
         "unit,error",
@@ -1358,7 +1325,6 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    @require_pint_array_function
     @pytest.mark.xfail(
         reason="pint does not implement np.result_type in __array_function__ yet"
     )
@@ -1398,7 +1364,6 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    @require_pint_array_function
     @pytest.mark.xfail(
         reason="pint does not implement np.result_type in __array_function__ yet"
     )
@@ -1442,7 +1407,6 @@ class TestDataArray:
 
             assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (method("unstack"), method("reset_index", "z"), method("reorder_levels")),
@@ -1465,7 +1429,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @require_pint_array_function
     @pytest.mark.parametrize(
         "func",
         (
