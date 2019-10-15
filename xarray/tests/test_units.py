@@ -1475,3 +1475,72 @@ class TestDataArray:
         result = func(data_array)
 
         assert_equal_with_units(expected, result)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("diff", dim="x"),
+            method("differentiate", coord="x"),
+            method("integrate", dim="x"),
+            pytest.param(
+                method("quantile", q=[0.25, 0.75]),
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement nanpercentile yet"
+                ),
+            ),
+            pytest.param(
+                method("reduce", func=np.sum, dim="x"),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_computation(self, func, dtype):
+        array = (
+            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+        )
+
+        x = np.arange(array.shape[0]) * unit_registry.m
+        y = np.arange(array.shape[1]) * unit_registry.s
+
+        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
+        units = extract_units(data_array)
+
+        expected = attach_units(func(strip_units(data_array)), units)
+        result = func(data_array)
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("groupby", "y"), marks=pytest.mark.xfail(reason="strips units")
+            ),
+            pytest.param(
+                method("groupby_bins", "y", bins=4),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
+            method("coarsen", y=2),
+            method("resample", x=5 * unit_registry.m),
+            pytest.param(
+                method("rolling", y=3), marks=pytest.mark.xfail(reason="strips units")
+            ),
+        ),
+        ids=repr,
+    )
+    def test_computation_objects(self, func, dtype):
+        array = (
+            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+        )
+
+        x = np.arange(array.shape[0]) * unit_registry.m
+        y = np.arange(array.shape[1]) * 3 * unit_registry.s
+
+        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
+        units = extract_units(data_array)
+
+        expected = attach_units(func(strip_units(data_array)).mean(), units)
+        result = func(data_array).mean()
+
+        assert_equal_with_units(expected, result)
