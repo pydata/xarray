@@ -166,7 +166,7 @@ def attach_units(obj, units):
 
         coords = {
             name: (
-                (value.dims, array_attach_units(value, units.get(name) or 1))
+                (value.dims, array_attach_units(value.data, units.get(name) or 1))
                 if name in units
                 # to preserve multiindexes
                 else value
@@ -968,17 +968,13 @@ class TestDataArray:
             data=quantity, coords={"x": x, "y": ("x", y)}, dims="x"
         )
 
-        data_kwargs = {"convert_from": base_unit if quantity.check(data_unit) else None}
-        dim_kwargs = {"convert_from": base_unit if x.check(dim_unit) else None}
-        coord_kwargs = {"convert_from": base_unit if y.check(coord_unit) else None}
-
-        other = xr.DataArray(
-            data=array_attach_units(data, data_unit, **data_kwargs),
-            coords={
-                "x": array_attach_units(coord, dim_unit, **dim_kwargs),
-                "y": ("x", array_attach_units(coord, coord_unit, **coord_kwargs)),
+        other = attach_units(
+            strip_units(data_array),
+            {
+                None: (data_unit, base_unit if quantity.check(data_unit) else None),
+                "x": (dim_unit, base_unit if x.check(dim_unit) else None),
+                "y": (coord_unit, base_unit if y.check(coord_unit) else None),
             },
-            dims="x",
         )
 
         # TODO: test dim coord once indexes leave units intact
