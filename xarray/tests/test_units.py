@@ -1526,6 +1526,10 @@ class TestDataArray:
             pytest.param(
                 method("rolling", y=3), marks=pytest.mark.xfail(reason="strips units")
             ),
+            pytest.param(
+                method("rolling_exp", y=3),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
         ),
         ids=repr,
     )
