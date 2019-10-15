@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core import formatting
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 pint = pytest.importorskip("pint")
@@ -201,7 +202,10 @@ def assert_equal_with_units(a, b):
 
         a_without_units = strip_units(a)
         b_without_units = strip_units(b)
-        assert a_without_units.equals(b_without_units)
+
+        assert a_without_units.equals(b_without_units), formatting.diff_dataset_repr(
+            a, b, "equals"
+        )
         assert a_units == b_units
     else:
         a = a if not isinstance(a, (xr.DataArray, xr.Variable)) else a.data
@@ -1438,6 +1442,33 @@ class TestDataArray:
         result = func(stacked)
 
         assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="indexes strip the label units")
+    def test_to_unstacked_dataset(self, dtype):
+        array = (
+            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
+            * unit_registry.pascal
+        )
+        x = np.arange(array.shape[0]) * unit_registry.m
+        y = np.arange(array.shape[1]) * unit_registry.s
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y}, dims=("x", "y")
+        ).stack(z=("x", "y"))
+
+        func = method("to_unstacked_dataset", dim="z")
+
+        expected = attach_units(
+            func(strip_units(data_array)),
+            {"y": y.units, **dict(zip(x.magnitude, [array.units] * len(y)))},
+        ).rename({elem.magnitude: elem for elem in x})
+        result = func(data_array)
+
+        print(data_array, expected, result, sep="\n")
+
+        assert_equal_with_units(expected, result)
+
+        assert False
 
     @pytest.mark.parametrize(
         "func",
