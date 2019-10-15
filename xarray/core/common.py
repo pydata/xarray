@@ -920,7 +920,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Parameters
         ----------
         indexer : {dim: freq}, optional
-            Mapping from the dimension name to resample frequency.
+            Mapping from the dimension name to resample frequency. The
+            dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
