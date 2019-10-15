@@ -1,6 +1,7 @@
 import operator
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
@@ -81,7 +82,13 @@ def array_attach_units(data, unit, convert_from=None):
             else unit_registry.dimensionless
         )
     else:
-        quantity = data * unit
+        try:
+            quantity = data * unit
+        except np.core._exceptions.UFuncTypeError:
+            if unit != 1:
+                raise
+
+            quantity = data
 
     return quantity
 
@@ -1524,7 +1531,6 @@ class TestDataArray:
                 marks=pytest.mark.xfail(reason="strips units"),
             ),
             method("coarsen", y=2),
-            method("resample", x=5 * unit_registry.m),
             pytest.param(
                 method("rolling", y=3), marks=pytest.mark.xfail(reason="strips units")
             ),
@@ -1545,6 +1551,21 @@ class TestDataArray:
 
         data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
         units = extract_units(data_array)
+
+        expected = attach_units(func(strip_units(data_array)).mean(), units)
+        result = func(data_array).mean()
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="strips units")
+    def test_resample(self, dtype):
+        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+
+        time = pd.date_range("10-09-2010", periods=len(array), freq="1y")
+        data_array = xr.DataArray(data=array, coords={"time": time}, dims="time")
+        units = extract_units(data_array)
+
+        func = method("resample", time="6m")
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
         result = func(data_array).mean()
