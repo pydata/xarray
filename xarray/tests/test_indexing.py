@@ -168,14 +168,13 @@ class TestIndexers:
         )
 
     def test_read_only_view(self):
-        from collections import OrderedDict
 
         arr = DataArray(
             np.random.rand(3, 3),
             coords={"x": np.arange(3), "y": np.arange(3)},
             dims=("x", "y"),
         )  # Create a 2D DataArray
-        arr = arr.expand_dims(OrderedDict([("z", 3)]), -1)  # New dimension 'z'
+        arr = arr.expand_dims({"z": 3}, -1)  # New dimension 'z'
         arr["z"] = np.arange(3)  # New coords to dimension 'z'
         with pytest.raises(ValueError, match="Do you want to .copy()"):
             arr.loc[0, 0, 0] = 999

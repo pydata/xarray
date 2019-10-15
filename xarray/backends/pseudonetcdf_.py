@@ -1,10 +1,8 @@
-from collections import OrderedDict
-
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenDict
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
@@ -65,11 +63,11 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
     def open_store_variable(self, name, var):
         data = indexing.LazilyOuterIndexedArray(PncArrayWrapper(name, self))
-        attrs = OrderedDict((k, getattr(var, k)) for k in var.ncattrs())
+        attrs = {k: getattr(var, k) for k in var.ncattrs()}
         return Variable(var.dimensions, data, attrs)
 
     def get_variables(self):
-        return FrozenOrderedDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -56,12 +55,12 @@ _VALID_COMPAT = Frozen(
 )
 
 
-def broadcast_dimension_size(variables: List[Variable],) -> "OrderedDict[Any, int]":
+def broadcast_dimension_size(variables: List[Variable],) -> Dict[Hashable, int]:
     """Extract dimension sizes from a dictionary of variables.
 
     Raises ValueError if any dimensions have different sizes.
     """
-    dims = OrderedDict()  # type: OrderedDict[Any, int]
+    dims: Dict[Hashable, int] = {}
     for var in variables:
         for dim, size in zip(var.dims, var.shape):
             if dim in dims and size != dims[dim]:
@@ -152,10 +151,10 @@ MergeElement = Tuple[Variable, Optional[pd.Index]]
 
 
 def merge_collected(
-    grouped: "OrderedDict[Hashable, List[MergeElement]]",
+    grouped: Dict[Hashable, List[MergeElement]],
     prioritized: Mapping[Hashable, MergeElement] = None,
     compat: str = "minimal",
-) -> Tuple["OrderedDict[Hashable, Variable]", "OrderedDict[Hashable, pd.Index]"]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
     Parameters
@@ -165,7 +164,7 @@ def merge_collected(
 
     Returns
     -------
-    OrderedDict with keys taken by the union of keys on list_of_mappings,
+    Dict with keys taken by the union of keys on list_of_mappings,
     and Variable values corresponding to those that should be found on the
     merged result.
     """
@@ -174,8 +173,8 @@ def merge_collected(
 
     _assert_compat_valid(compat)
 
-    merged_vars = OrderedDict()  # type: OrderedDict[Any, Variable]
-    merged_indexes = OrderedDict()  # type: OrderedDict[Any, pd.Index]
+    merged_vars: Dict[Hashable, Variable] = {}
+    merged_indexes: Dict[Hashable, pd.Index] = {}
 
     for name, elements_list in grouped.items():
         if name in prioritized:
@@ -227,7 +226,7 @@ def merge_collected(
 
 def collect_variables_and_indexes(
     list_of_mappings: "List[DatasetLike]",
-) -> "OrderedDict[Hashable, List[MergeElement]]":
+) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
 
     Mappings must either be Dataset objects, or have values of one of the
@@ -240,9 +239,7 @@ def collect_variables_and_indexes(
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    grouped = (
-        OrderedDict()
-    )  # type: OrderedDict[Hashable, List[Tuple[Variable, pd.Index]]]
+    grouped: Dict[Hashable, List[Tuple[Variable, pd.Index]]] = {}
 
     def append(name, variable, index):
         values = grouped.setdefault(name, [])
@@ -260,7 +257,7 @@ def collect_variables_and_indexes(
         for name, variable in mapping.items():
             if isinstance(variable, DataArray):
                 coords = variable._coords.copy()  # use private API for speed
-                indexes = OrderedDict(variable.indexes)
+                indexes = dict(variable.indexes)
                 # explicitly overwritten variables should take precedence
                 coords.pop(name, None)
                 indexes.pop(name, None)
@@ -279,11 +276,9 @@ def collect_variables_and_indexes(
 
 def collect_from_coordinates(
     list_of_coords: "List[Coordinates]"
-) -> "OrderedDict[Hashable, List[MergeElement]]":
+) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes to be merged from Coordinate objects."""
-    grouped = (
-        OrderedDict()
-    )  # type: OrderedDict[Hashable, List[Tuple[Variable, pd.Index]]]
+    grouped: Dict[Hashable, List[Tuple[Variable, pd.Index]]] = {}
 
     for coords in list_of_coords:
         variables = coords.variables
@@ -298,7 +293,7 @@ def merge_coordinates_without_align(
     objects: "List[Coordinates]",
     prioritized: Mapping[Hashable, MergeElement] = None,
     exclude_dims: AbstractSet = frozenset(),
-) -> Tuple["OrderedDict[Hashable, Variable]", "OrderedDict[Hashable, pd.Index]"]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
 
     This function is used for merging coordinate from pre-existing xarray
@@ -307,7 +302,7 @@ def merge_coordinates_without_align(
     collected = collect_from_coordinates(objects)
 
     if exclude_dims:
-        filtered = OrderedDict()  # type: OrderedDict[Hashable, List[MergeElement]]
+        filtered: Dict[Hashable, List[MergeElement]] = {}
         for name, elements in collected.items():
             new_elements = [
                 (variable, index)
@@ -371,7 +366,7 @@ def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["Dataset
 
     Returns
     -------
-    List of Dataset or OrderedDict objects. Any inputs or values in the inputs
+    List of Dataset or dictionary objects. Any inputs or values in the inputs
     that were pandas objects have been converted into native xarray objects.
     """
     from .dataarray import DataArray
@@ -380,11 +375,11 @@ def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["Dataset
     out = []
     for obj in objects:
         if isinstance(obj, Dataset):
-            variables = obj  # type: DatasetLike
+            variables: "DatasetLike" = obj
         else:
-            variables = OrderedDict()
+            variables = {}
             if isinstance(obj, PANDAS_TYPES):
-                obj = OrderedDict(obj.iteritems())
+                obj = dict(obj.iteritems())
             for k, v in obj.items():
                 if isinstance(v, PANDAS_TYPES):
                     v = DataArray(v)
@@ -395,7 +390,7 @@ def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["Dataset
 
 def _get_priority_vars_and_indexes(
     objects: List["DatasetLike"], priority_arg: Optional[int], compat: str = "equals"
-) -> "OrderedDict[Hashable, MergeElement]":
+) -> Dict[Hashable, MergeElement]:
     """Extract the priority variable from a list of mappings.
 
     We need this method because in some cases the priority argument itself
@@ -413,14 +408,14 @@ def _get_priority_vars_and_indexes(
 
     Returns
     -------
-    An OrderedDict of variables and associated indexes (if any) to prioritize.
+    A dictionary of variables and associated indexes (if any) to prioritize.
     """
     if priority_arg is None:
-        return OrderedDict()
+        return {}
 
     collected = collect_variables_and_indexes([objects[priority_arg]])
     variables, indexes = merge_collected(collected, compat=compat)
-    grouped = OrderedDict()  # type: OrderedDict[Hashable, MergeElement]
+    grouped: Dict[Hashable, MergeElement] = {}
     for name, variable in variables.items():
         grouped[name] = (variable, indexes.get(name))
     return grouped
@@ -433,7 +428,7 @@ def merge_coords(
     priority_arg: Optional[int] = None,
     indexes: Optional[Mapping[Hashable, pd.Index]] = None,
     fill_value: object = dtypes.NA,
-) -> Tuple["OrderedDict[Hashable, Variable]", "OrderedDict[Hashable, pd.Index]"]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Merge coordinate variables.
 
     See merge_core below for argument descriptions. This works similarly to
@@ -485,15 +480,11 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
             )
 
 
-_MergeResult = NamedTuple(
-    "_MergeResult",
-    [
-        ("variables", "OrderedDict[Hashable, Variable]"),
-        ("coord_names", Set[Hashable]),
-        ("dims", Dict[Hashable, int]),
-        ("indexes", "OrderedDict[Hashable, pd.Index]"),
-    ],
-)
+class _MergeResult(NamedTuple):
+    variables: Dict[Hashable, Variable]
+    coord_names: Set[Hashable]
+    dims: Dict[Hashable, int]
+    indexes: Dict[Hashable, pd.Index]
 
 
 def merge_core(
@@ -528,8 +519,8 @@ def merge_core(
 
     Returns
     -------
-    variables : OrderedDict
-        Ordered dictionary of Variable objects.
+    variables : dict
+        Dictionary of Variable objects.
     coord_names : set
         Set of coordinate names.
     dims : dict
@@ -819,10 +810,8 @@ def dataset_merge_method(
         objs = [dataset, other]
         priority_arg = 1
     else:
-        other_overwrite = OrderedDict()  # type: OrderedDict[Hashable, CoercibleValue]
-        other_no_overwrite = (
-            OrderedDict()
-        )  # type: OrderedDict[Hashable, CoercibleValue]
+        other_overwrite: Dict[Hashable, CoercibleValue] = {}
+        other_no_overwrite: Dict[Hashable, CoercibleValue] = {}
         for k, v in other.items():
             if k in overwrite_vars:
                 other_overwrite[k] = v
@@ -849,7 +838,7 @@ def dataset_update_method(
     from .dataset import Dataset
 
     if not isinstance(other, Dataset):
-        other = OrderedDict(other)
+        other = dict(other)
         for key, value in other.items():
             if isinstance(value, DataArray):
                 # drop conflicting coordinates

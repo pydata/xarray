@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import pandas as pd
 
 from . import dtypes, utils
@@ -246,7 +244,7 @@ def _parse_datasets(datasets):
     dims = set()
     all_coord_names = set()
     data_vars = set()  # list of data_vars
-    dim_coords = dict()  # maps dim name to variable
+    dim_coords = {}  # maps dim name to variable
     dims_sizes = {}  # shared dimension sizes to expand variables
 
     for ds in datasets:
@@ -314,22 +312,16 @@ def _dataset_concat(
         to_merge = {var: [] for var in variables_to_merge}
 
         for ds in datasets:
-            absent_merge_vars = variables_to_merge - set(ds.variables)
-            if absent_merge_vars:
-                raise ValueError(
-                    "variables %r are present in some datasets but not others. "
-                    % absent_merge_vars
-                )
-
             for var in variables_to_merge:
-                to_merge[var].append(ds.variables[var])
+                if var in ds:
+                    to_merge[var].append(ds.variables[var])
 
         for var in variables_to_merge:
             result_vars[var] = unique_variable(
                 var, to_merge[var], compat=compat, equals=equals.get(var, None)
             )
     else:
-        result_vars = OrderedDict()
+        result_vars = {}
     result_vars.update(dim_coords)
 
     # assign attrs and encoding from first dataset

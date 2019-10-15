@@ -23,7 +23,7 @@ multi-dimensional array. It has several key properties:
 - ``coords``: a dict-like container of arrays (*coordinates*) that label each
   point (e.g., 1-dimensional arrays of numbers, datetime objects or
   strings)
-- ``attrs``: an ``OrderedDict`` to hold arbitrary metadata (*attributes*)
+- ``attrs``: :py:class:`dict` to hold arbitrary metadata (*attributes*)
 
 xarray uses ``dims`` and ``coords`` to enable its core metadata aware operations.
 Dimensions provide names that xarray uses instead of the ``axis`` argument found
@@ -32,10 +32,10 @@ alignment, building on the functionality of the ``index`` found on a pandas
 :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Series`.
 
 DataArray objects also can have a ``name`` and can hold arbitrary metadata in
-the form of their ``attrs`` property (an ordered dictionary). Names and
-attributes are strictly for users and user-written code: xarray makes no attempt
-to interpret them, and propagates them only in unambiguous cases (see FAQ,
-:ref:`approach to metadata`).
+the form of their ``attrs`` property. Names and attributes are strictly for
+users and user-written code: xarray makes no attempt to interpret them, and
+propagates them only in unambiguous cases
+(see FAQ, :ref:`approach to metadata`).
 
 .. _creating a dataarray:
 
@@ -222,7 +222,7 @@ to access any variable in a dataset, datasets have four key properties:
 - ``data_vars``: a dict-like container of DataArrays corresponding to variables
 - ``coords``: another dict-like container of DataArrays intended to label points
   used in ``data_vars`` (e.g., arrays of numbers, datetime objects or strings)
-- ``attrs``: an ``OrderedDict`` to hold arbitrary metadata
+- ``attrs``: :py:class:`dict` to hold arbitrary metadata
 
 The distinction between whether a variables falls in data or coordinates
 (borrowed from `CF conventions`_) is mostly semantic, and you can probably get

@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 from pandas.errors import OutOfBoundsDatetime
 
-
 from xarray import DataArray, Dataset, Variable, coding, decode_cf
 from xarray.coding.times import (
     _import_cftime,
@@ -29,7 +28,6 @@ from . import (
     requires_cftime,
     requires_cftime_or_netCDF4,
 )
-
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",
@@ -714,7 +712,7 @@ def test_encode_time_bounds():
     ds.time.attrs = {"bounds": "time_bounds"}
     ds.time.encoding = {"calendar": "noleap", "units": "days since 2000-01-01"}
 
-    expected = dict()
+    expected = {}
     # expected['time'] = Variable(data=np.array([15]), dims=['time'])
     expected["time_bounds"] = Variable(data=np.array([0, 31]), dims=["time_bounds"])
 

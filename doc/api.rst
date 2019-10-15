@@ -30,6 +30,7 @@ Top-level functions
    zeros_like
    ones_like
    dot
+   map_blocks
 
 Dataset
 =======
@@ -499,6 +500,8 @@ Dataset methods
    Dataset.persist
    Dataset.load
    Dataset.chunk
+   Dataset.unify_chunks
+   Dataset.map_blocks
    Dataset.filter_by_attrs
    Dataset.info
 
@@ -529,6 +532,8 @@ DataArray methods
    DataArray.persist
    DataArray.load
    DataArray.chunk
+   DataArray.unify_chunks
+   DataArray.map_blocks
 
 GroupBy objects
 ===============
@@ -609,8 +614,8 @@ Plotting
    :toctree: generated/
 
    Dataset.plot
+   plot.scatter
    DataArray.plot
-   Dataset.plot.scatter
    plot.plot
    plot.contourf
    plot.contour
@@ -629,6 +634,7 @@ Testing
    testing.assert_equal
    testing.assert_identical
    testing.assert_allclose
+   testing.assert_chunks_equal
 
 Exceptions
 ==========

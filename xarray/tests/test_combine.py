@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from datetime import datetime
 from itertools import product
 
@@ -359,8 +358,8 @@ class TestNestedCombine:
 
         # ensure combine_nested handles non-sorted variables
         objs = [
-            Dataset(OrderedDict([("x", ("a", [0])), ("y", ("a", [0]))])),
-            Dataset(OrderedDict([("y", ("a", [1])), ("x", ("a", [1]))])),
+            Dataset({"x": ("a", [0]), "y": ("a", [0])}),
+            Dataset({"y": ("a", [1]), "x": ("a", [1])}),
         ]
         actual = combine_nested(objs, concat_dim="a")
         expected = Dataset({"x": ("a", [0, 1]), "y": ("a", [0, 1])})
@@ -740,8 +739,8 @@ class TestAutoCombineOldAPI:
 
         # ensure auto_combine handles non-sorted variables
         objs = [
-            Dataset(OrderedDict([("x", ("a", [0])), ("y", ("a", [0]))])),
-            Dataset(OrderedDict([("y", ("a", [1])), ("x", ("a", [1]))])),
+            Dataset({"x": ("a", [0]), "y": ("a", [0])}),
+            Dataset({"y": ("a", [1]), "x": ("a", [1])}),
         ]
         actual = auto_combine(objs)
         expected = Dataset({"x": ("a", [0, 1]), "y": ("a", [0, 1])})
@@ -783,12 +782,11 @@ class TestAutoCombineOldAPI:
         actual = auto_combine(datasets, concat_dim="t")
         assert_identical(expected, actual)
 
-    def test_auto_combine_still_fails(self):
-        # concat can't handle new variables (yet):
-        # https://github.com/pydata/xarray/issues/508
+    def test_auto_combine_with_new_variables(self):
         datasets = [Dataset({"x": 0}, {"y": 0}), Dataset({"x": 1}, {"y": 1, "z": 1})]
-        with pytest.raises(ValueError):
-            auto_combine(datasets, "y")
+        actual = auto_combine(datasets, "y")
+        expected = Dataset({"x": ("y", [0, 1])}, {"y": [0, 1], "z": 1})
+        assert_identical(expected, actual)
 
     def test_auto_combine_no_concat(self):
         objs = [Dataset({"x": 0}), Dataset({"y": 1})]
