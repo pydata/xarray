@@ -1493,6 +1493,11 @@ class TestDataArray:
                 method("reduce", func=np.sum, dim="x"),
                 marks=pytest.mark.xfail(reason="strips units"),
             ),
+            pytest.param(
+                lambda x: x.dot(x),
+                id="method_dot",
+                marks=pytest.mark.xfail(reason="pint does not implement einsum"),
+            ),
         ),
         ids=repr,
     )
