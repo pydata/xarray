@@ -276,4 +276,15 @@ def test_groupby_grouping_errors():
         dataset.to_array().groupby(dataset.foo * np.nan)
 
 
+def test_groupby_bins_timeseries():
+    ds = xr.Dataset()
+    ds["time"] = xr.DataArray(
+        pd.date_range("2010-08-01", "2010-08-15", freq="15min"), dims="time"
+    )
+    ds["val"] = xr.DataArray(np.random.rand(*ds["time"].shape), dims="time")
+    ds.groupby_bins(
+        "time", pd.date_range(start="2010-08-01", end="2010-08-15", freq="24.8H")
+    )
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
