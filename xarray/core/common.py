@@ -914,13 +914,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     ):
         """Returns a Resample object for performing resampling operations.
 
-        Handles both downsampling and upsampling. If any intervals contain no
-        values from the original object, they will be given the value ``NaN``.
+        Handles both downsampling and upsampling. The resampled
+        dimension must be a datetime-like coordinate. If any intervals
+        contain no values from the original object, they will be given
+        the value ``NaN``.
 
         Parameters
         ----------
         indexer : {dim: freq}, optional
-            Mapping from the dimension name to resample frequency.
+            Mapping from the dimension name to resample frequency. The
+            dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
@@ -978,11 +981,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
 
         Limit scope of upsampling method
+
         >>> da.resample(time='1D').nearest(tolerance='1D')
         <xarray.DataArray (time: 337)>
         array([ 0.,  0., nan, ..., nan, 11., 11.])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+
+        See Also
+        --------
+        pandas.Series.resample
+        pandas.DataFrame.resample
 
         References
         ----------
