@@ -69,8 +69,6 @@ Breaking changes
   (:issue:`3222`, :issue:`3293`, :issue:`3340`, :issue:`3346`, :issue:`3358`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
-New features
-~~~~~~~~~~~~
 - Dropped the `drop=False` optional parameter from :meth:`Variable.isel`.
   It was unused and doesn't make sense for a Variable. (:pull:`3375`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
