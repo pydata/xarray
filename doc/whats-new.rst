@@ -18,6 +18,19 @@ What's New
 v0.14.1 (unreleased)
 --------------------
 
+New Features
+~~~~~~~~~~~~
+- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
+
+  .. note::
+
+    At the moment of writing, these tests *as well as the ability to use pint in general*
+    require `a highly experimental version of pint
+    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
+    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
+    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
+
+  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
 
 .. _whats-new.0.14.0:
 
@@ -51,10 +64,6 @@ Breaking changes
 
 New features
 ~~~~~~~~~~~~
-- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
-  Note that, at the moment of writing, there are issues when pint interacts
-  with non-numpy array libraries, e.g. dask or sparse.
-  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
 - Dropped the `drop=False` optional parameter from :meth:`Variable.isel`.
   It was unused and doesn't make sense for a Variable. (:pull:`3375`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
