@@ -291,4 +291,5 @@ def test_groupby_bins_timeseries():
     ).to_dataset(name="val")
     assert_identical(actual, expected)
 
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
