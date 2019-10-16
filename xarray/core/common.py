@@ -914,8 +914,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     ):
         """Returns a Resample object for performing resampling operations.
 
-        Handles both downsampling and upsampling. If any intervals contain no
-        values from the original object, they will be given the value ``NaN``.
+        Handles both downsampling and upsampling. The resampled
+        dimension must be a datetime-like coordinate. If any intervals
+        contain no values from the original object, they will be given
+        the value ``NaN``.
 
         Parameters
         ----------
