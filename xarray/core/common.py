@@ -991,7 +991,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         References
         ----------
 
-        .. [1] https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+
+        See Also
+        --------
+        pandas.Series.resample
+        pandas.DataFrame.resample
         """
         # TODO support non-string indexer after removing the old API.
 
