@@ -15,6 +15,7 @@ from .pycompat import integer_types
 from .utils import (
     either_dict_or_kwargs,
     hashable,
+    is_scalar,
     maybe_wrap_array,
     peek_at,
     safe_cast_to_index,
@@ -24,7 +25,7 @@ from .variable import IndexVariable, Variable, as_variable
 
 def check_reduce_dims(reduce_dims, dimensions):
 
-    if isinstance(reduce_dims, str):
+    if is_scalar(reduce_dims):
         reduce_dims = [reduce_dims]
 
     if reduce_dims is not ALL_DIMS and any(
