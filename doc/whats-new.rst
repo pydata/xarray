@@ -32,6 +32,14 @@ New Features
 
   (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
 
+Documentation
+~~~~~~~~~~~~~
+
+- Fix the documentation of :py:meth:`DataArray.resample` and
+  :py:meth:`Dataset.resample` and explicitly state that a
+  datetime-like dimension is required. (:pull:`3400`)
+  By `Justus Magin <https://github.com/keewis>`_.
+
 .. _whats-new.0.14.0:
 
 v0.14.0 (14 Oct 2019)
