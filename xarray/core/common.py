@@ -988,15 +988,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
 
-        References
-        ----------
-
-        .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
-
         See Also
         --------
         pandas.Series.resample
         pandas.DataFrame.resample
+
+        References
+        ----------
+
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
         # TODO support non-string indexer after removing the old API.
 
