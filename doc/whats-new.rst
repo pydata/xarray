@@ -18,6 +18,11 @@ What's New
 v0.14.1 (unreleased)
 --------------------
 
+Bug fixes
+~~~~~~~~~
+
+- Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.14.0:
 
