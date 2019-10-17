@@ -730,6 +730,23 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             },
         )
 
+    def weighted(self, weights):
+        """
+        Weighted operations.
+        Parameters
+        ----------
+        weights : DataArray
+            An array of weights associated with the values in this Dataset.
+            Each value in the data contributes to the reduction operation
+            according to its associated weight.
+        Note
+        ----
+        Missing values in the weights are treated as 0 (i.e. no weight).
+        """
+
+        return self._weighted_cls(self, weights)
+
+
     def rolling(
         self,
         dim: Mapping[Hashable, int] = None,
