@@ -301,6 +301,19 @@ def test_groupby_drops_nans():
     actual = array.groupby("x1").sum()
     assert_equal(expected, actual)
 
+    # NaT in non-dimensional coordinate
+    array["t"] = (
+        "x",
+        [
+            np.datetime64("2001-01-01"),
+            np.datetime64("2001-01-01"),
+            np.datetime64("NaT"),
+        ],
+    )
+    expected = xr.DataArray(3, [("t", [np.datetime64("2001-01-01")])])
+    actual = array.groupby("t").sum()
+    assert_equal(expected, actual)
+
     # test for repeated coordinate labels
     array = xr.DataArray([0, 1, 2, 4, 3, 4], [("x", [np.nan, 1, 1, np.nan, 2, np.nan])])
     expected = xr.DataArray([3, 3], [("x", [1, 2])])
