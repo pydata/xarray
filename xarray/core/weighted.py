@@ -74,7 +74,7 @@ def _maybe_get_all_dims(
     """
 
     if dims is None:
-        dims = set(dims1) | set(dims2)
+        dims = tuple(sorted(set(dims1) | set(dims2)))
 
     return dims
 
