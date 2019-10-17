@@ -89,6 +89,8 @@ def _get_scheduler(get=None, collection=None):
     try:
         if actual_get is dask.multiprocessing.get:
             return "multiprocessing"
+        else:
+            return "threaded"
     except (AttributeError):
         return "threaded"
 
