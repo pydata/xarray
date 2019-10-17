@@ -54,8 +54,6 @@ class DataArrayWeighted(object):
 
         """
 
-        super(DataArrayWeighted, self).__init__()
-
         from .dataarray import DataArray
 
         msg = "'weights' must be a DataArray"
