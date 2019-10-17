@@ -23,6 +23,14 @@ Bug fixes
 
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+ 
+Documentation
+~~~~~~~~~~~~~
+
+- Fix the documentation of :py:meth:`DataArray.resample` and
+  :py:meth:`Dataset.resample` and explicitly state that a
+  datetime-like dimension is required. (:pull:`3400`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 .. _whats-new.0.14.0:
 
