@@ -11,6 +11,38 @@ Frequently Asked Questions
     import xarray as xr
     np.random.seed(123456)
 
+
+Your documentation keeps mentioning pandas. What is pandas?
+-----------------------------------------------------------
+
+pandas_ is a very popular data analysis package in Python
+with wide usage in many fields. Our API is heavily inspired by pandas —
+this is why there are so many references to pandas.
+
+.. _pandas: https://pandas.pydata.org
+
+
+Do I need to know pandas to use xarray?
+---------------------------------------
+
+No! Our API is heavily inspired by pandas so while knowing pandas will let you
+become productive more quickly, knowledge of pandas is not necessary to use xarray.
+
+
+Should I use xarray instead of pandas?
+--------------------------------------
+
+It's not an either/or choice! xarray provides robust support for converting
+back and forth between the tabular data-structures of pandas and its own
+multi-dimensional data-structures.
+
+That said, you should only bother with xarray if some aspect of data is
+fundamentally multi-dimensional. If your data is unstructured or
+one-dimensional, pandas is usually the right choice: it has better performance
+for common operations such as ``groupby`` and you'll find far more usage
+examples online.
+
+
 Why is pandas not enough?
 -------------------------
 
@@ -23,9 +55,9 @@ natively represented as an array with four dimensions: time, row, column and
 color.
 
 Pandas has historically supported N-dimensional panels, but deprecated them in
-version 0.20 in favor of Xarray data structures.  There are now built-in methods
-on both sides to convert between pandas and Xarray, allowing for more focussed
-development effort.  Xarray objects have a much richer model of dimensionality -
+version 0.20 in favor of Xarray data structures. There are now built-in methods
+on both sides to convert between pandas and Xarray, allowing for more focused
+development effort. Xarray objects have a much richer model of dimensionality -
 if you were using Panels:
 
 - You need to create a new factory type for each dimensionality.
@@ -54,20 +86,6 @@ can you write ``x.sel(time='2000-01-01')`` and  ``x.mean(dim='time')``, but
 operations like ``x - x.mean(dim='time')`` always work, no matter the order
 of the "time" dimension. You never need to reshape arrays (e.g., with
 ``np.newaxis``) to align them for arithmetic operations in xarray.
-
-
-Should I use xarray instead of pandas?
---------------------------------------
-
-It's not an either/or choice! xarray provides robust support for converting
-back and forth between the tabular data-structures of pandas and its own
-multi-dimensional data-structures.
-
-That said, you should only bother with xarray if some aspect of data is
-fundamentally multi-dimensional. If your data is unstructured or
-one-dimensional, pandas is usually the right choice: it has better performance
-for common operations such as ``groupby`` and you'll find far more usage
-examples online.
 
 
 Why don't aggregations return Python scalars?
@@ -212,3 +230,22 @@ would certainly appreciate it. We recommend two citations.
                  doi    = {10.5281/zenodo.59499},
                  url    = {https://doi.org/10.5281/zenodo.59499}
                 }
+
+.. _public api:
+
+What parts of xarray are considered public API?
+-----------------------------------------------
+
+As a rule, only functions/methods documented in our :ref:`api` are considered
+part of xarray's public API. Everything else (in particular, everything in
+``xarray.core`` that is not also exposed in the top level ``xarray`` namespace)
+is considered a private implementation detail that may change at any time.
+
+Objects that exist to facilitate xarray's fluent interface on ``DataArray`` and
+``Dataset`` objects are a special case. For convenience, we document them in
+the API docs, but only their methods and the ``DataArray``/``Dataset``
+methods/properties to construct them (e.g., ``.plot()``, ``.groupby()``,
+``.str``) are considered public API. Constructors and other details of the
+internal classes used to implemented them (i.e.,
+``xarray.plot.plotting._PlotMethods``, ``xarray.core.groupby.DataArrayGroupBy``,
+``xarray.core.accessor_str.StringAccessor``) are not.

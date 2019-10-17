@@ -237,7 +237,7 @@ index labels along a dimension dropped:
 
 .. ipython:: python
 
-    ds.drop(['IN', 'IL'], dim='space')
+    ds.drop(space=['IN', 'IL'])
 
 ``drop`` is both a ``Dataset`` and ``DataArray`` method.
 
@@ -391,14 +391,6 @@ These methods may also be applied to ``Dataset`` objects
   indexing is supported (or if supported, may not be supported efficiently).
   You may find increased performance by loading your data into memory first,
   e.g., with :py:meth:`~xarray.Dataset.load`.
-
-.. note::
-
-  Vectorized indexing is a new feature in v0.10.
-  In older versions of xarray, dimensions of indexers are ignored.
-  Dedicated methods for some advanced indexing use cases,
-  ``isel_points`` and ``sel_points`` are now deprecated.
-  See :ref:`more_advanced_indexing` for their alternative.
 
 .. note::
 

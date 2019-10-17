@@ -8,7 +8,7 @@ class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
 
 
-class _CachedAccessor(object):
+class _CachedAccessor:
     """Custom property-like object (descriptor) for caching accessors."""
 
     def __init__(self, name, accessor):
@@ -19,18 +19,23 @@ class _CachedAccessor(object):
         if obj is None:
             # we're accessing the attribute of the class, i.e., Dataset.geo
             return self._accessor
+
+        try:
+            return obj._accessors[self._name]
+        except TypeError:
+            obj._accessors = {}
+        except KeyError:
+            pass
+
         try:
             accessor_obj = self._accessor(obj)
         except AttributeError:
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            raise RuntimeError('error initializing %r accessor.' % self._name)
-        # Replace the property with the accessor object. Inspired by:
-        # http://www.pydanny.com/cached-property.html
-        # We need to use object.__setattr__ because we overwrite __setattr__ on
-        # AttrAccessMixin.
-        object.__setattr__(obj, self._name, accessor_obj)
+            raise RuntimeError("error initializing %r accessor." % self._name)
+
+        obj._accessors[self._name] = accessor_obj
         return accessor_obj
 
 
@@ -38,13 +43,15 @@ def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
             warnings.warn(
-                'registration of accessor %r under name %r for type %r is '
-                'overriding a preexisting attribute with the same name.'
+                "registration of accessor %r under name %r for type %r is "
+                "overriding a preexisting attribute with the same name."
                 % (accessor, name, cls),
                 AccessorRegistrationWarning,
-                stacklevel=2)
+                stacklevel=2,
+            )
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
+
     return decorator
 
 
@@ -81,7 +88,7 @@ def register_dataset_accessor(name):
         import xarray as xr
 
         @xr.register_dataset_accessor('geo')
-        class GeoAccessor(object):
+        class GeoAccessor:
             def __init__(self, xarray_obj):
                 self._obj = xarray_obj
 

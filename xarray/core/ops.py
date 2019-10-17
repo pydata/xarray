@@ -14,6 +14,7 @@ from .nputils import array_eq, array_ne
 
 try:
     import bottleneck as bn
+
     has_bottleneck = True
 except ImportError:
     # use numpy methods instead
@@ -21,28 +22,43 @@ except ImportError:
     has_bottleneck = False
 
 
-UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
-CMP_BINARY_OPS = ['lt', 'le', 'ge', 'gt']
-NUM_BINARY_OPS = ['add', 'sub', 'mul', 'truediv', 'floordiv', 'mod',
-                  'pow', 'and', 'xor', 'or']
+UNARY_OPS = ["neg", "pos", "abs", "invert"]
+CMP_BINARY_OPS = ["lt", "le", "ge", "gt"]
+NUM_BINARY_OPS = [
+    "add",
+    "sub",
+    "mul",
+    "truediv",
+    "floordiv",
+    "mod",
+    "pow",
+    "and",
+    "xor",
+    "or",
+]
 
 # methods which pass on the numpy return value unchanged
 # be careful not to list methods that we would want to wrap later
-NUMPY_SAME_METHODS = ['item', 'searchsorted']
+NUMPY_SAME_METHODS = ["item", "searchsorted"]
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
-NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate']
-PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
+NUMPY_UNARY_METHODS = ["astype", "argsort", "clip", "conj", "conjugate"]
+PANDAS_UNARY_FUNCTIONS = ["isnull", "notnull"]
 # methods which remove an axis
-REDUCE_METHODS = ['all', 'any']
-NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
-                      'std', 'var', 'median']
-NAN_CUM_METHODS = ['cumsum', 'cumprod']
-BOTTLENECK_ROLLING_METHODS = {'move_sum': 'sum', 'move_mean': 'mean',
-                              'move_std': 'std', 'move_min': 'min',
-                              'move_max': 'max', 'move_var': 'var',
-                              'move_argmin': 'argmin', 'move_argmax': 'argmax',
-                              'move_median': 'median'}
+REDUCE_METHODS = ["all", "any"]
+NAN_REDUCE_METHODS = [
+    "argmax",
+    "argmin",
+    "max",
+    "min",
+    "mean",
+    "prod",
+    "sum",
+    "std",
+    "var",
+    "median",
+]
+NAN_CUM_METHODS = ["cumsum", "cumprod"]
 # TODO: wrap take, dot, sort
 
 
@@ -103,20 +119,6 @@ min_count : int, default None
     If fewer than min_count non-NA values are present the result will
     be NA. New in version 0.10.8: Added with the default being None."""
 
-_ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
-Reduce this {da_or_ds}'s data windows by applying `{name}` along its dimension.
-
-Parameters
-----------
-**kwargs : dict
-    Additional keyword arguments passed on to `{name}`.
-
-Returns
--------
-reduced : {da_or_ds}
-    New {da_or_ds} object with `{name}` applied along its rolling dimnension.
-"""
-
 _COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
 Coarsen this object by applying `{name}` along its dimensions.
 
@@ -157,12 +159,16 @@ def fillna(data, other, join="left", dataset_join="left"):
     """
     from .computation import apply_ufunc
 
-    return apply_ufunc(duck_array_ops.fillna, data, other,
-                       join=join,
-                       dask="allowed",
-                       dataset_join=dataset_join,
-                       dataset_fill_value=np.nan,
-                       keep_attrs=True)
+    return apply_ufunc(
+        duck_array_ops.fillna,
+        data,
+        other,
+        join=join,
+        dask="allowed",
+        dataset_join=dataset_join,
+        dataset_fill_value=np.nan,
+        keep_attrs=True,
+    )
 
 
 def where_method(self, cond, other=dtypes.NA):
@@ -181,14 +187,19 @@ def where_method(self, cond, other=dtypes.NA):
     Same type as caller.
     """
     from .computation import apply_ufunc
+
     # alignment for three arguments is complicated, so don't support it yet
-    join = 'inner' if other is dtypes.NA else 'exact'
-    return apply_ufunc(duck_array_ops.where_method,
-                       self, cond, other,
-                       join=join,
-                       dataset_join=join,
-                       dask='allowed',
-                       keep_attrs=True)
+    join = "inner" if other is dtypes.NA else "exact"
+    return apply_ufunc(
+        duck_array_ops.where_method,
+        self,
+        cond,
+        other,
+        join=join,
+        dataset_join=join,
+        dask="allowed",
+        keep_attrs=True,
+    )
 
 
 def _call_possibly_missing_method(arg, name, args, kwargs):
@@ -196,7 +207,7 @@ def _call_possibly_missing_method(arg, name, args, kwargs):
         method = getattr(arg, name)
     except AttributeError:
         duck_array_ops.fail_on_dask_array_input(arg, func_name=name)
-        if hasattr(arg, 'data'):
+        if hasattr(arg, "data"):
             duck_array_ops.fail_on_dask_array_input(arg.data, func_name=name)
         raise
     else:
@@ -206,6 +217,7 @@ def _call_possibly_missing_method(arg, name, args, kwargs):
 def _values_method_wrapper(name):
     def func(self, *args, **kwargs):
         return _call_possibly_missing_method(self.data, name, args, kwargs)
+
     func.__name__ = name
     func.__doc__ = getattr(np.ndarray, name).__doc__
     return func
@@ -214,6 +226,7 @@ def _values_method_wrapper(name):
 def _method_wrapper(name):
     def func(self, *args, **kwargs):
         return _call_possibly_missing_method(self, name, args, kwargs)
+
     func.__name__ = name
     func.__doc__ = getattr(np.ndarray, name).__doc__
     return func
@@ -231,61 +244,60 @@ def _func_slash_method_wrapper(f, name=None):
             return getattr(self, name)(*args, **kwargs)
         except AttributeError:
             return f(self, *args, **kwargs)
+
     func.__name__ = name
     func.__doc__ = f.__doc__
     return func
 
 
-def rolling_count(rolling):
-
-    rolling_count = rolling._counts()
-    enough_periods = rolling_count >= rolling._min_periods
-    return rolling_count.where(enough_periods)
-
-
 def inject_reduce_methods(cls):
-    methods = ([(name, getattr(duck_array_ops, 'array_%s' % name), False)
-                for name in REDUCE_METHODS] +
-               [(name, getattr(duck_array_ops, name), True)
-                for name in NAN_REDUCE_METHODS] +
-               [('count', duck_array_ops.count, False)])
+    methods = (
+        [
+            (name, getattr(duck_array_ops, "array_%s" % name), False)
+            for name in REDUCE_METHODS
+        ]
+        + [(name, getattr(duck_array_ops, name), True) for name in NAN_REDUCE_METHODS]
+        + [("count", duck_array_ops.count, False)]
+    )
     for name, f, include_skipna in methods:
-        numeric_only = getattr(f, 'numeric_only', False)
-        available_min_count = getattr(f, 'available_min_count', False)
-        min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ''
+        numeric_only = getattr(f, "numeric_only", False)
+        available_min_count = getattr(f, "available_min_count", False)
+        min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ""
 
         func = cls._reduce_method(f, include_skipna, numeric_only)
         func.__name__ = name
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
-            name=name, cls=cls.__name__,
+            name=name,
+            cls=cls.__name__,
             extra_args=cls._reduce_extra_args_docstring.format(name=name),
-            min_count_docs=min_count_docs)
+            min_count_docs=min_count_docs,
+        )
         setattr(cls, name, func)
 
 
 def inject_cum_methods(cls):
-    methods = ([(name, getattr(duck_array_ops, name), True)
-                for name in NAN_CUM_METHODS])
+    methods = [(name, getattr(duck_array_ops, name), True) for name in NAN_CUM_METHODS]
     for name, f, include_skipna in methods:
-        numeric_only = getattr(f, 'numeric_only', False)
+        numeric_only = getattr(f, "numeric_only", False)
         func = cls._reduce_method(f, include_skipna, numeric_only)
         func.__name__ = name
         func.__doc__ = _CUM_DOCSTRING_TEMPLATE.format(
-            name=name, cls=cls.__name__,
-            extra_args=cls._cum_extra_args_docstring.format(name=name))
+            name=name,
+            cls=cls.__name__,
+            extra_args=cls._cum_extra_args_docstring.format(name=name),
+        )
         setattr(cls, name, func)
 
 
 def op_str(name):
-    return '__%s__' % name
+    return "__%s__" % name
 
 
 def get_op(name):
     return getattr(operator, op_str(name))
 
 
-NON_INPLACE_OP = dict((get_op('i' + name), get_op(name))
-                      for name in NUM_BINARY_OPS)
+NON_INPLACE_OP = {get_op("i" + name): get_op(name) for name in NUM_BINARY_OPS}
 
 
 def inplace_to_noninplace_op(f):
@@ -296,16 +308,14 @@ def inject_binary_ops(cls, inplace=False):
     for name in CMP_BINARY_OPS + NUM_BINARY_OPS:
         setattr(cls, op_str(name), cls._binary_op(get_op(name)))
 
-    for name, f in [('eq', array_eq), ('ne', array_ne)]:
+    for name, f in [("eq", array_eq), ("ne", array_ne)]:
         setattr(cls, op_str(name), cls._binary_op(f))
 
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants
-        setattr(cls, op_str('r' + name),
-                cls._binary_op(get_op(name), reflexive=True))
+        setattr(cls, op_str("r" + name), cls._binary_op(get_op(name), reflexive=True))
         if inplace:
-            setattr(cls, op_str('i' + name),
-                    cls._inplace_binary_op(get_op('i' + name)))
+            setattr(cls, op_str("i" + name), cls._inplace_binary_op(get_op("i" + name)))
 
 
 def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
@@ -323,12 +333,11 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
 
     for name in PANDAS_UNARY_FUNCTIONS:
-        f = _func_slash_method_wrapper(
-            getattr(duck_array_ops, name), name=name)
+        f = _func_slash_method_wrapper(getattr(duck_array_ops, name), name=name)
         setattr(cls, name, cls._unary_op(f))
 
-    f = _func_slash_method_wrapper(duck_array_ops.around, name='round')
-    setattr(cls, 'round', cls._unary_op(f))
+    f = _func_slash_method_wrapper(duck_array_ops.around, name="round")
+    setattr(cls, "round", cls._unary_op(f))
 
     if array_only:
         # these methods don't return arrays of the same shape as the input, so
@@ -340,62 +349,11 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
     inject_cum_methods(cls)
 
 
-def inject_bottleneck_rolling_methods(cls):
-    # standard numpy reduce methods
-    methods = [(name, getattr(duck_array_ops, name))
-               for name in NAN_REDUCE_METHODS]
-    for name, f in methods:
-        func = cls._reduce_method(f)
-        func.__name__ = name
-        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__, da_or_ds='DataArray')
-        setattr(cls, name, func)
-
-    # bottleneck doesn't offer rolling_count, so we construct it ourselves
-    func = rolling_count
-    func.__name__ = 'count'
-    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-        name=func.__name__, da_or_ds='DataArray')
-    setattr(cls, 'count', func)
-
-    # bottleneck rolling methods
-    if not has_bottleneck:
-        return
-
-    for bn_name, method_name in BOTTLENECK_ROLLING_METHODS.items():
-        f = getattr(bn, bn_name)
-        func = cls._bottleneck_reduce(f)
-        func.__name__ = method_name
-        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__, da_or_ds='DataArray')
-        setattr(cls, method_name, func)
-
-
-def inject_datasetrolling_methods(cls):
-    # standard numpy reduce methods
-    methods = [(name, getattr(duck_array_ops, name))
-               for name in NAN_REDUCE_METHODS]
-    for name, f in methods:
-        func = cls._reduce_method(f)
-        func.__name__ = name
-        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__, da_or_ds='Dataset')
-        setattr(cls, name, func)
-    # bottleneck doesn't offer rolling_count, so we construct it ourselves
-    func = rolling_count
-    func.__name__ = 'count'
-    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-        name=func.__name__, da_or_ds='Dataset')
-    setattr(cls, 'count', func)
-
-
 def inject_coarsen_methods(cls):
     # standard numpy reduce methods
-    methods = [(name, getattr(duck_array_ops, name))
-               for name in NAN_REDUCE_METHODS]
+    methods = [(name, getattr(duck_array_ops, name)) for name in NAN_REDUCE_METHODS]
     for name, f in methods:
         func = cls._reduce_method(f)
         func.__name__ = name
-        func.__doc__ = _COARSEN_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__)
+        func.__doc__ = _COARSEN_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
         setattr(cls, name, func)

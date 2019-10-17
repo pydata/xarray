@@ -1,0 +1,34 @@
+steps:
+
+- template: install.yml
+
+- bash: |
+    source activate xarray-tests
+    python -OO -c "import xarray"
+  displayName: Import xarray
+
+# Work around for allowed test failures:
+# https://github.com/microsoft/azure-pipelines-tasks/issues/9302
+- bash: |
+    source activate xarray-tests
+    pytest \
+    --junitxml=junit/test-results.xml \
+    --cov=xarray \
+    --cov-report=xml \
+    $(pytest_extra_flags) || [ "$ALLOW_FAILURE" = "true" ]
+  displayName: Run tests
+
+- bash: |
+    curl https://codecov.io/bash > codecov.sh
+    bash codecov.sh -t 688f4d53-31bb-49b5-8370-4ce6f792cf3d
+  displayName: Upload coverage to codecov.io
+
+# TODO: publish coverage results to Azure, once we can merge them across
+# multiple jobs: https://stackoverflow.com/questions/56776185
+
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFiles: '**/test-*.xml'
+    failTaskOnFailedTests: false
+    testRunTitle: '$(Agent.JobName)'

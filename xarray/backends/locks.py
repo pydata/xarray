@@ -1,7 +1,7 @@
 import multiprocessing
 import threading
-from typing import Any, MutableMapping
 import weakref
+from typing import Any, MutableMapping
 
 try:
     from dask.utils import SerializableLock
@@ -21,7 +21,7 @@ HDF5_LOCK = SerializableLock()
 NETCDFC_LOCK = SerializableLock()
 
 
-_FILE_LOCKS = weakref.WeakValueDictionary()  # type: MutableMapping[Any, threading.Lock]  # noqa
+_FILE_LOCKS: MutableMapping[Any, threading.Lock] = weakref.WeakValueDictionary()
 
 
 def _get_threaded_lock(key):
@@ -41,9 +41,9 @@ def _get_multiprocessing_lock(key):
 
 _LOCK_MAKERS = {
     None: _get_threaded_lock,
-    'threaded': _get_threaded_lock,
-    'multiprocessing': _get_multiprocessing_lock,
-    'distributed': DistributedLock,
+    "threaded": _get_threaded_lock,
+    "multiprocessing": _get_multiprocessing_lock,
+    "distributed": DistributedLock,
 }
 
 
@@ -72,29 +72,24 @@ def _get_scheduler(get=None, collection=None):
     dask.base.get_scheduler
     """
     try:
-        # dask 0.18.1 and later
-        from dask.base import get_scheduler
-        actual_get = get_scheduler(get, collection)
+        import dask  # noqa: F401
     except ImportError:
-        try:
-            from dask.utils import effective_get
-            actual_get = effective_get(get, collection)
-        except ImportError:
-            return None
+        return None
+
+    actual_get = dask.base.get_scheduler(get, collection)
 
     try:
         from dask.distributed import Client
+
         if isinstance(actual_get.__self__, Client):
-            return 'distributed'
+            return "distributed"
     except (ImportError, AttributeError):
-        try:
-            import dask.multiprocessing
-            if actual_get == dask.multiprocessing.get:
-                return 'multiprocessing'
-            else:
-                return 'threaded'
-        except ImportError:
-            return 'threaded'
+        pass
+
+    if actual_get is dask.multiprocessing.get:
+        return "multiprocessing"
+    else:
+        return "threaded"
 
 
 def get_write_lock(key):
@@ -135,7 +130,7 @@ def acquire(lock, blocking=True):
         return lock.acquire(blocking)
 
 
-class CombinedLock(object):
+class CombinedLock:
     """A combination of multiple locks.
 
     Like a locked door, a CombinedLock is locked if any of its constituent
@@ -167,7 +162,7 @@ class CombinedLock(object):
         return "CombinedLock(%r)" % list(self.locks)
 
 
-class DummyLock(object):
+class DummyLock:
     """DummyLock provides the lock API without any actual locking."""
 
     def acquire(self, blocking=True):

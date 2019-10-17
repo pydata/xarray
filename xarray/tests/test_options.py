@@ -23,17 +23,17 @@ def test_display_width():
 
 def test_arithmetic_join():
     with pytest.raises(ValueError):
-        xarray.set_options(arithmetic_join='invalid')
-    with xarray.set_options(arithmetic_join='exact'):
-        assert OPTIONS['arithmetic_join'] == 'exact'
+        xarray.set_options(arithmetic_join="invalid")
+    with xarray.set_options(arithmetic_join="exact"):
+        assert OPTIONS["arithmetic_join"] == "exact"
 
 
 def test_enable_cftimeindex():
     with pytest.raises(ValueError):
         xarray.set_options(enable_cftimeindex=None)
-    with pytest.warns(FutureWarning, match='no-op'):
+    with pytest.warns(FutureWarning, match="no-op"):
         with xarray.set_options(enable_cftimeindex=True):
-            assert OPTIONS['enable_cftimeindex']
+            assert OPTIONS["enable_cftimeindex"]
 
 
 def test_file_cache_maxsize():
@@ -47,41 +47,39 @@ def test_file_cache_maxsize():
 
 def test_keep_attrs():
     with pytest.raises(ValueError):
-        xarray.set_options(keep_attrs='invalid_str')
+        xarray.set_options(keep_attrs="invalid_str")
     with xarray.set_options(keep_attrs=True):
-        assert OPTIONS['keep_attrs']
+        assert OPTIONS["keep_attrs"]
     with xarray.set_options(keep_attrs=False):
-        assert not OPTIONS['keep_attrs']
-    with xarray.set_options(keep_attrs='default'):
+        assert not OPTIONS["keep_attrs"]
+    with xarray.set_options(keep_attrs="default"):
         assert _get_keep_attrs(default=True)
         assert not _get_keep_attrs(default=False)
 
 
 def test_nested_options():
-    original = OPTIONS['display_width']
+    original = OPTIONS["display_width"]
     with xarray.set_options(display_width=1):
-        assert OPTIONS['display_width'] == 1
+        assert OPTIONS["display_width"] == 1
         with xarray.set_options(display_width=2):
-            assert OPTIONS['display_width'] == 2
-        assert OPTIONS['display_width'] == 1
-    assert OPTIONS['display_width'] == original
+            assert OPTIONS["display_width"] == 2
+        assert OPTIONS["display_width"] == 1
+    assert OPTIONS["display_width"] == original
 
 
 def create_test_dataset_attrs(seed=0):
     ds = create_test_data(seed)
-    ds.attrs = {'attr1': 5, 'attr2': 'history',
-                'attr3': {'nested': 'more_info'}}
+    ds.attrs = {"attr1": 5, "attr2": "history", "attr3": {"nested": "more_info"}}
     return ds
 
 
-def create_test_dataarray_attrs(seed=0, var='var1'):
+def create_test_dataarray_attrs(seed=0, var="var1"):
     da = create_test_data(seed)[var]
-    da.attrs = {'attr1': 5, 'attr2': 'history',
-                'attr3': {'nested': 'more_info'}}
+    da.attrs = {"attr1": 5, "attr2": "history", "attr3": {"nested": "more_info"}}
     return da
 
 
-class TestAttrRetention(object):
+class TestAttrRetention:
     def test_dataset_attr_retention(self):
         # Use .mean() for all tests: a typical reduction operation
         ds = create_test_dataset_attrs()
@@ -90,7 +88,7 @@ class TestAttrRetention(object):
         # Test default behaviour
         result = ds.mean()
         assert result.attrs == {}
-        with xarray.set_options(keep_attrs='default'):
+        with xarray.set_options(keep_attrs="default"):
             result = ds.mean()
             assert result.attrs == {}
 
@@ -110,7 +108,7 @@ class TestAttrRetention(object):
         # Test default behaviour
         result = da.mean()
         assert result.attrs == {}
-        with xarray.set_options(keep_attrs='default'):
+        with xarray.set_options(keep_attrs="default"):
             result = da.mean()
             assert result.attrs == {}
 
@@ -123,44 +121,43 @@ class TestAttrRetention(object):
             assert result.attrs == {}
 
     def test_groupby_attr_retention(self):
-        da = xarray.DataArray([1, 2, 3], [('x', [1, 1, 2])])
-        da.attrs = {'attr1': 5, 'attr2': 'history',
-                    'attr3': {'nested': 'more_info'}}
+        da = xarray.DataArray([1, 2, 3], [("x", [1, 1, 2])])
+        da.attrs = {"attr1": 5, "attr2": "history", "attr3": {"nested": "more_info"}}
         original_attrs = da.attrs
 
         # Test default behaviour
-        result = da.groupby('x').sum(keep_attrs=True)
+        result = da.groupby("x").sum(keep_attrs=True)
         assert result.attrs == original_attrs
-        with xarray.set_options(keep_attrs='default'):
-            result = da.groupby('x').sum(keep_attrs=True)
+        with xarray.set_options(keep_attrs="default"):
+            result = da.groupby("x").sum(keep_attrs=True)
             assert result.attrs == original_attrs
 
         with xarray.set_options(keep_attrs=True):
-            result1 = da.groupby('x')
+            result1 = da.groupby("x")
             result = result1.sum()
             assert result.attrs == original_attrs
 
         with xarray.set_options(keep_attrs=False):
-            result = da.groupby('x').sum()
+            result = da.groupby("x").sum()
             assert result.attrs == {}
 
     def test_concat_attr_retention(self):
         ds1 = create_test_dataset_attrs()
         ds2 = create_test_dataset_attrs()
-        ds2.attrs = {'wrong': 'attributes'}
+        ds2.attrs = {"wrong": "attributes"}
         original_attrs = ds1.attrs
 
         # Test default behaviour of keeping the attrs of the first
         # dataset in the supplied list
         # global keep_attrs option current doesn't affect concat
-        result = concat([ds1, ds2], dim='dim1')
+        result = concat([ds1, ds2], dim="dim1")
         assert result.attrs == original_attrs
 
     @pytest.mark.xfail
     def test_merge_attr_retention(self):
-        da1 = create_test_dataarray_attrs(var='var1')
-        da2 = create_test_dataarray_attrs(var='var2')
-        da2.attrs = {'wrong': 'attributes'}
+        da1 = create_test_dataarray_attrs(var="var1")
+        da2 = create_test_dataarray_attrs(var="var2")
+        da2.attrs = {"wrong": "attributes"}
         original_attrs = da1.attrs
 
         # merge currently discards attrs, and the global keep_attrs

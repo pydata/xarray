@@ -71,6 +71,18 @@ instance, we can create the same dates and DataArray we created above using:
    dates = xr.cftime_range(start='0001', periods=24, freq='MS', calendar='noleap')
    da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'], name='foo')
 
+With :py:meth:`~xarray.CFTimeIndex.strftime` we can also easily generate formatted strings from
+the datetime values of a :py:class:`~xarray.CFTimeIndex` directly or through the
+:py:meth:`~xarray.DataArray.dt` accessor for a :py:class:`~xarray.DataArray`
+using the same formatting as the standard `datetime.strftime`_ convention .
+
+.. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+
+.. ipython:: python
+
+    dates.strftime('%c')
+    da['time'].dt.strftime('%Y%m%d')
+
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - `Partial datetime string indexing`_ using strictly `ISO 8601-format`_ partial
@@ -124,6 +136,12 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
    da.to_netcdf('example-no-leap.nc')
    xr.open_dataset('example-no-leap.nc')
+
+.. ipython:: python
+    :suppress:
+
+    import os
+    os.remove('example-no-leap.nc')
 
 - And resampling along the time dimension for data indexed by a :py:class:`~xarray.CFTimeIndex`:
 
