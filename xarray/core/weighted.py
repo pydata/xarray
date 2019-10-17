@@ -38,7 +38,7 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     """
 
 _SUM_OF_WEIGHTS_DOCSTRING = """
-    Calcualte the sum of weights, accounting for missing values
+    Calculate the sum of weights, accounting for missing values
 
     Parameters
     ----------
@@ -68,7 +68,7 @@ def _maybe_get_all_dims(
     dims1: Tuple[Hashable, ...],
     dims2: Tuple[Hashable, ...],
 ):
-    """ the union of all dimensions
+    """ the union of dims1 and dims2 if dims is None
 
     `dims=None` behaves differently in `dot` and `sum`, so we have to apply
     `dot` over the union of the dimensions
@@ -95,7 +95,7 @@ def _sum_of_weights(
     # need to infer dims as we use `dot`
     dims = _maybe_get_all_dims(dim, da.dims, weights.dims)
 
-    # use `dot` to avoid creating large da's
+    # use `dot` to avoid creating large DataArrays (if da and weights do not share all dims)
     sum_of_weights = dot(mask, weights, dims=dims)
 
     # find all weights that are valid (not 0)
@@ -173,7 +173,7 @@ class Weighted:
 
     def __init__(self, obj, weights) -> None:
         """
-        Weighted operations for DataArray.
+        Create a Weighted object
 
         Parameters
         ----------
@@ -199,7 +199,7 @@ class Weighted:
         self.weights = weights.fillna(0)
 
     def __repr__(self):
-        """provide a nice str repr of our weighted object"""
+        """provide a nice str repr of our Weighted object"""
 
         msg = "{klass} with weights along dimensions: {weight_dims}"
         return msg.format(
