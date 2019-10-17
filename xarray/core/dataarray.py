@@ -8,8 +8,7 @@ import pandas as pd
 
 from ..plot.plot import _PlotMethods
 from . import (
-    computation, dtypes, groupby, indexing, ops, resample, rolling, utils,
-    weighted)
+    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
@@ -161,7 +160,6 @@ class DataArray(AbstractArray, DataWithCoords):
     _rolling_cls = rolling.DataArrayRolling
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
-    _weighted_cls = weighted.DataArrayWeighted
 
     dt = property(DatetimeAccessor)
 
