@@ -321,7 +321,7 @@ class GroupBy(SupportsArithmetic):
         full_index = None
 
         if bins is not None:
-            if np.isnan(bins).all():
+            if duck_array_ops.isnull(bins).all():
                 raise ValueError("All bin edges are NaN.")
             binned = pd.cut(group.values, bins, **cut_kwargs)
             new_dim_name = group.name + "_bins"
