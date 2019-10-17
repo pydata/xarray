@@ -31,6 +31,7 @@ dependencies:
   - numba=0.44
   - numpy=1.14
   - pandas=0.24
+  # - pint  # See py36-min-nep18.yml
   - pip
   - pseudonetcdf=3.0
   - pydap=3.2

@@ -27,6 +27,7 @@ dependencies:
   - numba
   - numpy
   - pandas
+  - pint
   - pip
   - pseudonetcdf
   - pydap
