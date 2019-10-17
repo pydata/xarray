@@ -68,7 +68,7 @@ def test_weigted_non_DataArray_weights():
 
     ds = Dataset(dict(data=[1, 2]))
     with raises_regex(AssertionError, "'weights' must be a DataArray"):
-        da.weighted([1, 2])
+        ds.weighted([1, 2])
 
 
 @pytest.mark.parametrize("weights", ([1, 2], [np.nan, 2], [np.nan, np.nan]))

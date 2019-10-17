@@ -746,7 +746,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return self._weighted_cls(self, weights)
 
-
     def rolling(
         self,
         dim: Mapping[Hashable, int] = None,

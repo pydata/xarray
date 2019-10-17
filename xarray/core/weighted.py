@@ -48,7 +48,7 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
         Axis(es) over which to sum the weights. Only one of the 'dim' and
         'axis' arguments can be supplied. If neither are supplied, then
         the weights are summed over all axes.
-    
+
     Returns
     -------
     reduced : {cls}
@@ -64,7 +64,9 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
 
 
 def _maybe_get_all_dims(
-    dims: Optional[Union[Hashable, Iterable[Hashable]]], dims1: Tuple[Hashable, ...], dims2: Tuple[Hashable, ...]
+    dims: Optional[Union[Hashable, Iterable[Hashable]]],
+    dims1: Tuple[Hashable, ...],
+    dims2: Tuple[Hashable, ...],
 ):
     """ the union of all dimensions
 
@@ -251,7 +253,7 @@ DataArrayWeighted.sum.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
 
 class DatasetWeighted(Weighted):
     def _dataset_implementation(self, func, **kwargs) -> "Dataset":
-        
+
         from .dataset import Dataset
 
         weighted = {}
