@@ -11,10 +11,6 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     ----------
     dim : str or sequence of str, optional
         Dimension(s) over which to apply the weighted `{fcn}`.
-    axis : int or sequence of int, optional
-        Axis(es) over which to apply the weighted `{fcn}`. Only one of the
-        'dim' and 'axis' arguments can be supplied. If neither are supplied,
-        then the weighted `{fcn}` is calculated over all axes.
     skipna : bool, optional
         If True, skip missing values (as marked by NaN). By default, only
         skips missing values for float dtypes; other dtypes either do not
@@ -44,10 +40,6 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     ----------
     dim : str or sequence of str, optional
         Dimension(s) over which to sum the weights.
-    axis : int or sequence of int, optional
-        Axis(es) over which to sum the weights. Only one of the 'dim' and
-        'axis' arguments can be supplied. If neither are supplied, then
-        the weights are summed over all axes.
 
     Returns
     -------
@@ -56,11 +48,6 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
 
 
     """
-
-
-# functions for weighted operations for one DataArray
-# NOTE: weights must not contain missing values (this is taken care of in the
-# DataArrayWeighted and DatasetWeighted cls)
 
 
 def _maybe_get_all_dims(
@@ -79,75 +66,6 @@ def _maybe_get_all_dims(
         dims = tuple(sorted(set(dims1) | set(dims2)))
 
     return dims
-
-
-def _sum_of_weights(
-    da: "DataArray",
-    weights: "DataArray",
-    dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-    axis=None,
-) -> "DataArray":
-    """ Calcualte the sum of weights, accounting for missing values """
-
-    # we need to mask DATA values that are nan; else the weights are wrong
-    mask = where(da.notnull(), 1, 0)  # binary mask
-
-    # need to infer dims as we use `dot`
-    dims = _maybe_get_all_dims(dim, da.dims, weights.dims)
-
-    # use `dot` to avoid creating large DataArrays (if da and weights do not share all dims)
-    sum_of_weights = dot(mask, weights, dims=dims)
-
-    # find all weights that are valid (not 0)
-    valid_weights = sum_of_weights != 0.0
-
-    # set invalid weights to nan
-    return sum_of_weights.where(valid_weights)
-
-
-def _weighted_sum(
-    da: "DataArray",
-    weights: "DataArray",
-    dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-    axis=None,
-    skipna: Optional[bool] = None,
-    **kwargs
-) -> "DataArray":
-    """Reduce a DataArray by a by a weighted `sum` along some dimension(s)."""
-
-    # need to infer dims as we use `dot`
-    dims = _maybe_get_all_dims(dim, da.dims, weights.dims)
-
-    # use `dot` to avoid creating large da's
-
-    # need to mask invalid DATA as dot does not implement skipna
-    if skipna or skipna is None:
-        return where(da.isnull(), 0.0, da).dot(weights, dims=dims)
-
-    return dot(da, weights, dims=dims)
-
-
-def _weighted_mean(
-    da: "DataArray",
-    weights: "DataArray",
-    dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-    axis=None,
-    skipna: Optional[bool] = None,
-    **kwargs
-) -> "DataArray":
-    """Reduce a DataArray by a weighted `mean` along some dimension(s)."""
-
-    # get weighted sum
-    weighted_sum = _weighted_sum(
-        da, weights, dim=dim, axis=axis, skipna=skipna, **kwargs
-    )
-
-    # get the sum of weights
-    sum_of_weights = _sum_of_weights(da, weights, dim=dim, axis=axis)
-
-    # calculate weighted mean
-    return weighted_sum / sum_of_weights
-
 
 class Weighted:
     """A object that implements weighted operations.
@@ -168,10 +86,14 @@ class Weighted:
         ...
 
     @overload
-    def __init__(self, obj: "Dataset", weights: "DataArray") -> None:
+    def __init__(
+        self, obj: "Dataset", weights: "DataArray"
+    ) -> None:  # noqa: F811 TODO: remove once pyflakes/ flake8 on azure is updated
         ...
 
-    def __init__(self, obj, weights) -> None:
+    def __init__(
+        self, obj, weights
+    ) -> None:  # noqa: F811 TODO: remove once pyflakes/ flake8 on azure is updated
         """
         Create a Weighted object
 
@@ -198,6 +120,76 @@ class Weighted:
         self.obj = obj
         self.weights = weights.fillna(0)
 
+    def _sum_of_weights(
+        self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
+    ) -> "DataArray":
+        """ Calculate the sum of weights, accounting for missing values """
+
+        # we need to mask DATA values that are nan; else the weights are wrong
+        mask = da.isnull()
+
+        # need to infer dims as we use `dot`
+        dims = _maybe_get_all_dims(dim, da.dims, self.weights.dims)
+
+        # use `dot` to avoid creating large DataArrays (if da and weights do not share all dims)
+        sum_of_weights = dot(mask, self.weights, dims=dims)
+
+        # find all weights that are valid (not 0)
+        valid_weights = sum_of_weights != 0.0
+
+        # set invalid weights to nan
+        return sum_of_weights.where(valid_weights)
+
+    def _weighted_sum(
+        self,
+        da: "DataArray",
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+        **kwargs
+    ) -> "DataArray":
+        """Reduce a DataArray by a by a weighted `sum` along some dimension(s)."""
+
+        # need to infer dims as we use `dot`
+        dims = _maybe_get_all_dims(dim, da.dims, self.weights.dims)
+
+        # use `dot` to avoid creating large da's
+
+        # need to mask invalid DATA as dot does not implement skipna
+        if skipna or skipna is None:
+            return da.fillna(0.).dot(self.weights, dims=dims)
+
+        return dot(da, self.weights, dims=dims)
+
+    def _weighted_mean(
+        self,
+        da: "DataArray",
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+        **kwargs
+    ) -> "DataArray":
+        """Reduce a DataArray by a weighted `mean` along some dimension(s)."""
+
+        # get weighted sum
+        weighted_sum = self._weighted_sum(da, dim=dim, skipna=skipna, **kwargs)
+
+        # get the sum of weights
+        sum_of_weights = self._sum_of_weights(da, dim=dim)
+
+        # calculate weighted mean
+        return weighted_sum / sum_of_weights
+
+    # def _implementation(self, func, **kwargs):
+
+    #     msg = "Use 'Dataset.weighted' or 'DataArray.weighted'"
+
+    #     raise NotImplementedError(msg)
+
+
+    def sum(self, dim=None, skipna=None):
+
+        return self._implementation(self._weighted_sum, dim=None, skipna=None)
+
+
     def __repr__(self):
         """provide a nice str repr of our Weighted object"""
 
@@ -208,35 +200,35 @@ class Weighted:
 
 
 class DataArrayWeighted(Weighted):
+
+
+    def _implementation(self, func, **kwargs):
+
+        return func(self.obj, **kwargs)
+
     def sum_of_weights(
-        self, dim: Optional[Union[Hashable, Iterable[Hashable]]] = None, axis=None
+        self, dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
     ) -> "DataArray":
 
-        return _sum_of_weights(self.obj, self.weights, dim=dim, axis=axis)
+        return self._sum_of_weights(self.obj, dim=dim)
 
-    def sum(
-        self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        axis=None,
-        skipna: Optional[bool] = None,
-        **kwargs
-    ) -> "DataArray":
+    # def sum(
+    #     self,
+    #     dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+    #     skipna: Optional[bool] = None,
+    #     **kwargs
+    # ) -> "DataArray":
 
-        return _weighted_sum(
-            self.obj, self.weights, dim=dim, axis=axis, skipna=skipna, **kwargs
-        )
+    #     return self._weighted_sum(self.obj, dim=dim, skipna=skipna, **kwargs)
 
     def mean(
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        axis=None,
         skipna: Optional[bool] = None,
         **kwargs
     ) -> "DataArray":
 
-        return _weighted_mean(
-            self.obj, self.weights, dim=dim, axis=axis, skipna=skipna, **kwargs
-        )
+        return self._weighted_mean(self.obj, dim=dim, skipna=skipna, **kwargs)
 
 
 # add docstrings
@@ -259,41 +251,54 @@ class DatasetWeighted(Weighted):
         weighted = {}
         for key, da in self.obj.data_vars.items():
 
-            weighted[key] = func(da, self.weights, **kwargs)
+            weighted[key] = func(da, **kwargs)
 
         return Dataset(weighted, coords=self.obj.coords)
+
+
+    def _implementation(self, func, **kwargs) -> "Dataset":
+
+        from .dataset import Dataset
+
+        weighted = {}
+        for key, da in self.obj.data_vars.items():
+
+            weighted[key] = func(da, **kwargs)
+
+        return Dataset(weighted, coords=self.obj.coords)
+
+
+
+
 
     def sum_of_weights(
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        axis=None,
         skipna: Optional[bool] = None,
     ) -> "Dataset":
 
-        return self._dataset_implementation(_sum_of_weights, dim=dim, axis=axis)
+        return self._dataset_implementation(self._sum_of_weights, dim=dim)
 
-    def sum(
-        self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        axis=None,
-        skipna: Optional[bool] = None,
-        **kwargs
-    ) -> "Dataset":
+    # def sum(
+    #     self,
+    #     dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+    #     skipna: Optional[bool] = None,
+    #     **kwargs
+    # ) -> "Dataset":
 
-        return self._dataset_implementation(
-            _weighted_sum, dim=dim, axis=axis, skipna=skipna, **kwargs
-        )
+    #     return self._dataset_implementation(
+    #         self._weighted_sum, dim=dim, skipna=skipna, **kwargs
+    #     )
 
     def mean(
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        axis=None,
         skipna: Optional[bool] = None,
         **kwargs
     ) -> "Dataset":
 
         return self._dataset_implementation(
-            _weighted_mean, dim=dim, axis=axis, skipna=skipna, **kwargs
+            self._weighted_mean, dim=dim, skipna=skipna, **kwargs
         )
 
 
