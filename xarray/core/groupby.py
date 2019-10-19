@@ -13,6 +13,7 @@ from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
+from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -970,7 +971,7 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions):
+class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions, IncludeCumMethods):
     __slots__ = ()
 
 
@@ -1108,5 +1109,5 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
         return self.map(lambda ds: ds.assign(**kwargs))
 
 
-class DatasetGroupBy(DatasetGroupByBase, DatasetGroupByReductions):
+class DatasetGroupBy(DatasetGroupByBase, DatasetGroupByReductions, IncludeCumMethods):
     __slots__ = ()

@@ -1918,4 +1918,23 @@ class TestDatasetResample:
         assert_identical(expected, actual)
 
 
+def test_groupby_cumsum():
+    ds = xr.Dataset(
+        {"foo": (("x",), [7, 3, 1, 1, 1, 1, 1])},
+        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
+    )
+    actual = ds.groupby("group_id").cumsum(dim="x")
+    expected = xr.Dataset(
+        {
+            "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
+            "group_id": (("x",), [0, 0, 1, 1, 2, 2, 2]),
+        },
+        coords={"x": [0, 1, 2, 3, 4, 5, 6]},
+    )
+    assert_identical(expected, actual)
+
+    actual = ds.foo.groupby(ds.group_id).cumsum(dim="x")
+    assert_identical(expected.foo, actual)
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
