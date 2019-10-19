@@ -859,3 +859,4 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
 ops.inject_reduce_methods(DatasetGroupBy)
 ops.inject_binary_ops(DatasetGroupBy)
+ops.inject_cum_methods(DatasetGroupBy)
