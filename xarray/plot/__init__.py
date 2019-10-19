@@ -1,5 +1,6 @@
 from .facetgrid import FacetGrid
 from .plot import contour, contourf, hist, imshow, line, pcolormesh, plot, step
+from .dataset_plot import scatter
 
 __all__ = [
     "plot",
@@ -11,4 +12,5 @@ __all__ = [
     "imshow",
     "pcolormesh",
     "FacetGrid",
+    "scatter",
 ]

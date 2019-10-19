@@ -6,6 +6,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes, merge
+
 from . import (
     InaccessibleArray,
     assert_array_equal,
@@ -41,8 +42,10 @@ def test_concat_compat():
     for var in ["has_x", "no_x_y"]:
         assert "y" not in result[var]
 
+    with raises_regex(ValueError, "coordinates in some datasets but not others"):
+        concat([ds1, ds2], dim="q")
     with raises_regex(ValueError, "'q' is not present in all datasets"):
-        concat([ds1, ds2], dim="q", data_vars="all", compat="broadcast_equals")
+        concat([ds2, ds1], dim="q")
 
 
 class TestConcatDataset:
@@ -64,6 +67,22 @@ class TestConcatDataset:
     def test_concat_simple(self, data, dim, coords):
         datasets = [g for _, g in data.groupby(dim, squeeze=False)]
         assert_identical(data, concat(datasets, dim, coords=coords))
+
+    def test_concat_merge_variables_present_in_some_datasets(self, data):
+        # coordinates present in some datasets but not others
+        ds1 = Dataset(data_vars={"a": ("y", [0.1])}, coords={"x": 0.1})
+        ds2 = Dataset(data_vars={"a": ("y", [0.2])}, coords={"z": 0.2})
+        actual = concat([ds1, ds2], dim="y", coords="minimal")
+        expected = Dataset({"a": ("y", [0.1, 0.2])}, coords={"x": 0.1, "z": 0.2})
+        assert_identical(expected, actual)
+
+        # data variables present in some datasets but not others
+        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
+        data0, data1 = deepcopy(split_data)
+        data1["foo"] = ("bar", np.random.randn(10))
+        actual = concat([data0, data1], "dim1")
+        expected = data.copy().assign(foo=data1.foo)
+        assert_identical(expected, actual)
 
     def test_concat_2(self, data):
         dim = "dim2"
@@ -89,7 +108,11 @@ class TestConcatDataset:
             assert_equal(data["extra"], actual["extra"])
 
     def test_concat(self, data):
-        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
+        split_data = [
+            data.isel(dim1=slice(3)),
+            data.isel(dim1=3),
+            data.isel(dim1=slice(4, None)),
+        ]
         assert_identical(data, concat(split_data, "dim1"))
 
     def test_concat_dim_precedence(self, data):
@@ -183,11 +206,6 @@ class TestConcatDataset:
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
 
-        with raises_regex(ValueError, "present in some datasets"):
-            data0, data1 = deepcopy(split_data)
-            data1["foo"] = ("bar", np.random.randn(10))
-            concat([data0, data1], "dim1")
-
         with raises_regex(ValueError, "compat.* invalid"):
             concat(split_data, "dim1", compat="foobar")
 
@@ -204,7 +222,7 @@ class TestConcatDataset:
         ds1 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]})
         ds2 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]})
 
-        expected = dict()
+        expected = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},
@@ -417,7 +435,7 @@ class TestConcatDataArray:
             {"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]}
         ).to_array()
 
-        expected = dict()
+        expected = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},

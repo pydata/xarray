@@ -1,7 +1,5 @@
 import os
 import warnings
-from collections import OrderedDict
-from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -245,7 +243,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     if cache is None:
         cache = chunks is None
 
-    coords = OrderedDict()
+    coords = {}
 
     # Get bands
     if riods.count < 1:
@@ -253,18 +251,14 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     coords["band"] = np.asarray(riods.indexes)
 
     # Get coordinates
-    if LooseVersion(rasterio.__version__) < "1.0":
-        transform = riods.affine
-    else:
-        transform = riods.transform
-    if transform.is_rectilinear:
+    if riods.transform.is_rectilinear:
         # 1d coordinates
         parse = True if parse_coordinates is None else parse_coordinates
         if parse:
             nx, ny = riods.width, riods.height
             # xarray coordinates are pixel centered
-            x, _ = (np.arange(nx) + 0.5, np.zeros(nx) + 0.5) * transform
-            _, y = (np.zeros(ny) + 0.5, np.arange(ny) + 0.5) * transform
+            x, _ = (np.arange(nx) + 0.5, np.zeros(nx) + 0.5) * riods.transform
+            _, y = (np.zeros(ny) + 0.5, np.arange(ny) + 0.5) * riods.transform
             coords["y"] = y
             coords["x"] = x
     else:
@@ -281,13 +275,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             )
 
     # Attributes
-    attrs = dict()
+    attrs = {}
     # Affine transformation matrix (always available)
     # This describes coefficients mapping pixel coordinates to CRS
     # For serialization store as tuple of 6 floats, the last row being
     # always (0, 0, 1) per definition (see
     # https://github.com/sgillies/affine)
-    attrs["transform"] = tuple(transform)[:6]
+    attrs["transform"] = tuple(riods.transform)[:6]
     if hasattr(riods, "crs") and riods.crs:
         # CRS is a dict-like object specific to rasterio
         # If CRS is not None, we convert it back to a PROJ4 string using

@@ -2,7 +2,7 @@ import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenDict
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
@@ -66,7 +66,7 @@ class NioDataStore(AbstractDataStore):
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
-        return FrozenOrderedDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 

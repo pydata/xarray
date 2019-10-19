@@ -11,6 +11,38 @@ Frequently Asked Questions
     import xarray as xr
     np.random.seed(123456)
 
+
+Your documentation keeps mentioning pandas. What is pandas?
+-----------------------------------------------------------
+
+pandas_ is a very popular data analysis package in Python
+with wide usage in many fields. Our API is heavily inspired by pandas —
+this is why there are so many references to pandas.
+
+.. _pandas: https://pandas.pydata.org
+
+
+Do I need to know pandas to use xarray?
+---------------------------------------
+
+No! Our API is heavily inspired by pandas so while knowing pandas will let you
+become productive more quickly, knowledge of pandas is not necessary to use xarray.
+
+
+Should I use xarray instead of pandas?
+--------------------------------------
+
+It's not an either/or choice! xarray provides robust support for converting
+back and forth between the tabular data-structures of pandas and its own
+multi-dimensional data-structures.
+
+That said, you should only bother with xarray if some aspect of data is
+fundamentally multi-dimensional. If your data is unstructured or
+one-dimensional, pandas is usually the right choice: it has better performance
+for common operations such as ``groupby`` and you'll find far more usage
+examples online.
+
+
 Why is pandas not enough?
 -------------------------
 
@@ -24,6 +56,31 @@ Higher dimensionality
 
 Sometimes we want to use higher dimensional arrays, or arrays for 
 which the names of dimensions have some semantic significance we want to retain.
+if it can be sensibly described as "rows and columns", pandas is probably the
+right choice.  However, sometimes we want to use higher dimensional arrays
+(`ndim > 2`), or arrays for which the order of dimensions (e.g., columns vs
+rows) shouldn't really matter. For example, the images of a movie can be
+natively represented as an array with four dimensions: time, row, column and
+color.
+
+Pandas has historically supported N-dimensional panels, but deprecated them in
+version 0.20 in favor of Xarray data structures. There are now built-in methods
+on both sides to convert between pandas and Xarray, allowing for more focused
+development effort. Xarray objects have a much richer model of dimensionality -
+if you were using Panels:
+
+- You need to create a new factory type for each dimensionality.
+- You can't do math between NDPanels with different dimensionality.
+- Each dimension in a NDPanel has a name (e.g., 'labels', 'items',
+  'major_axis', etc.) but the dimension names refer to order, not their
+  meaning. You can't specify an operation as to be applied along the "time"
+  axis.
+- You often have to manually convert collections of pandas arrays
+  (Series, DataFrames, etc) to have the same number of dimensions.
+  In contrast, this sort of data structure fits very naturally in an
+  xarray ``Dataset``.
+
+You can :ref:`read about switching from Panels to Xarray here <panel transition>`.
 Pandas gets a lot of things right, but many science, engineering and complex
 analytics use cases need fully multi-dimensional data structures.
 

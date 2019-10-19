@@ -25,7 +25,6 @@ from . import (
     raises_regex,
     requires_cftime,
     requires_matplotlib,
-    requires_matplotlib2,
     requires_nc_time_axis,
     requires_seaborn,
 )
@@ -169,6 +168,23 @@ class TestPlot(PlotTestCase):
         # Plot current against time
         line = current.plot.line()[0]
         assert_array_equal(line.get_xdata(), current.coords["t"].values)
+
+    def test_line_plot_along_1d_coord(self):
+        # Test for bug in GH #3334
+        x_coord = xr.DataArray(data=[0.1, 0.2], dims=["x"])
+        t_coord = xr.DataArray(data=[10, 20], dims=["t"])
+
+        da = xr.DataArray(
+            data=np.array([[0, 1], [5, 9]]),
+            dims=["x", "t"],
+            coords={"x": x_coord, "time": t_coord},
+        )
+
+        line = da.plot(x="time", hue="x")[0]
+        assert_array_equal(line.get_xdata(), da.coords["time"].values)
+
+        line = da.plot(y="time", hue="x")[0]
+        assert_array_equal(line.get_ydata(), da.coords["time"].values)
 
     def test_2d_line(self):
         with raises_regex(ValueError, "hue"):
@@ -343,7 +359,6 @@ class TestPlot(PlotTestCase):
             d[0].plot(x="x", y="y", col="z", ax=plt.gca())
 
     @pytest.mark.slow
-    @requires_matplotlib2
     def test_subplot_kws(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=["y", "x", "z"])
@@ -1945,10 +1960,11 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
 
     def test_facetgrid_hue_style(self):
-        # Can't move this to pytest.mark.parametrize because py35-min
-        # doesn't have mpl.
-        for hue_style, map_type in zip(
-            ["discrete", "continuous"], [list, mpl.collections.PathCollection]
+        # Can't move this to pytest.mark.parametrize because py36-bare-minimum
+        # doesn't have matplotlib.
+        for hue_style, map_type in (
+            ("discrete", list),
+            ("continuous", mpl.collections.PathCollection),
         ):
             g = self.ds.plot.scatter(
                 x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style

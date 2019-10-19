@@ -16,14 +16,13 @@ CLASSIFIERS = [
     "Intended Audience :: Science/Research",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Topic :: Scientific/Engineering",
 ]
 
-PYTHON_REQUIRES = ">=3.5.3"
-INSTALL_REQUIRES = ["numpy >= 1.12", "pandas >= 0.19.2"]
+PYTHON_REQUIRES = ">=3.6"
+INSTALL_REQUIRES = ["numpy >= 1.14", "pandas >= 0.24"]
 needs_pytest = {"pytest", "test", "ptr"}.intersection(sys.argv)
 SETUP_REQUIRES = ["pytest-runner >= 4.2"] if needs_pytest else []
 TESTS_REQUIRE = ["pytest >= 2.7.1"]
@@ -86,7 +85,7 @@ Learn more
 - Issue tracker: http://github.com/pydata/xarray/issues
 - Source code: http://github.com/pydata/xarray
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
-"""  # noqa
+"""
 
 
 setup(

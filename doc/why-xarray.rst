@@ -1,6 +1,10 @@
 Overview: Why xarray?
 =====================
 
+Xarray introduces labels in the form of dimensions, coordinates and attributes on top of
+raw NumPy-like multidimensional arrays, which allows for a more intuitive, more concise,
+and less error-prone developer experience.
+
 What labels enable
 ------------------
 
@@ -18,13 +22,14 @@ Xarray doesn't just keep track of labels on arrays -- it uses them to provide a
 powerful and concise interface. For example:
 
 -  Apply operations over dimensions by name: ``x.sum('time')``.
--  Select values by label instead of integer location:
+-  Select values by label (or logical location) instead of integer location:
    ``x.loc['2014-01-01']`` or ``x.sel(time='2014-01-01')``.
 -  Mathematical operations (e.g., ``x - y``) vectorize across multiple
    dimensions (array broadcasting) based on dimension names, not shape.
--  Flexible split-apply-combine operations with groupby:
+-  Easily use the `split-apply-combine <https://vita.had.co.nz/papers/plyr.pdf>`_
+   paradigm with ``groupby``:
    ``x.groupby('time.dayofyear').mean()``.
--  Database like alignment based on coordinate labels that smoothly
+-  Database-like alignment based on coordinate labels that smoothly
    handles missing values: ``x, y = xr.align(x, y, join='outer')``.
 -  Keep track of arbitrary metadata in the form of a Python dictionary:
    ``x.attrs``.
@@ -33,8 +38,8 @@ The N-dimensional nature of xarray's data structures makes it suitable for deali
 with multi-dimensional scientific data, and its use of dimension names
 instead of axis labels (``dim='time'`` instead of ``axis=0``) makes such
 arrays much more manageable than the raw numpy ndarray: with xarray, you don't
-need to keep track of the order of arrays dimensions or insert dummy dimensions
-(e.g., ``np.newaxis``) to align arrays.
+need to keep track of the order of an array's dimensions or insert dummy dimensions of
+size 1 to align arrays (e.g., using ``np.newaxis``).
 
 The immediate payoff of using xarray is that you'll write less code. The
 long-term payoff is that you'll understand what you were thinking when you come
@@ -44,7 +49,7 @@ Core data structures
 --------------------
 
 xarray has two core data structures, which build upon and extend the core
-strengths of  NumPy_ and pandas_. Both are fundamentally N-dimensional:
+strengths of  NumPy_ and pandas_. Both data structures are fundamentally N-dimensional:
 
 - :py:class:`~xarray.DataArray` is our implementation of a labeled, N-dimensional
   array. It is an N-D generalization of a :py:class:`pandas.Series`. The name
@@ -62,7 +67,7 @@ The power of the dataset over a plain dictionary is that, in addition to
 pulling out arrays by name, it is possible to select or combine data along a
 dimension across all arrays simultaneously. Like a
 :py:class:`~pandas.DataFrame`, datasets facilitate array operations with
-heterogeneous data -- the difference is that the arrays in a dataset can have 
+heterogeneous data -- the difference is that the arrays in a dataset can have
 not only different data types, but also different numbers of dimensions.
 
 This data model is borrowed from the netCDF_ file format, which also provides
@@ -82,7 +87,7 @@ Xarray contributes domain-agnostic data-structures and tools for labeled
 multi-dimensional arrays to Python's SciPy_ ecosystem for numerical computing.
 In particular, xarray builds upon and integrates with NumPy_ and pandas_:
 
-- Our user-facing interfaces aim to be more explicit verisons of those found in
+- Our user-facing interfaces aim to be more explicit versions of those found in
   NumPy/pandas.
 - Compatibility with the broader ecosystem is a major goal: it should be easy
   to get your data in and out.

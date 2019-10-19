@@ -15,82 +15,6 @@ format (recommended).
     import xarray as xr
     np.random.seed(123456)
 
-.. _io.pickle:
-
-Pickle
-------
-
-The simplest way to serialize an xarray object is to use Python's built-in pickle
-module:
-
-.. ipython:: python
-
-    import pickle
-
-    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
-                    coords={'x': [10, 20, 30, 40],
-                            'y': pd.date_range('2000-01-01', periods=5),
-                            'z': ('x', list('abcd'))})
-
-    # use the highest protocol (-1) because it is way faster than the default
-    # text based pickle format
-    pkl = pickle.dumps(ds, protocol=-1)
-
-    pickle.loads(pkl)
-
-Pickling is important because it doesn't require any external libraries
-and lets you use xarray objects with Python modules like
-:py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
-**not recommended for long-term storage**.
-
-Restoring a pickle requires that the internal structure of the types for the
-pickled data remain unchanged. Because the internal design of xarray is still
-being refined, we make no guarantees (at this point) that objects pickled with
-this version of xarray will work in future versions.
-
-.. note::
-
-  When pickling an object opened from a NetCDF file, the pickle file will
-  contain a reference to the file on disk. If you want to store the actual
-  array values, load it into memory first with :py:meth:`~xarray.Dataset.load`
-  or :py:meth:`~xarray.Dataset.compute`.
-
-.. _dictionary io:
-
-Dictionary
-----------
-
-We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
-:py:meth:`~xarray.Dataset.to_dict`:
-
-.. ipython:: python
-
-    d = ds.to_dict()
-    d
-
-We can create a new xarray object from a dict using
-:py:meth:`~xarray.Dataset.from_dict`:
-
-.. ipython:: python
-
-    ds_dict = xr.Dataset.from_dict(d)
-    ds_dict
-
-Dictionary support allows for flexible use of xarray objects. It doesn't
-require external libraries and dicts can easily be pickled, or converted to
-json, or geojson. All the values are converted to lists, so dicts might
-be quite large.
-
-To export just the dataset schema, without the data itself, use the
-``data=False`` option:
-
-.. ipython:: python
-
-    ds.to_dict(data=False)
-
-This can be useful for generating indices of dataset contents to expose to
-search indices or other automated data discovery tools.
-
 .. _io.netcdf:
 
 netCDF
@@ -127,11 +51,24 @@ We can save a Dataset to disk using the
 
 .. ipython:: python
 
+    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
+                    coords={'x': [10, 20, 30, 40],
+                            'y': pd.date_range('2000-01-01', periods=5),
+                            'z': ('x', list('abcd'))})
+
     ds.to_netcdf('saved_on_disk.nc')
 
 By default, the file is saved as netCDF4 (assuming netCDF4-Python is
 installed). You can control the format and engine used to write the file with
 the ``format`` and ``engine`` arguments.
+
+.. tip::
+
+   Using the `h5netcdf <https://github.com/shoyer/h5netcdf>`_  package
+   by passing ``engine='h5netcdf'`` to :py:meth:`~xarray.open_dataset` can
+   sometimes be quicker than the default ``engine='netcdf4'`` that uses the
+   `netCDF4 <https://github.com/Unidata/netcdf4-python>`_ package.
+
 
 We can load netCDF files to create a new Dataset using
 :py:func:`~xarray.open_dataset`:
@@ -149,7 +86,15 @@ convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
 when loading, ensuring that the ``DataArray`` that is loaded is always exactly
 the same as the one that was saved.
 
-Data is always loaded lazily from netCDF files. You can manipulate, slice and subset
+A dataset can also be loaded or written to a specific group within a netCDF
+file. To load from a group, pass a ``group`` keyword argument to the
+``open_dataset`` function. The group can be specified as a path-like
+string, e.g., to access subgroup 'bar' within group 'foo' pass
+'/foo/bar' as the ``group`` argument. When writing multiple groups in one file,
+pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
+file.
+
+Data is *always* loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
@@ -251,8 +196,6 @@ will remove encoding information.
     :suppress:
 
     ds_disk.close()
-    import os
-    os.remove('saved_on_disk.nc')
 
 
 .. _combining multiple files:
@@ -508,6 +451,7 @@ This feature is availabe through :py:func:`DataArray.to_netcdf` and
 and currently raises a warning unless ``invalid_netcdf=True`` is set:
 
 .. ipython:: python
+    :okwarning:
 
     # Writing complex valued data
     da = xr.DataArray([1.+1.j, 2.+2.j, 3.+3.j])
@@ -516,6 +460,11 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
     # Reading it back
     xr.open_dataarray("complex.nc", engine="h5netcdf")
 
+.. ipython:: python
+    :suppress:
+
+    import os
+    os.remove('complex.nc')
 
 .. warning::
 
@@ -675,6 +624,83 @@ that require NASA's URS authentication::
 
 __ http://docs.python-requests.org
 __ http://pydap.readthedocs.io/en/latest/client.html#authentication
+
+.. _io.pickle:
+
+Pickle
+------
+
+The simplest way to serialize an xarray object is to use Python's built-in pickle
+module:
+
+.. ipython:: python
+
+    import pickle
+
+    # use the highest protocol (-1) because it is way faster than the default
+    # text based pickle format
+    pkl = pickle.dumps(ds, protocol=-1)
+
+    pickle.loads(pkl)
+
+Pickling is important because it doesn't require any external libraries
+and lets you use xarray objects with Python modules like
+:py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
+**not recommended for long-term storage**.
+
+Restoring a pickle requires that the internal structure of the types for the
+pickled data remain unchanged. Because the internal design of xarray is still
+being refined, we make no guarantees (at this point) that objects pickled with
+this version of xarray will work in future versions.
+
+.. note::
+
+  When pickling an object opened from a NetCDF file, the pickle file will
+  contain a reference to the file on disk. If you want to store the actual
+  array values, load it into memory first with :py:meth:`~xarray.Dataset.load`
+  or :py:meth:`~xarray.Dataset.compute`.
+
+.. _dictionary io:
+
+Dictionary
+----------
+
+We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
+:py:meth:`~xarray.Dataset.to_dict`:
+
+.. ipython:: python
+
+    d = ds.to_dict()
+    d
+
+We can create a new xarray object from a dict using
+:py:meth:`~xarray.Dataset.from_dict`:
+
+.. ipython:: python
+
+    ds_dict = xr.Dataset.from_dict(d)
+    ds_dict
+
+Dictionary support allows for flexible use of xarray objects. It doesn't
+require external libraries and dicts can easily be pickled, or converted to
+json, or geojson. All the values are converted to lists, so dicts might
+be quite large.
+
+To export just the dataset schema, without the data itself, use the
+``data=False`` option:
+
+.. ipython:: python
+
+    ds.to_dict(data=False)
+
+This can be useful for generating indices of dataset contents to expose to
+search indices or other automated data discovery tools.
+
+.. ipython:: python
+    :suppress:
+
+    import os
+    os.remove('saved_on_disk.nc')
 
 .. _io.rasterio:
 

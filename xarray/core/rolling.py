@@ -1,7 +1,4 @@
 import functools
-import warnings
-from collections import OrderedDict
-from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -71,17 +68,6 @@ class Rolling:
         -------
         rolling : type of input argument
         """
-
-        if bottleneck is not None and (
-            LooseVersion(bottleneck.__version__) < LooseVersion("1.0")
-        ):
-            warnings.warn(
-                "xarray requires bottleneck version of 1.0 or "
-                "greater for rolling operations. Rolling "
-                "aggregation methods will use numpy instead"
-                "of bottleneck."
-            )
-
         if len(windows) != 1:
             raise ValueError("exactly one dim/window should be provided")
 
@@ -332,14 +318,6 @@ class DataArrayRolling(Rolling):
 
         padded = self.obj.variable
         if self.center:
-            if (
-                LooseVersion(np.__version__) < LooseVersion("1.13")
-                and self.obj.dtype.kind == "b"
-            ):
-                # with numpy < 1.13 bottleneck cannot handle np.nan-Boolean
-                # mixed array correctly. We cast boolean array to float.
-                padded = padded.astype(float)
-
             if isinstance(padded.data, dask_array_type):
                 # Workaround to make the padded chunk size is larger than
                 # self.window-1
@@ -423,8 +401,8 @@ class DatasetRolling(Rolling):
         super().__init__(obj, windows, min_periods, center)
         if self.dim not in self.obj.dims:
             raise KeyError(self.dim)
-        # Keep each Rolling object as an OrderedDict
-        self.rollings = OrderedDict()
+        # Keep each Rolling object as a dictionary
+        self.rollings = {}
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
             if self.dim in da.dims:
@@ -433,7 +411,7 @@ class DatasetRolling(Rolling):
     def _dataset_implementation(self, func, **kwargs):
         from .dataset import Dataset
 
-        reduced = OrderedDict()
+        reduced = {}
         for key, da in self.obj.data_vars.items():
             if self.dim in da.dims:
                 reduced[key] = func(self.rollings[key], **kwargs)
@@ -499,7 +477,7 @@ class DatasetRolling(Rolling):
 
         from .dataset import Dataset
 
-        dataset = OrderedDict()
+        dataset = {}
         for key, da in self.obj.data_vars.items():
             if self.dim in da.dims:
                 dataset[key] = self.rollings[key].construct(
@@ -619,7 +597,7 @@ class DatasetCoarsen(Coarsen):
         def wrapped_func(self, **kwargs):
             from .dataset import Dataset
 
-            reduced = OrderedDict()
+            reduced = {}
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
                     self.windows, func, self.boundary, self.side

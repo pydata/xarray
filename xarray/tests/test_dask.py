@@ -1,5 +1,5 @@
+import operator
 import pickle
-from collections import OrderedDict
 from contextlib import suppress
 from distutils.version import LooseVersion
 from textwrap import dedent
@@ -11,6 +11,7 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
+from xarray.testing import assert_chunks_equal
 from xarray.tests import mock
 
 from . import (
@@ -46,16 +47,9 @@ class CountingScheduler:
         return dask.get(dsk, keys, **kwargs)
 
 
-def _set_dask_scheduler(scheduler=dask.get):
-    """ Backwards compatible way of setting scheduler. """
-    if LooseVersion(dask.__version__) >= LooseVersion("0.18.0"):
-        return dask.config.set(scheduler=scheduler)
-    return dask.set_options(get=scheduler)
-
-
 def raise_if_dask_computes(max_computes=0):
     scheduler = CountingScheduler(max_computes)
-    return _set_dask_scheduler(scheduler)
+    return dask.config.set(scheduler=scheduler)
 
 
 def test_raise_if_dask_computes():
@@ -67,9 +61,7 @@ def test_raise_if_dask_computes():
 
 class DaskTestCase:
     def assertLazyAnd(self, expected, actual, test):
-        with _set_dask_scheduler(dask.get):
-            # dask.get is the syncronous scheduler, which get's set also by
-            # dask.config.set(scheduler="syncronous") in current versions.
+        with dask.config.set(scheduler="synchronous"):
             test(actual, expected)
 
         if isinstance(actual, Dataset):
@@ -512,10 +504,7 @@ class TestDataArrayAndDataset(DaskTestCase):
             count[0] += 1
             return dask.get(*args, **kwargs)
 
-        if dask.__version__ < "0.19.4":
-            ds.load(get=counting_get)
-        else:
-            ds.load(scheduler=counting_get)
+        ds.load(scheduler=counting_get)
 
         assert count[0] == 1
 
@@ -543,7 +532,7 @@ class TestDataArrayAndDataset(DaskTestCase):
             <xarray.DataArray 'data' (x: 1)>
             {!r}
             Coordinates:
-                y        (x) int64 dask.array<chunksize=(1,)>
+                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
             Dimensions without coordinates: x""".format(
                 data
             )
@@ -666,7 +655,7 @@ class TestToDaskDataFrame:
         y = np.arange(10, dtype="uint8")
         t = list("abcdefghij")
 
-        ds = Dataset(OrderedDict([("a", ("t", x)), ("b", ("t", y)), ("t", ("t", t))]))
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
 
         expected_pd = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
 
@@ -725,7 +714,7 @@ class TestToDaskDataFrame:
         x = da.from_array(np.random.randn(10), chunks=4)
         t = da.from_array(np.arange(10) * 2, chunks=4)
 
-        ds = Dataset(OrderedDict([("a", ("t", x)), ("t", ("t", t))]))
+        ds = Dataset({"a": ("t", x), "t": ("t", t)})
 
         expected_pd = pd.DataFrame({"a": x}, index=pd.Index(t, name="t"))
         expected = dd.from_pandas(expected_pd, chunksize=4)
@@ -739,7 +728,7 @@ class TestToDaskDataFrame:
         y = np.arange(10, dtype="uint8")
         t = list("abcdefghij")
 
-        ds = Dataset(OrderedDict([("a", ("t", x)), ("b", ("t", y)), ("t", ("t", t))]))
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
 
         expected = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
 
@@ -838,8 +827,6 @@ def build_dask_array(name):
     )
 
 
-# test both the perist method and the dask.persist function
-# the dask.persist function requires a new version of dask
 @pytest.mark.parametrize(
     "persist", [lambda x: x.persist(), lambda x: dask.persist(x)[0]]
 )
@@ -892,21 +879,12 @@ def test_dataarray_with_dask_coords():
 def test_basic_compute():
     ds = Dataset({"foo": ("x", range(5)), "bar": ("x", range(5))}).chunk({"x": 2})
     for get in [dask.threaded.get, dask.multiprocessing.get, dask.local.get_sync, None]:
-        with (
-            dask.config.set(scheduler=get)
-            if LooseVersion(dask.__version__) >= LooseVersion("0.19.4")
-            else dask.config.set(scheduler=get)
-            if LooseVersion(dask.__version__) >= LooseVersion("0.18.0")
-            else dask.set_options(get=get)
-        ):
+        with dask.config.set(scheduler=get):
             ds.compute()
             ds.foo.compute()
             ds.foo.variable.compute()
 
 
-@pytest.mark.skipif(
-    LooseVersion(dask.__version__) < LooseVersion("0.20.0"), reason="needs newer dask"
-)
 def test_dask_layers_and_dependencies():
     ds = Dataset({"foo": ("x", range(5)), "bar": ("x", range(5))}).chunk()
 
@@ -917,3 +895,243 @@ def test_dask_layers_and_dependencies():
     assert set(x.foo.__dask_graph__().dependencies).issuperset(
         ds.__dask_graph__().dependencies
     )
+
+
+def make_da():
+    da = xr.DataArray(
+        np.ones((10, 20)),
+        dims=["x", "y"],
+        coords={"x": np.arange(10), "y": np.arange(100, 120)},
+        name="a",
+    ).chunk({"x": 4, "y": 5})
+    da.attrs["test"] = "test"
+    da.coords["c2"] = 0.5
+    da.coords["ndcoord"] = da.x * 2
+    da.coords["cxy"] = (da.x * da.y).chunk({"x": 4, "y": 5})
+
+    return da
+
+
+def make_ds():
+    map_ds = xr.Dataset()
+    map_ds["a"] = make_da()
+    map_ds["b"] = map_ds.a + 50
+    map_ds["c"] = map_ds.x + 20
+    map_ds = map_ds.chunk({"x": 4, "y": 5})
+    map_ds["d"] = ("z", [1, 1, 1, 1])
+    map_ds["z"] = [0, 1, 2, 3]
+    map_ds["e"] = map_ds.x + map_ds.y
+    map_ds.coords["c1"] = 0.5
+    map_ds.coords["cx"] = ("x", np.arange(len(map_ds.x)))
+    map_ds.coords["cx"].attrs["test2"] = "test2"
+    map_ds.attrs["test"] = "test"
+    map_ds.coords["xx"] = map_ds["a"] * map_ds.y
+
+    return map_ds
+
+
+# fixtures cannot be used in parametrize statements
+# instead use this workaround
+# https://docs.pytest.org/en/latest/deprecations.html#calling-fixtures-directly
+@pytest.fixture
+def map_da():
+    return make_da()
+
+
+@pytest.fixture
+def map_ds():
+    return make_ds()
+
+
+def test_unify_chunks(map_ds):
+    ds_copy = map_ds.copy()
+    ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
+
+    with raises_regex(ValueError, "inconsistent chunks"):
+        ds_copy.chunks
+
+    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5), "z": (4,)}
+    with raise_if_dask_computes():
+        actual_chunks = ds_copy.unify_chunks().chunks
+    expected_chunks == actual_chunks
+    assert_identical(map_ds, ds_copy.unify_chunks())
+
+
+@pytest.mark.parametrize("obj", [make_ds(), make_da()])
+@pytest.mark.parametrize(
+    "transform", [lambda x: x.compute(), lambda x: x.unify_chunks()]
+)
+def test_unify_chunks_shallow_copy(obj, transform):
+    obj = transform(obj)
+    unified = obj.unify_chunks()
+    assert_identical(obj, unified) and obj is not obj.unify_chunks()
+
+
+def test_map_blocks_error(map_da, map_ds):
+    def bad_func(darray):
+        return (darray * darray.x + 5 * darray.y)[:1, :1]
+
+    with raises_regex(ValueError, "Length of the.* has changed."):
+        xr.map_blocks(bad_func, map_da).compute()
+
+    def returns_numpy(darray):
+        return (darray * darray.x + 5 * darray.y).values
+
+    with raises_regex(TypeError, "Function must return an xarray DataArray"):
+        xr.map_blocks(returns_numpy, map_da)
+
+    with raises_regex(TypeError, "args must be"):
+        xr.map_blocks(operator.add, map_da, args=10)
+
+    with raises_regex(TypeError, "kwargs must be"):
+        xr.map_blocks(operator.add, map_da, args=[10], kwargs=[20])
+
+    def really_bad_func(darray):
+        raise ValueError("couldn't do anything.")
+
+    with raises_regex(Exception, "Cannot infer"):
+        xr.map_blocks(really_bad_func, map_da)
+
+    ds_copy = map_ds.copy()
+    ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
+
+    with raises_regex(ValueError, "inconsistent chunks"):
+        xr.map_blocks(bad_func, ds_copy)
+
+    with raises_regex(TypeError, "Cannot pass dask collections"):
+        xr.map_blocks(bad_func, map_da, args=[map_da.chunk()])
+
+    with raises_regex(TypeError, "Cannot pass dask collections"):
+        xr.map_blocks(bad_func, map_da, kwargs=dict(a=map_da.chunk()))
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks(obj):
+    def func(obj):
+        result = obj + obj.x + 5 * obj.y
+        return result
+
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, obj)
+    expected = func(obj)
+    assert_chunks_equal(expected.chunk(), actual)
+    xr.testing.assert_identical(actual.compute(), expected.compute())
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks_convert_args_to_list(obj):
+    expected = obj + 10
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(operator.add, obj, [10])
+    assert_chunks_equal(expected.chunk(), actual)
+    xr.testing.assert_identical(actual.compute(), expected.compute())
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks_add_attrs(obj):
+    def add_attrs(obj):
+        obj = obj.copy(deep=True)
+        obj.attrs["new"] = "new"
+        obj.cxy.attrs["new2"] = "new2"
+        return obj
+
+    expected = add_attrs(obj)
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(add_attrs, obj)
+
+    xr.testing.assert_identical(actual.compute(), expected.compute())
+
+
+def test_map_blocks_change_name(map_da):
+    def change_name(obj):
+        obj = obj.copy(deep=True)
+        obj.name = "new"
+        return obj
+
+    expected = change_name(map_da)
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(change_name, map_da)
+
+    xr.testing.assert_identical(actual.compute(), expected.compute())
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks_kwargs(obj):
+    expected = xr.full_like(obj, fill_value=np.nan)
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(xr.full_like, obj, kwargs=dict(fill_value=np.nan))
+    assert_chunks_equal(expected.chunk(), actual)
+    xr.testing.assert_identical(actual.compute(), expected.compute())
+
+
+def test_map_blocks_to_array(map_ds):
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(lambda x: x.to_array(), map_ds)
+
+    # to_array does not preserve name, so cannot use assert_identical
+    assert_equal(actual.compute(), map_ds.to_array().compute())
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        lambda x: x,
+        lambda x: x.to_dataset(),
+        lambda x: x.drop("x"),
+        lambda x: x.expand_dims(k=[1, 2, 3]),
+        lambda x: x.assign_coords(new_coord=("y", x.y * 2)),
+        lambda x: x.astype(np.int32),
+        # TODO: [lambda x: x.isel(x=1).drop("x"), map_da],
+    ],
+)
+def test_map_blocks_da_transformations(func, map_da):
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, map_da)
+
+    assert_identical(actual.compute(), func(map_da).compute())
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        lambda x: x,
+        lambda x: x.drop("cxy"),
+        lambda x: x.drop("a"),
+        lambda x: x.drop("x"),
+        lambda x: x.expand_dims(k=[1, 2, 3]),
+        lambda x: x.rename({"a": "new1", "b": "new2"}),
+        # TODO: [lambda x: x.isel(x=1)],
+    ],
+)
+def test_map_blocks_ds_transformations(func, map_ds):
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, map_ds)
+
+    assert_identical(actual.compute(), func(map_ds).compute())
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks_object_method(obj):
+    def func(obj):
+        result = obj + obj.x + 5 * obj.y
+        return result
+
+    with raise_if_dask_computes():
+        expected = xr.map_blocks(func, obj)
+        actual = obj.map_blocks(func)
+
+    assert_identical(expected.compute(), actual.compute())
+
+
+def test_make_meta(map_ds):
+    from ..core.parallel import make_meta
+
+    meta = make_meta(map_ds)
+
+    for variable in map_ds._coord_names:
+        assert variable in meta._coord_names
+        assert meta.coords[variable].shape == (0,) * meta.coords[variable].ndim
+
+    for variable in map_ds.data_vars:
+        assert variable in meta.data_vars
+        assert meta.data_vars[variable].shape == (0,) * meta.data_vars[variable].ndim

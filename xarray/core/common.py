@@ -1,16 +1,15 @@
 import warnings
-from collections import OrderedDict
 from contextlib import suppress
 from textwrap import dedent
 from typing import (
     Any,
     Callable,
+    Dict,
     Hashable,
     Iterable,
     Iterator,
     List,
     Mapping,
-    MutableMapping,
     Tuple,
     TypeVar,
     Union,
@@ -25,7 +24,7 @@ from .npcompat import DTypeLike
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
+from .utils import Frozen, ReprObject, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject("<all-dims>")
@@ -180,7 +179,7 @@ class AbstractArray(ImplementsArrayReduce):
         --------
         Dataset.sizes
         """
-        return Frozen(OrderedDict(zip(self.dims, self.shape)))
+        return Frozen(dict(zip(self.dims, self.shape)))
 
 
 class AttrAccessMixin:
@@ -193,10 +192,9 @@ class AttrAccessMixin:
         """Verify that all subclasses explicitly define ``__slots__``. If they don't,
         raise error in the core xarray module and a FutureWarning in third-party
         extensions.
-        This check is only triggered in Python 3.6+.
         """
         if not hasattr(object.__new__(cls), "__dict__"):
-            cls.__setattr__ = cls._setattr_slots
+            pass
         elif cls.__module__.startswith("xarray."):
             raise AttributeError("%s must explicitly define __slots__" % cls.__name__)
         else:
@@ -230,12 +228,11 @@ class AttrAccessMixin:
             "%r object has no attribute %r" % (type(self).__name__, name)
         )
 
-    # This complicated three-method design boosts overall performance of simple
-    # operations - particularly DataArray methods that perform a _to_temp_dataset()
-    # round-trip - by a whopping 8% compared to a single method that checks
-    # hasattr(self, "__dict__") at runtime before every single assignment (like
-    # _setattr_py35 does). All of this is just temporary until the FutureWarning can be
-    # changed into a hard crash.
+    # This complicated two-method design boosts overall performance of simple operations
+    # - particularly DataArray methods that perform a _to_temp_dataset() round-trip - by
+    # a whopping 8% compared to a single method that checks hasattr(self, "__dict__") at
+    # runtime before every single assignment. All of this is just temporary until the
+    # FutureWarning can be changed into a hard crash.
     def _setattr_dict(self, name: str, value: Any) -> None:
         """Deprecated third party subclass (see ``__init_subclass__`` above)
         """
@@ -251,7 +248,7 @@ class AttrAccessMixin:
                 stacklevel=2,
             )
 
-    def _setattr_slots(self, name: str, value: Any) -> None:
+    def __setattr__(self, name: str, value: Any) -> None:
         """Objects with ``__slots__`` raise AttributeError if you try setting an
         undeclared attribute. This is desirable, but the error message could use some
         improvement.
@@ -269,14 +266,6 @@ class AttrAccessMixin:
                 % (name, type(self).__name__)
             ) from e
 
-    def _setattr_py35(self, name: str, value: Any) -> None:
-        if hasattr(self, "__dict__"):
-            return self._setattr_dict(name, value)
-        return self._setattr_slots(name, value)
-
-    # Overridden in Python >=3.6 by __init_subclass__
-    __setattr__ = _setattr_py35
-
     def __dir__(self) -> List[str]:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
@@ -293,7 +282,7 @@ class AttrAccessMixin:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
-        """  # noqa
+        """
         item_lists = [
             item
             for sublist in self._item_sources
@@ -391,14 +380,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
-    ) -> MutableMapping[Hashable, T]:
-        results = SortedKeysDict()  # type: SortedKeysDict[Hashable, T]
-        for k, v in kwargs.items():
-            if callable(v):
-                results[k] = v(self)
-            else:
-                results[k] = v
-        return results
+    ) -> Dict[Hashable, T]:
+        return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign new coordinates to this object.
@@ -542,6 +525,72 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...    .pipe((f, 'arg2'), arg1=a, arg3=c)
         ...  )
 
+        Examples
+        --------
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> x = xr.Dataset(
+        ...     {
+        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
+        ...     },
+        ...     coords={"lat": [10, 20], "lon": [150, 160]},
+        ... )
+        >>> x
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
+            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+
+        >>> def adder(data, arg):
+        ...     return data + arg
+        ...
+        >>> def div(data, arg):
+        ...     return data / arg
+        ...
+        >>> def sub_mult(data, sub_arg, mult_arg):
+        ...     return (data * mult_arg) - sub_arg
+        ...
+        >>> x.pipe(adder, 2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
+            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+
+        >>> x.pipe(adder, arg=2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
+            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+
+        >>> (
+        ... x
+        ... .pipe(adder, arg=2)
+        ... .pipe(div, arg=2)
+        ... .pipe(sub_mult, sub_arg=2, mult_arg=2)
+        ... )
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
+            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+
         See Also
         --------
         pandas.DataFrame.pipe
@@ -603,7 +652,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
-        """  # noqa
+        """
         return self._groupby_cls(
             self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
         )
@@ -666,7 +715,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         References
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
-        """  # noqa
+        """
         return self._groupby_cls(
             self,
             group,
@@ -742,7 +791,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
-        """  # noqa
+        """
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
 
@@ -865,13 +914,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     ):
         """Returns a Resample object for performing resampling operations.
 
-        Handles both downsampling and upsampling. If any intervals contain no
-        values from the original object, they will be given the value ``NaN``.
+        Handles both downsampling and upsampling. The resampled
+        dimension must be a datetime-like coordinate. If any intervals
+        contain no values from the original object, they will be given
+        the value ``NaN``.
 
         Parameters
         ----------
         indexer : {dim: freq}, optional
-            Mapping from the dimension name to resample frequency.
+            Mapping from the dimension name to resample frequency. The
+            dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
@@ -929,17 +981,23 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
 
         Limit scope of upsampling method
+
         >>> da.resample(time='1D').nearest(tolerance='1D')
         <xarray.DataArray (time: 337)>
         array([ 0.,  0., nan, ..., nan, 11., 11.])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
 
+        See Also
+        --------
+        pandas.Series.resample
+        pandas.DataFrame.resample
+
         References
         ----------
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
-        """  # noqa
+        """
         # TODO support non-string indexer after removing the old API.
 
         from .dataarray import DataArray
@@ -974,13 +1032,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
             grouper = CFTimeGrouper(freq, closed, label, base, loffset)
         else:
-            # TODO: to_offset() call required for pandas==0.19.2
             grouper = pd.Grouper(
-                freq=freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=pd.tseries.frequencies.to_offset(loffset),
+                freq=freq, closed=closed, label=label, base=base, loffset=loffset
             )
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
@@ -1016,7 +1069,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Same type as caller.
+        Same xarray type as caller, with dtype float64.
 
         Examples
         --------
@@ -1150,7 +1203,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def __getitem__(self, value):
         # implementations of this class should implement this method
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 def full_like(other, fill_value, dtype: DTypeLike = None):
@@ -1172,16 +1225,71 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
         filled with fill_value. Coords will be copied from other.
         If other is based on dask, the new one will be as well, and will be
         split in the same chunks.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 1)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[1, 1, 1],
+           [1, 1, 1]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 0.5)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 0, 0],
+           [0, 0, 0]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 0.5, dtype=np.double)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0.5, 0.5, 0.5],
+           [0.5, 0.5, 0.5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, np.nan, dtype=np.double)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[nan, nan, nan],
+           [nan, nan, nan]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    zeros_like
+    ones_like
+
     """
     from .dataarray import DataArray
     from .dataset import Dataset
     from .variable import Variable
 
     if isinstance(other, Dataset):
-        data_vars = OrderedDict(
-            (k, _full_like_variable(v, fill_value, dtype))
+        data_vars = {
+            k: _full_like_variable(v, fill_value, dtype)
             for k, v in other.data_vars.items()
-        )
+        }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
     elif isinstance(other, DataArray):
         return DataArray(
@@ -1217,13 +1325,109 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
 
 
 def zeros_like(other, dtype: DTypeLike = None):
-    """Shorthand for full_like(other, 0, dtype)
+    """Return a new object of zeros with the same shape and
+    type as a given dataarray or dataset.
+
+    Parameters
+    ----------
+    other : DataArray, Dataset, or Variable
+        The reference object. The output will have the same dimensions and coordinates as this object.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
+
+    Returns
+    -------
+    out : same as object
+        New object of zeros with the same shape and type as other.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.zeros_like(x)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 0, 0],
+           [0, 0, 0]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.zeros_like(x, dtype=np.float)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    ones_like
+    full_like
+
     """
     return full_like(other, 0, dtype)
 
 
 def ones_like(other, dtype: DTypeLike = None):
-    """Shorthand for full_like(other, 1, dtype)
+    """Return a new object of ones with the same shape and
+    type as a given dataarray or dataset.
+
+    Parameters
+    ----------
+    other : DataArray, Dataset, or Variable
+        The reference object. The output will have the same dimensions and coordinates as this object.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
+
+    Returns
+    -------
+    out : same as object
+        New object of ones with the same shape and type as other.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> >>> xr.ones_like(x)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[1, 1, 1],
+           [1, 1, 1]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    zeros_like
+    full_like
+
     """
     return full_like(other, 1, dtype)
 

@@ -1,7 +1,6 @@
 import pickle
 import sys
 import warnings
-from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
 
@@ -26,7 +25,6 @@ from xarray.tests import (
     requires_bottleneck,
     requires_dask,
     requires_iris,
-    requires_np113,
     requires_numbagg,
     requires_scipy,
     requires_sparse,
@@ -51,9 +49,7 @@ class TestDataArray:
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
-        coords = OrderedDict(
-            [("x", np.arange(3, dtype=np.int64)), ("other", np.int64(0))]
-        )
+        coords = {"x": np.arange(3, dtype=np.int64), "other": np.int64(0)}
         data_array = DataArray(v, coords, name="my_variable")
         expected = dedent(
             """\
@@ -132,9 +128,7 @@ class TestDataArray:
 
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)), [("x", [0, 1]), ("y", ["a", "b", "c"])])
-        expected = OrderedDict(
-            [("x", pd.Index([0, 1])), ("y", pd.Index(["a", "b", "c"]))]
-        )
+        expected = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
         assert array.indexes.keys() == expected.keys()
         for k in expected:
             assert array.indexes[k].equals(expected[k])
@@ -159,9 +153,7 @@ class TestDataArray:
         when dimension is a structured array.
         """
         # GH837, GH861
-        # checking array subraction when dims are the same
-        # note: names need to be in sorted order to align consistently with
-        # pandas < 0.24 and >= 0.24.
+        # checking array subtraction when dims are the same
         p_data = np.array(
             [("Abe", 180), ("Stacy", 150), ("Dick", 200)],
             dtype=[("name", "|S256"), ("height", object)],
@@ -486,32 +478,32 @@ class TestDataArray:
         assert_identical(self.ds["x"], x)
         assert_identical(self.ds["y"], y)
 
-        I = ReturnItem()  # noqa
+        arr = ReturnItem()
         for i in [
-            I[:],
-            I[...],
-            I[x.values],
-            I[x.variable],
-            I[x],
-            I[x, y],
-            I[x.values > -1],
-            I[x.variable > -1],
-            I[x > -1],
-            I[x > -1, y > -1],
+            arr[:],
+            arr[...],
+            arr[x.values],
+            arr[x.variable],
+            arr[x],
+            arr[x, y],
+            arr[x.values > -1],
+            arr[x.variable > -1],
+            arr[x > -1],
+            arr[x > -1, y > -1],
         ]:
             assert_equal(self.dv, self.dv[i])
         for i in [
-            I[0],
-            I[:, 0],
-            I[:3, :2],
-            I[x.values[:3]],
-            I[x.variable[:3]],
-            I[x[:3]],
-            I[x[:3], y[:4]],
-            I[x.values > 3],
-            I[x.variable > 3],
-            I[x > 3],
-            I[x > 3, y > 3],
+            arr[0],
+            arr[:, 0],
+            arr[:3, :2],
+            arr[x.values[:3]],
+            arr[x.variable[:3]],
+            arr[x[:3]],
+            arr[x[:3], y[:4]],
+            arr[x.values > 3],
+            arr[x.variable > 3],
+            arr[x > 3],
+            arr[x > 3, y > 3],
         ]:
             assert_array_equal(self.v[i], self.dv[i])
 
@@ -1565,11 +1557,11 @@ class TestDataArray:
             attrs={"key": "entry"},
         )
         with pytest.raises(TypeError):
-            array.expand_dims(OrderedDict((("new_dim", 3.2),)))
+            array.expand_dims({"new_dim": 3.2})
 
         # Attempt to use both dim and kwargs
         with pytest.raises(ValueError):
-            array.expand_dims(OrderedDict((("d", 4),)), e=4)
+            array.expand_dims({"d": 4}, e=4)
 
     def test_expand_dims(self):
         array = DataArray(
@@ -1654,21 +1646,15 @@ class TestDataArray:
             coords={"x": np.linspace(0.0, 1.0, 3), "z": 1.0},
             attrs={"key": "entry"},
         )
-        # For python 3.5 and earlier this has to be an ordered dict, to
-        # maintain insertion order.
-        actual = array.expand_dims(
-            OrderedDict((("y", 2), ("z", 1), ("dim_1", ["a", "b", "c"])))
-        )
+        actual = array.expand_dims({"y": 2, "z": 1, "dim_1": ["a", "b", "c"]})
 
-        expected_coords = OrderedDict(
-            (
-                ("y", [0, 1]),
-                ("z", [1.0]),
-                ("dim_1", ["a", "b", "c"]),
-                ("x", np.linspace(0, 1, 3)),
-                ("dim_0", range(4)),
-            )
-        )
+        expected_coords = {
+            "y": [0, 1],
+            "z": [1.0],
+            "dim_1": ["a", "b", "c"],
+            "x": np.linspace(0, 1, 3),
+            "dim_0": range(4),
+        }
         expected = DataArray(
             array.values * np.ones([2, 1, 3, 3, 4]),
             coords=expected_coords,
@@ -1679,28 +1665,20 @@ class TestDataArray:
 
         # Test with kwargs instead of passing dict to dim arg.
 
-        # TODO: only the code under the if-statement is needed when python 3.5
-        #   is no longer supported.
-        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
-        if python36_plus:
-            other_way = array.expand_dims(dim_1=["a", "b", "c"])
+        other_way = array.expand_dims(dim_1=["a", "b", "c"])
 
-            other_way_expected = DataArray(
-                array.values * np.ones([3, 3, 4]),
-                coords={
-                    "dim_1": ["a", "b", "c"],
-                    "x": np.linspace(0, 1, 3),
-                    "dim_0": range(4),
-                    "z": 1.0,
-                },
-                dims=["dim_1", "x", "dim_0"],
-                attrs={"key": "entry"},
-            ).drop("dim_0")
-            assert_identical(other_way_expected, other_way)
-        else:
-            # In python 3.5, using dim_kwargs should raise a ValueError.
-            with raises_regex(ValueError, "dim_kwargs isn't"):
-                array.expand_dims(e=["l", "m", "n"])
+        other_way_expected = DataArray(
+            array.values * np.ones([3, 3, 4]),
+            coords={
+                "dim_1": ["a", "b", "c"],
+                "x": np.linspace(0, 1, 3),
+                "dim_0": range(4),
+                "z": 1.0,
+            },
+            dims=["dim_1", "x", "dim_0"],
+            attrs={"key": "entry"},
+        ).drop("dim_0")
+        assert_identical(other_way_expected, other_way)
 
     def test_set_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
@@ -2349,7 +2327,7 @@ class TestDataArray:
         # Test dropped attrs
         vm = self.va.mean()
         assert len(vm.attrs) == 0
-        assert vm.attrs == OrderedDict()
+        assert vm.attrs == {}
 
         # Test kept attrs
         vm = self.va.mean(keep_attrs=True)
@@ -2581,6 +2559,15 @@ class TestDataArray:
         expected = array.copy()
         expected = change_metadata(expected)
         assert_equal(expected, actual)
+
+    def test_groupby_reduce_dimension_error(self):
+        array = self.make_groupby_example_array()
+        grouped = array.groupby("y")
+        with raises_regex(ValueError, "cannot reduce over dimension 'y'"):
+            grouped.mean()
+
+        grouped = array.groupby("y", squeeze=False)
+        assert_identical(array, grouped.mean())
 
     def test_groupby_math(self):
         array = self.make_groupby_example_array()
@@ -3372,7 +3359,7 @@ class TestDataArray:
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
-            if len(shape) > 2 and not LooseVersion(pd.__version__) < "0.25.0":
+            if len(shape) > 2 and LooseVersion(pd.__version__) >= "0.25.0":
                 continue
             dims = list("abc")[: len(shape)]
             da = DataArray(np.random.randn(*shape), dims=dims)
@@ -3659,7 +3646,7 @@ class TestDataArray:
         original = DataArray(
             lonlat.sum(axis=0),
             dims=["y", "x"],
-            coords=OrderedDict(x=x, y=y, lon=lon, lat=lat),
+            coords=dict(x=x, y=y, lon=lon, lat=lat),
             name="sst",
         )
         actual = original.to_cdms2()
@@ -3713,7 +3700,7 @@ class TestDataArray:
 
     def test_to_dataset_split(self):
         array = DataArray([1, 2, 3], coords=[("x", list("abc"))], attrs={"a": 1})
-        expected = Dataset(OrderedDict([("a", 1), ("b", 2), ("c", 3)]), attrs={"a": 1})
+        expected = Dataset({"a": 1, "b": 2, "c": 3}, attrs={"a": 1})
         actual = array.to_dataset("x")
         assert_identical(expected, actual)
 
@@ -3724,7 +3711,7 @@ class TestDataArray:
         assert_identical(array, roundtripped)
 
         array = DataArray([1, 2, 3], dims="x")
-        expected = Dataset(OrderedDict([(0, 1), (1, 2), (2, 3)]))
+        expected = Dataset({0: 1, 1: 2, 2: 3})
         actual = array.to_dataset("x")
         assert_identical(expected, actual)
 
@@ -4186,12 +4173,12 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     assert_equal(actual, da["time"])
 
 
+@requires_dask
 @pytest.mark.parametrize("name", ("mean", "count"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
 def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
-    pytest.importorskip("dask.array")
     # dask version
     rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
@@ -4297,7 +4284,6 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-@requires_np113
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
@@ -4379,7 +4365,7 @@ class TestIrisConversion:
         import cf_units  # iris requirement
 
         # to iris
-        coord_dict = OrderedDict()
+        coord_dict = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
         coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
         coord_dict["height"] = 10
@@ -4450,7 +4436,7 @@ class TestIrisConversion:
         import iris
         import cf_units  # iris requirement
 
-        coord_dict = OrderedDict()
+        coord_dict = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
         coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
         coord_dict["height"] = 10
@@ -4658,7 +4644,6 @@ def test_no_dict():
         d.__dict__
 
 
-@pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
 def test_subclass_slots():
     """Test that DataArray subclasses must explicitly define ``__slots__``.
 
@@ -4672,3 +4657,14 @@ def test_subclass_slots():
             pass
 
     assert str(e.value) == "MyArray must explicitly define __slots__"
+
+
+def test_weakref():
+    """Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots
+    """
+    from weakref import ref
+
+    a = DataArray(1)
+    r = ref(a)
+    assert r() is a

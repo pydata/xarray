@@ -7,8 +7,9 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import SupportsArithmetic
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
+from .formatting import format_array_flat
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -158,6 +159,15 @@ class _DummyGroup:
     def values(self):
         return range(self.size)
 
+    @property
+    def shape(self):
+        return (self.size,)
+
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            key = key[0]
+        return self.values[key]
+
 
 def _ensure_1d(group, obj):
     if group.ndim != 1:
@@ -238,6 +248,7 @@ class GroupBy(SupportsArithmetic):
         "_restore_coord_dims",
         "_stacked_dim",
         "_unique_coord",
+        "_dims",
     )
 
     def __init__(
@@ -310,6 +321,8 @@ class GroupBy(SupportsArithmetic):
         full_index = None
 
         if bins is not None:
+            if duck_array_ops.isnull(bins).all():
+                raise ValueError("All bin edges are NaN.")
             binned = pd.cut(group.values, bins, **cut_kwargs)
             new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
@@ -341,6 +354,16 @@ class GroupBy(SupportsArithmetic):
             )
             unique_coord = IndexVariable(group.name, unique_values)
 
+        if len(group_indices) == 0:
+            if bins is not None:
+                raise ValueError(
+                    "None of the data falls within bins with edges %r" % bins
+                )
+            else:
+                raise ValueError(
+                    "Failed to group data. Are you grouping by a variable that is all NaN?"
+                )
+
         if (
             isinstance(obj, DataArray)
             and restore_coord_dims is None
@@ -369,6 +392,16 @@ class GroupBy(SupportsArithmetic):
 
         # cached attributes
         self._groups = None
+        self._dims = None
+
+    @property
+    def dims(self):
+        if self._dims is None:
+            self._dims = self._obj.isel(
+                **{self._group_dim: self._group_indices[0]}
+            ).dims
+
+        return self._dims
 
     @property
     def groups(self):
@@ -382,6 +415,14 @@ class GroupBy(SupportsArithmetic):
 
     def __iter__(self):
         return zip(self._unique_coord.values, self._iter_grouped())
+
+    def __repr__(self):
+        return "%s, grouped over %r \n%r groups with labels %s." % (
+            self.__class__.__name__,
+            self._unique_coord.name,
+            self._unique_coord.size,
+            ", ".join(format_array_flat(self._unique_coord, 30).split()),
+        )
 
     def _get_index_and_items(self, index, grouper):
         from .resample_cftime import CFTimeGrouper
@@ -671,7 +712,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         q : float in range of [0,1] (or sequence of floats)
             Quantile to compute, which must be between 0 and 1
             inclusive.
-        dim : str or sequence of str, optional
+        dim : xarray.ALL_DIMS, str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
@@ -728,7 +769,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
+        dim : xarray.ALL_DIMS, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -747,8 +788,17 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim is None:
+            dim = self._group_dim
+
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
+
+        if dim is not ALL_DIMS and dim not in self.dims:
+            raise ValueError(
+                "cannot reduce over dimension %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
+                % (dim, self.dims)
+            )
 
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
@@ -817,7 +867,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
+        dim : xarray.ALL_DIMS, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -844,6 +894,12 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
+
+        if dim is not ALL_DIMS and dim not in self.dims:
+            raise ValueError(
+                "cannot reduce over dimension %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
+                % (dim, self.dims)
+            )
 
         return self.apply(reduce_dataset)
 

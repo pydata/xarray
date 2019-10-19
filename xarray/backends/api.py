@@ -42,12 +42,12 @@ DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
 def _get_default_engine_remote_uri():
     try:
-        import netCDF4  # noqa
+        import netCDF4  # noqa: F401
 
         engine = "netcdf4"
     except ImportError:  # pragma: no cover
         try:
-            import pydap  # noqa
+            import pydap  # noqa: F401
 
             engine = "pydap"
         except ImportError:
@@ -61,13 +61,13 @@ def _get_default_engine_remote_uri():
 def _get_default_engine_grib():
     msgs = []
     try:
-        import Nio  # noqa
+        import Nio  # noqa: F401
 
         msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
     except ImportError:  # pragma: no cover
         pass
     try:
-        import cfgrib  # noqa
+        import cfgrib  # noqa: F401
 
         msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
     except ImportError:  # pragma: no cover
@@ -80,7 +80,7 @@ def _get_default_engine_grib():
 
 def _get_default_engine_gz():
     try:
-        import scipy  # noqa
+        import scipy  # noqa: F401
 
         engine = "scipy"
     except ImportError:  # pragma: no cover
@@ -90,12 +90,12 @@ def _get_default_engine_gz():
 
 def _get_default_engine_netcdf():
     try:
-        import netCDF4  # noqa
+        import netCDF4  # noqa: F401
 
         engine = "netcdf4"
     except ImportError:  # pragma: no cover
         try:
-            import scipy.io.netcdf  # noqa
+            import scipy.io.netcdf  # noqa: F401
 
             engine = "scipy"
         except ImportError:
@@ -722,44 +722,41 @@ def open_mfdataset(
 ):
     """Open multiple files as a single dataset.
 
-    If combine='by_coords' then the function ``combine_by_coords`` is used to 
-    combine the datasets into one before returning the result, and if 
-    combine='nested' then ``combine_nested`` is used. The filepaths must be 
-    structured according to which combining function is used, the details of 
-    which are given in the documentation for ``combine_by_coords`` and 
-    ``combine_nested``. By default the old (now deprecated) ``auto_combine`` 
-    will be used, please specify either ``combine='by_coords'`` or 
-    ``combine='nested'`` in future. Requires dask to be installed. See 
-    documentation for details on dask [1]. Attributes from the first dataset 
-    file are used for the combined dataset.
+    If combine='by_coords' then the function ``combine_by_coords`` is used to combine
+    the datasets into one before returning the result, and if combine='nested' then
+    ``combine_nested`` is used. The filepaths must be structured according to which
+    combining function is used, the details of which are given in the documentation for
+    ``combine_by_coords`` and ``combine_nested``. By default the old (now deprecated)
+    ``auto_combine`` will be used, please specify either ``combine='by_coords'`` or
+    ``combine='nested'`` in future. Requires dask to be installed. See documentation for
+    details on dask [1]. Attributes from the first dataset file are used for the
+    combined dataset.
 
     Parameters
     ----------
     paths : str or sequence
-        Either a string glob in the form "path/to/my/files/*.nc" or an explicit
-        list of files to open. Paths can be given as strings or as pathlib
-        Paths. If concatenation along more than one dimension is desired, then
-        ``paths`` must be a nested list-of-lists (see ``manual_combine`` for
-        details). (A string glob will be expanded to a 1-dimensional list.)
+        Either a string glob in the form "path/to/my/files/*.nc" or an explicit list of
+        files to open. Paths can be given as strings or as pathlib Paths. If
+        concatenation along more than one dimension is desired, then ``paths`` must be a
+        nested list-of-lists (see ``manual_combine`` for details). (A string glob will
+        be expanded to a 1-dimensional list.)
     chunks : int or dict, optional
-        Dictionary with keys given by dimension names and values given by chunk
-        sizes. In general, these should divide the dimensions of each dataset.
-        If int, chunk each dimension by ``chunks``.
-        By default, chunks will be chosen to load entire input files into
-        memory at once. This has a major impact on performance: please see the
-        full documentation for more details [2].
+        Dictionary with keys given by dimension names and values given by chunk sizes.
+        In general, these should divide the dimensions of each dataset. If int, chunk
+        each dimension by ``chunks``. By default, chunks will be chosen to load entire
+        input files into memory at once. This has a major impact on performance: please
+        see the full documentation for more details [2].
     concat_dim : str, or list of str, DataArray, Index or None, optional
-        Dimensions to concatenate files along.  You only
-        need to provide this argument if any of the dimensions along which you
-        want to concatenate is not a dimension in the original datasets, e.g.,
-        if you want to stack a collection of 2D arrays along a third dimension.
-        Set ``concat_dim=[..., None, ...]`` explicitly to
+        Dimensions to concatenate files along.  You only need to provide this argument
+        if any of the dimensions along which you want to concatenate is not a dimension
+        in the original datasets, e.g., if you want to stack a collection of 2D arrays
+        along a third dimension. Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation along a particular dimension.
     combine : {'by_coords', 'nested'}, optional
-        Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is 
-        used to combine all the data. If this argument is not provided, 
-        `xarray.auto_combine` is used, but in the future this behavior will 
-        switch to use `xarray.combine_by_coords` by default.
+        Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is used to
+        combine all the data. If this argument is not provided, `xarray.auto_combine` is
+        used, but in the future this behavior will switch to use
+        `xarray.combine_by_coords` by default.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
@@ -854,7 +851,7 @@ def open_mfdataset(
 
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
-    """  # noqa
+    """
     if isinstance(paths, str):
         if is_remote_uri(paths):
             raise ValueError(
@@ -915,7 +912,7 @@ def open_mfdataset(
             # Remove this after deprecation cycle from #2616 is complete
             basic_msg = dedent(
                 """\
-            In xarray version 0.14 the default behaviour of `open_mfdataset`
+            In xarray version 0.15 the default behaviour of `open_mfdataset`
             will change. To retain the existing behavior, pass
             combine='nested'. To use future default behavior, pass
             combine='by_coords'. See
@@ -966,11 +963,11 @@ def open_mfdataset(
     return combined
 
 
-WRITEABLE_STORES = {
+WRITEABLE_STORES: Dict[str, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
     "h5netcdf": backends.H5NetCDFStore,
-}  # type: Dict[str, Callable]
+}
 
 
 def to_netcdf(

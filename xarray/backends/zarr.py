@@ -1,13 +1,11 @@
 import warnings
-from collections import OrderedDict
-from distutils.version import LooseVersion
 
 import numpy as np
 
 from .. import Variable, coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import FrozenOrderedDict, HiddenKeyDict
+from ..core.utils import FrozenDict, HiddenKeyDict
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
 # need some special secret attributes to tell us the dimensions
@@ -254,25 +252,6 @@ class ZarrStore(AbstractWritableDataStore):
     ):
         import zarr
 
-        min_zarr = "2.2"
-
-        if LooseVersion(zarr.__version__) < min_zarr:  # pragma: no cover
-            raise NotImplementedError(
-                "Zarr version %s or greater is "
-                "required by xarray. See zarr "
-                "installation "
-                "http://zarr.readthedocs.io/en/stable/"
-                "#installation" % min_zarr
-            )
-
-        if consolidated or consolidate_on_close:
-            if LooseVersion(zarr.__version__) <= "2.2.1.dev2":  # pragma: no cover
-                raise NotImplementedError(
-                    "Zarr version 2.2.1.dev2 or greater "
-                    "is required by for consolidated "
-                    "metadata."
-                )
-
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
         if consolidated:
             # TODO: an option to pass the metadata_key keyword
@@ -292,7 +271,7 @@ class ZarrStore(AbstractWritableDataStore):
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, _DIMENSION_KEY)
-        attributes = OrderedDict(attributes)
+        attributes = dict(attributes)
         encoding = {
             "chunks": zarr_array.chunks,
             "compressor": zarr_array.compressor,
@@ -306,16 +285,16 @@ class ZarrStore(AbstractWritableDataStore):
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
-        return FrozenOrderedDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.arrays()
         )
 
     def get_attrs(self):
-        attributes = OrderedDict(self.ds.attrs.asdict())
+        attributes = dict(self.ds.attrs.asdict())
         return attributes
 
     def get_dimensions(self):
-        dimensions = OrderedDict()
+        dimensions = {}
         for k, v in self.ds.arrays():
             try:
                 for d, s in zip(v.attrs[_DIMENSION_KEY], v.shape):
@@ -385,9 +364,7 @@ class ZarrStore(AbstractWritableDataStore):
             vn for vn in variables if _encode_variable_name(vn) in self.ds
         }
         new_variables = set(variables) - existing_variables
-        variables_without_encoding = OrderedDict(
-            [(vn, variables[vn]) for vn in new_variables]
-        )
+        variables_without_encoding = {vn: variables[vn] for vn in new_variables}
         variables_encoded, attributes = self.encode(
             variables_without_encoding, attributes
         )
@@ -396,7 +373,7 @@ class ZarrStore(AbstractWritableDataStore):
             # there are variables to append
             # their encoding must be the same as in the store
             ds = open_zarr(self.ds.store, chunks=None)
-            variables_with_encoding = OrderedDict()
+            variables_with_encoding = {}
             for vn in existing_variables:
                 variables_with_encoding[vn] = variables[vn].copy(deep=False)
                 variables_with_encoding[vn].encoding = ds[vn].encoding
@@ -456,7 +433,7 @@ class ZarrStore(AbstractWritableDataStore):
             else:
                 # new variable
                 encoding = _extract_zarr_variable_encoding(v, raise_on_invalid=check)
-                encoded_attrs = OrderedDict()
+                encoded_attrs = {}
                 # the magic for storing the hidden dimension data
                 encoded_attrs[_DIMENSION_KEY] = dims
                 for k2, v2 in attrs.items():
@@ -678,7 +655,5 @@ def open_zarr(
         else:
             return var
 
-    variables = OrderedDict(
-        [(k, maybe_chunk(k, v, chunks)) for k, v in ds.variables.items()]
-    )
+    variables = {k: maybe_chunk(k, v, chunks) for k, v in ds.variables.items()}
     return ds._replace_vars_and_dims(variables)

@@ -1,7 +1,5 @@
 import functools
-import sys
 import warnings
-from collections import OrderedDict
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -15,6 +13,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
     cast,
     overload,
@@ -64,6 +63,8 @@ from .variable import (
 )
 
 if TYPE_CHECKING:
+    T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
+
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -80,7 +81,7 @@ if TYPE_CHECKING:
 
 def _infer_coords_and_dims(
     shape, coords, dims
-) -> "Tuple[OrderedDict[Any, Variable], Tuple[Hashable, ...]]":
+) -> "Tuple[Dict[Any, Variable], Tuple[Hashable, ...]]":
     """All the logic for creating a new DataArray"""
 
     if (
@@ -123,7 +124,7 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError("dimension %s is not a string" % d)
 
-    new_coords = OrderedDict()  # type: OrderedDict[Any, Variable]
+    new_coords: Dict[Any, Variable] = {}
 
     if utils.is_dict_like(coords):
         for k, v in coords.items():
@@ -244,11 +245,25 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary of DataArray objects that label values along each dimension.
     name : str or None
         Name of this array.
-    attrs : OrderedDict
+    attrs : dict
         Dictionary for holding arbitrary metadata.
     """
 
-    __slots__ = ("_accessors", "_coords", "_file_obj", "_name", "_indexes", "_variable")
+    _accessors: Optional[Dict[str, Any]]
+    _coords: Dict[Any, Variable]
+    _indexes: Optional[Dict[Hashable, pd.Index]]
+    _name: Optional[Hashable]
+    _variable: Variable
+
+    __slots__ = (
+        "_accessors",
+        "_coords",
+        "_file_obj",
+        "_indexes",
+        "_name",
+        "_variable",
+        "__weakref__",
+    )
 
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
@@ -269,7 +284,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # deprecated parameters
         encoding=None,
         # internal parameters
-        indexes=None,
+        indexes: Dict[Hashable, pd.Index] = None,
         fastpath: bool = False,
     ):
         """
@@ -315,7 +330,7 @@ class DataArray(AbstractArray, DataWithCoords):
         if encoding is not None:
             warnings.warn(
                 "The `encoding` argument to `DataArray` is deprecated, and . "
-                "will be removed in 0.14. "
+                "will be removed in 0.15. "
                 "Instead, specify the encoding when writing to disk or "
                 "set the `encoding` attribute directly.",
                 FutureWarning,
@@ -356,11 +371,11 @@ class DataArray(AbstractArray, DataWithCoords):
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
 
         # These fully describe a DataArray
-        self._variable = variable  # type: Variable
-        assert isinstance(coords, OrderedDict)
-        self._coords = coords  # type: OrderedDict[Any, Variable]
-        self._name = name  # type: Optional[Hashable]
-        self._accessors = None  # type: Optional[Dict[str, Any]]
+        self._variable = variable
+        assert isinstance(coords, dict)
+        self._coords = coords
+        self._name = name
+        self._accessors = None
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
@@ -390,16 +405,16 @@ class DataArray(AbstractArray, DataWithCoords):
         elif variable.dims == self.dims:
             # Shape has changed (e.g. from reduce(..., keepdims=True)
             new_sizes = dict(zip(self.dims, variable.shape))
-            coords = OrderedDict(
-                (k, v)
+            coords = {
+                k: v
                 for k, v in self._coords.items()
                 if v.shape == tuple(new_sizes[d] for d in v.dims)
-            )
+            }
         else:
             allowed_dims = set(variable.dims)
-            coords = OrderedDict(
-                (k, v) for k, v in self._coords.items() if set(v.dims) <= allowed_dims
-            )
+            coords = {
+                k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
+            }
         return self._replace(variable, coords, name)
 
     def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
@@ -411,7 +426,7 @@ class DataArray(AbstractArray, DataWithCoords):
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
-        dim_names = {}  # type: Dict[Any, str]
+        dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
             if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
                 dim_names[dim] = idx.name
@@ -437,9 +452,8 @@ class DataArray(AbstractArray, DataWithCoords):
             array.attrs = {}
             return array
 
-        variables = OrderedDict(
-            [(label, subset(dim, label)) for label in self.get_index(dim)]
-        )
+        variables = {label: subset(dim, label) for label in self.get_index(dim)}
+
         coords = self.coords.to_dataset()
         if dim in coords:
             del coords[dim]
@@ -592,11 +606,11 @@ class DataArray(AbstractArray, DataWithCoords):
             return dict(zip(self.dims, key))
 
     @property
-    def _level_coords(self) -> "OrderedDict[Any, Hashable]":
+    def _level_coords(self) -> Dict[Hashable, Hashable]:
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
-        level_coords = OrderedDict()  # type: OrderedDict[Any, Hashable]
+        level_coords: Dict[Hashable, Hashable] = {}
 
         for cname, var in self._coords.items():
             if var.ndim == 1 and isinstance(var, IndexVariable):
@@ -672,7 +686,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return _LocIndexer(self)
 
     @property
-    def attrs(self) -> "OrderedDict[Any, Any]":
+    def attrs(self) -> Dict[Hashable, Any]:
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
@@ -682,7 +696,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self.variable.attrs = value  # type: ignore
 
     @property
-    def encoding(self) -> "OrderedDict[Any, Any]":
+    def encoding(self) -> Dict[Hashable, Any]:
         """Dictionary of format-specific settings for how this array should be
         serialized."""
         return self.variable.encoding
@@ -908,7 +922,7 @@ class DataArray(AbstractArray, DataWithCoords):
         pandas.DataFrame.copy
         """
         variable = self.variable.copy(deep=deep, data=data)
-        coords = OrderedDict((k, v.copy(deep=deep)) for k, v in self._coords.items())
+        coords = {k: v.copy(deep=deep) for k, v in self._coords.items()}
         return self._replace(variable, coords)
 
     def __copy__(self) -> "DataArray":
@@ -1176,12 +1190,11 @@ class DataArray(AbstractArray, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -1242,7 +1255,7 @@ class DataArray(AbstractArray, DataWithCoords):
             * None (default): don't fill gaps
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value (requires pandas>=0.16)
+            * nearest: use nearest valid index value
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
@@ -1445,8 +1458,25 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        renamed : Dataset
+        swapped : DataArray
             DataArray with swapped dimensions.
+
+        Examples
+        --------
+        >>> arr = xr.DataArray(data=[0, 1], dims="x",
+                               coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        >>> arr
+        <xarray.DataArray (x: 2)>
+        array([0, 1])
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+            y        (x) int64 0 1
+        >>> arr.swap_dims({"x": "y"})
+        <xarray.DataArray (y: 2)>
+        array([0, 1])
+        Coordinates:
+            x        (y) <U1 'a' 'b'
+          * y        (y) int64 0 1
 
         See Also
         --------
@@ -1479,9 +1509,7 @@ class DataArray(AbstractArray, DataWithCoords):
             with length 1. If provided as a dict, then the keys are the new
             dimensions and the values are either integers (giving the length of
             the new dimensions) or sequence/ndarray (giving the coordinates of
-            the new dimensions). **WARNING** for python 3.5, if ``dim`` is
-            dict-like, then it must be an ``OrderedDict``. This is to ensure
-            that the order in which the dims are given is maintained.
+            the new dimensions).
         axis : integer, list (or tuple) of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
@@ -1492,8 +1520,7 @@ class DataArray(AbstractArray, DataWithCoords):
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
             coordinates. Note, this is an alternative to passing a dict to the
-            dim kwarg and will only be used if dim is None. **WARNING** for
-            python 3.5 ``dim_kwargs`` is not available.
+            dim kwarg and will only be used if dim is None.
 
         Returns
         -------
@@ -1505,19 +1532,9 @@ class DataArray(AbstractArray, DataWithCoords):
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
-            dim = OrderedDict((d, 1) for d in dim)
+            dim = dict.fromkeys(dim, 1)
         elif dim is not None and not isinstance(dim, Mapping):
-            dim = OrderedDict(((cast(Hashable, dim), 1),))
-
-        # TODO: get rid of the below code block when python 3.5 is no longer
-        #   supported.
-        python36_plus = sys.version_info[0] == 3 and sys.version_info[1] > 5
-        not_ordereddict = dim is not None and not isinstance(dim, OrderedDict)
-        if not python36_plus and not_ordereddict:
-            raise TypeError("dim must be an OrderedDict for python <3.6")
-        elif not python36_plus and dim_kwargs:
-            raise ValueError("dim_kwargs isn't available for python <3.6")
-        dim_kwargs = OrderedDict(dim_kwargs)
+            dim = {cast(Hashable, dim): 1}
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         ds = self._to_temp_dataset().expand_dims(dim, axis)
@@ -1811,7 +1828,7 @@ class DataArray(AbstractArray, DataWithCoords):
         variable_dim = idx.names[level_number]
 
         # pull variables out of datarray
-        data_dict = OrderedDict()
+        data_dict = {}
         for k in variables:
             data_dict[k] = self.sel({variable_dim: k}).squeeze(drop=True)
 
@@ -1854,7 +1871,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = OrderedDict()  # type: OrderedDict[Any, Variable]
+            coords: Dict[Hashable, Variable] = {}
             for name, coord in self.coords.items():
                 coord_dims = tuple(dim for dim in dims if dim in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
@@ -2180,7 +2197,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 "DataFrame: use the ``name`` parameter"
             )
 
-        dims = OrderedDict(zip(self.dims, self.shape))
+        dims = dict(zip(self.dims, self.shape))
         # By using a unique name, we can convert a DataArray into a DataFrame
         # even if it shares a name with one of its coordinates.
         # I would normally use unique_name = object() but that results in a
@@ -2219,7 +2236,7 @@ class DataArray(AbstractArray, DataWithCoords):
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
-    def to_netcdf(self, *args, **kwargs) -> Optional["Delayed"]:
+    def to_netcdf(self, *args, **kwargs) -> Union[bytes, "Delayed", None]:
         """Write DataArray contents to a netCDF file.
 
         All parameters are passed directly to `xarray.Dataset.to_netcdf`.
@@ -2308,12 +2325,10 @@ class DataArray(AbstractArray, DataWithCoords):
         coords = None
         if "coords" in d:
             try:
-                coords = OrderedDict(
-                    [
-                        (k, (v["dims"], v["data"], v.get("attrs")))
-                        for k, v in d["coords"].items()
-                    ]
-                )
+                coords = {
+                    k: (v["dims"], v["data"], v.get("attrs"))
+                    for k, v in d["coords"].items()
+                }
             except KeyError as e:
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
@@ -2494,7 +2509,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 if not reflexive
                 else f(other_variable, self.variable)
             )
-            coords = self.coords._merge_raw(other_coords)
+            coords, indexes = self.coords._merge_raw(other_coords)
             name = self._result_name(other)
 
             return self._replace(variable, coords, name)
@@ -2528,15 +2543,17 @@ class DataArray(AbstractArray, DataWithCoords):
     @property
     def plot(self) -> _PlotMethods:
         """
-        Access plotting functions
+        Access plotting functions for DataArray's
 
         >>> d = DataArray([[1, 2], [3, 4]])
 
         For convenience just call this directly
+
         >>> d.plot()
 
         Or use it as a namespace to use xarray.plot functions as
         DataArray methods
+
         >>> d.plot.imshow()  # equivalent to xarray.plot.imshow(d)
 
         """
@@ -3026,8 +3043,81 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().integrate(dim, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    def unify_chunks(self) -> "DataArray":
+        """ Unify chunk size along all chunked dimensions of this DataArray.
+
+        Returns
+        -------
+
+        DataArray with consistent chunk sizes for all dask-array variables
+
+        See Also
+        --------
+
+        dask.array.core.unify_chunks
+        """
+        ds = self._to_temp_dataset().unify_chunks()
+        return self._from_temp_dataset(ds)
+
+    def map_blocks(
+        self,
+        func: "Callable[..., T_DSorDA]",
+        args: Sequence[Any] = (),
+        kwargs: Mapping[str, Any] = None,
+    ) -> "T_DSorDA":
+        """
+        Apply a function to each chunk of this DataArray. This method is experimental
+        and its signature may change.
+
+        Parameters
+        ----------
+        func: callable
+            User-provided function that accepts a DataArray as its first parameter. The
+            function will receive a subset of this DataArray, corresponding to one chunk
+            along each chunked dimension. ``func`` will be executed as
+            ``func(obj_subset, *args, **kwargs)``.
+
+            The function will be first run on mocked-up data, that looks like this array
+            but has sizes 0, to determine properties of the returned object such as
+            dtype, variable names, new dimensions and new indexes (if any).
+
+            This function must return either a single DataArray or a single Dataset.
+
+            This function cannot change size of existing dimensions, or add new chunked
+            dimensions.
+        args: Sequence
+            Passed verbatim to func after unpacking, after the sliced DataArray. xarray
+            objects, if any, will not be split by chunks. Passing dask collections is
+            not allowed.
+        kwargs: Mapping
+            Passed verbatim to func after unpacking. xarray objects, if any, will not be
+            split by chunks. Passing dask collections is not allowed.
+
+        Returns
+        -------
+        A single DataArray or Dataset with dask backend, reassembled from the outputs of
+        the function.
+
+        Notes
+        -----
+        This method is designed for when one needs to manipulate a whole xarray object
+        within each chunk. In the more common case where one can work on numpy arrays,
+        it is recommended to use apply_ufunc.
+
+        If none of the variables in this DataArray is backed by dask, calling this
+        method is equivalent to calling ``func(self, *args, **kwargs)``.
+
+        See Also
+        --------
+        dask.array.map_blocks, xarray.apply_ufunc, xarray.map_blocks,
+        xarray.Dataset.map_blocks
+        """
+        from .parallel import map_blocks
+
+        return map_blocks(func, self, args, kwargs)
+
     # this needs to be at the end, or mypy will confuse with `str`
-    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names  # noqa
+    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
 
 

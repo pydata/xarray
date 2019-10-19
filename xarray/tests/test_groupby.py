@@ -5,7 +5,7 @@ import pytest
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_identical
+from . import assert_identical, raises_regex
 
 
 def test_consolidate_slices():
@@ -19,6 +19,19 @@ def test_consolidate_slices():
 
     with pytest.raises(ValueError):
         _consolidate_slices([slice(3), 4])
+
+
+def test_groupby_dims_property():
+    ds = xr.Dataset(
+        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
+        {"x": ["a", "bcd", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
+    )
+
+    assert ds.groupby("x").dims == ds.isel(x=1).dims
+    assert ds.groupby("y").dims == ds.isel(y=1).dims
+
+    stacked = ds.stack({"xy": ("x", "y")})
+    assert stacked.groupby("xy").dims == stacked.isel(xy=0).dims
 
 
 def test_multi_index_groupby_apply():
@@ -200,6 +213,83 @@ def test_da_groupby_assign_coords():
     )
     assert_identical(expected, actual1)
     assert_identical(expected, actual2)
+
+
+repr_da = xr.DataArray(
+    np.random.randn(10, 20, 6, 24),
+    dims=["x", "y", "z", "t"],
+    coords={
+        "z": ["a", "b", "c", "a", "b", "c"],
+        "x": [1, 1, 1, 2, 2, 3, 4, 5, 3, 4],
+        "t": pd.date_range("2001-01-01", freq="M", periods=24),
+        "month": ("t", list(range(1, 13)) * 2),
+    },
+)
+
+
+@pytest.mark.parametrize("dim", ["x", "y", "z", "month"])
+@pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
+def test_groupby_repr(obj, dim):
+    actual = repr(obj.groupby(dim))
+    expected = "%sGroupBy" % obj.__class__.__name__
+    expected += ", grouped over %r " % dim
+    expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
+    if dim == "x":
+        expected += "1, 2, 3, 4, 5."
+    elif dim == "y":
+        expected += "0, 1, 2, 3, 4, 5, ..., 15, 16, 17, 18, 19."
+    elif dim == "z":
+        expected += "'a', 'b', 'c'."
+    elif dim == "month":
+        expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
+    assert actual == expected
+
+
+@pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
+def test_groupby_repr_datetime(obj):
+    actual = repr(obj.groupby("t.month"))
+    expected = "%sGroupBy" % obj.__class__.__name__
+    expected += ", grouped over 'month' "
+    expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
+    expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
+    assert actual == expected
+
+
+def test_groupby_grouping_errors():
+    dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
+    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+        dataset.groupby_bins("x", bins=[0.1, 0.2, 0.3])
+
+    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+        dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
+
+    with raises_regex(ValueError, "All bin edges are NaN."):
+        dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
+
+    with raises_regex(ValueError, "All bin edges are NaN."):
+        dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
+
+    with raises_regex(ValueError, "Failed to group data."):
+        dataset.groupby(dataset.foo * np.nan)
+
+    with raises_regex(ValueError, "Failed to group data."):
+        dataset.to_array().groupby(dataset.foo * np.nan)
+
+
+def test_groupby_bins_timeseries():
+    ds = xr.Dataset()
+    ds["time"] = xr.DataArray(
+        pd.date_range("2010-08-01", "2010-08-15", freq="15min"), dims="time"
+    )
+    ds["val"] = xr.DataArray(np.ones(*ds["time"].shape), dims="time")
+    time_bins = pd.date_range(start="2010-08-01", end="2010-08-15", freq="24H")
+    actual = ds.groupby_bins("time", time_bins).sum()
+    expected = xr.DataArray(
+        96 * np.ones((14,)),
+        dims=["time_bins"],
+        coords={"time_bins": pd.cut(time_bins, time_bins).categories},
+    ).to_dataset(name="val")
+    assert_identical(actual, expected)
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

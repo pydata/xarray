@@ -77,7 +77,7 @@ a customized coordinate, but xarray facilitates this via the
     x_bins = [0,25,50]
     ds.groupby_bins('x', x_bins).groups
 
-The binning is implemented via `pandas.cut`__, whose documentation details how
+The binning is implemented via :func:`pandas.cut`, whose documentation details how
 the bins are assigned. As seen in the example above, by default, the bins are
 labeled with strings using set notation to precisely identify the bin limits. To
 override this behavior, you can specify the bin labels explicitly. Here we
@@ -87,8 +87,6 @@ choose `float` labels which identify the bin centers:
 
     x_bin_labels = [12.5,37.5]
     ds.groupby_bins('x', x_bins, labels=x_bin_labels).groups
-
-__ http://pandas.pydata.org/pandas-docs/version/0.17.1/generated/pandas.cut.html
 
 
 Apply
@@ -215,4 +213,4 @@ applying your function, and then unstacking the result:
 .. ipython:: python
 
    stacked = da.stack(gridcell=['ny', 'nx'])
-   stacked.groupby('gridcell').sum().unstack('gridcell')
+   stacked.groupby('gridcell').sum(xr.ALL_DIMS).unstack('gridcell')

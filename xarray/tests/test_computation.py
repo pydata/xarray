@@ -1,8 +1,6 @@
 import functools
 import operator
 import pickle
-from collections import OrderedDict
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -73,7 +71,7 @@ def test_ordered_set_intersection():
 
 
 def test_join_dict_keys():
-    dicts = [OrderedDict.fromkeys(keys) for keys in [["x", "y"], ["y", "z"]]]
+    dicts = [dict.fromkeys(keys) for keys in [["x", "y"], ["y", "z"]]]
     assert list(join_dict_keys(dicts, "left")) == ["x", "y"]
     assert list(join_dict_keys(dicts, "right")) == ["y", "z"]
     assert list(join_dict_keys(dicts, "inner")) == ["y"]
@@ -447,17 +445,16 @@ def test_apply_groupby_add():
 
 
 def test_unified_dim_sizes():
-    assert unified_dim_sizes([xr.Variable((), 0)]) == OrderedDict()
-    assert unified_dim_sizes(
-        [xr.Variable("x", [1]), xr.Variable("x", [1])]
-    ) == OrderedDict([("x", 1)])
-    assert unified_dim_sizes(
-        [xr.Variable("x", [1]), xr.Variable("y", [1, 2])]
-    ) == OrderedDict([("x", 1), ("y", 2)])
+    assert unified_dim_sizes([xr.Variable((), 0)]) == {}
+    assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1])]) == {"x": 1}
+    assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("y", [1, 2])]) == {
+        "x": 1,
+        "y": 2,
+    }
     assert unified_dim_sizes(
         [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
         exclude_dims={"z"},
-    ) == OrderedDict([("x", 1), ("y", 2)])
+    ) == {"x": 1, "y": 2}
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -942,12 +939,6 @@ def test_dot(use_dask):
     assert (actual.data == np.einsum("ij,ijk->k", a, b)).all()
     assert isinstance(actual.variable.data, type(da_a.variable.data))
 
-    if use_dask:
-        import dask
-
-        if LooseVersion(dask.__version__) < LooseVersion("0.17.3"):
-            pytest.skip("needs dask.array.einsum")
-
     # for only a single array is passed without dims argument, just return
     # as is
     actual = xr.dot(da_a)
@@ -1008,7 +999,7 @@ def test_dot(use_dask):
     assert (actual.data == np.zeros(actual.shape)).all()
 
     # Invalid cases
-    if not use_dask or LooseVersion(dask.__version__) > LooseVersion("0.17.4"):
+    if not use_dask:
         with pytest.raises(TypeError):
             xr.dot(da_a, dims="a", invalid=None)
     with pytest.raises(TypeError):

@@ -2,7 +2,6 @@ import logging
 import time
 import traceback
 import warnings
-from collections import OrderedDict
 from collections.abc import Mapping
 
 import numpy as np
@@ -10,7 +9,7 @@ import numpy as np
 from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.pycompat import dask_array_type
-from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
+from ..core.utils import FrozenDict, NdimSizeLenMixin
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -88,13 +87,13 @@ class AbstractDataStore(Mapping):
         return len(self.variables)
 
     def get_dimensions(self):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_attrs(self):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_variables(self):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_encoding(self):
         return {}
@@ -120,10 +119,10 @@ class AbstractDataStore(Mapping):
         This function will be called anytime variables or attributes
         are requested, so care should be taken to make sure its fast.
         """
-        variables = FrozenOrderedDict(
+        variables = FrozenDict(
             (_decode_variable_name(k), v) for k, v in self.get_variables().items()
         )
-        attributes = FrozenOrderedDict(self.get_attrs())
+        attributes = FrozenDict(self.get_attrs())
         return variables, attributes
 
     @property
@@ -230,12 +229,8 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes : dict-like
 
         """
-        variables = OrderedDict(
-            [(k, self.encode_variable(v)) for k, v in variables.items()]
-        )
-        attributes = OrderedDict(
-            [(k, self.encode_attribute(v)) for k, v in attributes.items()]
-        )
+        variables = {k: self.encode_variable(v) for k, v in variables.items()}
+        attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
 
     def encode_variable(self, v):
@@ -247,13 +242,13 @@ class AbstractWritableDataStore(AbstractDataStore):
         return a
 
     def set_dimension(self, d, l):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def set_attribute(self, k, v):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def set_variable(self, k, v):  # pragma: no cover
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def store_dataset(self, dataset):
         """
@@ -361,7 +356,7 @@ class AbstractWritableDataStore(AbstractDataStore):
 
         existing_dims = self.get_dimensions()
 
-        dims = OrderedDict()
+        dims = {}
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
@@ -385,10 +380,6 @@ class WritableCFDataStore(AbstractWritableDataStore):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
         variables, attributes = cf_encoder(variables, attributes)
-        variables = OrderedDict(
-            [(k, self.encode_variable(v)) for k, v in variables.items()]
-        )
-        attributes = OrderedDict(
-            [(k, self.encode_attribute(v)) for k, v in attributes.items()]
-        )
+        variables = {k: self.encode_variable(v) for k, v in variables.items()}
+        attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes

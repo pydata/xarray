@@ -6,6 +6,7 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
+from pandas.errors import OutOfBoundsDatetime
 
 from ..core import indexing
 from ..core.common import contains_cftime_datetimes
@@ -20,13 +21,6 @@ from .variables import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
-
-try:
-    from pandas.errors import OutOfBoundsDatetime
-except ImportError:
-    # pandas < 0.20
-    from pandas.tslib import OutOfBoundsDatetime
-
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}

@@ -1,0 +1,49 @@
+name: xarray-tests
+channels:
+  - conda-forge
+dependencies:
+  # MINIMUM VERSIONS POLICY: see doc/installing.rst
+  # Run ci/min_deps_check.py to verify that this file respects the policy.
+  # When upgrading python, numpy, or pandas, must also change
+  # doc/installing.rst and setup.py.
+  - python=3.6
+  - black
+  - boto3=1.9
+  - bottleneck=1.2
+  - cartopy=0.17
+  - cdms2=3.1
+  - cfgrib=0.9
+  - cftime=1.0
+  - coveralls
+  - dask=1.2
+  - distributed=1.27
+  - flake8
+  - h5netcdf=0.7
+  - h5py=2.9  # Policy allows for 2.10, but it's a conflict-fest
+  - hdf5=1.10
+  - hypothesis
+  - iris=2.2
+  - lxml=4.4  # Optional dep of pydap
+  - matplotlib=3.1
+  - mypy=0.730  # Must match .pre-commit-config.yaml
+  - nc-time-axis=1.2
+  - netcdf4=1.4
+  - numba=0.44
+  - numpy=1.14
+  - pandas=0.24
+  # - pint  # See py36-min-nep18.yml
+  - pip
+  - pseudonetcdf=3.0
+  - pydap=3.2
+  - pynio=1.5
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - rasterio=1.0
+  - scipy=1.0  # Policy allows for 1.2, but scipy>=1.1 breaks numpy=1.14
+  - seaborn=0.9
+  # - sparse  # See py36-min-nep18.yml
+  - toolz=0.10
+  - zarr=2.3
+  - pip:
+    - numbagg==0.1

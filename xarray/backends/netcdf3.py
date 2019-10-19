@@ -1,5 +1,4 @@
 import unicodedata
-from collections import OrderedDict
 
 import numpy as np
 
@@ -70,7 +69,7 @@ def encode_nc3_attr_value(value):
 
 
 def encode_nc3_attrs(attrs):
-    return OrderedDict([(k, encode_nc3_attr_value(v)) for k, v in attrs.items()])
+    return {k: encode_nc3_attr_value(v) for k, v in attrs.items()}
 
 
 def encode_nc3_variable(var):

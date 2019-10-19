@@ -1,8 +1,8 @@
-from collections import OrderedDict
 from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     Hashable,
     Iterator,
     Mapping,
@@ -17,11 +17,7 @@ import pandas as pd
 
 from . import formatting, indexing
 from .indexes import Indexes
-from .merge import (
-    expand_and_merge_variables,
-    merge_coords,
-    merge_coords_for_inplace_math,
-)
+from .merge import merge_coordinates_without_align, merge_coords
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
 
@@ -34,7 +30,7 @@ if TYPE_CHECKING:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class AbstractCoordinates(Mapping[Hashable, "DataArray"]):
+class Coordinates(Mapping[Hashable, "DataArray"]):
     __slots__ = ()
 
     def __getitem__(self, key: Hashable) -> "DataArray":
@@ -59,7 +55,7 @@ class AbstractCoordinates(Mapping[Hashable, "DataArray"]):
     def variables(self):
         raise NotImplementedError()
 
-    def _update_coords(self, coords):
+    def _update_coords(self, coords, indexes):
         raise NotImplementedError()
 
     def __iter__(self) -> Iterator["Hashable"]:
@@ -116,19 +112,19 @@ class AbstractCoordinates(Mapping[Hashable, "DataArray"]):
 
     def update(self, other: Mapping[Hashable, Any]) -> None:
         other_vars = getattr(other, "variables", other)
-        coords = merge_coords(
+        coords, indexes = merge_coords(
             [self.variables, other_vars], priority_arg=1, indexes=self.indexes
         )
-        self._update_coords(coords)
+        self._update_coords(coords, indexes)
 
     def _merge_raw(self, other):
         """For use with binary arithmetic."""
         if other is None:
-            variables = OrderedDict(self.variables)
+            variables = dict(self.variables)
+            indexes = dict(self.indexes)
         else:
-            # don't align because we already called xarray.align
-            variables = expand_and_merge_variables([self.variables, other.variables])
-        return variables
+            variables, indexes = merge_coordinates_without_align([self, other])
+        return variables, indexes
 
     @contextmanager
     def _merge_inplace(self, other):
@@ -136,18 +132,18 @@ class AbstractCoordinates(Mapping[Hashable, "DataArray"]):
         if other is None:
             yield
         else:
-            # don't include indexes in priority_vars, because we didn't align
-            # first
-            priority_vars = OrderedDict(
-                kv for kv in self.variables.items() if kv[0] not in self.dims
-            )
-            variables = merge_coords_for_inplace_math(
-                [self.variables, other.variables], priority_vars=priority_vars
+            # don't include indexes in prioritized, because we didn't align
+            # first and we want indexes to be checked
+            prioritized = {
+                k: (v, None) for k, v in self.variables.items() if k not in self.indexes
+            }
+            variables, indexes = merge_coordinates_without_align(
+                [self, other], prioritized
             )
             yield
-            self._update_coords(variables)
+            self._update_coords(variables, indexes)
 
-    def merge(self, other: "AbstractCoordinates") -> "Dataset":
+    def merge(self, other: "Coordinates") -> "Dataset":
         """Merge two sets of coordinates to create a new Dataset
 
         The method implements the logic used for joining coordinates in the
@@ -173,16 +169,22 @@ class AbstractCoordinates(Mapping[Hashable, "DataArray"]):
 
         if other is None:
             return self.to_dataset()
-        else:
-            other_vars = getattr(other, "variables", other)
-            coords = expand_and_merge_variables([self.variables, other_vars])
-            return Dataset._from_vars_and_coord_names(coords, set(coords))
+
+        if not isinstance(other, Coordinates):
+            other = Dataset(coords=other).coords
+
+        coords, indexes = merge_coordinates_without_align([self, other])
+        coord_names = set(coords)
+        merged = Dataset._construct_direct(
+            variables=coords, coord_names=coord_names, indexes=indexes
+        )
+        return merged
 
 
-class DatasetCoordinates(AbstractCoordinates):
+class DatasetCoordinates(Coordinates):
     """Dictionary like container for Dataset coordinates.
 
-    Essentially an immutable OrderedDict with keys given by the array's
+    Essentially an immutable dictionary with keys given by the array's
     dimensions and the values given by the corresponding xarray.Coordinate
     objects.
     """
@@ -203,9 +205,7 @@ class DatasetCoordinates(AbstractCoordinates):
     @property
     def variables(self) -> Mapping[Hashable, Variable]:
         return Frozen(
-            OrderedDict(
-                (k, v) for k, v in self._data.variables.items() if k in self._names
-            )
+            {k: v for k, v in self._data.variables.items() if k in self._names}
         )
 
     def __getitem__(self, key: Hashable) -> "DataArray":
@@ -218,7 +218,9 @@ class DatasetCoordinates(AbstractCoordinates):
         """
         return self._data._copy_listed(self._names)
 
-    def _update_coords(self, coords: Mapping[Hashable, Any]) -> None:
+    def _update_coords(
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
+    ) -> None:
         from .dataset import calculate_dimensions
 
         variables = self._data._variables.copy()
@@ -234,7 +236,12 @@ class DatasetCoordinates(AbstractCoordinates):
         self._data._variables = variables
         self._data._coord_names.update(new_coord_names)
         self._data._dims = dims
-        self._data._indexes = None
+
+        # TODO(shoyer): once ._indexes is always populated by a dict, modify
+        # it to update inplace instead.
+        original_indexes = dict(self._data.indexes)
+        original_indexes.update(indexes)
+        self._data._indexes = original_indexes
 
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
@@ -251,10 +258,10 @@ class DatasetCoordinates(AbstractCoordinates):
         ]
 
 
-class DataArrayCoordinates(AbstractCoordinates):
+class DataArrayCoordinates(Coordinates):
     """Dictionary like container for DataArray coordinates.
 
-    Essentially an OrderedDict with keys given by the array's
+    Essentially a dict with keys given by the array's
     dimensions and the values given by corresponding DataArray objects.
     """
 
@@ -274,7 +281,9 @@ class DataArrayCoordinates(AbstractCoordinates):
     def __getitem__(self, key: Hashable) -> "DataArray":
         return self._data._getitem_coord(key)
 
-    def _update_coords(self, coords) -> None:
+    def _update_coords(
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
+    ) -> None:
         from .dataset import calculate_dimensions
 
         coords_plus_data = coords.copy()
@@ -285,7 +294,12 @@ class DataArrayCoordinates(AbstractCoordinates):
                 "cannot add coordinates with new dimensions to " "a DataArray"
             )
         self._data._coords = coords
-        self._data._indexes = None
+
+        # TODO(shoyer): once ._indexes is always populated by a dict, modify
+        # it to update inplace instead.
+        original_indexes = dict(self._data.indexes)
+        original_indexes.update(indexes)
+        self._data._indexes = original_indexes
 
     @property
     def variables(self):
@@ -294,9 +308,7 @@ class DataArrayCoordinates(AbstractCoordinates):
     def to_dataset(self) -> "Dataset":
         from .dataset import Dataset
 
-        coords = OrderedDict(
-            (k, v.copy(deep=False)) for k, v in self._data._coords.items()
-        )
+        coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
         return Dataset._from_vars_and_coord_names(coords, set(coords))
 
     def __delitem__(self, key: Hashable) -> None:
@@ -386,8 +398,6 @@ def remap_label_indexers(
         elif isinstance(v, DataArray):
             # drop coordinates found in indexers since .sel() already
             # ensures alignments
-            coords = OrderedDict(
-                (k, v) for k, v in v._coords.items() if k not in indexers
-            )
+            coords = {k: var for k, var in v._coords.items() if k not in indexers}
             pos_indexers[k] = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
     return pos_indexers, new_indexes
