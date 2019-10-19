@@ -110,16 +110,14 @@ class _UFuncSignature:
         return not self == other
 
     def __repr__(self):
-        return "%s(%r, %r)" % (
-            type(self).__name__,
-            list(self.input_core_dims),
-            list(self.output_core_dims),
+        return "{}({!r}, {!r})".format(
+            type(self).__name__, list(self.input_core_dims), list(self.output_core_dims)
         )
 
     def __str__(self):
         lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
         rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
-        return "{}->{}".format(lhs, rhs)
+        return f"{lhs}->{rhs}"
 
     def to_gufunc_string(self):
         """Create an equivalent signature string for a NumPy gufunc.
@@ -355,7 +353,7 @@ def apply_dataset_vfunc(
     dataset_join="exact",
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
-    keep_attrs=False
+    keep_attrs=False,
 ):
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
@@ -548,7 +546,7 @@ def apply_variable_ufunc(
     dask="forbidden",
     output_dtypes=None,
     output_sizes=None,
-    keep_attrs=False
+    keep_attrs=False,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects.
     """
@@ -720,7 +718,7 @@ def _apply_blockwise(
         *blockwise_args,
         dtype=dtype,
         concatenate=True,
-        new_axes=output_sizes
+        new_axes=output_sizes,
     )
 
 
@@ -743,7 +741,7 @@ def apply_array_ufunc(func, *args, dask="forbidden"):
         elif dask == "allowed":
             pass
         else:
-            raise ValueError("unknown setting for dask array handling: {}".format(dask))
+            raise ValueError(f"unknown setting for dask array handling: {dask}")
     return func(*args)
 
 
@@ -761,7 +759,7 @@ def apply_ufunc(
     kwargs: Mapping = None,
     dask: str = "forbidden",
     output_dtypes: Sequence = None,
-    output_sizes: Mapping[Any, int] = None
+    output_sizes: Mapping[Any, int] = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -1032,7 +1030,7 @@ def apply_ufunc(
             exclude_dims=exclude_dims,
             dataset_join=dataset_join,
             fill_value=dataset_fill_value,
-            keep_attrs=keep_attrs
+            keep_attrs=keep_attrs,
         )
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_vfunc(
@@ -1041,7 +1039,7 @@ def apply_ufunc(
             signature=signature,
             join=join,
             exclude_dims=exclude_dims,
-            keep_attrs=keep_attrs
+            keep_attrs=keep_attrs,
         )
     elif any(isinstance(a, Variable) for a in args):
         return variables_vfunc(*args)
@@ -1175,7 +1173,7 @@ def dot(*arrays, dims=None, **kwargs):
         *arrays,
         input_core_dims=input_core_dims,
         output_core_dims=output_core_dims,
-        dask="allowed"
+        dask="allowed",
     )
     return result.transpose(*[d for d in all_dims if d in result.dims])
 
