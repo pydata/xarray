@@ -2069,7 +2069,7 @@ class TestDataArray:
         assert_equal(expected, actual)
 
         # same as previous but with ellipsis
-        actual = da.transpose("z", ..., transpose_coords=True)
+        actual = da.transpose("z", ..., "x", transpose_coords=True)
         assert_equal(expected, actual)
 
         with pytest.raises(ValueError):

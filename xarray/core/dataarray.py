@@ -1869,7 +1869,8 @@ class DataArray(AbstractArray, DataWithCoords):
                     "permuted array dimensions (%s) unless `...` is included"
                     % (dims, tuple(self.dims))
                 )
-
+        # infix here so the filter `coord_dims` below works correctly
+        dims = tuple(utils.infix_dims(dims, self.dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: Dict[Hashable, Variable] = {}
