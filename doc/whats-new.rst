@@ -39,6 +39,12 @@ Documentation
   datetime-like dimension is required. (:pull:`3400`)
   By `Justus Magin <https://github.com/keewis>`_.
 
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Use Python 3.6 idioms throughout the codebase. (:pull:3419)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
 .. _whats-new.0.14.0:
 
 v0.14.0 (14 Oct 2019)
