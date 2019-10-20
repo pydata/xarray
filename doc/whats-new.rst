@@ -18,10 +18,6 @@ What's New
 v0.14.1 (unreleased)
 --------------------
 
-Bug fixes
-~~~~~~~~~
-- Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
-  but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 New Features
 ~~~~~~~~~~~~
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
@@ -34,6 +30,11 @@ New Features
     <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
     ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
     Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
+
+Bug fixes
+~~~~~~~~~
+- Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
+  but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 
 Documentation
 ~~~~~~~~~~~~~
