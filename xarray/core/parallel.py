@@ -252,7 +252,7 @@ def map_blocks(
                 for dim in variable.dims:
                     chunk = chunk[chunk_index_dict[dim]]
 
-                chunk_variable_task = ("{}-{}".format(gname, chunk[0]),) + v
+                chunk_variable_task = (f"{gname}-{chunk[0]}",) + v
                 graph[chunk_variable_task] = (
                     tuple,
                     [variable.dims, chunk, variable.attrs],
