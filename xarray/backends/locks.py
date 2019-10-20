@@ -87,7 +87,8 @@ def _get_scheduler(get=None, collection=None) -> Optional[str]:
         pass
 
     try:
-        # dask.multiprocessing requires cloudpickle to be installed
+        # As of dask=2.6, dask.multiprocessing requires cloudpickle to be installed
+        # Dependency removed in https://github.com/dask/dask/pull/5511
         if actual_get is dask.multiprocessing.get:
             return "multiprocessing"
     except AttributeError:
