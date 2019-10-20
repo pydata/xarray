@@ -4679,6 +4679,13 @@ class TestDataset:
             expected_dims = tuple(d for d in new_order if d in ds[k].dims)
             assert actual[k].dims == expected_dims
 
+        # same as above but with ellipsis
+        new_order = ("dim2", "dim3", "dim1", "time")
+        actual = ds.transpose("dim2", "dim3", ...)
+        for k in ds.variables:
+            expected_dims = tuple(d for d in new_order if d in ds[k].dims)
+            assert actual[k].dims == expected_dims
+
         with raises_regex(ValueError, "arguments to transpose"):
             ds.transpose("dim1", "dim2", "dim3")
         with raises_regex(ValueError, "arguments to transpose"):

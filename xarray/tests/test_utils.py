@@ -289,7 +289,6 @@ def test_either_dict_or_kwargs():
     ],
 )
 def test_infix_dims(supplied, all_, expected):
-
     result = list(utils.infix_dims(supplied, all_))
     assert result == expected
 

@@ -1863,10 +1863,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.transpose
         """
         if dims:
-            if set(dims) ^ set(self.dims):
+            if set(dims) ^ set(self.dims) and ... not in dims:
                 raise ValueError(
                     "arguments to transpose (%s) must be "
-                    "permuted array dimensions (%s)" % (dims, tuple(self.dims))
+                    "permuted array dimensions (%s) unless `...` is included"
+                    % (dims, tuple(self.dims))
                 )
 
         variable = self.variable.transpose(*dims)
