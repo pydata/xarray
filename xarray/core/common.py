@@ -1069,7 +1069,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Same type as caller.
+        Same xarray type as caller, with dtype float64.
 
         Examples
         --------
