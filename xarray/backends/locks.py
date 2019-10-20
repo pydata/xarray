@@ -1,7 +1,7 @@
 import multiprocessing
 import threading
 import weakref
-from typing import Any, MutableMapping
+from typing import Any, MutableMapping, Optional
 
 try:
     from dask.utils import SerializableLock
@@ -62,7 +62,7 @@ def _get_lock_maker(scheduler=None):
     return _LOCK_MAKERS[scheduler]
 
 
-def _get_scheduler(get=None, collection=None):
+def _get_scheduler(get=None, collection=None) -> Optional[str]:
     """Determine the dask scheduler that is being used.
 
     None is returned if no dask scheduler is active.
@@ -87,12 +87,13 @@ def _get_scheduler(get=None, collection=None):
         pass
 
     try:
+        # dask.multiprocessing requires cloudpickle to be installed
         if actual_get is dask.multiprocessing.get:
             return "multiprocessing"
-        else:
-            return "threaded"
-    except (AttributeError):
-        return "threaded"
+    except AttributeError:
+        pass
+
+    return "threaded"
 
 
 def get_write_lock(key):
