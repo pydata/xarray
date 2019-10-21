@@ -13,7 +13,6 @@ from typing import (
     Collection,
     Container,
     Dict,
-    Generator,
     Hashable,
     Iterable,
     Iterator,
@@ -662,7 +661,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
         return len(self._data) - num_hidden
 
 
-def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Generator:
+def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
     """
     Resolves a supplied list containing an ellispsis representing other items, to
     a generator with the 'realized' list of all items
