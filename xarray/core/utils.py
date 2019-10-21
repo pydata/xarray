@@ -683,7 +683,6 @@ def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Generator:
             raise ValueError(
                 f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
             )
-        # we could check if all dims are present, as a future feature
         yield from dims_supplied
 
 

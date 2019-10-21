@@ -3710,7 +3710,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if dims:
             dims = tuple(utils.infix_dims(dims, self.dims))
         ds = self.copy()
-        # infix here so the filter `var_dims` below works correctly
         for name, var in self._variables.items():
             var_dims = tuple(dim for dim in dims if dim in var.dims)
             ds._variables[name] = var.transpose(*var_dims)
