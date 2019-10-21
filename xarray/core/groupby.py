@@ -298,7 +298,7 @@ class GroupBy(SupportsArithmetic):
                 )
             group = obj[group]
             if len(group) == 0:
-                raise ValueError("{} must not be empty".format(group.name))
+                raise ValueError(f"{group.name} must not be empty")
 
             if group.name not in obj.coords and group.name in obj.dims:
                 # DummyGroups should not appear on groupby results
@@ -321,7 +321,7 @@ class GroupBy(SupportsArithmetic):
         full_index = None
 
         if bins is not None:
-            if np.isnan(bins).all():
+            if duck_array_ops.isnull(bins).all():
                 raise ValueError("All bin edges are NaN.")
             binned = pd.cut(group.values, bins, **cut_kwargs)
             new_dim_name = group.name + "_bins"
@@ -417,7 +417,7 @@ class GroupBy(SupportsArithmetic):
         return zip(self._unique_coord.values, self._iter_grouped())
 
     def __repr__(self):
-        return "%s, grouped over %r \n%r groups with labels %s." % (
+        return "{}, grouped over {!r} \n{!r} groups with labels {}.".format(
             self.__class__.__name__,
             self._unique_coord.name,
             self._unique_coord.size,

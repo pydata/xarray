@@ -27,8 +27,9 @@ dependencies:
   - numba
   - numpy
   - pandas
+  - pint
   - pip
-  - pseudonetcdf
+  - pseudonetcdf<3.1  # FIXME https://github.com/pydata/xarray/issues/3409
   - pydap
   # - pynio  # Not available on Windows
   - pytest

@@ -66,6 +66,15 @@ For plotting
 Alternative data containers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - `sparse <https://sparse.pydata.org/>`_: for sparse arrays
+- `pint <https://pint.readthedocs.io/>`_: for units of measure
+
+  .. note::
+
+    At the moment of writing, xarray requires a `highly experimental version of pint
+    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
+    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
+    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
+
 - Any numpy-like objects that support
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_.
   Note that while such libraries theoretically should work, they are untested.
@@ -85,7 +94,7 @@ dependencies:
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **pandas:** 12 months
 - **scipy:** 12 months
-- **sparse** and other libraries that rely on
+- **sparse, pint** and other libraries that rely on
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
   for integration: very latest available versions only, until the technology will have
   matured. This extends to dask when used in conjunction with any of these libraries.

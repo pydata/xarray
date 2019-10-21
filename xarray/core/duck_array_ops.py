@@ -41,7 +41,7 @@ def _dask_or_eager_func(
                 try:
                     wrapped = getattr(dask_module, name)
                 except AttributeError as e:
-                    raise AttributeError("%s: requires dask >=%s" % (e, requires_dask))
+                    raise AttributeError(f"{e}: requires dask >={requires_dask}")
             else:
                 wrapped = getattr(eager_module, name)
             return wrapped(*args, **kwargs)
@@ -257,7 +257,7 @@ def _create_nan_agg_method(name, coerce_strings=False):
 
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
-            raise TypeError("`out` is not valid for {}".format(name))
+            raise TypeError(f"`out` is not valid for {name}")
 
         values = asarray(values)
 
