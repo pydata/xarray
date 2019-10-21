@@ -156,7 +156,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
 
             # GH2619. Raise a KeyError if nothing is chosen
             if indexer.dtype.kind == "b" and indexer.sum() == 0:
-                raise KeyError("{} not found".format(label))
+                raise KeyError(f"{label} not found")
 
     elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
         if _is_nested_tuple(label):
@@ -352,7 +352,7 @@ class BasicIndexer(ExplicitIndexer):
 
     def __init__(self, key):
         if not isinstance(key, tuple):
-            raise TypeError("key must be a tuple: {!r}".format(key))
+            raise TypeError(f"key must be a tuple: {key!r}")
 
         new_key = []
         for k in key:
@@ -384,7 +384,7 @@ class OuterIndexer(ExplicitIndexer):
 
     def __init__(self, key):
         if not isinstance(key, tuple):
-            raise TypeError("key must be a tuple: {!r}".format(key))
+            raise TypeError(f"key must be a tuple: {key!r}")
 
         new_key = []
         for k in key:
@@ -429,7 +429,7 @@ class VectorizedIndexer(ExplicitIndexer):
 
     def __init__(self, key):
         if not isinstance(key, tuple):
-            raise TypeError("key must be a tuple: {!r}".format(key))
+            raise TypeError(f"key must be a tuple: {key!r}")
 
         new_key = []
         ndim = None
@@ -574,7 +574,9 @@ class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array[full_key] = value
 
     def __repr__(self):
-        return "%s(array=%r, key=%r)" % (type(self).__name__, self.array, self.key)
+        return "{}(array={!r}, key={!r})".format(
+            type(self).__name__, self.array, self.key
+        )
 
 
 class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
@@ -625,7 +627,9 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         )
 
     def __repr__(self):
-        return "%s(array=%r, key=%r)" % (type(self).__name__, self.array, self.key)
+        return "{}(array={!r}, key={!r})".format(
+            type(self).__name__, self.array, self.key
+        )
 
 
 def _wrap_numpy_scalars(array):
@@ -847,7 +851,7 @@ def decompose_indexer(
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, (BasicIndexer, OuterIndexer)):
         return _decompose_outer_indexer(indexer, shape, indexing_support)
-    raise TypeError("unexpected key type: {}".format(indexer))
+    raise TypeError(f"unexpected key type: {indexer}")
 
 
 def _decompose_slice(key, size):
@@ -1413,7 +1417,9 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array  # self.array should be always one-dimensional
 
     def __repr__(self) -> str:
-        return "%s(array=%r, dtype=%r)" % (type(self).__name__, self.array, self.dtype)
+        return "{}(array={!r}, dtype={!r})".format(
+            type(self).__name__, self.array, self.dtype
+        )
 
     def copy(self, deep: bool = True) -> "PandasIndexAdapter":
         # Not the same as just writing `self.array.copy(deep=deep)`, as

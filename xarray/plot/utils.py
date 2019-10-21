@@ -302,7 +302,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
         )
     for label in not_none:
         if label not in darray.dims:
-            raise ValueError("%r is not a dimension" % (label,))
+            raise ValueError(f"{label!r} is not a dimension")
 
     # Then calculate rgb dimension if certain and check validity
     could_be_color = [
@@ -693,7 +693,7 @@ def _process_cmap_cbar_kwargs(
     colors=None,
     cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
     levels=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Parameters
