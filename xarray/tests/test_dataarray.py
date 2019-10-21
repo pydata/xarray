@@ -3930,6 +3930,16 @@ class TestDataArray:
         expected = DataArray(expected_vals, coords=[x, j], dims=["x", "j"])
         assert_equal(expected, actual)
 
+        # xr.ALL_DIMS: all shared dims
+        actual = da.dot(da, dims=xr.ALL_DIMS)
+        expected = da.dot(da)
+        assert_equal(expected, actual)
+
+        # xr.ALL_DIMS: multiple shared dims
+        actual = da.dot(dm, dims=xr.ALL_DIMS)
+        expected = da.dot(dm, dims=("j", "x", "y", "z"))
+        assert_equal(expected, actual)
+
         with pytest.raises(NotImplementedError):
             da.dot(dm.to_dataset(name="dm"))
         with pytest.raises(TypeError):

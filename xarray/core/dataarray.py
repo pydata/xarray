@@ -2747,7 +2747,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims: hashable or sequence of hashables, optional
+        dims: xarray.ALL_DIMS, hashable or sequence of hashables, optional
             Along which dimensions to be summed over. Default all the common
             dimensions are summed over.
 
