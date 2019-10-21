@@ -271,24 +271,29 @@ def interp_na(
 
     if max_gap is not None:
         max_type = type(max_gap)
-        if isinstance(self.indexes[dim], pd.DatetimeIndex) and not isinstance(
-            max_gap, (np.timedelta64, str)
-        ):
-            raise TypeError(
-                "expected max_gap of type str or timedelta64 since underlying index is DatetimeIndex but received %r"
-                % max_type
-            )
+        if isinstance(self.indexes[dim], pd.DatetimeIndex):
+            if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
+                raise TypeError(
+                    f"Underlying index is DatetimeIndex. Expected max_gap of type str, pandas.Timedelta or numpy.timedelta64 but received {max_type}"
+                )
 
-        # TODO: better time offset checks
-        if isinstance(max_gap, (np.timedelta64, str)):
             if not use_coordinate:
                 raise ValueError(
                     f"provided max_gap of type {max_type} but use_coordinate=False. Set use_coordinate=True instead."
                 )
+
             if isinstance(max_gap, str):
-                max_gap = pd.to_timedelta(max_gap).to_numpy().astype(np.float64)
-            else:
-                max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
+                try:
+                    max_gap = pd.to_timedelta(max_gap).to_numpy()
+                except ValueError:
+                    raise ValueError(
+                        f"Could not convert {max_gap!r} to a pandas timedelta using pandas.to_timedelta"
+                    )
+
+            if isinstance(max_gap, pd.Timedelta):
+                max_gap = max_gap.to_numpy()
+
+            max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
 
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)

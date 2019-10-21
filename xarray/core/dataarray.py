@@ -2018,9 +2018,12 @@ class DataArray(AbstractArray, DataWithCoords):
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit. This filling is done regardless of the size of
             the gap in the data.
-        max_gap : int, default None
-            Maximum size of gap that will be filled. Must be greater than 0 or None
-            for no limit.
+        max_gap : str, pandas.Timedelta or numpy.timedelta64, default None
+            Maximum size of gap that will be filled. Use None for no limit. When interpolating
+            along a datetime64 dimension and use_coordinate=True, max_gap can be one of the following:
+            - a string that is valid input for pandas.to_timedelta
+            - a numpy.timedelta64 object
+            - a pandas.Timedelta object
         kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
