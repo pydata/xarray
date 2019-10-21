@@ -1544,7 +1544,7 @@ class TestFacetGrid(PlotTestCase):
         self.darray.name = "testvar"
         self.g.map_dataarray(xplt.contourf, "x", "y")
         for k, ax in zip("abc", self.g.axes.flat):
-            assert "z = {}".format(k) == ax.get_title()
+            assert f"z = {k}" == ax.get_title()
 
         alltxt = text_in_fig()
         assert self.darray.name in alltxt

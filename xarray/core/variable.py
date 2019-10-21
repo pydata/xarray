@@ -113,7 +113,7 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
     elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
         obj = Variable(obj.name, obj)
     elif isinstance(obj, (set, dict)):
-        raise TypeError("variable %r has invalid type %r" % (name, type(obj)))
+        raise TypeError("variable {!r} has invalid type {!r}".format(name, type(obj)))
     elif name is not None:
         data = as_compatible_data(obj)
         if data.ndim != 1:
@@ -658,7 +658,7 @@ class Variable(
         try:
             variables = _broadcast_compat_variables(*variables)
         except ValueError:
-            raise IndexError("Dimensions of indexers mismatch: {}".format(key))
+            raise IndexError(f"Dimensions of indexers mismatch: {key}")
 
         out_key = [variable.data for variable in variables]
         out_dims = tuple(out_dims_set)
@@ -972,7 +972,7 @@ class Variable(
     def isel(
         self: VariableType,
         indexers: Mapping[Hashable, Any] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> VariableType:
         """Return a new array indexed along the specified dimension(s).
 
@@ -1417,7 +1417,7 @@ class Variable(
         keep_attrs=None,
         keepdims=False,
         allow_lazy=False,
-        **kwargs
+        **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -1803,7 +1803,7 @@ class Variable(
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
-                raise NameError("{} is not a valid method.".format(name))
+                raise NameError(f"{name} is not a valid method.")
         return type(self)(self.dims, func(reshaped, axis=axes), self._attrs)
 
     def _coarsen_reshape(self, windows, boundary, side):
@@ -1822,7 +1822,7 @@ class Variable(
 
         for d, window in windows.items():
             if window <= 0:
-                raise ValueError("window must be > 0. Given {}".format(window))
+                raise ValueError(f"window must be > 0. Given {window}")
 
         variable = self
         for d, window in windows.items():
@@ -2246,7 +2246,7 @@ def assert_unique_multiindex_level_names(variables):
             idx_level_names = var.to_index_variable().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:
-                    level_names[n].append("%r (%s)" % (n, var_name))
+                    level_names[n].append(f"{n!r} ({var_name})")
             if idx_level_names:
                 all_level_names.update(idx_level_names)
 

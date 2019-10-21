@@ -65,7 +65,7 @@ class do:
         return getattr(obj, self.meth)(*self.args, **self.kwargs)
 
     def __repr__(self):
-        return "obj.{}(*{}, **{})".format(self.meth, self.args, self.kwargs)
+        return f"obj.{self.meth}(*{self.args}, **{self.kwargs})"
 
 
 @pytest.mark.parametrize(

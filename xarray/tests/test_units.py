@@ -257,14 +257,12 @@ class method:
                     if key not in exclude_kwargs
                 }
             else:
-                raise AttributeError(
-                    "{obj} has no method named '{self.name}'".format(obj=obj, self=self)
-                )
+                raise AttributeError(f"{obj} has no method named '{self.name}'")
 
         return func(*all_args, **all_kwargs)
 
     def __repr__(self):
-        return "method_{self.name}".format(self=self)
+        return f"method_{self.name}"
 
 
 class function:
@@ -276,7 +274,7 @@ class function:
         return self.func(*args, **kwargs)
 
     def __repr__(self):
-        return "function_{self.name}".format(self=self)
+        return f"function_{self.name}"
 
 
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))

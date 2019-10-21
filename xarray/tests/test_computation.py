@@ -25,7 +25,7 @@ from . import has_dask, raises_regex, requires_dask
 
 def assert_identical(a, b):
     if hasattr(a, "identical"):
-        msg = "not identical:\n%r\n%r" % (a, b)
+        msg = f"not identical:\n{a!r}\n{b!r}"
         assert a.identical(b), msg
     else:
         assert_array_equal(a, b)
@@ -376,7 +376,7 @@ def test_apply_exclude():
             *objects,
             input_core_dims=[[dim]] * len(objects),
             output_core_dims=[[dim]],
-            exclude_dims={dim}
+            exclude_dims={dim},
         )
         if isinstance(result, (xr.Dataset, xr.DataArray)):
             # note: this will fail if dim is not a coordinate on any input

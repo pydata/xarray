@@ -83,7 +83,7 @@ class CachingFileManager(FileManager):
         kwargs=None,
         lock=None,
         cache=None,
-        ref_counts=None
+        ref_counts=None,
     ):
         """Initialize a FileManager.
 
@@ -267,7 +267,7 @@ class CachingFileManager(FileManager):
     def __repr__(self):
         args_string = ", ".join(map(repr, self._args))
         if self._mode is not _DEFAULT_MODE:
-            args_string += ", mode={!r}".format(self._mode)
+            args_string += f", mode={self._mode!r}"
         return "{}({!r}, {}, kwargs={})".format(
             type(self).__name__, self._opener, args_string, self._kwargs
         )

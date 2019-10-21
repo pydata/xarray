@@ -125,7 +125,7 @@ class set_options:
                     % (k, set(OPTIONS))
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError("option %r given an invalid value: %r" % (k, v))
+                raise ValueError(f"option {k!r} given an invalid value: {v!r}")
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 

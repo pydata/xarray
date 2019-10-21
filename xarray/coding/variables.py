@@ -73,11 +73,8 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return self.func(self.array)
 
     def __repr__(self):
-        return "%s(%r, func=%r, dtype=%r)" % (
-            type(self).__name__,
-            self.array,
-            self.func,
-            self.dtype,
+        return "{}({!r}, func={!r}, dtype={!r})".format(
+            type(self).__name__, self.array, self.func, self.dtype
         )
 
 
@@ -113,7 +110,7 @@ def unpack_for_decoding(var):
 
 def safe_setitem(dest, key, value, name=None):
     if key in dest:
-        var_str = " on variable {!r}".format(name) if name else ""
+        var_str = f" on variable {name!r}" if name else ""
         raise ValueError(
             "failed to prevent overwriting existing key {} in attrs{}. "
             "This is probably an encoding field used by xarray to describe "

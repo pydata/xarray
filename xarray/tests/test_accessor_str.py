@@ -503,7 +503,7 @@ def test_slice(dtype):
             expected = xr.DataArray([s[start:stop:step] for s in arr.values])
             assert_equal(result, expected.astype(dtype))
         except IndexError:
-            print("failed on %s:%s:%s" % (start, stop, step))
+            print(f"failed on {start}:{stop}:{step}")
             raise
 
 

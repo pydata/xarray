@@ -17,9 +17,9 @@ class TestLoadDataset:
             os.sep.join(("~", ".xarray_tutorial_data", self.testfile))
         )
         with suppress(OSError):
-            os.remove("{}.nc".format(self.testfilepath))
+            os.remove(f"{self.testfilepath}.nc")
         with suppress(OSError):
-            os.remove("{}.md5".format(self.testfilepath))
+            os.remove(f"{self.testfilepath}.md5")
 
     def test_download_from_github(self):
         ds = tutorial.open_dataset(self.testfile).load()

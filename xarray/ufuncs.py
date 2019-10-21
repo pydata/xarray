@@ -55,7 +55,7 @@ class _UFuncDispatcher:
         f = _dask_or_eager_func(self._name, array_args=slice(len(args)))
         if len(args) > 2 or len(args) == 0:
             raise TypeError(
-                "cannot handle %s arguments for %r" % (len(args), self._name)
+                "cannot handle {} arguments for {!r}".format(len(args), self._name)
             )
         elif len(args) == 1:
             if isinstance(args[0], _xarray_types):

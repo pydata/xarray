@@ -16,7 +16,7 @@ except ImportError:
 def _validate_axis(data, axis):
     ndim = data.ndim
     if not -ndim <= axis < ndim:
-        raise IndexError("axis %r out of bounds [-%r, %r)" % (axis, ndim, ndim))
+        raise IndexError(f"axis {axis!r} out of bounds [-{ndim}, {ndim})")
     if axis < 0:
         axis += ndim
     return axis
@@ -190,9 +190,9 @@ def _rolling_window(a, window, axis=-1):
     a = np.swapaxes(a, axis, -1)
 
     if window < 1:
-        raise ValueError("`window` must be at least 1. Given : {}".format(window))
+        raise ValueError(f"`window` must be at least 1. Given : {window}")
     if window > a.shape[-1]:
-        raise ValueError("`window` is too long. Given : {}".format(window))
+        raise ValueError(f"`window` is too long. Given : {window}")
 
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)

@@ -222,9 +222,8 @@ def map_blocks(
     indexes.update({k: template.indexes[k] for k in new_indexes})
 
     graph: Dict[Any, Any] = {}
-    gname = "%s-%s" % (
-        dask.utils.funcname(func),
-        dask.base.tokenize(dataset, args, kwargs),
+    gname = "{}-{}".format(
+        dask.utils.funcname(func), dask.base.tokenize(dataset, args, kwargs)
     )
 
     # map dims to list of chunk indexes
@@ -253,7 +252,7 @@ def map_blocks(
                 for dim in variable.dims:
                     chunk = chunk[chunk_index_dict[dim]]
 
-                chunk_variable_task = ("%s-%s" % (gname, chunk[0]),) + v
+                chunk_variable_task = (f"{gname}-{chunk[0]}",) + v
                 graph[chunk_variable_task] = (
                     tuple,
                     [variable.dims, chunk, variable.attrs],
@@ -272,7 +271,7 @@ def map_blocks(
 
                 subset = variable.isel(subsetter)
                 chunk_variable_task = (
-                    "%s-%s" % (gname, dask.base.tokenize(subset)),
+                    "{}-{}".format(gname, dask.base.tokenize(subset)),
                 ) + v
                 graph[chunk_variable_task] = (
                     tuple,
@@ -300,7 +299,7 @@ def map_blocks(
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
-            gname_l = "%s-%s" % (gname, name)
+            gname_l = f"{gname}-{name}"
             var_key_map[name] = gname_l
 
             key: Tuple[Any, ...] = (gname_l,)

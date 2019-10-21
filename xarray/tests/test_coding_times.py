@@ -455,7 +455,7 @@ def test_decode_360_day_calendar():
     calendar = "360_day"
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
-        units = "days since {}-01-01".format(year)
+        units = f"days since {year}-01-01"
         num_times = np.arange(100)
 
         if cftime.__name__ == "cftime":
@@ -884,7 +884,7 @@ def test_use_cftime_default_standard_calendar_out_of_range(calendar, units_year)
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -901,7 +901,7 @@ def test_use_cftime_default_non_standard_calendar(calendar, units_year):
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -919,7 +919,7 @@ def test_use_cftime_true(calendar, units_year):
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -946,7 +946,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 @pytest.mark.parametrize("units_year", [1500, 2500])
 def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
 
@@ -955,6 +955,6 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
 def test_use_cftime_false_non_standard_calendar(calendar, units_year):
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)

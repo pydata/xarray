@@ -87,7 +87,7 @@ class ImplementsDatasetReduce:
                     skipna=skipna,
                     numeric_only=numeric_only,
                     allow_lazy=True,
-                    **kwargs
+                    **kwargs,
                 )
 
         else:
@@ -167,7 +167,7 @@ class AbstractArray(ImplementsArrayReduce):
         try:
             return self.dims.index(dim)
         except ValueError:
-            raise ValueError("%r not found in array dimensions %r" % (dim, self.dims))
+            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
     def sizes(self: Any) -> Mapping[Hashable, int]:
@@ -225,7 +225,7 @@ class AttrAccessMixin:
                 with suppress(KeyError):
                     return source[name]
         raise AttributeError(
-            "%r object has no attribute %r" % (type(self).__name__, name)
+            "{!r} object has no attribute {!r}".format(type(self).__name__, name)
         )
 
     # This complicated two-method design boosts overall performance of simple operations
@@ -258,7 +258,9 @@ class AttrAccessMixin:
         except AttributeError as e:
             # Don't accidentally shadow custom AttributeErrors, e.g.
             # DataArray.dims.setter
-            if str(e) != "%r object has no attribute %r" % (type(self).__name__, name):
+            if str(e) != "{!r} object has no attribute {!r}".format(
+                type(self).__name__, name
+            ):
                 raise
             raise AttributeError(
                 "cannot set attribute %r on a %r object. Use __setitem__ style"
@@ -479,7 +481,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self,
         func: Union[Callable[..., T], Tuple[Callable[..., T], str]],
         *args,
-        **kwargs
+        **kwargs,
     ) -> T:
         """
         Apply func(self, *args, **kwargs)
@@ -735,7 +737,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
         center: bool = False,
-        **window_kwargs: int
+        **window_kwargs: int,
     ):
         """
         Rolling window object.
@@ -799,7 +801,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self,
         window: Mapping[Hashable, int] = None,
         window_type: str = "span",
-        **window_kwargs
+        **window_kwargs,
     ):
         """
         Exponentially-weighted moving window.
@@ -840,7 +842,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         boundary: str = "exact",
         side: Union[str, Mapping[Hashable, str]] = "left",
         coord_func: str = "mean",
-        **window_kwargs: int
+        **window_kwargs: int,
     ):
         """
         Coarsen object.
@@ -910,7 +912,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         keep_attrs: bool = None,
         loffset=None,
         restore_coord_dims: bool = None,
-        **indexer_kwargs: str
+        **indexer_kwargs: str,
     ):
         """Returns a Resample object for performing resampling operations.
 

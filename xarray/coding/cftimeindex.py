@@ -403,7 +403,7 @@ class CFTimeIndex(pd.Index):
         from .cftime_offsets import to_offset
 
         if not isinstance(n, int):
-            raise TypeError("'n' must be an int, got {}.".format(n))
+            raise TypeError(f"'n' must be an int, got {n}.")
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):

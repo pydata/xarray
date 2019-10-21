@@ -144,7 +144,9 @@ def unique_variable(
 
 def _assert_compat_valid(compat):
     if compat not in _VALID_COMPAT:
-        raise ValueError("compat=%r invalid: must be %s" % (compat, set(_VALID_COMPAT)))
+        raise ValueError(
+            "compat={!r} invalid: must be {}".format(compat, set(_VALID_COMPAT))
+        )
 
 
 MergeElement = Tuple[Variable, Optional[pd.Index]]

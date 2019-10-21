@@ -355,7 +355,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
             # Numpy < 1.13 does not handle object-type array.
             try:
                 if skipna:
-                    expected = getattr(np, "nan{}".format(func))(da.values, axis=axis)
+                    expected = getattr(np, f"nan{func}")(da.values, axis=axis)
                 else:
                     expected = getattr(np, func)(da.values, axis=axis)
 
@@ -400,7 +400,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         actual = getattr(da, func)(skipna=skipna)
         if dask:
             assert isinstance(da.data, dask_array_type)
-        expected = getattr(np, "nan{}".format(func))(da.values)
+        expected = getattr(np, f"nan{func}")(da.values)
         if actual.dtype == object:
             assert actual.values == np.array(expected)
         else:
