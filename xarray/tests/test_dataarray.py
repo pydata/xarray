@@ -2516,7 +2516,7 @@ class TestDataArray:
 
         for shortcut in [True, False]:
             for keep_attrs in [True, False]:
-                print("shortcut=%s, keep_attrs=%s" % (shortcut, keep_attrs))
+                print(f"shortcut={shortcut}, keep_attrs={keep_attrs}")
                 actual = array.groupby("abc").reduce(
                     np.mean, keep_attrs=keep_attrs, shortcut=shortcut
                 )
@@ -4151,7 +4151,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     # Test all bottleneck functions
     rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
-    func_name = "move_{}".format(name)
+    func_name = f"move_{name}"
     actual = getattr(rolling_obj, name)()
     expected = getattr(bn, func_name)(
         da.values, window=7, axis=1, min_count=min_periods

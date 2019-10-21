@@ -50,7 +50,7 @@ def coerce_nc3_dtype(arr):
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
             raise ValueError(
-                "could not safely cast array from dtype %s to %s" % (dtype, new_dtype)
+                f"could not safely cast array from dtype {dtype} to {new_dtype}"
             )
         arr = cast_arr
     return arr
