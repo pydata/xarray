@@ -18,12 +18,6 @@ What's New
 v0.14.1 (unreleased)
 --------------------
 
-Bug fixes
-~~~~~~~~~
-
-- Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
-  By `Deepak Cherian <https://github.com/dcherian>`_.
- 
 New Features
 ~~~~~~~~~~~~
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
@@ -41,6 +35,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
+- Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
