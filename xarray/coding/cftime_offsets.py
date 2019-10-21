@@ -638,7 +638,7 @@ _FREQUENCIES = {
 
 
 _FREQUENCY_CONDITION = "|".join(_FREQUENCIES.keys())
-_PATTERN = r"^((?P<multiple>\d+)|())(?P<freq>({}))$".format(_FREQUENCY_CONDITION)
+_PATTERN = fr"^((?P<multiple>\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have
@@ -759,9 +759,7 @@ def _generate_range(start, end, periods, offset):
 
             next_date = current + offset
             if next_date <= current:
-                raise ValueError(
-                    "Offset {offset} did not increment date".format(offset=offset)
-                )
+                raise ValueError(f"Offset {offset} did not increment date")
             current = next_date
     else:
         while current >= end:
@@ -769,9 +767,7 @@ def _generate_range(start, end, periods, offset):
 
             next_date = current + offset
             if next_date >= current:
-                raise ValueError(
-                    "Offset {offset} did not decrement date".format(offset=offset)
-                )
+                raise ValueError(f"Offset {offset} did not decrement date")
             current = next_date
 
 

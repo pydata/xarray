@@ -217,7 +217,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
             elif opt == "minimal":
                 pass
             else:
-                raise ValueError("unexpected value for %s: %s" % (subset, opt))
+                raise ValueError(f"unexpected value for {subset}: {opt}")
         else:
             invalid_vars = [k for k in opt if k not in getattr(datasets[0], subset)]
             if invalid_vars:

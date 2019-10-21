@@ -120,7 +120,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     if isinstance(a, Variable):
         assert a.dims == b.dims
         allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
-        assert allclose, "{}\n{}".format(a.values, b.values)
+        assert allclose, f"{a.values}\n{b.values}"
     elif isinstance(a, DataArray):
         assert_allclose(a.variable, b.variable, **kwargs)
         assert set(a.coords) == set(b.coords)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pickle
 import sys
 import warnings
@@ -5391,7 +5390,7 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     # Test all bottleneck functions
     rolling_obj = ds.rolling(time=7, min_periods=min_periods)
 
-    func_name = "move_{}".format(name)
+    func_name = f"move_{name}"
     actual = getattr(rolling_obj, name)()
     if key == "z1":  # z1 does not depend on 'Time' axis. Stored as it is.
         expected = ds[key]

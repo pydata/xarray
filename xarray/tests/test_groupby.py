@@ -342,4 +342,20 @@ def test_groupby_grouping_errors():
         dataset.to_array().groupby(dataset.foo * np.nan)
 
 
+def test_groupby_bins_timeseries():
+    ds = xr.Dataset()
+    ds["time"] = xr.DataArray(
+        pd.date_range("2010-08-01", "2010-08-15", freq="15min"), dims="time"
+    )
+    ds["val"] = xr.DataArray(np.ones(*ds["time"].shape), dims="time")
+    time_bins = pd.date_range(start="2010-08-01", end="2010-08-15", freq="24H")
+    actual = ds.groupby_bins("time", time_bins).sum()
+    expected = xr.DataArray(
+        96 * np.ones((14,)),
+        dims=["time_bins"],
+        coords={"time_bins": pd.cut(time_bins, time_bins).categories},
+    ).to_dataset(name="val")
+    assert_identical(actual, expected)
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
