@@ -20,6 +20,10 @@ v0.14.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
+  to represent all 'other' dimensions. For example, to move one dimension to the front,
+  pass `.transpose('x', ...)`. (:pull:`3421`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
   (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
 
