@@ -147,11 +147,11 @@ def test_da_groupby_quantile():
         [("x", [1, 1, 1, 2, 2]), ("y", [0, 0, 1])],
     )
 
-    actual_x = array.groupby("x").quantile(0, dim=xr.ALL_DIMS)
+    actual_x = array.groupby("x").quantile(0, dim=...)
     expected_x = xr.DataArray([1, 4], [("x", [1, 2])])
     assert_identical(expected_x, actual_x)
 
-    actual_y = array.groupby("y").quantile(0, dim=xr.ALL_DIMS)
+    actual_y = array.groupby("y").quantile(0, dim=...)
     expected_y = xr.DataArray([1, 22], [("y", [0, 1])])
     assert_identical(expected_y, actual_y)
 
@@ -177,7 +177,7 @@ def test_da_groupby_quantile():
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=xr.ALL_DIMS)
+    actual = g.quantile(0, dim=...)
     expected = xr.DataArray(
         [
             0.0,

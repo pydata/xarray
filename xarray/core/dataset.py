@@ -47,7 +47,6 @@ from . import (
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .common import (
-    ALL_DIMS,
     DataWithCoords,
     ImplementsDatasetReduce,
     _contains_datetime_like_objects,
@@ -4032,7 +4031,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if dim is None or dim is ALL_DIMS:
+        if dim is None or dim is ...:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
             dims = {dim}
@@ -4997,7 +4996,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if isinstance(dim, str):
             dims = {dim}
-        elif dim is None or dim is ALL_DIMS:
+        elif dim in [None, ...]:
             dims = set(self.dims)
         else:
             dims = set(dim)

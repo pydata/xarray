@@ -20,6 +20,11 @@ v0.14.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Changed `xr.ALL_DIMS` to equal python's `Ellipsis` (`...`), and changed internal usages to use
+  `...` directly. As before, you can use this to instruct a `groupby` operation
+  to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
+  using `...`.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
   (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
 
