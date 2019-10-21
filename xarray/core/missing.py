@@ -229,10 +229,10 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
             index.name = dim
 
         if not index.is_monotonic:
-            raise ValueError(f"Index {index.name} must be monotonically increasing")
+            raise ValueError(f"Index {index.name!r} must be monotonically increasing")
 
         if not index.is_unique:
-            raise ValueError(f"Index {index.name} has duplicate values")
+            raise ValueError(f"Index {index.name!r} has duplicate values")
 
         # raise if index cannot be cast to a float (e.g. MultiIndex)
         try:
@@ -241,7 +241,7 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
             # pandas raises a TypeError
             # xarray/nuppy raise a ValueError
             raise TypeError(
-                f"Index {index.name} must be castable to float64 to support"
+                f"Index {index.name!r} must be castable to float64 to support"
                 "interpolation, got {type(index)}"
             )
 
@@ -283,8 +283,7 @@ def interp_na(
         if isinstance(max_gap, (np.timedelta64, str)):
             if not use_coordinate:
                 raise ValueError(
-                    "provided max_gap of type %r but use_coordinate=False. Set use_coordinate=True instead."
-                    % max_type
+                    f"provided max_gap of type {max_type} but use_coordinate=False. Set use_coordinate=True instead."
                 )
             if isinstance(max_gap, str):
                 max_gap = pd.to_timedelta(max_gap).to_numpy().astype(np.float64)
