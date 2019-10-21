@@ -57,19 +57,49 @@ def _icon(icon_name):
             .format(icon_name))
 
 
-def summarize_variable(name, var):
+def _summarize_coord_multiindex(name, coord, d):
+    d['dtype'] = 'MultiIndex'
+    d['preview'] = '(' +  ', '.join(l for l in coord.level_names) + ')'
+    return summarize_variable(name, coord, d)
+
+
+def summarize_coord(name, var):
     d = {}
+    is_index = name in var.dims
+    d['cssclass_idx'] = " class='xr-has-index'" if is_index else ""
+    if is_index:
+        coord = var.variable.to_index_variable()
+        if coord.level_names is not None:
+            coords = {}
+            coords[name] = _summarize_coord_multiindex(name, coord, d)
+
+            for lname in coord.level_names:
+                var = coord.get_level_variable(lname)
+                coords[lname] = summarize_variable(lname, var)
+
+            return coords
+
+    return {name: summarize_variable(name, var.variable, d)}
+
+
+def summarize_coords(variables):
+    coords = {}
+    for k, v in variables.items():
+        coords.update(**summarize_coord(k, v))
+
+    vars_li = "".join("<li class='xr-var-item'>{}</li>"
+                     .format(v) for v in coords.values())
+
+    return "<ul class='xr-var-list'>{}</ul>".format(vars_li)
+
+
+def summarize_variable(name, var, d=None):
+    if d is None:
+        d = {'cssclass_idx': ""}
 
     d['dims_str'] = '(' +  ', '.join(dim for dim in var.dims) + ')'
-
     d['name'] = name
-
-    if name in var.dims:
-        d['cssclass_idx'] = " class='xr-has-index'"
-    else:
-        d['cssclass_idx'] = ""
-
-    d['dtype'] = var.dtype
+    d['dtype'] = d.get('dtype', var.dtype)
 
     # "unique" ids required to expand/collapse subsections
     d['attrs_id'] = 'attrs-' + str(uuid.uuid4())
@@ -83,7 +113,7 @@ def summarize_variable(name, var):
         d['attrs'] = ''
 
     # TODO: no value preview if not in memory
-    d['preview'] = format_values_preview(var)
+    d['preview'] = d.get('preview', format_values_preview(var))
     d['attrs_ul'] = summarize_attrs(var.attrs)
     d['data_repr'] = repr(var.data)
 
@@ -201,7 +231,7 @@ def array_section(obj):
 
 
 coord_section = partial(_mapping_section,
-                        name='Coordinates', details_func=summarize_vars,
+                        name='Coordinates', details_func=summarize_coords,
                         max_items_collapse=25)
 
 
