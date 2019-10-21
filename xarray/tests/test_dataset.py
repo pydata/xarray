@@ -4685,9 +4685,9 @@ class TestDataset:
             expected_dims = tuple(d for d in new_order if d in ds[k].dims)
             assert actual[k].dims == expected_dims
 
-        with raises_regex(ValueError, "arguments to transpose"):
+        with raises_regex(ValueError, "permuted"):
             ds.transpose("dim1", "dim2", "dim3")
-        with raises_regex(ValueError, "arguments to transpose"):
+        with raises_regex(ValueError, "permuted"):
             ds.transpose("dim1", "dim2", "dim3", "time", "extra_dim")
 
         assert "T" not in dir(ds)

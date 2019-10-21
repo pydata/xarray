@@ -3708,15 +3708,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.transpose
         """
         if dims:
-            if set(dims) ^ set(self.dims) and ... not in dims:
-                raise ValueError(
-                    "arguments to transpose (%s) must be "
-                    "permuted array dimensions (%s) unless `...` is included"
-                    % (dims, tuple(self.dims))
-                )
+            dims = tuple(utils.infix_dims(dims, self.dims))
         ds = self.copy()
         # infix here so the filter `var_dims` below works correctly
-        dims = tuple(utils.infix_dims(dims, self.dims))
         for name, var in self._variables.items():
             var_dims = tuple(dim for dim in dims if dim in var.dims)
             ds._variables[name] = var.transpose(*var_dims)
