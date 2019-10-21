@@ -215,7 +215,7 @@ class VariableSubclassobjects:
                 return hash(self.item)
 
             def __repr__(self):
-                return "%s(item=%r)" % (type(self).__name__, self.item)
+                return "{}(item={!r})".format(type(self).__name__, self.item)
 
         item = HashableItemWrapper((1, 2, 3))
         x = self.cls("x", [item])

@@ -1639,18 +1639,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         lines.append("xarray.Dataset {")
         lines.append("dimensions:")
         for name, size in self.dims.items():
-            lines.append("\t{name} = {size} ;".format(name=name, size=size))
+            lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
         for name, da in self.variables.items():
             dims = ", ".join(da.dims)
-            lines.append(
-                "\t{type} {name}({dims}) ;".format(type=da.dtype, name=name, dims=dims)
-            )
+            lines.append(f"\t{da.dtype} {name}({dims}) ;")
             for k, v in da.attrs.items():
-                lines.append("\t\t{name}:{k} = {v} ;".format(name=name, k=k, v=v))
+                lines.append(f"\t\t{name}:{k} = {v} ;")
         lines.append("\n// global attributes:")
         for k, v in self.attrs.items():
-            lines.append("\t:{k} = {v} ;".format(k=k, v=v))
+            lines.append(f"\t:{k} = {v} ;")
         lines.append("}")
 
         buf.write("\n".join(lines))
@@ -1732,7 +1730,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 chunks = None
             if var.ndim > 0:
                 token2 = tokenize(name, token if token else var._data)
-                name2 = "%s%s-%s" % (name_prefix, name, token2)
+                name2 = f"{name_prefix}{name}-{token2}"
                 return var.chunk(chunks, name=name2, lock=lock)
             else:
                 return var
@@ -2624,7 +2622,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             var.dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             name = name_dict.get(k, k)
             if name in variables:
-                raise ValueError("the new name %r conflicts" % (name,))
+                raise ValueError(f"the new name {name!r} conflicts")
             variables[name] = var
             if k in self._coord_names:
                 coord_names.add(name)
@@ -2932,7 +2930,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError("lengths of dim and axis should be identical.")
         for d in dim:
             if d in self.dims:
-                raise ValueError("Dimension {dim} already exists.".format(dim=d))
+                raise ValueError(f"Dimension {d} already exists.")
             if d in self._variables and not utils.is_scalar(self._variables[d]):
                 raise ValueError(
                     "{dim} already exists as coordinate or"
@@ -4725,7 +4723,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if n == 0:
             return self
         if n < 0:
-            raise ValueError("order `n` must be non-negative but got {}".format(n))
+            raise ValueError(f"order `n` must be non-negative but got {n}")
 
         # prepare slices
         kwargs_start = {dim: slice(None, -1)}
@@ -5128,7 +5126,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError("Coordinate {} does not exist.".format(coord))
+            raise ValueError(f"Coordinate {coord} does not exist.")
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:
@@ -5194,7 +5192,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError("Coordinate {} does not exist.".format(coord))
+            raise ValueError(f"Coordinate {coord} does not exist.")
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:

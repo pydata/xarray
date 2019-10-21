@@ -44,7 +44,7 @@ def _importorskip(modname, minversion=None):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
-    func = pytest.mark.skipif(not has, reason="requires {}".format(modname))
+    func = pytest.mark.skipif(not has, reason=f"requires {modname}")
     return has, func
 
 
@@ -109,7 +109,7 @@ def raises_regex(error, pattern):
     message = str(excinfo.value)
     if not re.search(pattern, message):
         raise AssertionError(
-            "exception %r did not match pattern %r" % (excinfo.value, pattern)
+            f"exception {excinfo.value!r} did not match pattern {pattern!r}"
         )
 
 

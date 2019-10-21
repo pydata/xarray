@@ -44,7 +44,7 @@ def _check_inplace(inplace: Optional[bool]) -> None:
 
 
 def alias_message(old_name: str, new_name: str) -> str:
-    return "%s has been deprecated. Use %s instead." % (old_name, new_name)
+    return f"{old_name} has been deprecated. Use {new_name} instead."
 
 
 def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
@@ -395,7 +395,7 @@ class Frozen(Mapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return "%s(%r)" % (type(self).__name__, self.mapping)
+        return "{}({!r})".format(type(self).__name__, self.mapping)
 
 
 def FrozenDict(*args, **kwargs) -> Frozen:
@@ -432,7 +432,7 @@ class SortedKeysDict(MutableMapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return "%s(%r)" % (type(self).__name__, self.mapping)
+        return "{}({!r})".format(type(self).__name__, self.mapping)
 
 
 class OrderedSet(MutableSet[T]):
@@ -478,7 +478,7 @@ class OrderedSet(MutableSet[T]):
         self |= values  # type: ignore
 
     def __repr__(self) -> str:
-        return "%s(%r)" % (type(self).__name__, list(self))
+        return "{}({!r})".format(type(self).__name__, list(self))
 
 
 class NdimSizeLenMixin:
@@ -526,7 +526,7 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array[key]
 
     def __repr__(self: Any) -> str:
-        return "%s(array=%r)" % (type(self).__name__, self.array)
+        return "{}(array={!r})".format(type(self).__name__, self.array)
 
 
 class ReprObject:
