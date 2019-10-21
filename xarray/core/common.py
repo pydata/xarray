@@ -21,7 +21,7 @@ import pandas as pd
 from . import dtypes, duck_array_ops, formatting, formatting_html, ops
 from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
@@ -135,6 +135,9 @@ class AbstractArray(ImplementsArrayReduce):
         return formatting.array_repr(self)
 
     def _repr_html_(self):
+        if OPTIONS["display_style"] == "classic":
+            classic = repr(self).replace("<", "&lt;").replace(">", "&gt;")
+            return "<pre>{repr}</pre>".format(repr=classic)
         return formatting_html.array_repr(self)
 
     def _iter(self: Any) -> Iterator[Any]:
