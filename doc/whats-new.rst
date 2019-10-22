@@ -18,6 +18,10 @@ What's New
 v0.14.1 (unreleased)
 --------------------
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.14.0:
 
