@@ -472,61 +472,6 @@ def test_interpolate_na_nan_block_lengths(y, lengths):
     assert_equal(actual, expected)
 
 
-@requires_bottleneck
-def test_interpolate_na_max_gap():
-    arr = [
-        [
-            np.nan,
-            np.nan,
-            np.nan,
-            1,
-            2,
-            3,
-            np.nan,
-            np.nan,
-            6,
-            7,
-            np.nan,
-            np.nan,
-            np.nan,
-            11,
-            np.nan,
-            np.nan,
-        ]
-    ]
-
-    da = xr.DataArray(
-        arr * 2, dims=["x", "y"], coords={"x": [0, 1], "y": np.arange(len(arr[0]))}
-    )
-
-    expected = da.copy(
-        data=[
-            [
-                np.nan,
-                np.nan,
-                np.nan,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                np.nan,
-                np.nan,
-                np.nan,
-                11,
-                np.nan,
-                np.nan,
-            ]
-        ]
-        * 2
-    )
-
-    actual = da.interpolate_na("y", max_gap=3)
-    assert_equal(expected, actual)
-
-
 @pytest.fixture
 def da_time():
     return xr.DataArray(
