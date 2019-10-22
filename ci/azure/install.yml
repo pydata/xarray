@@ -24,7 +24,8 @@ steps:
         --upgrade \
         git+https://github.com/dask/dask \
         git+https://github.com/dask/distributed \
-        git+https://github.com/zarr-developers/zarr
+        git+https://github.com/zarr-developers/zarr \
+        git+https://github.com/Unidata/cftime
   condition: eq(variables['UPSTREAM_DEV'], 'true')
   displayName: Install upstream dev dependencies
 
