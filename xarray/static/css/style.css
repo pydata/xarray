@@ -3,7 +3,7 @@
  */
 
 .xr-wrap {
-  min-width: 400px;
+  min-width: 300px;
   max-width: 700px;
 }
 
@@ -187,7 +187,7 @@
   margin-bottom: 0;
 }
 
-.xr-var-item > .xr-var-name span:hover {
+.xr-var-item > .xr-var-name:hover span {
   padding-right: 5px;
 }
 
@@ -218,7 +218,8 @@
 .xr-var-name,
 .xr-var-dims,
 .xr-var-dtype,
-.xr-preview {
+.xr-preview,
+.xr-attrs dt {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -227,9 +228,9 @@
 
 .xr-var-name:hover,
 .xr-var-dims:hover,
-.xr-var-dtype:hover {
+.xr-var-dtype:hover,
+.xr-attrs dt:hover {
   overflow: visible;
-  white-space: normal;
   width: auto;
   z-index: 1;
 }
@@ -259,7 +260,33 @@
 }
 
 .xr-attrs {
-  list-style: none !important;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 125px auto;
+}
+
+.xr-attrs dt, dd {
+  padding: 0;
+  margin: 0;
+  float: left;
+  padding-right: 10px;
+}
+
+.xr-attrs dt {
+  grid-column: 1;
+}
+
+.xr-attrs dt:hover span {
+  display: inline-block;
+  background: #fff;
+  padding-right: 10px;
+}
+
+.xr-attrs dd {
+  grid-column: 2;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .xr-icon-database,

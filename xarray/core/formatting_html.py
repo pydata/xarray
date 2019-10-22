@@ -41,10 +41,11 @@ def format_values_preview(array, max_char=35):
 
 
 def summarize_attrs(attrs):
-    attrs_li = "".join("<li>{} : {}</li>".format(k, v)
+    attrs_dl = "".join("<dt><span>{} :</span></dt>"
+                       "<dd>{}</dd>".format(k, v)
                        for k, v in attrs.items())
 
-    return "<ul class='xr-attrs'>{}</ul>".format(attrs_li)
+    return "<dl class='xr-attrs'>{}</dl>".format(attrs_dl)
 
 
 def _icon(icon_name):
