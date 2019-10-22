@@ -9,7 +9,7 @@ dependencies:
   - cartopy
   - cdms2
   - cfgrib
-  - cftime
+  - cftime=1.0.3.4
   - coveralls
   - dask
   - distributed
