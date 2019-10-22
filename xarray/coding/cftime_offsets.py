@@ -50,6 +50,7 @@ import numpy as np
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
+from distutils.version import LooseVersion
 
 
 def get_date_type(calendar):
@@ -222,6 +223,8 @@ def _adjust_n_years(other, n, month, reference_day):
 def _shift_month(date, months, day_option="start"):
     """Shift the date to a month start or end a given number of months away.
     """
+    import cftime
+
     delta_year = (date.month + months) // 12
     month = (date.month + months) % 12
 
