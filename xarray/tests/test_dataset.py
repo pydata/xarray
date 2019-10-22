@@ -3593,6 +3593,19 @@ class TestDataset:
         with raises_regex(TypeError, r"resample\(\) no longer supports"):
             ds.resample("1D", dim="time")
 
+    def test_resample_ds_da_are_the_same(self):
+        time = pd.date_range("2000-01-01", freq="6H", periods=365 * 4)
+        ds = xr.Dataset(
+            {
+                "foo": (("time", "x"), np.random.randn(365 * 4, 5)),
+                "time": time,
+                "x": np.arange(5),
+            }
+        )
+        assert_identical(
+            ds.resample(time="M").mean()["foo"], ds.foo.resample(time="M").mean()
+        )
+
     def test_ds_resample_apply_func_args(self):
         def func(arg1, arg2, arg3=0.0):
             return arg1.mean("time") + arg2 + arg3
