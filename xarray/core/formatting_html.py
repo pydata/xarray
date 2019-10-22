@@ -37,8 +37,7 @@ def format_dims(dims, coord_names):
 def format_values_preview(array, max_char=35):
     pprint_str = format_array_flat(array, max_char)
 
-    return "".join("<span>{} </span>".format(s)
-                   for s in pprint_str.split())
+    return "".join("{} ".format(s) for s in pprint_str.split())
 
 
 def summarize_attrs(attrs):
@@ -50,7 +49,7 @@ def summarize_attrs(attrs):
 
 def _icon(icon_name):
     # icon_name should be defined in xarray/static/html/icon-svg-inline.html
-    return ("<svg class='icon {0}'>"
+    return ("<svg class='icon xr-{0}'>"
             "<use xlink:href='#{0}'>"
             "</use>"
             "</svg>"
@@ -124,7 +123,7 @@ def summarize_variable(name, var, d=None):
         "<div class='xr-var-name'><span{cssclass_idx}>{name}</span></div>"
         "<div class='xr-var-dims'>{dims_str}</div>"
         "<div class='xr-var-dtype'>{dtype}</div>"
-        "<div class='xr-var-preview xr-preview'><span>{preview}</span></div>"
+        "<div class='xr-var-preview xr-preview'>{preview}</div>"
         "<input id='{attrs_id}' class='xr-var-attrs-in' "
         "type='checkbox' {disabled}>"
         "<label for='{attrs_id}' title='Show/Hide attributes'>"
