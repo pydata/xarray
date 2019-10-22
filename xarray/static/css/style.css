@@ -247,6 +247,10 @@
   display: block;
 }
 
+.xr-var-data > table {
+  float: right;
+}
+
 .xr-var-name span,
 .xr-var-data,
 .xr-attrs {
@@ -274,6 +278,7 @@
 }
 
 .xr-attrs dt {
+  font-weight: normal;
   grid-column: 1;
 }
 

@@ -24,6 +24,14 @@ ICONS_SVG = (pkg_resources
              .decode('utf8'))
 
 
+def short_data_repr_html(array):
+    """Format "data" for DataArray and Variable."""
+    internal_data = getattr(array, "variable", array)._data
+    if hasattr(internal_data, '_repr_html_'):
+        return internal_data._repr_html_()
+    return short_data_repr(array)
+
+
 def format_dims(dims, coord_names):
     if not dims:
         return ''
@@ -106,7 +114,7 @@ def summarize_variable(name, var, is_index=False, **kwargs):
 
     d['preview'] = d.get('preview', inline_variable_array_repr(variable, 35))
     d['attrs_ul'] = summarize_attrs(var.attrs)
-    d['data_repr'] = short_data_repr(variable)
+    d['data_repr'] = short_data_repr_html(variable)
 
     d['attrs_icon'] = _icon('icon-file-text2')
     d['data_icon'] = _icon('icon-database')
@@ -202,7 +210,7 @@ def array_section(obj):
     d['id'] = 'section-' + str(uuid.uuid4())
 
     d['preview'] = inline_variable_array_repr(obj.variable, max_width=70)
-    d['data_repr'] = short_data_repr(obj)
+    d['data_repr'] = short_data_repr_html(obj)
 
     # TODO: maybe collapse section dep. on number of lines in data repr
     d['collapsed'] = ''
