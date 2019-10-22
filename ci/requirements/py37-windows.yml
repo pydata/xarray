@@ -9,7 +9,7 @@ dependencies:
   - cartopy
   # - cdms2  # Not available on Windows
   # - cfgrib  # Causes Python interpreter crash on Windows
-  - cftime<1.0.4  # FIXME incompatibility with 1.0.4
+  - cftime<1.0.4  # FIXME
   - coveralls
   - dask
   - distributed
@@ -25,7 +25,7 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy<1.18  # FIXME incompatibility with 1.18
+  - numpy<1.18  # FIXME https://github.com/pydata/xarray/issues/3409
   - pandas
   - pint
   - pip

@@ -15,7 +15,7 @@ steps:
         --no-deps \
         --pre \
         --upgrade \
-        numpy \
+        numpy<1.18  # FIXME https://github.com/pydata/xarray/issues/3409 \
         matplotlib \
         pandas \
         scipy
