@@ -8,7 +8,7 @@ from collections import OrderedDict
 from .formatting import format_array_flat
 
 
-CSS_FILE_PATH = '/'.join(('static', 'css', 'style-jupyterlab.css'))
+CSS_FILE_PATH = '/'.join(('static', 'css', 'style.css'))
 CSS_STYLE = (pkg_resources
              .resource_string('xarray', CSS_FILE_PATH)
              .decode('utf8'))
