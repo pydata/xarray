@@ -22,6 +22,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 New Features
 ~~~~~~~~~~~~
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
