@@ -219,12 +219,13 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
             index = arr.coords[use_coordinate]
             if index.ndim != 1:
                 raise ValueError(
-                    "Coordinates used for interpolation must be 1D, "
-                    "%s is %dD." % (use_coordinate, index.ndim)
+                    f"Coordinates used for interpolation must be 1D, "
+                    f"{use_coordinate} is {index.ndim}D."
                 )
             index = index.to_index()
 
         # TODO: index.name is None for multiindexes
+        # set name for nice error messages below
         if isinstance(index, pd.MultiIndex):
             index.name = dim
 
@@ -239,7 +240,7 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
             index = index.values.astype(np.float64)
         except (TypeError, ValueError):
             # pandas raises a TypeError
-            # xarray/nuppy raise a ValueError
+            # xarray/numpy raise a ValueError
             raise TypeError(
                 f"Index {index.name!r} must be castable to float64 to support"
                 "interpolation, got {type(index)}"
