@@ -9,7 +9,7 @@ dependencies:
   - cartopy
   - cdms2
   - cfgrib
-  - cftime=1.0.3.4
+  - cftime<1.0.4  # FIXME incompatibility with 1.0.4
   - coveralls
   - dask
   - distributed
@@ -25,7 +25,7 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy
+  - numpy<1.18  # FIXME incompatibility with 1.18
   - pandas
   - pint
   - pip
