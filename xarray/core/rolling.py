@@ -454,7 +454,7 @@ class DatasetRolling(Rolling):
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
             ),
-            **kwargs
+            **kwargs,
         )
 
     def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
