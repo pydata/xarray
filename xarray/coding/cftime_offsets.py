@@ -50,6 +50,7 @@ import numpy as np
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
+from distutils.version import LooseVersion
 
 
 def get_date_type(calendar):
@@ -222,6 +223,8 @@ def _adjust_n_years(other, n, month, reference_day):
 def _shift_month(date, months, day_option="start"):
     """Shift the date to a month start or end a given number of months away.
     """
+    import cftime
+
     delta_year = (date.month + months) // 12
     month = (date.month + months) % 12
 
@@ -237,11 +240,14 @@ def _shift_month(date, months, day_option="start"):
         day = _days_in_month(reference)
     else:
         raise ValueError(day_option)
-    # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
-    # the returned date object in versions of cftime between 1.0.2 and
-    # 1.0.3.4.  It can be removed for versions of cftime greater than
-    # 1.0.3.4.
-    return date.replace(year=year, month=month, day=day, dayofwk=-1)
+    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
+        # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
+        # the returned date object in versions of cftime between 1.0.2 and
+        # 1.0.3.4.  It can be removed for versions of cftime greater than
+        # 1.0.3.4.
+        return date.replace(year=year, month=month, day=day, dayofwk=-1)
+    else:
+        return date.replace(year=year, month=month, day=day)
 
 
 def roll_qtrday(other, n, month, day_option, modby=3):
