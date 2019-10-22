@@ -96,6 +96,8 @@ def parse_iso8601(datetime_string):
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
+    import cftime
+
     default = date_type(1, 1, 1)
     result = parse_iso8601(timestr)
     replace = {}
