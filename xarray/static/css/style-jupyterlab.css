@@ -36,6 +36,7 @@
 }
 
 .xr-sections {
+  padding-left: 0 !important;
   display: grid;
   grid-template-columns: 150px auto auto 1fr 20px 20px;
 }
