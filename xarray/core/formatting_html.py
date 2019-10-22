@@ -218,11 +218,11 @@ def array_section(obj):
     d['collapsed'] = ''
 
     d['tip'] = "Show/hide data repr"
-
+    d['data_icon'] = _icon('icon-database')
     return (
         "<div class='xr-array-wrap'>"
         "<input id='{id}' class='xr-array-in' type='checkbox' {collapsed}>"
-        "<label for='{id}' class='xr-array-icon' title='{tip}'></label>"
+        "<label for='{id}' title='{tip}'>{data_icon}</label>"
         "<div class='xr-array-preview xr-preview'><span>{preview}</span></div>"
         "<pre class='xr-array-data'>{data_repr}</pre>"
         "</div>"
