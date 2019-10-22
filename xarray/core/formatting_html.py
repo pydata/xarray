@@ -5,7 +5,11 @@ import pkg_resources
 from functools import partial
 from collections import OrderedDict
 
-from .formatting import format_array_flat
+from .formatting import (
+    format_array_flat,
+    inline_variable_array_repr,
+    short_data_repr,
+)
 
 
 CSS_FILE_PATH = '/'.join(('static', 'css', 'style.css'))
@@ -34,12 +38,6 @@ def format_dims(dims, coord_names):
     return "<ul class='xr-dim-list'>{}</ul>".format(dims_li)
 
 
-def format_values_preview(array, max_char=35):
-    pprint_str = format_array_flat(array, max_char)
-
-    return "".join("{} ".format(s) for s in pprint_str.split())
-
-
 def summarize_attrs(attrs):
     attrs_dl = "".join("<dt><span>{} :</span></dt>"
                        "<dd>{}</dd>".format(k, v)
@@ -57,29 +55,25 @@ def _icon(icon_name):
             .format(icon_name))
 
 
-def _summarize_coord_multiindex(name, coord, d):
-    d['dtype'] = 'MultiIndex'
-    d['preview'] = '(' +  ', '.join(l for l in coord.level_names) + ')'
-    return summarize_variable(name, coord, d)
+def _summarize_coord_multiindex(name, coord):
+    preview = '(' +  ', '.join(l for l in coord.level_names) + ')'
+    return summarize_variable(
+        name, coord, is_index=True, dtype='MultiIndex', preview=preview)
 
 
 def summarize_coord(name, var):
-    d = {}
     is_index = name in var.dims
-    d['cssclass_idx'] = " class='xr-has-index'" if is_index else ""
     if is_index:
         coord = var.variable.to_index_variable()
         if coord.level_names is not None:
             coords = {}
-            coords[name] = _summarize_coord_multiindex(name, coord, d)
-
+            coords[name] = _summarize_coord_multiindex(name, coord)
             for lname in coord.level_names:
                 var = coord.get_level_variable(lname)
                 coords[lname] = summarize_variable(lname, var)
-
             return coords
 
-    return {name: summarize_variable(name, var.variable, d)}
+    return {name: summarize_variable(name, var, is_index)}
 
 
 def summarize_coords(variables):
@@ -93,10 +87,12 @@ def summarize_coords(variables):
     return "<ul class='xr-var-list'>{}</ul>".format(vars_li)
 
 
-def summarize_variable(name, var, d=None):
-    if d is None:
-        d = {'cssclass_idx': ""}
+def summarize_variable(name, var, is_index=False, **kwargs):
+    variable = var.variable if hasattr(var, 'variable') else var
+    has_attrs = len(var.attrs)
+    d = kwargs
 
+    d['cssclass_idx'] = " class='xr-has-index'" if is_index else ""
     d['dims_str'] = '(' +  ', '.join(dim for dim in var.dims) + ')'
     d['name'] = name
     d['dtype'] = d.get('dtype', var.dtype)
@@ -105,17 +101,12 @@ def summarize_variable(name, var, d=None):
     d['attrs_id'] = 'attrs-' + str(uuid.uuid4())
     d['data_id'] = 'data-' + str(uuid.uuid4())
 
-    if len(var.attrs):
-        d['disabled'] = ''
-        d['attrs'] = summarize_attrs(var.attrs)
-    else:
-        d['disabled'] = 'disabled'
-        d['attrs'] = ''
+    d['disabled'] = '' if has_attrs else 'disabled'
+    d['attrs'] = summarize_attrs(var.attrs) if has_attrs else ''
 
-    # TODO: no value preview if not in memory
-    d['preview'] = d.get('preview', format_values_preview(var))
+    d['preview'] = d.get('preview', inline_variable_array_repr(variable, 35))
     d['attrs_ul'] = summarize_attrs(var.attrs)
-    d['data_repr'] = repr(var.data)
+    d['data_repr'] = short_data_repr(variable)
 
     d['attrs_icon'] = _icon('icon-file-text2')
     d['data_icon'] = _icon('icon-database')
@@ -210,10 +201,8 @@ def array_section(obj):
     # "unique" id to expand/collapse the section
     d['id'] = 'section-' + str(uuid.uuid4())
 
-    # TODO: no value preview if not in memory
-    d['preview'] = format_values_preview(obj.values, max_char=70)
-
-    d['data_repr'] = repr(obj.data)
+    d['preview'] = inline_variable_array_repr(obj.variable, max_width=70)
+    d['data_repr'] = short_data_repr(obj)
 
     # TODO: maybe collapse section dep. on number of lines in data repr
     d['collapsed'] = ''
