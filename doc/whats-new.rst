@@ -22,6 +22,37 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+New Features
+~~~~~~~~~~~~
+- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
+  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
+
+  .. note::
+
+    At the moment of writing, these tests *as well as the ability to use pint in general*
+    require `a highly experimental version of pint
+    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
+    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
+    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
+
+Bug fixes
+~~~~~~~~~
+- Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
+  but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
+
+Documentation
+~~~~~~~~~~~~~
+
+- Fix the documentation of :py:meth:`DataArray.resample` and
+  :py:meth:`Dataset.resample` and explicitly state that a
+  datetime-like dimension is required. (:pull:`3400`)
+  By `Justus Magin <https://github.com/keewis>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Use Python 3.6 idioms throughout the codebase. (:pull:3419)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.14.0:
 

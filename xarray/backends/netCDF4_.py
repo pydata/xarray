@@ -137,7 +137,7 @@ def _nc4_dtype(var):
     elif var.dtype.kind in ["i", "u", "f", "c", "S"]:
         dtype = var.dtype
     else:
-        raise ValueError("unsupported dtype for netCDF4 variable: {}".format(var.dtype))
+        raise ValueError(f"unsupported dtype for netCDF4 variable: {var.dtype}")
     return dtype
 
 

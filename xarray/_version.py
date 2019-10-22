@@ -94,7 +94,7 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False, env=
             return None, None
     else:
         if verbose:
-            print("unable to find command, tried %s" % (commands,))
+            print(f"unable to find command, tried {commands}")
         return None, None
     stdout = p.communicate()[0].strip()
     if sys.version_info[0] >= 3:
@@ -302,9 +302,8 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
             if verbose:
                 fmt = "tag '%s' doesn't start with prefix '%s'"
                 print(fmt % (full_tag, tag_prefix))
-            pieces["error"] = "tag '%s' doesn't start with prefix '%s'" % (
-                full_tag,
-                tag_prefix,
+            pieces["error"] = "tag '{}' doesn't start with prefix '{}'".format(
+                full_tag, tag_prefix
             )
             return pieces
         pieces["closest-tag"] = full_tag[len(tag_prefix) :]
