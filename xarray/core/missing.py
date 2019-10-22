@@ -13,13 +13,16 @@ from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
 
-def _get_nan_block_lengths(obj, dim, index):
+def _get_nan_block_lengths(obj, dim: str, index: Variable):
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
     """
 
-    # algorithm from https://stackoverflow.com/questions/53060003/how-to-get-the-maximum-time-of-gap-in-xarray-dataset/53075828#53075828
+    # make variable so that we get broadcasting for free
+    index = Variable([dim], index)
+
+    # algorithm from https://github.com/pydata/xarray/pull/3302#discussion_r324707072
     arange = ones_like(obj) * index
     valid = obj.notnull()
     valid_arange = arange.where(valid)
@@ -272,7 +275,7 @@ def interp_na(
 
     if max_gap is not None:
         max_type = type(max_gap)
-        if isinstance(self.indexes[dim], pd.DatetimeIndex):
+        if dim in self.indexes and isinstance(self.indexes[dim], pd.DatetimeIndex):
             if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
                 raise TypeError(
                     f"Underlying index is DatetimeIndex. Expected max_gap of type str, pandas.Timedelta or numpy.timedelta64 but received {max_type}"
@@ -320,6 +323,10 @@ def interp_na(
         arr = arr.where(valids)
 
     if max_gap is not None:
+        if dim not in self.coords:
+            raise NotImplementedError(
+                "max_gap not implemented for unlabeled coordinates yet."
+            )
         nan_block_lengths = _get_nan_block_lengths(self, dim, index)
         arr = arr.where(nan_block_lengths <= max_gap)
 

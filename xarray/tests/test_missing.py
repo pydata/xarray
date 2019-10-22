@@ -557,3 +557,48 @@ def test_interpolate_na_max_gap_time_specifier(da_time, max_gap, transform):
     )
     actual = transform(da_time).interpolate_na("t", max_gap=max_gap)
     assert_equal(actual, expected)
+
+
+@requires_bottleneck
+@pytest.mark.parametrize(
+    "coords",
+    [
+        pytest.param(None, marks=pytest.mark.xfail()),
+        {"x": np.arange(4), "y": np.arange(11)},
+    ],
+)
+def test_interpolate_na_2d(coords):
+    da = xr.DataArray(
+        [
+            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+        ],
+        dims=["x", "y"],
+        coords=coords,
+    )
+
+    actual = da.interpolate_na("y", max_gap=2)
+    expected_y = da.copy(
+        data=[
+            [1, 2, 3, 4, 5, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, 4, 5, 6, 7, np.nan, np.nan, np.nan, 11],
+        ]
+    )
+    assert_equal(actual, expected_y)
+
+    actual = da.interpolate_na("x", max_gap=3)
+    expected_x = xr.DataArray(
+        [
+            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+        ],
+        dims=["x", "y"],
+        coords=coords,
+    )
+    assert_equal(actual, expected_x)
