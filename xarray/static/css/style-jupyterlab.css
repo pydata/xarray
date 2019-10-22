@@ -36,10 +36,8 @@
 }
 
 .xr-sections {
-  margin: 0 !important;
-  padding: 3px !important;
   display: grid;
-  grid-template-columns: minmax(150px, auto) 0.5fr auto 1fr 20px 20px;
+  grid-template-columns: 150px auto auto 1fr 20px 20px;
 }
 
 .xr-section-item {
@@ -128,6 +126,7 @@
 .xr-array-data {
   padding: 5px 0 4px 8px !important;
   margin: 0;
+  overflow: hidden;
 }
 
 .xr-array-data,
@@ -138,10 +137,6 @@
 .xr-array-in:checked ~ .xr-array-data,
 .xr-array-preview {
   display: inline-block;
-}
-
-.xr-preview > span > span:nth-child(odd) {
-  color: rgba(0, 0, 0, .65);
 }
 
 .xr-dim-list {
@@ -192,6 +187,16 @@
   background-color: #efefef;
 }
 
+.xr-var-list > li:nth-child(odd) > .xr-var-name span:hover {
+  background-color: #efefef;
+  padding-right: 5px;
+}
+
+.xr-var-list > li:nth-child(even) > .xr-var-name span:hover {
+  background-color: #fcfcfc;
+  padding-right: 5px;
+}
+
 .xr-var-name {
   grid-column: 1;
 }
@@ -207,7 +212,6 @@
 .xr-var-dtype {
   grid-column: 3;
   text-align: right;
-  padding-right: 10px;
   color: #555;
 }
 
@@ -216,12 +220,23 @@
   color: #888;
 }
 
-.xr-var-name > span,
+.xr-var-name,
 .xr-var-dims,
 .xr-var-dtype,
-.xr-var-preview > span {
+.xr-var-preview {
   white-space: nowrap;
-  overflow-x: hidden;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.xr-var-name:hover,
+.xr-var-dims:hover,
+.xr-var-dtype:hover {
+  overflow: visible;
+  white-space: normal;
+  width: auto;
+  z-index: 1;
 }
 
 .xr-var-attrs,
