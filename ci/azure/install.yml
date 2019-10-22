@@ -25,7 +25,8 @@ steps:
         git+https://github.com/dask/dask \
         git+https://github.com/dask/distributed \
         git+https://github.com/zarr-developers/zarr \
-        # git+https://github.com/Unidata/cftime  # FIXME
+        # git+https://github.com/Unidata/cftime  # FIXME PR not merged yet
+        git+https://github.com/Unidata/cftime.git@refs/pull/127/merge
   condition: eq(variables['UPSTREAM_DEV'], 'true')
   displayName: Install upstream dev dependencies
 
