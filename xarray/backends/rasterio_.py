@@ -257,8 +257,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         if parse:
             nx, ny = riods.width, riods.height
             # xarray coordinates are pixel centered
-            x, _ = (np.arange(nx) + 0.5, np.zeros(nx) + 0.5) * riods.transform
-            _, y = (np.zeros(ny) + 0.5, np.arange(ny) + 0.5) * riods.transform
+            x, _ = riods.transform * (np.arange(nx) + 0.5, np.zeros(nx) + 0.5)
+            _, y = riods.transform * (np.zeros(ny) + 0.5, np.arange(ny) + 0.5)
             coords["y"] = y
             coords["x"] = x
     else:
