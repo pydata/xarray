@@ -44,6 +44,9 @@ Bug fixes
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
+- Rolling reduction operations now longer compute dask arrays by default. (:issue:3161).
+  In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
