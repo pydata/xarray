@@ -170,7 +170,7 @@
 }
 
 .xr-has-index {
-  text-decoration: underline;
+  font-weight: bold;
 }
 
 .xr-var-list {
@@ -184,6 +184,7 @@
 .xr-var-item > div,
 .xr-var-item > label {
   background-color: #fcfcfc;
+  margin-bottom: 0;
 }
 
 .xr-var-list > li:nth-child(odd) > div,
@@ -263,7 +264,8 @@
   list-style: none !important;
 }
 
-.icon {
+.xr-icon-database,
+.xr-icon-file-text2 {
   display: inline-block;
   vertical-align: middle;
   width: 1em;
