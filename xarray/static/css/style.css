@@ -119,10 +119,12 @@
 
 .xr-array-wrap {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 20px auto;
 }
 
 .xr-array-wrap > label {
-  display: inline-block;
+  grid-column: 1;
   vertical-align: top;
 }
 
@@ -133,7 +135,7 @@
 .xr-array-preview,
 .xr-array-data {
   padding: 0 5px !important;
-  width: calc(100% - 20px);
+  grid-column: 2;
 }
 
 .xr-array-data,
@@ -150,6 +152,7 @@
   display: inline-block !important;
   list-style: none;
   padding: 0 !important;
+  margin: 0;
 }
 
 .xr-dim-list li {
