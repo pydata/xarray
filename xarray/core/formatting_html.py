@@ -6,7 +6,7 @@ from collections import OrderedDict
 from functools import partial
 from html import escape
 
-from .formatting import format_array_flat, inline_variable_array_repr, short_data_repr
+from .formatting import inline_variable_array_repr, short_data_repr
 
 
 CSS_FILE_PATH = "/".join(("static", "css", "style.css"))
@@ -94,7 +94,6 @@ def summarize_coords(variables):
 
 def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
     variable = var.variable if hasattr(var, "variable") else var
-    has_attrs = len(var.attrs)
 
     cssclass_idx = " class='xr-has-index'" if is_index else ""
     dims_str = f"({', '.join(escape(dim) for dim in var.dims)})"
@@ -104,9 +103,7 @@ def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
     # "unique" ids required to expand/collapse subsections
     attrs_id = "attrs-" + str(uuid.uuid4())
     data_id = "data-" + str(uuid.uuid4())
-
-    disabled = "" if has_attrs else "disabled"
-    attrs = summarize_attrs(var.attrs) if has_attrs else ""
+    disabled = "" if len(var.attrs) else "disabled"
 
     preview = preview or escape(inline_variable_array_repr(variable, 35))
     attrs_ul = summarize_attrs(var.attrs)
