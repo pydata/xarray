@@ -3,6 +3,7 @@ import functools
 import sys
 import warnings
 from collections import defaultdict
+from html import escape
 from numbers import Number
 from pathlib import Path
 from typing import (
@@ -1622,8 +1623,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _repr_html_(self):
         if OPTIONS["display_style"] == "classic":
-            classic = repr(self).replace("<", "&lt;").replace(">", "&gt;")
-            return "<pre>{repr}</pre>".format(repr=classic)
+            classic = escape(repr(self))
+            return f"<pre>{classic}</pre>"
         return formatting_html.dataset_repr(self)
 
     def info(self, buf=None) -> None:

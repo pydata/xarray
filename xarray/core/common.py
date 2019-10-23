@@ -1,5 +1,6 @@
 import warnings
 from contextlib import suppress
+from html import escape
 from textwrap import dedent
 from typing import (
     Any,
@@ -136,8 +137,8 @@ class AbstractArray(ImplementsArrayReduce):
 
     def _repr_html_(self):
         if OPTIONS["display_style"] == "classic":
-            classic = repr(self).replace("<", "&lt;").replace(">", "&gt;")
-            return "<pre>{repr}</pre>".format(repr=classic)
+            classic = escape(repr(self), quote=True)
+            return f"<pre>{classic}</pre>"
         return formatting_html.array_repr(self)
 
     def _iter(self: Any) -> Iterator[Any]:

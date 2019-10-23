@@ -2,8 +2,9 @@
 
 import uuid
 import pkg_resources
-from functools import partial
 from collections import OrderedDict
+from functools import partial
+from html import escape
 
 from .formatting import (
     format_array_flat,
@@ -29,7 +30,7 @@ def short_data_repr_html(array):
     internal_data = getattr(array, "variable", array)._data
     if hasattr(internal_data, '_repr_html_'):
         return internal_data._repr_html_()
-    return short_data_repr(array)
+    return escape(short_data_repr(array))
 
 
 def format_dims(dims, coord_names):
@@ -39,19 +40,19 @@ def format_dims(dims, coord_names):
     dim_css_map = {k: " class='xr-has-index'" if k in coord_names else ''
                    for k, v in dims.items()}
 
-    dims_li = "".join("<li><span{cssclass_idx}>{name}</span>: {size}</li>"
-                      .format(cssclass_idx=dim_css_map[k], name=k, size=v)
-                      for k, v in dims.items())
+    dims_li = "".join(f"<li><span{dim_css_map[dim]}>"
+                      f"{escape(dim)}</span>: {size}</li>"
+                      for dim, size in dims.items())
 
-    return "<ul class='xr-dim-list'>{}</ul>".format(dims_li)
+    return f"<ul class='xr-dim-list'>{dims_li}</ul>"
 
 
 def summarize_attrs(attrs):
-    attrs_dl = "".join("<dt><span>{} :</span></dt>"
-                       "<dd>{}</dd>".format(k, v)
+    attrs_dl = "".join(f"<dt><span>{escape(k)} :</span></dt>"
+                       f"<dd>{escape(str(v))}</dd>"
                        for k, v in attrs.items())
 
-    return "<dl class='xr-attrs'>{}</dl>".format(attrs_dl)
+    return f"<dl class='xr-attrs'>{attrs_dl}</dl>"
 
 
 def _icon(icon_name):
@@ -64,7 +65,7 @@ def _icon(icon_name):
 
 
 def _summarize_coord_multiindex(name, coord):
-    preview = '(' +  ', '.join(l for l in coord.level_names) + ')'
+    preview = f"({', '.join(escape(l) for l in coord.level_names)})"
     return summarize_variable(
         name, coord, is_index=True, dtype='MultiIndex', preview=preview)
 
@@ -89,106 +90,82 @@ def summarize_coords(variables):
     for k, v in variables.items():
         coords.update(**summarize_coord(k, v))
 
-    vars_li = "".join("<li class='xr-var-item'>{}</li>"
-                     .format(v) for v in coords.values())
+    vars_li = "".join(f"<li class='xr-var-item'>{v}</li>"
+                      for v in coords.values())
 
-    return "<ul class='xr-var-list'>{}</ul>".format(vars_li)
+    return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
-def summarize_variable(name, var, is_index=False, **kwargs):
+def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
     variable = var.variable if hasattr(var, 'variable') else var
     has_attrs = len(var.attrs)
-    d = kwargs
 
-    d['cssclass_idx'] = " class='xr-has-index'" if is_index else ""
-    d['dims_str'] = '(' +  ', '.join(dim for dim in var.dims) + ')'
-    d['name'] = name
-    d['dtype'] = d.get('dtype', var.dtype)
+    cssclass_idx = " class='xr-has-index'" if is_index else ""
+    dims_str = f"({', '.join(escape(dim) for dim in var.dims)})"
+    name = escape(name)
+    dtype = dtype or var.dtype
 
     # "unique" ids required to expand/collapse subsections
-    d['attrs_id'] = 'attrs-' + str(uuid.uuid4())
-    d['data_id'] = 'data-' + str(uuid.uuid4())
+    attrs_id = 'attrs-' + str(uuid.uuid4())
+    data_id = 'data-' + str(uuid.uuid4())
 
-    d['disabled'] = '' if has_attrs else 'disabled'
-    d['attrs'] = summarize_attrs(var.attrs) if has_attrs else ''
+    disabled = '' if has_attrs else 'disabled'
+    attrs = summarize_attrs(var.attrs) if has_attrs else ''
 
-    d['preview'] = d.get('preview', inline_variable_array_repr(variable, 35))
-    d['attrs_ul'] = summarize_attrs(var.attrs)
-    d['data_repr'] = short_data_repr_html(variable)
+    preview = preview or escape(inline_variable_array_repr(variable, 35))
+    attrs_ul = summarize_attrs(var.attrs)
+    data_repr = short_data_repr_html(variable)
 
-    d['attrs_icon'] = _icon('icon-file-text2')
-    d['data_icon'] = _icon('icon-database')
+    attrs_icon = _icon('icon-file-text2')
+    data_icon = _icon('icon-database')
 
     return (
-        "<div class='xr-var-name'><span{cssclass_idx}>{name}</span></div>"
-        "<div class='xr-var-dims'>{dims_str}</div>"
-        "<div class='xr-var-dtype'>{dtype}</div>"
-        "<div class='xr-var-preview xr-preview'>{preview}</div>"
-        "<input id='{attrs_id}' class='xr-var-attrs-in' "
-        "type='checkbox' {disabled}>"
-        "<label for='{attrs_id}' title='Show/Hide attributes'>"
-        "{attrs_icon}</label>"
-        "<input id='{data_id}' class='xr-var-data-in' type='checkbox'>"
-        "<label for='{data_id}' title='Show/Hide data repr'>"
-        "{data_icon}</label>"
-        "<div class='xr-var-attrs'>{attrs_ul}</div>"
-        "<pre class='xr-var-data'>{data_repr}</pre>"
-        .format(**d))
+        f"<div class='xr-var-name'><span{cssclass_idx}>{name}</span></div>"
+        f"<div class='xr-var-dims'>{dims_str}</div>"
+        f"<div class='xr-var-dtype'>{dtype}</div>"
+        f"<div class='xr-var-preview xr-preview'>{preview}</div>"
+        f"<input id='{attrs_id}' class='xr-var-attrs-in' "
+        f"type='checkbox' {disabled}>"
+        f"<label for='{attrs_id}' title='Show/Hide attributes'>"
+        f"{attrs_icon}</label>"
+        f"<input id='{data_id}' class='xr-var-data-in' type='checkbox'>"
+        f"<label for='{data_id}' title='Show/Hide data repr'>"
+        f"{data_icon}</label>"
+        f"<div class='xr-var-attrs'>{attrs_ul}</div>"
+        f"<pre class='xr-var-data'>{data_repr}</pre>")
 
 
 def summarize_vars(variables):
-    vars_li = "".join("<li class='xr-var-item'>{}</li>"
-                      .format(summarize_variable(k, v))
+    vars_li = "".join(f"<li class='xr-var-item'>{summarize_variable(k, v)}</li>"
                       for k, v in variables.items())
 
-    return "<ul class='xr-var-list'>{}</ul>".format(vars_li)
+    return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
-def collapsible_section(name, inline_details=None, details=None,
+def collapsible_section(name, inline_details='', details='',
                         n_items=None, enabled=True, collapsed=False):
-    d = {}
-
     # "unique" id to expand/collapse the section
-    d['id'] = 'section-' + str(uuid.uuid4())
+    data_id = 'section-' + str(uuid.uuid4())
 
-    if n_items is not None:
-        n_items_span = " <span>({})</span>".format(n_items)
-    else:
-        n_items_span = ''
-
-    d['title'] = "{}:{}".format(name, n_items_span)
-
-    if n_items is not None and not n_items:
-        collapsed = True
-
-    d['inline_details'] = inline_details or ''
-    d['details'] = details or ''
-
-    d['enabled'] = '' if enabled else 'disabled'
-    d['collapsed'] = '' if collapsed else 'checked'
-
-    if enabled:
-        d['tip'] = " title='Expand/collapse section'"
-    else:
-        d['tip'] = ""
+    has_items = n_items is not None and n_items
+    n_items_span = '' if n_items is None else f" <span>({n_items})</span>"
+    enabled = '' if enabled and has_items else 'disabled'
+    collapsed = '' if collapsed or not has_items else 'checked'
+    tip = " title='Expand/collapse section'" if enabled else ""
 
     return (
-        "<input id='{id}' class='xr-section-summary-in' "
-        "type='checkbox' {enabled} {collapsed}>"
-        "<label for='{id}' class='xr-section-summary' {tip}>{title}</label>"
-        "<div class='xr-section-inline-details'>{inline_details}</div>"
-        "<div class='xr-section-details'>{details}</div>"
-        .format(**d))
+        f"<input id='{data_id}' class='xr-section-summary-in' "
+        f"type='checkbox' {enabled} {collapsed}>"
+        f"<label for='{data_id}' class='xr-section-summary' {tip}>"
+        f"{name}:{n_items_span}</label>"
+        f"<div class='xr-section-inline-details'>{inline_details}</div>"
+        f"<div class='xr-section-details'>{details}</div>")
 
 
-def _mapping_section(mapping, name, details_func,
-                     enabled=True, max_items_collapse=None):
+def _mapping_section(mapping, name, details_func, max_items_collapse,
+                     enabled=True):
     n_items = len(mapping)
-
-    if max_items_collapse is not None and n_items <= max_items_collapse:
-        collapsed = False
-    else:
-        collapsed = True
+    collapsed = n_items >= max_items_collapse
 
     return collapsible_section(
         name, details=details_func(mapping), n_items=n_items,
@@ -204,27 +181,20 @@ def dim_section(obj):
 
 
 def array_section(obj):
-    d = {}
-
     # "unique" id to expand/collapse the section
-    d['id'] = 'section-' + str(uuid.uuid4())
+    data_id = 'section-' + str(uuid.uuid4())
+    collapsed = ''
+    preview = escape(inline_variable_array_repr(obj.variable, max_width=70))
+    data_repr = short_data_repr_html(obj)
+    data_icon = _icon('icon-database')
 
-    d['preview'] = inline_variable_array_repr(obj.variable, max_width=70)
-    d['data_repr'] = short_data_repr_html(obj)
-
-    # TODO: maybe collapse section dep. on number of lines in data repr
-    d['collapsed'] = ''
-
-    d['tip'] = "Show/hide data repr"
-    d['data_icon'] = _icon('icon-database')
     return (
         "<div class='xr-array-wrap'>"
-        "<input id='{id}' class='xr-array-in' type='checkbox' {collapsed}>"
-        "<label for='{id}' title='{tip}'>{data_icon}</label>"
-        "<div class='xr-array-preview xr-preview'><span>{preview}</span></div>"
-        "<pre class='xr-array-data'>{data_repr}</pre>"
-        "</div>"
-        .format(**d))
+        f"<input id='{data_id}' class='xr-array-in' type='checkbox' {collapsed}>"
+        f"<label for='{data_id}' title='Show/hide data repr'>{data_icon}</label>"
+        f"<div class='xr-array-preview xr-preview'><span>{preview}</span></div>"
+        f"<pre class='xr-array-data'>{data_repr}</pre>"
+        "</div>")
 
 
 coord_section = partial(_mapping_section,
@@ -243,41 +213,24 @@ attr_section = partial(_mapping_section,
 
 
 def _obj_repr(header_components, sections):
-    d = {}
-
-    d['header'] = "<div class='xr-header'>{}</div>".format(
-        "".join(comp for comp in header_components))
-
-    d['icons'] = ICONS_SVG
-    d['style'] = "<style>{}</style>".format(CSS_STYLE)
-
-    d['sections'] = "".join("<li class='xr-section-item'>{}</li>".format(s)
-                            for s in sections)
+    header = f"<div class='xr-header'>{''.join(h for h in header_components)}</div>"
+    sections = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
 
     return ("<div>"
-            "{icons}{style}"
+            f"{ICONS_SVG}<style>{CSS_STYLE}</style>"
             "<div class='xr-wrap'>"
-            "{header}"
-            "<ul class='xr-sections'>{sections}</ul>"
+            f"{header}"
+            f"<ul class='xr-sections'>{sections}</ul>"
             "</div>"
-            "</div>"
-            .format(**d))
+            "</div>")
 
 
 def array_repr(arr):
     dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
 
     obj_type = "xarray.{}".format(type(arr).__name__)
-
-    if hasattr(arr, 'name') and arr.name is not None:
-        arr_name = "'{}'".format(arr.name)
-    else:
-        arr_name = ""
-
-    if hasattr(arr, 'coords'):
-        coord_names = list(arr.coords)
-    else:
-        coord_names = []
+    arr_name = "'{}'".format(arr.name) if getattr(arr, 'name', None) else ""
+    coord_names = list(arr.coords) if hasattr(arr, 'coords') else []
 
     header_components = [
         "<div class='xr-obj-type'>{}</div>".format(obj_type),
@@ -285,9 +238,7 @@ def array_repr(arr):
         format_dims(dims, coord_names)
     ]
 
-    sections = []
-
-    sections.append(array_section(arr))
+    sections = [array_section(arr)]
 
     if hasattr(arr, 'coords'):
         sections.append(coord_section(arr.coords))
@@ -300,7 +251,7 @@ def array_repr(arr):
 def dataset_repr(ds):
     obj_type = "xarray.{}".format(type(ds).__name__)
 
-    header_components = ["<div class='xr-obj-type'>{}</div>".format(obj_type)]
+    header_components = [f"<div class='xr-obj-type'>{escape(obj_type)}</div>"]
 
     sections = [dim_section(ds),
                 coord_section(ds.coords),
