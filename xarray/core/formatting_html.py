@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import uuid
 import pkg_resources
 from collections import OrderedDict

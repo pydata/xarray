@@ -88,7 +88,7 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value():
     assert "<dd>&lt;pd.DataFrame&gt;</dd>" in formatted
 
 
-def test_array_repr_of_dataarray(dataarray):
+def test_repr_of_dataarray(dataarray):
     formatted = fh.array_repr(dataarray)
     assert "dim_0" in formatted
     # has an expandable data section
@@ -105,6 +105,11 @@ def test_summary_of_multiindex_coord(multiindex):
     assert "(level_1, level_2)" in formatted
     assert "MultiIndex" in formatted
     assert "<span class='xr-has-index'>foo</span>" in formatted
+
+
+def test_repr_of_multiindex(multiindex):
+    formatted = fh.dataset_repr(multiindex)
+    assert "(x)" in formatted
 
 
 def test_repr_of_dataset(dataset):
