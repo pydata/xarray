@@ -18,6 +18,11 @@ What's New
 v0.14.1 (unreleased)
 --------------------
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 New Features
 ~~~~~~~~~~~~
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
@@ -37,6 +42,10 @@ Bug fixes
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
