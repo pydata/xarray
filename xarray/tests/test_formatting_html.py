@@ -46,7 +46,7 @@ def dataset():
 
 def test_short_data_repr_html(dataarray):
     data_repr = fh.short_data_repr_html(dataarray)
-    assert data_repr.startswith('array')
+    assert data_repr.startswith("array")
 
 
 def test_short_data_repr_html_dask(dask_dataarray):

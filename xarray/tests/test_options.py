@@ -188,3 +188,16 @@ class TestAttrRetention:
             html = ds._repr_html_()
             assert html.startswith("<div>")
             assert "&#x27;nested&#x27;" in html
+
+    def test_display_dataarray_style_text(self):
+        da = create_test_dataarray_attrs()
+        text = da._repr_html_()
+        assert text.startswith("<pre>")
+        assert "&lt;xarray.DataArray &#x27;var1&#x27;" in text
+
+    def test_display_dataarray_style_html(self):
+        da = create_test_dataarray_attrs()
+        with xarray.set_options(display_style="html"):
+            html = da._repr_html_()
+            assert html.startswith("<div>")
+            assert "#x27;nested&#x27;" in html
