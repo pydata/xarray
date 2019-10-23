@@ -245,8 +245,8 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
             # pandas raises a TypeError
             # xarray/numpy raise a ValueError
             raise TypeError(
-                f"Index {index.name!r} must be castable to float64 to support"
-                "interpolation, got {type(index)}"
+                f"Index {index.name!r} must be castable to float64 to support "
+                f"interpolation, got {type(index).__name__}."
             )
 
     else:
@@ -274,7 +274,7 @@ def interp_na(
         valids = _get_valid_fill_mask(self, dim, limit)
 
     if max_gap is not None:
-        max_type = type(max_gap)
+        max_type = type(max_gap).__name__
         if dim in self.indexes and isinstance(self.indexes[dim], pd.DatetimeIndex):
             if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
                 raise TypeError(
