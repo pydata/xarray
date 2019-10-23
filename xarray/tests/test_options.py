@@ -175,11 +175,10 @@ class TestAttrRetention:
         result = merge([da1, da2])
         assert result.attrs == original_attrs
 
-
     def test_display_style_text(self):
         ds = create_test_dataset_attrs()
         text = ds._repr_html_()
-        assert text.startswith('<pre>')
+        assert text.startswith("<pre>")
         assert "&#x27;nested&#x27;" in text
         assert "&lt;xarray.Dataset&gt;" in text
 
