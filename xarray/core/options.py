@@ -20,11 +20,11 @@ OPTIONS = {
     CMAP_SEQUENTIAL: "viridis",
     CMAP_DIVERGENT: "RdBu_r",
     KEEP_ATTRS: "default",
-    DISPLAY_STYLE: "classic",
+    DISPLAY_STYLE: "text",
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
-_DISPLAY_OPTIONS = frozenset(["classic", "html"])
+_DISPLAY_OPTIONS = frozenset(["text", "html"])
 
 
 def _positive_integer(value):

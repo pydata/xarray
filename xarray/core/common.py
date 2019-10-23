@@ -136,9 +136,8 @@ class AbstractArray(ImplementsArrayReduce):
         return formatting.array_repr(self)
 
     def _repr_html_(self):
-        if OPTIONS["display_style"] == "classic":
-            classic = escape(repr(self), quote=True)
-            return f"<pre>{classic}</pre>"
+        if OPTIONS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
         return formatting_html.array_repr(self)
 
     def _iter(self: Any) -> Iterator[Any]:

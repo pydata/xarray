@@ -1622,9 +1622,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return formatting.dataset_repr(self)
 
     def _repr_html_(self):
-        if OPTIONS["display_style"] == "classic":
-            classic = escape(repr(self))
-            return f"<pre>{classic}</pre>"
+        if OPTIONS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
         return formatting_html.dataset_repr(self)
 
     def info(self, buf=None) -> None:
