@@ -67,6 +67,16 @@ def test_nested_options():
     assert OPTIONS["display_width"] == original
 
 
+def test_display_style():
+    original = "text"
+    assert OPTIONS["display_style"] == original
+    with pytest.raises(ValueError):
+        xarray.set_options(display_style="invalid_str")
+    with xarray.set_options(display_style="html"):
+        assert OPTIONS["display_style"] == "html"
+    assert OPTIONS["display_style"] == original
+
+
 def create_test_dataset_attrs(seed=0):
     ds = create_test_data(seed)
     ds.attrs = {"attr1": 5, "attr2": "history", "attr3": {"nested": "more_info"}}
@@ -164,3 +174,18 @@ class TestAttrRetention:
         # option doesn't affect this
         result = merge([da1, da2])
         assert result.attrs == original_attrs
+
+
+    def test_display_style_text(self):
+        ds = create_test_dataset_attrs()
+        text = ds._repr_html_()
+        assert text.startswith('<pre>')
+        assert "&#x27;nested&#x27;" in text
+        assert "&lt;xarray.Dataset&gt;" in text
+
+    def test_display_style_html(self):
+        ds = create_test_dataset_attrs()
+        with xarray.set_options(display_style="html"):
+            html = ds._repr_html_()
+            assert html.startswith("<div>")
+            assert "&#x27;nested&#x27;" in html
