@@ -42,7 +42,7 @@ Bug fixes
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
-   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 
 Documentation
