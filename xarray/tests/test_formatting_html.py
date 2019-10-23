@@ -24,6 +24,7 @@ def multiindex():
     )
     return xr.Dataset({}, {"x": mindex})
 
+
 @pytest.fixture
 def dataset():
     times = pd.date_range("2000-01-01", "2001-12-31", name="time")
@@ -39,8 +40,9 @@ def dataset():
             "tmax": (("time", "location"), tmax_values),
         },
         {"time": times, "location": ["<IA>", "IN", "IL"]},
-        attrs={'description': 'Test data.'}
+        attrs={"description": "Test data."},
     )
+
 
 def test_short_data_repr_html(dataarray):
     data_repr = fh.short_data_repr_html(dataarray)
@@ -48,7 +50,7 @@ def test_short_data_repr_html(dataarray):
 
 
 def test_short_data_repr_html_dask(dask_dataarray):
-    assert hasattr(dask_dataarray.data, '_repr_html_')
+    assert hasattr(dask_dataarray.data, "_repr_html_")
     data_repr = fh.short_data_repr_html(dask_dataarray)
     assert data_repr == dask_dataarray.data._repr_html_()
 
@@ -56,29 +58,29 @@ def test_short_data_repr_html_dask(dask_dataarray):
 def test_format_dims_no_dims():
     dims, coord_names = {}, []
     formatted = fh.format_dims(dims, coord_names)
-    assert formatted == ''
+    assert formatted == ""
 
 
 def test_format_dims_unsafe_dim_name():
-    dims, coord_names = {'<x>': 3, 'y': 2}, []
+    dims, coord_names = {"<x>": 3, "y": 2}, []
     formatted = fh.format_dims(dims, coord_names)
     assert "&lt;x&gt;" in formatted
 
 
 def test_format_dims_non_index():
-    dims, coord_names = {'x': 3, 'y': 2}, ['time']
+    dims, coord_names = {"x": 3, "y": 2}, ["time"]
     formatted = fh.format_dims(dims, coord_names)
     assert "class='xr-has-index'" not in formatted
 
 
 def test_format_dims_index():
-    dims, coord_names = {'x': 3, 'y': 2}, ['x']
+    dims, coord_names = {"x": 3, "y": 2}, ["x"]
     formatted = fh.format_dims(dims, coord_names)
     assert "class='xr-has-index'" in formatted
 
 
 def test_summarize_attrs_with_unsafe_attr_name_and_value():
-    attrs = {'<x>': 3, 'y': "<pd.DataFrame>"}
+    attrs = {"<x>": 3, "y": "<pd.DataFrame>"}
     formatted = fh.summarize_attrs(attrs)
     assert "<dt><span>&lt;x&gt; :</span></dt>" in formatted
     assert "<dt><span>y :</span></dt>" in formatted
@@ -88,22 +90,26 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value():
 
 def test_array_repr_of_dataarray(dataarray):
     formatted = fh.array_repr(dataarray)
-    assert 'dim_0' in formatted
+    assert "dim_0" in formatted
     # has an expandable data section
     assert formatted.count("class='xr-array-in' type='checkbox' >") == 1
     # coords and attrs don't have an items so they'll be be disabled and collapsed
-    assert formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 2
+    assert (
+        formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 2
+    )
 
 
 def test_summary_of_multiindex_coord(multiindex):
-    idx =  multiindex.x.variable.to_index_variable()
-    formatted = fh._summarize_coord_multiindex('foo', idx)
-    assert '(level_1, level_2)' in formatted
-    assert 'MultiIndex' in formatted
+    idx = multiindex.x.variable.to_index_variable()
+    formatted = fh._summarize_coord_multiindex("foo", idx)
+    assert "(level_1, level_2)" in formatted
+    assert "MultiIndex" in formatted
     assert "<span class='xr-has-index'>foo</span>" in formatted
 
 
 def test_repr_of_dataset(dataset):
     formatted = fh.dataset_repr(dataset)
     # coords, attrs, and data_vars are expanded
-    assert formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
+    assert (
+        formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
+    )
