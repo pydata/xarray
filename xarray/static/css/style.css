@@ -181,7 +181,7 @@
 }
 
 .xr-var-item > div,
-.xr-var-item > label,
+.xr-var-item label,
 .xr-var-item > .xr-var-name span {
   background-color: #fcfcfc;
   margin-bottom: 0;
