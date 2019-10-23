@@ -18,6 +18,11 @@ What's New
 v0.14.1 (unreleased)
 --------------------
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 New Features
 ~~~~~~~~~~~~
 - :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
@@ -40,6 +45,10 @@ Bug fixes
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 
+- Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
+
 Documentation
 ~~~~~~~~~~~~~
 
@@ -48,6 +57,11 @@ Documentation
   datetime-like dimension is required. (:pull:`3400`)
   By `Justus Magin <https://github.com/keewis>`_.
 
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Use Python 3.6 idioms throughout the codebase. (:pull:3419)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.14.0:
 
