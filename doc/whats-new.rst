@@ -56,6 +56,8 @@ Documentation
   :py:meth:`Dataset.resample` and explicitly state that a
   datetime-like dimension is required. (:pull:`3400`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Update the terminology page to address multidimensional coordinates. (:pull:`3410`)
+  By `Jon Thielen <https://github.com/jthielen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
