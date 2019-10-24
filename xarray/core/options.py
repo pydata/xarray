@@ -103,7 +103,7 @@ class set_options:
       logic that attrs should only be kept in unambiguous circumstances.
       Default: ``'default'``.
     - ``display_style``: display style to use in jupyter for xarray objects.
-      Default: ``classic``. Other options are ``html``.
+      Default: ``'text'``. Other options are ``'html'``.
 
 
     You can use ``set_options`` either as a context manager:
