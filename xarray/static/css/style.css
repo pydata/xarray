@@ -266,7 +266,7 @@
   grid-column: 1 / -1;
 }
 
-.xr-attrs {
+dl.xr-attrs {
   padding: 0;
   margin: 0;
   display: grid;
