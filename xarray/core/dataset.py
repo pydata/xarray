@@ -3,6 +3,7 @@ import functools
 import sys
 import warnings
 from collections import defaultdict
+from html import escape
 from numbers import Number
 from pathlib import Path
 from typing import (
@@ -39,6 +40,7 @@ from . import (
     dtypes,
     duck_array_ops,
     formatting,
+    formatting_html,
     groupby,
     ops,
     resample,
@@ -1618,6 +1620,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def __repr__(self) -> str:
         return formatting.dataset_repr(self)
+
+    def _repr_html_(self):
+        if OPTIONS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
+        return formatting_html.dataset_repr(self)
 
     def info(self, buf=None) -> None:
         """
