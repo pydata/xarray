@@ -2966,15 +2966,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     for a in axis:
                         if a < -result_ndim or result_ndim - 1 < a:
                             raise IndexError(
-                                "Axis {a} is out of bounds of the expanded"
-                                " dimension size {dim}.".format(
-                                    a=a, v=k, dim=result_ndim
-                                )
+                                f"Axis {a} of variable {k} is out of bounds of the "
+                                f"expanded dimension size {result_ndim}"
                             )
 
                     axis_pos = [a if a >= 0 else result_ndim + a for a in axis]
                     if len(axis_pos) != len(set(axis_pos)):
-                        raise ValueError("axis should not contain duplicate" " values.")
+                        raise ValueError("axis should not contain duplicate values")
                     # We need to sort them to make sure `axis` equals to the
                     # axis positions of the result array.
                     zip_axis_dim = sorted(zip(axis_pos, dim.items()))
@@ -3130,7 +3128,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coord = self._variables[dim]
             index = self.indexes[dim]
             if not isinstance(index, pd.MultiIndex):
-                raise ValueError("coordinate %r has no MultiIndex" % dim)
+                raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
             variables[dim] = IndexVariable(coord.dims, new_index)
             indexes[dim] = new_index
