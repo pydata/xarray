@@ -18,6 +18,11 @@ What's New
 v0.14.1 (unreleased)
 --------------------
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 New Features
 ~~~~~~~~~~~~
 - Added the ``max_gap`` kwarg to :py:meth:`~xarray.DataArray.interpolate_na` and
@@ -39,6 +44,10 @@ Bug fixes
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 
+- Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
+
 Documentation
 ~~~~~~~~~~~~~
 
@@ -46,6 +55,8 @@ Documentation
   :py:meth:`Dataset.resample` and explicitly state that a
   datetime-like dimension is required. (:pull:`3400`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Update the terminology page to address multidimensional coordinates. (:pull:`3410`)
+  By `Jon Thielen <https://github.com/jthielen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

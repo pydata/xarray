@@ -15,16 +15,17 @@ steps:
         --no-deps \
         --pre \
         --upgrade \
-        numpy \
         matplotlib \
-        pandas \
+        pandas=0.26.0.dev0+628.g03c1a3db2 \  # FIXME https://github.com/pydata/xarray/issues/3440
         scipy
+        # numpy \  # FIXME https://github.com/pydata/xarray/issues/3409
     pip install \
         --no-deps \
         --upgrade \
         git+https://github.com/dask/dask \
         git+https://github.com/dask/distributed \
-        git+https://github.com/zarr-developers/zarr
+        git+https://github.com/zarr-developers/zarr \
+        git+https://github.com/Unidata/cftime
   condition: eq(variables['UPSTREAM_DEV'], 'true')
   displayName: Install upstream dev dependencies
 
