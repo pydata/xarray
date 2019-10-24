@@ -477,7 +477,6 @@ def da_time():
     return xr.DataArray(
         [np.nan, 1, 2, np.nan, np.nan, 5, np.nan, np.nan, np.nan, np.nan, 10],
         dims=["t"],
-        coords={"t": pd.date_range("2001-01-01", freq="H", periods=11)},
     )
 
 
@@ -492,11 +491,18 @@ def test_interpolate_na_max_gap_datetime_errors(da_time):
         da_time.interpolate_na("t", max_gap="huh")
 
 
+@pytest.mark.parametrize(
+    "time_range_func",
+    [pd.date_range, pytest.param(xr.cftime_range, marks=pytest.mark.xfail)],
+)
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3H", np.timedelta64(3, "h"), pd.to_timedelta("3H")]
 )
-def test_interpolate_na_max_gap_time_specifier(da_time, max_gap, transform):
+def test_interpolate_na_max_gap_time_specifier(
+    da_time, max_gap, transform, time_range_func
+):
+    da_time["t"] = time_range_func("2001-01-01", freq="H", periods=11)
     expected = transform(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )
