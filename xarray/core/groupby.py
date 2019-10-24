@@ -897,7 +897,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         if dim is not ... and dim not in self.dims:
             raise ValueError(
-                "cannot reduce over dimension %r. expected either `...` to reduce over all dimensions or one or more of %r."
+                "cannot reduce over dimension %r. expected either '...' to reduce over all dimensions or one or more of %r."
                 % (dim, self.dims)
             )
 
