@@ -22,6 +22,7 @@ from . import (
     assert_identical,
     raises_regex,
 )
+from .test_backends import create_tmp_file
 
 dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
@@ -1135,3 +1136,57 @@ def test_make_meta(map_ds):
     for variable in map_ds.data_vars:
         assert variable in meta.data_vars
         assert meta.data_vars[variable].shape == (0,) * meta.data_vars[variable].ndim
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+@pytest.mark.parametrize(
+    "transform",
+    [
+        lambda x: x.reset_coords(),
+        lambda x: x.reset_coords(drop=True),
+        lambda x: x.isel(x=1),
+        lambda x: x.attrs.update(new_attrs=1),
+        lambda x: x.assign_coords(cxy=1),
+        lambda x: x.rename({"x": "xnew"}),
+        lambda x: x.rename({"cxy": "cxynew"}),
+    ],
+)
+def test_normalize_token_not_identical(obj, transform):
+    with raise_if_dask_computes():
+        assert not dask.base.tokenize(obj) == dask.base.tokenize(transform(obj))
+    assert not dask.base.tokenize(obj.compute()) == dask.base.tokenize(
+        transform(obj.compute())
+    )
+
+
+@pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.compute()])
+def test_normalize_differently_when_data_changes(transform):
+    obj = transform(make_ds())
+    new = obj.copy(deep=True)
+    new["a"] *= 2
+    with raise_if_dask_computes():
+        assert not dask.base.tokenize(obj) == dask.base.tokenize(new)
+
+    obj = transform(make_da())
+    new = obj.copy(deep=True)
+    new *= 2
+    with raise_if_dask_computes():
+        assert not dask.base.tokenize(obj) == dask.base.tokenize(new)
+
+
+@pytest.mark.parametrize(
+    "transform", [lambda x: x, lambda x: x.copy(), lambda x: x.copy(deep=True)]
+)
+@pytest.mark.parametrize(
+    "obj", [make_da(), make_ds(), make_da().indexes["x"], make_ds().variables["a"]]
+)
+def test_normalize_token_identical(obj, transform):
+    with raise_if_dask_computes():
+        assert dask.base.tokenize(obj) == dask.base.tokenize(transform(obj))
+
+
+def test_normalize_token_netcdf_backend(map_ds):
+    with create_tmp_file() as tmp_file:
+        map_ds.to_netcdf(tmp_file)
+        read = xr.open_dataset(tmp_file)
+        assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)

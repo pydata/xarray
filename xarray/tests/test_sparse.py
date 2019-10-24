@@ -22,6 +22,7 @@ if not IS_NEP18_ACTIVE:
     )
 
 sparse = pytest.importorskip("sparse")
+dask = pytest.importorskip("dask")
 
 
 def assert_sparse_equal(a, b):
@@ -849,3 +850,14 @@ def test_chunk():
     dsc = ds.chunk(2)
     assert dsc.chunks == {"dim_0": (2, 2)}
     assert_identical(dsc, ds)
+
+
+def test_normalize_token():
+    s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
+    a = DataArray(s)
+    dask.base.tokenize(a)
+    assert isinstance(a.data, sparse.COO)
+
+    ac = a.chunk(2)
+    dask.base.tokenize(ac)
+    assert isinstance(ac.data._meta, sparse.COO)

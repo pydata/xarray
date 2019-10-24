@@ -754,6 +754,9 @@ class DataArray(AbstractArray, DataWithCoords):
             dataset[self.name] = self.variable
             return dataset
 
+    def __dask_tokenize__(self):
+        return (DataArray, self._variable, self._coords, self._name)
+
     def __dask_graph__(self):
         return self._to_temp_dataset().__dask_graph__()
 

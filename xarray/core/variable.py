@@ -389,6 +389,9 @@ class Variable(
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
+    def __dask_tokenize__(self):
+        return Variable, self._dims, self.data, self._attrs
+
     def __dask_graph__(self):
         if isinstance(self._data, dask_array_type):
             return self._data.__dask_graph__()
@@ -1960,6 +1963,9 @@ class IndexVariable(Variable):
         # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndexAdapter):
             self._data = PandasIndexAdapter(self._data)
+
+    def __dask_tokenize__(self):
+        return (IndexVariable, self._dims, self._data.array, self._attrs)
 
     def load(self):
         # data is already loaded into memory for IndexVariable
