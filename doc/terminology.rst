@@ -27,15 +27,15 @@ Terminology
 
 ----
 
-**Coordinate:** An array that labels a dimension of another ``DataArray``. Loosely, the coordinate array's values can be thought of as tick labels along a dimension. There are two types of coordinate arrays: *dimension coordinates* and *non-dimension coordinates* (see below). A coordinate named ``x`` can be retrieved from ``arr.coords[x]``. A ``DataArray`` can have more coordinates than dimensions because a single dimension can be assigned multiple coordinate arrays. However, only one coordinate array can be a assigned as a particular dimension's dimension coordinate array. As a consequence, ``len(arr.dims) <= len(arr.coords)`` in general.
+**Coordinate:** An array that labels a dimension or set of dimensions of another ``DataArray``. In the usual one-dimensional case, the coordinate array's values can loosely be thought of as tick labels along a dimension. There are two types of coordinate arrays: *dimension coordinates* and *non-dimension coordinates* (see below). A coordinate named ``x`` can be retrieved from ``arr.coords[x]``. A ``DataArray`` can have more coordinates than dimensions because a single dimension can be labeled by multiple coordinate arrays. However, only one coordinate array can be a assigned as a particular dimension's dimension coordinate array. As a consequence, ``len(arr.dims) <= len(arr.coords)`` in general.
 
 ----
 
-**Dimension coordinate:** A coordinate array assigned to ``arr`` with both a name and dimension name in ``arr.dims``. Dimension coordinates are used for label-based indexing and alignment, like the index found on a :py:class:`pandas.DataFrame` or :py:class:`pandas.Series`. In fact, dimension coordinates use :py:class:`pandas.Index` objects under the hood for efficient computation. Dimension coordinates are marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
+**Dimension coordinate:** A one-dimensional coordinate array assigned to ``arr`` with both a name and dimension name in ``arr.dims``. Dimension coordinates are used for label-based indexing and alignment, like the index found on a :py:class:`pandas.DataFrame` or :py:class:`pandas.Series`. In fact, dimension coordinates use :py:class:`pandas.Index` objects under the hood for efficient computation. Dimension coordinates are marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
 
 ----
 
-**Non-dimension coordinate:** A coordinate array assigned to ``arr`` with a name in ``arr.dims`` but a dimension name *not* in ``arr.dims``. These coordinate arrays are useful for auxiliary labeling. However, non-dimension coordinates are not indexed, and any operation on non-dimension coordinates that leverages indexing will fail. Printing ``arr.coords`` will print all of ``arr``'s coordinate names, with the assigned dimensions in parentheses. For example, ``coord_name   (dim_name) 1 2 3 ...``.
+**Non-dimension coordinate:** A coordinate array assigned to ``arr`` with a name in ``arr.coords`` but *not* in ``arr.dims``. These coordinates arrays can be one-dimensional or multidimensional, and they are useful for auxiliary labeling. As an example, multidimensional coordinates are often used in geoscience datasets when :doc:`the data's physical coordinates (such as latitude and longitude) differ from their logical coordinates <examples/multidimensional-coords>`. However, non-dimension coordinates are not indexed, and any operation on non-dimension coordinates that leverages indexing will fail. Printing ``arr.coords`` will print all of ``arr``'s coordinate names, with the corresponding dimension(s) in parentheses. For example, ``coord_name   (dim_name) 1 2 3 ...``.
 
 ----
 
