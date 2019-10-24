@@ -15,10 +15,10 @@ steps:
         --no-deps \
         --pre \
         --upgrade \
-        numpy \
         matplotlib \
         pandas \
         scipy
+        # numpy \  # FIXME https://github.com/pydata/xarray/issues/3409
     pip install \
         --no-deps \
         --upgrade \

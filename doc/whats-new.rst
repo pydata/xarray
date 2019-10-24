@@ -42,7 +42,7 @@ Bug fixes
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
-   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 
 Documentation
@@ -52,6 +52,8 @@ Documentation
   :py:meth:`Dataset.resample` and explicitly state that a
   datetime-like dimension is required. (:pull:`3400`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Update the terminology page to address multidimensional coordinates. (:pull:`3410`)
+  By `Jon Thielen <https://github.com/jthielen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
