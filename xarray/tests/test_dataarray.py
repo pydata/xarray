@@ -1534,11 +1534,11 @@ class TestDataArray:
             # Should not pass the already existing dimension.
             array.expand_dims(dim=["x"])
         # raise if duplicate
-        with raises_regex(ValueError, "duplicate values."):
+        with raises_regex(ValueError, "duplicate values"):
             array.expand_dims(dim=["y", "y"])
-        with raises_regex(ValueError, "duplicate values."):
+        with raises_regex(ValueError, "duplicate values"):
             array.expand_dims(dim=["y", "z"], axis=[1, 1])
-        with raises_regex(ValueError, "duplicate values."):
+        with raises_regex(ValueError, "duplicate values"):
             array.expand_dims(dim=["y", "z"], axis=[2, -2])
 
         # out of bounds error, axis must be in [-4, 3]

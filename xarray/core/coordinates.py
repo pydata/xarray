@@ -367,7 +367,7 @@ def remap_label_indexers(
     indexers: Mapping[Hashable, Any] = None,
     method: str = None,
     tolerance=None,
-    **indexers_kwargs: Any
+    **indexers_kwargs: Any,
 ) -> Tuple[dict, dict]:  # TODO more precise return type after annotations in indexing
     """Remap indexers from obj.coords.
     If indexer is an instance of DataArray and it has coordinate, then this coordinate

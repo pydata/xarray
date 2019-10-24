@@ -151,7 +151,7 @@ class Resample:
             assume_sorted=True,
             method=kind,
             kwargs={"bounds_error": False},
-            **{self._dim: self._full_index}
+            **{self._dim: self._full_index},
         )
 
 

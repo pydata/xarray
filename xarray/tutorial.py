@@ -32,7 +32,7 @@ def open_dataset(
     cache_dir=_default_cache_dir,
     github_url="https://github.com/pydata/xarray-data",
     branch="master",
-    **kws
+    **kws,
 ):
     """
     Open a dataset from the online repository (requires internet).

@@ -76,7 +76,7 @@ class SupportsArithmetic:
             dataset_join=dataset_join,
             dataset_fill_value=np.nan,
             kwargs=kwargs,
-            dask="allowed"
+            dask="allowed",
         )
 
     # this has no runtime function - these are listed so IDEs know these

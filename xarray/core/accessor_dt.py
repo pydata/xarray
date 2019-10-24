@@ -178,7 +178,9 @@ class DatetimeAccessor:
             )
         self._obj = obj
 
-    def _tslib_field_accessor(name, docstring=None, dtype=None):
+    def _tslib_field_accessor(  # type: ignore
+        name: str, docstring: str = None, dtype: np.dtype = None
+    ):
         def f(self, dtype=dtype):
             if dtype is None:
                 dtype = self._obj.dtype

@@ -71,7 +71,7 @@ class NumpyInterpolator(BaseInterpolator):
             self._yi,
             left=self._left,
             right=self._right,
-            **self.call_kwargs
+            **self.call_kwargs,
         )
 
 
@@ -93,7 +93,7 @@ class ScipyInterpolator(BaseInterpolator):
         copy=False,
         bounds_error=False,
         order=None,
-        **kwargs
+        **kwargs,
     ):
         from scipy.interpolate import interp1d
 
@@ -126,7 +126,7 @@ class ScipyInterpolator(BaseInterpolator):
             bounds_error=False,
             assume_sorted=assume_sorted,
             copy=copy,
-            **self.cons_kwargs
+            **self.cons_kwargs,
         )
 
 
@@ -147,7 +147,7 @@ class SplineInterpolator(BaseInterpolator):
         order=3,
         nu=0,
         ext=None,
-        **kwargs
+        **kwargs,
     ):
         from scipy.interpolate import UnivariateSpline
 
