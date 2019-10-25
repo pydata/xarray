@@ -1,5 +1,6 @@
 import warnings
 from functools import partial
+from numbers import Number
 from typing import Any, Callable, Dict, Sequence
 
 import numpy as np
@@ -275,15 +276,17 @@ def interp_na(
 
     if max_gap is not None:
         max_type = type(max_gap).__name__
-        if dim in self.indexes and isinstance(self.indexes[dim], pd.DatetimeIndex):
+        if not is_scalar(max_gap):
+            raise ValueError("max_gap must be a scalar.")
+
+        if (
+            dim in self.indexes
+            and isinstance(self.indexes[dim], pd.DatetimeIndex)
+            and use_coordinate
+        ):
             if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
                 raise TypeError(
                     f"Underlying index is DatetimeIndex. Expected max_gap of type str, pandas.Timedelta or numpy.timedelta64 but received {max_type}"
-                )
-
-            if not use_coordinate:
-                raise ValueError(
-                    f"provided max_gap of type {max_type} but use_coordinate=False. Set use_coordinate=True instead."
                 )
 
             if isinstance(max_gap, str):
@@ -298,6 +301,12 @@ def interp_na(
                 max_gap = max_gap.to_numpy()
 
             max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
+
+        if not use_coordinate:
+            if not isinstance(max_gap, (Number, np.number)):
+                raise TypeError(
+                    f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
+                )
 
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)

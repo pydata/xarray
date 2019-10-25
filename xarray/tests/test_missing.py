@@ -480,11 +480,20 @@ def da_time():
     )
 
 
-def test_interpolate_na_max_gap_datetime_errors(da_time):
+def test_interpolate_na_max_gap_errors(da_time):
+    with raises_regex(
+        NotImplementedError, "max_gap not implemented for unlabeled coordinates"
+    ):
+        da_time.interpolate_na("t", max_gap=1)
+
+    with raises_regex(ValueError, "max_gap must be a scalar."):
+        da_time.interpolate_na("t", max_gap=(1,))
+
+    da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
     with raises_regex(TypeError, "Underlying index is"):
         da_time.interpolate_na("t", max_gap=1)
 
-    with raises_regex(ValueError, "but use_coordinate=False"):
+    with raises_regex(TypeError, "Expected integer or floating point"):
         da_time.interpolate_na("t", max_gap="1H", use_coordinate=False)
 
     with raises_regex(ValueError, "Could not convert 'huh' to a "):
