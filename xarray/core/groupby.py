@@ -7,7 +7,7 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import SupportsArithmetic
-from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .options import _get_keep_attrs
@@ -25,7 +25,7 @@ from .variable import IndexVariable, Variable, as_variable
 
 def check_reduce_dims(reduce_dims, dimensions):
 
-    if reduce_dims is not ALL_DIMS:
+    if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
         if any([dim not in dimensions for dim in reduce_dims]):
@@ -725,7 +725,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         q : float in range of [0,1] (or sequence of floats)
             Quantile to compute, which must be between 0 and 1
             inclusive.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
@@ -782,7 +782,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -876,7 +876,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
