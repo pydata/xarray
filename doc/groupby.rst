@@ -118,6 +118,12 @@ dimensions *other than* the provided one:
 
     ds.groupby('x').std(...)
 
+.. note::
+
+    We use an ellipsis (`...`) here to indicate we want to reduce over all
+    other dimensions  
+
+
 First and last
 ~~~~~~~~~~~~~~
 
