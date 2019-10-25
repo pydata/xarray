@@ -55,6 +55,10 @@ Bug fixes
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
+- Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
+  :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
+  (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
+
 
 Documentation
 ~~~~~~~~~~~~~
