@@ -107,7 +107,7 @@ function to specify the output coordinates of the group.
     lat_center = np.arange(1, 90, 2)
     # group according to those bins and take the mean
     Tair_lat_mean = (ds.Tair.groupby_bins('xc', lat_bins, labels=lat_center)
-	             .mean(xr.ALL_DIMS))
+	             .mean(...))
     # plot the result
     @savefig xarray_multidimensional_coords_14_1.png width=5in
     Tair_lat_mean.plot();

@@ -7,7 +7,7 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import SupportsArithmetic
-from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .options import _get_keep_attrs
@@ -712,7 +712,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         q : float in range of [0,1] (or sequence of floats)
             Quantile to compute, which must be between 0 and 1
             inclusive.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
@@ -769,7 +769,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -794,9 +794,9 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        if dim is not ALL_DIMS and dim not in self.dims:
+        if dim is not ... and dim not in self.dims:
             raise ValueError(
-                "cannot reduce over dimension %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
+                "cannot reduce over dimension %r. expected either '...' to reduce over all dimensions or one or more of %r."
                 % (dim, self.dims)
             )
 
@@ -867,7 +867,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -895,9 +895,9 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
 
-        if dim is not ALL_DIMS and dim not in self.dims:
+        if dim is not ... and dim not in self.dims:
             raise ValueError(
-                "cannot reduce over dimension %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
+                "cannot reduce over dimension %r. expected either '...' to reduce over all dimensions or one or more of %r."
                 % (dim, self.dims)
             )
 
