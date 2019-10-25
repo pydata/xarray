@@ -30,7 +30,7 @@ def check_reduce_dims(reduce_dims, dimensions):
             reduce_dims = [reduce_dims]
         if any([dim not in dimensions for dim in reduce_dims]):
             raise ValueError(
-                "cannot reduce over dimensions %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
+                "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
                 % (reduce_dims, dimensions)
             )
 
