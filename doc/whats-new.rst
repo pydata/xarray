@@ -25,6 +25,11 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Changed `xr.ALL_DIMS` to equal python's `Ellipsis` (`...`), and changed internal usages to use
+  `...` directly. As before, you can use this to instruct a `groupby` operation
+  to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
+  using `...`.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
   (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
 
@@ -36,6 +41,12 @@ New Features
     ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
     Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
 
+- Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
+  representation of objects in jupyter. By default this feature is turned off
+  for now. Enable it with :py:meth:`xarray.set_options(display_style="html")`.
+  (:pull:`3425`) by `Benoit Bovy <https://github.com/benbovy>`_ and
+  `Julia Signell <https://github.com/jsignell>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
@@ -44,9 +55,14 @@ Bug fixes
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
+
 - Rolling reduction operations now longer compute dask arrays by default. (:issue:3161).
   In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
+  :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
+  (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
 
 Documentation
 ~~~~~~~~~~~~~

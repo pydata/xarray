@@ -5,7 +5,23 @@ import pytest
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_identical, raises_regex
+from . import assert_allclose, assert_identical, raises_regex
+
+
+@pytest.fixture
+def dataset():
+    ds = xr.Dataset(
+        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
+        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
+    )
+    ds["boo"] = (("z", "y"), [["f", "g", "h", "j"]] * 2)
+
+    return ds
+
+
+@pytest.fixture
+def array(dataset):
+    return dataset["foo"]
 
 
 def test_consolidate_slices():
@@ -21,25 +37,17 @@ def test_consolidate_slices():
         _consolidate_slices([slice(3), 4])
 
 
-def test_groupby_dims_property():
-    ds = xr.Dataset(
-        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
-        {"x": ["a", "bcd", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
-    )
+def test_groupby_dims_property(dataset):
+    assert dataset.groupby("x").dims == dataset.isel(x=1).dims
+    assert dataset.groupby("y").dims == dataset.isel(y=1).dims
 
-    assert ds.groupby("x").dims == ds.isel(x=1).dims
-    assert ds.groupby("y").dims == ds.isel(y=1).dims
-
-    stacked = ds.stack({"xy": ("x", "y")})
+    stacked = dataset.stack({"xy": ("x", "y")})
     assert stacked.groupby("xy").dims == stacked.isel(xy=0).dims
 
 
-def test_multi_index_groupby_apply():
+def test_multi_index_groupby_apply(dataset):
     # regression test for GH873
-    ds = xr.Dataset(
-        {"foo": (("x", "y"), np.random.randn(3, 4))},
-        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4]},
-    )
+    ds = dataset.isel(z=1, drop=True)[["foo"]]
     doubled = 2 * ds
     group_doubled = (
         ds.stack(space=["x", "y"])
@@ -147,11 +155,11 @@ def test_da_groupby_quantile():
         [("x", [1, 1, 1, 2, 2]), ("y", [0, 0, 1])],
     )
 
-    actual_x = array.groupby("x").quantile(0, dim=xr.ALL_DIMS)
+    actual_x = array.groupby("x").quantile(0, dim=...)
     expected_x = xr.DataArray([1, 4], [("x", [1, 2])])
     assert_identical(expected_x, actual_x)
 
-    actual_y = array.groupby("y").quantile(0, dim=xr.ALL_DIMS)
+    actual_y = array.groupby("y").quantile(0, dim=...)
     expected_y = xr.DataArray([1, 22], [("y", [0, 1])])
     assert_identical(expected_y, actual_y)
 
@@ -177,7 +185,7 @@ def test_da_groupby_quantile():
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=xr.ALL_DIMS)
+    actual = g.quantile(0, dim=...)
     expected = xr.DataArray(
         [
             0.0,
@@ -274,6 +282,24 @@ def test_groupby_grouping_errors():
 
     with raises_regex(ValueError, "Failed to group data."):
         dataset.to_array().groupby(dataset.foo * np.nan)
+
+
+def test_groupby_reduce_dimension_error(array):
+    grouped = array.groupby("y")
+    with raises_regex(ValueError, "cannot reduce over dimensions"):
+        grouped.mean()
+
+    with raises_regex(ValueError, "cannot reduce over dimensions"):
+        grouped.mean("huh")
+
+    with raises_regex(ValueError, "cannot reduce over dimensions"):
+        grouped.mean(("x", "y", "asd"))
+
+    grouped = array.groupby("y", squeeze=False)
+    assert_identical(array, grouped.mean())
+
+    assert_identical(array.mean("x"), grouped.reduce(np.mean, "x"))
+    assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
 
 
 def test_groupby_bins_timeseries():
