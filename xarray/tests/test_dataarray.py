@@ -13,7 +13,7 @@ from xarray import DataArray, Dataset, IndexVariable, Variable, align, broadcast
 from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
-from xarray.core.common import ALL_DIMS, full_like
+from xarray.core.common import full_like
 from xarray.tests import (
     LooseVersion,
     ReturnItem,
@@ -2443,8 +2443,8 @@ class TestDataArray:
                 "abc": Variable(["abc"], np.array(["a", "b", "c"])),
             }
         )["foo"]
-        assert_allclose(expected_sum_all, grouped.reduce(np.sum, dim=ALL_DIMS))
-        assert_allclose(expected_sum_all, grouped.sum(ALL_DIMS))
+        assert_allclose(expected_sum_all, grouped.reduce(np.sum, dim=...))
+        assert_allclose(expected_sum_all, grouped.sum(...))
 
         expected = DataArray(
             [
@@ -2456,7 +2456,7 @@ class TestDataArray:
         )
         actual = array["y"].groupby("abc").apply(np.sum)
         assert_allclose(expected, actual)
-        actual = array["y"].groupby("abc").sum(ALL_DIMS)
+        actual = array["y"].groupby("abc").sum(...)
         assert_allclose(expected, actual)
 
         expected_sum_axis1 = Dataset(
@@ -2590,9 +2590,9 @@ class TestDataArray:
             assert_identical(expected, actual)
 
         grouped = array.groupby("abc")
-        expected_agg = (grouped.mean(ALL_DIMS) - np.arange(3)).rename(None)
+        expected_agg = (grouped.mean(...) - np.arange(3)).rename(None)
         actual = grouped - DataArray(range(3), [("abc", ["a", "b", "c"])])
-        actual_agg = actual.groupby("abc").mean(ALL_DIMS)
+        actual_agg = actual.groupby("abc").mean(...)
         assert_allclose(expected_agg, actual_agg)
 
         with raises_regex(TypeError, "only support binary ops"):
@@ -2698,7 +2698,7 @@ class TestDataArray:
             ("lon", DataArray([5, 28, 23], coords=[("lon", [30.0, 40.0, 50.0])])),
             ("lat", DataArray([16, 40], coords=[("lat", [10.0, 20.0])])),
         ]:
-            actual_sum = array.groupby(dim).sum(ALL_DIMS)
+            actual_sum = array.groupby(dim).sum(...)
             assert_identical(expected_sum, actual_sum)
 
     def test_groupby_multidim_apply(self):

@@ -11,7 +11,6 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    ALL_DIMS,
     DataArray,
     Dataset,
     IndexVariable,
@@ -3327,7 +3326,7 @@ class TestDataset:
 
         expected = data.mean("y")
         expected["yonly"] = expected["yonly"].variable.set_dims({"x": 3})
-        actual = data.groupby("x").mean(ALL_DIMS)
+        actual = data.groupby("x").mean(...)
         assert_allclose(expected, actual)
 
         actual = data.groupby("x").mean("y")
@@ -3336,12 +3335,12 @@ class TestDataset:
         letters = data["letters"]
         expected = Dataset(
             {
-                "xy": data["xy"].groupby(letters).mean(ALL_DIMS),
+                "xy": data["xy"].groupby(letters).mean(...),
                 "xonly": (data["xonly"].mean().variable.set_dims({"letters": 2})),
                 "yonly": data["yonly"].groupby(letters).mean(),
             }
         )
-        actual = data.groupby("letters").mean(ALL_DIMS)
+        actual = data.groupby("letters").mean(...)
         assert_allclose(expected, actual)
 
     def test_groupby_math(self):
@@ -3404,14 +3403,14 @@ class TestDataset:
             {"x": ("t", [1, 2, 3])}, {"t": pd.date_range("20100101", periods=3)}
         )
         grouped = ds.groupby("t.day")
-        actual = grouped - grouped.mean(ALL_DIMS)
+        actual = grouped - grouped.mean(...)
         expected = Dataset({"x": ("t", [0, 0, 0])}, ds[["t", "t.day"]])
         assert_identical(actual, expected)
 
     def test_groupby_nan(self):
         # nan should be excluded from groupby
         ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, {"bar": ("x", [1, 1, 2, np.nan])})
-        actual = ds.groupby("bar").mean(ALL_DIMS)
+        actual = ds.groupby("bar").mean(...)
         expected = Dataset({"foo": ("bar", [1.5, 3]), "bar": [1, 2]})
         assert_identical(actual, expected)
 
@@ -3421,7 +3420,7 @@ class TestDataset:
         for vn in ["a", "b", "c"]:
             ds[vn] = DataArray(np.arange(10), dims=["t"])
         data_vars_ref = list(ds.data_vars.keys())
-        ds = ds.groupby("t").mean(ALL_DIMS)
+        ds = ds.groupby("t").mean(...)
         data_vars = list(ds.data_vars.keys())
         assert data_vars == data_vars_ref
         # coords are now at the end of the list, so the test below fails
