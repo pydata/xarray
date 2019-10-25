@@ -1632,3 +1632,7 @@ class TestDataArray:
         result = func(data_array.groupby("y"))
 
         assert_equal_with_units(expected, result)
+
+
+class TestDataset:
+    pass
