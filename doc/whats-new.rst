@@ -39,6 +39,12 @@ New Features
     ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
     Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
 
+- Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
+  representation of objects in jupyter. By default this feature is turned off
+  for now. Enable it with :py:meth:`xarray.set_options(display_style="html")`.
+  (:pull:`3425`) by `Benoit Bovy <https://github.com/benbovy>`_ and
+  `Julia Signell <https://github.com/jsignell>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
