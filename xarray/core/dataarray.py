@@ -1982,11 +1982,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def interpolate_na(
         self,
-        dim=None,
+        dim: Hashable = None,
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
-        max_gap: int = None,
+        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
         **kwargs: Any,
     ) -> "DataArray":
         """Interpolate values according to different methods.

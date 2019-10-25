@@ -3866,7 +3866,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, Hashable] = True,
-        max_gap: int = None,
+        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
         **kwargs: Any,
     ) -> "Dataset":
         """Interpolate values according to different methods.

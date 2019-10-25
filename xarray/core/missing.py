@@ -1,7 +1,7 @@
 import warnings
 from functools import partial
 from numbers import Number
-from typing import Any, Callable, Dict, Sequence
+from typing import Any, Callable, Dict, Hashable, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
 
-def _get_nan_block_lengths(obj, dim: str, index: Variable):
+def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
@@ -206,7 +206,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def get_clean_interp_index(arr, dim, use_coordinate=True):
+def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] = True):
     """get index to use for x values in interpolation.
 
     If use_coordinate is True, the coordinate that shares the name of the
@@ -259,11 +259,11 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
 
 def interp_na(
     self,
-    dim=None,
-    use_coordinate=True,
-    method="linear",
-    limit=None,
-    max_gap=None,
+    dim: Hashable = None,
+    use_coordinate: Union[bool, str] = True,
+    method: str = "linear",
+    limit: int = None,
+    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
     **kwargs,
 ):
     """Interpolate values according to different methods.
