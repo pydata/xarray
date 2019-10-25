@@ -340,9 +340,10 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
-    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
-    "iris": ("http://scitools.org.uk/iris/docs/latest/", None),
-    "numpy": ("https://docs.scipy.org/doc/numpy/", None),
-    "numba": ("https://numba.pydata.org/numba-doc/latest/", None),
-    "matplotlib": ("https://matplotlib.org/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "iris": ("https://scitools.org.uk/iris/docs/latest", None),
+    "numpy": ("https://docs.scipy.org/doc/numpy", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "numba": ("https://numba.pydata.org/numba-doc/latest", None),
+    "matplotlib": ("https://matplotlib.org", None),
 }
