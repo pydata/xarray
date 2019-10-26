@@ -18,13 +18,7 @@ from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal
 
-from . import (
-    arm_xfail,
-    assert_array_equal,
-    has_cftime,
-    requires_cftime,
-    requires_dask
-)
+from . import arm_xfail, assert_array_equal, has_cftime, requires_cftime, requires_dask
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",
@@ -95,7 +89,9 @@ def _all_cftime_date_types():
 def test_cf_datetime(num_dates, units, calendar):
     import cftime
 
-    expected = cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
+    expected = cftime.num2date(
+        num_dates, units, calendar, only_use_cftime_datetimes=True
+    )
     min_y = np.ravel(np.atleast_1d(expected))[np.nanargmin(num_dates)].year
     max_y = np.ravel(np.atleast_1d(expected))[np.nanargmax(num_dates)].year
     if min_y >= 1678 and max_y < 2262:
@@ -202,6 +198,7 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar):
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 def test_decode_non_standard_calendar_inside_timestamp_range(calendar):
     import cftime
+
     units = "days since 0001-01-01"
     times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="H")
     non_standard_time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
@@ -274,6 +271,7 @@ def test_decode_non_standard_calendar_single_element_inside_timestamp_range(cale
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 def test_decode_single_element_outside_timestamp_range(calendar):
     import cftime
+
     units = "days since 0001-01-01"
     for days in [1, 1470376]:
         for num_time in [days, [days], [[days]]]:
@@ -394,6 +392,7 @@ def test_decode_multidim_time_outside_timestamp_range(calendar):
 @pytest.mark.parametrize("calendar", ["360_day", "all_leap", "366_day"])
 def test_decode_non_standard_calendar_single_element(calendar):
     import cftime
+
     units = "days since 0001-01-01"
 
     dt = cftime.datetime(2001, 2, 29)
@@ -411,13 +410,16 @@ def test_decode_non_standard_calendar_single_element(calendar):
 @requires_cftime
 def test_decode_360_day_calendar():
     import cftime
+
     calendar = "360_day"
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
         units = f"days since {year}-01-01"
         num_times = np.arange(100)
 
-        expected = cftime.num2date(num_times, units, calendar, only_use_cftime_datetimes=True)
+        expected = cftime.num2date(
+            num_times, units, calendar, only_use_cftime_datetimes=True
+        )
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")

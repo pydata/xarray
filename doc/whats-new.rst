@@ -21,7 +21,7 @@ v0.14.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Minimum cftime version is now 1.0.3. `Deepak Cherian <https://github.com/dcherian>`_.
+- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
 - All support for netcdftime, the module in older versions of netCDF4 that
   eventually became the cftime package, has been removed.  By `Spencer Clark
   <https://github.com/spencerkclark>`_. 

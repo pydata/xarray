@@ -19,7 +19,7 @@ from . import raises_regex, requires_cftime
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
-    _all_cftime_date_types
+    _all_cftime_date_types,
 )
 
 
