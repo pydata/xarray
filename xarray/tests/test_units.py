@@ -1635,4 +1635,89 @@ class TestDataArray:
 
 
 class TestDataset:
-    pass
+    # FIXME: this effectively tests merging of two dataarrays -- should probably be done in the merge itself
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.mm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="same_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "shared",
+        (
+            "nothing",
+            pytest.param(
+                "dims",
+                marks=pytest.mark.xfail(reason="reindex does not work with pint yet"),
+            ),
+            pytest.param(
+                "coords",
+                marks=pytest.mark.xfail(reason="reindex does not work with pint yet"),
+            ),
+        ),
+    )
+    def test_init(self, shared, unit, error, dtype):
+        original_unit = unit_registry.m
+        scaled_unit = unit_registry.mm
+
+        a = np.linspace(0, 1, 10).astype(dtype) * unit_registry.Pa
+        b = np.linspace(-1, 0, 12).astype(dtype) * unit_registry.Pa
+
+        raw_x = np.arange(a.shape[0])
+        x = raw_x * original_unit
+        x2 = x.to(scaled_unit)
+
+        raw_y = np.arange(b.shape[0])
+        y = raw_y * unit
+        y_units = unit if isinstance(y, unit_registry.Quantity) else None
+        if isinstance(y, unit_registry.Quantity):
+            if y.check(scaled_unit):
+                y2 = y.to(scaled_unit)
+            else:
+                y2 = y * 1000
+            y2_units = y2.units
+        else:
+            y2 = y * 1000
+            y2_units = None
+
+        variants = {
+            "nothing": ({"x": x, "x2": ("x", x2)}, {"y": y, "y2": ("y", y2)}),
+            "dims": (
+                {"x": x, "x2": ("x", strip_units(x2))},
+                {"x": y, "y2": ("x", strip_units(y2))},
+            ),
+            "coords": ({"x": raw_x, "y": ("x", x2)}, {"x": raw_y, "y": ("x", y2)}),
+        }
+        coords_a, coords_b = variants.get(shared)
+
+        dims_a, dims_b = ("x", "y") if shared == "nothing" else ("x", "x")
+
+        arr1 = xr.DataArray(data=a, coords=coords_a, dims=dims_a)
+        arr2 = xr.DataArray(data=b, coords=coords_b, dims=dims_b)
+        if error is not None and shared != "nothing":
+            with pytest.raises(error):
+                xr.Dataset(data_vars={"a": arr1, "b": arr2})
+
+            return
+
+        result = xr.Dataset(data_vars={"a": arr1, "b": arr2})
+
+        expected_units = {
+            "a": a.units,
+            "b": b.units,
+            "x": x.units,
+            "x2": x2.units,
+            "y": y_units,
+            "y2": y2_units,
+        }
+        expected = attach_units(
+            xr.Dataset(data_vars={"a": strip_units(arr1), "b": strip_units(arr2)}),
+            expected_units,
+        )
+        assert_equal_with_units(result, expected)
