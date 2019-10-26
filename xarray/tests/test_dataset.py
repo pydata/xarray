@@ -2118,25 +2118,31 @@ class TestDataset:
     def test_drop_index_labels(self):
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
-        actual = data.drop(x=["a"])
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop(["a"], "x")
         expected = data.isel(x=[1])
         assert_identical(expected, actual)
 
-        actual = data.drop(x=["a", "b"])
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop(["a", "b"], "x")
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
         with pytest.raises(KeyError):
             # not contained in axis
-            data.drop(x=["c"])
+            with pytest.warns(DeprecationWarning):
+                data.drop(["c"], dim="x")
 
-        actual = data.drop(x=["c"], errors="ignore")
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop(["c"], dim="x", errors="ignore")
         assert_identical(data, actual)
 
         with pytest.raises(ValueError):
-            data.drop(["c"], dim="x", errors="wrong_value")
+            with pytest.warns(DeprecationWarning):
+                data.drop(["c"], dim="x", errors="wrong_value")
 
-        actual = data.drop(x=["a", "b", "c"], errors="ignore")
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop(["a", "b", "c"], "x", errors="ignore")
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
