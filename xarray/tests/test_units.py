@@ -1721,3 +1721,98 @@ class TestDataset:
             expected_units,
         )
         assert_equal_with_units(result, expected)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                function("all"),
+                marks=pytest.mark.xfail(reason="not implemented by pint"),
+            ),
+            pytest.param(
+                function("any"),
+                marks=pytest.mark.xfail(reason="not implemented by pint"),
+            ),
+            function("argmax"),
+            function("argmin"),
+            function("max"),
+            function("min"),
+            function("mean"),
+            pytest.param(
+                function("median"),
+                marks=pytest.mark.xfail(
+                    reason="np.median does not work with dataset yet"
+                ),
+            ),
+            pytest.param(
+                function("sum"),
+                marks=pytest.mark.xfail(
+                    reason="np.result_type not implemented by pint"
+                ),
+            ),
+            pytest.param(
+                function("prod"),
+                marks=pytest.mark.xfail(reason="not implemented by pint"),
+            ),
+            function("std"),
+            function("var"),
+            function("cumsum"),
+            pytest.param(
+                function("cumprod"),
+                marks=pytest.mark.xfail(
+                    reason="pint does not support cumprod on non-dimensionless yet"
+                ),
+            ),
+            pytest.param(
+                method("all"), marks=pytest.mark.xfail(reason="not implemented by pint")
+            ),
+            pytest.param(
+                method("any"), marks=pytest.mark.xfail(reason="not implemented by pint")
+            ),
+            method("argmax"),
+            method("argmin"),
+            method("max"),
+            method("min"),
+            method("mean"),
+            method("median"),
+            pytest.param(
+                method("sum"),
+                marks=pytest.mark.xfail(
+                    reason="np.result_type not implemented by pint"
+                ),
+            ),
+            pytest.param(
+                method("prod"),
+                marks=pytest.mark.xfail(reason="not implemented by pint"),
+            ),
+            method("std"),
+            method("var"),
+            method("cumsum"),
+            pytest.param(
+                method("cumprod"),
+                marks=pytest.mark.xfail(
+                    reason="pint does not support cumprod on non-dimensionless yet"
+                ),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_aggregation(self, func, dtype):
+        unit_a = unit_registry.Pa
+        unit_b = unit_registry.kg / unit_registry.m ** 3
+        a = xr.DataArray(data=np.linspace(0, 1, 10).astype(dtype) * unit_a, dims="x")
+        b = xr.DataArray(data=np.linspace(-1, 0, 10).astype(dtype) * unit_b, dims="x")
+        x = xr.DataArray(data=np.arange(10).astype(dtype) * unit_registry.m, dims="x")
+        y = xr.DataArray(
+            data=np.arange(10, 20).astype(dtype) * unit_registry.s, dims="x"
+        )
+
+        ds = xr.Dataset(data_vars={"a": a, "b": b}, coords={"x": x, "y": y})
+
+        result = func(ds)
+        expected = attach_units(
+            func(strip_units(ds)),
+            {"a": array_extract_units(func(a)), "b": array_extract_units(func(b))},
+        )
+
+        assert_equal_with_units(result, expected)
