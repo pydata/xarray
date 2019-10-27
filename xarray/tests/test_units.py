@@ -1816,3 +1816,127 @@ class TestDataset:
         )
 
         assert_equal_with_units(result, expected)
+
+    @pytest.mark.parametrize("property", ("imag", "real"))
+    def test_numpy_properties(self, property, dtype):
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(
+                    data=np.linspace(0, 1, 10) * unit_registry.Pa, dims="x"
+                ),
+                "b": xr.DataArray(
+                    data=np.linspace(-1, 0, 15) * unit_registry.Pa, dims="y"
+                ),
+            },
+            coords={
+                "x": np.arange(10) * unit_registry.m,
+                "y": np.arange(15) * unit_registry.s,
+            },
+        )
+        units = extract_units(ds)
+
+        result = getattr(ds, property)
+        expected = attach_units(getattr(strip_units(ds), property), units)
+
+        assert_equal_with_units(result, expected)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("astype", float),
+            method("conj"),
+            method("argsort"),
+            method("conjugate"),
+            method("round"),
+            pytest.param(
+                method("rank", dim="x"),
+                marks=pytest.mark.xfail(reason="pint does not implement rank yet"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_numpy_methods(self, func, dtype):
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(
+                    data=np.linspace(1, -1, 10) * unit_registry.Pa, dims="x"
+                ),
+                "b": xr.DataArray(
+                    data=np.linspace(-1, 1, 15) * unit_registry.Pa, dims="y"
+                ),
+            },
+            coords={
+                "x": np.arange(10) * unit_registry.m,
+                "y": np.arange(15) * unit_registry.s,
+            },
+        )
+        units = {
+            "a": array_extract_units(func(ds.a)),
+            "b": array_extract_units(func(ds.b)),
+            "x": unit_registry.m,
+            "y": unit_registry.s,
+        }
+
+        result = func(ds)
+        expected = attach_units(func(strip_units(ds)), units)
+
+        assert_equal_with_units(result, expected)
+
+    @pytest.mark.parametrize("func", (method("clip", min=3, max=8),), ids=repr)
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_numpy_methods_with_args(self, func, unit, error, dtype):
+        data_unit = unit_registry.m
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=np.arange(10) * data_unit, dims="x"),
+                "b": xr.DataArray(data=np.arange(15) * data_unit, dims="y"),
+            },
+            coords={
+                "x": np.arange(10) * unit_registry.m,
+                "y": np.arange(15) * unit_registry.s,
+            },
+        )
+        units = extract_units(ds)
+
+        def strip(value):
+            return (
+                value.magnitude if isinstance(value, unit_registry.Quantity) else value
+            )
+
+        def convert(value, to):
+            if isinstance(value, unit_registry.Quantity) and value.check(to):
+                return value.to(to)
+
+            return value
+
+        scalar_types = (int, float)
+        kwargs = {
+            key: (value * unit if isinstance(value, scalar_types) else value)
+            for key, value in func.kwargs.items()
+        }
+
+        stripped_kwargs = {
+            key: strip(convert(value, data_unit)) for key, value in kwargs.items()
+        }
+
+        if error is not None:
+            with pytest.raises(error):
+                func(ds, **kwargs)
+
+            return
+
+        result = func(ds, **kwargs)
+        expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
+
+        assert_equal_with_units(result, expected)
