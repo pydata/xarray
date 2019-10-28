@@ -2,6 +2,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
+from .duck_array_ops import lazy_array_equiv
 from .merge import _VALID_COMPAT, unique_variable
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
@@ -189,6 +190,21 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
                     if k not in concat_over:
+                        equals[k] = None
+                        variables = [ds.variables[k] for ds in datasets]
+                        # first check without comparing values i.e. no computes
+                        for var in variables[1:]:
+                            equals[k] = getattr(variables[0], compat)(
+                                var, equiv=lazy_array_equiv
+                            )
+                            if not equals[k]:
+                                break
+
+                        if equals[k] is not None:
+                            if equals[k] is False:
+                                concat_over.add(k)
+                            continue
+
                         # Compare the variable of all datasets vs. the one
                         # of the first dataset. Perform the minimum amount of
                         # loads in order to avoid multiple loads from disk

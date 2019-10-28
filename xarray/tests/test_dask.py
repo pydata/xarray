@@ -22,6 +22,7 @@ from . import (
     assert_identical,
     raises_regex,
 )
+from ..core.duck_array_ops import lazy_array_equiv
 
 dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
@@ -1135,3 +1136,42 @@ def test_make_meta(map_ds):
     for variable in map_ds.data_vars:
         assert variable in meta.data_vars
         assert meta.data_vars[variable].shape == (0,) * meta.data_vars[variable].ndim
+
+
+def test_identical_coords_no_computes():
+    lons2 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
+    a = xr.DataArray(
+        da.zeros((10, 10), chunks=2), dims=("y", "x"), coords={"lons": lons2}
+    )
+    b = xr.DataArray(
+        da.zeros((10, 10), chunks=2), dims=("y", "x"), coords={"lons": lons2}
+    )
+    with raise_if_dask_computes():
+        c = a + b
+    assert_identical(c, a)
+
+
+def test_lazy_array_equiv():
+    lons1 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
+    lons2 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
+    var1 = lons1.variable
+    var2 = lons2.variable
+    with raise_if_dask_computes():
+        lons1.equals(lons2)
+    with raise_if_dask_computes():
+        var1.equals(var2 / 2, equiv=lazy_array_equiv)
+    assert var1.equals(var2.compute(), equiv=lazy_array_equiv) is None
+    assert var1.compute().equals(var2.compute(), equiv=lazy_array_equiv) is None
+
+    with raise_if_dask_computes():
+        assert lons1.equals(lons1.transpose("y", "x"))
+
+    with raise_if_dask_computes():
+        for compat in [
+            "broadcast_equals",
+            "equals",
+            "override",
+            "identical",
+            "no_conflicts",
+        ]:
+            xr.merge([lons1, lons2], compat=compat)
