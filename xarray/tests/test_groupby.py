@@ -5,7 +5,7 @@ import pytest
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_allclose, assert_identical, raises_regex
+from . import assert_allclose, assert_equal, assert_identical, raises_regex
 
 
 @pytest.fixture
@@ -48,14 +48,14 @@ def test_groupby_dims_property(dataset):
 def test_multi_index_groupby_apply(dataset):
     # regression test for GH873
     ds = dataset.isel(z=1, drop=True)[["foo"]]
-    doubled = 2 * ds
-    group_doubled = (
+    expected = 2 * ds
+    actual = (
         ds.stack(space=["x", "y"])
         .groupby("space")
         .apply(lambda x: 2 * x)
         .unstack("space")
     )
-    assert doubled.equals(group_doubled)
+    assert_equal(expected, actual)
 
 
 def test_multi_index_groupby_sum():
@@ -66,7 +66,7 @@ def test_multi_index_groupby_sum():
     )
     expected = ds.sum("z")
     actual = ds.stack(space=["x", "y"]).groupby("space").sum("z").unstack("space")
-    assert expected.equals(actual)
+    assert_equal(expected, actual)
 
 
 def test_groupby_da_datetime():
@@ -86,7 +86,7 @@ def test_groupby_da_datetime():
     expected = xr.DataArray(
         [3, 7], coords=dict(reference_date=reference_dates), dims="reference_date"
     )
-    assert actual.equals(expected)
+    assert_equal(expected, actual)
 
 
 def test_groupby_duplicate_coordinate_labels():
@@ -94,7 +94,7 @@ def test_groupby_duplicate_coordinate_labels():
     array = xr.DataArray([1, 2, 3], [("x", [1, 1, 2])])
     expected = xr.DataArray([3, 3], [("x", [1, 2])])
     actual = array.groupby("x").sum()
-    assert expected.equals(actual)
+    assert_equal(expected, actual)
 
 
 def test_groupby_input_mutation():
@@ -261,6 +261,72 @@ def test_groupby_repr_datetime(obj):
     expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
     assert actual == expected
+
+
+def test_groupby_drops_nans():
+    # GH2383
+    # nan in 2D data variable (requires stacking)
+    ds = xr.Dataset(
+        {
+            "variable": (("lat", "lon", "time"), np.arange(60.0).reshape((4, 3, 5))),
+            "id": (("lat", "lon"), np.arange(12.0).reshape((4, 3))),
+        },
+        coords={"lat": np.arange(4), "lon": np.arange(3), "time": np.arange(5)},
+    )
+
+    ds["id"].values[0, 0] = np.nan
+    ds["id"].values[3, 0] = np.nan
+    ds["id"].values[-1, -1] = np.nan
+
+    grouped = ds.groupby(ds.id)
+
+    # non reduction operation
+    expected = ds.copy()
+    expected.variable.values[0, 0, :] = np.nan
+    expected.variable.values[-1, -1, :] = np.nan
+    expected.variable.values[3, 0, :] = np.nan
+    actual = grouped.apply(lambda x: x).transpose(*ds.variable.dims)
+    assert_identical(actual, expected)
+
+    # reduction along grouped dimension
+    actual = grouped.mean()
+    stacked = ds.stack({"xy": ["lat", "lon"]})
+    expected = (
+        stacked.variable.where(stacked.id.notnull()).rename({"xy": "id"}).to_dataset()
+    )
+    expected["id"] = stacked.id.values
+    assert_identical(actual, expected.dropna("id").transpose(*actual.dims))
+
+    # reduction operation along a different dimension
+    actual = grouped.mean("time")
+    expected = ds.mean("time").where(ds.id.notnull())
+    assert_identical(actual, expected)
+
+    # NaN in non-dimensional coordinate
+    array = xr.DataArray([1, 2, 3], [("x", [1, 2, 3])])
+    array["x1"] = ("x", [1, 1, np.nan])
+    expected = xr.DataArray(3, [("x1", [1])])
+    actual = array.groupby("x1").sum()
+    assert_equal(expected, actual)
+
+    # NaT in non-dimensional coordinate
+    array["t"] = (
+        "x",
+        [
+            np.datetime64("2001-01-01"),
+            np.datetime64("2001-01-01"),
+            np.datetime64("NaT"),
+        ],
+    )
+    expected = xr.DataArray(3, [("t", [np.datetime64("2001-01-01")])])
+    actual = array.groupby("t").sum()
+    assert_equal(expected, actual)
+
+    # test for repeated coordinate labels
+    array = xr.DataArray([0, 1, 2, 4, 3, 4], [("x", [np.nan, 1, 1, np.nan, 2, np.nan])])
+    expected = xr.DataArray([3, 3], [("x", [1, 2])])
+    actual = array.groupby("x").sum()
+    assert_equal(expected, actual)
 
 
 def test_groupby_grouping_errors():

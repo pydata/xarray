@@ -55,14 +55,13 @@ Bug fixes
 ~~~~~~~~~
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
-
-- Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4. 
+- Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-
 - Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
   :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
-
 
 Documentation
 ~~~~~~~~~~~~~
