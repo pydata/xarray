@@ -138,4 +138,7 @@ under a "3-clause BSD" license:
 xarray also bundles portions of CPython, which is available under the "Python
 Software Foundation License" in xarray/core/pycompat.py.
 
+xarray uses icons from the icomoon package (free version), which is
+available under the "CC BY 4.0" license.
+
 The full text of these licenses are included in the licenses directory.

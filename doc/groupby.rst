@@ -116,7 +116,13 @@ dimensions *other than* the provided one:
 
 .. ipython:: python
 
-    ds.groupby('x').std(xr.ALL_DIMS)
+    ds.groupby('x').std(...)
+
+.. note::
+
+    We use an ellipsis (`...`) here to indicate we want to reduce over all
+    other dimensions  
+
 
 First and last
 ~~~~~~~~~~~~~~
@@ -127,7 +133,7 @@ values for group along the grouped dimension:
 
 .. ipython:: python
 
-    ds.groupby('letters').first(xr.ALL_DIMS)
+    ds.groupby('letters').first(...)
 
 By default, they skip missing values (control this with ``skipna``).
 
@@ -142,7 +148,7 @@ coordinates. For example:
 
 .. ipython:: python
 
-    alt = arr.groupby('letters').mean(xr.ALL_DIMS)
+    alt = arr.groupby('letters').mean(...)
     alt
     ds.groupby('letters') - alt
 
@@ -195,7 +201,7 @@ __ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimen
                 'lat': (['ny','nx'], [[10,10],[20,20]] ),},
         dims=['ny','nx'])
     da
-    da.groupby('lon').sum(xr.ALL_DIMS)
+    da.groupby('lon').sum(...)
     da.groupby('lon').apply(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large
@@ -213,4 +219,4 @@ applying your function, and then unstacking the result:
 .. ipython:: python
 
    stacked = da.stack(gridcell=['ny', 'nx'])
-   stacked.groupby('gridcell').sum(xr.ALL_DIMS).unstack('gridcell')
+   stacked.groupby('gridcell').sum(...).unstack('gridcell')
