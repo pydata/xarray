@@ -158,18 +158,21 @@ def source_ndarray(array):
 
 
 def assert_equal(a, b):
+    __tracebackhide__ = True
     xarray.testing.assert_equal(a, b)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)
 
 
 def assert_identical(a, b):
+    __tracebackhide__ = True
     xarray.testing.assert_identical(a, b)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)
 
 
 def assert_allclose(a, b, **kwargs):
+    __tracebackhide__ = True
     xarray.testing.assert_allclose(a, b, **kwargs)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)

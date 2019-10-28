@@ -18,12 +18,14 @@ Reordering dimensions
 ---------------------
 
 To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
-on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`:
+on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An 
+ellipsis (`...`) can be use to represent all other dimensions:
 
 .. ipython:: python
 
     ds = xr.Dataset({'foo': (('x', 'y', 'z'), [[[42]]]), 'bar': (('y', 'z'), [[24]])})
     ds.transpose('y', 'z', 'x')
+    ds.transpose(..., 'x')  # equivalent
     ds.transpose()  # reverses all dimensions
 
 Expand and squeeze dimensions
