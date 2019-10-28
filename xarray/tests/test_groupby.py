@@ -5,7 +5,7 @@ import pytest
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_equal, assert_identical, raises_regex
+from . import assert_allclose, assert_equal, assert_identical, raises_regex
 
 
 @pytest.fixture
@@ -365,7 +365,7 @@ def test_groupby_reduce_dimension_error(array):
     assert_identical(array, grouped.mean())
 
     assert_identical(array.mean("x"), grouped.reduce(np.mean, "x"))
-    assert_equal(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
+    assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
 
 
 def test_groupby_bins_timeseries():
