@@ -193,7 +193,9 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 
 
 def lazy_array_equiv(arr1, arr2):
-    """Like array_equal, but doesn't actually compare values
+    """Like array_equal, but doesn't actually compare values.
+       Returns True or False when equality can be determined without computing.
+       Returns None when equality cannot determined (e.g. one or both of arr1, arr2 are numpy arrays)
     """
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
