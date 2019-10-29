@@ -56,7 +56,7 @@ def dtype(request):
 def test_dask():
     import dask.array as da
 
-    arr = da.from_array(["a", "b", "c"])
+    arr = da.from_array(["a", "b", "c"], chunks=-1)
     xarr = xr.DataArray(arr)
 
     result = xarr.str.len().compute()
@@ -142,14 +142,14 @@ def test_replace(dtype):
 def test_replace_callable():
     values = xr.DataArray(["fooBAD__barBAD"])
     # test with callable
-    repl = lambda m: m.group(0).swapcase()  # noqa
+    repl = lambda m: m.group(0).swapcase()
     result = values.str.replace("[a-z][A-Z]{2}", repl, n=2)
     exp = xr.DataArray(["foObaD__baRbaD"])
     assert_equal(result, exp)
     # test regex named groups
     values = xr.DataArray(["Foo Bar Baz"])
     pat = r"(?P<first>\w+) (?P<middle>\w+) (?P<last>\w+)"
-    repl = lambda m: m.group("middle").swapcase()  # noqa
+    repl = lambda m: m.group("middle").swapcase()
     result = values.str.replace(pat, repl)
     exp = xr.DataArray(["bAR"])
     assert_equal(result, exp)
@@ -503,7 +503,7 @@ def test_slice(dtype):
             expected = xr.DataArray([s[start:stop:step] for s in arr.values])
             assert_equal(result, expected.astype(dtype))
         except IndexError:
-            print("failed on %s:%s:%s" % (start, stop, step))
+            print(f"failed on {start}:{stop}:{step}")
             raise
 
 

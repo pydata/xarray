@@ -3,7 +3,7 @@ import numpy as np
 from .. import Variable
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import Frozen, FrozenOrderedDict, is_dict_like
+from ..core.utils import Frozen, FrozenDict, is_dict_like
 from .common import AbstractDataStore, BackendArray, robust_getitem
 
 
@@ -49,7 +49,7 @@ def _fix_attributes(attributes):
             # dot-separated key
             attributes.update(
                 {
-                    "{}.{}".format(k, k_child): v_child
+                    f"{k}.{k_child}": v_child
                     for k_child, v_child in attributes.pop(k).items()
                 }
             )
@@ -83,7 +83,7 @@ class PydapDataStore(AbstractDataStore):
         return Variable(var.dimensions, data, _fix_attributes(var.attributes))
 
     def get_variables(self):
-        return FrozenOrderedDict(
+        return FrozenDict(
             (k, self.open_store_variable(self.ds[k])) for k in self.ds.keys()
         )
 

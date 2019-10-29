@@ -4,6 +4,7 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.errors import OutOfBoundsDatetime
 
 from xarray import DataArray, Dataset, Variable, coding, decode_cf
 from xarray.coding.times import (
@@ -27,12 +28,6 @@ from . import (
     requires_cftime,
     requires_cftime_or_netCDF4,
 )
-
-try:
-    from pandas.errors import OutOfBoundsDatetime
-except ImportError:
-    # pandas < 0.20
-    from pandas.tslib import OutOfBoundsDatetime
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",
@@ -119,7 +114,9 @@ def test_cf_datetime(num_dates, units, calendar):
         warnings.filterwarnings("ignore", "Unable to decode time axis")
         actual = coding.times.decode_cf_datetime(num_dates, units, calendar)
 
-    abs_diff = np.atleast_1d(abs(actual - expected)).astype(np.timedelta64)
+    abs_diff = np.asarray(abs(actual - expected)).ravel()
+    abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
+
     # once we no longer support versions of netCDF4 older than 1.1.5,
     # we could do this check with near microsecond accuracy:
     # https://github.com/Unidata/netcdf4-python/issues/355
@@ -458,7 +455,7 @@ def test_decode_360_day_calendar():
     calendar = "360_day"
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
-        units = "days since {}-01-01".format(year)
+        units = f"days since {year}-01-01"
         num_times = np.arange(100)
 
         if cftime.__name__ == "cftime":
@@ -715,7 +712,7 @@ def test_encode_time_bounds():
     ds.time.attrs = {"bounds": "time_bounds"}
     ds.time.encoding = {"calendar": "noleap", "units": "days since 2000-01-01"}
 
-    expected = dict()
+    expected = {}
     # expected['time'] = Variable(data=np.array([15]), dims=['time'])
     expected["time_bounds"] = Variable(data=np.array([0, 31]), dims=["time_bounds"])
 
@@ -738,9 +735,7 @@ def test_encode_time_bounds():
     with pytest.raises(AssertionError):
         assert_equal(encoded["time_bounds"], expected["time_bounds"])
     assert "calendar" not in encoded["time_bounds"].attrs
-    assert (
-        encoded["time_bounds"].attrs["units"] == ds.time_bounds.encoding["units"]
-    )  # noqa
+    assert encoded["time_bounds"].attrs["units"] == ds.time_bounds.encoding["units"]
 
     ds.time.encoding = {}
     with pytest.warns(UserWarning):
@@ -831,8 +826,7 @@ def test_encode_cf_datetime_overflow(shape):
 
 
 def test_encode_cf_datetime_pandas_min():
-    # Test that encode_cf_datetime does not fail for versions
-    # of pandas < 0.21.1 (GH 2623).
+    # GH 2623
     dates = pd.date_range("2000", periods=3)
     num, units, calendar = encode_cf_datetime(dates)
     expected_num = np.array([0.0, 1.0, 2.0])
@@ -890,7 +884,7 @@ def test_use_cftime_default_standard_calendar_out_of_range(calendar, units_year)
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -907,7 +901,7 @@ def test_use_cftime_default_non_standard_calendar(calendar, units_year):
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -925,7 +919,7 @@ def test_use_cftime_true(calendar, units_year):
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -952,7 +946,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 @pytest.mark.parametrize("units_year", [1500, 2500])
 def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
 
@@ -961,6 +955,6 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
 def test_use_cftime_false_non_standard_calendar(calendar, units_year):
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)

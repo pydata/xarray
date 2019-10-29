@@ -25,7 +25,6 @@ from . import (
     raises_regex,
     requires_cftime,
     requires_matplotlib,
-    requires_matplotlib2,
     requires_nc_time_axis,
     requires_seaborn,
 )
@@ -169,6 +168,23 @@ class TestPlot(PlotTestCase):
         # Plot current against time
         line = current.plot.line()[0]
         assert_array_equal(line.get_xdata(), current.coords["t"].values)
+
+    def test_line_plot_along_1d_coord(self):
+        # Test for bug in GH #3334
+        x_coord = xr.DataArray(data=[0.1, 0.2], dims=["x"])
+        t_coord = xr.DataArray(data=[10, 20], dims=["t"])
+
+        da = xr.DataArray(
+            data=np.array([[0, 1], [5, 9]]),
+            dims=["x", "t"],
+            coords={"x": x_coord, "time": t_coord},
+        )
+
+        line = da.plot(x="time", hue="x")[0]
+        assert_array_equal(line.get_xdata(), da.coords["time"].values)
+
+        line = da.plot(y="time", hue="x")[0]
+        assert_array_equal(line.get_ydata(), da.coords["time"].values)
 
     def test_2d_line(self):
         with raises_regex(ValueError, "hue"):
@@ -343,7 +359,6 @@ class TestPlot(PlotTestCase):
             d[0].plot(x="x", y="y", col="z", ax=plt.gca())
 
     @pytest.mark.slow
-    @requires_matplotlib2
     def test_subplot_kws(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=["y", "x", "z"])
@@ -402,7 +417,7 @@ class TestPlot(PlotTestCase):
 
     def test_coord_with_interval(self):
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins("dim_0", bins).mean(xr.ALL_DIMS).plot()
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot()
 
 
 class TestPlot1D(PlotTestCase):
@@ -487,7 +502,7 @@ class TestPlotStep(PlotTestCase):
 
     def test_coord_with_interval_step(self):
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins("dim_0", bins).mean(xr.ALL_DIMS).plot.step()
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step()
         assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
 
@@ -529,7 +544,7 @@ class TestPlotHistogram(PlotTestCase):
     def test_hist_coord_with_interval(self):
         (
             self.darray.groupby_bins("dim_0", [-1, 0, 1, 2])
-            .mean(xr.ALL_DIMS)
+            .mean(...)
             .plot.hist(range=(-1, 2))
         )
 
@@ -1283,33 +1298,45 @@ class TestContour(Common2dMixin, PlotTestCase):
 
     plotfunc = staticmethod(xplt.contour)
 
+    # matplotlib cmap.colors gives an rgbA ndarray
+    # when seaborn is used, instead we get an rgb tuple
+    @staticmethod
+    def _color_as_tuple(c):
+        return tuple(c[:3])
+
     def test_colors(self):
-        # matplotlib cmap.colors gives an rgbA ndarray
-        # when seaborn is used, instead we get an rgb tuple
-        def _color_as_tuple(c):
-            return tuple(c[:3])
 
         # with single color, we don't want rgb array
         artist = self.plotmethod(colors="k")
         assert artist.cmap.colors[0] == "k"
 
         artist = self.plotmethod(colors=["k", "b"])
-        assert _color_as_tuple(artist.cmap.colors[1]) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(artist.cmap.colors[1]) == (0.0, 0.0, 1.0)
 
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert _color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
-        assert _color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
+        assert self._color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
+        assert self._color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
         # the last color is now under "over"
-        assert _color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
+
+    def test_colors_np_levels(self):
+
+        # https://github.com/pydata/xarray/issues/3284
+        levels = np.array([-0.5, 0.0, 0.5, 1.0])
+        artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
+        assert self._color_as_tuple(artist.cmap.colors[1]) == (1.0, 0.0, 0.0)
+        assert self._color_as_tuple(artist.cmap.colors[2]) == (1.0, 1.0, 1.0)
+        # the last color is now under "over"
+        assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
 
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):
             self.plotmethod(colors="k", cmap="RdBu")
 
-    def list_of_colors_in_cmap_deprecated(self):
-        with pytest.raises(Exception):
+    def list_of_colors_in_cmap_raises_error(self):
+        with raises_regex(ValueError, "list of colors"):
             self.plotmethod(cmap=["k", "b"])
 
     @pytest.mark.slow
@@ -1517,7 +1544,7 @@ class TestFacetGrid(PlotTestCase):
         self.darray.name = "testvar"
         self.g.map_dataarray(xplt.contourf, "x", "y")
         for k, ax in zip("abc", self.g.axes.flat):
-            assert "z = {}".format(k) == ax.get_title()
+            assert f"z = {k}" == ax.get_title()
 
         alltxt = text_in_fig()
         assert self.darray.name in alltxt
@@ -1933,10 +1960,11 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
 
     def test_facetgrid_hue_style(self):
-        # Can't move this to pytest.mark.parametrize because py35-min
-        # doesn't have mpl.
-        for hue_style, map_type in zip(
-            ["discrete", "continuous"], [list, mpl.collections.PathCollection]
+        # Can't move this to pytest.mark.parametrize because py36-bare-minimum
+        # doesn't have matplotlib.
+        for hue_style, map_type in (
+            ("discrete", list),
+            ("continuous", mpl.collections.PathCollection),
         ):
             g = self.ds.plot.scatter(
                 x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style

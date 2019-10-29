@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
-from xarray.core import dtypes
+from xarray.core import dtypes, merge
 
 from . import (
     InaccessibleArray,
@@ -16,6 +16,36 @@ from . import (
     requires_dask,
 )
 from .test_dataset import create_test_data
+
+
+def test_concat_compat():
+    ds1 = Dataset(
+        {
+            "has_x_y": (("y", "x"), [[1, 2]]),
+            "has_x": ("x", [1, 2]),
+            "no_x_y": ("z", [1, 2]),
+        },
+        coords={"x": [0, 1], "y": [0], "z": [-1, -2]},
+    )
+    ds2 = Dataset(
+        {
+            "has_x_y": (("y", "x"), [[3, 4]]),
+            "has_x": ("x", [1, 2]),
+            "no_x_y": (("q", "z"), [[1, 2]]),
+        },
+        coords={"x": [0, 1], "y": [1], "z": [-1, -2], "q": [0]},
+    )
+
+    result = concat([ds1, ds2], dim="y", data_vars="minimal", compat="broadcast_equals")
+    assert_equal(ds2.no_x_y, result.no_x_y.transpose())
+
+    for var in ["has_x", "no_x_y"]:
+        assert "y" not in result[var]
+
+    with raises_regex(ValueError, "coordinates in some datasets but not others"):
+        concat([ds1, ds2], dim="q")
+    with raises_regex(ValueError, "'q' is not present in all datasets"):
+        concat([ds2, ds1], dim="q")
 
 
 class TestConcatDataset:
@@ -37,6 +67,22 @@ class TestConcatDataset:
     def test_concat_simple(self, data, dim, coords):
         datasets = [g for _, g in data.groupby(dim, squeeze=False)]
         assert_identical(data, concat(datasets, dim, coords=coords))
+
+    def test_concat_merge_variables_present_in_some_datasets(self, data):
+        # coordinates present in some datasets but not others
+        ds1 = Dataset(data_vars={"a": ("y", [0.1])}, coords={"x": 0.1})
+        ds2 = Dataset(data_vars={"a": ("y", [0.2])}, coords={"z": 0.2})
+        actual = concat([ds1, ds2], dim="y", coords="minimal")
+        expected = Dataset({"a": ("y", [0.1, 0.2])}, coords={"x": 0.1, "z": 0.2})
+        assert_identical(expected, actual)
+
+        # data variables present in some datasets but not others
+        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
+        data0, data1 = deepcopy(split_data)
+        data1["foo"] = ("bar", np.random.randn(10))
+        actual = concat([data0, data1], "dim1")
+        expected = data.copy().assign(foo=data1.foo)
+        assert_identical(expected, actual)
 
     def test_concat_2(self, data):
         dim = "dim2"
@@ -62,7 +108,11 @@ class TestConcatDataset:
             assert_equal(data["extra"], actual["extra"])
 
     def test_concat(self, data):
-        split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
+        split_data = [
+            data.isel(dim1=slice(3)),
+            data.isel(dim1=3),
+            data.isel(dim1=slice(4, None)),
+        ]
         assert_identical(data, concat(split_data, "dim1"))
 
     def test_concat_dim_precedence(self, data):
@@ -92,7 +142,7 @@ class TestConcatDataset:
             actual = concat(objs, dim="x", coords=coords)
             assert_identical(expected, actual)
         for coords in ["minimal", []]:
-            with raises_regex(ValueError, "not equal across"):
+            with raises_regex(merge.MergeError, "conflicting values"):
                 concat(objs, dim="x", coords=coords)
 
     def test_concat_constant_index(self):
@@ -103,8 +153,10 @@ class TestConcatDataset:
         for mode in ["different", "all", ["foo"]]:
             actual = concat([ds1, ds2], "y", data_vars=mode)
             assert_identical(expected, actual)
-        with raises_regex(ValueError, "not equal across datasets"):
-            concat([ds1, ds2], "y", data_vars="minimal")
+        with raises_regex(merge.MergeError, "conflicting values"):
+            # previously dim="y", and raised error which makes no sense.
+            # "foo" has dimension "y" so minimal should concatenate it?
+            concat([ds1, ds2], "new_dim", data_vars="minimal")
 
     def test_concat_size0(self):
         data = create_test_data()
@@ -137,6 +189,14 @@ class TestConcatDataset:
         with raises_regex(ValueError, "must supply at least one"):
             concat([], "dim1")
 
+        with raises_regex(ValueError, "Cannot specify both .*='different'"):
+            concat(
+                [data, data], dim="concat_dim", data_vars="different", compat="override"
+            )
+
+        with raises_regex(ValueError, "must supply at least one"):
+            concat([], "dim1")
+
         with raises_regex(ValueError, "are not coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
 
@@ -145,11 +205,6 @@ class TestConcatDataset:
             data1.attrs["foo"] = "bar"
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
-
-        with raises_regex(ValueError, "encountered unexpected"):
-            data0, data1 = deepcopy(split_data)
-            data1["foo"] = ("bar", np.random.randn(10))
-            concat([data0, data1], "dim1")
 
         with raises_regex(ValueError, "compat.* invalid"):
             concat(split_data, "dim1", compat="foobar")
@@ -163,16 +218,11 @@ class TestConcatDataset:
         with raises_regex(ValueError, "coordinate in some datasets but not others"):
             concat([Dataset({"x": 0}), Dataset({}, {"x": 1})], dim="z")
 
-        with raises_regex(ValueError, "no longer a valid"):
-            concat([data, data], "new_dim", mode="different")
-        with raises_regex(ValueError, "no longer a valid"):
-            concat([data, data], "new_dim", concat_over="different")
-
     def test_concat_join_kwarg(self):
         ds1 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]})
         ds2 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]})
 
-        expected = dict()
+        expected = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},
@@ -385,7 +435,7 @@ class TestConcatDataArray:
             {"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]}
         ).to_array()
 
-        expected = dict()
+        expected = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},

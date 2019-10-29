@@ -43,12 +43,14 @@
 import re
 from datetime import timedelta
 from functools import partial
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import numpy as np
 
+from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
+from distutils.version import LooseVersion
 
 
 def get_date_type(calendar):
@@ -73,8 +75,8 @@ def get_date_type(calendar):
 
 
 class BaseCFTimeOffset:
-    _freq = None  # type: ClassVar[str]
-    _day_option = None  # type: ClassVar[str]
+    _freq: ClassVar[Optional[str]] = None
+    _day_option: ClassVar[Optional[str]] = None
 
     def __init__(self, n=1):
         if not isinstance(n, int):
@@ -181,7 +183,7 @@ def _get_day_of_month(other, day_option):
     elif day_option is None:
         # Note: unlike `_shift_month`, _get_day_of_month does not
         # allow day_option = None
-        raise NotImplementedError
+        raise NotImplementedError()
     else:
         raise ValueError(day_option)
 
@@ -221,6 +223,8 @@ def _adjust_n_years(other, n, month, reference_day):
 def _shift_month(date, months, day_option="start"):
     """Shift the date to a month start or end a given number of months away.
     """
+    import cftime
+
     delta_year = (date.month + months) // 12
     month = (date.month + months) % 12
 
@@ -236,11 +240,14 @@ def _shift_month(date, months, day_option="start"):
         day = _days_in_month(reference)
     else:
         raise ValueError(day_option)
-    # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
-    # the returned date object in versions of cftime between 1.0.2 and
-    # 1.0.3.4.  It can be removed for versions of cftime greater than
-    # 1.0.3.4.
-    return date.replace(year=year, month=month, day=day, dayofwk=-1)
+    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
+        # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
+        # the returned date object in versions of cftime between 1.0.2 and
+        # 1.0.3.4.  It can be removed for versions of cftime greater than
+        # 1.0.3.4.
+        return date.replace(year=year, month=month, day=day, dayofwk=-1)
+    else:
+        return date.replace(year=year, month=month, day=day)
 
 
 def roll_qtrday(other, n, month, day_option, modby=3):
@@ -350,8 +357,8 @@ class QuarterOffset(BaseCFTimeOffset):
     """Quarter representation copied off of pandas/tseries/offsets.py
     """
 
-    _freq = None  # type: ClassVar[str]
-    _default_month = None  # type: ClassVar[int]
+    _freq: ClassVar[str]
+    _default_month: ClassVar[int]
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
@@ -447,9 +454,9 @@ class QuarterEnd(QuarterOffset):
 
 
 class YearOffset(BaseCFTimeOffset):
-    _freq = None  # type: ClassVar[str]
-    _day_option = None  # type: ClassVar[str]
-    _default_month = None  # type: ClassVar[int]
+    _freq: ClassVar[str]
+    _day_option: ClassVar[str]
+    _default_month: ClassVar[int]
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
@@ -637,7 +644,7 @@ _FREQUENCIES = {
 
 
 _FREQUENCY_CONDITION = "|".join(_FREQUENCIES.keys())
-_PATTERN = r"^((?P<multiple>\d+)|())(?P<freq>({}))$".format(_FREQUENCY_CONDITION)
+_PATTERN = fr"^((?P<multiple>\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have
@@ -758,9 +765,7 @@ def _generate_range(start, end, periods, offset):
 
             next_date = current + offset
             if next_date <= current:
-                raise ValueError(
-                    "Offset {offset} did not increment date".format(offset=offset)
-                )
+                raise ValueError(f"Offset {offset} did not increment date")
             current = next_date
     else:
         while current >= end:
@@ -768,15 +773,8 @@ def _generate_range(start, end, periods, offset):
 
             next_date = current + offset
             if next_date >= current:
-                raise ValueError(
-                    "Offset {offset} did not decrement date".format(offset=offset)
-                )
+                raise ValueError(f"Offset {offset} did not decrement date")
             current = next_date
-
-
-def _count_not_none(*args):
-    """Compute the number of non-None arguments."""
-    return sum([arg is not None for arg in args])
 
 
 def cftime_range(
@@ -957,7 +955,7 @@ def cftime_range(
     pandas.date_range
     """
     # Adapted from pandas.core.indexes.datetimes._generate_range.
-    if _count_not_none(start, end, periods, freq) != 3:
+    if count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
             "Of the arguments 'start', 'end', 'periods', and 'freq', three "
             "must be specified at a time."

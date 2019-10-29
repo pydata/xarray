@@ -17,10 +17,8 @@ from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array
-    from . import dask_array_compat
 except ImportError:
     dask_array = None  # type: ignore
-    dask_array_compat = None  # type: ignore
 
 
 def _dask_or_eager_func(
@@ -43,7 +41,7 @@ def _dask_or_eager_func(
                 try:
                     wrapped = getattr(dask_module, name)
                 except AttributeError as e:
-                    raise AttributeError("%s: requires dask >=%s" % (e, requires_dask))
+                    raise AttributeError(f"{e}: requires dask >={requires_dask}")
             else:
                 wrapped = getattr(eager_module, name)
             return wrapped(*args, **kwargs)
@@ -120,9 +118,7 @@ def notnull(data):
 
 transpose = _dask_or_eager_func("transpose")
 _where = _dask_or_eager_func("where", array_args=slice(3))
-isin = _dask_or_eager_func(
-    "isin", eager_module=npcompat, dask_module=dask_array_compat, array_args=slice(2)
-)
+isin = _dask_or_eager_func("isin", array_args=slice(2))
 take = _dask_or_eager_func("take")
 broadcast_to = _dask_or_eager_func("broadcast_to")
 
@@ -133,15 +129,13 @@ array_all = _dask_or_eager_func("all")
 array_any = _dask_or_eager_func("any")
 
 tensordot = _dask_or_eager_func("tensordot", array_args=slice(2))
-einsum = _dask_or_eager_func(
-    "einsum", array_args=slice(1, None), requires_dask="0.17.3"
-)
+einsum = _dask_or_eager_func("einsum", array_args=slice(1, None))
 
 
 def gradient(x, coord, axis, edge_order):
     if isinstance(x, dask_array_type):
-        return dask_array_compat.gradient(x, coord, axis=axis, edge_order=edge_order)
-    return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
+        return dask_array.gradient(x, coord, axis=axis, edge_order=edge_order)
+    return np.gradient(x, coord, axis=axis, edge_order=edge_order)
 
 
 def trapz(y, x, axis):
@@ -263,7 +257,7 @@ def _create_nan_agg_method(name, coerce_strings=False):
 
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
-            raise TypeError("`out` is not valid for {}".format(name))
+            raise TypeError(f"`out` is not valid for {name}")
 
         values = asarray(values)
 

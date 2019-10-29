@@ -1,24 +1,19 @@
-import warnings
-from collections import OrderedDict
-
 import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
+from .merge import _VALID_COMPAT, unique_variable
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 
 
 def concat(
     objs,
-    dim=None,
+    dim,
     data_vars="all",
     coords="different",
     compat="equals",
     positions=None,
-    indexers=None,
-    mode=None,
-    concat_over=None,
     fill_value=dtypes.NA,
     join="outer",
 ):
@@ -63,12 +58,19 @@ def concat(
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
             in addition to the 'minimal' coordinates.
-    compat : {'equals', 'identical'}, optional
-        String indicating how to compare non-concatenated variables and
-        dataset global attributes for potential conflicts. 'equals' means
-        that all variable values and dimensions must be the same;
-        'identical' means that variable attributes and global attributes
-        must also be equal.
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
+        String indicating how to compare non-concatenated variables of the same name for
+        potential conflicts. This is passed down to merge.
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
+        - 'override': skip comparing and pick variable from first dataset
     positions : None or list of integer arrays, optional
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
@@ -111,36 +113,10 @@ def concat(
     except StopIteration:
         raise ValueError("must supply at least one object to concatenate")
 
-    if dim is None:
-        warnings.warn(
-            "the `dim` argument to `concat` will be required "
-            "in a future version of xarray; for now, setting it to "
-            "the old default of 'concat_dim'",
-            FutureWarning,
-            stacklevel=2,
-        )
-        dim = "concat_dims"
-
-    if indexers is not None:  # pragma: no cover
-        warnings.warn(
-            "indexers has been renamed to positions; the alias "
-            "will be removed in a future version of xarray",
-            FutureWarning,
-            stacklevel=2,
-        )
-        positions = indexers
-
-    if mode is not None:
+    if compat not in _VALID_COMPAT:
         raise ValueError(
-            "`mode` is no longer a valid argument to "
-            "xarray.concat; it has been split into the "
-            "`data_vars` and `coords` arguments"
-        )
-    if concat_over is not None:
-        raise ValueError(
-            "`concat_over` is no longer a valid argument to "
-            "xarray.concat; it has been split into the "
-            "`data_vars` and `coords` arguments"
+            "compat=%r invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
+            % compat
         )
 
     if isinstance(first_obj, DataArray):
@@ -179,23 +155,37 @@ def _calc_concat_dim_coord(dim):
     return dim, coord
 
 
-def _calc_concat_over(datasets, dim, data_vars, coords):
+def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
     """
     Determine which dataset variables need to be concatenated in the result,
-    and which can simply be taken from the first dataset.
     """
     # Return values
     concat_over = set()
     equals = {}
 
-    if dim in datasets[0]:
+    if dim in dim_names:
+        concat_over_existing_dim = True
         concat_over.add(dim)
+    else:
+        concat_over_existing_dim = False
+
+    concat_dim_lengths = []
     for ds in datasets:
+        if concat_over_existing_dim:
+            if dim not in ds.dims:
+                if dim in ds:
+                    ds = ds.set_coords(dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
+        concat_dim_lengths.append(ds.dims.get(dim, 1))
 
     def process_subset_opt(opt, subset):
         if isinstance(opt, str):
             if opt == "different":
+                if compat == "override":
+                    raise ValueError(
+                        "Cannot specify both %s='different' and compat='override'."
+                        % subset
+                    )
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
                     if k not in concat_over:
@@ -209,7 +199,7 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                         for ds_rhs in datasets[1:]:
                             v_rhs = ds_rhs.variables[k].compute()
                             computed.append(v_rhs)
-                            if not v_lhs.equals(v_rhs):
+                            if not getattr(v_lhs, compat)(v_rhs):
                                 concat_over.add(k)
                                 equals[k] = False
                                 # computed variables are not to be re-computed
@@ -227,7 +217,7 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
             elif opt == "minimal":
                 pass
             else:
-                raise ValueError("unexpected value for %s: %s" % (subset, opt))
+                raise ValueError(f"unexpected value for {subset}: {opt}")
         else:
             invalid_vars = [k for k in opt if k not in getattr(datasets[0], subset)]
             if invalid_vars:
@@ -245,7 +235,29 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
 
     process_subset_opt(data_vars, "data_vars")
     process_subset_opt(coords, "coords")
-    return concat_over, equals
+    return concat_over, equals, concat_dim_lengths
+
+
+# determine dimensional coordinate names and a dict mapping name to DataArray
+def _parse_datasets(datasets):
+
+    dims = set()
+    all_coord_names = set()
+    data_vars = set()  # list of data_vars
+    dim_coords = {}  # maps dim name to variable
+    dims_sizes = {}  # shared dimension sizes to expand variables
+
+    for ds in datasets:
+        dims_sizes.update(ds.dims)
+        all_coord_names.update(ds.coords)
+        data_vars.update(ds.data_vars)
+
+        for dim in set(ds.dims) - dims:
+            if dim not in dim_coords:
+                dim_coords[dim] = ds.coords[dim].variable
+        dims = dims | set(ds.dims)
+
+    return dim_coords, dims_sizes, all_coord_names, data_vars
 
 
 def _dataset_concat(
@@ -263,11 +275,6 @@ def _dataset_concat(
     """
     from .dataset import Dataset
 
-    if compat not in ["equals", "identical"]:
-        raise ValueError(
-            "compat=%r invalid: must be 'equals' " "or 'identical'" % compat
-        )
-
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
@@ -275,62 +282,59 @@ def _dataset_concat(
         *datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value
     )
 
-    concat_over, equals = _calc_concat_over(datasets, dim, data_vars, coords)
+    dim_coords, dims_sizes, coord_names, data_names = _parse_datasets(datasets)
+    dim_names = set(dim_coords)
+    unlabeled_dims = dim_names - coord_names
 
-    def insert_result_variable(k, v):
-        assert isinstance(v, Variable)
-        if k in datasets[0].coords:
-            result_coord_names.add(k)
-        result_vars[k] = v
+    both_data_and_coords = coord_names & data_names
+    if both_data_and_coords:
+        raise ValueError(
+            "%r is a coordinate in some datasets but not others." % both_data_and_coords
+        )
+    # we don't want the concat dimension in the result dataset yet
+    dim_coords.pop(dim, None)
+    dims_sizes.pop(dim, None)
 
-    # create the new dataset and add constant variables
-    result_vars = OrderedDict()
-    result_coord_names = set(datasets[0].coords)
+    # case where concat dimension is a coordinate or data_var but not a dimension
+    if (dim in coord_names or dim in data_names) and dim not in dim_names:
+        datasets = [ds.expand_dims(dim) for ds in datasets]
+
+    # determine which variables to concatentate
+    concat_over, equals, concat_dim_lengths = _calc_concat_over(
+        datasets, dim, dim_names, data_vars, coords, compat
+    )
+
+    # determine which variables to merge, and then merge them according to compat
+    variables_to_merge = (coord_names | data_names) - concat_over - dim_names
+
+    result_vars = {}
+    if variables_to_merge:
+        to_merge = {var: [] for var in variables_to_merge}
+
+        for ds in datasets:
+            for var in variables_to_merge:
+                if var in ds:
+                    to_merge[var].append(ds.variables[var])
+
+        for var in variables_to_merge:
+            result_vars[var] = unique_variable(
+                var, to_merge[var], compat=compat, equals=equals.get(var, None)
+            )
+    else:
+        result_vars = {}
+    result_vars.update(dim_coords)
+
+    # assign attrs and encoding from first dataset
     result_attrs = datasets[0].attrs
     result_encoding = datasets[0].encoding
 
-    for k, v in datasets[0].variables.items():
-        if k not in concat_over:
-            insert_result_variable(k, v)
-
-    # check that global attributes and non-concatenated variables are fixed
-    # across all datasets
+    # check that global attributes are fixed across all datasets if necessary
     for ds in datasets[1:]:
         if compat == "identical" and not utils.dict_equiv(ds.attrs, result_attrs):
-            raise ValueError("dataset global attributes not equal")
-        for k, v in ds.variables.items():
-            if k not in result_vars and k not in concat_over:
-                raise ValueError("encountered unexpected variable %r" % k)
-            elif (k in result_coord_names) != (k in ds.coords):
-                raise ValueError(
-                    "%r is a coordinate in some datasets but not " "others" % k
-                )
-            elif k in result_vars and k != dim:
-                # Don't use Variable.identical as it internally invokes
-                # Variable.equals, and we may already know the answer
-                if compat == "identical" and not utils.dict_equiv(
-                    v.attrs, result_vars[k].attrs
-                ):
-                    raise ValueError("variable %s not identical across datasets" % k)
-
-                # Proceed with equals()
-                try:
-                    # May be populated when using the "different" method
-                    is_equal = equals[k]
-                except KeyError:
-                    result_vars[k].load()
-                    is_equal = v.equals(result_vars[k])
-                if not is_equal:
-                    raise ValueError("variable %s not equal across datasets" % k)
+            raise ValueError("Dataset global attributes not equal.")
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
-    dim_lengths = [ds.dims.get(dim, 1) for ds in datasets]
-    non_concat_dims = {}
-    for ds in datasets:
-        non_concat_dims.update(ds.dims)
-    non_concat_dims.pop(dim, None)
-
     def ensure_common_dims(vars):
         # ensure each variable with the given name shares the same
         # dimensions and the same shape for all of them except along the
@@ -338,24 +342,35 @@ def _dataset_concat(
         common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
         if dim not in common_dims:
             common_dims = (dim,) + common_dims
-        for var, dim_len in zip(vars, dim_lengths):
+        for var, dim_len in zip(vars, concat_dim_lengths):
             if var.dims != common_dims:
-                common_shape = tuple(
-                    non_concat_dims.get(d, dim_len) for d in common_dims
-                )
+                common_shape = tuple(dims_sizes.get(d, dim_len) for d in common_dims)
                 var = var.set_dims(common_dims, common_shape)
             yield var
 
     # stack up each variable to fill-out the dataset (in order)
+    # n.b. this loop preserves variable order, needed for groupby.
     for k in datasets[0].variables:
         if k in concat_over:
-            vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+            try:
+                vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+            except KeyError:
+                raise ValueError("%r is not present in all datasets." % k)
             combined = concat_vars(vars, dim, positions)
-            insert_result_variable(k, combined)
+            assert isinstance(combined, Variable)
+            result_vars[k] = combined
 
     result = Dataset(result_vars, attrs=result_attrs)
-    result = result.set_coords(result_coord_names)
+    absent_coord_names = coord_names - set(result.variables)
+    if absent_coord_names:
+        raise ValueError(
+            "Variables %r are coordinates in some datasets but not others."
+            % absent_coord_names
+        )
+    result = result.set_coords(coord_names)
     result.encoding = result_encoding
+
+    result = result.drop(unlabeled_dims, errors="ignore")
 
     if coord is not None:
         # add concat dimension last to ensure that its in the final Dataset
@@ -378,7 +393,7 @@ def _dataarray_concat(
 
     if data_vars != "all":
         raise ValueError(
-            "data_vars is not a valid argument when " "concatenating DataArray objects"
+            "data_vars is not a valid argument when concatenating DataArray objects"
         )
 
     datasets = []

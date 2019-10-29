@@ -1,7 +1,7 @@
 """Coders for individual Variable objects."""
 import warnings
 from functools import partial
-from typing import Any
+from typing import Any, Hashable
 
 import numpy as np
 import pandas as pd
@@ -33,15 +33,19 @@ class VariableCoder:
     variables in the underlying store.
     """
 
-    def encode(self, variable, name=None):  # pragma: no cover
-        # type: (Variable, Any) -> Variable
-        """Convert an encoded variable to a decoded variable."""
-        raise NotImplementedError
+    def encode(
+        self, variable: Variable, name: Hashable = None
+    ) -> Variable:  # pragma: no cover
+        """Convert an encoded variable to a decoded variable
+        """
+        raise NotImplementedError()
 
-    def decode(self, variable, name=None):  # pragma: no cover
-        # type: (Variable, Any) -> Variable
-        """Convert an decoded variable to a encoded variable."""
-        raise NotImplementedError
+    def decode(
+        self, variable: Variable, name: Hashable = None
+    ) -> Variable:  # pragma: no cover
+        """Convert an decoded variable to a encoded variable
+        """
+        raise NotImplementedError()
 
 
 class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -69,11 +73,8 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return self.func(self.array)
 
     def __repr__(self):
-        return "%s(%r, func=%r, dtype=%r)" % (
-            type(self).__name__,
-            self.array,
-            self.func,
-            self.dtype,
+        return "{}({!r}, func={!r}, dtype={!r})".format(
+            type(self).__name__, self.array, self.func, self.dtype
         )
 
 
@@ -109,7 +110,7 @@ def unpack_for_decoding(var):
 
 def safe_setitem(dest, key, value, name=None):
     if key in dest:
-        var_str = " on variable {!r}".format(name) if name else ""
+        var_str = f" on variable {name!r}" if name else ""
         raise ValueError(
             "failed to prevent overwriting existing key {} in attrs{}. "
             "This is probably an encoding field used by xarray to describe "

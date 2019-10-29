@@ -1,5 +1,4 @@
 import unicodedata
-from collections import OrderedDict
 
 import numpy as np
 
@@ -51,7 +50,7 @@ def coerce_nc3_dtype(arr):
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
             raise ValueError(
-                "could not safely cast array from dtype %s to %s" % (dtype, new_dtype)
+                f"could not safely cast array from dtype {dtype} to {new_dtype}"
             )
         arr = cast_arr
     return arr
@@ -70,7 +69,7 @@ def encode_nc3_attr_value(value):
 
 
 def encode_nc3_attrs(attrs):
-    return OrderedDict([(k, encode_nc3_attr_value(v)) for k, v in attrs.items()])
+    return {k: encode_nc3_attr_value(v) for k, v in attrs.items()}
 
 
 def encode_nc3_variable(var):

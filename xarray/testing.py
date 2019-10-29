@@ -1,6 +1,5 @@
 """Testing functions exposed to the user API"""
-from collections import OrderedDict
-from typing import Hashable, Union
+from typing import Hashable, Set, Union
 
 import numpy as np
 import pandas as pd
@@ -50,8 +49,8 @@ def assert_equal(a, b):
     assert_identical, assert_allclose, Dataset.equals, DataArray.equals,
     numpy.testing.assert_array_equal
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     if isinstance(a, (Variable, DataArray)):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -77,8 +76,8 @@ def assert_identical(a, b):
     --------
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
@@ -115,13 +114,13 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     --------
     assert_identical, assert_equal, numpy.testing.assert_allclose
     """
-    __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa
+    __tracebackhide__ = True
+    assert type(a) == type(b)
     kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
     if isinstance(a, Variable):
         assert a.dims == b.dims
         allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
-        assert allclose, "{}\n{}".format(a.values, b.values)
+        assert allclose, f"{a.values}\n{b.values}"
     elif isinstance(a, DataArray):
         assert_allclose(a.variable, b.variable, **kwargs)
         assert set(a.coords) == set(b.coords)
@@ -142,8 +141,28 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+def assert_chunks_equal(a, b):
+    """
+    Assert that chunksizes along chunked dimensions are equal.
+
+    Parameters
+    ----------
+    a : xarray.Dataset or xarray.DataArray
+        The first object to compare.
+    b : xarray.Dataset or xarray.DataArray
+        The second object to compare.
+    """
+
+    if isinstance(a, DataArray) != isinstance(b, DataArray):
+        raise TypeError("a and b have mismatched types")
+
+    left = a.unify_chunks()
+    right = b.unify_chunks()
+    assert left.chunks == right.chunks
+
+
 def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
-    assert isinstance(indexes, OrderedDict), indexes
+    assert isinstance(indexes, dict), indexes
     assert all(isinstance(v, pd.Index) for v in indexes.values()), {
         k: type(v) for k, v in indexes.items()
     }
@@ -162,7 +181,7 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
 
 def _assert_variable_invariants(var: Variable, name: Hashable = None):
     if name is None:
-        name_or_empty = ()  # type: tuple
+        name_or_empty: tuple = ()
     else:
         name_or_empty = (name,)
     assert isinstance(var._dims, tuple), name_or_empty + (var._dims,)
@@ -173,16 +192,14 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
     assert isinstance(var._encoding, (type(None), dict)), name_or_empty + (
         var._encoding,
     )
-    assert isinstance(var._attrs, (type(None), OrderedDict)), name_or_empty + (
-        var._attrs,
-    )
+    assert isinstance(var._attrs, (type(None), dict)), name_or_empty + (var._attrs,)
 
 
 def _assert_dataarray_invariants(da: DataArray):
     assert isinstance(da._variable, Variable), da._variable
     _assert_variable_invariants(da._variable)
 
-    assert isinstance(da._coords, OrderedDict), da._coords
+    assert isinstance(da._coords, dict), da._coords
     assert all(isinstance(v, Variable) for v in da._coords.values()), da._coords
     assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
         da.dims,
@@ -199,7 +216,7 @@ def _assert_dataarray_invariants(da: DataArray):
 
 
 def _assert_dataset_invariants(ds: Dataset):
-    assert isinstance(ds._variables, OrderedDict), type(ds._variables)
+    assert isinstance(ds._variables, dict), type(ds._variables)
     assert all(isinstance(v, Variable) for v in ds._variables.values()), ds._variables
     for k, v in ds._variables.items():
         _assert_variable_invariants(v, k)
@@ -212,7 +229,7 @@ def _assert_dataset_invariants(ds: Dataset):
 
     assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
-    var_dims = set()  # type: set
+    var_dims: Set[Hashable] = set()
     for v in ds._variables.values():
         var_dims.update(v.dims)
     assert ds._dims.keys() == var_dims, (set(ds._dims), var_dims)
@@ -232,7 +249,7 @@ def _assert_dataset_invariants(ds: Dataset):
         _assert_indexes_invariants_checks(ds._indexes, ds._variables, ds._dims)
 
     assert isinstance(ds._encoding, (type(None), dict))
-    assert isinstance(ds._attrs, (type(None), OrderedDict))
+    assert isinstance(ds._attrs, (type(None), dict))
 
 
 def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable],):

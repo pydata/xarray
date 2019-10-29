@@ -6,11 +6,11 @@ import itertools
 import os.path
 import re
 import warnings
-from collections import OrderedDict
 from typing import (
     AbstractSet,
     Any,
     Callable,
+    Collection,
     Container,
     Dict,
     Hashable,
@@ -43,7 +43,7 @@ def _check_inplace(inplace: Optional[bool]) -> None:
 
 
 def alias_message(old_name: str, new_name: str) -> str:
-    return "%s has been deprecated. Use %s instead." % (old_name, new_name)
+    return f"{old_name} has been deprecated. Use {new_name} instead."
 
 
 def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
@@ -347,7 +347,7 @@ def ordered_dict_intersection(
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> MutableMapping[K, V]:
-    """Return the intersection of two dictionaries as a new OrderedDict.
+    """Return the intersection of two dictionaries as a new dictionary.
 
     Items are retained if their keys are found in both dictionaries and the
     values are compatible.
@@ -362,10 +362,10 @@ def ordered_dict_intersection(
 
     Returns
     -------
-    intersection : OrderedDict
+    intersection : dict
         Intersection of the contents.
     """
-    new_dict = OrderedDict(first_dict)
+    new_dict = dict(first_dict)
     remove_incompatible_items(new_dict, second_dict, compat)
     return new_dict
 
@@ -394,11 +394,11 @@ class Frozen(Mapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return "%s(%r)" % (type(self).__name__, self.mapping)
+        return "{}({!r})".format(type(self).__name__, self.mapping)
 
 
-def FrozenOrderedDict(*args, **kwargs) -> Frozen:
-    return Frozen(OrderedDict(*args, **kwargs))
+def FrozenDict(*args, **kwargs) -> Frozen:
+    return Frozen(dict(*args, **kwargs))
 
 
 class SortedKeysDict(MutableMapping[K, V]):
@@ -431,22 +431,24 @@ class SortedKeysDict(MutableMapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return "%s(%r)" % (type(self).__name__, self.mapping)
+        return "{}({!r})".format(type(self).__name__, self.mapping)
 
 
 class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 
-    The API matches the builtin set, but it preserves insertion order of
-    elements, like an OrderedDict.
+    The API matches the builtin set, but it preserves insertion order of elements, like
+    a dict. Note that, unlike in an OrderedDict, equality tests are not order-sensitive.
     """
 
-    __slots__ = ("_ordered_dict",)
+    _d: Dict[T, None]
+
+    __slots__ = ("_d",)
 
     def __init__(self, values: AbstractSet[T] = None):
-        self._ordered_dict = OrderedDict()  # type: MutableMapping[T, None]
+        self._d = {}
         if values is not None:
-            # Disable type checking - both mypy and PyCharm believes that
+            # Disable type checking - both mypy and PyCharm believe that
             # we're altering the type of self in place (see signature of
             # MutableSet.__ior__)
             self |= values  # type: ignore
@@ -454,19 +456,19 @@ class OrderedSet(MutableSet[T]):
     # Required methods for MutableSet
 
     def __contains__(self, value: object) -> bool:
-        return value in self._ordered_dict
+        return value in self._d
 
     def __iter__(self) -> Iterator[T]:
-        return iter(self._ordered_dict)
+        return iter(self._d)
 
     def __len__(self) -> int:
-        return len(self._ordered_dict)
+        return len(self._d)
 
     def add(self, value: T) -> None:
-        self._ordered_dict[value] = None
+        self._d[value] = None
 
     def discard(self, value: T) -> None:
-        del self._ordered_dict[value]
+        del self._d[value]
 
     # Additional methods
 
@@ -475,7 +477,7 @@ class OrderedSet(MutableSet[T]):
         self |= values  # type: ignore
 
     def __repr__(self) -> str:
-        return "%s(%r)" % (type(self).__name__, list(self))
+        return "{}({!r})".format(type(self).__name__, list(self))
 
 
 class NdimSizeLenMixin:
@@ -523,7 +525,7 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array[key]
 
     def __repr__(self: Any) -> str:
-        return "%s(array=%r)" % (type(self).__name__, self.array)
+        return "{}(array={!r})".format(type(self).__name__, self.array)
 
 
 class ReprObject:
@@ -657,6 +659,30 @@ class HiddenKeyDict(MutableMapping[K, V]):
     def __len__(self) -> int:
         num_hidden = len(self._hidden_keys & self._data.keys())
         return len(self._data) - num_hidden
+
+
+def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
+    """
+    Resolves a supplied list containing an ellispsis representing other items, to
+    a generator with the 'realized' list of all items
+    """
+    if ... in dims_supplied:
+        if len(set(dims_all)) != len(dims_all):
+            raise ValueError("Cannot use ellipsis with repeated dims")
+        if len([d for d in dims_supplied if d == ...]) > 1:
+            raise ValueError("More than one ellipsis supplied")
+        other_dims = [d for d in dims_all if d not in dims_supplied]
+        for d in dims_supplied:
+            if d == ...:
+                yield from other_dims
+            else:
+                yield d
+    else:
+        if set(dims_supplied) ^ set(dims_all):
+            raise ValueError(
+                f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
+            )
+        yield from dims_supplied
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:

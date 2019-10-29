@@ -1,7 +1,8 @@
 import contextlib
+import io
 import threading
 import warnings
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -9,11 +10,13 @@ from .locks import acquire
 from .lru_cache import LRUCache
 
 # Global cache for storing open files.
-FILE_CACHE = LRUCache(OPTIONS["file_cache_maxsize"], on_evict=lambda k, v: v.close())
+FILE_CACHE: LRUCache[str, io.IOBase] = LRUCache(
+    maxsize=cast(int, OPTIONS["file_cache_maxsize"]), on_evict=lambda k, v: v.close()
+)
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
 
-REF_COUNTS = {}  # type: Dict[Any, int]
+REF_COUNTS: Dict[Any, int] = {}
 
 _DEFAULT_MODE = utils.ReprObject("<unused>")
 
@@ -28,7 +31,7 @@ class FileManager:
 
     def acquire(self, needs_lock=True):
         """Acquire the file object from this manager."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def acquire_context(self, needs_lock=True):
         """Context manager for acquiring a file. Yields a file object.
@@ -37,11 +40,11 @@ class FileManager:
         (i.e., removes it from any cache) if an exception is raised from the
         context. It *does not* automatically close the file.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def close(self, needs_lock=True):
         """Close the file object associated with this manager, if needed."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class CachingFileManager(FileManager):
@@ -80,7 +83,7 @@ class CachingFileManager(FileManager):
         kwargs=None,
         lock=None,
         cache=None,
-        ref_counts=None
+        ref_counts=None,
     ):
         """Initialize a FileManager.
 
@@ -264,7 +267,7 @@ class CachingFileManager(FileManager):
     def __repr__(self):
         args_string = ", ".join(map(repr, self._args))
         if self._mode is not _DEFAULT_MODE:
-            args_string += ", mode={!r}".format(self._mode)
+            args_string += f", mode={self._mode!r}"
         return "{}({!r}, {}, kwargs={})".format(
             type(self).__name__, self._opener, args_string, self._kwargs
         )

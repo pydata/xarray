@@ -1,6 +1,6 @@
 """Functions for converting to and from xarray objects
 """
-from collections import Counter, OrderedDict
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -118,7 +118,7 @@ def to_cdms2(dataarray, copy=True):
     # Curvilinear and unstructured grids
     if dataarray.name not in dataarray.coords:
 
-        cdms2_axes = OrderedDict()
+        cdms2_axes = {}
         for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
 
             coord_array = dataarray.coords[coord_name].to_cdms2()
@@ -229,16 +229,14 @@ def _iris_cell_methods_to_str(cell_methods_obj):
     """
     cell_methods = []
     for cell_method in cell_methods_obj:
-        names = "".join(["{}: ".format(n) for n in cell_method.coord_names])
+        names = "".join([f"{n}: " for n in cell_method.coord_names])
         intervals = " ".join(
-            ["interval: {}".format(interval) for interval in cell_method.intervals]
+            [f"interval: {interval}" for interval in cell_method.intervals]
         )
-        comments = " ".join(
-            ["comment: {}".format(comment) for comment in cell_method.comments]
-        )
+        comments = " ".join([f"comment: {comment}" for comment in cell_method.comments])
         extra = " ".join([intervals, comments]).strip()
         if extra:
-            extra = " ({})".format(extra)
+            extra = f" ({extra})"
         cell_methods.append(names + cell_method.method + extra)
     return " ".join(cell_methods)
 
@@ -267,13 +265,13 @@ def from_iris(cube):
             dim_coord = cube.coord(dim_coords=True, dimensions=(i,))
             dims.append(_name(dim_coord))
         except iris.exceptions.CoordinateNotFoundError:
-            dims.append("dim_{}".format(i))
+            dims.append(f"dim_{i}")
 
     if len(set(dims)) != len(dims):
         duplicates = [k for k, v in Counter(dims).items() if v > 1]
-        raise ValueError("Duplicate coordinate name {}.".format(duplicates))
+        raise ValueError(f"Duplicate coordinate name {duplicates}.")
 
-    coords = OrderedDict()
+    coords = {}
 
     for coord in cube.coords():
         coord_attrs = _iris_obj_to_attrs(coord)

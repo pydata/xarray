@@ -1,13 +1,10 @@
-import warnings
-from collections import OrderedDict
-from distutils.version import LooseVersion
 from io import BytesIO
 
 import numpy as np
 
 from .. import Variable
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenDict
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
@@ -23,9 +20,7 @@ def _decode_string(s):
 def _decode_attrs(d):
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
-    return OrderedDict(
-        (k, v if k == "_FillValue" else _decode_string(v)) for (k, v) in d.items()
-    )
+    return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
 
 
 class ScipyArrayWrapper(BackendArray):
@@ -113,18 +108,6 @@ class ScipyDataStore(WritableCFDataStore):
     def __init__(
         self, filename_or_obj, mode="r", format=None, group=None, mmap=None, lock=None
     ):
-        import scipy
-        import scipy.io
-
-        if mode != "r" and scipy.__version__ < LooseVersion("0.13"):  # pragma: no cover
-            warnings.warn(
-                "scipy %s detected; "
-                "the minimal recommended version is 0.13. "
-                "Older version of this library do not reliably "
-                "read and write files." % scipy.__version__,
-                ImportWarning,
-            )
-
         if group is not None:
             raise ValueError(
                 "cannot save to a group with the " "scipy.io.netcdf backend"
@@ -170,7 +153,7 @@ class ScipyDataStore(WritableCFDataStore):
         )
 
     def get_variables(self):
-        return FrozenOrderedDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 

@@ -3,34 +3,43 @@ channels:
   - conda-forge
 dependencies:
   - python=3.7
-  - cftime
-  - nc-time-axis
+  - black
+  - boto3
+  - bottleneck
+  - cartopy
+  - cdms2
+  - cfgrib
+  - cftime<1.0.4  # FIXME need 1.0.5 (not released yet); 1.0.4 is broken
+  - coveralls
   - dask
   - distributed
-  - h5py
+  - flake8
   - h5netcdf
+  - h5py
+  - hdf5
+  - hypothesis
+  - iris
+  - lxml    # Optional dep of pydap
   - matplotlib
+  - mypy=0.730  # Must match .pre-commit-config.yaml
+  - nc-time-axis
   - netcdf4
+  - numba
+  - numpy<1.18  # FIXME https://github.com/pydata/xarray/issues/3409
+  - pandas
+  - pint
+  - pip
+  - pseudonetcdf<3.1  # FIXME https://github.com/pydata/xarray/issues/3409
+  - pydap
+  - pynio
   - pytest
   - pytest-cov
   - pytest-env
-  - coveralls
-  - flake8
-  - mypy==0.720  # Must match .pre-commit-config.yaml
-  - numpy>=1.12
-  - pandas>=0.19
-  - pip
+  - rasterio
   - scipy
   - seaborn
   - sparse
   - toolz
-  - rasterio
-  - boto3
-  - bottleneck
   - zarr
-  - pseudonetcdf>=3.0.1
-  - cfgrib>=0.9.2
-  - lxml
-  - pydap
   - pip:
     - numbagg

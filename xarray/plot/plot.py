@@ -83,7 +83,9 @@ def _infer_line_data(darray, x, y, hue):
                     )
 
             else:
-                yplt = darray.transpose(xname, huename)
+                xdim, = darray[xname].dims
+                huedim, = darray[huename].dims
+                yplt = darray.transpose(xdim, huedim)
 
         else:
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
@@ -100,7 +102,9 @@ def _infer_line_data(darray, x, y, hue):
                     )
 
             else:
-                xplt = darray.transpose(yname, huename)
+                ydim, = darray[yname].dims
+                huedim, = darray[huename].dims
+                xplt = darray.transpose(ydim, huedim)
 
         huelabel = label_from_attrs(darray[huename])
         hueplt = darray[huename]
@@ -120,7 +124,7 @@ def plot(
     hue=None,
     rtol=0.01,
     subplot_kws=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Default plot of DataArray using matplotlib.pyplot.
@@ -222,7 +226,7 @@ def line(
     ylim=None,
     add_legend=True,
     _labels=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Line plot of DataArray index against values
@@ -400,7 +404,7 @@ def hist(
     yticks=None,
     xlim=None,
     ylim=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Histogram of DataArray
@@ -580,7 +584,7 @@ def _plot2d(plotfunc):
     """
 
     # Build on the original docstring
-    plotfunc.__doc__ = "%s\n%s" % (plotfunc.__doc__, commondoc)
+    plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
     @functools.wraps(plotfunc)
     def newplotfunc(
@@ -617,7 +621,7 @@ def _plot2d(plotfunc):
         xlim=None,
         ylim=None,
         norm=None,
-        **kwargs
+        **kwargs,
     ):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
@@ -730,7 +734,7 @@ def _plot2d(plotfunc):
             vmin=cmap_params["vmin"],
             vmax=cmap_params["vmax"],
             norm=cmap_params["norm"],
-            **kwargs
+            **kwargs,
         )
 
         # Label the plot with metadata
@@ -804,7 +808,7 @@ def _plot2d(plotfunc):
         xlim=None,
         ylim=None,
         norm=None,
-        **kwargs
+        **kwargs,
     ):
         """
         The method should have the same signature as the function.

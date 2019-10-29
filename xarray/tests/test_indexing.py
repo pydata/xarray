@@ -21,24 +21,24 @@ class TestIndexers:
     def test_expanded_indexer(self):
         x = np.random.randn(10, 11, 12, 13, 14)
         y = np.arange(5)
-        I = ReturnItem()  # noqa
+        arr = ReturnItem()
         for i in [
-            I[:],
-            I[...],
-            I[0, :, 10],
-            I[..., 10],
-            I[:5, ..., 0],
-            I[..., 0, :],
-            I[y],
-            I[y, y],
-            I[..., y, y],
-            I[..., 0, 1, 2, 3, 4],
+            arr[:],
+            arr[...],
+            arr[0, :, 10],
+            arr[..., 10],
+            arr[:5, ..., 0],
+            arr[..., 0, :],
+            arr[y],
+            arr[y, y],
+            arr[..., y, y],
+            arr[..., 0, 1, 2, 3, 4],
         ]:
             j = indexing.expanded_indexer(i, x.ndim)
             assert_array_equal(x[i], x[j])
             assert_array_equal(self.set_to_zero(x, i), self.set_to_zero(x, j))
         with raises_regex(IndexError, "too many indices"):
-            indexing.expanded_indexer(I[1, 2, 3], 2)
+            indexing.expanded_indexer(arr[1, 2, 3], 2)
 
     def test_asarray_tuplesafe(self):
         res = indexing._asarray_tuplesafe(("a", 1))
@@ -83,8 +83,7 @@ class TestIndexers:
             indexing.convert_label_indexer(mindex, 0)
         with pytest.raises(ValueError):
             indexing.convert_label_indexer(index, {"three": 0})
-        with pytest.raises((KeyError, IndexError)):
-            # pandas 0.21 changed this from KeyError to IndexError
+        with pytest.raises(IndexError):
             indexing.convert_label_indexer(mindex, (slice(None), 1, "no_level"))
 
     def test_convert_unsorted_datetime_index_raises(self):
@@ -169,14 +168,13 @@ class TestIndexers:
         )
 
     def test_read_only_view(self):
-        from collections import OrderedDict
 
         arr = DataArray(
             np.random.rand(3, 3),
             coords={"x": np.arange(3), "y": np.arange(3)},
             dims=("x", "y"),
         )  # Create a 2D DataArray
-        arr = arr.expand_dims(OrderedDict([("z", 3)]), -1)  # New dimension 'z'
+        arr = arr.expand_dims({"z": 3}, -1)  # New dimension 'z'
         arr["z"] = np.arange(3)  # New coords to dimension 'z'
         with pytest.raises(ValueError, match="Do you want to .copy()"):
             arr.loc[0, 0, 0] = 999
@@ -184,27 +182,27 @@ class TestIndexers:
 
 class TestLazyArray:
     def test_slice_slice(self):
-        I = ReturnItem()  # noqa: E741  # allow ambiguous name
+        arr = ReturnItem()
         for size in [100, 99]:
             # We test even/odd size cases
             x = np.arange(size)
             slices = [
-                I[:3],
-                I[:4],
-                I[2:4],
-                I[:1],
-                I[:-1],
-                I[5:-1],
-                I[-5:-1],
-                I[::-1],
-                I[5::-1],
-                I[:3:-1],
-                I[:30:-1],
-                I[10:4:],
-                I[::4],
-                I[4:4:4],
-                I[:4:-4],
-                I[::-2],
+                arr[:3],
+                arr[:4],
+                arr[2:4],
+                arr[:1],
+                arr[:-1],
+                arr[5:-1],
+                arr[-5:-1],
+                arr[::-1],
+                arr[5::-1],
+                arr[:3:-1],
+                arr[:30:-1],
+                arr[10:4:],
+                arr[::4],
+                arr[4:4:4],
+                arr[:4:-4],
+                arr[::-2],
             ]
             for i in slices:
                 for j in slices:
@@ -219,9 +217,9 @@ class TestLazyArray:
         v = Variable(["i", "j", "k"], original)
         lazy = indexing.LazilyOuterIndexedArray(x)
         v_lazy = Variable(["i", "j", "k"], lazy)
-        I = ReturnItem()  # noqa: E741  # allow ambiguous name
+        arr = ReturnItem()
         # test orthogonally applied indexers
-        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
+        indexers = [arr[:], 0, -2, arr[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
         for i in indexers:
             for j in indexers:
                 for k in indexers:
@@ -252,12 +250,12 @@ class TestLazyArray:
         # test sequentially applied indexers
         indexers = [
             (3, 2),
-            (I[:], 0),
-            (I[:2], -1),
-            (I[:4], [0]),
+            (arr[:], 0),
+            (arr[:2], -1),
+            (arr[:4], [0]),
             ([4, 5], 0),
             ([0, 1, 2], [0, 1]),
-            ([0, 3, 5], I[:2]),
+            ([0, 3, 5], arr[:2]),
         ]
         for i, j in indexers:
             expected = v[i][j]
@@ -288,7 +286,7 @@ class TestLazyArray:
         v_eager = Variable(["i", "j", "k"], x)
         lazy = indexing.LazilyOuterIndexedArray(x)
         v_lazy = Variable(["i", "j", "k"], lazy)
-        I = ReturnItem()  # noqa: E741  # allow ambiguous name
+        arr = ReturnItem()
 
         def check_indexing(v_eager, v_lazy, indexers):
             for indexer in indexers:
@@ -307,7 +305,7 @@ class TestLazyArray:
                 v_lazy = actual
 
         # test orthogonal indexing
-        indexers = [(I[:], 0, 1), (Variable("i", [0, 1]),)]
+        indexers = [(arr[:], 0, 1), (Variable("i", [0, 1]),)]
         check_indexing(v_eager, v_lazy, indexers)
 
         # vectorized indexing
@@ -637,13 +635,13 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized():
 
     original = np.random.rand(10, 20, 30)
     v = Variable(["i", "j", "k"], original)
-    I = ReturnItem()  # noqa: E741  # allow ambiguous name
+    arr = ReturnItem()
     # test orthogonally applied indexers
     indexers = [
-        I[:],
+        arr[:],
         0,
         -2,
-        I[:3],
+        arr[:3],
         np.array([0, 1, 2, 3]),
         np.array([0]),
         np.arange(10) < 5,

@@ -77,7 +77,7 @@ a customized coordinate, but xarray facilitates this via the
     x_bins = [0,25,50]
     ds.groupby_bins('x', x_bins).groups
 
-The binning is implemented via `pandas.cut`__, whose documentation details how
+The binning is implemented via :func:`pandas.cut`, whose documentation details how
 the bins are assigned. As seen in the example above, by default, the bins are
 labeled with strings using set notation to precisely identify the bin limits. To
 override this behavior, you can specify the bin labels explicitly. Here we
@@ -87,8 +87,6 @@ choose `float` labels which identify the bin centers:
 
     x_bin_labels = [12.5,37.5]
     ds.groupby_bins('x', x_bins, labels=x_bin_labels).groups
-
-__ http://pandas.pydata.org/pandas-docs/version/0.17.1/generated/pandas.cut.html
 
 
 Apply
@@ -118,7 +116,13 @@ dimensions *other than* the provided one:
 
 .. ipython:: python
 
-    ds.groupby('x').std(xr.ALL_DIMS)
+    ds.groupby('x').std(...)
+
+.. note::
+
+    We use an ellipsis (`...`) here to indicate we want to reduce over all
+    other dimensions  
+
 
 First and last
 ~~~~~~~~~~~~~~
@@ -129,7 +133,7 @@ values for group along the grouped dimension:
 
 .. ipython:: python
 
-    ds.groupby('letters').first(xr.ALL_DIMS)
+    ds.groupby('letters').first(...)
 
 By default, they skip missing values (control this with ``skipna``).
 
@@ -144,7 +148,7 @@ coordinates. For example:
 
 .. ipython:: python
 
-    alt = arr.groupby('letters').mean(xr.ALL_DIMS)
+    alt = arr.groupby('letters').mean(...)
     alt
     ds.groupby('letters') - alt
 
@@ -197,7 +201,7 @@ __ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimen
                 'lat': (['ny','nx'], [[10,10],[20,20]] ),},
         dims=['ny','nx'])
     da
-    da.groupby('lon').sum(xr.ALL_DIMS)
+    da.groupby('lon').sum(...)
     da.groupby('lon').apply(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large
@@ -215,4 +219,4 @@ applying your function, and then unstacking the result:
 .. ipython:: python
 
    stacked = da.stack(gridcell=['ny', 'nx'])
-   stacked.groupby('gridcell').sum().unstack('gridcell')
+   stacked.groupby('gridcell').sum(...).unstack('gridcell')

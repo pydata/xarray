@@ -1,5 +1,5 @@
 import warnings
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -474,7 +474,7 @@ def decode_cf_variables(
     if decode_times:
         _update_bounds_attributes(variables)
 
-    new_vars = OrderedDict()
+    new_vars = {}
     for k, v in variables.items():
         if k in drop_variables:
             continue
@@ -504,7 +504,7 @@ def decode_cf_variables(
                     coord_names.update(var_coord_names)
 
     if decode_coords and "coordinates" in attributes:
-        attributes = OrderedDict(attributes)
+        attributes = dict(attributes)
         coord_names.update(attributes.pop("coordinates").split())
 
     return new_vars, attributes, coord_names
@@ -662,7 +662,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
                 global_coordinates.discard(coord_name)
 
-    variables = OrderedDict((k, v.copy(deep=False)) for k, v in variables.items())
+    variables = {k: v.copy(deep=False) for k, v in variables.items()}
 
     # These coordinates are saved according to CF conventions
     for var_name, coord_names in variable_coordinates.items():
@@ -681,7 +681,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     # Reference discussion:
     # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/057771.html
     if global_coordinates:
-        attributes = OrderedDict(attributes)
+        attributes = dict(attributes)
         if "coordinates" in attributes:
             raise ValueError(
                 "cannot serialize coordinates because the global "
@@ -745,15 +745,13 @@ def cf_encoder(variables, attributes):
     # add encoding for time bounds variables if present.
     _update_bounds_encoding(variables)
 
-    new_vars = OrderedDict(
-        (k, encode_cf_variable(v, name=k)) for k, v in variables.items()
-    )
+    new_vars = {k: encode_cf_variable(v, name=k) for k, v in variables.items()}
 
     # Remove attrs from bounds variables (issue #2921)
     for var in new_vars.values():
         bounds = var.attrs["bounds"] if "bounds" in var.attrs else None
         if bounds and bounds in new_vars:
-            # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries # noqa
+            # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries
             for attr in [
                 "units",
                 "standard_name",

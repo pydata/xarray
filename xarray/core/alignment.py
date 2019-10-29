@@ -1,7 +1,6 @@
 import functools
 import operator
-import warnings
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Dict, Hashable, Mapping, Optional, Tuple, Union
 
@@ -14,8 +13,8 @@ from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray  # noqa: F401
-    from .dataset import Dataset  # noqa: F401
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 def _get_joiner(join):
@@ -50,7 +49,7 @@ def _override_indexes(objects, all_indexes, exclude):
 
     objects = list(objects)
     for idx, obj in enumerate(objects[1:]):
-        new_indexes = dict()
+        new_indexes = {}
         for dim in obj.dims:
             if dim not in exclude:
                 new_indexes[dim] = all_indexes[dim][0]
@@ -65,7 +64,7 @@ def align(
     copy=True,
     indexes=None,
     exclude=frozenset(),
-    fill_value=dtypes.NA
+    fill_value=dtypes.NA,
 ):
     """
     Given any number of Dataset and/or DataArray objects, returns new
@@ -117,6 +116,136 @@ def align(
     ValueError
         If any dimensions without labels on the arguments have different sizes,
         or a different size than the size of the aligned dimension labels.
+
+    Examples
+    --------
+
+    >>> import xarray as xr
+    >>> x = xr.DataArray([[25, 35], [10, 24]], dims=('lat', 'lon'),
+    ...              coords={'lat': [35., 40.], 'lon': [100., 120.]})
+    >>> y = xr.DataArray([[20, 5], [7, 13]], dims=('lat', 'lon'),
+    ...              coords={'lat': [35., 42.], 'lon': [100., 120.]})
+
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[25, 35],
+           [10, 24]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> y
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[20,  5],
+           [ 7, 13]])
+    Coordinates:
+    * lat      (lat) float64 35.0 42.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y)
+    >>> a
+    <xarray.DataArray (lat: 1, lon: 2)>
+    array([[25, 35]])
+    Coordinates:
+    * lat      (lat) float64 35.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 1, lon: 2)>
+    array([[20,  5]])
+    Coordinates:
+    * lat      (lat) float64 35.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='outer')
+    >>> a
+    <xarray.DataArray (lat: 3, lon: 2)>
+    array([[25., 35.],
+           [10., 24.],
+           [nan, nan]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 3, lon: 2)>
+    array([[20.,  5.],
+           [nan, nan],
+           [ 7., 13.]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='outer', fill_value=-999)
+    >>> a
+    <xarray.DataArray (lat: 3, lon: 2)>
+    array([[  25,   35],
+           [  10,   24],
+           [-999, -999]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 3, lon: 2)>
+    array([[  20,    5],
+           [-999, -999],
+           [   7,   13]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0 42.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='left')
+    >>> a
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[25, 35],
+           [10, 24]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[20.,  5.],
+           [nan, nan]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='right')
+    >>> a
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[25., 35.],
+           [nan, nan]])
+    Coordinates:
+    * lat      (lat) float64 35.0 42.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[20,  5],
+           [ 7, 13]])
+    Coordinates:
+    * lat      (lat) float64 35.0 42.0
+    * lon      (lon) float64 100.0 120.0
+
+    >>> a, b = xr.align(x, y, join='exact')
+    Traceback (most recent call last):
+    ...
+        "indexes along dimension {!r} are not equal".format(dim)
+    ValueError: indexes along dimension 'lat' are not equal
+
+    >>> a, b = xr.align(x, y, join='override')
+    >>> a
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[25, 35],
+           [10, 24]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+    >>> b
+    <xarray.DataArray (lat: 2, lon: 2)>
+    array([[20,  5],
+           [ 7, 13]])
+    Coordinates:
+    * lat      (lat) float64 35.0 40.0
+    * lon      (lon) float64 100.0 120.0
+
     """
     if indexes is None:
         indexes = {}
@@ -139,7 +268,7 @@ def align(
                     all_indexes[dim].append(index)
 
     if join == "override":
-        objects = _override_indexes(list(objects), all_indexes, exclude)
+        objects = _override_indexes(objects, all_indexes, exclude)
 
     # We don't reindex over dimensions with all equal indexes for two reasons:
     # - It's faster for the usual case (already aligned objects).
@@ -165,9 +294,7 @@ def align(
                 or dim in unlabeled_dim_sizes
             ):
                 if join == "exact":
-                    raise ValueError(
-                        "indexes along dimension {!r} are not equal".format(dim)
-                    )
+                    raise ValueError(f"indexes along dimension {dim!r} are not equal")
                 index = joiner(matching_indexes)
                 joined_indexes[dim] = index
             else:
@@ -221,8 +348,8 @@ def deep_align(
 
     This function is not public API.
     """
-    from .dataarray import DataArray  # noqa: F811
-    from .dataset import Dataset  # noqa: F811
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     if indexes is None:
         indexes = {}
@@ -236,26 +363,33 @@ def deep_align(
     targets = []
     no_key = object()
     not_replaced = object()
-    for n, variables in enumerate(objects):
+    for position, variables in enumerate(objects):
         if is_alignable(variables):
-            positions.append(n)
+            positions.append(position)
             keys.append(no_key)
             targets.append(variables)
             out.append(not_replaced)
         elif is_dict_like(variables):
+            current_out = {}
             for k, v in variables.items():
                 if is_alignable(v) and k not in indexes:
                     # Skip variables in indexes for alignment, because these
                     # should to be overwritten instead:
                     # https://github.com/pydata/xarray/issues/725
-                    positions.append(n)
+                    # https://github.com/pydata/xarray/issues/3377
+                    # TODO(shoyer): doing this here feels super-hacky -- can we
+                    # move it explicitly into merge instead?
+                    positions.append(position)
                     keys.append(k)
                     targets.append(v)
-            out.append(OrderedDict(variables))
+                    current_out[k] = not_replaced
+                else:
+                    current_out[k] = v
+            out.append(current_out)
         elif raise_on_invalid:
             raise ValueError(
                 "object to align is neither an xarray.Dataset, "
-                "an xarray.DataArray nor a dictionary: %r" % variables
+                "an xarray.DataArray nor a dictionary: {!r}".format(variables)
             )
         else:
             out.append(variables)
@@ -266,7 +400,7 @@ def deep_align(
         copy=copy,
         indexes=indexes,
         exclude=exclude,
-        fill_value=fill_value
+        fill_value=fill_value,
     )
 
     for position, key, aligned_obj in zip(positions, keys, aligned):
@@ -276,13 +410,16 @@ def deep_align(
             out[position][key] = aligned_obj
 
     # something went wrong: we should have replaced all sentinel values
-    assert all(arg is not not_replaced for arg in out)
+    for arg in out:
+        assert arg is not not_replaced
+        if is_dict_like(arg):
+            assert all(value is not not_replaced for value in arg.values())
 
     return out
 
 
 def reindex_like_indexers(
-    target: Union["DataArray", "Dataset"], other: Union["DataArray", "Dataset"]
+    target: "Union[DataArray, Dataset]", other: "Union[DataArray, Dataset]"
 ) -> Dict[Hashable, pd.Index]:
     """Extract indexers to align target with other.
 
@@ -329,7 +466,7 @@ def reindex_variables(
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
-) -> "Tuple[OrderedDict[Any, Variable], OrderedDict[Any, pd.Index]]":
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -369,32 +506,27 @@ def reindex_variables(
 
     Returns
     -------
-    reindexed : OrderedDict
+    reindexed : dict
         Dict of reindexed variables.
-    new_indexes : OrderedDict
+    new_indexes : dict
         Dict of indexes associated with the reindexed variables.
     """
-    from .dataarray import DataArray  # noqa: F811
+    from .dataarray import DataArray
 
     # create variables for the new dataset
-    reindexed = OrderedDict()  # type: OrderedDict[Any, Variable]
+    reindexed: Dict[Hashable, Variable] = {}
 
     # build up indexers for assignment along each dimension
     int_indexers = {}
-    new_indexes = OrderedDict(indexes)
+    new_indexes = dict(indexes)
     masked_dims = set()
     unchanged_dims = set()
 
     for dim, indexer in indexers.items():
         if isinstance(indexer, DataArray) and indexer.dims != (dim,):
-            warnings.warn(
+            raise ValueError(
                 "Indexer has dimensions {:s} that are different "
-                "from that to be indexed along {:s}. "
-                "This will behave differently in the future.".format(
-                    str(indexer.dims), dim
-                ),
-                FutureWarning,
-                stacklevel=3,
+                "from that to be indexed along {:s}".format(str(indexer.dims), dim)
             )
 
         target = new_indexes[dim] = utils.safe_cast_to_index(indexers[dim])
@@ -421,7 +553,7 @@ def reindex_variables(
 
         if dim in variables:
             var = variables[dim]
-            args = (var.attrs, var.encoding)  # type: tuple
+            args: tuple = (var.attrs, var.encoding)
         else:
             args = ()
         reindexed[dim] = IndexVariable((dim,), target, *args)
@@ -462,8 +594,8 @@ def reindex_variables(
 
 def _get_broadcast_dims_map_common_coords(args, exclude):
 
-    common_coords = OrderedDict()
-    dims_map = OrderedDict()
+    common_coords = {}
+    dims_map = {}
     for arg in args:
         for dim in arg.dims:
             if dim not in common_coords and dim not in exclude:
@@ -476,8 +608,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 
 def _broadcast_helper(arg, exclude, dims_map, common_coords):
 
-    from .dataarray import DataArray  # noqa: F811
-    from .dataset import Dataset  # noqa: F811
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     def _set_dims(var):
         # Add excluded dims to a copy of dims_map
@@ -491,13 +623,13 @@ def _broadcast_helper(arg, exclude, dims_map, common_coords):
 
     def _broadcast_array(array):
         data = _set_dims(array.variable)
-        coords = OrderedDict(array.coords)
+        coords = dict(array.coords)
         coords.update(common_coords)
         return DataArray(data, coords, data.dims, name=array.name, attrs=array.attrs)
 
     def _broadcast_dataset(ds):
-        data_vars = OrderedDict((k, _set_dims(ds.variables[k])) for k in ds.data_vars)
-        coords = OrderedDict(ds.coords)
+        data_vars = {k: _set_dims(ds.variables[k]) for k in ds.data_vars}
+        coords = dict(ds.coords)
         coords.update(common_coords)
         return Dataset(data_vars, coords, ds.attrs)
 
@@ -592,14 +724,3 @@ def broadcast(*args, exclude=None):
         result.append(_broadcast_helper(arg, exclude, dims_map, common_coords))
 
     return tuple(result)
-
-
-def broadcast_arrays(*args):
-    import warnings
-
-    warnings.warn(
-        "xarray.broadcast_arrays is deprecated: use " "xarray.broadcast instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return broadcast(*args)

@@ -7,16 +7,11 @@ from itertools import zip_longest
 
 import numpy as np
 import pandas as pd
+from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
 from .pycompat import dask_array_type, sparse_array_type
-
-try:
-    from pandas.errors import OutOfBoundsDatetime
-except ImportError:
-    # pandas < 0.20
-    from pandas.tslib import OutOfBoundsDatetime
 
 
 def pretty_print(x, numchars):
@@ -116,7 +111,7 @@ def format_timestamp(t):
         if time_str == "00:00:00":
             return date_str
         else:
-            return "{}T{}".format(date_str, time_str)
+            return f"{date_str}T{time_str}"
 
 
 def format_timedelta(t, timedelta_format=None):
@@ -145,7 +140,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
     elif isinstance(x, (float, np.float)):
-        return "{:.4}".format(x)
+        return f"{x:.4}"
     else:
         return str(x)
 
@@ -233,11 +228,11 @@ def inline_dask_repr(array):
             meta_repr = _KNOWN_TYPE_REPRS[type(meta)]
         else:
             meta_repr = type(meta).__name__
-        meta_string = ", meta={}".format(meta_repr)
+        meta_string = f", meta={meta_repr}"
     else:
         meta_string = ""
 
-    return "dask.array<chunksize={}{}>".format(chunksize, meta_string)
+    return f"dask.array<chunksize={chunksize}{meta_string}>"
 
 
 def inline_sparse_repr(array):
@@ -267,12 +262,12 @@ def summarize_variable(name, var, col_width, marker=" ", max_width=None):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
     if max_width is None:
         max_width = OPTIONS["display_width"]
-    first_col = pretty_print("  {} {} ".format(marker, name), col_width)
+    first_col = pretty_print(f"  {marker} {name} ", col_width)
     if var.dims:
         dims_str = "({}) ".format(", ".join(map(str, var.dims)))
     else:
         dims_str = ""
-    front_str = "{}{}{} ".format(first_col, dims_str, var.dtype)
+    front_str = f"{first_col}{dims_str}{var.dtype} "
 
     values_width = max_width - len(front_str)
     values_str = inline_variable_array_repr(var, values_width)
@@ -281,7 +276,7 @@ def summarize_variable(name, var, col_width, marker=" ", max_width=None):
 
 
 def _summarize_coord_multiindex(coord, col_width, marker):
-    first_col = pretty_print("  {} {} ".format(marker, coord.name), col_width)
+    first_col = pretty_print(f"  {marker} {coord.name} ", col_width)
     return "{}({}) MultiIndex".format(first_col, str(coord.dims[0]))
 
 
@@ -318,13 +313,13 @@ def summarize_coord(name, var, col_width):
 def summarize_attr(key, value, col_width=None):
     """Summary for __repr__ - use ``X.attrs[key]`` for full value."""
     # Indent key and add ':', then right-pad if col_width is not None
-    k_str = "    {}:".format(key)
+    k_str = f"    {key}:"
     if col_width is not None:
         k_str = pretty_print(k_str, col_width)
     # Replace tabs and newlines, so we print on one line in known width
     v_str = str(value).replace("\t", "\\t").replace("\n", "\\n")
     # Finally, truncate to the desired display width
-    return maybe_truncate("{} {}".format(k_str, v_str), OPTIONS["display_width"])
+    return maybe_truncate(f"{k_str} {v_str}", OPTIONS["display_width"])
 
 
 EMPTY_REPR = "    *empty*"
@@ -356,7 +351,7 @@ def _calculate_col_width(col_items):
 def _mapping_repr(mapping, title, summarizer, col_width=None):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
-    summary = ["{}:".format(title)]
+    summary = [f"{title}:"]
     if mapping:
         summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
@@ -385,19 +380,19 @@ def coords_repr(coords, col_width=None):
 def indexes_repr(indexes):
     summary = []
     for k, v in indexes.items():
-        summary.append(wrap_indent(repr(v), "{}: ".format(k)))
+        summary.append(wrap_indent(repr(v), f"{k}: "))
     return "\n".join(summary)
 
 
 def dim_summary(obj):
-    elements = ["{}: {}".format(k, v) for k, v in obj.sizes.items()]
+    elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
     return ", ".join(elements)
 
 
 def unindexed_dims_repr(dims, coords):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
-        dims_str = ", ".join("{}".format(d) for d in unindexed_dims)
+        dims_str = ", ".join(f"{d}" for d in unindexed_dims)
         return "Dimensions without coordinates: " + dims_str
     else:
         return None
@@ -443,13 +438,13 @@ def short_data_repr(array):
         return short_numpy_repr(array)
     else:
         # internal xarray array type
-        return "[{} values with dtype={}]".format(array.size, array.dtype)
+        return f"[{array.size} values with dtype={array.dtype}]"
 
 
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, "name") and arr.name is not None:
-        name_str = "{!r} ".format(arr.name)
+        name_str = f"{arr.name!r} "
     else:
         name_str = ""
 
@@ -508,7 +503,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
-            header = "{} only on the {} object:".format(title, ab_side)
+            header = f"{title} only on the {ab_side} object:"
             return [header] + extra_repr
         else:
             return []

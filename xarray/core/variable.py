@@ -1,9 +1,9 @@
 import functools
 import itertools
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Hashable, Mapping, Union
+from typing import Any, Dict, Hashable, Mapping, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -25,6 +25,7 @@ from .utils import (
     OrderedSet,
     decode_numpy_dict_values,
     either_dict_or_kwargs,
+    infix_dims,
     ensure_us_time_resolution,
 )
 
@@ -40,6 +41,18 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 ) + dask_array_type
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
+
+VariableType = TypeVar("VariableType", bound="Variable")
+"""Type annotation to be used when methods of Variable return self or a copy of self.
+When called from an instance of a subclass, e.g. IndexVariable, mypy identifies the
+output as an instance of the subclass.
+
+Usage::
+
+   class Variable:
+       def f(self: VariableType, ...) -> VariableType:
+           ...
+"""
 
 
 class MissingDimensionsError(ValueError):
@@ -101,7 +114,7 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
     elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
         obj = Variable(obj.name, obj)
     elif isinstance(obj, (set, dict)):
-        raise TypeError("variable %r has invalid type %r" % (name, type(obj)))
+        raise TypeError("variable {!r} has invalid type {!r}".format(name, type(obj)))
     elif name is not None:
         data = as_compatible_data(obj)
         if data.ndim != 1:
@@ -646,7 +659,7 @@ class Variable(
         try:
             variables = _broadcast_compat_variables(*variables)
         except ValueError:
-            raise IndexError("Dimensions of indexers mismatch: {}".format(key))
+            raise IndexError(f"Dimensions of indexers mismatch: {key}")
 
         out_key = [variable.data for variable in variables]
         out_dims = tuple(out_dims_set)
@@ -663,8 +676,8 @@ class Variable(
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
-    def __getitem__(self, key):
-        """Return a new Array object whose contents are consistent with
+    def __getitem__(self: VariableType, key) -> VariableType:
+        """Return a new Variable object whose contents are consistent with
         getting the provided key from the underlying data.
 
         NB. __getitem__ and __setitem__ implement xarray-style indexing,
@@ -682,7 +695,7 @@ class Variable(
             data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
-    def _finalize_indexing_result(self, dims, data):
+    def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
         """Used by IndexVariable to return IndexVariable objects when possible.
         """
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
@@ -756,16 +769,16 @@ class Variable(
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> "OrderedDict[Any, Any]":
+    def attrs(self) -> Dict[Hashable, Any]:
         """Dictionary of local attributes on this variable.
         """
         if self._attrs is None:
-            self._attrs = OrderedDict()
+            self._attrs = {}
         return self._attrs
 
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
-        self._attrs = OrderedDict(value)
+        self._attrs = dict(value)
 
     @property
     def encoding(self):
@@ -957,7 +970,11 @@ class Variable(
 
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
-    def isel(self, indexers=None, drop=False, **indexers_kwargs):
+    def isel(
+        self: VariableType,
+        indexers: Mapping[Hashable, Any] = None,
+        **indexers_kwargs: Any,
+    ) -> VariableType:
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -976,15 +993,12 @@ class Variable(
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
-        invalid = [k for k in indexers if k not in self.dims]
+        invalid = indexers.keys() - set(self.dims)
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        key = [slice(None)] * self.ndim
-        for i, dim in enumerate(self.dims):
-            if dim in indexers:
-                key[i] = indexers[dim]
-        return self[tuple(key)]
+        key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
+        return self[key]
 
     def squeeze(self, dim=None):
         """Return a new object with squeezed data.
@@ -1215,6 +1229,7 @@ class Variable(
         """
         if len(dims) == 0:
             dims = self.dims[::-1]
+        dims = tuple(infix_dims(dims, self.dims))
         axes = self.get_axis_num(dims)
         if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
@@ -1225,16 +1240,6 @@ class Variable(
     @property
     def T(self) -> "Variable":
         return self.transpose()
-
-    def expand_dims(self, *args):
-        import warnings
-
-        warnings.warn(
-            "Variable.expand_dims is deprecated: use " "Variable.set_dims instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.expand_dims(*args)
 
     def set_dims(self, dims, shape=None):
         """Return a new variable with given set of dimensions.
@@ -1414,7 +1419,7 @@ class Variable(
         keep_attrs=None,
         keepdims=False,
         allow_lazy=False,
-        **kwargs
+        **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -1447,7 +1452,7 @@ class Variable(
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if dim is common.ALL_DIMS:
+        if dim == ...:
             dim = None
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
@@ -1544,8 +1549,8 @@ class Variable(
             dims = (dim,) + first_var.dims
             data = duck_array_ops.stack(arrays, axis=axis)
 
-        attrs = OrderedDict(first_var.attrs)
-        encoding = OrderedDict(first_var.encoding)
+        attrs = dict(first_var.attrs)
+        encoding = dict(first_var.encoding)
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
@@ -1602,7 +1607,7 @@ class Variable(
         """
         return self.broadcast_equals(other, equiv=duck_array_ops.array_notnull_equiv)
 
-    def quantile(self, q, dim=None, interpolation="linear"):
+    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -1625,6 +1630,10 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -1633,7 +1642,7 @@ class Variable(
             is a scalar. If multiple percentiles are given, first axis of
             the result corresponds to the quantile and a quantile dimension
             is added to the return array. The other dimensions are the
-             dimensions that remain after the reduction of the array.
+            dimensions that remain after the reduction of the array.
 
         See Also
         --------
@@ -1661,14 +1670,19 @@ class Variable(
             axis = None
             new_dims = []
 
-        # only add the quantile dimension if q is array like
+        # Only add the quantile dimension if q is array-like
         if q.ndim != 0:
             new_dims = ["quantile"] + new_dims
 
         qs = np.nanpercentile(
             self.data, q * 100.0, axis=axis, interpolation=interpolation
         )
-        return Variable(new_dims, qs)
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+        attrs = self._attrs if keep_attrs else None
+
+        return Variable(new_dims, qs, attrs)
 
     def rank(self, dim, pct=False):
         """Ranks the data.
@@ -1791,7 +1805,7 @@ class Variable(
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
-                raise NameError("{} is not a valid method.".format(name))
+                raise NameError(f"{name} is not a valid method.")
         return type(self)(self.dims, func(reshaped, axis=axes), self._attrs)
 
     def _coarsen_reshape(self, windows, boundary, side):
@@ -1810,7 +1824,7 @@ class Variable(
 
         for d, window in windows.items():
             if window <= 0:
-                raise ValueError("window must be > 0. Given {}".format(window))
+                raise ValueError(f"window must be > 0. Given {window}")
 
         variable = self
         for d, window in windows.items():
@@ -2004,7 +2018,7 @@ class IndexVariable(Variable):
                 indices = nputils.inverse_permutation(np.concatenate(positions))
                 data = data.take(indices)
 
-        attrs = OrderedDict(first_var.attrs)
+        attrs = dict(first_var.attrs)
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
@@ -2121,7 +2135,7 @@ Coordinate = utils.alias(IndexVariable, "Coordinate")
 
 def _unified_dims(variables):
     # validate dimensions
-    all_dims = OrderedDict()
+    all_dims = {}
     for var in variables:
         var_dims = var.dims
         if len(set(var_dims)) < len(var_dims):
@@ -2234,7 +2248,7 @@ def assert_unique_multiindex_level_names(variables):
             idx_level_names = var.to_index_variable().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:
-                    level_names[n].append("%r (%s)" % (n, var_name))
+                    level_names[n].append(f"{n!r} ({var_name})")
             if idx_level_names:
                 all_level_names.update(idx_level_names)
 

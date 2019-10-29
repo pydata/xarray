@@ -1,16 +1,13 @@
 import functools
 import operator
-import warnings
-from collections import OrderedDict
 from contextlib import suppress
-from distutils.version import LooseVersion
 
 import numpy as np
 
 from .. import Variable, coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, is_remote_uri
+from ..core.utils import FrozenDict, is_remote_uri
 from .common import (
     BackendArray,
     WritableCFDataStore,
@@ -140,7 +137,7 @@ def _nc4_dtype(var):
     elif var.dtype.kind in ["i", "u", "f", "c", "S"]:
         dtype = var.dtype
     else:
-        raise ValueError("unsupported dtype for netCDF4 variable: {}".format(var.dtype))
+        raise ValueError(f"unsupported dtype for netCDF4 variable: {var.dtype}")
     return dtype
 
 
@@ -276,25 +273,6 @@ def _is_list_of_strings(value):
         return False
 
 
-def _set_nc_attribute(obj, key, value):
-    if _is_list_of_strings(value):
-        # encode as NC_STRING if attr is list of strings
-        try:
-            obj.setncattr_string(key, value)
-        except AttributeError:
-            # Inform users with old netCDF that does not support
-            # NC_STRING that we can't serialize lists of strings
-            # as attrs
-            msg = (
-                "Attributes which are lists of strings are not "
-                "supported with this version of netCDF. Please "
-                "upgrade to netCDF4-python 1.2.4 or greater."
-            )
-            raise AttributeError(msg)
-    else:
-        obj.setncattr(key, value)
-
-
 class NetCDF4DataStore(WritableCFDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -354,16 +332,6 @@ class NetCDF4DataStore(WritableCFDataStore):
     ):
         import netCDF4
 
-        if len(filename) == 88 and LooseVersion(netCDF4.__version__) < "1.3.1":
-            warnings.warn(
-                "A segmentation fault may occur when the "
-                "file path has exactly 88 characters as it does "
-                "in this case. The issue is known to occur with "
-                "version 1.2.4 of netCDF4 and can be addressed by "
-                "upgrading netCDF4 to at least version 1.3.1. "
-                "More details can be found here: "
-                "https://github.com/pydata/xarray/issues/1745"
-            )
         if format is None:
             format = "NETCDF4"
 
@@ -400,7 +368,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     def open_store_variable(self, name, var):
         dimensions = var.dimensions
         data = indexing.LazilyOuterIndexedArray(NetCDF4ArrayWrapper(name, self))
-        attributes = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs())
+        attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
         encoding = {}
@@ -427,17 +395,17 @@ class NetCDF4DataStore(WritableCFDataStore):
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
-        dsvars = FrozenOrderedDict(
+        dsvars = FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
         return dsvars
 
     def get_attrs(self):
-        attrs = FrozenOrderedDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
+        attrs = FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
         return attrs
 
     def get_dimensions(self):
-        dims = FrozenOrderedDict((k, len(v)) for k, v in self.ds.dimensions.items())
+        dims = FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
         return dims
 
     def get_encoding(self):
@@ -454,7 +422,11 @@ class NetCDF4DataStore(WritableCFDataStore):
     def set_attribute(self, key, value):
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
-        _set_nc_attribute(self.ds, key, value)
+        if _is_list_of_strings(value):
+            # encode as NC_STRING if attr is list of strings
+            self.ds.setncattr_string(key, value)
+        else:
+            self.ds.setncattr(key, value)
 
     def encode_variable(self, variable):
         variable = _force_native_endianness(variable)
@@ -506,10 +478,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                 fill_value=fill_value,
             )
 
-        for k, v in attrs.items():
-            # set attributes one-by-one since netCDF4<1.0.10 can't handle
-            # OrderedDict as the input to setncatts
-            _set_nc_attribute(nc4_var, k, v)
+        nc4_var.setncatts(attrs)
 
         target = NetCDF4ArrayWrapper(name, self)
 

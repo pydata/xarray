@@ -2,7 +2,6 @@ import itertools
 import textwrap
 import warnings
 from datetime import datetime
-from distutils.version import LooseVersion
 from inspect import getfullargspec
 from typing import Any, Iterable, Mapping, Tuple, Union
 
@@ -13,12 +12,9 @@ from ..core.options import OPTIONS
 from ..core.utils import is_scalar
 
 try:
-    import nc_time_axis
+    import nc_time_axis  # noqa: F401
 
-    if LooseVersion(nc_time_axis.__version__) < LooseVersion("1.2.0"):
-        nc_time_axis_available = False
-    else:
-        nc_time_axis_available = True
+    nc_time_axis_available = True
 except ImportError:
     nc_time_axis_available = False
 
@@ -52,15 +48,7 @@ def register_pandas_datetime_converter_if_needed():
     # based on https://github.com/pandas-dev/pandas/pull/17710
     global _registered
     if not _registered:
-        try:
-            from pandas.plotting import register_matplotlib_converters
-
-            register_matplotlib_converters()
-        except ImportError:
-            # register_matplotlib_converters new in pandas 0.22
-            from pandas.tseries import converter
-
-            converter.register()
+        pd.plotting.register_matplotlib_converters()
         _registered = True
 
 
@@ -314,7 +302,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
         )
     for label in not_none:
         if label not in darray.dims:
-            raise ValueError("%r is not a dimension" % (label,))
+            raise ValueError(f"{label!r} is not a dimension")
 
     # Then calculate rgb dimension if certain and check validity
     could_be_color = [
@@ -705,7 +693,7 @@ def _process_cmap_cbar_kwargs(
     colors=None,
     cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
     levels=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Parameters
@@ -731,17 +719,15 @@ def _process_cmap_cbar_kwargs(
 
     # colors is only valid when levels is supplied or the plot is of type
     # contour or contourf
-    if colors and (("contour" not in func.__name__) and (not levels)):
+    if colors and (("contour" not in func.__name__) and (levels is None)):
         raise ValueError("Can only specify colors with contour or levels")
 
     # we should not be getting a list of colors in cmap anymore
     # is there a better way to do this test?
     if isinstance(cmap, (list, tuple)):
-        warnings.warn(
+        raise ValueError(
             "Specifying a list of colors in cmap is deprecated. "
-            "Use colors keyword instead.",
-            DeprecationWarning,
-            stacklevel=3,
+            "Use colors keyword instead."
         )
 
     cmap_kwargs = {

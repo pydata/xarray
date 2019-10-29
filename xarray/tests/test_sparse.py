@@ -65,7 +65,7 @@ class do:
         return getattr(obj, self.meth)(*self.args, **self.kwargs)
 
     def __repr__(self):
-        return "obj.{}(*{}, **{})".format(self.meth, self.args, self.kwargs)
+        return f"obj.{self.meth}(*{self.args}, **{self.kwargs})"
 
 
 @pytest.mark.parametrize(
@@ -176,7 +176,7 @@ def test_variable_property(prop):
         ),
         param(
             do("pad_with_fill_value", pad_widths={"x": (1, 1)}, fill_value=5),
-            True,  # noqa
+            True,
             marks=xfail(reason="Missing implementation for np.pad"),
         ),
         (do("prod"), False),
@@ -430,7 +430,7 @@ def test_dataarray_property(prop):
             ),
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
-        ),  # noqa
+        ),
         param(do("interpolate_na", "x"), True, marks=xfail(reason="Coercion to dense")),
         param(
             do("isin", [1, 2, 3]),
@@ -477,13 +477,13 @@ def test_dataarray_property(prop):
             ),
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
-        ),  # noqa
+        ),
         (do("roll", x=2, roll_coords=True), True),
         param(
             do("sel", x=[0, 1, 2], y=[2, 3]),
             True,
             marks=xfail(reason="Indexing COO with more than one iterable index"),
-        ),  # noqa
+        ),
         param(
             do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
         ),
@@ -495,7 +495,7 @@ def test_dataarray_property(prop):
             do("where", make_xrarray({"x": 10, "y": 5}) > 0.5),
             False,
             marks=xfail(reason="Conversion of dense to sparse when using sparse mask"),
-        ),  # noqa
+        ),
     ],
     ids=repr,
 )
@@ -656,7 +656,7 @@ class TestSparseDataArrayAndDataset:
         a = xr.DataArray(
             sparse.COO.from_numpy(np.ones(4)),
             dims=["x"],
-            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4)))},
+            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4, dtype="i8")))},
         )
         expected = dedent(
             """\
@@ -671,7 +671,7 @@ class TestSparseDataArrayAndDataset:
     def test_dataset_repr(self):
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))},
-            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4)))},
+            coords={"y": ("x", sparse.COO.from_numpy(np.arange(4, dtype="i8")))},
         )
         expected = dedent(
             """\
@@ -756,8 +756,8 @@ class TestSparseDataArrayAndDataset:
     def test_groupby(self):
         x1 = self.ds_xr
         x2 = self.sp_xr
-        m1 = x1.groupby("x").mean(xr.ALL_DIMS)
-        m2 = x2.groupby("x").mean(xr.ALL_DIMS)
+        m1 = x1.groupby("x").mean(...)
+        m2 = x2.groupby("x").mean(...)
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
 
@@ -772,8 +772,8 @@ class TestSparseDataArrayAndDataset:
     def test_groupby_bins(self):
         x1 = self.ds_xr
         x2 = self.sp_xr
-        m1 = x1.groupby_bins("x", bins=[0, 3, 7, 10]).sum(xr.ALL_DIMS)
-        m2 = x2.groupby_bins("x", bins=[0, 3, 7, 10]).sum(xr.ALL_DIMS)
+        m1 = x1.groupby_bins("x", bins=[0, 3, 7, 10]).sum(...)
+        m2 = x2.groupby_bins("x", bins=[0, 3, 7, 10]).sum(...)
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
 

@@ -8,8 +8,12 @@ jobs:
 - job: Linux
   strategy:
     matrix:
-      py35-min:
-        conda_env: py35-min
+      py36-bare-minimum:
+        conda_env: py36-bare-minimum
+      py36-min-all-deps:
+        conda_env: py36-min-all-deps
+      py36-min-nep18:
+        conda_env: py36-min-nep18
       py36:
         conda_env: py36
       py37:
@@ -17,7 +21,7 @@ jobs:
       py37-upstream-dev:
         conda_env: py37
         upstream_dev: true
-      py36-flakey:
+      py36-flaky:
         conda_env: py36
         pytest_extra_flags: --run-flaky --run-network-tests
         allow_failure: true
@@ -78,27 +82,31 @@ jobs:
       mypy .
     displayName: mypy type checks
 
+- job: MinimumVersionsPolicy
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - template: ci/azure/add-conda-to-path.yml
+  - bash: |
+      conda install -y pyyaml
+      python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
+      python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
+    displayName: minimum versions policy
+
 - job: Docs
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
   - template: ci/azure/install.yml
     parameters:
-      env_file: doc/environment.yml
+      env_file: ci/requirements/doc.yml
+  - bash: |
+      source activate xarray-tests
+      # Replicate the exact environment created by the readthedocs CI
+      conda install --yes --quiet -c pkgs/main mock pillow sphinx sphinx_rtd_theme
+    displayName: Replicate readthedocs CI environment
   - bash: |
       source activate xarray-tests
       cd doc
       sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs
-
-- job: LinuxHypothesis
-  variables:
-    conda_env: py36-hypothesis
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/install.yml
-  - bash: |
-      source activate xarray-tests
-      pytest properties
-    displayName: Property based tests

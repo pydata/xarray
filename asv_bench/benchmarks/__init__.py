@@ -16,9 +16,9 @@ def parameterized(names, params):
 
 def requires_dask():
     try:
-        import dask  # noqa
+        import dask  # noqa: F401
     except ImportError:
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 def randn(shape, frac_nan=None, chunks=None, seed=0):
