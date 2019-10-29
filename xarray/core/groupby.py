@@ -321,7 +321,7 @@ class GroupBy(SupportsArithmetic):
             raise ValueError("`group` must have a name")
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
-        group_dim, = group.dims
+        (group_dim,) = group.dims
 
         expected_size = obj.sizes[group_dim]
         if group.size != expected_size:
@@ -470,7 +470,7 @@ class GroupBy(SupportsArithmetic):
         else:
             coord = self._unique_coord
             positions = None
-        dim, = coord.dims
+        (dim,) = coord.dims
         if isinstance(coord, _DummyGroup):
             coord = None
         return coord, dim, positions
@@ -644,7 +644,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     def _restore_dim_order(self, stacked):
         def lookup_order(dimension):
             if dimension == self._group.name:
-                dimension, = self._group.dims
+                (dimension,) = self._group.dims
             if dimension in self._obj.dims:
                 axis = self._obj.get_axis_num(dimension)
             else:

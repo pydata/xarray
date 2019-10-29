@@ -1945,7 +1945,7 @@ class TestDataset:
 
     def test_align_indexes(self):
         x = Dataset({"foo": DataArray([1, 2, 3], dims="x", coords=[("x", [1, 2, 3])])})
-        x2, = align(x, indexes={"x": [2, 3, 1]})
+        (x2,) = align(x, indexes={"x": [2, 3, 1]})
         expected_x2 = Dataset(
             {"foo": DataArray([2, 3, 1], dims="x", coords={"x": [2, 3, 1]})}
         )
@@ -1973,7 +1973,7 @@ class TestDataset:
             },
             {"c": ("x", [4])},
         )
-        actual, = broadcast(ds)
+        (actual,) = broadcast(ds)
         assert_identical(expected, actual)
 
         ds_x = Dataset({"foo": ("x", [1])})
@@ -1995,7 +1995,7 @@ class TestDataset:
         x = Dataset({"foo": (("x", "y"), [[1, 1]])})
         y = Dataset({"bar": ("y", [2, 3])})
 
-        actual_x, = broadcast(x)
+        (actual_x,) = broadcast(x)
         assert_identical(x, actual_x)
         assert source_ndarray(actual_x["foo"].data) is source_ndarray(x["foo"].data)
 
