@@ -15,11 +15,24 @@ from .pycompat import integer_types
 from .utils import (
     either_dict_or_kwargs,
     hashable,
+    is_scalar,
     maybe_wrap_array,
     peek_at,
     safe_cast_to_index,
 )
 from .variable import IndexVariable, Variable, as_variable
+
+
+def check_reduce_dims(reduce_dims, dimensions):
+
+    if reduce_dims is not ...:
+        if is_scalar(reduce_dims):
+            reduce_dims = [reduce_dims]
+        if any([dim not in dimensions for dim in reduce_dims]):
+            raise ValueError(
+                "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
+                % (reduce_dims, dimensions)
+            )
 
 
 def unique_value_groups(ar, sort=True):
@@ -348,6 +361,13 @@ class GroupBy(SupportsArithmetic):
                 group_indices = [slice(i, i + 1) for i in group_indices]
             unique_coord = group
         else:
+            if group.isnull().any():
+                # drop any NaN valued groups.
+                # also drop obj values where group was NaN
+                # Use where instead of reindex to account for duplicate coordinate labels.
+                obj = obj.where(group.notnull(), drop=True)
+                group = group.dropna(group_dim)
+
             # look through group to find the unique values
             unique_values, group_indices = unique_value_groups(
                 safe_cast_to_index(group), sort=(bins is None)
@@ -794,14 +814,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        if dim is not ... and dim not in self.dims:
-            raise ValueError(
-                "cannot reduce over dimension %r. expected either '...' to reduce over all dimensions or one or more of %r."
-                % (dim, self.dims)
-            )
-
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
+
+        check_reduce_dims(dim, self.dims)
 
         return self.apply(reduce_array, shortcut=shortcut)
 
@@ -895,11 +911,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
 
-        if dim is not ... and dim not in self.dims:
-            raise ValueError(
-                "cannot reduce over dimension %r. expected either '...' to reduce over all dimensions or one or more of %r."
-                % (dim, self.dims)
-            )
+        check_reduce_dims(dim, self.dims)
 
         return self.apply(reduce_dataset)
 

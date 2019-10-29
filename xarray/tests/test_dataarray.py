@@ -2068,6 +2068,10 @@ class TestDataArray:
         )
         assert_equal(expected, actual)
 
+        # same as previous but with ellipsis
+        actual = da.transpose("z", ..., "x", transpose_coords=True)
+        assert_equal(expected, actual)
+
         with pytest.raises(ValueError):
             da.transpose("x", "y")
 
@@ -2559,15 +2563,6 @@ class TestDataArray:
         expected = array.copy()
         expected = change_metadata(expected)
         assert_equal(expected, actual)
-
-    def test_groupby_reduce_dimension_error(self):
-        array = self.make_groupby_example_array()
-        grouped = array.groupby("y")
-        with raises_regex(ValueError, "cannot reduce over dimension 'y'"):
-            grouped.mean()
-
-        grouped = array.groupby("y", squeeze=False)
-        assert_identical(array, grouped.mean())
 
     def test_groupby_math(self):
         array = self.make_groupby_example_array()
