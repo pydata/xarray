@@ -7,10 +7,8 @@ import xarray as xr
 from . import (
     assert_array_equal,
     assert_equal,
-    has_cftime,
-    has_cftime_or_netCDF4,
-    has_dask,
     raises_regex,
+    requires_cftime,
     requires_dask,
 )
 
@@ -199,7 +197,7 @@ def times_3d(times):
     )
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
 )
@@ -217,7 +215,7 @@ def test_field_access(data, field):
     assert_equal(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_cftime_strftime_access(data):
     """ compare cftime formatting against datetime formatting """
     date_format = "%Y%m%d%H"
@@ -232,8 +230,8 @@ def test_cftime_strftime_access(data):
     assert_equal(result, expected)
 
 
-@pytest.mark.skipif(not has_dask, reason="dask not installed")
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
+@requires_dask
 @pytest.mark.parametrize(
     "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
 )
@@ -254,8 +252,8 @@ def test_dask_field_access_1d(data, field):
     assert_equal(result.compute(), expected)
 
 
-@pytest.mark.skipif(not has_dask, reason="dask not installed")
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
+@requires_dask
 @pytest.mark.parametrize(
     "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
 )
@@ -286,7 +284,7 @@ def cftime_date_type(calendar):
     return _all_cftime_date_types()[calendar]
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_seasons(cftime_date_type):
     dates = np.array([cftime_date_type(2000, month, 15) for month in range(1, 13)])
     dates = xr.DataArray(dates)
@@ -307,15 +305,3 @@ def test_seasons(cftime_date_type):
     seasons = xr.DataArray(seasons)
 
     assert_array_equal(seasons.values, dates.dt.season.values)
-
-
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime or netCDF4 not installed")
-def test_dt_accessor_error_netCDF4(cftime_date_type):
-    da = xr.DataArray(
-        [cftime_date_type(1, 1, 1), cftime_date_type(2, 1, 1)], dims=["time"]
-    )
-    if not has_cftime:
-        with pytest.raises(TypeError):
-            da.dt.month
-    else:
-        da.dt.month

@@ -9,7 +9,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs
 
-from . import assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_dask
+from . import assert_array_equal, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -39,17 +39,12 @@ def test_safe_cast_to_index():
         assert expected.dtype == actual.dtype
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 def test_safe_cast_to_index_cftimeindex():
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         dates = [date_type(1, 1, day) for day in range(1, 20)]
-
-        if has_cftime:
-            expected = CFTimeIndex(dates)
-        else:
-            expected = pd.Index(dates)
-
+        expected = CFTimeIndex(dates)
         actual = utils.safe_cast_to_index(np.array(dates))
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
@@ -57,7 +52,7 @@ def test_safe_cast_to_index_cftimeindex():
 
 
 # Test that datetime.datetime objects are never used in a CFTimeIndex
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 def test_safe_cast_to_index_datetime_datetime():
     dates = [datetime(1, 1, day) for day in range(1, 20)]
 
