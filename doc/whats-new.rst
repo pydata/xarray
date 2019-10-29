@@ -39,7 +39,9 @@ New Features
   to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
   using `...`. (:pull:`3418`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-
+- :py:func:`~xarray.dot`, and :py:func:`~xarray.DataArray.dot` now support the
+  `dims=...` option to sum over the union of dimensions of all input arrays
+  (:issue:`3423`) by `Mathias Hauser <https://github.com/mathause>`_.
 - Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
   representation of objects in jupyter. By default this feature is turned off
   for now. Enable it with :py:meth:`xarray.set_options(display_style="html")`.
@@ -81,6 +83,7 @@ Internal Changes
     <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
     ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
     Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
+
 - Use Python 3.6 idioms throughout the codebase. (:pull:3419)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
