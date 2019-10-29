@@ -4088,14 +4088,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
         )
 
-    def apply(
+    def map(
         self,
         func: Callable,
         keep_attrs: bool = None,
         args: Iterable[Any] = (),
         **kwargs: Any,
     ) -> "Dataset":
-        """Apply a function over the data variables in this dataset.
+        """Apply a function over each data variable in this dataset.
 
         Parameters
         ----------
@@ -4128,7 +4128,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) float64 -0.3751 -1.951 -1.945 0.2948 0.711 -0.3948
             bar      (x) int64 -1 2
-        >>> ds.apply(np.fabs)
+        >>> ds.map(np.fabs)
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Dimensions without coordinates: dim_0, dim_1, x
@@ -4144,6 +4144,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             keep_attrs = _get_keep_attrs(default=False)
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
+
+    def apply(
+        self,
+        func: Callable,
+        keep_attrs: bool = None,
+        args: Iterable[Any] = (),
+        **kwargs: Any,
+    ) -> "Dataset":
+        warnings.warn(
+            "Dataset.apply is deprecated in favor of Dataset.map and will be changed or removed in a future version of xarray",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.map(func, keep_attrs, args, **kwargs)
 
     def assign(
         self, variables: Mapping[Hashable, Any] = None, **variables_kwargs: Hashable

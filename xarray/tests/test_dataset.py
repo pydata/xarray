@@ -4494,28 +4494,35 @@ class TestDataset:
         actual = ds.count()
         assert_identical(expected, actual)
 
-    def test_apply(self):
+    def test_map(self):
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
-        assert_identical(data.apply(np.mean), data.mean())
+        assert_identical(data.map(np.mean), data.mean())
 
         expected = data.mean(keep_attrs=True)
-        actual = data.apply(lambda x: x.mean(keep_attrs=True), keep_attrs=True)
+        actual = data.map(lambda x: x.mean(keep_attrs=True), keep_attrs=True)
         assert_identical(expected, actual)
 
-        assert_identical(data.apply(lambda x: x, keep_attrs=True), data.drop("time"))
+        assert_identical(data.map(lambda x: x, keep_attrs=True), data.drop("time"))
 
         def scale(x, multiple=1):
             return multiple * x
 
-        actual = data.apply(scale, multiple=2)
+        actual = data.map(scale, multiple=2)
         assert_equal(actual["var1"], 2 * data["var1"])
         assert_identical(actual["numbers"], data["numbers"])
 
-        actual = data.apply(np.asarray)
+        actual = data.map(np.asarray)
         expected = data.drop("time")  # time is not used on a data var
         assert_equal(expected, actual)
+
+    def test_apply_deprecated_map(self):
+        data = create_test_data()
+        data.attrs["foo"] = "bar"
+
+        with pytest.warns(DeprecationWarning):
+            assert_identical(data.map(np.mean), data.mean())
 
     def make_example_math_dataset(self):
         variables = {
@@ -4543,15 +4550,15 @@ class TestDataset:
     def test_unary_ops(self):
         ds = self.make_example_math_dataset()
 
-        assert_identical(ds.apply(abs), abs(ds))
-        assert_identical(ds.apply(lambda x: x + 4), ds + 4)
+        assert_identical(ds.map(abs), abs(ds))
+        assert_identical(ds.map(lambda x: x + 4), ds + 4)
 
         for func in [
             lambda x: x.isnull(),
             lambda x: x.round(),
             lambda x: x.astype(int),
         ]:
-            assert_identical(ds.apply(func), func(ds))
+            assert_identical(ds.map(func), func(ds))
 
         assert_identical(ds.isnull(), ~ds.notnull())
 
@@ -4564,7 +4571,7 @@ class TestDataset:
     def test_dataset_array_math(self):
         ds = self.make_example_math_dataset()
 
-        expected = ds.apply(lambda x: x - ds["foo"])
+        expected = ds.map(lambda x: x - ds["foo"])
         assert_identical(expected, ds - ds["foo"])
         assert_identical(expected, -ds["foo"] + ds)
         assert_identical(expected, ds - ds["foo"].variable)
@@ -4573,7 +4580,7 @@ class TestDataset:
         actual -= ds["foo"]
         assert_identical(expected, actual)
 
-        expected = ds.apply(lambda x: x + ds["bar"])
+        expected = ds.map(lambda x: x + ds["bar"])
         assert_identical(expected, ds + ds["bar"])
         actual = ds.copy(deep=True)
         actual += ds["bar"]
@@ -4589,7 +4596,7 @@ class TestDataset:
         assert_identical(ds, ds + 0 * ds)
         assert_identical(ds, ds + {"foo": 0, "bar": 0})
 
-        expected = ds.apply(lambda x: 2 * x)
+        expected = ds.map(lambda x: 2 * x)
         assert_identical(expected, 2 * ds)
         assert_identical(expected, ds + ds)
         assert_identical(expected, ds + ds.data_vars)
@@ -4686,7 +4693,7 @@ class TestDataset:
         assert_identical(expected, actual)
 
         actual = ds.transpose("x", "y")
-        expected = ds.apply(lambda x: x.transpose("x", "y", transpose_coords=True))
+        expected = ds.map(lambda x: x.transpose("x", "y", transpose_coords=True))
         assert_identical(expected, actual)
 
         ds = create_test_data()
