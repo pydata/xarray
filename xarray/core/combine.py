@@ -954,7 +954,7 @@ def _auto_concat(
                     "supply the ``concat_dim`` argument "
                     "explicitly"
                 )
-            dim, = concat_dims
+            (dim,) = concat_dims
         return concat(
             datasets,
             dim=dim,
