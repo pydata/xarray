@@ -998,20 +998,20 @@ def test_dot(use_dask):
     assert actual.dims == ("b",)
     assert (actual.data == np.zeros(actual.shape)).all()
 
-    # xr.ALL_DIMS
-    actual = xr.dot(da_a, da_b, dims=xr.ALL_DIMS)
+    # Ellipsis (...) sums over all dimensions
+    actual = xr.dot(da_a, da_b, dims=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij,ijk->", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, da_c, dims=xr.ALL_DIMS)
+    actual = xr.dot(da_a, da_b, da_c, dims=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij,ijk,kl-> ", a, b, c)).all()
 
-    actual = xr.dot(da_a, dims=xr.ALL_DIMS)
+    actual = xr.dot(da_a, dims=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij-> ", a)).all()
 
-    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims=xr.ALL_DIMS)
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims=...)
     assert actual.dims == ()
     assert (actual.data == np.zeros(actual.shape)).all()
 

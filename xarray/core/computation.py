@@ -25,7 +25,6 @@ import numpy as np
 
 from . import duck_array_ops, utils
 from .alignment import deep_align
-from .common import ALL_DIMS
 from .merge import merge_coordinates_without_align
 from .pycompat import dask_array_type
 from .utils import is_dict_like
@@ -1056,9 +1055,9 @@ def dot(*arrays, dims=None, **kwargs):
     ----------
     arrays: DataArray (or Variable) objects
         Arrays to compute.
-    dims: xarray.ALL_DIMS, str or tuple of strings, optional
-        Which dimensions to sum over.
-        If not speciified, then all the common dimensions are summed over.
+    dims: '...', str or tuple of strings, optional
+        Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
+        If not specified, then all the common dimensions are summed over.
     **kwargs: dict
         Additional keyword arguments passed to numpy.einsum or
         dask.array.einsum
@@ -1123,7 +1122,7 @@ def dot(*arrays, dims=None, **kwargs):
     array([110, 125])
     Dimensions without coordinates: c
 
-    >>> xr.dot(da_a, da_b, dims=xr.ALL_DIMS)
+    >>> xr.dot(da_a, da_b, dims=...)
     <xarray.DataArray ()>
     array(235)
     """
@@ -1150,7 +1149,7 @@ def dot(*arrays, dims=None, **kwargs):
     einsum_axes = "abcdefghijklmnopqrstuvwxyz"
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
-    if dims is ALL_DIMS:
+    if dims is ...:
         dims = all_dims
     elif dims is None:
         # find dimensions that occur more than one times
