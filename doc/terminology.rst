@@ -15,7 +15,7 @@ Terminology
 
 ----
 
-**Variable:** A `NetCDF-like variable <https://www.unidata.ucar.edu/software/netcdf/netcdf/Variables.html>`_ consisting of dimensions, data, and attributes which describe a single array. The main functional difference between variables and numpy arrays is that numerical operations on variables implement array broadcasting by dimension name. Each ``DataArray`` has an underlying variable that can be accessed via ``arr.variable``. However, a variable is not fully described outside of either a ``Dataset`` or a ``DataArray``.
+**Variable:** A `NetCDF-like variable <https://www.unidata.ucar.edu/software/netcdf/docs/netcdf_data_set_components.html#variables>`_ consisting of dimensions, data, and attributes which describe a single array. The main functional difference between variables and numpy arrays is that numerical operations on variables implement array broadcasting by dimension name. Each ``DataArray`` has an underlying variable that can be accessed via ``arr.variable``. However, a variable is not fully described outside of either a ``Dataset`` or a ``DataArray``.
 
 .. note::
 
