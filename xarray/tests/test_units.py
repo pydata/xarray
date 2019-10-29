@@ -122,15 +122,25 @@ def extract_units(obj):
 
 
 def strip_units(obj):
+    def _strip(obj):
+        if isinstance(obj, unit_registry.Quantity):
+            return obj.magnitude
+        else:
+            return obj
+
     if isinstance(obj, xr.Dataset):
-        data_vars = {name: strip_units(value) for name, value in obj.data_vars.items()}
-        coords = {name: strip_units(value) for name, value in obj.coords.items()}
+        data_vars = {
+            _strip(name): strip_units(value) for name, value in obj.data_vars.items()
+        }
+        coords = {
+            _strip(name): strip_units(value) for name, value in obj.coords.items()
+        }
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords)
     elif isinstance(obj, xr.DataArray):
         data = array_strip_units(obj.data)
         coords = {
-            name: (
+            _strip(name): (
                 (value.dims, array_strip_units(value.data))
                 if isinstance(value.data, Quantity)
                 else value  # to preserve multiindexes
@@ -138,7 +148,9 @@ def strip_units(obj):
             for name, value in obj.coords.items()
         }
 
-        new_obj = xr.DataArray(name=obj.name, data=data, coords=coords, dims=obj.dims)
+        new_obj = xr.DataArray(
+            name=_strip(obj.name), data=data, coords=coords, dims=obj.dims
+        )
     elif hasattr(obj, "magnitude"):
         new_obj = obj.magnitude
     else:
@@ -2439,3 +2451,109 @@ class TestDataset:
         result = left.broadcast_equals(right)
 
         assert expected == result
+
+    @pytest.mark.parametrize(
+        "func",
+        (method("unstack"), method("reset_index", "v"), method("reorder_levels")),
+        ids=repr,
+    )
+    def test_stacking_stacked(self, func, dtype):
+        array1 = (
+            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+        )
+        array2 = (
+            np.linspace(-10, 0, 5 * 10 * 15).reshape(5, 10, 15).astype(dtype)
+            * unit_registry.m
+        )
+
+        x = np.arange(array1.shape[0])
+        y = np.arange(array1.shape[1])
+        z = np.arange(array2.shape[2])
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
+            },
+            coords={"x": x, "y": y, "z": z},
+        )
+
+        stacked = ds.stack(v=("x", "y"))
+
+        expected = attach_units(
+            func(strip_units(stacked)), {"a": unit_registry.m, "b": unit_registry.m}
+        )
+        result = func(stacked)
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="tries to subscript scalar quantities")
+    def test_to_stacked_array(self, dtype):
+        labels = np.arange(5).astype(dtype) * unit_registry.s
+        arrays = {name: np.linspace(0, 1, 10) * unit_registry.m for name in labels}
+
+        ds = xr.Dataset(
+            data_vars={
+                name: xr.DataArray(data=array, dims="x")
+                for name, array in arrays.items()
+            }
+        )
+
+        func = method("to_stacked_array", "z", variable_dim="y", sample_dims=["x"])
+
+        result = func(ds).rename(None)
+        expected = attach_units(
+            func(strip_units(ds)).rename(None),
+            {None: unit_registry.m, "y": unit_registry.s},
+        )
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("transpose", "y", "x", "z1", "z2"),
+            method("stack", a=("x", "y")),
+            method("set_index", x="x2"),
+            pytest.param(
+                method("shift", x=2), marks=pytest.mark.xfail(reason="sets all to nan")
+            ),
+            pytest.param(
+                method("roll", x=2, roll_coords=False),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
+            method("sortby", "x2"),
+        ),
+        ids=repr,
+    )
+    def test_stacking_reordering(self, func, dtype):
+        array1 = (
+            np.linspace(0, 10, 2 * 5 * 10).reshape(2, 5, 10).astype(dtype)
+            * unit_registry.Pa
+        )
+        array2 = (
+            np.linspace(0, 10, 2 * 5 * 15).reshape(2, 5, 15).astype(dtype)
+            * unit_registry.degK
+        )
+
+        x = np.arange(array1.shape[0])
+        y = np.arange(array1.shape[1])
+        z1 = np.arange(array1.shape[2])
+        z2 = np.arange(array2.shape[2])
+
+        x2 = np.linspace(0, 1, array1.shape[0])[::-1]
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y", "z1")),
+                "b": xr.DataArray(data=array2, dims=("x", "y", "z2")),
+            },
+            coords={"x": x, "y": y, "z1": z1, "z2": z2, "x2": ("x", x2)},
+        )
+
+        expected = attach_units(
+            func(strip_units(ds)), {"a": unit_registry.Pa, "b": unit_registry.degK}
+        )
+        result = func(ds)
+
+        assert_equal_with_units(expected, result)
