@@ -39,6 +39,9 @@ New Features
   to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
   using `...`.
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`~xarray.dot`, and :py:func:`~xarray.DataArray.dot` now support the
+  `dims=...` option to sum over the union of dimensions of all input arrays
+  (:issue:`3423`) by `Mathias Hauser <https://github.com/mathause>`_.
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
   (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
 
