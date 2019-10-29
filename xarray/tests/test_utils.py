@@ -275,3 +275,27 @@ def test_either_dict_or_kwargs():
 
     with pytest.raises(ValueError, match=r"foo"):
         result = either_dict_or_kwargs(dict(a=1), dict(a=1), "foo")
+
+
+@pytest.mark.parametrize(
+    ["supplied", "all_", "expected"],
+    [
+        (list("abc"), list("abc"), list("abc")),
+        (["a", ..., "c"], list("abc"), list("abc")),
+        (["a", ...], list("abc"), list("abc")),
+        (["c", ...], list("abc"), list("cab")),
+        ([..., "b"], list("abc"), list("acb")),
+        ([...], list("abc"), list("abc")),
+    ],
+)
+def test_infix_dims(supplied, all_, expected):
+    result = list(utils.infix_dims(supplied, all_))
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["supplied", "all_"], [([..., ...], list("abc")), ([...], list("aac"))]
+)
+def test_infix_dims_errors(supplied, all_):
+    with pytest.raises(ValueError):
+        list(utils.infix_dims(supplied, all_))

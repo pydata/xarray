@@ -3,6 +3,7 @@ import functools
 import sys
 import warnings
 from collections import defaultdict
+from html import escape
 from numbers import Number
 from pathlib import Path
 from typing import (
@@ -39,6 +40,7 @@ from . import (
     dtypes,
     duck_array_ops,
     formatting,
+    formatting_html,
     groupby,
     ops,
     resample,
@@ -47,7 +49,6 @@ from . import (
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .common import (
-    ALL_DIMS,
     DataWithCoords,
     ImplementsDatasetReduce,
     _contains_datetime_like_objects,
@@ -1618,6 +1619,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def __repr__(self) -> str:
         return formatting.dataset_repr(self)
+
+    def _repr_html_(self):
+        if OPTIONS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
+        return formatting_html.dataset_repr(self)
 
     def info(self, buf=None) -> None:
         """
@@ -3536,7 +3542,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         labels : hashable or iterable of hashables
             Name(s) of variables or index labels to drop.
-            If dim is not None, labels can be any array-like.
         dim : None or hashable, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.
@@ -3706,14 +3711,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.transpose
         """
         if dims:
-            if set(dims) ^ set(self.dims):
+            if set(dims) ^ set(self.dims) and ... not in dims:
                 raise ValueError(
                     "arguments to transpose (%s) must be "
                     "permuted dataset dimensions (%s)" % (dims, tuple(self.dims))
                 )
         ds = self.copy()
         for name, var in self._variables.items():
-            var_dims = tuple(dim for dim in dims if dim in var.dims)
+            var_dims = tuple(dim for dim in dims if dim in (var.dims + (...,)))
             ds._variables[name] = var.transpose(*var_dims)
         return ds
 
@@ -4030,7 +4035,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if dim is None or dim is ALL_DIMS:
+        if dim is None or dim is ...:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
             dims = {dim}
@@ -4995,7 +5000,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if isinstance(dim, str):
             dims = {dim}
-        elif dim is None or dim is ALL_DIMS:
+        elif dim in [None, ...]:
             dims = set(self.dims)
         else:
             dims = set(dim)

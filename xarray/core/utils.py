@@ -10,6 +10,7 @@ from typing import (
     AbstractSet,
     Any,
     Callable,
+    Collection,
     Container,
     Dict,
     Hashable,
@@ -658,6 +659,30 @@ class HiddenKeyDict(MutableMapping[K, V]):
     def __len__(self) -> int:
         num_hidden = len(self._hidden_keys & self._data.keys())
         return len(self._data) - num_hidden
+
+
+def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
+    """
+    Resolves a supplied list containing an ellispsis representing other items, to
+    a generator with the 'realized' list of all items
+    """
+    if ... in dims_supplied:
+        if len(set(dims_all)) != len(dims_all):
+            raise ValueError("Cannot use ellipsis with repeated dims")
+        if len([d for d in dims_supplied if d == ...]) > 1:
+            raise ValueError("More than one ellipsis supplied")
+        other_dims = [d for d in dims_all if d not in dims_supplied]
+        for d in dims_supplied:
+            if d == ...:
+                yield from other_dims
+            else:
+                yield d
+    else:
+        if set(dims_supplied) ^ set(dims_all):
+            raise ValueError(
+                f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
+            )
+        yield from dims_supplied
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
