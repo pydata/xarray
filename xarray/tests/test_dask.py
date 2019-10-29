@@ -424,7 +424,53 @@ class TestDataArrayAndDataset(DaskTestCase):
         out.compute()
         assert kernel_call_count == 24
 
-        # Finally, test that riginals are unaltered
+        # Finally, test that originals are unaltered
+        assert ds1["d"].data is d1
+        assert ds1["c"].data is c1
+        assert ds2["d"].data is d2
+        assert ds2["c"].data is c2
+        assert ds3["d"].data is d3
+        assert ds3["c"].data is c3
+
+        # now check that concat() is correctly using dask name equality to skip loads
+        out = xr.concat(
+            [ds1, ds1, ds1], dim="n", data_vars="different", coords="different"
+        )
+        assert kernel_call_count == 24
+        # variables are not loaded in the output
+        assert isinstance(out["d"].data, dask.array.Array)
+        assert isinstance(out["c"].data, dask.array.Array)
+
+        out = xr.concat(
+            [ds1, ds1, ds1], dim="n", data_vars=[], coords=[], compat="identical"
+        )
+        assert kernel_call_count == 24
+        # variables are not loaded in the output
+        assert isinstance(out["d"].data, dask.array.Array)
+        assert isinstance(out["c"].data, dask.array.Array)
+
+        out = xr.concat(
+            [ds1, ds2.compute(), ds3],
+            dim="n",
+            data_vars="all",
+            coords="different",
+            compat="identical",
+        )
+        # c1,c3 must be computed for comparison since c2 is numpy;
+        # d2 is computed too
+        assert kernel_call_count == 28
+
+        out = xr.concat(
+            [ds1, ds2.compute(), ds3],
+            dim="n",
+            data_vars="all",
+            coords="all",
+            compat="identical",
+        )
+        # no extra computes
+        assert kernel_call_count == 30
+
+        # Finally, test that originals are unaltered
         assert ds1["d"].data is d1
         assert ds1["c"].data is c1
         assert ds2["d"].data is d2
