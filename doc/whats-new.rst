@@ -37,18 +37,8 @@ New Features
 - Changed `xr.ALL_DIMS` to equal python's `Ellipsis` (`...`), and changed internal usages to use
   `...` directly. As before, you can use this to instruct a `groupby` operation
   to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
-  using `...`.
+  using `...`. (:pull:`3418`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
-  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
-
-  .. note::
-
-    At the moment of writing, these tests *as well as the ability to use pint in general*
-    require `a highly experimental version of pint
-    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
-    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
-    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
 
 - Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
   representation of objects in jupyter. By default this feature is turned off
@@ -81,6 +71,16 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
+  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
+
+  .. note::
+
+    At the moment of writing, these tests *as well as the ability to use pint in general*
+    require `a highly experimental version of pint
+    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
+    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
+    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
 - Use Python 3.6 idioms throughout the codebase. (:pull:3419)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
