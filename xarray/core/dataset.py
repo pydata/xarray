@@ -4066,7 +4066,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     if len(reduce_dims) == 1:
                         # unpack dimensions for the benefit of functions
                         # like np.argmin which can't handle tuple arguments
-                        reduce_dims, = reduce_dims
+                        (reduce_dims,) = reduce_dims
                     elif len(reduce_dims) == var.ndim:
                         # prefer to aggregate over axis=None rather than
                         # axis=(0, 1) if they will be equivalent, because

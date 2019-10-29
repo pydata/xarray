@@ -149,10 +149,10 @@ def _calc_concat_dim_coord(dim):
         dim = dim_name
     elif not isinstance(dim, DataArray):
         coord = as_variable(dim).to_index_variable()
-        dim, = coord.dims
+        (dim,) = coord.dims
     else:
         coord = dim
-        dim, = coord.dims
+        (dim,) = coord.dims
     return dim, coord
 
 

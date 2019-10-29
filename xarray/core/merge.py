@@ -286,7 +286,7 @@ def collect_variables_and_indexes(
 
 
 def collect_from_coordinates(
-    list_of_coords: "List[Coordinates]"
+    list_of_coords: "List[Coordinates]",
 ) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes to be merged from Coordinate objects."""
     grouped: Dict[Hashable, List[Tuple[Variable, pd.Index]]] = {}
@@ -329,7 +329,7 @@ def merge_coordinates_without_align(
 
 
 def determine_coords(
-    list_of_mappings: Iterable["DatasetLike"]
+    list_of_mappings: Iterable["DatasetLike"],
 ) -> Tuple[Set[Hashable], Set[Hashable]]:
     """Given a list of dicts with xarray object values, identify coordinates.
 

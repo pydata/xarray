@@ -1528,7 +1528,7 @@ class Variable(
             along the given dimension.
         """
         if not isinstance(dim, str):
-            dim, = dim.dims
+            (dim,) = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
         # twice
@@ -2000,7 +2000,7 @@ class IndexVariable(Variable):
         arrays, if possible.
         """
         if not isinstance(dim, str):
-            dim, = dim.dims
+            (dim,) = dim.dims
 
         variables = list(variables)
         first_var = variables[0]
