@@ -61,7 +61,7 @@ Internal Changes
 - Use Python 3.6 idioms throughout the codebase. (:pull:3419)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - Implement :py:func:`__dask_tokenize__` for xarray objects.
-  By `Deepak Cherian <https://github.com/dcherian>`_
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Guido Imperiale <https://github.com/crusaderky>`_.
 
 .. _whats-new.0.14.0:
 
