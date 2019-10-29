@@ -179,6 +179,8 @@ def lazy_array_equiv(arr1, arr2):
        Returns True or False when equality can be determined without computing.
        Returns None when equality cannot determined (e.g. one or both of arr1, arr2 are numpy arrays)
     """
+    if arr1 is arr2:
+        return True
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
