@@ -411,7 +411,7 @@ Any variables using that dimension are dropped:
 
 As an alternate to dictionary-like modifications, you can use
 :py:meth:`~xarray.Dataset.assign` and :py:meth:`~xarray.Dataset.assign_coords`.
-These methods return a new dataset with additional (or replaced) or values:
+These methods return a new dataset with additional (or replaced) values:
 
 .. ipython:: python
 
@@ -420,7 +420,7 @@ These methods return a new dataset with additional (or replaced) or values:
 There is also the :py:meth:`~xarray.Dataset.pipe` method that allows you to use
 a method call with an external function (e.g., ``ds.pipe(func)``) instead of
 simply calling it (e.g., ``func(ds)``). This allows you to write pipelines for
-transforming you data (using "method chaining") instead of writing hard to
+transforming your data (using "method chaining") instead of writing hard to
 follow nested function calls:
 
 .. ipython:: python
