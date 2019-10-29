@@ -1,6 +1,10 @@
 """
 Property-based tests for roundtripping between xarray and pandas objects.
 """
+import pytest
+
+pytest.importorskip("hypothesis")
+
 from functools import partial
 import hypothesis.extra.numpy as npst
 import hypothesis.extra.pandas as pdst
