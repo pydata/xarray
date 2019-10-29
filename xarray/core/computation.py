@@ -145,7 +145,7 @@ def result_name(objects: list) -> Any:
     names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
     names.discard(_DEFAULT_NAME)
     if len(names) == 1:
-        name, = names
+        (name,) = names
     else:
         name = None
     return name
@@ -187,7 +187,7 @@ def build_output_coords(
 
     if len(coords_list) == 1 and not exclude_dims:
         # we can skip the expensive merge
-        unpacked_coords, = coords_list
+        (unpacked_coords,) = coords_list
         merged_vars = dict(unpacked_coords.variables)
     else:
         # TODO: save these merged indexes, instead of re-computing them later
@@ -237,7 +237,7 @@ def apply_dataarray_vfunc(
             for variable, coords in zip(result_var, result_coords)
         )
     else:
-        coords, = result_coords
+        (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
     return out
@@ -384,7 +384,7 @@ def apply_dataset_vfunc(
     if signature.num_outputs > 1:
         out = tuple(_fast_dataset(*args) for args in zip(result_vars, list_of_coords))
     else:
-        coord_vars, = list_of_coords
+        (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
     if keep_attrs and isinstance(first_obj, Dataset):

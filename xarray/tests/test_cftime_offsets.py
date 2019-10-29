@@ -1187,5 +1187,5 @@ def test_dayofyear_after_cftime_range(freq):
 def test_cftime_range_standard_calendar_refers_to_gregorian():
     from cftime import DatetimeGregorian
 
-    result, = cftime_range("2000", periods=1)
+    (result,) = cftime_range("2000", periods=1)
     assert isinstance(result, DatetimeGregorian)

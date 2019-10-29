@@ -616,7 +616,7 @@ class DataArray(AbstractArray, DataWithCoords):
             if var.ndim == 1 and isinstance(var, IndexVariable):
                 level_names = var.level_names
                 if level_names is not None:
-                    dim, = var.dims
+                    (dim,) = var.dims
                     level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
@@ -1866,12 +1866,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.transpose
         """
         if dims:
-            if set(dims) ^ set(self.dims):
-                raise ValueError(
-                    "arguments to transpose (%s) must be "
-                    "permuted array dimensions (%s)" % (dims, tuple(self.dims))
-                )
-
+            dims = tuple(utils.infix_dims(dims, self.dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: Dict[Hashable, Variable] = {}

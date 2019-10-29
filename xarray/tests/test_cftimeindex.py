@@ -15,7 +15,7 @@ from xarray.coding.cftimeindex import (
 )
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import has_cftime, has_cftime_or_netCDF4, raises_regex, requires_cftime
+from . import raises_regex, requires_cftime
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
@@ -653,7 +653,7 @@ def test_indexing_in_dataframe_iloc(df, index):
     assert result.equals(expected)
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 def test_concat_cftimeindex(date_type):
     da1 = xr.DataArray(
         [1.0, 2.0], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]], dims=["time"]
@@ -663,11 +663,7 @@ def test_concat_cftimeindex(date_type):
     )
     da = xr.concat([da1, da2], dim="time")
 
-    if has_cftime:
-        assert isinstance(da.indexes["time"], CFTimeIndex)
-    else:
-        assert isinstance(da.indexes["time"], pd.Index)
-        assert not isinstance(da.indexes["time"], CFTimeIndex)
+    assert isinstance(da.indexes["time"], CFTimeIndex)
 
 
 @requires_cftime

@@ -78,10 +78,6 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
-has_cftime_or_netCDF4 = has_cftime or has_netCDF4
-requires_cftime_or_netCDF4 = pytest.mark.skipif(
-    not has_cftime_or_netCDF4, reason="requires cftime or netCDF4"
-)
 try:
     import_seaborn()
     has_seaborn = True
@@ -158,18 +154,21 @@ def source_ndarray(array):
 
 
 def assert_equal(a, b):
+    __tracebackhide__ = True
     xarray.testing.assert_equal(a, b)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)
 
 
 def assert_identical(a, b):
+    __tracebackhide__ = True
     xarray.testing.assert_identical(a, b)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)
 
 
 def assert_allclose(a, b, **kwargs):
+    __tracebackhide__ = True
     xarray.testing.assert_allclose(a, b, **kwargs)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)
