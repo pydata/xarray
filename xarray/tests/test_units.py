@@ -1940,3 +1940,376 @@ class TestDataset:
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
 
         assert_equal_with_units(result, expected)
+
+    @pytest.mark.parametrize(
+        "func", (method("isnull"), method("notnull"), method("count")), ids=repr
+    )
+    def test_missing_value_detection(self, func, dtype):
+        array1 = (
+            np.array(
+                [
+                    [1.4, 2.3, np.nan, 7.2],
+                    [np.nan, 9.7, np.nan, np.nan],
+                    [2.1, np.nan, np.nan, 4.6],
+                    [9.9, np.nan, 7.2, 9.1],
+                ]
+            )
+            * unit_registry.degK
+        )
+        array2 = (
+            np.array(
+                [
+                    [np.nan, 5.7, 12.0, 7.2],
+                    [np.nan, 12.4, np.nan, 4.2],
+                    [9.8, np.nan, 4.6, 1.4],
+                    [7.2, np.nan, 6.3, np.nan],
+                    [8.4, 3.9, np.nan, np.nan],
+                ]
+            )
+            * unit_registry.Pa
+        )
+
+        x = np.arange(array1.shape[0]) * unit_registry.m
+        y = np.arange(array1.shape[1]) * unit_registry.m
+        z = np.arange(array2.shape[0]) * unit_registry.m
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("z", "x")),
+            },
+            coords={"x": x, "y": y, "z": z},
+        )
+
+        expected = func(strip_units(ds))
+        result = func(ds)
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="ffill and bfill lose the unit")
+    @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
+    def test_missing_value_filling(self, func, dtype):
+        array1 = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.degK
+        )
+        array2 = (
+            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            * unit_registry.Pa
+        )
+
+        x = np.arange(len(array1))
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        expected = attach_units(
+            func(strip_units(ds), dim="x"),
+            {"a": unit_registry.degK, "b": unit_registry.Pa},
+        )
+        result = func(ds, dim="x")
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="fillna drops the unit")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(
+                1,
+                DimensionalityError,
+                id="no_unit",
+                marks=pytest.mark.xfail(reason="blocked by the failing `where`"),
+            ),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "fill_value",
+        (
+            pytest.param(
+                -1,
+                id="python scalar",
+                marks=pytest.mark.xfail(
+                    reason="python scalar cannot be converted using astype()"
+                ),
+            ),
+            pytest.param(np.array(-1), id="numpy scalar"),
+            pytest.param(np.array([-1]), id="numpy array"),
+        ),
+    )
+    def test_fillna(self, fill_value, unit, error, dtype):
+        array1 = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.m
+        )
+        array2 = (
+            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            * unit_registry.m
+        )
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            }
+        )
+
+        if error is not None:
+            with pytest.raises(error):
+                ds.fillna(value=fill_value * unit)
+
+            return
+
+        result = ds.fillna(value=fill_value * unit)
+        expected = attach_units(
+            strip_units(ds).fillna(value=fill_value),
+            {"a": unit_registry.m, "b": unit_registry.m},
+        )
+
+        assert_equal_with_units(expected, result)
+
+    def test_dropna(self, dtype):
+        array1 = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.degK
+        )
+        array2 = (
+            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            * unit_registry.Pa
+        )
+        x = np.arange(len(array1))
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        expected = attach_units(
+            strip_units(ds).dropna(dim="x"),
+            {"a": unit_registry.degK, "b": unit_registry.Pa},
+        )
+        result = ds.dropna(dim="x")
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="pint does not implement `numpy.isin`")
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="same_unit"),
+        ),
+    )
+    def test_isin(self, unit, dtype):
+        array1 = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.m
+        )
+        array2 = (
+            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            * unit_registry.m
+        )
+        x = np.arange(len(array1))
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
+        values = raw_values * unit
+
+        if (
+            isinstance(values, unit_registry.Quantity)
+            and values.check(unit_registry.m)
+            and unit != unit_registry.m
+        ):
+            raw_values = values.to(unit_registry.m).magnitude
+
+        expected = strip_units(ds).isin(raw_values)
+        if not isinstance(values, unit_registry.Quantity) or not values.check(
+            unit_registry.m
+        ):
+            expected.a[:] = False
+            expected.b[:] = False
+        result = ds.isin(values)
+
+        assert_equal_with_units(result, expected)
+
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            pytest.param(
+                "masking",
+                marks=pytest.mark.xfail(
+                    reason="np.result_type not implemented by quantity"
+                ),
+            ),
+            pytest.param(
+                "replacing_scalar",
+                marks=pytest.mark.xfail(
+                    reason="python scalar not convertible using astype"
+                ),
+            ),
+            pytest.param(
+                "replacing_array",
+                marks=pytest.mark.xfail(
+                    reason="replacing using an array drops the units"
+                ),
+            ),
+            pytest.param(
+                "dropping",
+                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
+            ),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="same_unit"),
+        ),
+    )
+    def test_where(self, variant, unit, error, dtype):
+        def _strip_units(mapping):
+            return {key: array_strip_units(value) for key, value in mapping.items()}
+
+        original_unit = unit_registry.m
+        array1 = np.linspace(0, 1, 10).astype(dtype) * original_unit
+        array2 = np.linspace(-1, 0, 10).astype(dtype) * original_unit
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": np.arange(len(array1))},
+        )
+
+        condition = ds < 0.5 * original_unit
+        other = np.linspace(-2, -1, 10).astype(dtype) * unit
+        variant_kwargs = {
+            "masking": {"cond": condition},
+            "replacing_scalar": {"cond": condition, "other": -1 * unit},
+            "replacing_array": {"cond": condition, "other": other},
+            "dropping": {"cond": condition, "drop": True},
+        }
+        kwargs = variant_kwargs.get(variant)
+        kwargs_without_units = _strip_units(kwargs)
+
+        if variant not in ("masking", "dropping") and error is not None:
+            with pytest.raises(error):
+                ds.where(**kwargs)
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).where(**kwargs_without_units),
+            {"a": original_unit, "b": original_unit},
+        )
+        result = ds.where(**kwargs)
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="interpolate strips units")
+    def test_interpolate_na(self, dtype):
+        array1 = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.degK
+        )
+        array2 = (
+            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            * unit_registry.Pa
+        )
+        x = np.arange(len(array1))
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        expected = attach_units(
+            strip_units(ds).interpolate_na(dim="x"),
+            {"a": unit_registry.degK, "b": unit_registry.Pa},
+        )
+        result = ds.interpolate_na(dim="x")
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="uses Dataset.where, which currently fails")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="same_unit"),
+        ),
+    )
+    def test_combine_first(self, unit, error, dtype):
+        array1 = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * unit_registry.degK
+        )
+        array2 = (
+            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
+            * unit_registry.Pa
+        )
+        x = np.arange(len(array1))
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+        other_array1 = np.ones_like(array1) * unit
+        other_array2 = -1 * np.ones_like(array2) * unit
+        other = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=other_array1, dims="x"),
+                "b": xr.DataArray(data=other_array2, dims="x"),
+            },
+            coords={"x": np.arange(array1.shape[0])},
+        )
+
+        if error is not None:
+            with pytest.raises(error):
+                ds.combine_first(other)
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).combine_first(strip_units(other)),
+            {"a": unit_registry.m, "b": unit_registry.m},
+        )
+        result = ds.combine_first(other)
+
+        assert_equal_with_units(expected, result)
