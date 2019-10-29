@@ -2313,3 +2313,129 @@ class TestDataset:
         result = ds.combine_first(other)
 
         assert_equal_with_units(expected, result)
+
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(
+                unit_registry.cm,
+                id="compatible_unit",
+                marks=pytest.mark.xfail(reason="identical does not check units yet"),
+            ),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "variation",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.xfail(reason="units in indexes not supported")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
+    def test_comparisons(self, func, variation, unit, dtype):
+        array1 = np.linspace(0, 5, 10).astype(dtype)
+        array2 = np.linspace(-5, 0, 10).astype(dtype)
+
+        coord = np.arange(len(array1)).astype(dtype)
+
+        original_unit = unit_registry.m
+        quantity1 = array1 * original_unit
+        quantity2 = array2 * original_unit
+        x = coord * original_unit
+        y = coord * original_unit
+
+        units = {
+            "data": (unit, original_unit, original_unit),
+            "dims": (original_unit, unit, original_unit),
+            "coords": (original_unit, original_unit, unit),
+        }
+        data_unit, dim_unit, coord_unit = units.get(variation)
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=quantity1, dims="x"),
+                "b": xr.DataArray(data=quantity2, dims="x"),
+            },
+            coords={"x": x, "y": ("x", y)},
+        )
+
+        other = attach_units(
+            strip_units(ds),
+            {
+                "a": (data_unit, original_unit if quantity1.check(data_unit) else None),
+                "b": (data_unit, original_unit if quantity2.check(data_unit) else None),
+                "x": (dim_unit, original_unit if x.check(dim_unit) else None),
+                "y": (coord_unit, original_unit if y.check(coord_unit) else None),
+            },
+        )
+
+        # TODO: test dim coord once indexes leave units intact
+        # also, express this in terms of calls on the raw data array
+        # and then check the units
+        equal_arrays = (
+            np.all(ds.a.data == other.a.data)
+            and np.all(ds.b.data == other.b.data)
+            and (np.all(x == other.x.data) or True)  # dims can't be checked yet
+            and np.all(y == other.y.data)
+        )
+        equal_units = (
+            data_unit == original_unit
+            and coord_unit == original_unit
+            and dim_unit == original_unit
+        )
+        expected = equal_arrays and (func.name != "identical" or equal_units)
+        result = func(ds, other)
+
+        assert expected == result
+
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    def test_broadcast_equals(self, unit, dtype):
+        left_array1 = np.ones(shape=(2, 3), dtype=dtype) * unit_registry.m
+        left_array2 = np.zeros(shape=(2, 6), dtype=dtype) * unit_registry.m
+
+        right_array1 = array_attach_units(
+            np.ones(shape=(2,), dtype=dtype),
+            unit,
+            convert_from=unit_registry.m if left_array1.check(unit) else None,
+        )
+        right_array2 = array_attach_units(
+            np.ones(shape=(2,), dtype=dtype),
+            unit,
+            convert_from=unit_registry.m if left_array2.check(unit) else None,
+        )
+
+        left = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=left_array1, dims=("x", "y")),
+                "b": xr.DataArray(data=left_array2, dims=("x", "z")),
+            }
+        )
+        right = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=right_array1, dims="x"),
+                "b": xr.DataArray(data=right_array2, dims="x"),
+            }
+        )
+
+        expected = np.all(left_array1 == right_array1[:, None]) and np.all(
+            left_array2 == right_array2[:, None]
+        )
+        result = left.broadcast_equals(right)
+
+        assert expected == result
