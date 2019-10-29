@@ -35,8 +35,9 @@ def datasets_1d_vars(draw):
     # Generate 1-3 variables, 1D with the same length as the index
     vars_strategy = st.dictionaries(
         keys=st.text(),
-        values=npst.arrays(dtype=numeric_dtypes, shape=len(idx))
-               .map(partial(xr.Variable, ("rows",))),
+        values=npst.arrays(dtype=numeric_dtypes, shape=len(idx)).map(
+            partial(xr.Variable, ("rows",))
+        ),
         min_size=1,
         max_size=3,
     )
