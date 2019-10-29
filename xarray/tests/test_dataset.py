@@ -4522,7 +4522,7 @@ class TestDataset:
         data.attrs["foo"] = "bar"
 
         with pytest.warns(DeprecationWarning):
-            assert_identical(data.map(np.mean), data.mean())
+            assert_identical(data.apply(np.mean), data.mean())
 
     def make_example_math_dataset(self):
         variables = {
