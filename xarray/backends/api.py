@@ -677,7 +677,7 @@ def open_dataarray(
             "then select the variable you want."
         )
     else:
-        data_array, = dataset.data_vars.values()
+        (data_array,) = dataset.data_vars.values()
 
     data_array._file_obj = dataset._file_obj
 
