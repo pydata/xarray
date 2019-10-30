@@ -1765,6 +1765,43 @@ class TestDataset:
         assert_equal_with_units(result, expected)
 
     @pytest.mark.parametrize(
+        "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
+    )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            pytest.param(
+                "with_dims",
+                marks=pytest.mark.xfail(reason="units in indexes are not supported"),
+            ),
+            pytest.param("with_coords"),
+            pytest.param("without_coords"),
+        ),
+    )
+    @pytest.mark.filterwarnings("error:::pint[.*]")
+    def test_repr(self, func, variant, dtype):
+        array1 = np.linspace(1, 2, 10, dtype=dtype) * unit_registry.Pa
+        array2 = np.linspace(0, 1, 10, dtype=dtype) * unit_registry.degK
+
+        x = np.arange(len(array1)) * unit_registry.s
+        y = x.to(unit_registry.ms)
+
+        variants = {
+            "with_dims": {"x": x},
+            "with_coords": {"y": ("x", y)},
+            "without_coords": {},
+        }
+
+        data_array = xr.Dataset(
+            data_vars={"a": ("x", array1), "b": ("x", array2)},
+            coords=variants.get(variant),
+        )
+
+        # FIXME: this just checks that the repr does not raise
+        # warnings or errors, but does not check the result
+        func(data_array)
+
+    @pytest.mark.parametrize(
         "func",
         (
             pytest.param(
