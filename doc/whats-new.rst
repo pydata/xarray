@@ -67,7 +67,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Fix leap year condition in example (http://xarray.pydata.org/en/stable/examples/monthly-means.html) by `Mickaël Lalande <https://github.com/mickaellalande>`_.
 - Fix the documentation of :py:meth:`DataArray.resample` and
   :py:meth:`Dataset.resample` and explicitly state that a
   datetime-like dimension is required. (:pull:`3400`)
