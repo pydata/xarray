@@ -2998,3 +2998,129 @@ class TestDataset:
         result = ds.reindex_like(other)
 
         assert_equal_with_units(result, expected)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("diff", dim="x"),
+            method("differentiate", coord="x"),
+            method("integrate", coord="x"),
+            pytest.param(
+                method("quantile", q=[0.25, 0.75]),
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement nanpercentile yet"
+                ),
+            ),
+            pytest.param(
+                method("reduce", func=np.sum, dim="x"),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
+            pytest.param(
+                method("apply", np.fabs),
+                marks=pytest.mark.xfail(reason="fabs strips units"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_computation(self, func, dtype):
+        array1 = (
+            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
+        )
+        array2 = (
+            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
+        )
+        x = np.arange(10) * unit_registry.m
+        y = np.arange(5) * unit_registry.m
+        z = np.arange(8) * unit_registry.m
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "z")),
+            },
+            coords={"x": x, "y": y, "z": z},
+        )
+
+        units = extract_units(ds)
+
+        expected = attach_units(func(strip_units(ds)), units)
+        result = func(ds)
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("groupby", "x"), marks=pytest.mark.xfail(reason="strips units")
+            ),
+            pytest.param(
+                method("groupby_bins", "x", bins=4),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
+            method("coarsen", x=2),
+            pytest.param(
+                method("rolling", x=3), marks=pytest.mark.xfail(reason="strips units")
+            ),
+            pytest.param(
+                method("rolling_exp", x=3),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_computation_objects(self, func, dtype):
+        array1 = (
+            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
+        )
+        array2 = (
+            np.linspace(10, 20, 10 * 5 * 8).reshape(10, 5, 8).astype(dtype)
+            * unit_registry.Pa
+        )
+        x = np.arange(10) * unit_registry.m
+        y = np.arange(5) * unit_registry.m
+        z = np.arange(8) * unit_registry.m
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
+            },
+            coords={"x": x, "y": y, "z": z},
+        )
+        units = extract_units(ds)
+
+        args = [] if func.name != "groupby" else ["y"]
+        reduce_func = method("mean", *args)
+        expected = attach_units(reduce_func(func(strip_units(ds))), units)
+        result = reduce_func(func(ds))
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="strips units")
+    def test_resample(self, dtype):
+        array1 = (
+            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
+        )
+        array2 = (
+            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
+        )
+        t = pd.date_range("10-09-2010", periods=array1.shape[0], freq="1y")
+        y = np.arange(5) * unit_registry.m
+        z = np.arange(8) * unit_registry.m
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("time", "y")),
+                "b": xr.DataArray(data=array2, dims=("time", "z")),
+            },
+            coords={"time": t, "y": y, "z": z},
+        )
+        units = extract_units(ds)
+
+        func = method("resample", time="6m")
+
+        expected = attach_units(func(strip_units(ds)).mean(), units)
+        result = func(ds).mean()
+
+        assert_equal_with_units(expected, result)
