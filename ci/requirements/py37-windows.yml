@@ -9,7 +9,7 @@ dependencies:
   - cartopy
   # - cdms2  # Not available on Windows
   # - cfgrib  # Causes Python interpreter crash on Windows
-  - cftime<1.0.4  # FIXME need 1.0.5 (not released yet); 1.0.4 is broken
+  - cftime
   - coveralls
   - dask
   - distributed
