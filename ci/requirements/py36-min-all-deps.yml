@@ -13,7 +13,7 @@ dependencies:
   - cartopy=0.17
   - cdms2=3.1
   - cfgrib=0.9
-  - cftime=1.0.3
+  - cftime=1.0
   - coveralls
   - dask=1.2
   - distributed=1.27
