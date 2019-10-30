@@ -13,7 +13,7 @@ from xarray import DataArray, Dataset, IndexVariable, Variable, align, broadcast
 from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
-from xarray.core.common import ALL_DIMS, full_like
+from xarray.core.common import full_like
 from xarray.tests import (
     LooseVersion,
     ReturnItem,
@@ -2068,6 +2068,10 @@ class TestDataArray:
         )
         assert_equal(expected, actual)
 
+        # same as previous but with ellipsis
+        actual = da.transpose("z", ..., "x", transpose_coords=True)
+        assert_equal(expected, actual)
+
         with pytest.raises(ValueError):
             da.transpose("x", "y")
 
@@ -2443,8 +2447,8 @@ class TestDataArray:
                 "abc": Variable(["abc"], np.array(["a", "b", "c"])),
             }
         )["foo"]
-        assert_allclose(expected_sum_all, grouped.reduce(np.sum, dim=ALL_DIMS))
-        assert_allclose(expected_sum_all, grouped.sum(ALL_DIMS))
+        assert_allclose(expected_sum_all, grouped.reduce(np.sum, dim=...))
+        assert_allclose(expected_sum_all, grouped.sum(...))
 
         expected = DataArray(
             [
@@ -2456,7 +2460,7 @@ class TestDataArray:
         )
         actual = array["y"].groupby("abc").apply(np.sum)
         assert_allclose(expected, actual)
-        actual = array["y"].groupby("abc").sum(ALL_DIMS)
+        actual = array["y"].groupby("abc").sum(...)
         assert_allclose(expected, actual)
 
         expected_sum_axis1 = Dataset(
@@ -2560,15 +2564,6 @@ class TestDataArray:
         expected = change_metadata(expected)
         assert_equal(expected, actual)
 
-    def test_groupby_reduce_dimension_error(self):
-        array = self.make_groupby_example_array()
-        grouped = array.groupby("y")
-        with raises_regex(ValueError, "cannot reduce over dimension 'y'"):
-            grouped.mean()
-
-        grouped = array.groupby("y", squeeze=False)
-        assert_identical(array, grouped.mean())
-
     def test_groupby_math(self):
         array = self.make_groupby_example_array()
         for squeeze in [True, False]:
@@ -2590,9 +2585,9 @@ class TestDataArray:
             assert_identical(expected, actual)
 
         grouped = array.groupby("abc")
-        expected_agg = (grouped.mean(ALL_DIMS) - np.arange(3)).rename(None)
+        expected_agg = (grouped.mean(...) - np.arange(3)).rename(None)
         actual = grouped - DataArray(range(3), [("abc", ["a", "b", "c"])])
-        actual_agg = actual.groupby("abc").mean(ALL_DIMS)
+        actual_agg = actual.groupby("abc").mean(...)
         assert_allclose(expected_agg, actual_agg)
 
         with raises_regex(TypeError, "only support binary ops"):
@@ -2698,7 +2693,7 @@ class TestDataArray:
             ("lon", DataArray([5, 28, 23], coords=[("lon", [30.0, 40.0, 50.0])])),
             ("lat", DataArray([16, 40], coords=[("lat", [10.0, 20.0])])),
         ]:
-            actual_sum = array.groupby(dim).sum(ALL_DIMS)
+            actual_sum = array.groupby(dim).sum(...)
             assert_identical(expected_sum, actual_sum)
 
     def test_groupby_multidim_apply(self):
@@ -3130,11 +3125,11 @@ class TestDataArray:
 
         # Trivial align - 1 element
         x = DataArray([1, 2, 3], coords=[("a", [1, 2, 3])])
-        x2, = align(x, copy=False)
+        (x2,) = align(x, copy=False)
         assert_identical(x, x2)
         assert source_ndarray(x2.data) is source_ndarray(x.data)
 
-        x2, = align(x, copy=True)
+        (x2,) = align(x, copy=True)
         assert_identical(x, x2)
         assert source_ndarray(x2.data) is not source_ndarray(x.data)
 
@@ -3219,7 +3214,7 @@ class TestDataArray:
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
 
-        x2, = align(x, join="outer", indexes={"a": [-2, 7, 10, -1]})
+        (x2,) = align(x, join="outer", indexes={"a": [-2, 7, 10, -1]})
         expected_x2 = DataArray([3, np.nan, 2, 1], coords=[("a", [-2, 7, 10, -1])])
         assert_identical(expected_x2, x2)
 
@@ -3298,7 +3293,7 @@ class TestDataArray:
         assert source_ndarray(x2.data) is source_ndarray(x.data)
 
         # single-element broadcast (trivial case)
-        x2, = broadcast(x)
+        (x2,) = broadcast(x)
         assert_identical(x, x2)
         assert source_ndarray(x2.data) is source_ndarray(x.data)
 
@@ -3928,6 +3923,16 @@ class TestDataArray:
         actual = da.dot(dm)
         expected_vals = np.tensordot(da_vals, dm_vals, axes=([1, 2], [1, 2]))
         expected = DataArray(expected_vals, coords=[x, j], dims=["x", "j"])
+        assert_equal(expected, actual)
+
+        # Ellipsis: all dims are shared
+        actual = da.dot(da, dims=...)
+        expected = da.dot(da)
+        assert_equal(expected, actual)
+
+        # Ellipsis: not all dims are shared
+        actual = da.dot(dm, dims=...)
+        expected = da.dot(dm, dims=("j", "x", "y", "z"))
         assert_equal(expected, actual)
 
         with pytest.raises(NotImplementedError):

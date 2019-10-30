@@ -83,8 +83,8 @@ def _infer_line_data(darray, x, y, hue):
                     )
 
             else:
-                xdim, = darray[xname].dims
-                huedim, = darray[huename].dims
+                (xdim,) = darray[xname].dims
+                (huedim,) = darray[huename].dims
                 yplt = darray.transpose(xdim, huedim)
 
         else:
@@ -102,8 +102,8 @@ def _infer_line_data(darray, x, y, hue):
                     )
 
             else:
-                ydim, = darray[yname].dims
-                huedim, = darray[huename].dims
+                (ydim,) = darray[yname].dims
+                (huedim,) = darray[huename].dims
                 xplt = darray.transpose(ydim, huedim)
 
         huelabel = label_from_attrs(darray[huename])

@@ -25,6 +25,7 @@ from .utils import (
     OrderedSet,
     decode_numpy_dict_values,
     either_dict_or_kwargs,
+    infix_dims,
     ensure_us_time_resolution,
 )
 
@@ -1228,6 +1229,7 @@ class Variable(
         """
         if len(dims) == 0:
             dims = self.dims[::-1]
+        dims = tuple(infix_dims(dims, self.dims))
         axes = self.get_axis_num(dims)
         if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
@@ -1450,7 +1452,7 @@ class Variable(
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if dim is common.ALL_DIMS:
+        if dim == ...:
             dim = None
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
@@ -1524,7 +1526,7 @@ class Variable(
             along the given dimension.
         """
         if not isinstance(dim, str):
-            dim, = dim.dims
+            (dim,) = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
         # twice
@@ -1994,7 +1996,7 @@ class IndexVariable(Variable):
         arrays, if possible.
         """
         if not isinstance(dim, str):
-            dim, = dim.dims
+            (dim,) = dim.dims
 
         variables = list(variables)
         first_var = variables[0]

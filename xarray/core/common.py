@@ -25,10 +25,10 @@ from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, ReprObject, either_dict_or_kwargs
+from .utils import Frozen, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
-ALL_DIMS = ReprObject("<all-dims>")
+ALL_DIMS = ...
 
 
 C = TypeVar("C")
