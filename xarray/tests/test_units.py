@@ -200,6 +200,41 @@ def attach_units(obj, units):
     return new_obj
 
 
+def convert_units(obj, to):
+    if isinstance(obj, xr.Dataset):
+        data_vars = {
+            name: convert_units(array, to) for name, array in obj.data_vars.items()
+        }
+        coords = {name: convert_units(array, to) for name, array in obj.coords.items()}
+        attrs = obj.attrs
+
+        new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
+    elif isinstance(obj, xr.DataArray):
+        name = obj.name
+
+        new_units = (
+            to.get(name, None) or to.get("data", None) or to.get(None, None) or 1
+        )
+        data = convert_units(obj.data, {None: new_units})
+
+        coords = {
+            name: (array.dims, convert_units(array.data, to))
+            for name, array in obj.coords.items()
+            if name != obj.name
+        }
+        dims = obj.dims
+        attrs = obj.attrs
+
+        new_obj = xr.DataArray(name=name, data=data, coords=coords, dims=dims)
+    elif isinstance(obj, unit_registry.Quantity):
+        units = to.get(None)
+        new_obj = obj.to(units) if units is not None else obj
+    else:
+        new_obj = obj
+
+    return new_obj
+
+
 def assert_equal_with_units(a, b):
     # works like xr.testing.assert_equal, but also explicitly checks units
     # so, it is more like assert_identical
@@ -3173,5 +3208,126 @@ class TestDataset:
             func(strip_units(ds).groupby("y"), **stripped_kwargs), units
         )
         result = func(ds.groupby("y"))
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("pipe", lambda ds: ds * 10),
+            method("assign", d=lambda ds: ds.b * 10),
+            method("assign_coords", y2=("y", np.arange(5) * unit_registry.mm)),
+            method("assign_attrs", attr1="value"),
+            method("rename", x2="x_mm"),
+            method("rename_vars", c="temperature"),
+            method("rename_dims", x="offset_x"),
+            method("swap_dims", {"x": "x2"}),
+            method("expand_dims", v=np.linspace(10, 20, 12) * unit_registry.s, axis=1),
+            method("drop", labels="x"),
+            method("drop_dims", "z"),
+            method("set_coords", names="c"),
+            method("reset_coords", names="x2"),
+            method("copy"),
+        ),
+        ids=repr,
+    )
+    def test_content_manipulation(self, func, dtype):
+        array1 = (
+            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype)
+            * unit_registry.m ** 3
+        )
+        array2 = (
+            np.linspace(10, 20, 10 * 5 * 8).reshape(10, 5, 8).astype(dtype)
+            * unit_registry.Pa
+        )
+        array3 = np.linspace(0, 10, 10).astype(dtype) * unit_registry.degK
+
+        x = np.arange(10) * unit_registry.m
+        x2 = x.to(unit_registry.mm)
+        y = np.arange(5) * unit_registry.m
+        z = np.arange(8) * unit_registry.m
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
+                "c": xr.DataArray(data=array3, dims="x"),
+            },
+            coords={"x": x, "y": y, "z": z, "x2": ("x", x2)},
+        )
+        units = extract_units(ds)
+        units.update(
+            {
+                "y2": unit_registry.mm,
+                "x_mm": unit_registry.mm,
+                "offset_x": unit_registry.m,
+                "d": unit_registry.Pa,
+                "temperature": unit_registry.degK,
+            }
+        )
+
+        stripped_kwargs = {
+            key: strip_units(value) for key, value in func.kwargs.items()
+        }
+        expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
+        result = func(ds)
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="blocked by reindex")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, xr.MergeError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, xr.MergeError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, xr.MergeError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, xr.MergeError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize("variant", ("data", "dims", "coords"))
+    def test_merge(self, variant, unit, error, dtype):
+        original_data_unit = unit_registry.m
+        original_dim_unit = unit_registry.m
+        original_coord_unit = unit_registry.m
+
+        variants = {
+            "data": (unit, original_dim_unit, original_coord_unit),
+            "dims": (original_data_unit, unit, original_coord_unit),
+            "coords": (original_data_unit, original_dim_unit, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+
+        left_array = np.arange(10).astype(dtype) * original_data_unit
+        right_array = np.arange(-5, 5).astype(dtype) * data_unit
+
+        left_dim = np.arange(10, 20) * original_dim_unit
+        right_dim = np.arange(5, 15) * dim_unit
+
+        left_coord = np.arange(-10, 0) * original_coord_unit
+        right_coord = np.arange(-15, -5) * coord_unit
+
+        left = xr.Dataset(
+            data_vars={"a": ("x", left_array)},
+            coords={"x": left_dim, "y": ("x", left_coord)},
+        )
+        right = xr.Dataset(
+            data_vars={"a": ("x", right_array)},
+            coords={"x": right_dim, "y": ("x", right_coord)},
+        )
+
+        units = extract_units(left)
+
+        if error is not None:
+            with pytest.raises(error):
+                left.merge(right)
+
+            return
+
+        converted = convert_units(right, units)
+        expected = attach_units(strip_units(left).merge(strip_units(converted)), units)
+        result = left.merge(right)
 
         assert_equal_with_units(expected, result)
