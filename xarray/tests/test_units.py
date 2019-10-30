@@ -2685,7 +2685,6 @@ class TestDataset:
         result = ds.loc[{"x": values_with_units}]
         assert_equal_with_units(expected, result)
 
-    # @pytest.mark.xfail(reason="tries to coerce using asarray")
     @pytest.mark.parametrize(
         "shape",
         (
