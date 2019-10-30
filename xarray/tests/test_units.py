@@ -2685,6 +2685,61 @@ class TestDataset:
         result = ds.loc[{"x": values_with_units}]
         assert_equal_with_units(expected, result)
 
+    @pytest.mark.xfail(
+        reason="indexes strip units and head / tail / thin only support integers"
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("head", x=7, y=3, z=6),
+            method("tail", x=7, y=3, z=6),
+            method("thin", x=7, y=3, z=6),
+        ),
+        ids=repr,
+    )
+    def test_head_tail_thin(self, func, unit, error, dtype):
+        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
+
+        coords = {
+            "x": np.arange(10) * unit_registry.m,
+            "y": np.arange(5) * unit_registry.m,
+            "z": np.arange(8) * unit_registry.m,
+        }
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "z")),
+            },
+            coords=coords,
+        )
+
+        kwargs = {name: value * unit for name, value in func.kwargs.items()}
+
+        if error is not None:
+            with pytest.raises(error):
+                func(ds, **kwargs)
+
+            return
+
+        expected = attach_units(func(strip_units(ds)), extract_units(ds))
+        result = func(ds, **kwargs)
+
+        assert_equal_with_units(expected, result)
+
     @pytest.mark.parametrize(
         "shape",
         (
