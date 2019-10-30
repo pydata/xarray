@@ -122,25 +122,20 @@ def extract_units(obj):
 
 
 def strip_units(obj):
-    def _strip(obj):
-        if isinstance(obj, unit_registry.Quantity):
-            return obj.magnitude
-        else:
-            return obj
-
     if isinstance(obj, xr.Dataset):
         data_vars = {
-            _strip(name): strip_units(value) for name, value in obj.data_vars.items()
+            strip_units(name): strip_units(value)
+            for name, value in obj.data_vars.items()
         }
         coords = {
-            _strip(name): strip_units(value) for name, value in obj.coords.items()
+            strip_units(name): strip_units(value) for name, value in obj.coords.items()
         }
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords)
     elif isinstance(obj, xr.DataArray):
         data = array_strip_units(obj.data)
         coords = {
-            _strip(name): (
+            strip_units(name): (
                 (value.dims, array_strip_units(value.data))
                 if isinstance(value.data, Quantity)
                 else value  # to preserve multiindexes
@@ -149,10 +144,12 @@ def strip_units(obj):
         }
 
         new_obj = xr.DataArray(
-            name=_strip(obj.name), data=data, coords=coords, dims=obj.dims
+            name=strip_units(obj.name), data=data, coords=coords, dims=obj.dims
         )
-    elif hasattr(obj, "magnitude"):
+    elif isinstance(obj, unit_registry.Quantity):
         new_obj = obj.magnitude
+    elif isinstance(obj, (list, tuple)):
+        return type(obj)(strip_units(elem) for elem in obj)
     else:
         new_obj = obj
 
@@ -3122,5 +3119,59 @@ class TestDataset:
 
         expected = attach_units(func(strip_units(ds)).mean(), units)
         result = func(ds).mean()
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("assign", c=lambda ds: 10 * ds.b),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
+            pytest.param(
+                method("assign_coords", v=("x", np.arange(10) * unit_registry.s)),
+                marks=pytest.mark.xfail(reason="strips units"),
+            ),
+            pytest.param(method("first")),
+            pytest.param(method("last")),
+            pytest.param(
+                method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
+                marks=pytest.mark.xfail(
+                    reason="dataset groupby does not implement quantile"
+                ),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_grouped_operations(self, func, dtype):
+        array1 = (
+            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
+        )
+        array2 = (
+            np.linspace(10, 20, 10 * 5 * 8).reshape(10, 5, 8).astype(dtype)
+            * unit_registry.Pa
+        )
+        x = np.arange(10) * unit_registry.m
+        y = np.arange(5) * unit_registry.m
+        z = np.arange(8) * unit_registry.m
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
+            },
+            coords={"x": x, "y": y, "z": z},
+        )
+        units = extract_units(ds)
+        units.update({"c": unit_registry.Pa, "v": unit_registry.s})
+
+        stripped_kwargs = {
+            name: strip_units(value) for name, value in func.kwargs.items()
+        }
+        expected = attach_units(
+            func(strip_units(ds).groupby("y"), **stripped_kwargs), units
+        )
+        result = func(ds.groupby("y"))
 
         assert_equal_with_units(expected, result)
