@@ -1679,7 +1679,7 @@ class TestDataArray:
 
 
 class TestDataset:
-    # FIXME: this effectively tests merging of two dataarrays -- should probably be done in the merge itself
+    # FIXME: this effectively tests merging of two datasets -- should probably be done in the merge tests
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -2977,9 +2977,11 @@ class TestDataset:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="no_unit"),
-            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="incompatible_unit"),
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
             pytest.param(unit_registry.cm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
