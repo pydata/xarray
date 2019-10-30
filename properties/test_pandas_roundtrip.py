@@ -85,6 +85,7 @@ numeric_homogeneous_dataframe = numeric_dtypes.flatmap(
 )
 
 
+@pytest.mark.xfail
 @given(numeric_homogeneous_dataframe)
 def test_roundtrip_pandas_dataframe(df):
     # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.
