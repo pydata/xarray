@@ -74,6 +74,10 @@ Documentation
   By `Justus Magin <https://github.com/keewis>`_.
 - Update the terminology page to address multidimensional coordinates. (:pull:`3410`)
   By `Jon Thielen <https://github.com/jthielen>`_.
+- Fix the documentation of :py:meth:`Dataset.integrate` and
+  :py:meth:`DataArray.integrate` and add an example to
+  :py:meth:`Dataset.integrate`. (:pull:`3469`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
