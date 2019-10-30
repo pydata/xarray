@@ -5165,7 +5165,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dim: str, or a sequence of str
+        coord: str, or a sequence of str
             Coordinate(s) used for the integration.
         datetime_unit
             Can be specify the unit if datetime coordinate is used. One of
