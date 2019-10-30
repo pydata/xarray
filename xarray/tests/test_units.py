@@ -222,10 +222,8 @@ def convert_units(obj, to):
             for name, array in obj.coords.items()
             if name != obj.name
         }
-        dims = obj.dims
-        attrs = obj.attrs
 
-        new_obj = xr.DataArray(name=name, data=data, coords=coords, dims=dims)
+        new_obj = obj.copy(data=data, coords=coords)
     elif isinstance(obj, unit_registry.Quantity):
         units = to.get(None)
         new_obj = obj.to(units) if units is not None else obj
