@@ -1677,7 +1677,6 @@ class TestDataArray:
 
 
 class TestDataset:
-    # FIXME: this effectively tests merging of two datasets -- should probably be done in the merge tests
     @pytest.mark.parametrize(
         "unit,error",
         (
