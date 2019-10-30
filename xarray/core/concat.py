@@ -148,10 +148,10 @@ def _calc_concat_dim_coord(dim):
         dim = dim_name
     elif not isinstance(dim, DataArray):
         coord = as_variable(dim).to_index_variable()
-        dim, = coord.dims
+        (dim,) = coord.dims
     else:
         coord = dim
-        dim, = coord.dims
+        (dim,) = coord.dims
     return dim, coord
 
 
@@ -217,7 +217,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
             elif opt == "minimal":
                 pass
             else:
-                raise ValueError("unexpected value for %s: %s" % (subset, opt))
+                raise ValueError(f"unexpected value for {subset}: {opt}")
         else:
             invalid_vars = [k for k in opt if k not in getattr(datasets[0], subset)]
             if invalid_vars:

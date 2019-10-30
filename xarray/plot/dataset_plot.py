@@ -19,7 +19,7 @@ _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
     dvars = set(ds.variables.keys())
-    error_msg = " must be one of ({0:s})".format(", ".join(dvars))
+    error_msg = " must be one of ({:s})".format(", ".join(dvars))
 
     if x not in dvars:
         raise ValueError("x" + error_msg)
@@ -148,7 +148,7 @@ def _parse_size(data, norm):
     return pd.Series(sizes)
 
 
-class _Dataset_PlotMethods(object):
+class _Dataset_PlotMethods:
     """
     Enables use of xarray.plot functions as attributes on a Dataset.
     For example, Dataset.plot.scatter
@@ -243,7 +243,7 @@ def _dsplot(plotfunc):
     """
 
     # Build on the original docstring
-    plotfunc.__doc__ = "%s\n%s" % (plotfunc.__doc__, commondoc)
+    plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
     @functools.wraps(plotfunc)
     def newplotfunc(
@@ -275,7 +275,7 @@ def _dsplot(plotfunc):
         colors=None,
         extend=None,
         cmap=None,
-        **kwargs
+        **kwargs,
     ):
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
@@ -310,9 +310,9 @@ def _dsplot(plotfunc):
                 )
 
             # subset that can be passed to scatter, hist2d
-            cmap_params_subset = dict(
-                (vv, cmap_params[vv]) for vv in ["vmin", "vmax", "norm", "cmap"]
-            )
+            cmap_params_subset = {
+                vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]
+            }
 
         else:
             cmap_params_subset = {}
@@ -325,7 +325,7 @@ def _dsplot(plotfunc):
             hue_style=hue_style,
             ax=ax,
             cmap_params=cmap_params_subset,
-            **kwargs
+            **kwargs,
         )
 
         if _is_facetgrid:  # if this was called from Facetgrid.map_dataset,
@@ -380,7 +380,7 @@ def _dsplot(plotfunc):
         colors=None,
         extend=None,
         cmap=None,
-        **kwargs
+        **kwargs,
     ):
         """
         The method should have the same signature as the function.
@@ -436,7 +436,7 @@ def scatter(ds, x, y, ax, **kwargs):
                     data["x"].where(mask, drop=True).values.flatten(),
                     data["y"].where(mask, drop=True).values.flatten(),
                     label=label,
-                    **kwargs
+                    **kwargs,
                 )
             )
 

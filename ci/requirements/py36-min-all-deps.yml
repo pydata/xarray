@@ -13,7 +13,7 @@ dependencies:
   - cartopy=0.17
   - cdms2=3.1
   - cfgrib=0.9
-  - cftime=1.0
+  - cftime=1.0.3  # FIXME need 1.0.5 (not released yet); 1.0.4 is broken
   - coveralls
   - dask=1.2
   - distributed=1.27
@@ -31,6 +31,7 @@ dependencies:
   - numba=0.44
   - numpy=1.14
   - pandas=0.24
+  # - pint  # See py36-min-nep18.yml
   - pip
   - pseudonetcdf=3.0
   - pydap=3.2

@@ -215,7 +215,7 @@ class VariableSubclassobjects:
                 return hash(self.item)
 
             def __repr__(self):
-                return "%s(item=%r)" % (type(self).__name__, self.item)
+                return "{}(item={!r})".format(type(self).__name__, self.item)
 
         item = HashableItemWrapper((1, 2, 3))
         x = self.cls("x", [item])
@@ -1280,6 +1280,9 @@ class TestVariable(VariableSubclassobjects):
         w2 = Variable(["d", "b", "c", "a"], np.einsum("abcd->dbca", x))
         assert w2.shape == (5, 3, 4, 2)
         assert_identical(w2, w.transpose("d", "b", "c", "a"))
+        assert_identical(w2, w.transpose("d", ..., "a"))
+        assert_identical(w2, w.transpose("d", "b", "c", ...))
+        assert_identical(w2, w.transpose(..., "b", "c", "a"))
         assert_identical(w, w2.transpose("a", "b", "c", "d"))
         w3 = Variable(["b", "c", "d", "a"], np.einsum("abcd->bcda", x))
         assert_identical(w, w3.transpose("a", "b", "c", "d"))

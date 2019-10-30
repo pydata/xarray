@@ -13,6 +13,80 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.14.1:
+
+v0.14.1 (unreleased)
+--------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+- All leftover support for dates from non-standard calendars through netcdftime, the
+  module included in versions of netCDF4 prior to 1.4 that eventually became the
+  cftime package, has been removed in favor of relying solely on the standalone
+  cftime package (:pull:`3450`).  By `Spencer Clark 
+  <https://github.com/spencerkclark>`_. 
+
+New Features
+~~~~~~~~~~~~
+- :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
+  to represent all 'other' dimensions. For example, to move one dimension to the front,
+  use `.transpose('x', ...)`. (:pull:`3421`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Changed `xr.ALL_DIMS` to equal python's `Ellipsis` (`...`), and changed internal usages to use
+  `...` directly. As before, you can use this to instruct a `groupby` operation
+  to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
+  using `...`.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`~xarray.dot`, and :py:func:`~xarray.DataArray.dot` now support the
+  `dims=...` option to sum over the union of dimensions of all input arrays
+  (:issue:`3423`) by `Mathias Hauser <https://github.com/mathause>`_.
+- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
+  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
+
+  .. note::
+
+    At the moment of writing, these tests *as well as the ability to use pint in general*
+    require `a highly experimental version of pint
+    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
+    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
+    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
+
+- Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
+  representation of objects in jupyter. By default this feature is turned off
+  for now. Enable it with :py:meth:`xarray.set_options(display_style="html")`.
+  (:pull:`3425`) by `Benoit Bovy <https://github.com/benbovy>`_ and
+  `Julia Signell <https://github.com/jsignell>`_.
+
+Bug fixes
+~~~~~~~~~
+- Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
+  but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
+- Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
+  :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
+  (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
+
+Documentation
+~~~~~~~~~~~~~
+
+- Fix the documentation of :py:meth:`DataArray.resample` and
+  :py:meth:`Dataset.resample` and explicitly state that a
+  datetime-like dimension is required. (:pull:`3400`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Update the terminology page to address multidimensional coordinates. (:pull:`3410`)
+  By `Jon Thielen <https://github.com/jthielen>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Use Python 3.6 idioms throughout the codebase. (:pull:3419)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
 .. _whats-new.0.14.0:
 
 v0.14.0 (14 Oct 2019)

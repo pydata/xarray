@@ -9,7 +9,7 @@ dependencies:
   - cartopy
   - cdms2
   - cfgrib
-  - cftime
+  - cftime<1.0.4  # FIXME need 1.0.5 (not released yet); 1.0.4 is broken
   - coveralls
   - dask
   - distributed
@@ -25,10 +25,11 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy
+  - numpy<1.18  # FIXME https://github.com/pydata/xarray/issues/3409
   - pandas
+  - pint
   - pip
-  - pseudonetcdf
+  - pseudonetcdf<3.1  # FIXME https://github.com/pydata/xarray/issues/3409
   - pydap
   - pynio
   - pytest

@@ -1,4 +1,5 @@
 import functools
+from typing import Callable
 
 import numpy as np
 
@@ -106,7 +107,7 @@ class Rolling:
     def __len__(self):
         return self.obj.sizes[self.dim]
 
-    def _reduce_method(name):
+    def _reduce_method(name: str) -> Callable:  # type: ignore
         array_agg_func = getattr(duck_array_ops, name)
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
@@ -453,7 +454,7 @@ class DatasetRolling(Rolling):
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
             ),
-            **kwargs
+            **kwargs,
         )
 
     def construct(self, window_dim, stride=1, fill_value=dtypes.NA):

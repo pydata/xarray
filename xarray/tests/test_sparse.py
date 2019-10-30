@@ -65,7 +65,7 @@ class do:
         return getattr(obj, self.meth)(*self.args, **self.kwargs)
 
     def __repr__(self):
-        return "obj.{}(*{}, **{})".format(self.meth, self.args, self.kwargs)
+        return f"obj.{self.meth}(*{self.args}, **{self.kwargs})"
 
 
 @pytest.mark.parametrize(
@@ -756,8 +756,8 @@ class TestSparseDataArrayAndDataset:
     def test_groupby(self):
         x1 = self.ds_xr
         x2 = self.sp_xr
-        m1 = x1.groupby("x").mean(xr.ALL_DIMS)
-        m2 = x2.groupby("x").mean(xr.ALL_DIMS)
+        m1 = x1.groupby("x").mean(...)
+        m2 = x2.groupby("x").mean(...)
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
 
@@ -772,8 +772,8 @@ class TestSparseDataArrayAndDataset:
     def test_groupby_bins(self):
         x1 = self.ds_xr
         x2 = self.sp_xr
-        m1 = x1.groupby_bins("x", bins=[0, 3, 7, 10]).sum(xr.ALL_DIMS)
-        m2 = x2.groupby_bins("x", bins=[0, 3, 7, 10]).sum(xr.ALL_DIMS)
+        m1 = x1.groupby_bins("x", bins=[0, 3, 7, 10]).sum(...)
+        m2 = x2.groupby_bins("x", bins=[0, 3, 7, 10]).sum(...)
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
 

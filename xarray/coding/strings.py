@@ -228,7 +228,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return self.array.shape[:-1]
 
     def __repr__(self):
-        return "%s(%r)" % (type(self).__name__, self.array)
+        return "{}({!r})".format(type(self).__name__, self.array)
 
     def __getitem__(self, key):
         # require slicing the last dimension completely

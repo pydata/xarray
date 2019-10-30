@@ -677,7 +677,7 @@ def open_dataarray(
             "then select the variable you want."
         )
     else:
-        data_array, = dataset.data_vars.values()
+        (data_array,) = dataset.data_vars.values()
 
     data_array._file_obj = dataset._file_obj
 
@@ -718,7 +718,7 @@ def open_mfdataset(
     autoclose=None,
     parallel=False,
     join="outer",
-    **kwargs
+    **kwargs,
 ):
     """Open multiple files as a single dataset.
 
@@ -1258,9 +1258,7 @@ def _validate_append_dim_and_encoding(
         return
     if append_dim:
         if append_dim not in ds.dims:
-            raise ValueError(
-                "{} not a valid dimension in the Dataset".format(append_dim)
-            )
+            raise ValueError(f"{append_dim} not a valid dimension in the Dataset")
     for data_var in ds_to_append:
         if data_var in ds:
             if append_dim is None:

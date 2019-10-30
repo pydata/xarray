@@ -25,7 +25,7 @@ from . import has_dask, raises_regex, requires_dask
 
 def assert_identical(a, b):
     if hasattr(a, "identical"):
-        msg = "not identical:\n%r\n%r" % (a, b)
+        msg = f"not identical:\n{a!r}\n{b!r}"
         assert a.identical(b), msg
     else:
         assert_array_equal(a, b)
@@ -376,7 +376,7 @@ def test_apply_exclude():
             *objects,
             input_core_dims=[[dim]] * len(objects),
             output_core_dims=[[dim]],
-            exclude_dims={dim}
+            exclude_dims={dim},
         )
         if isinstance(result, (xr.Dataset, xr.DataArray)):
             # note: this will fail if dim is not a coordinate on any input
@@ -996,6 +996,23 @@ def test_dot(use_dask):
     # empty dim
     actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims="a")
     assert actual.dims == ("b",)
+    assert (actual.data == np.zeros(actual.shape)).all()
+
+    # Ellipsis (...) sums over all dimensions
+    actual = xr.dot(da_a, da_b, dims=...)
+    assert actual.dims == ()
+    assert (actual.data == np.einsum("ij,ijk->", a, b)).all()
+
+    actual = xr.dot(da_a, da_b, da_c, dims=...)
+    assert actual.dims == ()
+    assert (actual.data == np.einsum("ij,ijk,kl-> ", a, b, c)).all()
+
+    actual = xr.dot(da_a, dims=...)
+    assert actual.dims == ()
+    assert (actual.data == np.einsum("ij-> ", a)).all()
+
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims=...)
+    assert actual.dims == ()
     assert (actual.data == np.zeros(actual.shape)).all()
 
     # Invalid cases

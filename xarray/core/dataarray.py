@@ -504,7 +504,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         if dim is not None and dim not in self.dims:
             raise TypeError(
-                "{} is not a dim. If supplying a ``name``, pass as a kwarg.".format(dim)
+                f"{dim} is not a dim. If supplying a ``name``, pass as a kwarg."
             )
 
         if dim is not None:
@@ -616,7 +616,7 @@ class DataArray(AbstractArray, DataWithCoords):
             if var.ndim == 1 and isinstance(var, IndexVariable):
                 level_names = var.level_names
                 if level_names is not None:
-                    dim, = var.dims
+                    (dim,) = var.dims
                     level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
@@ -996,7 +996,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         indexers: Mapping[Hashable, Any] = None,
         drop: bool = False,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by integer indexing
         along the specified dimension(s).
@@ -1016,7 +1016,7 @@ class DataArray(AbstractArray, DataWithCoords):
         method: str = None,
         tolerance=None,
         drop: bool = False,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by selecting index
         labels along the specified dimension(s).
@@ -1044,14 +1044,14 @@ class DataArray(AbstractArray, DataWithCoords):
             drop=drop,
             method=method,
             tolerance=tolerance,
-            **indexers_kwargs
+            **indexers_kwargs,
         )
         return self._from_temp_dataset(ds)
 
     def head(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the first `n`
         values along the specified dimension(s). Default `n` = 5
@@ -1068,7 +1068,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def tail(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the last `n`
         values along the specified dimension(s). Default `n` = 5
@@ -1085,7 +1085,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def thin(
         self,
         indexers: Union[Mapping[Hashable, int], int] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by each `n` value
         along the specified dimension(s). Default `n` = 5
@@ -1230,7 +1230,7 @@ class DataArray(AbstractArray, DataWithCoords):
         tolerance=None,
         copy: bool = True,
         fill_value=dtypes.NA,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> "DataArray":
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
@@ -1293,7 +1293,7 @@ class DataArray(AbstractArray, DataWithCoords):
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
-        **coords_kwargs: Any
+        **coords_kwargs: Any,
     ) -> "DataArray":
         """ Multidimensional interpolation of variables.
 
@@ -1348,7 +1348,7 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method,
             kwargs=kwargs,
             assume_sorted=assume_sorted,
-            **coords_kwargs
+            **coords_kwargs,
         )
         return self._from_temp_dataset(ds)
 
@@ -1410,7 +1410,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def rename(
         self,
         new_name_or_name_dict: Union[Hashable, Mapping[Hashable, Hashable]] = None,
-        **names: Hashable
+        **names: Hashable,
     ) -> "DataArray":
         """Returns a new DataArray with renamed coordinates or a new name.
 
@@ -1491,7 +1491,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         dim: Union[None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]] = None,
         axis=None,
-        **dim_kwargs: Any
+        **dim_kwargs: Any,
     ) -> "DataArray":
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape. The new object is a
@@ -1545,7 +1545,7 @@ class DataArray(AbstractArray, DataWithCoords):
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         inplace: bool = None,
-        **indexes_kwargs: Union[Hashable, Sequence[Hashable]]
+        **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
     ) -> Optional["DataArray"]:
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
@@ -1638,7 +1638,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         dim_order: Mapping[Hashable, Sequence[int]] = None,
         inplace: bool = None,
-        **dim_order_kwargs: Sequence[int]
+        **dim_order_kwargs: Sequence[int],
     ) -> "DataArray":
         """Rearrange index levels using input order.
 
@@ -1674,7 +1674,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def stack(
         self,
         dimensions: Mapping[Hashable, Sequence[Hashable]] = None,
-        **dimensions_kwargs: Sequence[Hashable]
+        **dimensions_kwargs: Sequence[Hashable],
     ) -> "DataArray":
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -1821,7 +1821,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         idx = self.indexes[dim]
         if not isinstance(idx, pd.MultiIndex):
-            raise ValueError("'{}' is not a stacked coordinate".format(dim))
+            raise ValueError(f"'{dim}' is not a stacked coordinate")
 
         level_number = idx._get_level_number(level)
         variables = idx.levels[level_number]
@@ -1863,12 +1863,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.transpose
         """
         if dims:
-            if set(dims) ^ set(self.dims):
-                raise ValueError(
-                    "arguments to transpose (%s) must be "
-                    "permuted array dimensions (%s)" % (dims, tuple(self.dims))
-                )
-
+            dims = tuple(utils.infix_dims(dims, self.dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: Dict[Hashable, Variable] = {}
@@ -1986,7 +1981,7 @@ class DataArray(AbstractArray, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "DataArray":
         """Interpolate values according to different methods.
 
@@ -2034,7 +2029,7 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method,
             limit=limit,
             use_coordinate=use_coordinate,
-            **kwargs
+            **kwargs,
         )
 
     def ffill(self, dim: Hashable, limit: int = None) -> "DataArray":
@@ -2110,7 +2105,7 @@ class DataArray(AbstractArray, DataWithCoords):
         axis: Union[None, int, Sequence[int]] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "DataArray":
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -2492,7 +2487,7 @@ class DataArray(AbstractArray, DataWithCoords):
         f: Callable[..., Any],
         reflexive: bool = False,
         join: str = None,  # see xarray.align
-        **ignored_kwargs
+        **ignored_kwargs,
     ) -> Callable[..., "DataArray"]:
         @functools.wraps(f)
         def func(self, other):
@@ -2633,7 +2628,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         shifts: Mapping[Hashable, int] = None,
         fill_value: Any = dtypes.NA,
-        **shifts_kwargs: int
+        **shifts_kwargs: int,
     ) -> "DataArray":
         """Shift this array by an offset along one or more dimensions.
 
@@ -2682,7 +2677,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         shifts: Mapping[Hashable, int] = None,
         roll_coords: bool = None,
-        **shifts_kwargs: int
+        **shifts_kwargs: int,
     ) -> "DataArray":
         """Roll this array by an offset along one or more dimensions.
 
@@ -2747,9 +2742,9 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims: hashable or sequence of hashables, optional
-            Along which dimensions to be summed over. Default all the common
-            dimensions are summed over.
+        dims: '...', hashable or sequence of hashables, optional
+            Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
+            If not specified, then all the common dimensions are summed over.
 
         Returns
         -------

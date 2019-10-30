@@ -8,7 +8,6 @@ from pandas.errors import OutOfBoundsDatetime
 
 from xarray import DataArray, Dataset, Variable, coding, decode_cf
 from xarray.coding.times import (
-    _import_cftime,
     cftime_to_nptime,
     decode_cf_datetime,
     encode_cf_datetime,
@@ -19,15 +18,7 @@ from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal
 
-from . import (
-    arm_xfail,
-    assert_array_equal,
-    has_cftime,
-    has_cftime_or_netCDF4,
-    has_dask,
-    requires_cftime,
-    requires_cftime_or_netCDF4,
-)
+from . import arm_xfail, assert_array_equal, has_cftime, requires_cftime, requires_dask
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",
@@ -79,10 +70,8 @@ _CF_DATETIME_TESTS = [
 
 
 def _all_cftime_date_types():
-    try:
-        import cftime
-    except ImportError:
-        import netcdftime as cftime
+    import cftime
+
     return {
         "noleap": cftime.DatetimeNoLeap,
         "365_day": cftime.DatetimeNoLeap,
@@ -95,16 +84,14 @@ def _all_cftime_date_types():
     }
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(["num_dates", "units", "calendar"], _CF_DATETIME_TESTS)
 def test_cf_datetime(num_dates, units, calendar):
-    cftime = _import_cftime()
-    if cftime.__name__ == "cftime":
-        expected = cftime.num2date(
-            num_dates, units, calendar, only_use_cftime_datetimes=True
-        )
-    else:
-        expected = cftime.num2date(num_dates, units, calendar)
+    import cftime
+
+    expected = cftime.num2date(
+        num_dates, units, calendar, only_use_cftime_datetimes=True
+    )
     min_y = np.ravel(np.atleast_1d(expected))[np.nanargmin(num_dates)].year
     max_y = np.ravel(np.atleast_1d(expected))[np.nanargmax(num_dates)].year
     if min_y >= 1678 and max_y < 2262:
@@ -138,15 +125,12 @@ def test_cf_datetime(num_dates, units, calendar):
             assert_array_equal(num_dates, np.around(encoded, 1))
 
 
-@requires_cftime_or_netCDF4
+@requires_cftime
 def test_decode_cf_datetime_overflow():
     # checks for
     # https://github.com/pydata/pandas/issues/14068
     # https://github.com/pydata/xarray/issues/975
-    try:
-        from cftime import DatetimeGregorian
-    except ImportError:
-        from netcdftime import DatetimeGregorian
+    from cftime import DatetimeGregorian
 
     datetime = DatetimeGregorian
     units = "days since 2000-01-01 00:00:00"
@@ -171,7 +155,7 @@ def test_decode_cf_datetime_non_standard_units():
     assert_array_equal(actual, expected)
 
 
-@requires_cftime_or_netCDF4
+@requires_cftime
 def test_decode_cf_datetime_non_iso_strings():
     # datetime strings that are _almost_ ISO compliant but not quite,
     # but which cftime.num2date can still parse correctly
@@ -190,10 +174,10 @@ def test_decode_cf_datetime_non_iso_strings():
         assert (abs_diff <= np.timedelta64(1, "s")).all()
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_decode_standard_calendar_inside_timestamp_range(calendar):
-    cftime = _import_cftime()
+    import cftime
 
     units = "days since 0001-01-01"
     times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="H")
@@ -210,21 +194,18 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar):
     assert (abs_diff <= np.timedelta64(1, "s")).all()
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 def test_decode_non_standard_calendar_inside_timestamp_range(calendar):
-    cftime = _import_cftime()
+    import cftime
+
     units = "days since 0001-01-01"
     times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="H")
     non_standard_time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
 
-    if cftime.__name__ == "cftime":
-        expected = cftime.num2date(
-            non_standard_time, units, calendar=calendar, only_use_cftime_datetimes=True
-        )
-    else:
-        expected = cftime.num2date(non_standard_time, units, calendar=calendar)
-
+    expected = cftime.num2date(
+        non_standard_time, units, calendar=calendar, only_use_cftime_datetimes=True
+    )
     expected_dtype = np.dtype("O")
 
     actual = coding.times.decode_cf_datetime(
@@ -238,24 +219,19 @@ def test_decode_non_standard_calendar_inside_timestamp_range(calendar):
     assert (abs_diff <= np.timedelta64(1, "s")).all()
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_decode_dates_outside_timestamp_range(calendar):
+    import cftime
     from datetime import datetime
-
-    cftime = _import_cftime()
 
     units = "days since 0001-01-01"
     times = [datetime(1, 4, 1, h) for h in range(1, 5)]
     time = cftime.date2num(times, units, calendar=calendar)
 
-    if cftime.__name__ == "cftime":
-        expected = cftime.num2date(
-            time, units, calendar=calendar, only_use_cftime_datetimes=True
-        )
-    else:
-        expected = cftime.num2date(time, units, calendar=calendar)
-
+    expected = cftime.num2date(
+        time, units, calendar=calendar, only_use_cftime_datetimes=True
+    )
     expected_date_type = type(expected[0])
 
     with warnings.catch_warnings():
@@ -269,7 +245,7 @@ def test_decode_dates_outside_timestamp_range(calendar):
     assert (abs_diff <= np.timedelta64(1, "s")).all()
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_decode_standard_calendar_single_element_inside_timestamp_range(calendar):
     units = "days since 0001-01-01"
@@ -280,7 +256,7 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(calendar
         assert actual.dtype == np.dtype("M8[ns]")
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 def test_decode_non_standard_calendar_single_element_inside_timestamp_range(calendar):
     units = "days since 0001-01-01"
@@ -291,10 +267,11 @@ def test_decode_non_standard_calendar_single_element_inside_timestamp_range(cale
         assert actual.dtype == np.dtype("O")
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 def test_decode_single_element_outside_timestamp_range(calendar):
-    cftime = _import_cftime()
+    import cftime
+
     units = "days since 0001-01-01"
     for days in [1, 1470376]:
         for num_time in [days, [days], [[days]]]:
@@ -304,20 +281,16 @@ def test_decode_single_element_outside_timestamp_range(calendar):
                     num_time, units, calendar=calendar
                 )
 
-            if cftime.__name__ == "cftime":
-                expected = cftime.num2date(
-                    days, units, calendar, only_use_cftime_datetimes=True
-                )
-            else:
-                expected = cftime.num2date(days, units, calendar)
-
+            expected = cftime.num2date(
+                days, units, calendar, only_use_cftime_datetimes=True
+            )
             assert isinstance(actual.item(), type(expected))
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_decode_standard_calendar_multidim_time_inside_timestamp_range(calendar):
-    cftime = _import_cftime()
+    import cftime
 
     units = "days since 0001-01-01"
     times1 = pd.date_range("2001-04-01", end="2001-04-05", freq="D")
@@ -343,10 +316,10 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(calendar)
     assert (abs_diff2 <= np.timedelta64(1, "s")).all()
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(calendar):
-    cftime = _import_cftime()
+    import cftime
 
     units = "days since 0001-01-01"
     times1 = pd.date_range("2001-04-01", end="2001-04-05", freq="D")
@@ -382,12 +355,11 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(calend
     assert (abs_diff2 <= np.timedelta64(1, "s")).all()
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_decode_multidim_time_outside_timestamp_range(calendar):
+    import cftime
     from datetime import datetime
-
-    cftime = _import_cftime()
 
     units = "days since 0001-01-01"
     times1 = [datetime(1, 4, day) for day in range(1, 6)]
@@ -398,16 +370,8 @@ def test_decode_multidim_time_outside_timestamp_range(calendar):
     mdim_time[:, 0] = time1
     mdim_time[:, 1] = time2
 
-    if cftime.__name__ == "cftime":
-        expected1 = cftime.num2date(
-            time1, units, calendar, only_use_cftime_datetimes=True
-        )
-        expected2 = cftime.num2date(
-            time2, units, calendar, only_use_cftime_datetimes=True
-        )
-    else:
-        expected1 = cftime.num2date(time1, units, calendar)
-        expected2 = cftime.num2date(time2, units, calendar)
+    expected1 = cftime.num2date(time1, units, calendar, only_use_cftime_datetimes=True)
+    expected2 = cftime.num2date(time2, units, calendar, only_use_cftime_datetimes=True)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "Unable to decode time axis")
@@ -424,46 +388,38 @@ def test_decode_multidim_time_outside_timestamp_range(calendar):
     assert (abs_diff2 <= np.timedelta64(1, "s")).all()
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("calendar", ["360_day", "all_leap", "366_day"])
 def test_decode_non_standard_calendar_single_element(calendar):
-    cftime = _import_cftime()
+    import cftime
+
     units = "days since 0001-01-01"
 
-    try:
-        dt = cftime.netcdftime.datetime(2001, 2, 29)
-    except AttributeError:
-        # Must be using the standalone cftime library
-        dt = cftime.datetime(2001, 2, 29)
+    dt = cftime.datetime(2001, 2, 29)
 
     num_time = cftime.date2num(dt, units, calendar)
     actual = coding.times.decode_cf_datetime(num_time, units, calendar=calendar)
 
-    if cftime.__name__ == "cftime":
-        expected = np.asarray(
-            cftime.num2date(num_time, units, calendar, only_use_cftime_datetimes=True)
-        )
-    else:
-        expected = np.asarray(cftime.num2date(num_time, units, calendar))
+    expected = np.asarray(
+        cftime.num2date(num_time, units, calendar, only_use_cftime_datetimes=True)
+    )
     assert actual.dtype == np.dtype("O")
     assert expected == actual
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 def test_decode_360_day_calendar():
-    cftime = _import_cftime()
+    import cftime
+
     calendar = "360_day"
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
-        units = "days since {}-01-01".format(year)
+        units = f"days since {year}-01-01"
         num_times = np.arange(100)
 
-        if cftime.__name__ == "cftime":
-            expected = cftime.num2date(
-                num_times, units, calendar, only_use_cftime_datetimes=True
-            )
-        else:
-            expected = cftime.num2date(num_times, units, calendar)
+        expected = cftime.num2date(
+            num_times, units, calendar, only_use_cftime_datetimes=True
+        )
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -477,7 +433,7 @@ def test_decode_360_day_calendar():
 
 
 @arm_xfail
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     ["num_dates", "units", "expected_list"],
     [
@@ -499,7 +455,7 @@ def test_cf_datetime_nan(num_dates, units, expected_list):
     assert_array_equal(expected, actual)
 
 
-@requires_cftime_or_netCDF4
+@requires_cftime
 def test_decoded_cf_datetime_array_2d():
     # regression test for GH1229
     variable = Variable(
@@ -548,7 +504,7 @@ _CFTIME_DATETIME_UNITS_TESTS = [
 ]
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     "calendar", _NON_STANDARD_CALENDARS + ["gregorian", "proleptic_gregorian"]
 )
@@ -622,7 +578,7 @@ def test_infer_timedelta_units(deltas, expected):
     assert expected == coding.times.infer_timedelta_units(deltas)
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize(
     ["date_args", "expected"],
     [
@@ -649,7 +605,7 @@ def test_decode_cf(calendar):
         ds[v].attrs["units"] = "days since 2001-01-01"
         ds[v].attrs["calendar"] = calendar
 
-    if not has_cftime_or_netCDF4 and calendar not in _STANDARD_CALENDARS:
+    if not has_cftime and calendar not in _STANDARD_CALENDARS:
         with pytest.raises(ValueError):
             ds = decode_cf(ds)
     else:
@@ -703,7 +659,7 @@ def test_decode_cf_time_bounds():
     _update_bounds_attributes(ds.variables)
 
 
-@requires_cftime_or_netCDF4
+@requires_cftime
 def test_encode_time_bounds():
 
     time = pd.date_range("2000-01-16", periods=1)
@@ -749,7 +705,7 @@ def calendar(request):
 
 @pytest.fixture()
 def times(calendar):
-    cftime = _import_cftime()
+    import cftime
 
     return cftime.num2date(
         np.arange(4),
@@ -779,24 +735,24 @@ def times_3d(times):
     )
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_contains_cftime_datetimes_1d(data):
     assert contains_cftime_datetimes(data.time)
 
 
-@pytest.mark.skipif(not has_dask, reason="dask not installed")
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
+@requires_dask
 def test_contains_cftime_datetimes_dask_1d(data):
     assert contains_cftime_datetimes(data.time.chunk())
 
 
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
 def test_contains_cftime_datetimes_3d(times_3d):
     assert contains_cftime_datetimes(times_3d)
 
 
-@pytest.mark.skipif(not has_dask, reason="dask not installed")
-@pytest.mark.skipif(not has_cftime, reason="cftime not installed")
+@requires_cftime
+@requires_dask
 def test_contains_cftime_datetimes_dask_3d(times_3d):
     assert contains_cftime_datetimes(times_3d.chunk())
 
@@ -806,13 +762,13 @@ def test_contains_cftime_datetimes_non_cftimes(non_cftime_data):
     assert not contains_cftime_datetimes(non_cftime_data)
 
 
-@pytest.mark.skipif(not has_dask, reason="dask not installed")
+@requires_dask
 @pytest.mark.parametrize("non_cftime_data", [DataArray([]), DataArray([1, 2])])
 def test_contains_cftime_datetimes_non_cftimes_dask(non_cftime_data):
     assert not contains_cftime_datetimes(non_cftime_data.chunk())
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 @pytest.mark.parametrize("shape", [(24,), (8, 3), (2, 4, 3)])
 def test_encode_cf_datetime_overflow(shape):
     # Test for fix to GH 2272
@@ -837,7 +793,7 @@ def test_encode_cf_datetime_pandas_min():
     assert calendar == expected_calendar
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 def test_time_units_with_timezone_roundtrip(calendar):
     # Regression test for GH 2649
     expected_units = "days since 2000-01-01T00:00:00-05:00"
@@ -884,7 +840,7 @@ def test_use_cftime_default_standard_calendar_out_of_range(calendar, units_year)
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -901,7 +857,7 @@ def test_use_cftime_default_non_standard_calendar(calendar, units_year):
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -919,7 +875,7 @@ def test_use_cftime_true(calendar, units_year):
     from cftime import num2date
 
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     expected = num2date(
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
@@ -946,7 +902,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 @pytest.mark.parametrize("units_year", [1500, 2500])
 def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
 
@@ -955,6 +911,6 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
 def test_use_cftime_false_non_standard_calendar(calendar, units_year):
     numerical_dates = [0, 1]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)

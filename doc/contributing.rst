@@ -286,12 +286,12 @@ How to build the *xarray* documentation
 Requirements
 ~~~~~~~~~~~~
 Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
-to build the docs you need to use the environment file ``doc/environment.yml``.
+to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
 
 .. code-block:: none
 
     # Create and activate the docs environment
-    conda env create -f doc/environment.yml
+    conda env create -f ci/requirements/doc.yml
     conda activate xarray-docs
 
     # or with older versions of Anaconda:

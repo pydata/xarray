@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ==================================
 Multiple lines from a 2d DataArray

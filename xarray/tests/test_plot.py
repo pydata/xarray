@@ -417,7 +417,7 @@ class TestPlot(PlotTestCase):
 
     def test_coord_with_interval(self):
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins("dim_0", bins).mean(xr.ALL_DIMS).plot()
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot()
 
 
 class TestPlot1D(PlotTestCase):
@@ -502,7 +502,7 @@ class TestPlotStep(PlotTestCase):
 
     def test_coord_with_interval_step(self):
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins("dim_0", bins).mean(xr.ALL_DIMS).plot.step()
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step()
         assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
 
@@ -544,7 +544,7 @@ class TestPlotHistogram(PlotTestCase):
     def test_hist_coord_with_interval(self):
         (
             self.darray.groupby_bins("dim_0", [-1, 0, 1, 2])
-            .mean(xr.ALL_DIMS)
+            .mean(...)
             .plot.hist(range=(-1, 2))
         )
 
@@ -1544,7 +1544,7 @@ class TestFacetGrid(PlotTestCase):
         self.darray.name = "testvar"
         self.g.map_dataarray(xplt.contourf, "x", "y")
         for k, ax in zip("abc", self.g.axes.flat):
-            assert "z = {}".format(k) == ax.get_title()
+            assert f"z = {k}" == ax.get_title()
 
         alltxt = text_in_fig()
         assert self.darray.name in alltxt

@@ -49,7 +49,7 @@ def _fix_attributes(attributes):
             # dot-separated key
             attributes.update(
                 {
-                    "{}.{}".format(k, k_child): v_child
+                    f"{k}.{k_child}": v_child
                     for k_child, v_child in attributes.pop(k).items()
                 }
             )

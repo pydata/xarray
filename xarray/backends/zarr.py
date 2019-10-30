@@ -467,7 +467,7 @@ def open_zarr(
     drop_variables=None,
     consolidated=False,
     overwrite_encoded_chunks=False,
-    **kwargs
+    **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
 

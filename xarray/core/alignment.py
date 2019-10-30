@@ -64,7 +64,7 @@ def align(
     copy=True,
     indexes=None,
     exclude=frozenset(),
-    fill_value=dtypes.NA
+    fill_value=dtypes.NA,
 ):
     """
     Given any number of Dataset and/or DataArray objects, returns new
@@ -252,7 +252,7 @@ def align(
 
     if not indexes and len(objects) == 1:
         # fast path for the trivial case
-        obj, = objects
+        (obj,) = objects
         return (obj.copy(deep=copy),)
 
     all_indexes = defaultdict(list)
@@ -294,9 +294,7 @@ def align(
                 or dim in unlabeled_dim_sizes
             ):
                 if join == "exact":
-                    raise ValueError(
-                        "indexes along dimension {!r} are not equal".format(dim)
-                    )
+                    raise ValueError(f"indexes along dimension {dim!r} are not equal")
                 index = joiner(matching_indexes)
                 joined_indexes[dim] = index
             else:
@@ -402,7 +400,7 @@ def deep_align(
         copy=copy,
         indexes=indexes,
         exclude=exclude,
-        fill_value=fill_value
+        fill_value=fill_value,
     )
 
     for position, key, aligned_obj in zip(positions, keys, aligned):
