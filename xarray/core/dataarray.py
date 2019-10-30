@@ -2995,7 +2995,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """ integrate the array with the trapezoidal rule.
 
         .. note::
-            This feature is limited to simple cartesian geometry, i.e. coord
+            This feature is limited to simple cartesian geometry, i.e. dim
             must be one dimensional.
 
         Parameters
