@@ -5185,20 +5185,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         >>> ds = xr.Dataset(
         ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0])},
-        ...     coords={"x": [0, 1, 2, 3], "y": ("x", [10, 11, 12, 13])},
+        ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
         ... )
         >>> ds.integrate("x")
         <xarray.Dataset>
         Dimensions:  ()
         Data variables:
-            a        float64 19.5
+            a        float64 16.5
             b        float64 3.5
         >>> ds.integrate("y")
         <xarray.Dataset>
         Dimensions:  ()
         Data variables:
-            a        float64 19.5
-            b        float64 3.5
+            a        float64 20.0
+            b        float64 4.0
         """
         if not isinstance(coord, (list, tuple)):
             coord = (coord,)
