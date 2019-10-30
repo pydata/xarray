@@ -2557,3 +2557,390 @@ class TestDataset:
         result = func(ds)
 
         assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(reason="indexes strip units")
+    @pytest.mark.parametrize(
+        "indices",
+        (
+            pytest.param(4, id="single index"),
+            pytest.param([5, 2, 9, 1], id="multiple indices"),
+        ),
+    )
+    def test_isel(self, indices, dtype):
+        array1 = np.arange(10).astype(dtype) * unit_registry.s
+        array2 = np.linspace(0, 1, 10).astype(dtype) * unit_registry.Pa
+
+        x = np.arange(len(array1)) * unit_registry.m
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        expected = attach_units(
+            strip_units(ds).isel(x=indices),
+            {"a": unit_registry.s, "b": unit_registry.Pa, "x": unit_registry.m},
+        )
+        result = ds.isel(x=indices)
+
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(
+        reason="xarray does not support duck arrays in dimension coordinates"
+    )
+    @pytest.mark.parametrize(
+        "values",
+        (
+            pytest.param(12, id="single_value"),
+            pytest.param([10, 5, 13], id="list_of_values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "units,error",
+        (
+            pytest.param(1, KeyError, id="no_units"),
+            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
+            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
+            pytest.param(unit_registry.ms, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.s, None, id="same_unit"),
+        ),
+    )
+    def test_sel(self, values, units, error, dtype):
+        array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
+        array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
+        x = np.arange(len(array1)) * unit_registry.s
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        values_with_units = values * units
+
+        if error is not None:
+            with pytest.raises(error):
+                ds.sel(x=values_with_units)
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).sel(x=values),
+            {"a": unit_registry.degK, "b": unit_registry.Pa, "x": unit_registry.s},
+        )
+        result = ds.sel(x=values_with_units)
+        assert_equal_with_units(expected, result)
+
+    @pytest.mark.xfail(
+        reason="xarray does not support duck arrays in dimension coordinates"
+    )
+    @pytest.mark.parametrize(
+        "values",
+        (
+            pytest.param(12, id="single value"),
+            pytest.param([10, 5, 13], id="list of multiple values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array of multiple values"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "units,error",
+        (
+            pytest.param(1, KeyError, id="no_units"),
+            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
+            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
+            pytest.param(unit_registry.ms, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.s, None, id="same_unit"),
+        ),
+    )
+    def test_loc(self, values, units, error, dtype):
+        array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
+        array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
+        x = np.arange(len(array1)) * unit_registry.s
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        values_with_units = values * units
+
+        if error is not None:
+            with pytest.raises(error):
+                ds.loc[{"x": values_with_units}]
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).loc[{"x": values}],
+            {"a": unit_registry.degK, "b": unit_registry.Pa, "x": unit_registry.s},
+        )
+        result = ds.loc[{"x": values_with_units}]
+        assert_equal_with_units(expected, result)
+
+    # @pytest.mark.xfail(reason="tries to coerce using asarray")
+    @pytest.mark.parametrize(
+        "shape",
+        (
+            pytest.param((10, 20), id="nothing squeezable"),
+            pytest.param((10, 20, 1), id="last dimension squeezable"),
+            pytest.param((10, 1, 20), id="middle dimension squeezable"),
+            pytest.param((1, 10, 20), id="first dimension squeezable"),
+            pytest.param((1, 10, 1, 20), id="first and last dimension squeezable"),
+        ),
+    )
+    def test_squeeze(self, shape, dtype):
+        names = "xyzt"
+        coords = {
+            name: np.arange(length).astype(dtype)
+            * (unit_registry.m if name != "t" else unit_registry.s)
+            for name, length in zip(names, shape)
+        }
+        array1 = (
+            np.linspace(0, 1, 10 * 20).astype(dtype).reshape(shape) * unit_registry.degK
+        )
+        array2 = (
+            np.linspace(1, 2, 10 * 20).astype(dtype).reshape(shape) * unit_registry.Pa
+        )
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=tuple(names[: len(shape)])),
+                "b": xr.DataArray(data=array2, dims=tuple(names[: len(shape)])),
+            },
+            coords=coords,
+        )
+        units = extract_units(ds)
+
+        expected = attach_units(strip_units(ds).squeeze(), units)
+
+        result = ds.squeeze()
+        assert_equal_with_units(result, expected)
+
+        # try squeezing the dimensions separately
+        names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
+        for name in names:
+            expected = attach_units(strip_units(ds).squeeze(dim=name), units)
+            result = ds.squeeze(dim=name)
+            assert_equal_with_units(result, expected)
+
+    @pytest.mark.xfail(reason="ignores units")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_interp(self, unit, error):
+        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
+
+        coords = {
+            "x": np.arange(10) * unit_registry.m,
+            "y": np.arange(5) * unit_registry.m,
+            "z": np.arange(8) * unit_registry.s,
+        }
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "z")),
+            },
+            coords=coords,
+        )
+
+        new_coords = (np.arange(10) + 0.5) * unit
+
+        if error is not None:
+            with pytest.raises(error):
+                ds.interp(x=new_coords)
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).interp(x=strip_units(new_coords)), extract_units(ds)
+        )
+        result = ds.interp(x=new_coords)
+
+        assert_equal_with_units(result, expected)
+
+    @pytest.mark.xfail(reason="ignores units")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_interp_like(self, unit, error, dtype):
+        array1 = (
+            np.linspace(0, 10, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
+        )
+        array2 = (
+            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
+        )
+
+        coords = {
+            "x": np.arange(10) * unit_registry.m,
+            "y": np.arange(5) * unit_registry.m,
+            "z": np.arange(8) * unit_registry.m,
+        }
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "z")),
+            },
+            coords=coords,
+        )
+
+        other = xr.Dataset(
+            data_vars={
+                "c": xr.DataArray(data=np.empty((20, 10)), dims=("x", "y")),
+                "d": xr.DataArray(data=np.empty((20, 15)), dims=("x", "z")),
+            },
+            coords={
+                "x": (np.arange(20) + 0.3) * unit,
+                "y": (np.arange(10) - 0.2) * unit,
+                "z": (np.arange(15) + 0.4) * unit,
+            },
+        )
+
+        if error is not None:
+            with pytest.raises(error):
+                ds.interp_like(other)
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).interp_like(strip_units(other)), extract_units(ds)
+        )
+        result = ds.interp_like(other)
+
+        assert_equal_with_units(result, expected)
+
+    @pytest.mark.xfail(
+        reason="pint does not implement np.result_type in __array_function__ yet"
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_reindex(self, unit, error):
+        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
+
+        coords = {
+            "x": np.arange(10) * unit_registry.m,
+            "y": np.arange(5) * unit_registry.m,
+            "z": np.arange(8) * unit_registry.s,
+        }
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "z")),
+            },
+            coords=coords,
+        )
+
+        new_coords = (np.arange(10) + 0.5) * unit
+
+        if error is not None:
+            with pytest.raises(error):
+                ds.interp(x=new_coords)
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).reindex(x=strip_units(new_coords)), extract_units(ds)
+        )
+        result = ds.reindex(x=new_coords)
+
+        assert_equal_with_units(result, expected)
+
+    @pytest.mark.xfail(
+        reason="pint does not implement np.result_type in __array_function__ yet"
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, None, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
+            pytest.param(unit_registry.s, None, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_reindex_like(self, unit, error, dtype):
+        array1 = (
+            np.linspace(0, 10, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
+        )
+        array2 = (
+            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
+        )
+
+        coords = {
+            "x": np.arange(10) * unit_registry.m,
+            "y": np.arange(5) * unit_registry.m,
+            "z": np.arange(8) * unit_registry.m,
+        }
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims=("x", "y")),
+                "b": xr.DataArray(data=array2, dims=("x", "z")),
+            },
+            coords=coords,
+        )
+
+        other = xr.Dataset(
+            data_vars={
+                "c": xr.DataArray(data=np.empty((20, 10)), dims=("x", "y")),
+                "d": xr.DataArray(data=np.empty((20, 15)), dims=("x", "z")),
+            },
+            coords={
+                "x": (np.arange(20) + 0.3) * unit,
+                "y": (np.arange(10) - 0.2) * unit,
+                "z": (np.arange(15) + 0.4) * unit,
+            },
+        )
+
+        if error is not None:
+            with pytest.raises(error):
+                ds.reindex_like(other)
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).reindex_like(strip_units(other)), extract_units(ds)
+        )
+        result = ds.reindex_like(other)
+
+        assert_equal_with_units(result, expected)
