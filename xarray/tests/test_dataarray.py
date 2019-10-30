@@ -3125,11 +3125,11 @@ class TestDataArray:
 
         # Trivial align - 1 element
         x = DataArray([1, 2, 3], coords=[("a", [1, 2, 3])])
-        x2, = align(x, copy=False)
+        (x2,) = align(x, copy=False)
         assert_identical(x, x2)
         assert source_ndarray(x2.data) is source_ndarray(x.data)
 
-        x2, = align(x, copy=True)
+        (x2,) = align(x, copy=True)
         assert_identical(x, x2)
         assert source_ndarray(x2.data) is not source_ndarray(x.data)
 
@@ -3214,7 +3214,7 @@ class TestDataArray:
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
 
-        x2, = align(x, join="outer", indexes={"a": [-2, 7, 10, -1]})
+        (x2,) = align(x, join="outer", indexes={"a": [-2, 7, 10, -1]})
         expected_x2 = DataArray([3, np.nan, 2, 1], coords=[("a", [-2, 7, 10, -1])])
         assert_identical(expected_x2, x2)
 
@@ -3293,7 +3293,7 @@ class TestDataArray:
         assert source_ndarray(x2.data) is source_ndarray(x.data)
 
         # single-element broadcast (trivial case)
-        x2, = broadcast(x)
+        (x2,) = broadcast(x)
         assert_identical(x, x2)
         assert source_ndarray(x2.data) is source_ndarray(x.data)
 
@@ -3923,6 +3923,16 @@ class TestDataArray:
         actual = da.dot(dm)
         expected_vals = np.tensordot(da_vals, dm_vals, axes=([1, 2], [1, 2]))
         expected = DataArray(expected_vals, coords=[x, j], dims=["x", "j"])
+        assert_equal(expected, actual)
+
+        # Ellipsis: all dims are shared
+        actual = da.dot(da, dims=...)
+        expected = da.dot(da)
+        assert_equal(expected, actual)
+
+        # Ellipsis: not all dims are shared
+        actual = da.dot(dm, dims=...)
+        expected = da.dot(dm, dims=("j", "x", "y", "z"))
         assert_equal(expected, actual)
 
         with pytest.raises(NotImplementedError):

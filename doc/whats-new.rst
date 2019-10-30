@@ -22,6 +22,11 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+- All leftover support for dates from non-standard calendars through netcdftime, the
+  module included in versions of netCDF4 prior to 1.4 that eventually became the
+  cftime package, has been removed in favor of relying solely on the standalone
+  cftime package (:pull:`3450`).  By `Spencer Clark 
+  <https://github.com/spencerkclark>`_. 
 
 New Features
 ~~~~~~~~~~~~
@@ -32,19 +37,11 @@ New Features
 - Changed `xr.ALL_DIMS` to equal python's `Ellipsis` (`...`), and changed internal usages to use
   `...` directly. As before, you can use this to instruct a `groupby` operation
   to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
-  using `...`.
+  using `...`. (:pull:`3418`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
-  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
-
-  .. note::
-
-    At the moment of writing, these tests *as well as the ability to use pint in general*
-    require `a highly experimental version of pint
-    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
-    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
-    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
-
+- :py:func:`~xarray.dot`, and :py:func:`~xarray.DataArray.dot` now support the
+  `dims=...` option to sum over the union of dimensions of all input arrays
+  (:issue:`3423`) by `Mathias Hauser <https://github.com/mathause>`_.
 - Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
   representation of objects in jupyter. By default this feature is turned off
   for now. Enable it with :py:meth:`xarray.set_options(display_style="html")`.
@@ -75,6 +72,17 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
+  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
+
+  .. note::
+
+    At the moment of writing, these tests *as well as the ability to use pint in general*
+    require `a highly experimental version of pint
+    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
+    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
+    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
 
 - Use Python 3.6 idioms throughout the codebase. (:pull:3419)
   By `Maximilian Roos <https://github.com/max-sixty>`_

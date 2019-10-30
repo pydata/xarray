@@ -616,7 +616,7 @@ class DataArray(AbstractArray, DataWithCoords):
             if var.ndim == 1 and isinstance(var, IndexVariable):
                 level_names = var.level_names
                 if level_names is not None:
-                    dim, = var.dims
+                    (dim,) = var.dims
                     level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
@@ -2742,9 +2742,9 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims: hashable or sequence of hashables, optional
-            Along which dimensions to be summed over. Default all the common
-            dimensions are summed over.
+        dims: '...', hashable or sequence of hashables, optional
+            Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
+            If not specified, then all the common dimensions are summed over.
 
         Returns
         -------

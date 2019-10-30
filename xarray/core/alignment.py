@@ -252,7 +252,7 @@ def align(
 
     if not indexes and len(objects) == 1:
         # fast path for the trivial case
-        obj, = objects
+        (obj,) = objects
         return (obj.copy(deep=copy),)
 
     all_indexes = defaultdict(list)

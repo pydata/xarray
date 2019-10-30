@@ -212,7 +212,7 @@ def get_dim_indexers(data_obj, indexers):
     level_indexers = defaultdict(dict)
     dim_indexers = {}
     for key, label in indexers.items():
-        dim, = data_obj[key].dims
+        (dim,) = data_obj[key].dims
         if key != dim:
             # assume here multi-index level indexer
             level_indexers[dim][key] = label
@@ -1368,7 +1368,7 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
-            key, = key
+            (key,) = key
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
             return NumpyIndexingAdapter(self.array.values)[indexer]
