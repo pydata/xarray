@@ -22,6 +22,11 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+
+  .. note::
+
+    cftime version 1.0.4 is broken (`cftime/126 <https://github.com/Unidata/cftime/issues/126>`_), use version 1.0.4.2 instead. 
+
 - All leftover support for dates from non-standard calendars through netcdftime, the
   module included in versions of netCDF4 prior to 1.4 that eventually became the
   cftime package, has been removed in favor of relying solely on the standalone
