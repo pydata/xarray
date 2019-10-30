@@ -83,7 +83,7 @@ the ``calendar.month_range`` function.
 
         for i, (month, year) in enumerate(zip(time.month, time.year)):
             month_length[i] = cal_days[month]
-            if leap_year(year, calendar=calendar):
+            if leap_year(year, calendar=calendar) and month == 2:
                 month_length[i] += 1
         return month_length
 
