@@ -53,7 +53,7 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .utils import ReprObject, _check_inplace, either_dict_or_kwargs
+from .utils import Default, ReprObject, _default, _check_inplace, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
     Variable,
@@ -270,8 +270,6 @@ class DataArray(AbstractArray, DataWithCoords):
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
-    __default = ReprObject("<default>")
-
     dt = property(DatetimeAccessor)
 
     def __init__(
@@ -387,18 +385,18 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         variable: Variable = None,
         coords=None,
-        name: Optional[Hashable] = __default,
+        name: Union[Hashable, None, Default] = _default,
     ) -> "DataArray":
         if variable is None:
             variable = self.variable
         if coords is None:
             coords = self._coords
-        if name is self.__default:
+        if name is _default:
             name = self.name
         return type(self)(variable, coords, name=name, fastpath=True)
 
     def _replace_maybe_drop_dims(
-        self, variable: Variable, name: Optional[Hashable] = __default
+        self, variable: Variable, name: Union[Hashable, None, Default] = _default
     ) -> "DataArray":
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
@@ -438,7 +436,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._to_dataset_whole(name=_THIS_ARRAY, shallow_copy=False)
 
     def _from_temp_dataset(
-        self, dataset: Dataset, name: Hashable = __default
+        self, dataset: Dataset, name: Hashable = _default
     ) -> "DataArray":
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
@@ -753,6 +751,9 @@ class DataArray(AbstractArray, DataWithCoords):
                 )
             dataset[self.name] = self.variable
             return dataset
+
+    def __dask_tokenize__(self):
+        return (type(self), self._variable, self._coords, self._name)
 
     def __dask_graph__(self):
         return self._to_temp_dataset().__dask_graph__()
@@ -2450,13 +2451,11 @@ class DataArray(AbstractArray, DataWithCoords):
         except (TypeError, AttributeError):
             return False
 
-    __default_name = object()
-
     def _result_name(self, other: Any = None) -> Optional[Hashable]:
         # use the same naming heuristics as pandas:
         # https://github.com/ContinuumIO/blaze/issues/458#issuecomment-51936356
-        other_name = getattr(other, "name", self.__default_name)
-        if other_name is self.__default_name or other_name == self.name:
+        other_name = getattr(other, "name", _default)
+        if other_name is _default or other_name == self.name:
             return self.name
         else:
             return None
@@ -2742,9 +2741,9 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims: hashable or sequence of hashables, optional
-            Along which dimensions to be summed over. Default all the common
-            dimensions are summed over.
+        dims: '...', hashable or sequence of hashables, optional
+            Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
+            If not specified, then all the common dimensions are summed over.
 
         Returns
         -------
@@ -2995,7 +2994,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """ integrate the array with the trapezoidal rule.
 
         .. note::
-            This feature is limited to simple cartesian geometry, i.e. coord
+            This feature is limited to simple cartesian geometry, i.e. dim
             must be one dimensional.
 
         Parameters

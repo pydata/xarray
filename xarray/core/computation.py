@@ -884,7 +884,7 @@ def apply_ufunc(
     Plain scalars, numpy arrays and a mix of these with xarray objects is also
     supported:
 
-    >>> magnitude(4, 5)
+    >>> magnitude(3, 4)
     5.0
     >>> magnitude(3, np.array([0, 4]))
     array([3., 5.])
@@ -1055,9 +1055,9 @@ def dot(*arrays, dims=None, **kwargs):
     ----------
     arrays: DataArray (or Variable) objects
         Arrays to compute.
-    dims: str or tuple of strings, optional
-        Which dimensions to sum over.
-        If not speciified, then all the common dimensions are summed over.
+    dims: '...', str or tuple of strings, optional
+        Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
+        If not specified, then all the common dimensions are summed over.
     **kwargs: dict
         Additional keyword arguments passed to numpy.einsum or
         dask.array.einsum
@@ -1070,7 +1070,7 @@ def dot(*arrays, dims=None, **kwargs):
     --------
 
     >>> import numpy as np
-    >>> import xarray as xp
+    >>> import xarray as xr
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=['a', 'b'])
     >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2),
     ...                     dims=['a', 'b', 'c'])
@@ -1117,6 +1117,14 @@ def dot(*arrays, dims=None, **kwargs):
            [273, 446, 619]])
     Dimensions without coordinates: a, d
 
+    >>> xr.dot(da_a, da_b)
+    <xarray.DataArray (c: 2)>
+    array([110, 125])
+    Dimensions without coordinates: c
+
+    >>> xr.dot(da_a, da_b, dims=...)
+    <xarray.DataArray ()>
+    array(235)
     """
     from .dataarray import DataArray
     from .variable import Variable
@@ -1141,7 +1149,9 @@ def dot(*arrays, dims=None, **kwargs):
     einsum_axes = "abcdefghijklmnopqrstuvwxyz"
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
-    if dims is None:
+    if dims is ...:
+        dims = all_dims
+    elif dims is None:
         # find dimensions that occur more than one times
         dim_counts = Counter()
         for arr in arrays:

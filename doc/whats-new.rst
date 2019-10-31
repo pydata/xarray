@@ -21,12 +21,20 @@ v0.14.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Broken compatibility with cftime < 1.0.3.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+  .. note::
+
+    cftime version 1.0.4 is broken
+    (`cftime/126 <https://github.com/Unidata/cftime/issues/126>`_);
+    please use version 1.0.4.2 instead.
+
 - All leftover support for dates from non-standard calendars through netcdftime, the
   module included in versions of netCDF4 prior to 1.4 that eventually became the
   cftime package, has been removed in favor of relying solely on the standalone
-  cftime package (:pull:`3450`).  By `Spencer Clark 
-  <https://github.com/spencerkclark>`_. 
+  cftime package (:pull:`3450`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -37,24 +45,24 @@ New Features
 - Changed `xr.ALL_DIMS` to equal python's `Ellipsis` (`...`), and changed internal usages to use
   `...` directly. As before, you can use this to instruct a `groupby` operation
   to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
-  using `...`.
+  using `...`. (:pull:`3418`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
-  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
-
-  .. note::
-
-    At the moment of writing, these tests *as well as the ability to use pint in general*
-    require `a highly experimental version of pint
-    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
-    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
-    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
-
+- :py:func:`~xarray.dot`, and :py:func:`~xarray.DataArray.dot` now support the
+  `dims=...` option to sum over the union of dimensions of all input arrays
+  (:issue:`3423`) by `Mathias Hauser <https://github.com/mathause>`_.
 - Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
   representation of objects in jupyter. By default this feature is turned off
   for now. Enable it with :py:meth:`xarray.set_options(display_style="html")`.
   (:pull:`3425`) by `Benoit Bovy <https://github.com/benbovy>`_ and
   `Julia Signell <https://github.com/jsignell>`_.
+- Implement `dask deterministic hashing
+  <https://docs.dask.org/en/latest/custom-collections.html#deterministic-hashing>`_
+  for xarray objects. Note that xarray objects with a dask.array backend already used
+  deterministic hashing in previous releases; this change implements it when whole
+  xarray objects are embedded in a dask graph, e.g. when :meth:`DataArray.map` is
+  invoked. (:issue:`3378`, :pull:`3446`)
+  By `Deepak Cherian <https://github.com/dcherian>`_ and
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -73,19 +81,35 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Fix leap year condition in example (http://xarray.pydata.org/en/stable/examples/monthly-means.html) by `Mickaël Lalande <https://github.com/mickaellalande>`_.
 - Fix the documentation of :py:meth:`DataArray.resample` and
   :py:meth:`Dataset.resample` and explicitly state that a
   datetime-like dimension is required. (:pull:`3400`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Update the terminology page to address multidimensional coordinates. (:pull:`3410`)
   By `Jon Thielen <https://github.com/jthielen>`_.
+- Fix the documentation of :py:meth:`Dataset.integrate` and
+  :py:meth:`DataArray.integrate` and add an example to
+  :py:meth:`Dataset.integrate`. (:pull:`3469`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Added integration tests against `pint <https://pint.readthedocs.io/>`_.
+  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
+
+  .. note::
+
+    At the moment of writing, these tests *as well as the ability to use pint in general*
+    require `a highly experimental version of pint
+    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
+    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
+    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
+
 - Use Python 3.6 idioms throughout the codebase. (:pull:3419)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 .. _whats-new.0.14.0:
 
