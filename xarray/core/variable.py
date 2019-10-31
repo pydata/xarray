@@ -391,7 +391,9 @@ class Variable(
         return new.load(**kwargs)
 
     def __dask_tokenize__(self):
-        return Variable, self._dims, self.data, self._attrs
+        # Use v.data, instead of v._data, in order to cope with the wrappers
+        # around NetCDF and the like
+        return type(self), self._dims, self.data, self._attrs
 
     def __dask_graph__(self):
         if isinstance(self._data, dask_array_type):
@@ -1967,7 +1969,8 @@ class IndexVariable(Variable):
             self._data = PandasIndexAdapter(self._data)
 
     def __dask_tokenize__(self):
-        return (IndexVariable, self._dims, self._data.array, self._attrs)
+        # Don't waste time converting pd.Index to np.ndarray
+        return (type(self), self._dims, self._data.array, self._attrs)
 
     def load(self):
         # data is already loaded into memory for IndexVariable

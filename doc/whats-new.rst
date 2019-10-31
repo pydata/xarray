@@ -21,17 +21,20 @@ v0.14.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Broken compatibility with cftime < 1.0.3.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
   .. note::
 
-    cftime version 1.0.4 is broken (`cftime/126 <https://github.com/Unidata/cftime/issues/126>`_), use version 1.0.4.2 instead. 
+    cftime version 1.0.4 is broken
+    (`cftime/126 <https://github.com/Unidata/cftime/issues/126>`_);
+    please use version 1.0.4.2 instead.
 
 - All leftover support for dates from non-standard calendars through netcdftime, the
   module included in versions of netCDF4 prior to 1.4 that eventually became the
   cftime package, has been removed in favor of relying solely on the standalone
-  cftime package (:pull:`3450`).  By `Spencer Clark 
-  <https://github.com/spencerkclark>`_. 
+  cftime package (:pull:`3450`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -52,6 +55,14 @@ New Features
   for now. Enable it with :py:meth:`xarray.set_options(display_style="html")`.
   (:pull:`3425`) by `Benoit Bovy <https://github.com/benbovy>`_ and
   `Julia Signell <https://github.com/jsignell>`_.
+- Implement `dask deterministic hashing
+  <https://docs.dask.org/en/latest/custom-collections.html#deterministic-hashing>`_
+  for xarray objects. Note that xarray objects with a dask.array backend already used
+  deterministic hashing in previous releases; this change implements it when whole
+  xarray objects are embedded in a dask graph, e.g. when :meth:`DataArray.map` is
+  invoked. (:issue:`3378`, :pull:`3446`)
+  By `Deepak Cherian <https://github.com/dcherian>`_ and
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -95,8 +106,7 @@ Internal Changes
 
 - Use Python 3.6 idioms throughout the codebase. (:pull:3419)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Implement :py:func:`__dask_tokenize__` for xarray objects.
-  By `Deepak Cherian <https://github.com/dcherian>`_ and `Guido Imperiale <https://github.com/crusaderky>`_.
+
 
 .. _whats-new.0.14.0:
 
