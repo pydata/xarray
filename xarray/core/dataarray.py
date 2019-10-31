@@ -385,7 +385,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         variable: Variable = None,
         coords=None,
-        name: Union[Optional[Hashable], Default] = _default,
+        name: Union[Hashable, None, Default] = _default,
     ) -> "DataArray":
         if variable is None:
             variable = self.variable
@@ -396,7 +396,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return type(self)(variable, coords, name=name, fastpath=True)
 
     def _replace_maybe_drop_dims(
-        self, variable: Variable, name: Union[Optional[Hashable], Default] = _default
+        self, variable: Variable, name: Union[Hashable, None, Default] = _default
     ) -> "DataArray":
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
