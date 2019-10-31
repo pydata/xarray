@@ -1227,7 +1227,7 @@ def test_lazy_array_equiv():
         ]:
             xr.merge([lons1, lons2], compat=compat)
 
-            
+
 @pytest.mark.parametrize(
     "obj", [make_da(), make_da().compute(), make_ds(), make_ds().compute()]
 )
