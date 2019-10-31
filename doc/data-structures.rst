@@ -393,7 +393,7 @@ methods (like pandas) for transforming datasets into new objects.
 
 For removing variables, you can select and drop an explicit list of
 variables by indexing with a list of names or using the
-:py:meth:`~xarray.Dataset.drop` methods to return a new ``Dataset``. These
+:py:meth:`~xarray.Dataset.drop_vars` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
 .. ipython:: python
