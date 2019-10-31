@@ -6,7 +6,6 @@ import itertools
 import os.path
 import re
 import warnings
-from enum import Enum
 from typing import (
     AbstractSet,
     Any,
@@ -704,8 +703,8 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     return new_dim
 
 
-class Default(Enum):
-    sentinel = 0
+class Default:
+    pass
 
 
-__default = Default.sentinel
+_default = Default()

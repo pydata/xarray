@@ -73,7 +73,7 @@ from .utils import (
     Default,
     Frozen,
     SortedKeysDict,
-    __default,
+    _default,
     _check_inplace,
     decode_numpy_dict_values,
     either_dict_or_kwargs,
@@ -867,9 +867,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables: Dict[Hashable, Variable] = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
-        attrs: Union[None, Dict[Hashable, Any], Default] = __default,
-        indexes: Union[Optional[Dict[Any, pd.Index]], Default] = __default,
-        encoding: Union[Optional[dict], Default] = __default,
+        attrs: Union[None, Dict[Hashable, Any], Default] = _default,
+        indexes: Union[Optional[Dict[Any, pd.Index]], Default] = _default,
+        encoding: Union[Optional[dict], Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Fastpath constructor for internal use.
@@ -887,11 +887,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 self._coord_names = coord_names
             if dims is not None:
                 self._dims = dims
-            if attrs is not __default:
+            if not isinstance(attrs, Default):
                 self._attrs = attrs
-            if indexes is not __default:
+            if not isinstance(indexes, Default):
                 self._indexes = indexes
-            if encoding is not __default:
+            if not isinstance(encoding, Default):
                 self._encoding = encoding
             obj = self
         else:
@@ -901,11 +901,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 coord_names = self._coord_names.copy()
             if dims is None:
                 dims = self._dims.copy()
-            if attrs is __default:
+            if attrs is _default:
                 attrs = copy.copy(self._attrs)
-            if indexes is __default:
+            if indexes is _default:
                 indexes = copy.copy(self._indexes)
-            if encoding is __default:
+            if encoding is _default:
                 encoding = copy.copy(self._encoding)
             obj = self._construct_direct(
                 variables, coord_names, dims, attrs, indexes, encoding
@@ -916,8 +916,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
-        attrs: Union[Optional[Dict[Hashable, Any]], Default] = __default,
-        indexes: Union[Dict[Hashable, pd.Index], Default] = __default,
+        attrs: Union[Optional[Dict[Hashable, Any]], Default] = _default,
+        indexes: Union[Dict[Hashable, pd.Index], Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Replace variables with recalculated dimensions."""
@@ -931,7 +931,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
         dims: Dict[Hashable, int] = None,
-        attrs: Union[Dict[Hashable, Any], Default] = __default,
+        attrs: Union[Dict[Hashable, Any], Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Deprecated version of _replace_with_new_dims().
