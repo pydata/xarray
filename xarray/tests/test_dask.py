@@ -1,5 +1,6 @@
 import operator
 import pickle
+import sys
 from contextlib import suppress
 from distutils.version import LooseVersion
 from textwrap import dedent
@@ -21,11 +22,15 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raises_regex,
+    requires_scipy_or_netCDF4,
 )
+from .test_backends import create_tmp_file
 
 dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
+
+ON_WINDOWS = sys.platform == "win32"
 
 
 class CountingScheduler:
@@ -1135,3 +1140,92 @@ def test_make_meta(map_ds):
     for variable in map_ds.data_vars:
         assert variable in meta.data_vars
         assert meta.data_vars[variable].shape == (0,) * meta.data_vars[variable].ndim
+
+
+@pytest.mark.parametrize(
+    "obj", [make_da(), make_da().compute(), make_ds(), make_ds().compute()]
+)
+@pytest.mark.parametrize(
+    "transform",
+    [
+        lambda x: x.reset_coords(),
+        lambda x: x.reset_coords(drop=True),
+        lambda x: x.isel(x=1),
+        lambda x: x.attrs.update(new_attrs=1),
+        lambda x: x.assign_coords(cxy=1),
+        lambda x: x.rename({"x": "xnew"}),
+        lambda x: x.rename({"cxy": "cxynew"}),
+    ],
+)
+def test_token_changes_on_transform(obj, transform):
+    with raise_if_dask_computes():
+        assert dask.base.tokenize(obj) != dask.base.tokenize(transform(obj))
+
+
+@pytest.mark.parametrize(
+    "obj", [make_da(), make_da().compute(), make_ds(), make_ds().compute()]
+)
+def test_token_changes_when_data_changes(obj):
+    with raise_if_dask_computes():
+        t1 = dask.base.tokenize(obj)
+
+    # Change data_var
+    if isinstance(obj, DataArray):
+        obj *= 2
+    else:
+        obj["a"] *= 2
+    with raise_if_dask_computes():
+        t2 = dask.base.tokenize(obj)
+    assert t2 != t1
+
+    # Change non-index coord
+    obj.coords["ndcoord"] *= 2
+    with raise_if_dask_computes():
+        t3 = dask.base.tokenize(obj)
+    assert t3 != t2
+
+    # Change IndexVariable
+    obj.coords["x"] *= 2
+    with raise_if_dask_computes():
+        t4 = dask.base.tokenize(obj)
+    assert t4 != t3
+
+
+@pytest.mark.parametrize("obj", [make_da().compute(), make_ds().compute()])
+def test_token_changes_when_buffer_changes(obj):
+    with raise_if_dask_computes():
+        t1 = dask.base.tokenize(obj)
+
+    if isinstance(obj, DataArray):
+        obj[0, 0] = 123
+    else:
+        obj["a"][0, 0] = 123
+    with raise_if_dask_computes():
+        t2 = dask.base.tokenize(obj)
+    assert t2 != t1
+
+    obj.coords["ndcoord"][0] = 123
+    with raise_if_dask_computes():
+        t3 = dask.base.tokenize(obj)
+    assert t3 != t2
+
+
+@pytest.mark.parametrize(
+    "transform",
+    [lambda x: x, lambda x: x.copy(deep=False), lambda x: x.copy(deep=True)],
+)
+@pytest.mark.parametrize("obj", [make_da(), make_ds(), make_ds().variables["a"]])
+def test_token_identical(obj, transform):
+    with raise_if_dask_computes():
+        assert dask.base.tokenize(obj) == dask.base.tokenize(transform(obj))
+    assert dask.base.tokenize(obj.compute()) == dask.base.tokenize(
+        transform(obj.compute())
+    )
+
+
+@requires_scipy_or_netCDF4
+def test_normalize_token_with_backend(map_ds):
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp_file:
+        map_ds.to_netcdf(tmp_file)
+        read = xr.open_dataset(tmp_file)
+        assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
