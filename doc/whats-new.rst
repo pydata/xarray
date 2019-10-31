@@ -21,6 +21,10 @@ v0.14.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Using :py:meth:`Dataset.drop` & :py:meth:`DataArray.drop' to drop variables is deprecated in favor of
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars'. The ``drop`` methods are now exclusively
+  for dropping values by labels.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
 
   .. note::

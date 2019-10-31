@@ -25,7 +25,6 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
 )
 
 import numpy as np
@@ -3519,32 +3518,46 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "cannot be found in this dataset"
             )
 
-    # Drop variables
-    @overload  # noqa: F811
-    def drop(
-        self, labels: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
+    def drop_vars(
+        self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "Dataset":
-        ...
+        """Drop variables from this dataset.
 
-    # Drop index labels along dimension
-    @overload  # noqa: F811
-    def drop(
-        self, labels: Any, dim: Hashable, *, errors: str = "raise"  # array-like
-    ) -> "Dataset":
-        ...
+        Parameters
+        ----------
+        names : hashable or iterable of hashables
+            Name(s) of variables to drop.
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if any of the variable
+            passed are not in the dataset. If 'ignore', any given names that are in the
+            dataset are dropped and no error is raised.
 
-    def drop(  # noqa: F811
-        self, labels=None, dim=None, *, errors="raise", **labels_kwargs
-    ):
-        """Drop variables or index labels from this dataset.
+        Returns
+        -------
+        dropped : Dataset
+
+        """
+        if isinstance(names, str) or not isinstance(names, Iterable):
+            names = {names}
+        else:
+            names = set(names)
+        if errors == "raise":
+            self._assert_all_in_dataset(names)
+
+        variables = {k: v for k, v in self._variables.items() if k not in names}
+        coord_names = {k for k in self._coord_names if k in variables}
+        indexes = {k: v for k, v in self.indexes.items() if k not in names}
+        return self._replace_with_new_dims(
+            variables, coord_names=coord_names, indexes=indexes
+        )
+
+    def drop(self, labels=None, dim=None, *, errors="raise", **labels_kwargs):
+        """Drop index labels from this dataset.
 
         Parameters
         ----------
         labels : hashable or iterable of hashables
             Name(s) of variables or index labels to drop.
-        dim : None or hashable, optional
-            Dimension along which to drop index labels. By default (if
-            ``dim is None``), drops variables rather than index labels.
         errors: {'raise', 'ignore'}, optional
             If 'raise' (default), raises a ValueError error if
             any of the variable or index labels passed are not
@@ -3584,59 +3597,47 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if is_dict_like(labels) and not isinstance(labels, dict):
             warnings.warn(
-                "dropping coordinates using key values of dict-like labels is "
-                "deprecated; use drop_vars or a list of coordinates.",
+                "dropping coordinates using `drop` is deprecated; use drop_vars.",
                 FutureWarning,
                 stacklevel=2,
             )
-        if dim is not None and is_list_like(labels):
+            return self.drop_vars(labels, errors=errors)
+
+        if labels_kwargs or isinstance(labels, dict):
+            if dim is not None:
+                raise ValueError("cannot specify dim and dict-like arguments.")
+            labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
+
+        if dim is None and is_list_like(labels):
             warnings.warn(
-                "dropping dimensions using list-like labels is deprecated; use "
-                "dict-like arguments.",
+                "dropping variables using `drop` is deprecated; use drop_vars.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            return self.drop_vars(labels, errors=errors)
+        if dim is not None:
+            warnings.warn(
+                "dropping labels using list-like labels is deprecated; use "
+                "dict-like arguments, e.g. `ds.drop(dim=[labels]).",
                 DeprecationWarning,
                 stacklevel=2,
             )
+            return self.drop({dim: labels}, errors=errors, **labels_kwargs)
 
-        if labels_kwargs or isinstance(labels, dict):
-            labels_kwargs = either_dict_or_kwargs(labels, labels_kwargs, "drop")
-            if dim is not None:
-                raise ValueError("cannot specify dim and dict-like arguments.")
-            ds = self
-            for dim, labels in labels_kwargs.items():
-                ds = ds._drop_labels(labels, dim, errors=errors)
-            return ds
-        elif dim is None:
-            if isinstance(labels, str) or not isinstance(labels, Iterable):
-                labels = {labels}
-            else:
-                labels = set(labels)
-            return self._drop_vars(labels, errors=errors)
-        else:
-            return self._drop_labels(labels, dim, errors=errors)
-
-    def _drop_labels(self, labels=None, dim=None, errors="raise"):
-        # Don't cast to set, as it would harm performance when labels
-        # is a large numpy array
-        if utils.is_scalar(labels):
-            labels = [labels]
-        labels = np.asarray(labels)
-        try:
-            index = self.indexes[dim]
-        except KeyError:
-            raise ValueError("dimension %r does not have coordinate labels" % dim)
-        new_index = index.drop(labels, errors=errors)
-        return self.loc[{dim: new_index}]
-
-    def _drop_vars(self, names: set, errors: str = "raise") -> "Dataset":
-        if errors == "raise":
-            self._assert_all_in_dataset(names)
-
-        variables = {k: v for k, v in self._variables.items() if k not in names}
-        coord_names = {k for k in self._coord_names if k in variables}
-        indexes = {k: v for k, v in self.indexes.items() if k not in names}
-        return self._replace_with_new_dims(
-            variables, coord_names=coord_names, indexes=indexes
-        )
+        ds = self
+        for dim, labels_for_dim in labels.items():
+            # Don't cast to set, as it would harm performance when labels
+            # is a large numpy array
+            if utils.is_scalar(labels_for_dim):
+                labels_for_dim = [labels_for_dim]
+            labels_for_dim = np.asarray(labels_for_dim)
+            try:
+                index = self.indexes[dim]
+            except KeyError:
+                raise ValueError("dimension %r does not have coordinate labels" % dim)
+            new_index = index.drop(labels_for_dim, errors=errors)
+            ds = ds.loc[{dim: new_index}]
+        return ds
 
     def drop_dims(
         self, drop_dims: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
@@ -3679,7 +3680,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
 
         drop_vars = {k for k, v in self._variables.items() if set(v.dims) & drop_dims}
-        return self._drop_vars(drop_vars)
+        return self.drop_vars(drop_vars)
 
     def transpose(self, *dims: Hashable) -> "Dataset":
         """Return a new Dataset object with all array dimensions transposed.

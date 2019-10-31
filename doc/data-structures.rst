@@ -400,7 +400,7 @@ operations keep around coordinates:
 
     ds[['temperature']]
     ds[['temperature', 'temperature_double']]
-    ds.drop('temperature')
+    ds.drop_vars('temperature')
 
 To remove a dimension, you can use :py:meth:`~xarray.Dataset.drop_dims` method.
 Any variables using that dimension are dropped:

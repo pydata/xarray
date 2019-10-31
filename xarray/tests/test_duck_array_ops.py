@@ -441,7 +441,8 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
         )
         expected = getattr(da, func)(dim=aggdim, skipna=skipna)
         assert_allclose(
-            actual.drop(list(actual.coords)), expected.drop(list(expected.coords))
+            actual.drop_vars(list(actual.coords)),
+            expected.drop_vars(list(expected.coords)),
         )
 
 

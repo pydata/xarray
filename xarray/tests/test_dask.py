@@ -1077,11 +1077,11 @@ def test_map_blocks_to_array(map_ds):
     [
         lambda x: x,
         lambda x: x.to_dataset(),
-        lambda x: x.drop("x"),
+        lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
         lambda x: x.assign_coords(new_coord=("y", x.y * 2)),
         lambda x: x.astype(np.int32),
-        # TODO: [lambda x: x.isel(x=1).drop("x"), map_da],
+        # TODO: [lambda x: x.isel(x=1).drop_vars("x"), map_da],
     ],
 )
 def test_map_blocks_da_transformations(func, map_da):
@@ -1095,9 +1095,9 @@ def test_map_blocks_da_transformations(func, map_da):
     "func",
     [
         lambda x: x,
-        lambda x: x.drop("cxy"),
-        lambda x: x.drop("a"),
-        lambda x: x.drop("x"),
+        lambda x: x.drop_vars("cxy"),
+        lambda x: x.drop_vars("a"),
+        lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
         lambda x: x.rename({"a": "new1", "b": "new2"}),
         # TODO: [lambda x: x.isel(x=1)],

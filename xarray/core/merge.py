@@ -850,6 +850,6 @@ def dataset_update_method(
                     if c not in value.dims and c in dataset.coords
                 ]
                 if coord_names:
-                    other[key] = value.drop(coord_names)
+                    other[key] = value.drop_vars(coord_names)
 
     return merge_core([dataset, other], priority_arg=1, indexes=dataset.indexes)

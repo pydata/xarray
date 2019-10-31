@@ -800,7 +800,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert "coordinates" not in ds["lat"].attrs
                 assert "coordinates" not in ds["lon"].attrs
 
-        modified = original.drop(["temp", "precip"])
+        modified = original.drop_vars(["temp", "precip"])
         with self.roundtrip(modified) as actual:
             assert_identical(actual, modified)
         with create_tmp_file() as tmp_file:
@@ -2177,7 +2177,7 @@ class TestH5NetCDFData(NetCDF4Base):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into
         # unicode instead of leaving them as bytes.
-        data = create_test_data().drop("dim3")
+        data = create_test_data().drop_vars("dim3")
         data.attrs["foo"] = "bar"
         valid_engines = ["netcdf4", "h5netcdf"]
         for write_engine in valid_engines:
@@ -2344,7 +2344,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
 
     def test_open_fileobj(self):
         # open in-memory datasets instead of local file paths
-        expected = create_test_data().drop("dim3")
+        expected = create_test_data().drop_vars("dim3")
         expected.attrs["foo"] = "bar"
         with create_tmp_file() as tmp_file:
             expected.to_netcdf(tmp_file, engine="h5netcdf")
@@ -4196,7 +4196,7 @@ class TestDataArrayToNetCDF:
         with create_tmp_file() as tmp:
             data.to_netcdf(tmp)
 
-            expected = data.drop("y")
+            expected = data.drop_vars("y")
             with open_dataarray(tmp, drop_variables=["y"]) as loaded:
                 assert_identical(expected, loaded)
 
