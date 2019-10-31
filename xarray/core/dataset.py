@@ -651,6 +651,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return self
 
+    def __dask_tokenize__(self):
+        return (type(self), self._variables, self._coord_names, self._attrs)
+
     def __dask_graph__(self):
         graphs = {k: v.__dask_graph__() for k, v in self.variables.items()}
         graphs = {k: v for k, v in graphs.items() if v is not None}
