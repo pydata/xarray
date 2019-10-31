@@ -6,6 +6,7 @@ import itertools
 import os.path
 import re
 import warnings
+from enum import Enum
 from typing import (
     AbstractSet,
     Any,
@@ -701,3 +702,11 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     while new_dim in dims:
         new_dim = "_" + str(new_dim)
     return new_dim
+
+
+# Singleton type, as per https://github.com/python/typing/pull/240
+class Default(Enum):
+    token = 0
+
+
+_default = Default.token
