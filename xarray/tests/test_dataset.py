@@ -2120,6 +2120,20 @@ class TestDataset:
         actual = data.drop_vars(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
+        # deprecated approach with `drop` works (straight copy paste from above)
+
+        with pytest.warns(FutureWarning):
+            actual = data.drop("not_found_here", errors="ignore")
+        assert_identical(data, actual)
+
+        with pytest.warns(FutureWarning):
+            actual = data.drop(["not_found_here"], errors="ignore")
+        assert_identical(data, actual)
+
+        with pytest.warns(FutureWarning):
+            actual = data.drop(["time", "not_found_here"], errors="ignore")
+        assert_identical(expected, actual)
+
     def test_drop_index_labels(self):
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
