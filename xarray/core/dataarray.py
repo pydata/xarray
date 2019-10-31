@@ -2745,9 +2745,9 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims: hashable or sequence of hashables, optional
-            Along which dimensions to be summed over. Default all the common
-            dimensions are summed over.
+        dims: '...', hashable or sequence of hashables, optional
+            Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
+            If not specified, then all the common dimensions are summed over.
 
         Returns
         -------
@@ -2998,7 +2998,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """ integrate the array with the trapezoidal rule.
 
         .. note::
-            This feature is limited to simple cartesian geometry, i.e. coord
+            This feature is limited to simple cartesian geometry, i.e. dim
             must be one dimensional.
 
         Parameters
