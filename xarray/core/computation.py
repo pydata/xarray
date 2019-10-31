@@ -884,7 +884,7 @@ def apply_ufunc(
     Plain scalars, numpy arrays and a mix of these with xarray objects is also
     supported:
 
-    >>> magnitude(4, 5)
+    >>> magnitude(3, 4)
     5.0
     >>> magnitude(3, np.array([0, 4]))
     array([3., 5.])
