@@ -1169,6 +1169,7 @@ def test_token_changes_when_data_changes(obj):
     with raise_if_dask_computes():
         t1 = dask.base.tokenize(obj)
 
+    # Change data_var
     if isinstance(obj, DataArray):
         obj *= 2
     else:
@@ -1177,10 +1178,17 @@ def test_token_changes_when_data_changes(obj):
         t2 = dask.base.tokenize(obj)
     assert t2 != t1
 
+    # Change non-index coord
     obj.coords["ndcoord"] *= 2
     with raise_if_dask_computes():
         t3 = dask.base.tokenize(obj)
     assert t3 != t2
+
+    # Change IndexVariable
+    obj.coords["x"] *= 2
+    with raise_if_dask_computes():
+        t4 = dask.base.tokenize(obj)
+    assert t4 != t3
 
 
 @pytest.mark.parametrize("obj", [make_da().compute(), make_ds().compute()])
