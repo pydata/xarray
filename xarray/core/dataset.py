@@ -412,7 +412,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     """
 
     _accessors: Optional[Dict[str, Any]]
-    _attrs: Union[Dict[Hashable, Any], None]
+    _attrs: Optional[Dict[Hashable, Any]]
     _coord_names: Set[Hashable]
     _dims: Dict[Hashable, int]
     _encoding: Optional[Dict[Hashable, Any]]
@@ -867,9 +867,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables: Dict[Hashable, Variable] = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
-        attrs: Union[None, Dict[Hashable, Any], Default] = _default,
-        indexes: Union[Optional[Dict[Any, pd.Index]], Default] = _default,
-        encoding: Union[Optional[dict], Default] = _default,
+        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        indexes: Union[Dict[Any, pd.Index], None, Default] = _default,
+        encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Fastpath constructor for internal use.
@@ -916,8 +916,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
-        attrs: Union[Optional[Dict[Hashable, Any]], Default] = _default,
-        indexes: Union[Dict[Hashable, pd.Index], Default] = _default,
+        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        indexes: Union[Dict[Hashable, pd.Index], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Replace variables with recalculated dimensions."""
@@ -931,7 +931,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
         dims: Dict[Hashable, int] = None,
-        attrs: Union[Dict[Hashable, Any], Default] = _default,
+        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Deprecated version of _replace_with_new_dims().
