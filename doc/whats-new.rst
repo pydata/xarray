@@ -3749,6 +3749,7 @@ Enhancements
   explicitly listed variables or index labels:
 
   .. ipython:: python
+     :okwarning:
 
       # drop variables
       ds = xray.Dataset({'x': 0, 'y': 1})
