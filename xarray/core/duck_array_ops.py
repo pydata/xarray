@@ -176,8 +176,10 @@ def as_shared_dtype(scalars_or_arrays):
 
 def lazy_array_equiv(arr1, arr2):
     """Like array_equal, but doesn't actually compare values.
-       Returns True or False when equality can be determined without computing.
-       Returns None when equality cannot determined (e.g. one or both of arr1, arr2 are numpy arrays)
+       Returns True when arr1, arr2 identical or their dask names are equal.
+       Returns False when shapes are not equal.
+       Returns None when equality cannot determined: one or both of arr1, arr2 are numpy arrays;
+       or their dask names are not equal
     """
     if arr1 is arr2:
         return True
@@ -193,6 +195,8 @@ def lazy_array_equiv(arr1, arr2):
         # GH3068
         if arr1.name == arr2.name:
             return True
+        else:
+            return None
     return None
 
 

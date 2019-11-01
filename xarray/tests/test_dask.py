@@ -1202,32 +1202,6 @@ def test_identical_coords_no_computes():
     assert_identical(c, a)
 
 
-def test_lazy_array_equiv():
-    lons1 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
-    lons2 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
-    var1 = lons1.variable
-    var2 = lons2.variable
-    with raise_if_dask_computes():
-        lons1.equals(lons2)
-    with raise_if_dask_computes():
-        var1.equals(var2 / 2, equiv=lazy_array_equiv)
-    assert var1.equals(var2.compute(), equiv=lazy_array_equiv) is None
-    assert var1.compute().equals(var2.compute(), equiv=lazy_array_equiv) is None
-
-    with raise_if_dask_computes():
-        assert lons1.equals(lons1.transpose("y", "x"))
-
-    with raise_if_dask_computes():
-        for compat in [
-            "broadcast_equals",
-            "equals",
-            "override",
-            "identical",
-            "no_conflicts",
-        ]:
-            xr.merge([lons1, lons2], compat=compat)
-
-
 @pytest.mark.parametrize(
     "obj", [make_da(), make_da().compute(), make_ds(), make_ds().compute()]
 )
@@ -1315,3 +1289,49 @@ def test_normalize_token_with_backend(map_ds):
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
         assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+
+
+@pytest.mark.parametrize(
+    "compat", ["broadcast_equals", "equals", "identical", "no_conflicts"]
+)
+def test_lazy_array_equiv_variables(compat):
+    var1 = xr.Variable(("y", "x"), da.zeros((10, 10), chunks=2))
+    var2 = xr.Variable(("y", "x"), da.zeros((10, 10), chunks=2))
+    var3 = xr.Variable(("y", "x"), da.zeros((20, 10), chunks=2))
+
+    with raise_if_dask_computes():
+        assert getattr(var1, compat)(var2, equiv=lazy_array_equiv)
+    # values are actually equal, but we don't know that till we compute, return None
+    with raise_if_dask_computes():
+        assert getattr(var1, compat)(var2 / 2, equiv=lazy_array_equiv) is None
+
+    # shapes are not equal, return False without computes
+    with raise_if_dask_computes():
+        assert getattr(var1, compat)(var3, equiv=lazy_array_equiv) is False
+
+    # if one or both arrays are numpy, return None
+    assert getattr(var1, compat)(var2.compute(), equiv=lazy_array_equiv) is None
+    assert (
+        getattr(var1.compute(), compat)(var2.compute(), equiv=lazy_array_equiv) is None
+    )
+
+    with raise_if_dask_computes():
+        assert getattr(var1, compat)(var2.transpose("y", "x"))
+
+
+@pytest.mark.parametrize(
+    "compat", ["broadcast_equals", "equals", "identical", "no_conflicts"]
+)
+def test_lazy_array_equiv_merge(compat):
+    da1 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
+    da2 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
+    da3 = xr.DataArray(da.ones((20, 10), chunks=2), dims=("y", "x"))
+
+    with raise_if_dask_computes():
+        xr.merge([da1, da2], compat=compat)
+    # shapes are not equal; no computes necessary
+    with raise_if_dask_computes(max_computes=0):
+        with pytest.raises(ValueError):
+            xr.merge([da1, da3], compat=compat)
+    with raise_if_dask_computes(max_computes=2):
+        xr.merge([da1, da2 / 2], compat=compat)

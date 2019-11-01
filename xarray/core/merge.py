@@ -127,11 +127,11 @@ def unique_variable(
         # first check without comparing values i.e. no computes
         for var in variables[1:]:
             equals = getattr(out, compat)(var, equiv=lazy_array_equiv)
-            if not equals:
+            if equals is not True:
                 break
 
-        # now compare values with minimum number of computes
-        if not equals:
+        if equals is None:
+            # now compare values with minimum number of computes
             out = out.compute()
             for var in variables[1:]:
                 equals = getattr(out, compat)(var)

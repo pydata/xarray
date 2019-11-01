@@ -197,34 +197,36 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                             equals[k] = getattr(variables[0], compat)(
                                 var, equiv=lazy_array_equiv
                             )
-                            if not equals[k]:
+                            if equals[k] is not True:
+                                # exit early if we know these are not equal or that
+                                # equality cannot be determined i.e. one or all of
+                                # the variables wraps a numpy array
                                 break
 
-                        if equals[k] is not None:
-                            if equals[k] is False:
-                                concat_over.add(k)
-                            continue
+                        if equals[k] is False:
+                            concat_over.add(k)
 
-                        # Compare the variable of all datasets vs. the one
-                        # of the first dataset. Perform the minimum amount of
-                        # loads in order to avoid multiple loads from disk
-                        # while keeping the RAM footprint low.
-                        v_lhs = datasets[0].variables[k].load()
-                        # We'll need to know later on if variables are equal.
-                        computed = []
-                        for ds_rhs in datasets[1:]:
-                            v_rhs = ds_rhs.variables[k].compute()
-                            computed.append(v_rhs)
-                            if not getattr(v_lhs, compat)(v_rhs):
-                                concat_over.add(k)
-                                equals[k] = False
-                                # computed variables are not to be re-computed
-                                # again in the future
-                                for ds, v in zip(datasets[1:], computed):
-                                    ds.variables[k].data = v.data
-                                break
-                        else:
-                            equals[k] = True
+                        elif equals[k] is None:
+                            # Compare the variable of all datasets vs. the one
+                            # of the first dataset. Perform the minimum amount of
+                            # loads in order to avoid multiple loads from disk
+                            # while keeping the RAM footprint low.
+                            v_lhs = datasets[0].variables[k].load()
+                            # We'll need to know later on if variables are equal.
+                            computed = []
+                            for ds_rhs in datasets[1:]:
+                                v_rhs = ds_rhs.variables[k].compute()
+                                computed.append(v_rhs)
+                                if not getattr(v_lhs, compat)(v_rhs):
+                                    concat_over.add(k)
+                                    equals[k] = False
+                                    # computed variables are not to be re-computed
+                                    # again in the future
+                                    for ds, v in zip(datasets[1:], computed):
+                                        ds.variables[k].data = v.data
+                                    break
+                            else:
+                                equals[k] = True
 
             elif opt == "all":
                 concat_over.update(
