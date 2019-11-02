@@ -108,7 +108,7 @@ Internal Changes
 - Use Python 3.6 idioms throughout the codebase. (:pull:3419)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
-- Run basic CI tests on Python 3.8. (:pull:3477)
+- Run basic CI tests on Python 3.8. (:pull:`3477`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
 
