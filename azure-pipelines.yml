@@ -18,6 +18,8 @@ jobs:
         conda_env: py36
       py37:
         conda_env: py37
+      py38:
+        conda_env: py38
       py37-upstream-dev:
         conda_env: py37
         upstream_dev: true
