@@ -76,6 +76,9 @@ Bug fixes
   :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
 
+- Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 - Fix leap year condition in example (http://xarray.pydata.org/en/stable/examples/monthly-means.html) by `Mickaël Lalande <https://github.com/mickaellalande>`_.

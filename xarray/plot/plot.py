@@ -672,10 +672,16 @@ def _plot2d(plotfunc):
 
         # check if we need to broadcast one dimension
         if xval.ndim < yval.ndim:
-            xval = np.broadcast_to(xval, yval.shape)
+            if xval.shape[0] == yval.shape[0]:
+                xval = np.broadcast_to(xval[:, np.newaxis], yval.shape)
+            else:
+                xval = np.broadcast_to(xval[np.newaxis, :], yval.shape)
 
-        if yval.ndim < xval.ndim:
-            yval = np.broadcast_to(yval, xval.shape)
+        elif yval.ndim < xval.ndim:
+            if yval.shape[0] == xval.shape[0]:
+                yval = np.broadcast_to(yval[:, np.newaxis], xval.shape)
+            else:
+                yval = np.broadcast_to(yval[np.newaxis, :], xval.shape)
 
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
@@ -687,7 +693,7 @@ def _plot2d(plotfunc):
             dims = yx_dims + tuple(d for d in darray.dims if d not in yx_dims)
             if dims != darray.dims:
                 darray = darray.transpose(*dims, transpose_coords=True)
-        elif darray[xlab].dims[-1] == darray.dims[0]:
+        elif xval.shape[-1] == darray.shape[0]:
             darray = darray.transpose(transpose_coords=True)
 
         # Pass the data as a masked ndarray too

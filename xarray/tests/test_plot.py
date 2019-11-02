@@ -2145,3 +2145,19 @@ class TestAxesKwargs:
         da.plot(yticks=np.arange(5))
         expected = np.arange(5)
         assert np.all(plt.gca().get_yticks() == expected)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["pcolormesh", "contourf", "contour"])
+def test_plot_transposed_nondim_coord(plotfunc):
+    x = np.linspace(0, 10, 101)
+    h = np.linspace(3, 7, 101)
+    s = np.linspace(0, 1, 51)
+    z = s[:, np.newaxis] * h[np.newaxis, :]
+    da = xr.DataArray(
+        np.sin(x) * np.cos(z),
+        dims=["s", "x"],
+        coords={"x": x, "s": s, "z": (("s", "x"), z), "zt": (("x", "s"), z.T)},
+    )
+    getattr(da.plot, plotfunc)(x="x", y="zt")
+    getattr(da.plot, plotfunc)(x="zt", y="x")
