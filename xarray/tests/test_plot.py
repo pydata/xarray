@@ -265,6 +265,7 @@ class TestPlot(PlotTestCase):
         )
 
         a.plot.contourf(x="time", y="depth")
+        a.plot.contourf(x="depth", y="time")
 
     def test3d(self):
         self.darray.plot()
