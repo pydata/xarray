@@ -105,7 +105,7 @@ Internal Changes
     ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
     Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
 
-- Use Python 3.6 idioms throughout the codebase. (:pull:3419)
+- Use Python 3.6 idioms throughout the codebase. (:pull:`3419`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
 - Run basic CI tests on Python 3.8. (:pull:`3477`)
