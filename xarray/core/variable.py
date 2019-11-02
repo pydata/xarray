@@ -25,6 +25,7 @@ from .utils import (
     OrderedSet,
     decode_numpy_dict_values,
     either_dict_or_kwargs,
+    infix_dims,
     ensure_us_time_resolution,
 )
 
@@ -388,6 +389,11 @@ class Variable(
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
+
+    def __dask_tokenize__(self):
+        # Use v.data, instead of v._data, in order to cope with the wrappers
+        # around NetCDF and the like
+        return type(self), self._dims, self.data, self._attrs
 
     def __dask_graph__(self):
         if isinstance(self._data, dask_array_type):
@@ -1228,6 +1234,7 @@ class Variable(
         """
         if len(dims) == 0:
             dims = self.dims[::-1]
+        dims = tuple(infix_dims(dims, self.dims))
         axes = self.get_axis_num(dims)
         if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
@@ -1524,7 +1531,7 @@ class Variable(
             along the given dimension.
         """
         if not isinstance(dim, str):
-            dim, = dim.dims
+            (dim,) = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
         # twice
@@ -1961,6 +1968,10 @@ class IndexVariable(Variable):
         if not isinstance(self._data, PandasIndexAdapter):
             self._data = PandasIndexAdapter(self._data)
 
+    def __dask_tokenize__(self):
+        # Don't waste time converting pd.Index to np.ndarray
+        return (type(self), self._dims, self._data.array, self._attrs)
+
     def load(self):
         # data is already loaded into memory for IndexVariable
         return self
@@ -1994,7 +2005,7 @@ class IndexVariable(Variable):
         arrays, if possible.
         """
         if not isinstance(dim, str):
-            dim, = dim.dims
+            (dim,) = dim.dims
 
         variables = list(variables)
         first_var = variables[0]

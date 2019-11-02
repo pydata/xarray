@@ -1945,7 +1945,7 @@ class TestDataset:
 
     def test_align_indexes(self):
         x = Dataset({"foo": DataArray([1, 2, 3], dims="x", coords=[("x", [1, 2, 3])])})
-        x2, = align(x, indexes={"x": [2, 3, 1]})
+        (x2,) = align(x, indexes={"x": [2, 3, 1]})
         expected_x2 = Dataset(
             {"foo": DataArray([2, 3, 1], dims="x", coords={"x": [2, 3, 1]})}
         )
@@ -1973,7 +1973,7 @@ class TestDataset:
             },
             {"c": ("x", [4])},
         )
-        actual, = broadcast(ds)
+        (actual,) = broadcast(ds)
         assert_identical(expected, actual)
 
         ds_x = Dataset({"foo": ("x", [1])})
@@ -1995,7 +1995,7 @@ class TestDataset:
         x = Dataset({"foo": (("x", "y"), [[1, 1]])})
         y = Dataset({"bar": ("y", [2, 3])})
 
-        actual_x, = broadcast(x)
+        (actual_x,) = broadcast(x)
         assert_identical(x, actual_x)
         assert source_ndarray(actual_x["foo"].data) is source_ndarray(x["foo"].data)
 
@@ -2117,25 +2117,31 @@ class TestDataset:
     def test_drop_index_labels(self):
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
-        actual = data.drop(["a"], "x")
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop(["a"], "x")
         expected = data.isel(x=[1])
         assert_identical(expected, actual)
 
-        actual = data.drop(["a", "b"], "x")
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop(["a", "b"], "x")
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
         with pytest.raises(KeyError):
             # not contained in axis
-            data.drop(["c"], dim="x")
+            with pytest.warns(DeprecationWarning):
+                data.drop(["c"], dim="x")
 
-        actual = data.drop(["c"], dim="x", errors="ignore")
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop(["c"], dim="x", errors="ignore")
         assert_identical(data, actual)
 
         with pytest.raises(ValueError):
-            data.drop(["c"], dim="x", errors="wrong_value")
+            with pytest.warns(DeprecationWarning):
+                data.drop(["c"], dim="x", errors="wrong_value")
 
-        actual = data.drop(["a", "b", "c"], "x", errors="ignore")
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop(["a", "b", "c"], "x", errors="ignore")
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
@@ -4675,6 +4681,10 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
+        actual = ds.transpose(...)
+        expected = ds
+        assert_identical(expected, actual)
+
         actual = ds.transpose("x", "y")
         expected = ds.apply(lambda x: x.transpose("x", "y", transpose_coords=True))
         assert_identical(expected, actual)
@@ -4690,12 +4700,31 @@ class TestDataset:
             expected_dims = tuple(d for d in new_order if d in ds[k].dims)
             assert actual[k].dims == expected_dims
 
-        with raises_regex(ValueError, "arguments to transpose"):
+        # same as above but with ellipsis
+        new_order = ("dim2", "dim3", "dim1", "time")
+        actual = ds.transpose("dim2", "dim3", ...)
+        for k in ds.variables:
+            expected_dims = tuple(d for d in new_order if d in ds[k].dims)
+            assert actual[k].dims == expected_dims
+
+        with raises_regex(ValueError, "permuted"):
             ds.transpose("dim1", "dim2", "dim3")
-        with raises_regex(ValueError, "arguments to transpose"):
+        with raises_regex(ValueError, "permuted"):
             ds.transpose("dim1", "dim2", "dim3", "time", "extra_dim")
 
         assert "T" not in dir(ds)
+
+    def test_dataset_ellipsis_transpose_different_ordered_vars(self):
+        # https://github.com/pydata/xarray/issues/1081#issuecomment-544350457
+        ds = Dataset(
+            dict(
+                a=(("w", "x", "y", "z"), np.ones((2, 3, 4, 5))),
+                b=(("x", "w", "y", "z"), np.zeros((3, 2, 4, 5))),
+            )
+        )
+        result = ds.transpose(..., "z", "y")
+        assert list(result["a"].dims) == list("wxzy")
+        assert list(result["b"].dims) == list("xwzy")
 
     def test_dataset_retains_period_index_on_transpose(self):
 
