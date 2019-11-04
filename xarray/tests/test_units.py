@@ -206,9 +206,8 @@ def convert_units(obj, to):
             name: convert_units(array, to) for name, array in obj.data_vars.items()
         }
         coords = {name: convert_units(array, to) for name, array in obj.coords.items()}
-        attrs = obj.attrs
 
-        new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
+        new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
     elif isinstance(obj, xr.DataArray):
         name = obj.name
 
@@ -223,7 +222,7 @@ def convert_units(obj, to):
             if name != obj.name
         }
 
-        new_obj = obj.copy(data=data, coords=coords)
+        new_obj = xr.DataArray(name=name, data=data, coords=coords, attrs=obj.attrs)
     elif isinstance(obj, unit_registry.Quantity):
         units = to.get(None)
         new_obj = obj.to(units) if units is not None else obj
