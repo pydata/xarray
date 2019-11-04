@@ -394,8 +394,6 @@ class DataArray(AbstractArray, DataWithCoords):
             coords = self._coords
         if name is _default:
             name = self.name
-        # if indexes is None:
-        #     indexes = self.indexes
         return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
 
     def _replace_maybe_drop_dims(
