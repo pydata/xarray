@@ -291,14 +291,14 @@ def interp_na(
 
             if isinstance(max_gap, str):
                 try:
-                    max_gap = pd.to_timedelta(max_gap).to_numpy()
+                    max_gap = pd.to_timedelta(max_gap)
                 except ValueError:
                     raise ValueError(
-                        f"Could not convert {max_gap!r} to a pandas timedelta using pandas.to_timedelta"
+                        f"Could not convert {max_gap!r} to timedelta64 using pandas.to_timedelta"
                     )
 
             if isinstance(max_gap, pd.Timedelta):
-                max_gap = max_gap.to_numpy()
+                max_gap = np.timedelta64(max_gap.value, "ns")
 
             max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
 

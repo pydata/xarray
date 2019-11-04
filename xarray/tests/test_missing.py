@@ -496,7 +496,7 @@ def test_interpolate_na_max_gap_errors(da_time):
     with raises_regex(TypeError, "Expected integer or floating point"):
         da_time.interpolate_na("t", max_gap="1H", use_coordinate=False)
 
-    with raises_regex(ValueError, "Could not convert 'huh' to a "):
+    with raises_regex(ValueError, "Could not convert 'huh' to timedelta64"):
         da_time.interpolate_na("t", max_gap="huh")
 
 
