@@ -500,6 +500,7 @@ def test_interpolate_na_max_gap_errors(da_time):
         da_time.interpolate_na("t", max_gap="huh")
 
 
+@requires_bottleneck
 @pytest.mark.parametrize(
     "time_range_func",
     [pd.date_range, pytest.param(xr.cftime_range, marks=pytest.mark.xfail)],
