@@ -30,25 +30,25 @@ Breaking changes
     (`cftime/126 <https://github.com/Unidata/cftime/issues/126>`_);
     please use version 1.0.4.2 instead.
 
-- All leftover support for dates from non-standard calendars through netcdftime, the
+- All leftover support for dates from non-standard calendars through ``netcdftime``, the
   module included in versions of netCDF4 prior to 1.4 that eventually became the
   cftime package, has been removed in favor of relying solely on the standalone
-  cftime package (:pull:`3450`).
+  ``cftime`` package (:pull:`3450`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 New Features
 ~~~~~~~~~~~~
 - :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
   to represent all 'other' dimensions. For example, to move one dimension to the front,
-  use `.transpose('x', ...)`. (:pull:`3421`)
+  use ``.transpose('x', ...)``. (:pull:`3421`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Changed `xr.ALL_DIMS` to equal python's `Ellipsis` (`...`), and changed internal usages to use
-  `...` directly. As before, you can use this to instruct a `groupby` operation
-  to reduce over all dimensions. While we have no plans to remove `xr.ALL_DIMS`, we suggest
+- Changed ``xr.ALL_DIMS`` to equal python's ``Ellipsis`` (`...`), and changed internal usages to use
+  `...` directly. As before, you can use this to instruct a ``groupby`` operation
+  to reduce over all dimensions. While we have no plans to remove ``xr.ALL_DIMS``, we suggest
   using `...`. (:pull:`3418`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- :py:func:`~xarray.dot`, and :py:func:`~xarray.DataArray.dot` now support the
-  `dims=...` option to sum over the union of dimensions of all input arrays
+- :py:func:`xarray.dot`, and :py:meth:`DataArray.dot` now support the
+  ``dims=...`` option to sum over the union of dimensions of all input arrays
   (:issue:`3423`) by `Mathias Hauser <https://github.com/mathause>`_.
 - Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
   representation of objects in jupyter. By default this feature is turned off
@@ -59,11 +59,12 @@ New Features
   <https://docs.dask.org/en/latest/custom-collections.html#deterministic-hashing>`_
   for xarray objects. Note that xarray objects with a dask.array backend already used
   deterministic hashing in previous releases; this change implements it when whole
-  xarray objects are embedded in a dask graph, e.g. when :meth:`DataArray.map` is
+  xarray objects are embedded in a dask graph, e.g. when :py:meth:`DataArray.map_blocks` is
   invoked. (:issue:`3378`, :pull:`3446`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
-- xarray now respects the ``encoding["coordinates"]`` attribute when writing to disk. (:issue:`3351`, :pull:`3487`)
+- xarray now respects the ``DataArray.encoding["coordinates"]`` attribute when writing to disk.
+  See :ref:`io.coordinates` for more. (:issue:`3351`, :pull:`3487`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
@@ -72,7 +73,7 @@ Bug fixes
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
+- Sync with cftime by removing ``dayofwk=-1`` for cftime>=1.0.4.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
   :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
