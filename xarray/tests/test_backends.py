@@ -3405,8 +3405,8 @@ class TestPseudoNetCDFFormat:
             ("TSTEP",),
             data,
             dict(
-                long_name="TFLAG".ljust(16)
-                var_desc="TFLAG".ljust(80)
+                long_name="TFLAG".ljust(16),
+                var_desc="TFLAG".ljust(80),
                 units="DATE-TIME".ljust(16)
             ),
         )
@@ -3438,8 +3438,8 @@ class TestPseudoNetCDFFormat:
 
         data = np.array([[[2002154, 0]]], dtype='i').repeat(2, 0)
         attrs = dict(
-            long_name="TFLAG".ljust(16)
-            var_desc="TFLAG".ljust(80)
+            long_name="TFLAG".ljust(16),
+            var_desc="TFLAG".ljust(80),
             units="DATE-TIME".ljust(16)
         )
         expected = xr.Variable(("TSTEP",), data, attrs)
