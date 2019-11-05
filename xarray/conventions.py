@@ -667,8 +667,9 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         encoding = var.encoding
         attrs = var.attrs
         if "coordinates" in attrs:
-            raise ValueError(
-                f"'coordinates' found in attrs for variable {name!r}. Please specify the 'coordinates' string in encoding."
+            warnings.warn(
+                f"'coordinates' found in attrs for variable {name!r}. This will be ignored. Instead please specify the 'coordinates' string in encoding.",
+                UserWarning,
             )
 
         if "coordinates" in encoding:

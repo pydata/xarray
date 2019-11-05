@@ -148,7 +148,7 @@ class TestEncodeCFVariable:
         assert enc["a"].attrs["coordinates"] == "y"
         assert enc["b"].attrs["coordinates"] == "z"
         orig["a"].attrs["coordinates"] = "foo"
-        with raises_regex(ValueError, "'coordinates' found in both"):
+        with pytest.warns(UserWarning, match="'coordinates' found in attrs"):
             conventions.encode_dataset_coordinates(orig)
 
     @requires_dask
