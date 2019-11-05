@@ -63,6 +63,8 @@ New Features
   invoked. (:issue:`3378`, :pull:`3446`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
+- xarray now respects the ``encoding["coordinates"]`` attribute when writing to disk. (:issue:`3351`, :pull:`3487`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
