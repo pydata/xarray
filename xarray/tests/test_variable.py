@@ -2,6 +2,8 @@ import warnings
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
+import itertools
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -782,6 +784,30 @@ class VariableSubclassobjects:
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
 
+        # TODO "mean", "median" and "reflect" have issues
+        modes = ["edge", "linear_ramp", "maximum", "minimum", "symmetric", "wrap"]
+        xr_args = [{"x": (2, 1)}, {"y": (0, 3)}, {"x": (3, 1), "z": (2, 0)}]
+        np_args = [
+            ((2, 1), (0, 0), (0, 0)),
+            ((0, 0), (0, 3), (0, 0)),
+            ((3, 1), (0, 0), (2, 0)),
+        ]
+        for (xr_arg, np_arg), mode in itertools.product(zip(xr_args, np_args), modes):
+            print(mode)
+            actual = v.pad(mode=mode, **xr_arg)
+            expected = np.pad(
+                np.array(v.data),
+                np_arg,
+                mode=mode,
+            )
+            assert_array_equal(actual, expected)
+            assert isinstance(actual._data, type(v._data))
+            assert type(actual._data) == type(v._data)
+
+    def test_pad_constant_values(self):
+        data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
+        v = self.cls(["x", "y", "z"], data)
+
         xr_args = [{"x": (2, 1)}, {"y": (0, 3)}, {"x": (3, 1), "z": (2, 0)}]
         np_args = [
             ((2, 1), (0, 0), (0, 0)),
@@ -789,7 +815,7 @@ class VariableSubclassobjects:
             ((3, 1), (0, 0), (2, 0)),
         ]
         for xr_arg, np_arg in zip(xr_args, np_args):
-            actual = v.pad_with_fill_value(**xr_arg)
+            actual = v.pad(**xr_arg)
             expected = np.pad(
                 np.array(v.data.astype(float)),
                 np_arg,
@@ -1848,6 +1874,11 @@ class TestVariableWithDask(VariableSubclassobjects):
             self.cls(("x", "y"), [[0, -1], [-1, 2]]),
         )
 
+    def test_pad(self):
+        import dask
+        if LooseVersion(dask.__version__) < "0.18.1":
+            pytest.skip("padding was added in Dask version 0.18.1 ")
+        super().test_pad()
 
 class TestIndexVariable(VariableSubclassobjects):
     cls = staticmethod(IndexVariable)
@@ -1955,6 +1986,10 @@ class TestIndexVariable(VariableSubclassobjects):
 
     @pytest.mark.xfail
     def test_pad(self):
+        super().test_rolling_window()
+
+    @pytest.mark.xfail
+    def test_pad_constant_values(self):
         super().test_rolling_window()
 
     @pytest.mark.xfail

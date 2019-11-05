@@ -454,3 +454,5 @@ def rolling_window(array, axis, window, center, fill_value):
         return dask_array_ops.rolling_window(array, axis, window, center, fill_value)
     else:  # np.ndarray
         return nputils.rolling_window(array, axis, window, center, fill_value)
+
+pad = _dask_or_eager_func("pad")

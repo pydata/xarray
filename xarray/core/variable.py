@@ -3,7 +3,7 @@ import itertools
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Dict, Hashable, Mapping, TypeVar, Union
+from typing import Any, Dict, Hashable, Mapping, TypeVar, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -1098,6 +1098,37 @@ class Variable(
         for dim, count in shifts.items():
             result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
+
+
+    def pad(self,
+        pad_widths: Mapping[Hashable, Tuple[int, int]] = None,
+        mode: str = "constant",
+        **kwargs: Any):
+
+        # pop optional arguments from kwargs, so pad_width_kwargs remain
+        opt_kwargs_names = ["stat_length", "constant_values", "end_values", "reflect_type"]
+        opt_kwargs = {name: kwargs.pop(name) for name in opt_kwargs_names if name in kwargs}
+
+        # workaround for Dask's default value of stat_length
+        if mode in ["maximum", "mean", "median", "minimum"]:
+            opt_kwargs.setdefault("stat_length", tuple((n, n) for n in self.data.shape))
+
+        dtype = self.dtype
+        if mode == "constant":
+            if "constant_values" not in opt_kwargs:
+                dtype, opt_kwargs["constant_values"] = dtypes.maybe_promote(self.dtype)
+
+        pad_widths = either_dict_or_kwargs(pad_widths, kwargs, "pad")
+        pads = [(0, 0) if d not in pad_widths else pad_widths[d] for d in self.dims]
+
+        array = duck_array_ops.pad(
+            self.data.astype(dtype, copy=False),
+            pads,
+            mode=mode,
+            **opt_kwargs
+        )
+
+        return type(self)(self.dims, array)
 
     def pad_with_fill_value(
         self, pad_widths=None, fill_value=dtypes.NA, **pad_widths_kwargs
