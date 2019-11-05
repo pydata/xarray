@@ -529,6 +529,7 @@ class GroupBy(SupportsArithmetic):
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
+                    del obj.indexes[dim]
         return obj
 
     def fillna(self, value):

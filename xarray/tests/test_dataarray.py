@@ -3953,6 +3953,17 @@ class TestDataArray:
         expected = da.dot(da)
         assert_identical(result, expected)
 
+    def test_binary_op_propagate_indexes(self):
+        # regression test for GH2227
+        self.dv["x"] = np.arange(self.dv.sizes["x"])
+        expected = self.dv.indexes["x"]
+
+        actual = (self.dv * 10).indexes["x"]
+        assert expected is actual
+
+        actual = (self.dv > 10).indexes["x"]
+        assert expected is actual
+
     def test_binary_op_join_setting(self):
         dim = "x"
         align_type = "outer"
