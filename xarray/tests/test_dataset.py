@@ -4958,6 +4958,14 @@ class TestDataset:
         )
         assert not bool(new_ds.data_vars)
 
+    def test_binary_op_propagate_indexes(self):
+        ds = Dataset(
+            {"d1": DataArray([1, 2, 3], dims=["x"], coords={"x": [10, 20, 30]})}
+        )
+        expected = ds.indexes["x"]
+        actual = (ds * 2).indexes["x"]
+        assert expected is actual
+
     def test_binary_op_join_setting(self):
         # arithmetic_join applies to data array coordinates
         missing_2 = xr.Dataset({"x": [0, 1]})
