@@ -392,6 +392,7 @@ class DataArray(AbstractArray, DataWithCoords):
         variable: Variable = None,
         coords=None,
         name: Union[Hashable, None, Default] = _default,
+        indexes=None,
     ) -> "DataArray":
         if variable is None:
             variable = self.variable
@@ -399,7 +400,7 @@ class DataArray(AbstractArray, DataWithCoords):
             coords = self._coords
         if name is _default:
             name = self.name
-        return type(self)(variable, coords, name=name, fastpath=True)
+        return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
 
     def _replace_maybe_drop_dims(
         self, variable: Variable, name: Union[Hashable, None, Default] = _default
@@ -446,7 +447,8 @@ class DataArray(AbstractArray, DataWithCoords):
     ) -> "DataArray":
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
-        return self._replace(variable, coords, name)
+        indexes = dataset._indexes
+        return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
         def subset(dim, label):
@@ -2534,7 +2536,7 @@ class DataArray(AbstractArray, DataWithCoords):
             coords, indexes = self.coords._merge_raw(other_coords)
             name = self._result_name(other)
 
-            return self._replace(variable, coords, name)
+            return self._replace(variable, coords, name, indexes=indexes)
 
         return func
 

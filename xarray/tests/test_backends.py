@@ -3400,20 +3400,17 @@ class TestPseudoNetCDFFormat:
         actual = camxfile.variables["O3"]
         assert_allclose(expected, actual)
 
-        data = np.array(["2002-06-03"], "datetime64[ns]")
+        data = np.array([[[2002154, 0]]], dtype="i")
         expected = xr.Variable(
-            ("TSTEP",),
+            ("TSTEP", "VAR", "DATE-TIME"),
             data,
             dict(
-                bounds="time_bounds",
-                long_name=(
-                    "synthesized time coordinate "
-                    + "from SDATE, STIME, STEP "
-                    + "global attributes"
-                ),
+                long_name="TFLAG".ljust(16),
+                var_desc="TFLAG".ljust(80),
+                units="DATE-TIME".ljust(16),
             ),
         )
-        actual = camxfile.variables["time"]
+        actual = camxfile.variables["TFLAG"]
         assert_allclose(expected, actual)
         camxfile.close()
 
@@ -3439,18 +3436,15 @@ class TestPseudoNetCDFFormat:
         actual = camxfile.variables["O3"]
         assert_allclose(expected, actual)
 
-        data1 = np.array(["2002-06-03"], "datetime64[ns]")
-        data = np.concatenate([data1] * 2, axis=0)
+        data = np.array([[[2002154, 0]]], dtype="i").repeat(2, 0)
         attrs = dict(
-            bounds="time_bounds",
-            long_name=(
-                "synthesized time coordinate "
-                + "from SDATE, STIME, STEP "
-                + "global attributes"
-            ),
+            long_name="TFLAG".ljust(16),
+            var_desc="TFLAG".ljust(80),
+            units="DATE-TIME".ljust(16),
         )
-        expected = xr.Variable(("TSTEP",), data, attrs)
-        actual = camxfile.variables["time"]
+        dims = ("TSTEP", "VAR", "DATE-TIME")
+        expected = xr.Variable(dims, data, attrs)
+        actual = camxfile.variables["TFLAG"]
         assert_allclose(expected, actual)
         camxfile.close()
 

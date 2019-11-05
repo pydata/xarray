@@ -74,6 +74,9 @@ Bug fixes
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Use dask names to compare dask objects prior to comparing values after computation.
+  (:issue:`3068`, :issue:`3311`, :issue:`3454`, :pull:`3453`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and

@@ -4893,6 +4893,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 (dim,) = self.variables[k].dims
                 if dim in shifts:
                     indexes[k] = roll_index(v, shifts[dim])
+                else:
+                    indexes[k] = v
         else:
             indexes = dict(self.indexes)
 
