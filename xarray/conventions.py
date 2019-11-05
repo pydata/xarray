@@ -666,9 +666,9 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     for name, var in variables.items():
         encoding = var.encoding
         attrs = var.attrs
-        if "coordinates" in encoding and "coordinates" in attrs:
+        if "coordinates" in attrs:
             raise ValueError(
-                f"'coordinates' found in both encoding and attrs for variable {name!r}. Please specify the 'coordinates' string in encoding."
+                f"'coordinates' found in attrs for variable {name!r}. Please specify the 'coordinates' string in encoding."
             )
 
         if "coordinates" in encoding:
