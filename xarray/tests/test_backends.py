@@ -3402,7 +3402,7 @@ class TestPseudoNetCDFFormat:
 
         data = np.array([[[2002154, 0]]], dtype="i")
         expected = xr.Variable(
-            ("TSTEP",),
+            ("TSTEP", "VAR", "DATE-TIME"),
             data,
             dict(
                 long_name="TFLAG".ljust(16),
@@ -3442,7 +3442,8 @@ class TestPseudoNetCDFFormat:
             var_desc="TFLAG".ljust(80),
             units="DATE-TIME".ljust(16),
         )
-        expected = xr.Variable(("TSTEP",), data, attrs)
+        dims = ("TSTEP", "VAR", "DATE-TIME")
+        expected = xr.Variable(dims, data, attrs)
         actual = camxfile.variables["TFLAG"]
         assert_allclose(expected, actual)
         camxfile.close()
