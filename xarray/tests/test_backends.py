@@ -3400,14 +3400,14 @@ class TestPseudoNetCDFFormat:
         actual = camxfile.variables["O3"]
         assert_allclose(expected, actual)
 
-        data = np.array([[[2002154, 0]]], dtype='i')
+        data = np.array([[[2002154, 0]]], dtype="i")
         expected = xr.Variable(
             ("TSTEP",),
             data,
             dict(
                 long_name="TFLAG".ljust(16),
                 var_desc="TFLAG".ljust(80),
-                units="DATE-TIME".ljust(16)
+                units="DATE-TIME".ljust(16),
             ),
         )
         actual = camxfile.variables["TFLAG"]
@@ -3436,11 +3436,11 @@ class TestPseudoNetCDFFormat:
         actual = camxfile.variables["O3"]
         assert_allclose(expected, actual)
 
-        data = np.array([[[2002154, 0]]], dtype='i').repeat(2, 0)
+        data = np.array([[[2002154, 0]]], dtype="i").repeat(2, 0)
         attrs = dict(
             long_name="TFLAG".ljust(16),
             var_desc="TFLAG".ljust(80),
-            units="DATE-TIME".ljust(16)
+            units="DATE-TIME".ljust(16),
         )
         expected = xr.Variable(("TSTEP",), data, attrs)
         actual = camxfile.variables["TFLAG"]
