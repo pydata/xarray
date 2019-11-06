@@ -3761,11 +3761,11 @@ Enhancements
 
       # drop variables
       ds = xray.Dataset({'x': 0, 'y': 1})
-      ds.drop_sel('x')
+      ds.drop('x')
 
       # drop index labels
       arr = xray.DataArray([1, 2, 3], coords=[('x', list('abc'))])
-      arr.drop_sel(['a', 'c'], dim='x')
+      arr.drop(['a', 'c'], dim='x')
 
 - :py:meth:`~xray.Dataset.broadcast_equals` has been added to correspond to
   the new ``compat`` option.
