@@ -811,15 +811,21 @@ class CFEncodedBase(DatasetIOBase):
                 assert "coordinates" not in ds["lon"].attrs
 
         original["temp"].encoding["coordinates"] = "lat"
-        with self.roundtrip(original) as actual:
-            assert_identical(actual, original)
+        with pytest.warns(UserWarning, match="'coordinates' attribute"):
+            with self.roundtrip(original) as actual:
+                assert_identical(actual, original)
+        original["precip"].encoding["coordinates"] = "lat"
         with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert equals_latlon(ds.precip.attrs["coordinates"])
-                assert "lon" not in ds["temp"].attrs["coordinates"]
-                assert "coordinates" not in ds["lat"].attrs
-                assert "coordinates" not in ds["lon"].attrs
+            with pytest.warns(UserWarning, match="'coordinates' attribute"):
+                original.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, decode_coords=True) as ds:
+                # lon was explicitly excluded from coordinates so it should
+                # be a data variable
+                assert "lon" not in ds["temp"].encoding["coordinates"]
+                assert "lon" not in ds["precip"].encoding["coordinates"]
+                assert "lon" not in ds.coords
+                assert "coordinates" not in ds["lat"].encoding
+                assert "coordinates" not in ds["lon"].encoding
 
     def test_roundtrip_endian(self):
         ds = Dataset(
