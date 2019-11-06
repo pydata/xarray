@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from .coding import strings, times, variables
-from .coding.variables import SerializationWarning
+from .coding.variables import SerializationWarning, pop_to
 from .core import duck_array_ops, indexing
 from .core.common import contains_cftime_datetimes
 from .core.pycompat import dask_array_type
@@ -667,27 +667,22 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     for name, var in variables.items():
         encoding = var.encoding
         attrs = var.attrs
-        if "coordinates" in attrs:
-            warnings.warn(
-                f"'coordinates' found in attrs for variable {name!r}. This will be ignored. "
-                f"Instead please specify the 'coordinates' string in encoding.",
-                UserWarning,
-                stacklevel=5,
+        if "coordinates" in attrs and "coordinates" in encoding:
+            raise ValueError(
+                f"'coordinates' found in both attrs and encoding for variable {name!r}."
             )
-
-        if "coordinates" in encoding:
+        coords_str = pop_to(encoding, attrs, "coordinates")
+        if coords_str:
             vars_with_coords_enc.append(name)
-            attrs["coordinates"] = encoding["coordinates"]
-        else:
-            if variable_coordinates[name]:
-                attrs["coordinates"] = " ".join(map(str, variable_coordinates[name]))
+        elif variable_coordinates[name]:
+            attrs["coordinates"] = " ".join(map(str, variable_coordinates[name]))
 
     if vars_with_coords_enc:
         warnings.warn(
             f"'coordinates' found in encoding for variables {vars_with_coords_enc!r}. "
             f"This may prevent faithful roundtripping of xarray Datasets.",
             UserWarning,
-            stacklevel=5,
+            stacklevel=6,
         )
     # These coordinates are not associated with any particular variables, so we
     # save them under a global 'coordinates' attribute so xarray can roundtrip

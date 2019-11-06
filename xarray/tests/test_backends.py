@@ -522,6 +522,14 @@ class DatasetIOBase:
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
 
+        original["foo"].encoding["coordinates"] = "y"
+        with self.roundtrip(original, open_kwargs={"decode_coords": False}) as expected:
+            # check roundtripping when decode_coords=False
+            with self.roundtrip(
+                expected, open_kwargs={"decode_coords": False}
+            ) as actual:
+                assert_identical(expected, actual)
+
     def test_roundtrip_global_coordinates(self):
         original = Dataset({"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])})
         with self.roundtrip(original) as actual:
