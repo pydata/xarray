@@ -1896,12 +1896,12 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        labels : hashable or iterable of hashables
+        names : hashable or iterable of hashables
             Name(s) of variables to drop.
         errors: {'raise', 'ignore'}, optional
             If 'raise' (default), raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
-            dataset are dropped and no error is raised.
+            DataArray are dropped and no error is raised.
 
         Returns
         -------
