@@ -2133,14 +2133,14 @@ class TestDataArray:
 
     def test_drop_index_labels(self):
         arr = DataArray(np.random.randn(2, 3), coords={"y": [0, 1, 2]}, dims=["x", "y"])
-        actual = arr.drop(y=[0, 1])
+        actual = arr.drop_sel(y=[0, 1])
         expected = arr[:, 2:]
         assert_identical(actual, expected)
 
         with raises_regex((KeyError, ValueError), "not .* in axis"):
-            actual = arr.drop([0, 1, 3], dim="y")
+            actual = arr.drop_sel(y=[0, 1, 3])
 
-        actual = arr.drop(y=[0, 1, 3], errors="ignore")
+        actual = arr.drop_sel(y=[0, 1, 3], errors="ignore")
         assert_identical(actual, expected)
 
         with pytest.warns(DeprecationWarning):

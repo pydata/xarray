@@ -237,7 +237,7 @@ index labels along a dimension dropped:
 
 .. ipython:: python
 
-    ds.drop(space=['IN', 'IL'])
+    ds.drop_sel(space=['IN', 'IL'])
 
 ``drop`` is both a ``Dataset`` and ``DataArray`` method.
 

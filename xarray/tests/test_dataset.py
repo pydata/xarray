@@ -2122,15 +2122,15 @@ class TestDataset:
 
         # deprecated approach with `drop` works (straight copy paste from above)
 
-        with pytest.warns(FutureWarning):
+        with pytest.warns(PendingDeprecationWarning):
             actual = data.drop("not_found_here", errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(FutureWarning):
+        with pytest.warns(PendingDeprecationWarning):
             actual = data.drop(["not_found_here"], errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(FutureWarning):
+        with pytest.warns(PendingDeprecationWarning):
             actual = data.drop(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
@@ -2167,7 +2167,7 @@ class TestDataset:
 
         # DataArrays as labels are a nasty corner case as they are not
         # Iterable[Hashable] - DataArray.__iter__ yields scalar DataArrays.
-        actual = data.drop(x=DataArray(["a", "b", "c"]), errors="ignore")
+        actual = data.drop_sel(x=DataArray(["a", "b", "c"]), errors="ignore")
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
         with pytest.warns(DeprecationWarning):
@@ -2175,7 +2175,7 @@ class TestDataset:
         assert_identical(expected, actual)
 
         with raises_regex(ValueError, "does not have coordinate labels"):
-            data.drop(y=1)
+            data.drop_sel(y=1)
 
     def test_drop_labels_by_keyword(self):
         data = Dataset(
@@ -2184,15 +2184,13 @@ class TestDataset:
         # Basic functionality.
         assert len(data.coords["x"]) == 2
 
-        # In the future, this will break.
         with pytest.warns(DeprecationWarning):
             ds1 = data.drop(["a"], dim="x")
-        ds2 = data.drop(x="a")
-        ds3 = data.drop(x=["a"])
-        ds4 = data.drop(x=["a", "b"])
-        ds5 = data.drop(x=["a", "b"], y=range(0, 6, 2))
+        ds2 = data.drop_sel(x="a")
+        ds3 = data.drop_sel(x=["a"])
+        ds4 = data.drop_sel(x=["a", "b"])
+        ds5 = data.drop_sel(x=["a", "b"], y=range(0, 6, 2))
 
-        # In the future, this will result in different behavior.
         arr = DataArray(range(3), dims=["c"])
         with pytest.warns(FutureWarning):
             data.drop(arr.coords)
@@ -4641,7 +4639,7 @@ class TestDataset:
         assert_identical(expected, actual)
 
         actual = ds.isel(y=slice(1)) + ds.isel(y=slice(1, None))
-        expected = 2 * ds.drop(y=ds.y)
+        expected = 2 * ds.drop_sel(y=ds.y)
         assert_equal(actual, expected)
 
         actual = ds + ds[["bar"]]

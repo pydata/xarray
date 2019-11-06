@@ -3553,52 +3553,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
 
     def drop(self, labels=None, dim=None, *, errors="raise", **labels_kwargs):
-        """Drop index labels from this dataset.
+        """Backward compatible method based on `drop_vars` and `drop_sel`
 
-        Parameters
-        ----------
-        labels : hashable or iterable of hashables
-            Name(s) of variables or index labels to drop.
-        errors: {'raise', 'ignore'}, optional
-            If 'raise' (default), raises a ValueError error if
-            any of the variable or index labels passed are not
-            in the dataset. If 'ignore', any given labels that are in the
-            dataset are dropped and no error is raised.
-        **labels_kwargs : {dim: label, ...}, optional
-            The keyword arguments form of ``dim`` and ``labels``.
-
-        Returns
-        -------
-        dropped : Dataset
-
-        Examples
-        --------
-        >>> data = np.random.randn(2, 3)
-        >>> labels = ['a', 'b', 'c']
-        >>> ds = xr.Dataset({'A': (['x', 'y'], data), 'y': labels})
-        >>> ds.drop(y=['a', 'c'])
-        <xarray.Dataset>
-        Dimensions:  (x: 2, y: 1)
-        Coordinates:
-          * y        (y) <U1 'b'
-        Dimensions without coordinates: x
-        Data variables:
-            A        (x, y) float64 -0.3454 0.1734
-        >>> ds.drop(y='b')
-        <xarray.Dataset>
-        Dimensions:  (x: 2, y: 2)
-        Coordinates:
-          * y        (y) <U1 'a' 'c'
-        Dimensions without coordinates: x
-        Data variables:
-            A        (x, y) float64 -0.3944 -1.418 1.423 -1.041
+        Using either `drop_vars` or `drop_sel` is encouraged
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
         if is_dict_like(labels) and not isinstance(labels, dict):
             warnings.warn(
-                "dropping coordinates using `drop` is deprecated; use drop_vars.",
+                "dropping coordinates using `drop` is be deprecated; use drop_vars.",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -3611,19 +3575,67 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if dim is None and (is_list_like(labels) or is_scalar(labels)):
             warnings.warn(
-                "dropping variables using `drop` is deprecated; use drop_vars.",
-                FutureWarning,
+                "dropping variables using `drop` will be deprecated; using drop_vars is encouraged.",
+                PendingDeprecationWarning,
                 stacklevel=2,
             )
             return self.drop_vars(labels, errors=errors)
         if dim is not None:
             warnings.warn(
-                "dropping labels using list-like labels is deprecated; use "
-                "dict-like arguments, e.g. `ds.drop(dim=[labels]).",
+                "dropping labels using list-like labels is deprecated; using "
+                "dict-like arguments with `drop_sel`, e.g. `ds.drop_sel(dim=[labels]).",
                 DeprecationWarning,
                 stacklevel=2,
             )
-            return self.drop({dim: labels}, errors=errors, **labels_kwargs)
+            return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
+
+        return self.drop_sel(labels, errors=errors)
+
+    def drop_sel(self, labels=None, *, errors="raise", **labels_kwargs):
+        """Drop index labels from this dataset.
+
+        Parameters
+        ----------
+        labels : Mapping[Hashable, Any]
+            Index labels to drop
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if
+            any of the index labels passed are not
+            in the dataset. If 'ignore', any given labels that are in the
+            dataset are dropped and no error is raised.
+        **labels_kwargs : {dim: label, ...}, optional
+            The keyword arguments form of ``dim`` and ``labels`
+
+        Returns
+        -------
+        dropped : Dataset
+
+        Examples
+        --------
+        >>> data = np.random.randn(2, 3)
+        >>> labels = ['a', 'b', 'c']
+        >>> ds = xr.Dataset({'A': (['x', 'y'], data), 'y': labels})
+        >>> ds.drop_sel(y=['a', 'c'])
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 1)
+        Coordinates:
+          * y        (y) <U1 'b'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) float64 -0.3454 0.1734
+        >>> ds.drop_sel(y='b')
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * y        (y) <U1 'a' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) float64 -0.3944 -1.418 1.423 -1.041
+        """
+        if errors not in ["raise", "ignore"]:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
+        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
         ds = self
         for dim, labels_for_dim in labels.items():
