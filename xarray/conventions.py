@@ -663,25 +663,32 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 global_coordinates.discard(coord_name)
 
     variables = {k: v.copy(deep=False) for k, v in variables.items()}
+    vars_with_coords_enc = []
     for name, var in variables.items():
         encoding = var.encoding
         attrs = var.attrs
         if "coordinates" in attrs:
             warnings.warn(
-                f"'coordinates' found in attrs for variable {name!r}. This will be ignored. Instead please specify the 'coordinates' string in encoding.",
+                f"'coordinates' found in attrs for variable {name!r}. This will be ignored. "
+                f"Instead please specify the 'coordinates' string in encoding.",
                 UserWarning,
+                stacklevel=5,
             )
 
         if "coordinates" in encoding:
-            warnings.warn(
-                f"'coordinates' attribute detected on variable {name!r}. This may prevent faithful roundtripping of xarray Datasets.",
-                UserWarning,
-            )
+            vars_with_coords_enc.append(name)
             attrs["coordinates"] = encoding["coordinates"]
         else:
             if variable_coordinates[name]:
                 attrs["coordinates"] = " ".join(map(str, variable_coordinates[name]))
 
+    if vars_with_coords_enc:
+        warnings.warn(
+            f"'coordinates' found in encoding for variables {vars_with_coords_enc!r}. "
+            f"This may prevent faithful roundtripping of xarray Datasets.",
+            UserWarning,
+            stacklevel=5,
+        )
     # These coordinates are not associated with any particular variables, so we
     # save them under a global 'coordinates' attribute so xarray can roundtrip
     # the dataset faithfully. Because this serialization goes beyond CF

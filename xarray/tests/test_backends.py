@@ -811,12 +811,12 @@ class CFEncodedBase(DatasetIOBase):
                 assert "coordinates" not in ds["lon"].attrs
 
         original["temp"].encoding["coordinates"] = "lat"
-        with pytest.warns(UserWarning, match="'coordinates' attribute"):
+        with pytest.warns(UserWarning, match="'coordinates' found"):
             with self.roundtrip(original) as actual:
                 assert_identical(actual, original)
         original["precip"].encoding["coordinates"] = "lat"
         with create_tmp_file() as tmp_file:
-            with pytest.warns(UserWarning, match="'coordinates' attribute"):
+            with pytest.warns(UserWarning, match="'coordinates' found"):
                 original.to_netcdf(tmp_file)
             with open_dataset(tmp_file, decode_coords=True) as ds:
                 # lon was explicitly excluded from coordinates so it should
