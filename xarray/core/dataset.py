@@ -3589,6 +3589,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
             return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
 
+        warnings.warn(
+            "dropping labels using `drop` will be deprecated; using drop_sel is encouraged.",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
         return self.drop_sel(labels, errors=errors)
 
     def drop_sel(self, labels=None, *, errors="raise", **labels_kwargs):
