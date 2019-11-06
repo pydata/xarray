@@ -21,10 +21,6 @@ v0.14.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Using :py:meth:`Dataset.drop` & :py:meth:`DataArray.drop' to drop variables is deprecated in favor of
-  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars'. The ``drop`` methods are now exclusively
-  for dropping values by labels.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Broken compatibility with cftime < 1.0.3.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -42,6 +38,11 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel' have been added for dropping labels.
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars' have been added for 
+  dropping variables (including coordinates). The ``drop`` methods remain as a backward compatible 
+  option for dropping either lables or variables, but using the more specific methods is encouraged.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
   to represent all 'other' dimensions. For example, to move one dimension to the front,
   use `.transpose('x', ...)`. (:pull:`3421`)
