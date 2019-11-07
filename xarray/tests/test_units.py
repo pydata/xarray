@@ -278,7 +278,7 @@ class function:
 
 
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
-def test_replication(func, dtype):
+def test_replication_dataarray(func, dtype):
     array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
     data_array = xr.DataArray(data=array, dims="x")
 
@@ -289,8 +289,33 @@ def test_replication(func, dtype):
     assert_equal_with_units(expected, result)
 
 
+@pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
+def test_replication_dataset(func, dtype):
+    array1 = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
+    array2 = np.linspace(5, 10, 10).astype(dtype) * unit_registry.Pa
+    x = np.arange(20).astype(dtype) * unit_registry.m
+    y = np.arange(10).astype(dtype) * unit_registry.m
+    z = y.to(unit_registry.mm)
+
+    ds = xr.Dataset(
+        data_vars={"a": ("x", array1), "b": ("y", array2)},
+        coords={"x": x, "y": y, "z": ("y", z)},
+    )
+
+    numpy_func = getattr(np, func.__name__)
+    expected = ds.copy(
+        data={name: numpy_func(array.data) for name, array in ds.data_vars.items()}
+    )
+    result = func(ds)
+
+    assert_equal_with_units(expected, result)
+
+
 @pytest.mark.xfail(
-    reason="np.full_like on Variable strips the unit and pint does not allow mixed args"
+    reason=(
+        "pint is undecided on how `full_like` should work, so incorrect errors "
+        "may be thrown: hgrecco/pint#882"
+    )
 )
 @pytest.mark.parametrize(
     "unit,error",
@@ -304,7 +329,7 @@ def test_replication(func, dtype):
         pytest.param(unit_registry.s, None, id="identical_unit"),
     ),
 )
-def test_replication_full_like(unit, error, dtype):
+def test_replication_full_like_dataarray(unit, error, dtype):
     array = np.linspace(0, 5, 10) * unit_registry.s
     data_array = xr.DataArray(data=array, dims="x")
 
@@ -317,6 +342,54 @@ def test_replication_full_like(unit, error, dtype):
         expected = np.full_like(array, fill_value=fill_value)
 
         assert_equal_with_units(expected, result)
+
+
+@pytest.mark.xfail(
+    reason=(
+        "pint is undecided on how `full_like` should work, so incorrect errors "
+        "may be thrown: hgrecco/pint#882"
+    )
+)
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.m, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.ms, None, id="compatible_unit"),
+        pytest.param(unit_registry.s, None, id="identical_unit"),
+    ),
+)
+def test_replication_full_like_dataset(unit, error, dtype):
+    array1 = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
+    array2 = np.linspace(5, 10, 10).astype(dtype) * unit_registry.Pa
+    x = np.arange(20).astype(dtype) * unit_registry.m
+    y = np.arange(10).astype(dtype) * unit_registry.m
+    z = y.to(unit_registry.mm)
+
+    ds = xr.Dataset(
+        data_vars={"a": ("x", array1), "b": ("y", array2)},
+        coords={"x": x, "y": y, "z": ("y", z)},
+    )
+
+    fill_value = -1 * unit
+    if error is not None:
+        with pytest.raises(error):
+            xr.full_like(ds, fill_value=fill_value)
+
+        return
+
+    expected = ds.copy(
+        data={
+            name: np.full_like(array, fill_value=fill_value)
+            for name, array in ds.data_vars.items()
+        }
+    )
+    result = xr.full_like(ds, fill_value=fill_value)
+
+    assert_equal_with_units(expected, result)
 
 
 class TestDataArray:
