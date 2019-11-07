@@ -266,15 +266,44 @@ class method:
 
 
 class function:
-    def __init__(self, name):
-        self.name = name
-        self.func = getattr(np, name)
+    def __init__(self, name_or_function, *args, **kwargs):
+        if callable(name_or_function):
+            self.name = name_or_function.__name__
+            self.func = name_or_function
+        else:
+            self.name = name_or_function
+            self.func = getattr(np, name_or_function)
+            if self.func is None:
+                raise AttributeError(
+                    f"module 'numpy' has no attribute named '{self.name}'"
+                )
+
+        self.args = args
+        self.kwargs = kwargs
 
     def __call__(self, *args, **kwargs):
-        return self.func(*args, **kwargs)
+        all_args = list(self.args) + list(args)
+        all_kwargs = {**self.kwargs, **kwargs}
+
+        return self.func(*all_args, **all_kwargs)
 
     def __repr__(self):
         return f"function_{self.name}"
+
+
+def test_apply_ufunc_dataarray(dtype):
+    func = function(
+        xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
+    )
+
+    array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.m
+    x = np.arange(20) * unit_registry.s
+    data_array = xr.DataArray(data=array, dims="x", coords={"x": x})
+
+    expected = attach_units(func(strip_units(data_array)), extract_units(data_array))
+    result = func(data_array)
+
+    assert_equal_with_units(expected, result)
 
 
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
