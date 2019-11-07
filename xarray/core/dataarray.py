@@ -52,6 +52,7 @@ from .coordinates import (
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
+from .merge import PANDAS_TYPES
 from .options import OPTIONS
 from .utils import Default, ReprObject, _default, _check_inplace, either_dict_or_kwargs
 from .variable import (
@@ -358,7 +359,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 dims = getattr(data, "dims", getattr(coords, "dims", None))
             if name is None:
                 name = getattr(data, "name", None)
-            if attrs is None:
+            if attrs is None and not isinstance(data, PANDAS_TYPES):
                 attrs = getattr(data, "attrs", None)
             if encoding is None:
                 encoding = getattr(data, "encoding", None)
