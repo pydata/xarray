@@ -38,6 +38,12 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
+  dropping variables (including coordinates). The existing ``drop`` methods remain as a backward compatible 
+  option for dropping either lables or variables, but using the more specific methods is encouraged.
+  (:pull:`3475`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
   to represent all 'other' dimensions. For example, to move one dimension to the front,
   use `.transpose('x', ...)`. (:pull:`3421`)
@@ -69,6 +75,9 @@ Bug fixes
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Use dask names to compare dask objects prior to comparing values after computation.
+  (:issue:`3068`, :issue:`3311`, :issue:`3454`, :pull:`3453`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
@@ -3749,6 +3758,7 @@ Enhancements
   explicitly listed variables or index labels:
 
   .. ipython:: python
+     :okwarning:
 
       # drop variables
       ds = xray.Dataset({'x': 0, 'y': 1})
