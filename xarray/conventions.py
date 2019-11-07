@@ -660,10 +660,9 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 and set(target_dims) <= set(v.dims)
             ):
                 variable_coordinates[k].add(coord_name)
-                global_coordinates.discard(coord_name)
 
     variables = {k: v.copy(deep=False) for k, v in variables.items()}
-    vars_with_coords_enc = []
+    written_coords = set()
     for name, var in variables.items():
         encoding = var.encoding
         attrs = var.attrs
@@ -672,18 +671,13 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 f"'coordinates' found in both attrs and encoding for variable {name!r}."
             )
         coords_str = pop_to(encoding, attrs, "coordinates")
-        if coords_str:
-            vars_with_coords_enc.append(name)
-        elif variable_coordinates[name]:
+        if not coords_str and variable_coordinates[name]:
             attrs["coordinates"] = " ".join(map(str, variable_coordinates[name]))
+        if "coordinates" in attrs:
+            written_coords.update(attrs["coordinates"].split())
 
-    if vars_with_coords_enc:
-        warnings.warn(
-            f"'coordinates' found in encoding for variables {vars_with_coords_enc!r}. "
-            f"This may prevent faithful roundtripping of xarray Datasets.",
-            UserWarning,
-            stacklevel=6,
-        )
+    global_coordinates.difference_update(written_coords)
+
     # These coordinates are not associated with any particular variables, so we
     # save them under a global 'coordinates' attribute so xarray can roundtrip
     # the dataset faithfully. Because this serialization goes beyond CF

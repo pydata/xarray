@@ -144,8 +144,7 @@ class TestEncodeCFVariable:
         )
         orig["a"].encoding["coordinates"] = "y"
         orig["b"].encoding["coordinates"] = "z"
-        with pytest.warns(UserWarning, match="'coordinates' found"):
-            enc, _ = conventions.encode_dataset_coordinates(orig)
+        enc, _ = conventions.encode_dataset_coordinates(orig)
         assert enc["a"].attrs["coordinates"] == "y"
         assert enc["b"].attrs["coordinates"] == "z"
         orig["a"].attrs["coordinates"] = "foo"
