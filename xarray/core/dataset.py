@@ -3538,7 +3538,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dropped : Dataset
 
         """
-        if isinstance(names, str) or not isinstance(names, Iterable):
+        # the Iterable check is required for mypy
+        if is_scalar(names) or not isinstance(names, Iterable):
             names = {names}
         else:
             names = set(names)
