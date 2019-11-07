@@ -357,6 +357,7 @@ def test_replication_dataset(func, dtype):
         pytest.param(unit_registry.ms, None, id="compatible_unit"),
         pytest.param(unit_registry.s, None, id="identical_unit"),
     ),
+    ids=repr,
 )
 def test_replication_full_like_dataarray(unit, error, dtype):
     array = np.linspace(0, 5, 10) * unit_registry.s
@@ -390,6 +391,7 @@ def test_replication_full_like_dataarray(unit, error, dtype):
         pytest.param(unit_registry.ms, None, id="compatible_unit"),
         pytest.param(unit_registry.s, None, id="identical_unit"),
     ),
+    ids=repr,
 )
 def test_replication_full_like_dataset(unit, error, dtype):
     array1 = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
