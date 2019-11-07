@@ -1,5 +1,6 @@
 import operator
 import pickle
+import sys
 from contextlib import suppress
 from distutils.version import LooseVersion
 from textwrap import dedent
@@ -21,11 +22,16 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raises_regex,
+    requires_scipy_or_netCDF4,
 )
+from ..core.duck_array_ops import lazy_array_equiv
+from .test_backends import create_tmp_file
 
 dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
+
+ON_WINDOWS = sys.platform == "win32"
 
 
 class CountingScheduler:
@@ -423,7 +429,53 @@ class TestDataArrayAndDataset(DaskTestCase):
         out.compute()
         assert kernel_call_count == 24
 
-        # Finally, test that riginals are unaltered
+        # Finally, test that originals are unaltered
+        assert ds1["d"].data is d1
+        assert ds1["c"].data is c1
+        assert ds2["d"].data is d2
+        assert ds2["c"].data is c2
+        assert ds3["d"].data is d3
+        assert ds3["c"].data is c3
+
+        # now check that concat() is correctly using dask name equality to skip loads
+        out = xr.concat(
+            [ds1, ds1, ds1], dim="n", data_vars="different", coords="different"
+        )
+        assert kernel_call_count == 24
+        # variables are not loaded in the output
+        assert isinstance(out["d"].data, dask.array.Array)
+        assert isinstance(out["c"].data, dask.array.Array)
+
+        out = xr.concat(
+            [ds1, ds1, ds1], dim="n", data_vars=[], coords=[], compat="identical"
+        )
+        assert kernel_call_count == 24
+        # variables are not loaded in the output
+        assert isinstance(out["d"].data, dask.array.Array)
+        assert isinstance(out["c"].data, dask.array.Array)
+
+        out = xr.concat(
+            [ds1, ds2.compute(), ds3],
+            dim="n",
+            data_vars="all",
+            coords="different",
+            compat="identical",
+        )
+        # c1,c3 must be computed for comparison since c2 is numpy;
+        # d2 is computed too
+        assert kernel_call_count == 28
+
+        out = xr.concat(
+            [ds1, ds2.compute(), ds3],
+            dim="n",
+            data_vars="all",
+            coords="all",
+            compat="identical",
+        )
+        # no extra computes
+        assert kernel_call_count == 30
+
+        # Finally, test that originals are unaltered
         assert ds1["d"].data is d1
         assert ds1["c"].data is c1
         assert ds2["d"].data is d2
@@ -1135,3 +1187,151 @@ def test_make_meta(map_ds):
     for variable in map_ds.data_vars:
         assert variable in meta.data_vars
         assert meta.data_vars[variable].shape == (0,) * meta.data_vars[variable].ndim
+
+
+def test_identical_coords_no_computes():
+    lons2 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
+    a = xr.DataArray(
+        da.zeros((10, 10), chunks=2), dims=("y", "x"), coords={"lons": lons2}
+    )
+    b = xr.DataArray(
+        da.zeros((10, 10), chunks=2), dims=("y", "x"), coords={"lons": lons2}
+    )
+    with raise_if_dask_computes():
+        c = a + b
+    assert_identical(c, a)
+
+
+@pytest.mark.parametrize(
+    "obj", [make_da(), make_da().compute(), make_ds(), make_ds().compute()]
+)
+@pytest.mark.parametrize(
+    "transform",
+    [
+        lambda x: x.reset_coords(),
+        lambda x: x.reset_coords(drop=True),
+        lambda x: x.isel(x=1),
+        lambda x: x.attrs.update(new_attrs=1),
+        lambda x: x.assign_coords(cxy=1),
+        lambda x: x.rename({"x": "xnew"}),
+        lambda x: x.rename({"cxy": "cxynew"}),
+    ],
+)
+def test_token_changes_on_transform(obj, transform):
+    with raise_if_dask_computes():
+        assert dask.base.tokenize(obj) != dask.base.tokenize(transform(obj))
+
+
+@pytest.mark.parametrize(
+    "obj", [make_da(), make_da().compute(), make_ds(), make_ds().compute()]
+)
+def test_token_changes_when_data_changes(obj):
+    with raise_if_dask_computes():
+        t1 = dask.base.tokenize(obj)
+
+    # Change data_var
+    if isinstance(obj, DataArray):
+        obj *= 2
+    else:
+        obj["a"] *= 2
+    with raise_if_dask_computes():
+        t2 = dask.base.tokenize(obj)
+    assert t2 != t1
+
+    # Change non-index coord
+    obj.coords["ndcoord"] *= 2
+    with raise_if_dask_computes():
+        t3 = dask.base.tokenize(obj)
+    assert t3 != t2
+
+    # Change IndexVariable
+    obj.coords["x"] *= 2
+    with raise_if_dask_computes():
+        t4 = dask.base.tokenize(obj)
+    assert t4 != t3
+
+
+@pytest.mark.parametrize("obj", [make_da().compute(), make_ds().compute()])
+def test_token_changes_when_buffer_changes(obj):
+    with raise_if_dask_computes():
+        t1 = dask.base.tokenize(obj)
+
+    if isinstance(obj, DataArray):
+        obj[0, 0] = 123
+    else:
+        obj["a"][0, 0] = 123
+    with raise_if_dask_computes():
+        t2 = dask.base.tokenize(obj)
+    assert t2 != t1
+
+    obj.coords["ndcoord"][0] = 123
+    with raise_if_dask_computes():
+        t3 = dask.base.tokenize(obj)
+    assert t3 != t2
+
+
+@pytest.mark.parametrize(
+    "transform",
+    [lambda x: x, lambda x: x.copy(deep=False), lambda x: x.copy(deep=True)],
+)
+@pytest.mark.parametrize("obj", [make_da(), make_ds(), make_ds().variables["a"]])
+def test_token_identical(obj, transform):
+    with raise_if_dask_computes():
+        assert dask.base.tokenize(obj) == dask.base.tokenize(transform(obj))
+    assert dask.base.tokenize(obj.compute()) == dask.base.tokenize(
+        transform(obj.compute())
+    )
+
+
+@requires_scipy_or_netCDF4
+def test_normalize_token_with_backend(map_ds):
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp_file:
+        map_ds.to_netcdf(tmp_file)
+        read = xr.open_dataset(tmp_file)
+        assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+
+
+@pytest.mark.parametrize(
+    "compat", ["broadcast_equals", "equals", "identical", "no_conflicts"]
+)
+def test_lazy_array_equiv_variables(compat):
+    var1 = xr.Variable(("y", "x"), da.zeros((10, 10), chunks=2))
+    var2 = xr.Variable(("y", "x"), da.zeros((10, 10), chunks=2))
+    var3 = xr.Variable(("y", "x"), da.zeros((20, 10), chunks=2))
+
+    with raise_if_dask_computes():
+        assert getattr(var1, compat)(var2, equiv=lazy_array_equiv)
+    # values are actually equal, but we don't know that till we compute, return None
+    with raise_if_dask_computes():
+        assert getattr(var1, compat)(var2 / 2, equiv=lazy_array_equiv) is None
+
+    # shapes are not equal, return False without computes
+    with raise_if_dask_computes():
+        assert getattr(var1, compat)(var3, equiv=lazy_array_equiv) is False
+
+    # if one or both arrays are numpy, return None
+    assert getattr(var1, compat)(var2.compute(), equiv=lazy_array_equiv) is None
+    assert (
+        getattr(var1.compute(), compat)(var2.compute(), equiv=lazy_array_equiv) is None
+    )
+
+    with raise_if_dask_computes():
+        assert getattr(var1, compat)(var2.transpose("y", "x"))
+
+
+@pytest.mark.parametrize(
+    "compat", ["broadcast_equals", "equals", "identical", "no_conflicts"]
+)
+def test_lazy_array_equiv_merge(compat):
+    da1 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
+    da2 = xr.DataArray(da.zeros((10, 10), chunks=2), dims=("y", "x"))
+    da3 = xr.DataArray(da.ones((20, 10), chunks=2), dims=("y", "x"))
+
+    with raise_if_dask_computes():
+        xr.merge([da1, da2], compat=compat)
+    # shapes are not equal; no computes necessary
+    with raise_if_dask_computes(max_computes=0):
+        with pytest.raises(ValueError):
+            xr.merge([da1, da3], compat=compat)
+    with raise_if_dask_computes(max_computes=2):
+        xr.merge([da1, da2 / 2], compat=compat)
