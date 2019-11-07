@@ -392,6 +392,26 @@ def test_replication_full_like_dataset(unit, error, dtype):
     assert_equal_with_units(expected, result)
 
 
+@pytest.mark.xfail(reason="pint does not implement `np.einsum`")
+def test_dot_dataarray(dtype):
+    array1 = (
+        np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
+        * unit_registry.m
+        / unit_registry.s
+    )
+    array2 = (
+        np.linspace(10, 20, 10 * 20).reshape(10, 20).astype(dtype) * unit_registry.s
+    )
+
+    arr1 = xr.DataArray(data=array1, dims=("x", "y"))
+    arr2 = xr.DataArray(data=array2, dims=("y", "z"))
+
+    expected = array1.dot(array2)
+    result = xr.dot(arr1, arr2)
+
+    assert_equal_with_units(expected, result)
+
+
 class TestDataArray:
     @pytest.mark.filterwarnings("error:::pint[.*]")
     @pytest.mark.parametrize(
