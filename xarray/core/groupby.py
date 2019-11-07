@@ -775,7 +775,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         )
 
         if np.asarray(q, dtype=np.float64).ndim == 0:
-            out = out.drop("quantile")
+            out = out.drop_vars("quantile")
         return out
 
     def reduce(

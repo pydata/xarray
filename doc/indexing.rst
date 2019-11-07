@@ -232,14 +232,14 @@ Using indexing to *assign* values to a subset of dataset (e.g.,
 Dropping labels and dimensions
 ------------------------------
 
-The :py:meth:`~xarray.Dataset.drop` method returns a new object with the listed
+The :py:meth:`~xarray.Dataset.drop_sel` method returns a new object with the listed
 index labels along a dimension dropped:
 
 .. ipython:: python
 
-    ds.drop(space=['IN', 'IL'])
+    ds.drop_sel(space=['IN', 'IL'])
 
-``drop`` is both a ``Dataset`` and ``DataArray`` method.
+``drop_sel`` is both a ``Dataset`` and ``DataArray`` method.
 
 Use :py:meth:`~xarray.Dataset.drop_dims` to drop a full dimension from a Dataset.
 Any variables with these dimensions are also dropped:

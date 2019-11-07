@@ -388,7 +388,7 @@ def _dataset_concat(
     result = result.set_coords(coord_names)
     result.encoding = result_encoding
 
-    result = result.drop(unlabeled_dims, errors="ignore")
+    result = result.drop_vars(unlabeled_dims, errors="ignore")
 
     if coord is not None:
         # add concat dimension last to ensure that its in the final Dataset

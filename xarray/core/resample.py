@@ -47,7 +47,7 @@ class Resample:
             if k == self._dim:
                 continue
             if self._dim in v.dims:
-                self._obj = self._obj.drop(k)
+                self._obj = self._obj.drop_vars(k)
 
         if method == "asfreq":
             return self.mean(self._dim)
@@ -146,7 +146,7 @@ class Resample:
         dummy = self._obj.copy()
         for k, v in self._obj.coords.items():
             if k != self._dim and self._dim in v.dims:
-                dummy = dummy.drop(k)
+                dummy = dummy.drop_vars(k)
         return dummy.interp(
             assume_sorted=True,
             method=kind,
@@ -218,7 +218,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         # dimension, then we need to do so before we can rename the proxy
         # dimension we used.
         if self._dim in combined.coords:
-            combined = combined.drop(self._dim)
+            combined = combined.drop_vars(self._dim)
 
         if self._resample_dim in combined.dims:
             combined = combined.rename({self._resample_dim: self._dim})

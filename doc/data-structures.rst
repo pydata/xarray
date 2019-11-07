@@ -393,14 +393,14 @@ methods (like pandas) for transforming datasets into new objects.
 
 For removing variables, you can select and drop an explicit list of
 variables by indexing with a list of names or using the
-:py:meth:`~xarray.Dataset.drop` methods to return a new ``Dataset``. These
+:py:meth:`~xarray.Dataset.drop_vars` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
 .. ipython:: python
 
     ds[['temperature']]
     ds[['temperature', 'temperature_double']]
-    ds.drop('temperature')
+    ds.drop_vars('temperature')
 
 To remove a dimension, you can use :py:meth:`~xarray.Dataset.drop_dims` method.
 Any variables using that dimension are dropped:
