@@ -16,7 +16,6 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
 )
 
 import numpy as np
@@ -53,7 +52,7 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .options import OPTIONS
-from .utils import Default, ReprObject, _default, _check_inplace, either_dict_or_kwargs
+from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
     Variable,
@@ -249,7 +248,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary for holding arbitrary metadata.
     """
 
-    _accessors: Optional[Dict[str, Any]]
+    _accessors: Optional[Dict[str, Any]]  # noqa
     _coords: Dict[Any, Variable]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _name: Optional[Hashable]
@@ -1890,41 +1889,72 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> "DataArray":
         return self.transpose()
 
-    # Drop coords
-    @overload
-    def drop(
-        self, labels: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
+    def drop_vars(
+        self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "DataArray":
-        ...
-
-    # Drop index labels along dimension
-    @overload  # noqa: F811
-    def drop(
-        self, labels: Any, dim: Hashable, *, errors: str = "raise"  # array-like
-    ) -> "DataArray":
-        ...
-
-    def drop(self, labels, dim=None, *, errors="raise"):  # noqa: F811
-        """Drop coordinates or index labels from this DataArray.
+        """Drop variables from this DataArray.
 
         Parameters
         ----------
-        labels : hashable or sequence of hashables
-            Name(s) of coordinates or index labels to drop.
-            If dim is not None, labels can be any array-like.
-        dim : hashable, optional
-            Dimension along which to drop index labels. By default (if
-            ``dim is None``), drops coordinates rather than index labels.
+        names : hashable or iterable of hashables
+            Name(s) of variables to drop.
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if any of the variable
+            passed are not in the dataset. If 'ignore', any given names that are in the
+            DataArray are dropped and no error is raised.
+
+        Returns
+        -------
+        dropped : Dataset
+
+        """
+        ds = self._to_temp_dataset().drop_vars(names, errors=errors)
+        return self._from_temp_dataset(ds)
+
+    def drop(
+        self,
+        labels: Mapping = None,
+        dim: Hashable = None,
+        *,
+        errors: str = "raise",
+        **labels_kwargs,
+    ) -> "DataArray":
+        """Backward compatible method based on `drop_vars` and `drop_sel`
+
+        Using either `drop_vars` or `drop_sel` is encouraged
+        """
+        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
+        return self._from_temp_dataset(ds)
+
+    def drop_sel(
+        self,
+        labels: Mapping[Hashable, Any] = None,
+        *,
+        errors: str = "raise",
+        **labels_kwargs,
+    ) -> "DataArray":
+        """Drop index labels from this DataArray.
+
+        Parameters
+        ----------
+        labels : Mapping[Hashable, Any]
+            Index labels to drop
         errors: {'raise', 'ignore'}, optional
             If 'raise' (default), raises a ValueError error if
-            any of the coordinates or index labels passed are not
-            in the array. If 'ignore', any given labels that are in the
-            array are dropped and no error is raised.
+            any of the index labels passed are not
+            in the dataset. If 'ignore', any given labels that are in the
+            dataset are dropped and no error is raised.
+        **labels_kwargs : {dim: label, ...}, optional
+            The keyword arguments form of ``dim`` and ``labels``
+
         Returns
         -------
         dropped : DataArray
         """
-        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
+        if labels_kwargs or isinstance(labels, dict):
+            labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
+
+        ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
 
     def dropna(
