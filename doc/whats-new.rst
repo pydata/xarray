@@ -38,8 +38,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel' have been added for dropping labels.
-  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars' have been added for 
+- :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
   dropping variables (including coordinates). The ``drop`` methods remain as a backward compatible 
   option for dropping either lables or variables, but using the more specific methods is encouraged.
   By `Maximilian Roos <https://github.com/max-sixty>`_
