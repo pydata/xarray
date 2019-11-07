@@ -21,20 +21,29 @@ v0.14.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Minimum cftime version is now 1.0.3. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Broken compatibility with cftime < 1.0.3.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
   .. note::
 
-    cftime version 1.0.4 is broken (`cftime/126 <https://github.com/Unidata/cftime/issues/126>`_), use version 1.0.4.2 instead. 
+    cftime version 1.0.4 is broken
+    (`cftime/126 <https://github.com/Unidata/cftime/issues/126>`_);
+    please use version 1.0.4.2 instead.
 
 - All leftover support for dates from non-standard calendars through netcdftime, the
   module included in versions of netCDF4 prior to 1.4 that eventually became the
   cftime package, has been removed in favor of relying solely on the standalone
-  cftime package (:pull:`3450`).  By `Spencer Clark 
-  <https://github.com/spencerkclark>`_. 
+  cftime package (:pull:`3450`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
+  dropping variables (including coordinates). The existing ``drop`` methods remain as a backward compatible 
+  option for dropping either lables or variables, but using the more specific methods is encouraged.
+  (:pull:`3475`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
   to represent all 'other' dimensions. For example, to move one dimension to the front,
   use `.transpose('x', ...)`. (:pull:`3421`)
@@ -52,12 +61,23 @@ New Features
   for now. Enable it with :py:meth:`xarray.set_options(display_style="html")`.
   (:pull:`3425`) by `Benoit Bovy <https://github.com/benbovy>`_ and
   `Julia Signell <https://github.com/jsignell>`_.
+- Implement `dask deterministic hashing
+  <https://docs.dask.org/en/latest/custom-collections.html#deterministic-hashing>`_
+  for xarray objects. Note that xarray objects with a dask.array backend already used
+  deterministic hashing in previous releases; this change implements it when whole
+  xarray objects are embedded in a dask graph, e.g. when :meth:`DataArray.map` is
+  invoked. (:issue:`3378`, :pull:`3446`)
+  By `Deepak Cherian <https://github.com/dcherian>`_ and
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Use dask names to compare dask objects prior to comparing values after computation.
+  (:issue:`3068`, :issue:`3311`, :issue:`3454`, :pull:`3453`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
@@ -67,7 +87,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- Fix leap year condition in example (http://xarray.pydata.org/en/stable/examples/monthly-means.html) by `Mickaël Lalande <https://github.com/mickaellalande>`_.
+- Fix leap year condition in example (http://xarray.pydata.org/en/stable/examples/monthly-means.html)
+  by `Mickaël Lalande <https://github.com/mickaellalande>`_.
 - Fix the documentation of :py:meth:`DataArray.resample` and
   :py:meth:`Dataset.resample` and explicitly state that a
   datetime-like dimension is required. (:pull:`3400`)
@@ -93,8 +114,12 @@ Internal Changes
     ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
     Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
 
-- Use Python 3.6 idioms throughout the codebase. (:pull:3419)
+- Use Python 3.6 idioms throughout the codebase. (:pull:`3419`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+
+- Run basic CI tests on Python 3.8. (:pull:`3477`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 .. _whats-new.0.14.0:
 
@@ -3733,6 +3758,7 @@ Enhancements
   explicitly listed variables or index labels:
 
   .. ipython:: python
+     :okwarning:
 
       # drop variables
       ds = xray.Dataset({'x': 0, 'y': 1})

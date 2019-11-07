@@ -1186,7 +1186,7 @@ class TestDataArray:
         "func",
         (
             pytest.param(
-                method("drop", labels=np.array([1, 5]), dim="x"),
+                method("drop_sel", labels=dict(x=np.array([1, 5]))),
                 marks=pytest.mark.xfail(
                     reason="selecting using incompatible units does not raise"
                 ),
@@ -1221,9 +1221,9 @@ class TestDataArray:
 
         expected = attach_units(
             func(strip_units(data_array), **stripped_kwargs),
-            {"data": quantity.units if func.name == "drop" else unit, "x": x.units},
+            {"data": quantity.units if func.name == "drop_sel" else unit, "x": x.units},
         )
-        if error is not None and func.name == "drop":
+        if error is not None and func.name == "drop_sel":
             with pytest.raises(error):
                 func(data_array, **kwargs)
         else:

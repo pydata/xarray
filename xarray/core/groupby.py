@@ -529,6 +529,7 @@ class GroupBy(SupportsArithmetic):
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
+                    del obj.indexes[dim]
         return obj
 
     def fillna(self, value):
@@ -774,7 +775,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         )
 
         if np.asarray(q, dtype=np.float64).ndim == 0:
-            out = out.drop("quantile")
+            out = out.drop_vars("quantile")
         return out
 
     def reduce(

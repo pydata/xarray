@@ -553,7 +553,7 @@ def test_datetime_single_string():
     actual = da.interp(time="2000-01-01T12:00")
     expected = xr.DataArray(0.5)
 
-    assert_allclose(actual.drop("time"), expected)
+    assert_allclose(actual.drop_vars("time"), expected)
 
 
 @requires_cftime
