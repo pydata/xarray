@@ -306,7 +306,9 @@ def test_apply_ufunc_dataarray(dtype):
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="pint does not implement `np.result_type`")
+@pytest.mark.xfail(
+    reason="pint does not implement `np.result_type` and align strips units"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -320,18 +322,36 @@ def test_apply_ufunc_dataarray(dtype):
     ),
     ids=repr,
 )
+@pytest.mark.parametrize("variant", ("data", "dims", "coords"))
 @pytest.mark.parametrize("fill_value", (np.float64(10), np.float64(np.nan)))
-def test_align_dataarray(fill_value, unit, error, dtype):
-    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * unit_registry.m
-    array2 = np.linspace(0, 8, 2 * 5).reshape(2, 5).astype(dtype) * unit_registry.m
-    x = np.arange(2) * unit_registry.m
-    y = np.arange(5) * unit_registry.m
-    z = np.arange(2, 7) * unit_registry.m
+def test_align_dataarray(fill_value, variant, unit, error, dtype):
+    original_unit = unit_registry.m
 
-    data_array1 = xr.DataArray(data=array1, coords={"x": x, "y": y}, dims=("x", "y"))
-    data_array2 = xr.DataArray(data=array2, coords={"x": x, "y": z}, dims=("x", "y"))
+    variants = {
+        "data": (unit, original_unit, original_unit),
+        "dims": (original_unit, unit, original_unit),
+        "coords": (original_unit, original_unit, unit),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
 
-    fill_value = fill_value * unit
+    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * original_unit
+    array2 = np.linspace(0, 8, 2 * 5).reshape(2, 5).astype(dtype) * data_unit
+    x = np.arange(2) * original_unit
+    x_a1 = np.array([10, 5]) * original_unit
+    x_a2 = np.array([10, 5]) * coord_unit
+
+    y1 = np.arange(5) * original_unit
+    y2 = np.arange(2, 7) * dim_unit
+
+    data_array1 = xr.DataArray(
+        data=array1, coords={"x": x, "x_a": ("x", x_a1), "y": y1}, dims=("x", "y")
+    )
+    data_array2 = xr.DataArray(
+        data=array2, coords={"x": x, "x_a": ("x", x_a2), "y": y2}, dims=("x", "y")
+    )
+
+    # FIXME: convert x_a2 and y2 in data_array2, too
+    fill_value = fill_value * data_unit
     if isinstance(fill_value, unit_registry.Quantity) and fill_value.check(
         unit_registry.m
     ):
@@ -354,7 +374,9 @@ def test_align_dataarray(fill_value, unit, error, dtype):
     assert_equal_with_units(expected_b, result_b)
 
 
-@pytest.mark.xfail(reason="pint does not implement `np.result_type`")
+@pytest.mark.xfail(
+    reason="pint does not implement `np.result_type` and align strips units"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -368,18 +390,39 @@ def test_align_dataarray(fill_value, unit, error, dtype):
     ),
     ids=repr,
 )
+@pytest.mark.parametrize("variant", ("data", "dims", "coords"))
 @pytest.mark.parametrize("fill_value", (np.float64(10), np.float64(np.nan)))
-def test_align_dataset(fill_value, unit, error, dtype):
-    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * unit_registry.m
-    array2 = np.linspace(0, 8, 2 * 5).reshape(2, 5).astype(dtype) * unit_registry.m
-    x = np.arange(2) * unit_registry.m
-    y = np.arange(5) * unit_registry.m
-    z = np.arange(2, 7) * unit_registry.m
+def test_align_dataset(fill_value, unit, variant, error, dtype):
+    original_unit = unit_registry.m
 
-    ds1 = xr.Dataset(data_vars={"a": (("x", "y"), array1)}, coords={"x": x, "y": y})
-    ds2 = xr.Dataset(data_vars={"a": (("x", "y"), array2)}, coords={"x": x, "y": z})
+    variants = {
+        "data": (unit, original_unit, original_unit),
+        "dims": (original_unit, unit, original_unit),
+        "coords": (original_unit, original_unit, unit),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
 
-    fill_value = fill_value * unit
+    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * original_unit
+    array2 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * data_unit
+
+    x = np.arange(2) * original_unit
+    x_a1 = np.array([10, 5]) * original_unit
+    x_a2 = np.array([10, 5]) * coord_unit
+
+    y1 = np.arange(5) * original_unit
+    y2 = np.arange(2, 7) * dim_unit
+
+    ds1 = xr.Dataset(
+        data_vars={"a": (("x", "y"), array1)},
+        coords={"x": x, "x_a": ("x", x_a1), "y": y1},
+    )
+    ds2 = xr.Dataset(
+        data_vars={"a": (("x", "y"), array2)},
+        coords={"x": x, "x_a": ("x", x_a2), "y": y2},
+    )
+
+    # FIXME: convert x_a2 and y2 in ds2, too
+    fill_value = fill_value * data_unit
     if isinstance(fill_value, unit_registry.Quantity) and fill_value.check(
         unit_registry.m
     ):
@@ -393,7 +436,10 @@ def test_align_dataset(fill_value, unit, error, dtype):
         return
 
     stripped_kwargs = {key: strip_units(value) for key, value in func.kwargs.items()}
-    expected_a, expected_b = func(strip_units(ds1), strip_units(ds2), **stripped_kwargs)
+    expected_a, expected_b = tuple(
+        attach_units(result, extract_units(ds1))
+        for result in func(strip_units(ds1), strip_units(ds2), **stripped_kwargs)
+    )
     result_a, result_b = func(ds1, ds2)
 
     assert_equal_with_units(expected_a, result_a)
