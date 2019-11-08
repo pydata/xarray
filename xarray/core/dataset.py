@@ -3,6 +3,7 @@ import functools
 import sys
 import warnings
 from collections import defaultdict
+from html import escape
 from numbers import Number
 from pathlib import Path
 from typing import (
@@ -24,7 +25,6 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
 )
 
 import numpy as np
@@ -39,6 +39,7 @@ from . import (
     dtypes,
     duck_array_ops,
     formatting,
+    formatting_html,
     groupby,
     ops,
     resample,
@@ -47,7 +48,6 @@ from . import (
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .common import (
-    ALL_DIMS,
     DataWithCoords,
     ImplementsDatasetReduce,
     _contains_datetime_like_objects,
@@ -69,14 +69,17 @@ from .merge import (
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import (
+    Default,
     Frozen,
     SortedKeysDict,
+    _default,
     _check_inplace,
     decode_numpy_dict_values,
     either_dict_or_kwargs,
     hashable,
     is_dict_like,
     is_list_like,
+    is_scalar,
     maybe_wrap_array,
 )
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
@@ -648,6 +651,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return self
 
+    def __dask_tokenize__(self):
+        return (type(self), self._variables, self._coord_names, self._attrs)
+
     def __dask_graph__(self):
         graphs = {k: v.__dask_graph__() for k, v in self.variables.items()}
         graphs = {k: v for k, v in graphs.items() if v is not None}
@@ -855,23 +861,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._accessors = None
         return obj
 
-    __default = object()
-
     @classmethod
     def _from_vars_and_coord_names(cls, variables, coord_names, attrs=None):
         return cls._construct_direct(variables, coord_names, attrs=attrs)
 
-    # TODO(shoyer): renable type checking on this signature when pytype has a
-    # good way to handle defaulting arguments to a sentinel value:
-    # https://github.com/python/mypy/issues/1803
-    def _replace(  # type: ignore
+    def _replace(
         self,
         variables: Dict[Hashable, Variable] = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
-        attrs: Optional[Dict[Hashable, Any]] = __default,
-        indexes: Optional[Dict[Any, pd.Index]] = __default,
-        encoding: Optional[dict] = __default,
+        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        indexes: Union[Dict[Any, pd.Index], None, Default] = _default,
+        encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Fastpath constructor for internal use.
@@ -889,12 +890,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 self._coord_names = coord_names
             if dims is not None:
                 self._dims = dims
-            if attrs is not self.__default:
-                self._attrs = attrs
-            if indexes is not self.__default:
-                self._indexes = indexes
-            if encoding is not self.__default:
-                self._encoding = encoding
+            if attrs is not _default:
+                self._attrs = attrs  # type: ignore # FIXME need mypy 0.750
+            if indexes is not _default:
+                self._indexes = indexes  # type: ignore # FIXME need mypy 0.750
+            if encoding is not _default:
+                self._encoding = encoding  # type: ignore # FIXME need mypy 0.750
             obj = self
         else:
             if variables is None:
@@ -903,23 +904,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 coord_names = self._coord_names.copy()
             if dims is None:
                 dims = self._dims.copy()
-            if attrs is self.__default:
+            if attrs is _default:
                 attrs = copy.copy(self._attrs)
-            if indexes is self.__default:
+            if indexes is _default:
                 indexes = copy.copy(self._indexes)
-            if encoding is self.__default:
+            if encoding is _default:
                 encoding = copy.copy(self._encoding)
             obj = self._construct_direct(
                 variables, coord_names, dims, attrs, indexes, encoding
             )
         return obj
 
-    def _replace_with_new_dims(  # type: ignore
+    def _replace_with_new_dims(
         self,
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
-        attrs: Optional[Dict[Hashable, Any]] = __default,
-        indexes: Dict[Hashable, pd.Index] = __default,
+        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        indexes: Union[Dict[Hashable, pd.Index], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Replace variables with recalculated dimensions."""
@@ -928,12 +929,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names, dims, attrs, indexes, inplace=inplace
         )
 
-    def _replace_vars_and_dims(  # type: ignore
+    def _replace_vars_and_dims(
         self,
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
         dims: Dict[Hashable, int] = None,
-        attrs: Dict[Hashable, Any] = __default,
+        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Deprecated version of _replace_with_new_dims().
@@ -1618,6 +1619,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def __repr__(self) -> str:
         return formatting.dataset_repr(self)
+
+    def _repr_html_(self):
+        if OPTIONS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
+        return formatting_html.dataset_repr(self)
 
     def info(self, buf=None) -> None:
         """
@@ -3513,40 +3519,98 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "cannot be found in this dataset"
             )
 
-    # Drop variables
-    @overload  # noqa: F811
-    def drop(
-        self, labels: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
+    def drop_vars(
+        self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "Dataset":
-        ...
-
-    # Drop index labels along dimension
-    @overload  # noqa: F811
-    def drop(
-        self, labels: Any, dim: Hashable, *, errors: str = "raise"  # array-like
-    ) -> "Dataset":
-        ...
-
-    def drop(  # noqa: F811
-        self, labels=None, dim=None, *, errors="raise", **labels_kwargs
-    ):
-        """Drop variables or index labels from this dataset.
+        """Drop variables from this dataset.
 
         Parameters
         ----------
-        labels : hashable or iterable of hashables
-            Name(s) of variables or index labels to drop.
-            If dim is not None, labels can be any array-like.
-        dim : None or hashable, optional
-            Dimension along which to drop index labels. By default (if
-            ``dim is None``), drops variables rather than index labels.
+        names : hashable or iterable of hashables
+            Name(s) of variables to drop.
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if any of the variable
+            passed are not in the dataset. If 'ignore', any given names that are in the
+            dataset are dropped and no error is raised.
+
+        Returns
+        -------
+        dropped : Dataset
+
+        """
+        # the Iterable check is required for mypy
+        if is_scalar(names) or not isinstance(names, Iterable):
+            names = {names}
+        else:
+            names = set(names)
+        if errors == "raise":
+            self._assert_all_in_dataset(names)
+
+        variables = {k: v for k, v in self._variables.items() if k not in names}
+        coord_names = {k for k in self._coord_names if k in variables}
+        indexes = {k: v for k, v in self.indexes.items() if k not in names}
+        return self._replace_with_new_dims(
+            variables, coord_names=coord_names, indexes=indexes
+        )
+
+    def drop(self, labels=None, dim=None, *, errors="raise", **labels_kwargs):
+        """Backward compatible method based on `drop_vars` and `drop_sel`
+
+        Using either `drop_vars` or `drop_sel` is encouraged
+        """
+        if errors not in ["raise", "ignore"]:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
+        if is_dict_like(labels) and not isinstance(labels, dict):
+            warnings.warn(
+                "dropping coordinates using `drop` is be deprecated; use drop_vars.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            return self.drop_vars(labels, errors=errors)
+
+        if labels_kwargs or isinstance(labels, dict):
+            if dim is not None:
+                raise ValueError("cannot specify dim and dict-like arguments.")
+            labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
+
+        if dim is None and (is_list_like(labels) or is_scalar(labels)):
+            warnings.warn(
+                "dropping variables using `drop` will be deprecated; using drop_vars is encouraged.",
+                PendingDeprecationWarning,
+                stacklevel=2,
+            )
+            return self.drop_vars(labels, errors=errors)
+        if dim is not None:
+            warnings.warn(
+                "dropping labels using list-like labels is deprecated; using "
+                "dict-like arguments with `drop_sel`, e.g. `ds.drop_sel(dim=[labels]).",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
+
+        warnings.warn(
+            "dropping labels using `drop` will be deprecated; using drop_sel is encouraged.",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.drop_sel(labels, errors=errors)
+
+    def drop_sel(self, labels=None, *, errors="raise", **labels_kwargs):
+        """Drop index labels from this dataset.
+
+        Parameters
+        ----------
+        labels : Mapping[Hashable, Any]
+            Index labels to drop
         errors: {'raise', 'ignore'}, optional
             If 'raise' (default), raises a ValueError error if
-            any of the variable or index labels passed are not
+            any of the index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
         **labels_kwargs : {dim: label, ...}, optional
-            The keyword arguments form of ``dim`` and ``labels``.
+            The keyword arguments form of ``dim`` and ``labels`
 
         Returns
         -------
@@ -3557,7 +3621,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> data = np.random.randn(2, 3)
         >>> labels = ['a', 'b', 'c']
         >>> ds = xr.Dataset({'A': (['x', 'y'], data), 'y': labels})
-        >>> ds.drop(y=['a', 'c'])
+        >>> ds.drop_sel(y=['a', 'c'])
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 1)
         Coordinates:
@@ -3565,7 +3629,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dimensions without coordinates: x
         Data variables:
             A        (x, y) float64 -0.3454 0.1734
-        >>> ds.drop(y='b')
+        >>> ds.drop_sel(y='b')
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
@@ -3577,61 +3641,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        if is_dict_like(labels) and not isinstance(labels, dict):
-            warnings.warn(
-                "dropping coordinates using key values of dict-like labels is "
-                "deprecated; use drop_vars or a list of coordinates.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if dim is not None and is_list_like(labels):
-            warnings.warn(
-                "dropping dimensions using list-like labels is deprecated; use "
-                "dict-like arguments.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
+        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
-        if labels_kwargs or isinstance(labels, dict):
-            labels_kwargs = either_dict_or_kwargs(labels, labels_kwargs, "drop")
-            if dim is not None:
-                raise ValueError("cannot specify dim and dict-like arguments.")
-            ds = self
-            for dim, labels in labels_kwargs.items():
-                ds = ds._drop_labels(labels, dim, errors=errors)
-            return ds
-        elif dim is None:
-            if isinstance(labels, str) or not isinstance(labels, Iterable):
-                labels = {labels}
-            else:
-                labels = set(labels)
-            return self._drop_vars(labels, errors=errors)
-        else:
-            return self._drop_labels(labels, dim, errors=errors)
-
-    def _drop_labels(self, labels=None, dim=None, errors="raise"):
-        # Don't cast to set, as it would harm performance when labels
-        # is a large numpy array
-        if utils.is_scalar(labels):
-            labels = [labels]
-        labels = np.asarray(labels)
-        try:
-            index = self.indexes[dim]
-        except KeyError:
-            raise ValueError("dimension %r does not have coordinate labels" % dim)
-        new_index = index.drop(labels, errors=errors)
-        return self.loc[{dim: new_index}]
-
-    def _drop_vars(self, names: set, errors: str = "raise") -> "Dataset":
-        if errors == "raise":
-            self._assert_all_in_dataset(names)
-
-        variables = {k: v for k, v in self._variables.items() if k not in names}
-        coord_names = {k for k in self._coord_names if k in variables}
-        indexes = {k: v for k, v in self.indexes.items() if k not in names}
-        return self._replace_with_new_dims(
-            variables, coord_names=coord_names, indexes=indexes
-        )
+        ds = self
+        for dim, labels_for_dim in labels.items():
+            # Don't cast to set, as it would harm performance when labels
+            # is a large numpy array
+            if utils.is_scalar(labels_for_dim):
+                labels_for_dim = [labels_for_dim]
+            labels_for_dim = np.asarray(labels_for_dim)
+            try:
+                index = self.indexes[dim]
+            except KeyError:
+                raise ValueError("dimension %r does not have coordinate labels" % dim)
+            new_index = index.drop(labels_for_dim, errors=errors)
+            ds = ds.loc[{dim: new_index}]
+        return ds
 
     def drop_dims(
         self, drop_dims: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
@@ -3674,7 +3699,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
 
         drop_vars = {k for k, v in self._variables.items() if set(v.dims) & drop_dims}
-        return self._drop_vars(drop_vars)
+        return self.drop_vars(drop_vars)
 
     def transpose(self, *dims: Hashable) -> "Dataset":
         """Return a new Dataset object with all array dimensions transposed.
@@ -3706,14 +3731,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.transpose
         """
         if dims:
-            if set(dims) ^ set(self.dims):
+            if set(dims) ^ set(self.dims) and ... not in dims:
                 raise ValueError(
                     "arguments to transpose (%s) must be "
                     "permuted dataset dimensions (%s)" % (dims, tuple(self.dims))
                 )
         ds = self.copy()
         for name, var in self._variables.items():
-            var_dims = tuple(dim for dim in dims if dim in var.dims)
+            var_dims = tuple(dim for dim in dims if dim in (var.dims + (...,)))
             ds._variables[name] = var.transpose(*var_dims)
         return ds
 
@@ -4030,7 +4055,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if dim is None or dim is ALL_DIMS:
+        if dim is None or dim is ...:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
             dims = {dim}
@@ -4061,7 +4086,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     if len(reduce_dims) == 1:
                         # unpack dimensions for the benefit of functions
                         # like np.argmin which can't handle tuple arguments
-                        reduce_dims, = reduce_dims
+                        (reduce_dims,) = reduce_dims
                     elif len(reduce_dims) == var.ndim:
                         # prefer to aggregate over axis=None rather than
                         # axis=(0, 1) if they will be equivalent, because
@@ -4886,6 +4911,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 (dim,) = self.variables[k].dims
                 if dim in shifts:
                     indexes[k] = roll_index(v, shifts[dim])
+                else:
+                    indexes[k] = v
         else:
             indexes = dict(self.indexes)
 
@@ -4995,7 +5022,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if isinstance(dim, str):
             dims = {dim}
-        elif dim is None or dim is ALL_DIMS:
+        elif dim in [None, ...]:
             dims = set(self.dims)
         else:
             dims = set(dim)
@@ -5160,7 +5187,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dim: str, or a sequence of str
+        coord: str, or a sequence of str
             Coordinate(s) used for the integration.
         datetime_unit
             Can be specify the unit if datetime coordinate is used. One of
@@ -5175,6 +5202,34 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         DataArray.integrate
         numpy.trapz: corresponding numpy function
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0])},
+        ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) int64 5 5 6 6
+            b        (x) int64 1 2 1 0
+        >>> ds.integrate("x")
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            a        float64 16.5
+            b        float64 3.5
+        >>> ds.integrate("y")
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            a        float64 20.0
+            b        float64 4.0
         """
         if not isinstance(coord, (list, tuple)):
             coord = (coord,)

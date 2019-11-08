@@ -1,5 +1,6 @@
 import warnings
 from contextlib import suppress
+from html import escape
 from textwrap import dedent
 from typing import (
     Any,
@@ -18,16 +19,16 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import dtypes, duck_array_ops, formatting, ops
+from . import dtypes, duck_array_ops, formatting, formatting_html, ops
 from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, ReprObject, either_dict_or_kwargs
+from .utils import Frozen, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
-ALL_DIMS = ReprObject("<all-dims>")
+ALL_DIMS = ...
 
 
 C = TypeVar("C")
@@ -124,6 +125,11 @@ class AbstractArray(ImplementsArrayReduce):
 
     def __repr__(self) -> str:
         return formatting.array_repr(self)
+
+    def _repr_html_(self):
+        if OPTIONS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
+        return formatting_html.array_repr(self)
 
     def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):

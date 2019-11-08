@@ -7,7 +7,7 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import SupportsArithmetic
-from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .options import _get_keep_attrs
@@ -15,11 +15,24 @@ from .pycompat import integer_types
 from .utils import (
     either_dict_or_kwargs,
     hashable,
+    is_scalar,
     maybe_wrap_array,
     peek_at,
     safe_cast_to_index,
 )
 from .variable import IndexVariable, Variable, as_variable
+
+
+def check_reduce_dims(reduce_dims, dimensions):
+
+    if reduce_dims is not ...:
+        if is_scalar(reduce_dims):
+            reduce_dims = [reduce_dims]
+        if any([dim not in dimensions for dim in reduce_dims]):
+            raise ValueError(
+                "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
+                % (reduce_dims, dimensions)
+            )
 
 
 def unique_value_groups(ar, sort=True):
@@ -308,7 +321,7 @@ class GroupBy(SupportsArithmetic):
             raise ValueError("`group` must have a name")
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
-        group_dim, = group.dims
+        (group_dim,) = group.dims
 
         expected_size = obj.sizes[group_dim]
         if group.size != expected_size:
@@ -348,6 +361,13 @@ class GroupBy(SupportsArithmetic):
                 group_indices = [slice(i, i + 1) for i in group_indices]
             unique_coord = group
         else:
+            if group.isnull().any():
+                # drop any NaN valued groups.
+                # also drop obj values where group was NaN
+                # Use where instead of reindex to account for duplicate coordinate labels.
+                obj = obj.where(group.notnull(), drop=True)
+                group = group.dropna(group_dim)
+
             # look through group to find the unique values
             unique_values, group_indices = unique_value_groups(
                 safe_cast_to_index(group), sort=(bins is None)
@@ -450,7 +470,7 @@ class GroupBy(SupportsArithmetic):
         else:
             coord = self._unique_coord
             positions = None
-        dim, = coord.dims
+        (dim,) = coord.dims
         if isinstance(coord, _DummyGroup):
             coord = None
         return coord, dim, positions
@@ -509,6 +529,7 @@ class GroupBy(SupportsArithmetic):
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
+                    del obj.indexes[dim]
         return obj
 
     def fillna(self, value):
@@ -622,7 +643,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     def _restore_dim_order(self, stacked):
         def lookup_order(dimension):
             if dimension == self._group.name:
-                dimension, = self._group.dims
+                (dimension,) = self._group.dims
             if dimension in self._obj.dims:
                 axis = self._obj.get_axis_num(dimension)
             else:
@@ -710,7 +731,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         q : float in range of [0,1] (or sequence of floats)
             Quantile to compute, which must be between 0 and 1
             inclusive.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
@@ -752,7 +773,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         )
 
         if np.asarray(q, dtype=np.float64).ndim == 0:
-            out = out.drop("quantile")
+            out = out.drop_vars("quantile")
         return out
 
     def reduce(
@@ -767,7 +788,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -792,14 +813,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        if dim is not ALL_DIMS and dim not in self.dims:
-            raise ValueError(
-                "cannot reduce over dimension %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
-                % (dim, self.dims)
-            )
-
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
+
+        check_reduce_dims(dim, self.dims)
 
         return self.apply(reduce_array, shortcut=shortcut)
 
@@ -865,7 +882,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : xarray.ALL_DIMS, str or sequence of str, optional
+        dim : `...`, str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -893,11 +910,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
 
-        if dim is not ALL_DIMS and dim not in self.dims:
-            raise ValueError(
-                "cannot reduce over dimension %r. expected either xarray.ALL_DIMS to reduce over all dimensions or one or more of %r."
-                % (dim, self.dims)
-            )
+        check_reduce_dims(dim, self.dims)
 
         return self.apply(reduce_dataset)
 

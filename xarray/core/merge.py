@@ -19,6 +19,7 @@ import pandas as pd
 
 from . import dtypes, pdcompat
 from .alignment import deep_align
+from .duck_array_ops import lazy_array_equiv
 from .utils import Frozen, dict_equiv
 from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
@@ -123,16 +124,24 @@ def unique_variable(
         combine_method = "fillna"
 
     if equals is None:
-        out = out.compute()
+        # first check without comparing values i.e. no computes
         for var in variables[1:]:
-            equals = getattr(out, compat)(var)
-            if not equals:
+            equals = getattr(out, compat)(var, equiv=lazy_array_equiv)
+            if equals is not True:
                 break
+
+        if equals is None:
+            # now compare values with minimum number of computes
+            out = out.compute()
+            for var in variables[1:]:
+                equals = getattr(out, compat)(var)
+                if not equals:
+                    break
 
     if not equals:
         raise MergeError(
-            "conflicting values for variable {!r} on objects to be combined. "
-            "You can skip this check by specifying compat='override'.".format(name)
+            f"conflicting values for variable {name!r} on objects to be combined. "
+            "You can skip this check by specifying compat='override'."
         )
 
     if combine_method:
@@ -277,7 +286,7 @@ def collect_variables_and_indexes(
 
 
 def collect_from_coordinates(
-    list_of_coords: "List[Coordinates]"
+    list_of_coords: "List[Coordinates]",
 ) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes to be merged from Coordinate objects."""
     grouped: Dict[Hashable, List[Tuple[Variable, pd.Index]]] = {}
@@ -320,7 +329,7 @@ def merge_coordinates_without_align(
 
 
 def determine_coords(
-    list_of_mappings: Iterable["DatasetLike"]
+    list_of_mappings: Iterable["DatasetLike"],
 ) -> Tuple[Set[Hashable], Set[Hashable]]:
     """Given a list of dicts with xarray object values, identify coordinates.
 
@@ -850,6 +859,6 @@ def dataset_update_method(
                     if c not in value.dims and c in dataset.coords
                 ]
                 if coord_names:
-                    other[key] = value.drop(coord_names)
+                    other[key] = value.drop_vars(coord_names)
 
     return merge_core([dataset, other], priority_arg=1, indexes=dataset.indexes)
