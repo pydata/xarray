@@ -211,6 +211,8 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
         with raises_regex(NotImplementedError, "dask"):
             v.median()
+        with raise_if_dask_computes():
+            v.reduce(np.mean)
 
     def test_missing_values(self):
         values = np.array([0, 1, np.nan, 3])
@@ -436,7 +438,25 @@ class TestDataArrayAndDataset(DaskTestCase):
         v = self.lazy_array
 
         expected = u.groupby("x").mean(xr.ALL_DIMS)
-        actual = v.groupby("x").mean(xr.ALL_DIMS)
+        with raise_if_dask_computes():
+            actual = v.groupby("x").mean(xr.ALL_DIMS)
+        self.assertLazyAndAllClose(expected, actual)
+
+        with raise_if_dask_computes():
+            actual = v.groupby("x").reduce(np.nanmean, xr.ALL_DIMS)
+        self.assertLazyAndAllClose(expected, actual)
+
+    def test_rolling(self):
+        u = self.eager_array
+        v = self.lazy_array
+
+        expected = u.rolling(x=2).mean()
+        with raise_if_dask_computes():
+            actual = v.rolling(x=2).mean()
+        self.assertLazyAndAllClose(expected, actual)
+
+        with raise_if_dask_computes():
+            actual = v.rolling(x=2).reduce(np.nanmean)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_groupby_first(self):
@@ -448,7 +468,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         with raises_regex(NotImplementedError, "dask"):
             v.groupby("ab").first()
         expected = u.groupby("ab").first()
-        actual = v.groupby("ab").first(skipna=False)
+        with raise_if_dask_computes():
+            actual = v.groupby("ab").first(skipna=False)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_reindex(self):
