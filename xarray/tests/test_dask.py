@@ -494,9 +494,9 @@ class TestDataArrayAndDataset(DaskTestCase):
             actual = v.groupby("x").mean(...)
         self.assertLazyAndAllClose(expected, actual)
 
-        actual = v.groupby("x").reduce(np.nanmean, ...)
         with raise_if_dask_computes():
-            self.assertLazyAndAllClose(expected, actual)
+            actual = v.groupby("x").reduce(np.nanmean, ...)
+        self.assertLazyAndAllClose(expected, actual)
 
     def test_rolling(self):
         u = self.eager_array
