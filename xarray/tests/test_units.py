@@ -446,6 +446,37 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
     assert_equal_with_units(expected_b, result_b)
 
 
+def test_broadcast_dataarray(dtype):
+    array1 = np.linspace(0, 10, 2) * unit_registry.Pa
+    array2 = np.linspace(0, 10, 3) * unit_registry.Pa
+
+    a = xr.DataArray(data=array1, dims="x")
+    b = xr.DataArray(data=array2, dims="y")
+
+    expected_a, expected_b = tuple(
+        attach_units(elem, extract_units(a))
+        for elem in xr.broadcast(strip_units(a), strip_units(b))
+    )
+    result_a, result_b = xr.broadcast(a, b)
+
+    assert_equal_with_units(expected_a, result_a)
+    assert_equal_with_units(expected_b, result_b)
+
+
+def test_broadcast_dataset(dtype):
+    array1 = np.linspace(0, 10, 2) * unit_registry.Pa
+    array2 = np.linspace(0, 10, 3) * unit_registry.Pa
+
+    ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("y", array2)})
+
+    expected, = tuple(
+        attach_units(elem, extract_units(ds)) for elem in xr.broadcast(strip_units(ds))
+    )
+    result, = xr.broadcast(ds)
+
+    assert_equal_with_units(expected, result)
+
+
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
 def test_replication_dataarray(func, dtype):
     array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
