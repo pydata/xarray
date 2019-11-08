@@ -469,10 +469,10 @@ def test_broadcast_dataset(dtype):
 
     ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("y", array2)})
 
-    expected, = tuple(
+    (expected,) = tuple(
         attach_units(elem, extract_units(ds)) for elem in xr.broadcast(strip_units(ds))
     )
-    result, = xr.broadcast(ds)
+    (result,) = xr.broadcast(ds)
 
     assert_equal_with_units(expected, result)
 
