@@ -1,11 +1,11 @@
 import functools
-from typing import Callable
+from typing import Any, Callable, Dict
 
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
-from .ops import inject_coarsen_methods
+from .ops import inject_reduce_methods
 from .pycompat import dask_array_type
 
 try:
@@ -556,18 +556,23 @@ class Coarsen:
 class DataArrayCoarsen(Coarsen):
     __slots__ = ()
 
+    _reduce_extra_args_docstring = """"""
+
     @classmethod
-    def _reduce_method(cls, func):
+    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
         """
-        Return a wrapped function for injecting numpy methods.
-        see ops.inject_coarsen_methods
+        Return a wrapped function for injecting reduction methods.
+        see ops.inject_reduce_methods
         """
+        kwargs: Dict[str, Any] = {}
+        if include_skipna:
+            kwargs["skipna"] = None
 
         def wrapped_func(self, **kwargs):
             from .dataarray import DataArray
 
             reduced = self.obj.variable.coarsen(
-                self.windows, func, self.boundary, self.side
+                self.windows, func, self.boundary, self.side, **kwargs
             )
             coords = {}
             for c, v in self.obj.coords.items():
@@ -576,7 +581,11 @@ class DataArrayCoarsen(Coarsen):
                 else:
                     if any(d in self.windows for d in v.dims):
                         coords[c] = v.variable.coarsen(
-                            self.windows, self.coord_func[c], self.boundary, self.side
+                            self.windows,
+                            self.coord_func[c],
+                            self.boundary,
+                            self.side,
+                            **kwargs,
                         )
                     else:
                         coords[c] = v
@@ -588,12 +597,17 @@ class DataArrayCoarsen(Coarsen):
 class DatasetCoarsen(Coarsen):
     __slots__ = ()
 
+    _reduce_extra_args_docstring = """"""
+
     @classmethod
-    def _reduce_method(cls, func):
+    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
         """
-        Return a wrapped function for injecting numpy methods.
-        see ops.inject_coarsen_methods
+        Return a wrapped function for injecting reduction methods.
+        see ops.inject_reduce_methods
         """
+        kwargs: Dict[str, Any] = {}
+        if include_skipna:
+            kwargs["skipna"] = None
 
         def wrapped_func(self, **kwargs):
             from .dataset import Dataset
@@ -601,14 +615,18 @@ class DatasetCoarsen(Coarsen):
             reduced = {}
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
-                    self.windows, func, self.boundary, self.side
+                    self.windows, func, self.boundary, self.side, **kwargs
                 )
 
             coords = {}
             for c, v in self.obj.coords.items():
                 if any(d in self.windows for d in v.dims):
                     coords[c] = v.variable.coarsen(
-                        self.windows, self.coord_func[c], self.boundary, self.side
+                        self.windows,
+                        self.coord_func[c],
+                        self.boundary,
+                        self.side,
+                        **kwargs,
                     )
                 else:
                     coords[c] = v.variable
@@ -617,5 +635,5 @@ class DatasetCoarsen(Coarsen):
         return wrapped_func
 
 
-inject_coarsen_methods(DataArrayCoarsen)
-inject_coarsen_methods(DatasetCoarsen)
+inject_reduce_methods(DataArrayCoarsen)
+inject_reduce_methods(DatasetCoarsen)
