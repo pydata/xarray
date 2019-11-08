@@ -594,6 +594,94 @@ def test_replication_full_like_dataset(unit, error, dtype):
     assert_equal_with_units(expected, result)
 
 
+@pytest.mark.xfail(reason="`where` strips units")
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.mm, None, id="compatible_unit"),
+        pytest.param(unit_registry.m, None, id="identical_unit"),
+    ),
+    ids=repr,
+)
+@pytest.mark.parametrize("fill_value", (np.nan, 10.2))
+def test_where_dataarray(fill_value, unit, error, dtype):
+    array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+
+    x = xr.DataArray(data=array, dims="x")
+    cond = x < 5 * unit_registry.m
+    # FIXME: this should work without wrapping in array()
+    fill_value = np.array(fill_value) * unit
+
+    if error is not None:
+        with pytest.raises(error):
+            xr.where(cond, x, fill_value)
+
+        return
+
+    fill_value_ = (
+        fill_value.to(unit_registry.m)
+        if isinstance(fill_value, unit_registry.Quantity)
+        and fill_value.check(unit_registry.m)
+        else fill_value
+    )
+    expected = attach_units(
+        xr.where(cond, strip_units(x), strip_units(fill_value_)), extract_units(x)
+    )
+    result = xr.where(cond, x, fill_value)
+
+    assert_equal_with_units(expected, result)
+
+
+@pytest.mark.xfail(reason="`where` strips units")
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.mm, None, id="compatible_unit"),
+        pytest.param(unit_registry.m, None, id="identical_unit"),
+    ),
+    ids=repr,
+)
+@pytest.mark.parametrize("fill_value", (np.nan, 10.2))
+def test_where_dataset(fill_value, unit, error, dtype):
+    array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+    array2 = np.linspace(-5, 0, 10).astype(dtype) * unit_registry.m
+    x = np.arange(10) * unit_registry.s
+
+    ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("x", array2)}, coords={"x": x})
+    cond = ds.x < 5 * unit_registry.s
+    # FIXME: this should work without wrapping in array()
+    fill_value = np.array(fill_value) * unit
+
+    if error is not None:
+        with pytest.raises(error):
+            xr.where(cond, ds, fill_value)
+
+        return
+
+    fill_value_ = (
+        fill_value.to(unit_registry.m)
+        if isinstance(fill_value, unit_registry.Quantity)
+        and fill_value.check(unit_registry.m)
+        else fill_value
+    )
+    expected = attach_units(
+        xr.where(cond, strip_units(ds), strip_units(fill_value_)), extract_units(ds)
+    )
+    result = xr.where(cond, ds, fill_value)
+
+    assert_equal_with_units(expected, result)
+
+
 @pytest.mark.xfail(reason="pint does not implement `np.einsum`")
 def test_dot_dataarray(dtype):
     array1 = (
