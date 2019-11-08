@@ -477,6 +477,75 @@ def test_broadcast_dataset(dtype):
     assert_equal_with_units(expected, result)
 
 
+@pytest.mark.xfail(reason="`combine_by_coords` strips units")
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.mm, None, id="compatible_unit"),
+        pytest.param(unit_registry.m, None, id="identical_unit"),
+    ),
+    ids=repr,
+)
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        "coords",
+    ),
+)
+def test_combine_by_coords_dataset(variant, unit, error, dtype):
+    original_unit = unit_registry.m
+
+    variants = {
+        "data": (unit, original_unit, original_unit),
+        "dims": (original_unit, unit, original_unit),
+        "coords": (original_unit, original_unit, unit),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
+
+    array1 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
+    array2 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
+    x = np.arange(1, 4) * 10 * original_unit
+    y = np.arange(2) * original_unit
+    z = np.arange(3) * original_unit
+
+    other_array1 = np.ones_like(array1) * data_unit
+    other_array2 = np.ones_like(array2) * data_unit
+    other_x = np.arange(1, 4) * 10 * dim_unit
+    other_y = np.arange(2, 4) * dim_unit
+    other_z = np.arange(3, 6) * coord_unit
+
+    ds = xr.Dataset(
+        data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
+        coords={"x": x, "y": y, "z": ("x", z)},
+    )
+    other = xr.Dataset(
+        data_vars={"a": (("y", "x"), other_array1), "b": (("y", "x"), other_array2)},
+        coords={"x": other_x, "y": other_y, "z": ("x", other_z)},
+    )
+
+    if error is not None:
+        with pytest.raises(error):
+            xr.combine_by_coords([ds, other])
+
+        return
+
+    units = extract_units(ds)
+    # FIXME: convert other to `units` before `strip_units`
+    expected = attach_units(
+        xr.combine_by_coords([strip_units(ds), strip_units(other)]), units
+    )
+    result = xr.combine_by_coords([ds, other])
+
+    assert_equal_with_units(expected, result)
+
+
 @pytest.mark.xfail(reason="`concat` strips units")
 @pytest.mark.parametrize(
     "unit,error",
