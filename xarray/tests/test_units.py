@@ -514,7 +514,7 @@ def test_replication_dataset(func, dtype):
 @pytest.mark.xfail(
     reason=(
         "pint is undecided on how `full_like` should work, so incorrect errors "
-        "may be thrown: hgrecco/pint#882"
+        "may be expected: hgrecco/pint#882"
     )
 )
 @pytest.mark.parametrize(
@@ -548,7 +548,7 @@ def test_replication_full_like_dataarray(unit, error, dtype):
 @pytest.mark.xfail(
     reason=(
         "pint is undecided on how `full_like` should work, so incorrect errors "
-        "may be thrown: hgrecco/pint#882"
+        "may be expected: hgrecco/pint#882"
     )
 )
 @pytest.mark.parametrize(
