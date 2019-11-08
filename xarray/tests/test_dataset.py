@@ -5389,6 +5389,11 @@ def ds(request):
         )
 
 
+def test_coarsen_absent_dims_error(ds):
+    with raises_regex(ValueError, "not found in Dataset."):
+        ds.coarsen(foo=2)
+
+
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
 def test_coarsen(ds, dask, boundary, side):

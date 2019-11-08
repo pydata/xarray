@@ -533,6 +533,11 @@ class Coarsen:
         self.side = side
         self.boundary = boundary
 
+        absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
+        if absent_dims:
+            raise ValueError(
+                f"Dimensions {absent_dims!r} not found in {self.obj.__class__.__name__}."
+            )
         if not utils.is_dict_like(coord_func):
             coord_func = {d: coord_func for d in self.obj.dims}
         for c in self.obj.coords:
