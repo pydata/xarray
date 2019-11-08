@@ -69,6 +69,9 @@ New Features
   invoked. (:issue:`3378`, :pull:`3446`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
+- Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
+  and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
+  By `Deepak Cherian <https://github.com/dcherian/>`_
 
 Bug fixes
 ~~~~~~~~~
