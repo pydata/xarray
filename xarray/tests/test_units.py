@@ -477,6 +477,104 @@ def test_broadcast_dataset(dtype):
     assert_equal_with_units(expected, result)
 
 
+@pytest.mark.xfail(reason="`concat` strips units")
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.mm, None, id="compatible_unit"),
+        pytest.param(unit_registry.m, None, id="identical_unit"),
+    ),
+    ids=repr,
+)
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+    ),
+)
+def test_concat_dataarray(variant, unit, error, dtype):
+    original_unit = unit_registry.m
+
+    variants = {"data": (unit, original_unit), "dims": (original_unit, unit)}
+    data_unit, dims_unit = variants.get(variant)
+
+    array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit
+    x1 = np.arange(5, 15) * original_unit
+    x2 = np.arange(5) * dims_unit
+
+    arr1 = xr.DataArray(data=array1, coords={"x": x1}, dims="x")
+    arr2 = xr.DataArray(data=array2, coords={"x": x2}, dims="x")
+
+    if error is not None:
+        with pytest.raises(error):
+            xr.concat([arr1, arr2], dim="x")
+
+        return
+
+    expected = attach_units(
+        xr.concat([strip_units(arr1), strip_units(arr2)], dim="x"), extract_units(arr1)
+    )
+    result = xr.concat([arr1, arr2], dim="x")
+
+    assert_equal_with_units(expected, result)
+
+
+@pytest.mark.xfail(False, reason="`concat` strips units")
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.mm, None, id="compatible_unit"),
+        pytest.param(unit_registry.m, None, id="identical_unit"),
+    ),
+    ids=repr,
+)
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+    ),
+)
+def test_concat_dataset(variant, unit, error, dtype):
+    original_unit = unit_registry.m
+
+    variants = {"data": (unit, original_unit), "dims": (original_unit, unit)}
+    data_unit, dims_unit = variants.get(variant)
+
+    array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit
+    x1 = np.arange(5, 15) * original_unit
+    x2 = np.arange(5) * dims_unit
+
+    ds1 = xr.Dataset(data_vars={"a": ("x", array1)}, coords={"x": x1})
+    ds2 = xr.Dataset(data_vars={"a": ("x", array2)}, coords={"x": x2})
+
+    if error is not None:
+        with pytest.raises(error):
+            xr.concat([ds1, ds2], dim="x")
+
+        return
+
+    expected = attach_units(
+        xr.concat([strip_units(ds1), strip_units(ds2)], dim="x"), extract_units(ds1)
+    )
+    result = xr.concat([ds1, ds2], dim="x")
+
+    assert_equal_with_units(expected, result)
+
+
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
 def test_replication_dataarray(func, dtype):
     array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
