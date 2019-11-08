@@ -718,6 +718,7 @@ def open_mfdataset(
     autoclose=None,
     parallel=False,
     join="outer",
+    master_file=0,
     **kwargs,
 ):
     """Open multiple files as a single dataset.
@@ -825,6 +826,8 @@ def open_mfdataset(
         - 'override': if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+    master_file : int, optional
+        Index of the file used to read global attributes from.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -959,7 +962,7 @@ def open_mfdataset(
         raise
 
     combined._file_obj = _MultiFileCloser(file_objs)
-    combined.attrs = datasets[0].attrs
+    combined.attrs = datasets[master_file].attrs  # FIXME allow path
     return combined
 
 
