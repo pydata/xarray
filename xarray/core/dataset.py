@@ -4115,7 +4115,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         args: Iterable[Any] = (),
         **kwargs: Any,
     ) -> "Dataset":
-        """Apply a function over each data variable in this dataset.
+        """Apply a function to each variable in this dataset
 
         Parameters
         ----------
@@ -4135,7 +4135,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         applied : Dataset
-            Resulting dataset from applying ``func`` over each data variable.
+            Resulting dataset from applying ``func`` to each data variable.
 
         Examples
         --------
@@ -4173,8 +4173,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         **kwargs: Any,
     ) -> "Dataset":
         warnings.warn(
-            "Dataset.apply is deprecated in favor of Dataset.map and will be changed or removed in a future version of xarray",
-            DeprecationWarning,
+            "Dataset.apply may be deprecated in the future. Using Dataset.map is encouraged",
+            PendingDeprecationWarning,
             stacklevel=2,
         )
         return self.map(func, keep_attrs, args, **kwargs)
