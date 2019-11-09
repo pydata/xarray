@@ -1,3 +1,5 @@
+import warnings
+
 from . import ops
 from .groupby import DataArrayGroupBy, DatasetGroupBy
 
@@ -234,9 +236,6 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             stacklevel=2,
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
-
-
-import warnings
 
 
 ops.inject_reduce_methods(DataArrayResample)

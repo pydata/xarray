@@ -656,7 +656,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         return stacked.transpose(*new_order, transpose_coords=self._restore_coord_dims)
 
     def map(self, func, shortcut=False, args=(), **kwargs):
-
         """Apply a function to each array in the group and concatenate them
         together into a new array.
 
