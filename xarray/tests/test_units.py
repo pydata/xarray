@@ -619,6 +619,106 @@ def test_combine_by_coords(variant, unit, error, dtype):
     assert_equal_with_units(expected, result)
 
 
+@pytest.mark.xfail(reason="blocked by `where`")
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.mm, None, id="compatible_unit"),
+        pytest.param(unit_registry.m, None, id="identical_unit"),
+    ),
+    ids=repr,
+)
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        "coords",
+    ),
+)
+def test_combine_nested(variant, unit, error, dtype):
+    original_unit = unit_registry.m
+
+    variants = {
+        "data": (unit, original_unit, original_unit),
+        "dims": (original_unit, unit, original_unit),
+        "coords": (original_unit, original_unit, unit),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
+
+    array1 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
+    array2 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
+
+    x = np.arange(1, 4) * 10 * original_unit
+    y = np.arange(2) * original_unit
+    z = np.arange(3) * original_unit
+
+    ds1 = xr.Dataset(
+        data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
+        coords={"x": x, "y": y, "z": ("x", z)},
+    )
+    ds2 = xr.Dataset(
+        data_vars={
+            "a": (("y", "x"), np.ones_like(array1) * data_unit),
+            "b": (("y", "x"), np.ones_like(array2) * data_unit),
+        },
+        coords={
+            "x": np.arange(3) * dim_unit,
+            "y": np.arange(2, 4) * dim_unit,
+            "z": ("x", np.arange(-3, 0) * coord_unit),
+        },
+    )
+    ds3 = xr.Dataset(
+        data_vars={
+            "a": (("y", "x"), np.zeros_like(array1) * np.nan * data_unit),
+            "b": (("y", "x"), np.zeros_like(array2) * np.nan * data_unit),
+        },
+        coords={
+            "x": np.arange(3, 6) * dim_unit,
+            "y": np.arange(4, 6) * dim_unit,
+            "z": ("x", np.arange(3, 6) * coord_unit),
+        },
+    )
+    ds4 = xr.Dataset(
+        data_vars={
+            "a": (("y", "x"), -1 * np.ones_like(array1) * data_unit),
+            "b": (("y", "x"), -1 * np.ones_like(array2) * data_unit),
+        },
+        coords={
+            "x": np.arange(6, 9) * dim_unit,
+            "y": np.arange(6, 8) * dim_unit,
+            "z": ("x", np.arange(6, 9) * coord_unit),
+        },
+    )
+
+    func = function(xr.combine_nested, concat_dim=["x", "y"])
+    if error is not None:
+        with pytest.raises(error):
+            func([[ds1, ds2], [ds3, ds4]])
+
+        return
+
+    units = extract_units(ds1)
+    convert_and_strip = lambda ds: strip_units(convert_units(ds, units))
+    expected = attach_units(
+        func(
+            [
+                [strip_units(ds1), convert_and_strip(ds2)],
+                [convert_and_strip(ds3), convert_and_strip(ds4)],
+            ]
+        ),
+        units,
+    )
+    result = func([[ds1, ds2], [ds3, ds4]])
+
+    assert_equal_with_units(expected, result)
+
+
 @pytest.mark.xfail(reason="`concat` strips units")
 @pytest.mark.parametrize(
     "unit,error",
