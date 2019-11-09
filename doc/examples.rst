@@ -7,4 +7,5 @@ Examples
     examples/weather-data
     examples/monthly-means
     examples/multidimensional-coords
+    examples/cookbook
     auto_gallery/index

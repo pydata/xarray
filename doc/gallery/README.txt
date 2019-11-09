@@ -1,4 +1,4 @@
-.. _recipes:
+.. _gallery:
 
 Gallery
 =======
