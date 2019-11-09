@@ -3310,17 +3310,17 @@ class TestDataset:
             return x
 
         for k in ["x", "c", "y"]:
-            actual = data.groupby(k, squeeze=False).apply(identity)
+            actual = data.groupby(k, squeeze=False).map(identity)
             assert_equal(data, actual)
 
     def test_groupby_returns_new_type(self):
         data = Dataset({"z": (["x", "y"], np.random.randn(3, 5))})
 
-        actual = data.groupby("x").apply(lambda ds: ds["z"])
+        actual = data.groupby("x").map(lambda ds: ds["z"])
         expected = data["z"]
         assert_identical(expected, actual)
 
-        actual = data["z"].groupby("x").apply(lambda x: x.to_dataset())
+        actual = data["z"].groupby("x").map(lambda x: x.to_dataset())
         expected = data
         assert_identical(expected, actual)
 
@@ -3639,7 +3639,7 @@ class TestDataset:
         times = pd.date_range("2000", freq="D", periods=3)
         ds = xr.Dataset({"foo": ("time", [1.0, 1.0, 1.0]), "time": times})
         expected = xr.Dataset({"foo": ("time", [3.0, 3.0, 3.0]), "time": times})
-        actual = ds.resample(time="D").apply(func, args=(1.0,), arg3=1.0)
+        actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
 
     def test_to_array(self):
@@ -4538,7 +4538,7 @@ class TestDataset:
         expected = data.drop_vars("time")  # time is not used on a data var
         assert_equal(expected, actual)
 
-    def test_apply_deprecated_map(self):
+    def test_apply_pending_deprecated_map(self):
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
