@@ -173,8 +173,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
 
         super().__init__(*args, **kwargs)
 
-    def apply(self, func, shortcut=False, args=(), **kwargs):
-        """Apply a function over each array in the group and concatenate them
+    def map(self, func, shortcut=False, args=(), **kwargs):
+        """Apply a function to each array in the group and concatenate them
         together into a new array.
 
         `func` is called like `func(ar, *args, **kwargs)` for each array `ar`
@@ -212,7 +212,9 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         applied : DataArray or DataArray
             The result of splitting, applying and combining this array.
         """
-        combined = super().apply(func, shortcut=shortcut, args=args, **kwargs)
+        # TODO: the argument order for Resample doesn't match that for its parent,
+        # GroupBy
+        combined = super().map(func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
@@ -224,6 +226,17 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             combined = combined.rename({self._resample_dim: self._dim})
 
         return combined
+
+    def apply(self, func, args=(), shortcut=None, **kwargs):
+        warnings.warn(
+            "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
+
+
+import warnings
 
 
 ops.inject_reduce_methods(DataArrayResample)
@@ -247,7 +260,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         super().__init__(*args, **kwargs)
 
-    def apply(self, func, args=(), shortcut=None, **kwargs):
+    def map(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function over each Dataset in the groups generated for
         resampling  and concatenate them together into a new Dataset.
 
@@ -281,6 +294,14 @@ class DatasetResample(DatasetGroupBy, Resample):
         combined = self._combine(applied)
 
         return combined.rename({self._resample_dim: self._dim})
+
+    def apply(self, func, args=(), shortcut=None, **kwargs):
+        warnings.warn(
+            "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
     def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along the

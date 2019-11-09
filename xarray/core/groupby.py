@@ -608,7 +608,7 @@ class GroupBy(SupportsArithmetic):
         Dataset.swap_dims
         """
         coords_kwargs = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
-        return self.apply(lambda ds: ds.assign_coords(**coords_kwargs))
+        return self.map(lambda ds: ds.assign_coords(**coords_kwargs))
 
 
 def _maybe_reorder(xarray_obj, dim, positions):
@@ -774,7 +774,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if dim is None:
             dim = self._group_dim
 
-        out = self.apply(
+        out = self.map(
             self._obj.__class__.quantile,
             shortcut=False,
             q=q,
@@ -829,7 +829,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         check_reduce_dims(dim, self.dims)
 
-        return self.apply(reduce_array, shortcut=shortcut)
+        return self.map(reduce_array, shortcut=shortcut)
 
 
 ops.inject_reduce_methods(DataArrayGroupBy)
@@ -931,7 +931,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         check_reduce_dims(dim, self.dims)
 
-        return self.apply(reduce_dataset)
+        return self.map(reduce_dataset)
 
     def assign(self, **kwargs):
         """Assign data variables by group.
@@ -940,7 +940,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         --------
         Dataset.assign
         """
-        return self.apply(lambda ds: ds.assign(**kwargs))
+        return self.map(lambda ds: ds.assign(**kwargs))
 
 
 ops.inject_reduce_methods(DatasetGroupBy)
