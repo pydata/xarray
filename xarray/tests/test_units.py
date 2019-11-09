@@ -608,9 +608,11 @@ def test_combine_by_coords(variant, unit, error, dtype):
         return
 
     units = extract_units(ds)
-    # FIXME: convert other to `units` before `strip_units`
     expected = attach_units(
-        xr.combine_by_coords([strip_units(ds), strip_units(other)]), units
+        xr.combine_by_coords(
+            [strip_units(ds), strip_units(convert_units(other, units))]
+        ),
+        units,
     )
     result = xr.combine_by_coords([ds, other])
 
