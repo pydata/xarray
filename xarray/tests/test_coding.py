@@ -20,6 +20,19 @@ def test_CFMaskCoder_decode():
     assert_identical(expected, encoded)
 
 
+def test_CFMaskCoder_encode_missing_fill_values_conflict():
+    original = xr.Variable(
+        ("x",),
+        [0.0, -1.0, 1.0],
+        encoding={"_FillValue": np.float32(1e20), "missing_value": np.float64(1e20)},
+    )
+    coder = variables.CFMaskCoder()
+    encoded = coder.encode(original)
+
+    assert encoded.dtype == encoded.attrs["missing_value"].dtype
+    assert encoded.dtype == encoded.attrs["_FillValue"].dtype
+
+
 def test_CFMaskCoder_missing_value():
     expected = xr.DataArray(
         np.array([[26915, 27755, -9999, 27705], [25595, -9999, 28315, -9999]]),

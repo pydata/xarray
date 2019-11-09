@@ -8,7 +8,6 @@ import pandas as pd
 
 from ..core import dtypes, duck_array_ops, indexing
 from ..core.pycompat import dask_array_type
-from ..core.utils import equivalent
 from ..core.variable import Variable
 
 
@@ -152,18 +151,24 @@ class CFMaskCoder(VariableCoder):
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
 
-        if fv is not None and mv is not None and not equivalent(fv, mv):
+        if (
+            fv is not None
+            and mv is not None
+            and not duck_array_ops.allclose_or_equiv(fv, mv)
+        ):
             raise ValueError(
                 "Variable {!r} has multiple fill values {}. "
                 "Cannot encode data. ".format(name, [fv, mv])
             )
 
         if fv is not None:
+            # TODO: Cast _FillValue to the same dtype as the data
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
                 data = duck_array_ops.fillna(data, fill_value)
 
         if mv is not None:
+            # TODO: Cast missing_value to the same dtype as the data
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and fv is None:
                 data = duck_array_ops.fillna(data, fill_value)
