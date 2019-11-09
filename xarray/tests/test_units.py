@@ -570,7 +570,7 @@ def test_broadcast_dataset(dtype):
         "coords",
     ),
 )
-def test_combine_by_coords_dataset(variant, unit, error, dtype):
+def test_combine_by_coords(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
