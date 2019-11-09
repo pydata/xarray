@@ -703,6 +703,13 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         return self._combine(applied, shortcut=shortcut)
 
     def apply(self, func, shortcut=False, args=(), **kwargs):
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        DataArrayGroupBy.map
+        """
         warnings.warn(
             "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
             PendingDeprecationWarning,
@@ -871,6 +878,14 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         return self._combine(applied)
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        DatasetGroupBy.map
+        """
+
         warnings.warn(
             "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
             PendingDeprecationWarning,

@@ -230,6 +230,13 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         return combined
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        DataArrayResample.map
+        """
         warnings.warn(
             "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
             PendingDeprecationWarning,
@@ -295,6 +302,14 @@ class DatasetResample(DatasetGroupBy, Resample):
         return combined.rename({self._resample_dim: self._dim})
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        DataSetResample.map
+        """
+
         warnings.warn(
             "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
             PendingDeprecationWarning,

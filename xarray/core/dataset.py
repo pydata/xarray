@@ -3557,6 +3557,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
         Using either `drop_vars` or `drop_sel` is encouraged
+
+        See Also
+        --------
+        Dataset.drop_vars
+        Dataset.drop_sel
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
@@ -4172,6 +4177,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         args: Iterable[Any] = (),
         **kwargs: Any,
     ) -> "Dataset":
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        Dataset.map
+        """
         warnings.warn(
             "Dataset.apply may be deprecated in the future. Using Dataset.map is encouraged",
             PendingDeprecationWarning,
