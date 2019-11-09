@@ -608,7 +608,7 @@ class GroupBy(SupportsArithmetic):
         Dataset.swap_dims
         """
         coords_kwargs = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
-        return self.apply(lambda ds: ds.assign_coords(**coords_kwargs))
+        return self.map(lambda ds: ds.assign_coords(**coords_kwargs))
 
 
 def _maybe_reorder(xarray_obj, dim, positions):
@@ -655,8 +655,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order, transpose_coords=self._restore_coord_dims)
 
-    def apply(self, func, shortcut=False, args=(), **kwargs):
-        """Apply a function over each array in the group and concatenate them
+    def map(self, func, shortcut=False, args=(), **kwargs):
+        """Apply a function to each array in the group and concatenate them
         together into a new array.
 
         `func` is called like `func(ar, *args, **kwargs)` for each array `ar`
@@ -701,6 +701,21 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             grouped = self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
+
+    def apply(self, func, shortcut=False, args=(), **kwargs):
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        DataArrayGroupBy.map
+        """
+        warnings.warn(
+            "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
     def _combine(self, applied, restore_coord_dims=False, shortcut=False):
         """Recombine the applied objects like the original."""
@@ -765,7 +780,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if dim is None:
             dim = self._group_dim
 
-        out = self.apply(
+        out = self.map(
             self._obj.__class__.quantile,
             shortcut=False,
             q=q,
@@ -820,7 +835,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         check_reduce_dims(dim, self.dims)
 
-        return self.apply(reduce_array, shortcut=shortcut)
+        return self.map(reduce_array, shortcut=shortcut)
 
 
 ops.inject_reduce_methods(DataArrayGroupBy)
@@ -828,8 +843,8 @@ ops.inject_binary_ops(DataArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
-    def apply(self, func, args=(), shortcut=None, **kwargs):
-        """Apply a function over each Dataset in the group and concatenate them
+    def map(self, func, args=(), shortcut=None, **kwargs):
+        """Apply a function to each Dataset in the group and concatenate them
         together into a new Dataset.
 
         `func` is called like `func(ds, *args, **kwargs)` for each dataset `ds`
@@ -861,6 +876,22 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         # ignore shortcut if set (for now)
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         return self._combine(applied)
+
+    def apply(self, func, args=(), shortcut=None, **kwargs):
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        DatasetGroupBy.map
+        """
+
+        warnings.warn(
+            "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
     def _combine(self, applied):
         """Recombine the applied objects like the original."""
@@ -914,7 +945,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         check_reduce_dims(dim, self.dims)
 
-        return self.apply(reduce_dataset)
+        return self.map(reduce_dataset)
 
     def assign(self, **kwargs):
         """Assign data variables by group.
@@ -923,7 +954,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         --------
         Dataset.assign
         """
-        return self.apply(lambda ds: ds.assign(**kwargs))
+        return self.map(lambda ds: ds.assign(**kwargs))
 
 
 ops.inject_reduce_methods(DatasetGroupBy)
