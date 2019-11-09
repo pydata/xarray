@@ -339,7 +339,7 @@ def test_dataarray_property(prop):
         (do("copy"), True),
         (do("count"), False),
         (do("diff", "x"), True),
-        (do("drop", "x"), True),
+        (do("drop_vars", "x"), True),
         (do("expand_dims", {"z": 2}, axis=2), True),
         (do("get_axis_num", "x"), False),
         (do("get_index", "x"), False),

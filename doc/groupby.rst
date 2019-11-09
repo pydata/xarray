@@ -35,10 +35,11 @@ Let's create a simple example dataset:
 
 .. ipython:: python
 
-    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 3))},
-                    coords={'x': [10, 20, 30, 40],
-                            'letters': ('x', list('abba'))})
-    arr = ds['foo']
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 3))},
+        coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
+    )
+    arr = ds["foo"]
     ds
 
 If we groupby the name of a variable or coordinate in a dataset (we can also
@@ -93,7 +94,7 @@ Apply
 ~~~~~
 
 To apply a function to each group, you can use the flexible
-:py:meth:`~xarray.DatasetGroupBy.apply` method. The resulting objects are automatically
+:py:meth:`~xarray.DatasetGroupBy.map` method. The resulting objects are automatically
 concatenated back together along the group axis:
 
 .. ipython:: python
@@ -101,7 +102,7 @@ concatenated back together along the group axis:
     def standardize(x):
         return (x - x.mean()) / x.std()
 
-    arr.groupby('letters').apply(standardize)
+    arr.groupby('letters').map(standardize)
 
 GroupBy objects also have a :py:meth:`~xarray.DatasetGroupBy.reduce` method and
 methods like :py:meth:`~xarray.DatasetGroupBy.mean` as shortcuts for applying an
@@ -202,7 +203,7 @@ __ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimen
         dims=['ny','nx'])
     da
     da.groupby('lon').sum(...)
-    da.groupby('lon').apply(lambda x: x - x.mean(), shortcut=False)
+    da.groupby('lon').map(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large
 number of bins, coarse-binning via :py:meth:`~xarray.Dataset.groupby_bins`

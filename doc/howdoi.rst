@@ -44,7 +44,7 @@ How do I ...
    * - convert a possibly irregularly sampled timeseries to a regularly sampled timeseries
      - :py:meth:`DataArray.resample`, :py:meth:`Dataset.resample` (see :ref:`resampling` for more)
    * - apply a function on all data variables in a Dataset
-     - :py:meth:`Dataset.apply`
+     - :py:meth:`Dataset.map`
    * - write xarray objects with complex values to a netCDF file
      - :py:func:`Dataset.to_netcdf`, :py:func:`DataArray.to_netcdf` specifying ``engine="h5netcdf", invalid_netcdf=True``
    * - make xarray objects look like other xarray objects

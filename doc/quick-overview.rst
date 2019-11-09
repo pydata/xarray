@@ -142,7 +142,7 @@ xarray supports grouped operations using a very similar API to pandas (see :ref:
     labels = xr.DataArray(['E', 'F', 'E'], [data.coords['y']], name='labels')
     labels
     data.groupby(labels).mean('y')
-    data.groupby(labels).apply(lambda x: x - x.min())
+    data.groupby(labels).map(lambda x: x - x.min())
 
 Plotting
 --------

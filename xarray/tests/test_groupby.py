@@ -45,14 +45,14 @@ def test_groupby_dims_property(dataset):
     assert stacked.groupby("xy").dims == stacked.isel(xy=0).dims
 
 
-def test_multi_index_groupby_apply(dataset):
+def test_multi_index_groupby_map(dataset):
     # regression test for GH873
     ds = dataset.isel(z=1, drop=True)[["foo"]]
     expected = 2 * ds
     actual = (
         ds.stack(space=["x", "y"])
         .groupby("space")
-        .apply(lambda x: 2 * x)
+        .map(lambda x: 2 * x)
         .unstack("space")
     )
     assert_equal(expected, actual)
@@ -107,23 +107,23 @@ def test_groupby_input_mutation():
     assert_identical(array, array_copy)  # should not modify inputs
 
 
-def test_da_groupby_apply_func_args():
+def test_da_groupby_map_func_args():
     def func(arg1, arg2, arg3=0):
         return arg1 + arg2 + arg3
 
     array = xr.DataArray([1, 1, 1], [("x", [1, 2, 3])])
     expected = xr.DataArray([3, 3, 3], [("x", [1, 2, 3])])
-    actual = array.groupby("x").apply(func, args=(1,), arg3=1)
+    actual = array.groupby("x").map(func, args=(1,), arg3=1)
     assert_identical(expected, actual)
 
 
-def test_ds_groupby_apply_func_args():
+def test_ds_groupby_map_func_args():
     def func(arg1, arg2, arg3=0):
         return arg1 + arg2 + arg3
 
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
     expected = xr.Dataset({"foo": ("x", [3, 3, 3])}, {"x": [1, 2, 3]})
-    actual = dataset.groupby("x").apply(func, args=(1,), arg3=1)
+    actual = dataset.groupby("x").map(func, args=(1,), arg3=1)
     assert_identical(expected, actual)
 
 
@@ -285,7 +285,7 @@ def test_groupby_drops_nans():
     expected.variable.values[0, 0, :] = np.nan
     expected.variable.values[-1, -1, :] = np.nan
     expected.variable.values[3, 0, :] = np.nan
-    actual = grouped.apply(lambda x: x).transpose(*ds.variable.dims)
+    actual = grouped.map(lambda x: x).transpose(*ds.variable.dims)
     assert_identical(actual, expected)
 
     # reduction along grouped dimension
