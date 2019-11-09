@@ -288,7 +288,7 @@ def line(
         )
 
     # The allargs dict passed to _easy_facetgrid above contains args
-    if args is ():
+    if args == ():
         args = kwargs.pop("args", ())
     else:
         assert "args" not in kwargs
