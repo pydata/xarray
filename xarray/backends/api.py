@@ -1234,6 +1234,8 @@ def _validate_datatypes_for_zarr_append(dataset):
     def check_dtype(var):
         if (
             not np.issubdtype(var.dtype, np.number)
+            and not np.issubdtype(var.dtype, np.datetime64)
+            and not np.issubdtype(var.dtype, np.bool)
             and not coding.strings.is_unicode_dtype(var.dtype)
             and not var.dtype == object
         ):
