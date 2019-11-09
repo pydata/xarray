@@ -90,8 +90,12 @@ def create_append_test_data(seed=None):
     string_var = np.array(["ae", "bc", "df"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
     unicode_var = ["áó", "áó", "áó"]
-    datetime_var = np.array(['2019-01-01', '2019-01-02', '2019-01-03'], dtype='datetime64[s]')
-    datetime_var_to_append = np.array(['2019-01-04', '2019-01-05'], dtype='datetime64[s]')
+    datetime_var = np.array(
+        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
+    )
+    datetime_var_to_append = np.array(
+        ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
+    )
     bool_var = np.array([True, False, True], dtype=np.bool)
     bool_var_to_append = np.array([False, True], dtype=np.bool)
 
@@ -127,9 +131,7 @@ def create_append_test_data(seed=None):
             "datetime_var": xr.DataArray(
                 datetime_var_to_append, coords=[time2], dims=["time"]
             ),
-            "bool_var": xr.DataArray(
-                bool_var_to_append, coords=[time2], dims=["time"]
-            ),
+            "bool_var": xr.DataArray(bool_var_to_append, coords=[time2], dims=["time"]),
         }
     )
 
@@ -139,7 +141,7 @@ def create_append_test_data(seed=None):
                 rs.rand(3, 3, nt1 + nt2),
                 coords=[lat, lon, time1.append(time2)],
                 dims=["lat", "lon", "time"],
-            ),
+            )
         }
     )
 
