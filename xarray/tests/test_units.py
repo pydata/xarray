@@ -882,39 +882,20 @@ def test_merge_dataset(variant, unit, error, dtype):
             "z": ("x", np.arange(3, 6) * coord_unit),
         },
     )
-    ds4 = xr.Dataset(
-        data_vars={
-            "a": (("y", "x"), -1 * np.ones_like(array1) * data_unit),
-            "b": (("y", "x"), -1 * np.ones_like(array2) * data_unit),
-        },
-        coords={
-            "x": np.arange(6, 9) * dim_unit,
-            "y": np.arange(6, 8) * dim_unit,
-            "z": ("x", np.arange(6, 9) * coord_unit),
-        },
-    )
 
     func = function(xr.merge)
     if error is not None:
         with pytest.raises(error):
-            func([ds1, ds2, ds3, ds4])
+            func([ds1, ds2, ds3])
 
         return
 
     units = extract_units(ds1)
     convert_and_strip = lambda ds: strip_units(convert_units(ds, units))
     expected = attach_units(
-        func(
-            [
-                strip_units(ds1),
-                convert_and_strip(ds2),
-                convert_and_strip(ds3),
-                convert_and_strip(ds4),
-            ]
-        ),
-        units,
+        func([strip_units(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]), units
     )
-    result = func([ds1, ds2, ds3, ds4])
+    result = func([ds1, ds2, ds3])
 
     assert_equal_with_units(expected, result)
 
