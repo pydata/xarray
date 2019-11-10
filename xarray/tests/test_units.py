@@ -839,6 +839,96 @@ def test_concat_dataset(variant, unit, error, dtype):
         "coords",
     ),
 )
+def test_merge_dataarray(variant, unit, error, dtype):
+    original_unit = unit_registry.m
+
+    variants = {
+        "data": (unit, original_unit, original_unit),
+        "dims": (original_unit, unit, original_unit),
+        "coords": (original_unit, original_unit, unit),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
+
+    array1 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * original_unit
+    array2 = np.linspace(1, 2, 2 * 4).reshape(2, 4).astype(dtype) * data_unit
+    array3 = np.linspace(0, 2, 3 * 4).reshape(3, 4).astype(dtype) * data_unit
+
+    x = np.arange(2) * original_unit
+    y = np.arange(3) * original_unit
+    z = np.arange(4) * original_unit
+    u = np.linspace(10, 20, 2) * original_unit
+    v = np.linspace(10, 20, 3) * original_unit
+    w = np.linspace(10, 20, 4) * original_unit
+
+    arr1 = xr.DataArray(
+        name="a",
+        data=array1,
+        coords={"x": x, "y": y, "u": ("x", u), "v": ("y", v)},
+        dims=("x", "y"),
+    )
+    arr2 = xr.DataArray(
+        name="b",
+        data=array2,
+        coords={
+            "x": np.arange(2, 4) * dim_unit,
+            "z": z,
+            "u": ("x", np.linspace(20, 30, 2) * coord_unit),
+            "w": ("z", w),
+        },
+        dims=("x", "z"),
+    )
+    arr3 = xr.DataArray(
+        name="c",
+        data=array3,
+        coords={
+            "y": np.arange(3, 6) * dim_unit,
+            "z": np.arange(4, 8) * dim_unit,
+            "v": ("y", np.linspace(10, 20, 3) * coord_unit),
+            "w": ("z", np.linspace(10, 20, 4) * coord_unit),
+        },
+        dims=("y", "z"),
+    )
+
+    func = function(xr.merge)
+    if error is not None:
+        with pytest.raises(error):
+            func([arr1, arr2, arr3])
+
+        return
+
+    units = {name: original_unit for name in list("abcuvwxyz")}
+    convert_and_strip = lambda arr: strip_units(convert_units(arr, units))
+    expected = attach_units(
+        func([strip_units(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]),
+        units,
+    )
+    result = func([arr1, arr2, arr3])
+
+    assert_equal_with_units(expected, result)
+
+
+@pytest.mark.xfail(reason="blocked by `where`")
+@pytest.mark.parametrize(
+    "unit,error",
+    (
+        pytest.param(1, DimensionalityError, id="no_unit"),
+        pytest.param(
+            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+        ),
+        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+        pytest.param(unit_registry.mm, None, id="compatible_unit"),
+        pytest.param(unit_registry.m, None, id="identical_unit"),
+    ),
+    ids=repr,
+)
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        "coords",
+    ),
+)
 def test_merge_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
