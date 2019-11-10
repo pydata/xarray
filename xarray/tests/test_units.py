@@ -1045,6 +1045,36 @@ class TestDataArray:
 
         assert expected == result
 
+    @pytest.mark.xfail(reason="blocked by `where`")
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    def test_broadcast_like(self, unit, dtype):
+        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * unit_registry.Pa
+        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * unit_registry.Pa
+
+        x1 = np.arange(2) * unit_registry.m
+        x2 = np.arange(2) * unit
+        y1 = np.array([0]) * unit_registry.m
+        y2 = np.arange(3) * unit
+
+        arr1 = xr.DataArray(data=array1, coords={"x": x1, "y": y1}, dims=("x", "y"))
+        arr2 = xr.DataArray(data=array2, coords={"x": x2, "y": y2}, dims=("x", "y"))
+
+        expected = attach_units(
+            strip_units(arr1).broadcast_like(strip_units(arr2)), extract_units(arr1)
+        )
+        result = arr1.broadcast_like(arr2)
+
+        assert_equal_with_units(expected, result)
+
     @pytest.mark.parametrize(
         "unit",
         (
@@ -2471,6 +2501,40 @@ class TestDataset:
         result = func(ds, other)
 
         assert expected == result
+
+    @pytest.mark.xfail(reason="blocked by `where`")
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    def test_broadcast_like(self, unit, dtype):
+        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * unit_registry.Pa
+        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * unit_registry.Pa
+
+        x1 = np.arange(2) * unit_registry.m
+        x2 = np.arange(2) * unit
+        y1 = np.array([0]) * unit_registry.m
+        y2 = np.arange(3) * unit
+
+        ds1 = xr.Dataset(
+            data_vars={"a": (("x", "y"), array1)}, coords={"x": x1, "y": y1}
+        )
+        ds2 = xr.Dataset(
+            data_vars={"a": (("x", "y"), array2)}, coords={"x": x2, "y": y2}
+        )
+
+        expected = attach_units(
+            strip_units(ds1).broadcast_like(strip_units(ds2)), extract_units(ds1)
+        )
+        result = ds1.broadcast_like(ds2)
+
+        assert_equal_with_units(expected, result)
 
     @pytest.mark.parametrize(
         "unit",
