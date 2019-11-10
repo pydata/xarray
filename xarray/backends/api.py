@@ -1243,8 +1243,9 @@ def _validate_datatypes_for_zarr_append(dataset):
             raise ValueError(
                 "Invalid dtype for data variable: {} "
                 "dtype must be a subtype of number, "
-                "a fixed sized string, a fixed size "
-                "unicode string or an object".format(var)
+                "datetime, bool, a fixed sized string, "
+                "a fixed size unicode string or an "
+                "object".format(var)
             )
 
     for k in dataset.data_vars.values():
