@@ -1333,6 +1333,49 @@ class TestDataArray:
                 np.squeeze(array, axis=index), data_array.squeeze(dim=name)
             )
 
+    @pytest.mark.xfail(
+        reason="indexes strip units and head / tail / thin only support integers"
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (method("head", x=7, y=3), method("tail", x=7, y=3), method("thin", x=7, y=3)),
+        ids=repr,
+    )
+    def test_head_tail_thin(self, func, unit, error, dtype):
+        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+
+        coords = {
+            "x": np.arange(10) * unit_registry.m,
+            "y": np.arange(5) * unit_registry.m,
+        }
+
+        arr = xr.DataArray(data=array, coords=coords, dims=("x", "y"))
+
+        kwargs = {name: value * unit for name, value in func.kwargs.items()}
+
+        if error is not None:
+            with pytest.raises(error):
+                func(arr, **kwargs)
+
+            return
+
+        expected = attach_units(func(strip_units(arr)), extract_units(arr))
+        result = func(arr, **kwargs)
+
+        assert_equal_with_units(expected, result)
+
     @pytest.mark.parametrize(
         "unit,error",
         (
