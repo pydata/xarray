@@ -111,7 +111,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
-  (:pull:`3238`, :pull:`3447`) by `Justus Magin <https://github.com/keewis>`_.
+  (:pull:`3238`, :pull:`3447`, :pull:`3508`) by `Justus Magin <https://github.com/keewis>`_.
 
   .. note::
 
