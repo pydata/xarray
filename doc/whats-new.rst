@@ -3736,7 +3736,7 @@ Breaking changes
   warnings: methods and attributes that were deprecated in xray v0.3 or earlier
   (e.g., ``dimensions``, ``attributes```) have gone away.
 
-.. _bottleneck: https://github.com/kwgoodman/bottleneck
+.. _bottleneck: https://github.com/pydata/bottleneck
 
 Enhancements
 ~~~~~~~~~~~~

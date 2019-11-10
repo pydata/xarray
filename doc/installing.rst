@@ -43,7 +43,7 @@ For accelerating xarray
 
 - `scipy <http://scipy.org/>`__: necessary to enable the interpolation features for
   xarray objects
-- `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
+- `bottleneck <https://github.com/pydata/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
 - `numbagg <https://github.com/shoyer/numbagg>`_: for exponential rolling
   window operations

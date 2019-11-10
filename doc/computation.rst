@@ -183,7 +183,7 @@ a value when aggregating:
 
    Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects.
 
-.. _bottleneck: https://github.com/kwgoodman/bottleneck/
+.. _bottleneck: https://github.com/pydata/bottleneck/
 
 We can also manually iterate through ``Rolling`` objects:
 
