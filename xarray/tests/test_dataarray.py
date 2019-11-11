@@ -1229,6 +1229,7 @@ class TestDataArray:
         assert expected == actual
 
         del da.coords["x"]
+        del da.indexes["x"]
         expected = DataArray(da.values, {"y": [0, 1, 2]}, dims=["x", "y"], name="foo")
         assert_identical(da, expected)
 
