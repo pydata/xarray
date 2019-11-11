@@ -69,6 +69,9 @@ New Features
   invoked. (:issue:`3378`, :pull:`3446`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
+- Add `master_file` option in :py:func:`~xarray.open_mfdataset` to choose the
+  source file for global attributes in a multi-file dataset (:issue:`2382`,
+  :pull:`3498`) by `Julien Seguinot <https://github.com/juseg>_`.
 
 Bug fixes
 ~~~~~~~~~
