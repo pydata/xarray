@@ -140,9 +140,9 @@ class Rolling:
 
 
 class DataArrayRolling(Rolling):
-    __slots__ = ("window_labels",)
+    __slots__ = ("window_labels", "stride")
 
-    def __init__(self, obj, windows, min_periods=None, center=False):
+    def __init__(self, obj, windows, min_periods=None, center=False, stride=1):
         """
         Moving window object for DataArray.
         You should use DataArray.rolling() method to construct this object
@@ -164,6 +164,8 @@ class DataArrayRolling(Rolling):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
+        stride : int, default 1
+            Stride of the moving window
 
         Returns
         -------
@@ -179,12 +181,19 @@ class DataArrayRolling(Rolling):
         super().__init__(obj, windows, min_periods=min_periods, center=center)
 
         self.window_labels = self.obj[self.dim]
+        self.stride = stride
 
     def __iter__(self):
         stops = np.arange(1, len(self.window_labels) + 1)
         starts = stops - int(self.window)
         starts[: int(self.window)] = 0
-        for (label, start, stop) in zip(self.window_labels, starts, stops):
+
+        # apply striding
+        stops = stops[:: self.stride]
+        starts = starts[:: self.stride]
+        window_labels = self.window_labels[:: self.stride]
+
+        for (label, start, stop) in zip(window_labels, starts, stops):
             window = self.obj.isel(**{self.dim: slice(start, stop)})
 
             counts = window.count(dim=self.dim)
@@ -282,7 +291,7 @@ class DataArrayRolling(Rolling):
                [ 4.,  9., 15., 18.]])
         """
         rolling_dim = utils.get_temp_dimname(self.obj.dims, "_rolling_dim")
-        windows = self.construct(rolling_dim)
+        windows = self.construct(rolling_dim, stride=self.stride)
         result = windows.reduce(func, dim=rolling_dim, **kwargs)
 
         # Find valid windows based on count.
@@ -300,11 +309,12 @@ class DataArrayRolling(Rolling):
         counts = (
             self.obj.notnull()
             .rolling(center=self.center, **{self.dim: self.window})
-            .construct(rolling_dim, fill_value=False)
+            .construct(rolling_dim, fill_value=False, stride=self.stride)
             .sum(dim=rolling_dim, skipna=False)
         )
         return counts
 
+    # TODO: verify if _bottleneck_reduce needs adjustments for stride
     def _bottleneck_reduce(self, func, **kwargs):
         from .dataarray import DataArray
 
@@ -365,7 +375,7 @@ class DataArrayRolling(Rolling):
 class DatasetRolling(Rolling):
     __slots__ = ("rollings",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False):
+    def __init__(self, obj, windows, min_periods=None, center=False, stride=1):
         """
         Moving window object for Dataset.
         You should use Dataset.rolling() method to construct this object
@@ -387,6 +397,8 @@ class DatasetRolling(Rolling):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
+        stride : int, default 1
+            Stride of the moving window
 
         Returns
         -------
@@ -407,7 +419,9 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
             if self.dim in da.dims:
-                self.rollings[key] = DataArrayRolling(da, windows, min_periods, center)
+                self.rollings[key] = DataArrayRolling(
+                    da, windows, min_periods, center, stride=stride
+                )
 
     def _dataset_implementation(self, func, **kwargs):
         from .dataset import Dataset
