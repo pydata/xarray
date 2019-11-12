@@ -162,17 +162,15 @@ class CFMaskCoder(VariableCoder):
             )
 
         if fv is not None:
-            encoding["_FillValue"] = np.asarray(encoding["_FillValue"]).astype(
-                data.dtype
-            )
+            # Ensure _FillValue is cast to same dtype as data's
+            encoding["_FillValue"] = data.dtype.type(encoding["_FillValue"])
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
                 data = duck_array_ops.fillna(data, fill_value)
 
         if mv is not None:
-            encoding["missing_value"] = np.asarray(encoding["missing_value"]).astype(
-                data.dtype
-            )
+            # Ensure missing_value is cast to same dtype as data's
+            encoding["missing_value"] = data.dtype.type(encoding["missing_value"])
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and fv is None:
                 data = duck_array_ops.fillna(data, fill_value)
