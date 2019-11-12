@@ -1470,7 +1470,7 @@ class Variable(
 
         if allow_lazy is not None:
             warnings.warn(
-                "allow_lazy will be deprecated in version 0.16.0. It is now True by default.",
+                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
                 DeprecationWarning,
             )
         else:
