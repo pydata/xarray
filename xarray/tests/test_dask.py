@@ -1296,7 +1296,6 @@ def test_recursive_token():
     # Test DataArray and Variable
     da_a = DataArray(a)
     da_b = DataArray(b)
-    assert str(da_a) == str(da_b)
     assert dask.base.tokenize(da_a) != dask.base.tokenize(da_b)
 
     # Test Dataset
@@ -1307,7 +1306,6 @@ def test_recursive_token():
     # Test IndexVariable
     da_a = DataArray(a, dims=["x"], coords={"x": a})
     da_b = DataArray(a, dims=["x"], coords={"x": b})
-    assert str(da_a) == str(da_b)
     assert dask.base.tokenize(da_a) != dask.base.tokenize(da_b)
 
 
