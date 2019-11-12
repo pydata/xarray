@@ -920,7 +920,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
         * x        (x) <U1 'a' 'b' 'c'
 
-        See also
+        See Also
         --------
         pandas.DataFrame.copy
         """
@@ -1717,7 +1717,7 @@ class DataArray(AbstractArray, DataWithCoords):
                    codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
 
-        See also
+        See Also
         --------
         DataArray.unstack
         """
@@ -1765,7 +1765,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> arr.identical(roundtripped)
         True
 
-        See also
+        See Also
         --------
         DataArray.stack
         """
@@ -1923,6 +1923,11 @@ class DataArray(AbstractArray, DataWithCoords):
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
         Using either `drop_vars` or `drop_sel` is encouraged
+
+        See Also
+        --------
+        DataArray.drop_vars
+        DataArray.drop_sel
         """
         ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
         return self._from_temp_dataset(ds)

@@ -2417,7 +2417,7 @@ class TestDataArray:
             assert_array_equal(expected_groups[key], grouped.groups[key])
         assert 3 == len(grouped)
 
-    def test_groupby_apply_identity(self):
+    def test_groupby_map_identity(self):
         expected = self.make_groupby_example_array()
         idx = expected.coords["y"]
 
@@ -2428,7 +2428,7 @@ class TestDataArray:
             for shortcut in [False, True]:
                 for squeeze in [False, True]:
                     grouped = expected.groupby(g, squeeze=squeeze)
-                    actual = grouped.apply(identity, shortcut=shortcut)
+                    actual = grouped.map(identity, shortcut=shortcut)
                     assert_identical(expected, actual)
 
     def test_groupby_sum(self):
@@ -2461,7 +2461,7 @@ class TestDataArray:
             [["a", "b", "c"]],
             ["abc"],
         )
-        actual = array["y"].groupby("abc").apply(np.sum)
+        actual = array["y"].groupby("abc").map(np.sum)
         assert_allclose(expected, actual)
         actual = array["y"].groupby("abc").sum(...)
         assert_allclose(expected, actual)
@@ -2532,7 +2532,7 @@ class TestDataArray:
                     expected.attrs["foo"] = "bar"
                 assert_identical(expected, actual)
 
-    def test_groupby_apply_center(self):
+    def test_groupby_map_center(self):
         def center(x):
             return x - np.mean(x)
 
@@ -2545,16 +2545,16 @@ class TestDataArray:
         )
         expected_ds["foo"] = (["x", "y"], exp_data)
         expected_centered = expected_ds["foo"]
-        assert_allclose(expected_centered, grouped.apply(center))
+        assert_allclose(expected_centered, grouped.map(center))
 
-    def test_groupby_apply_ndarray(self):
+    def test_groupby_map_ndarray(self):
         # regression test for #326
         array = self.make_groupby_example_array()
         grouped = array.groupby("abc")
-        actual = grouped.apply(np.asarray)
+        actual = grouped.map(np.asarray)
         assert_equal(array, actual)
 
-    def test_groupby_apply_changes_metadata(self):
+    def test_groupby_map_changes_metadata(self):
         def change_metadata(x):
             x.coords["x"] = x.coords["x"] * 2
             x.attrs["fruit"] = "lemon"
@@ -2562,7 +2562,7 @@ class TestDataArray:
 
         array = self.make_groupby_example_array()
         grouped = array.groupby("abc")
-        actual = grouped.apply(change_metadata)
+        actual = grouped.map(change_metadata)
         expected = array.copy()
         expected = change_metadata(expected)
         assert_equal(expected, actual)
@@ -2631,7 +2631,7 @@ class TestDataArray:
             ("a", ("a", "y")),
             ("b", ("x", "b")),
         ]:
-            result = array.groupby(by).apply(lambda x: x.squeeze())
+            result = array.groupby(by).map(lambda x: x.squeeze())
             assert result.dims == expected_dims
 
     def test_groupby_restore_coord_dims(self):
@@ -2651,13 +2651,13 @@ class TestDataArray:
             ("a", ("a", "y")),
             ("b", ("x", "b")),
         ]:
-            result = array.groupby(by, restore_coord_dims=True).apply(
+            result = array.groupby(by, restore_coord_dims=True).map(
                 lambda x: x.squeeze()
             )["c"]
             assert result.dims == expected_dims
 
         with pytest.warns(FutureWarning):
-            array.groupby("x").apply(lambda x: x.squeeze())
+            array.groupby("x").map(lambda x: x.squeeze())
 
     def test_groupby_first_and_last(self):
         array = DataArray([1, 2, 3, 4, 5], dims="x")
@@ -2699,9 +2699,9 @@ class TestDataArray:
             actual_sum = array.groupby(dim).sum(...)
             assert_identical(expected_sum, actual_sum)
 
-    def test_groupby_multidim_apply(self):
+    def test_groupby_multidim_map(self):
         array = self.make_groupby_multidim_example_array()
-        actual = array.groupby("lon").apply(lambda x: x - x.mean())
+        actual = array.groupby("lon").map(lambda x: x - x.mean())
         expected = DataArray(
             [[[-2.5, -6.0], [-5.0, -8.5]], [[2.5, 3.0], [8.0, 8.5]]],
             coords=array.coords,
@@ -2722,7 +2722,7 @@ class TestDataArray:
         )
         # the problem with this is that it overwrites the dimensions of array!
         # actual = array.groupby('dim_0', bins=bins).sum()
-        actual = array.groupby_bins("dim_0", bins).apply(lambda x: x.sum())
+        actual = array.groupby_bins("dim_0", bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
         # make sure original array dims are unchanged
         assert len(array.dim_0) == 4
@@ -2744,12 +2744,12 @@ class TestDataArray:
         bins = [0, 15, 20]
         bin_coords = pd.cut(array["lat"].values.flat, bins).categories
         expected = DataArray([16, 40], dims="lat_bins", coords={"lat_bins": bin_coords})
-        actual = array.groupby_bins("lat", bins).apply(lambda x: x.sum())
+        actual = array.groupby_bins("lat", bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
         # modify the array coordinates to be non-monotonic after unstacking
         array["lat"].data = np.array([[10.0, 20.0], [20.0, 10.0]])
         expected = DataArray([28, 28], dims="lat_bins", coords={"lat_bins": bin_coords})
-        actual = array.groupby_bins("lat", bins).apply(lambda x: x.sum())
+        actual = array.groupby_bins("lat", bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
 
     def test_groupby_bins_sort(self):
@@ -2784,7 +2784,7 @@ class TestDataArray:
         times = pd.date_range("2000", periods=3, freq="D")
         da = xr.DataArray([1.0, 1.0, 1.0], coords=[times], dims=["time"])
         expected = xr.DataArray([3.0, 3.0, 3.0], coords=[times], dims=["time"])
-        actual = da.resample(time="D").apply(func, args=(1.0,), arg3=1.0)
+        actual = da.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(actual, expected)
 
     def test_resample_first(self):
