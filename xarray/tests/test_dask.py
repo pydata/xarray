@@ -12,6 +12,7 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
+from xarray.core import duck_array_ops
 from xarray.testing import assert_chunks_equal
 from xarray.tests import mock
 
@@ -218,7 +219,7 @@ class TestVariable(DaskTestCase):
         with raises_regex(NotImplementedError, "dask"):
             v.median()
         with raise_if_dask_computes():
-            v.reduce(np.mean)
+            v.reduce(duck_array_ops.mean)
 
     def test_missing_values(self):
         values = np.array([0, 1, np.nan, 3])
