@@ -2916,7 +2916,7 @@ class DataArray(AbstractArray, DataWithCoords):
             is a scalar. If multiple percentiles are given, first axis of
             the result corresponds to the quantile and a quantile dimension
             is added to the return array. The other dimensions are the
-             dimensions that remain after the reduction of the array.
+            dimensions that remain after the reduction of the array.
 
         See Also
         --------

@@ -2108,7 +2108,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexers: Union[Mapping[Hashable, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "Dataset":
-        """Returns a new dataset with each array indexed along every `n`th
+        """Returns a new dataset with each array indexed along every `n`-th
         value for the specified dimension(s)
 
         Parameters
@@ -3467,6 +3467,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                   'no_conflicts'}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
+
             - 'broadcast_equals': all values must be equal when variables are
               broadcast against each other to ensure common dimensions.
             - 'equals': all values and dimensions must be the same.
@@ -3475,6 +3476,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
+
         join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -3615,7 +3617,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
         **labels_kwargs : {dim: label, ...}, optional
-            The keyword arguments form of ``dim`` and ``labels`
+            The keyword arguments form of ``dim`` and ``labels``
 
         Returns
         -------
@@ -3907,6 +3909,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
                   'polynomial', 'barycentric', 'krog', 'pchip',
                   'spline'}, optional
+
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation (Default). Additional keyword
@@ -5218,7 +5221,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         datetime_unit
             Can be specify the unit if datetime coordinate is used. One of
             {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
-             'as'}
+            'as'}
 
         Returns
         -------

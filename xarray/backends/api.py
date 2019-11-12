@@ -761,6 +761,7 @@ def open_mfdataset(
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
+
          * 'broadcast_equals': all values must be equal when variables are
            broadcast against each other to ensure common dimensions.
          * 'equals': all values and dimensions must be the same.
@@ -770,6 +771,7 @@ def open_mfdataset(
            must be equal. The returned dataset then contains the combination
            of all non-null values.
          * 'override': skip comparing and pick variable from first dataset
+
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
