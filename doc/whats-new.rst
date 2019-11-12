@@ -73,7 +73,7 @@ New Features
   for xarray objects. Note that xarray objects with a dask.array backend already used
   deterministic hashing in previous releases; this change implements it when whole
   xarray objects are embedded in a dask graph, e.g. when :meth:`DataArray.map` is
-  invoked. (:issue:`3378`, :pull:`3446`)
+  invoked. (:issue:`3378`, :pull:`3446`, :pull:`3515`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
 
