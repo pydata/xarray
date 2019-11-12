@@ -41,8 +41,15 @@ New Features
 - :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
   :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
   dropping variables (including coordinates). The existing ``drop`` methods remain as a backward compatible 
-  option for dropping either lables or variables, but using the more specific methods is encouraged.
+  option for dropping either labels or variables, but using the more specific methods is encouraged.
   (:pull:`3475`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:meth:`Dataset.map` & :py:meth:`GroupBy.map` & :py:meth:`Resample.map` have been added for 
+  mapping / applying a function over each item in the collection, reflecting the widely used
+  and least surprising name for this operation.
+  The existing ``apply`` methods remain for backward compatibility, though using the ``map``
+  methods is encouraged.
+  (:pull:`3459`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
   to represent all 'other' dimensions. For example, to move one dimension to the front,
@@ -107,7 +114,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
-  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
+  (:pull:`3238`, :pull:`3447`, :pull:`3508`) by `Justus Magin <https://github.com/keewis>`_.
 
   .. note::
 
@@ -123,6 +130,8 @@ Internal Changes
 - Run basic CI tests on Python 3.8. (:pull:`3477`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
+- Enable type checking on default sentinel values (:pull:`3472`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.14.0:
 
@@ -3730,7 +3739,7 @@ Breaking changes
   warnings: methods and attributes that were deprecated in xray v0.3 or earlier
   (e.g., ``dimensions``, ``attributes```) have gone away.
 
-.. _bottleneck: https://github.com/kwgoodman/bottleneck
+.. _bottleneck: https://github.com/pydata/bottleneck
 
 Enhancements
 ~~~~~~~~~~~~
