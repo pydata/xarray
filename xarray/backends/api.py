@@ -729,7 +729,7 @@ def open_mfdataset(
     ``combine_by_coords`` and ``combine_nested``. By default the old (now deprecated)
     ``auto_combine`` will be used, please specify either ``combine='by_coords'`` or
     ``combine='nested'`` in future. Requires dask to be installed. See documentation for
-    details on dask [1]. Attributes from the first dataset file are used for the
+    details on dask [1]_. Attributes from the first dataset file are used for the
     combined dataset.
 
     Parameters
@@ -745,7 +745,7 @@ def open_mfdataset(
         In general, these should divide the dimensions of each dataset. If int, chunk
         each dimension by ``chunks``. By default, chunks will be chosen to load entire
         input files into memory at once. This has a major impact on performance: please
-        see the full documentation for more details [2].
+        see the full documentation for more details [2]_.
     concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
         if any of the dimensions along which you want to concatenate is not a dimension
