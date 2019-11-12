@@ -157,20 +157,19 @@ class CFMaskCoder(VariableCoder):
             and not duck_array_ops.allclose_or_equiv(fv, mv)
         ):
             raise ValueError(
-                "Variable {!r} has multiple fill values {}. "
-                "Cannot encode data. ".format(name, [fv, mv])
+                f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
             )
 
         if fv is not None:
             # Ensure _FillValue is cast to same dtype as data's
-            encoding["_FillValue"] = data.dtype.type(encoding["_FillValue"])
+            encoding["_FillValue"] = data.dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
                 data = duck_array_ops.fillna(data, fill_value)
 
         if mv is not None:
             # Ensure missing_value is cast to same dtype as data's
-            encoding["missing_value"] = data.dtype.type(encoding["missing_value"])
+            encoding["missing_value"] = data.dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and fv is None:
                 data = duck_array_ops.fillna(data, fill_value)
