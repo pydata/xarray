@@ -1292,12 +1292,23 @@ def test_recursive_token():
     b[5000] = 2
     assert str(a) == str(b)
     assert dask.base.tokenize(a) != dask.base.tokenize(b)
+
+    # Test DataArray and Variable
     da_a = DataArray(a)
     da_b = DataArray(b)
+    assert str(da_a) == str(da_b)
     assert dask.base.tokenize(da_a) != dask.base.tokenize(da_b)
+
+    # Test Dataset
     ds_a = da_a.to_dataset(name="x")
     ds_b = da_b.to_dataset(name="x")
     assert dask.base.tokenize(ds_a) != dask.base.tokenize(ds_b)
+
+    # Test IndexVariable
+    da_a = DataArray(a, dims=["x"], coords={"x": a})
+    da_b = DataArray(a, dims=["x"], coords={"x": b})
+    assert str(da_a) == str(da_b)
+    assert dask.base.tokenize(da_a) != dask.base.tokenize(da_b)
 
 
 @requires_scipy_or_netCDF4
