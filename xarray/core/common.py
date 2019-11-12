@@ -100,15 +100,23 @@ class ImplementsDatasetReduce:
 
         return wrapped_func
 
-    _reduce_extra_args_docstring = """dim : str or sequence of str, optional
+    _reduce_extra_args_docstring = dedent(
+        """
+        dim : str or sequence of str, optional
             Dimension(s) over which to apply `{name}`.  By default `{name}` is
-            applied over all dimensions."""
+            applied over all dimensions.
+        """
+    ).strip()
 
-    _cum_extra_args_docstring = """dim : str or sequence of str, optional
+    _cum_extra_args_docstring = dedent(
+        """
+        dim : str or sequence of str, optional
             Dimension over which to apply `{name}`.
         axis : int or sequence of int, optional
             Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied."""
+            and 'axis' arguments can be supplied.
+        """
+    ).strip()
 
 
 class AbstractArray(ImplementsArrayReduce):
