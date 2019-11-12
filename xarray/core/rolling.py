@@ -354,7 +354,7 @@ class DataArrayRolling(Rolling):
     ):
         if "dim" in kwargs:
             warnings.warn(
-                f"Reductions will be applied along the rolling dimension '{self.dim}'. Passing the 'dim' kwarg passed to reduction operations is deprecated and will be removed in xarray 0.16.0.",
+                f"Reductions will be applied along the rolling dimension '{self.dim}'. Passing the 'dim' kwarg to reduction operations has no effect and will raise an error in xarray 0.16.0.",
                 DeprecationWarning,
                 stacklevel=3,
             )
