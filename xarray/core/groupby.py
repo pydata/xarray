@@ -687,9 +687,9 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-        args : tuple, optional
+        ``*args`` : tuple, optional
             Positional arguments passed to `func`.
-        **kwargs
+        ``**kwargs``
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
         Returns

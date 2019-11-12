@@ -1314,7 +1314,7 @@ class DataArray(AbstractArray, DataWithCoords):
             values.
         kwargs: dictionary
             Additional keyword passed to scipy's interpolator.
-        **coords_kwarg : {dim: coordinate, ...}, optional
+        ``**coords_kwarg`` : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
@@ -2028,9 +2028,10 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
-        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
-                  'polynomial', 'barycentric', 'krog', 'pchip',
-                  'spline', 'akima'}, optional
+        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
+                'cubic', 'polynomial', 'barycentric', 'krog', 'pchip',
+                'spline', 'akima'}, optional
+
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation (Default). Additional keyword
@@ -3041,8 +3042,8 @@ class DataArray(AbstractArray, DataWithCoords):
             Coordinate(s) used for the integration.
         datetime_unit: str, optional
             Can be used to specify the unit if datetime coordinate is used.
-            One of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',
-                    'ps', 'fs', 'as'}
+            One of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps',
+            'fs', 'as'}
 
         Returns
         -------

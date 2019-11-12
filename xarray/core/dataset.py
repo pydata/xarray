@@ -1499,7 +1499,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
-                               'zlib': True}, ...}``
+            'zlib': True}, ...}``
 
             The `h5netcdf` engine supports both the NetCDF4-style compression
             encoding parameters ``{'zlib': True, 'complevel': 9}`` and the h5py
@@ -2117,7 +2117,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             A dict with keys matching dimensions and integer values `n`
             or a single integer `n` applied over all dimensions.
             One of indexers or indexers_kwargs must be provided.
-        **indexers_kwargs : {dim: n, ...}, optional
+        ``**indexers_kwargs`` : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
