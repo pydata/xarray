@@ -14,6 +14,7 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
+from xarray.core.indexes import copy_indexes
 from xarray.tests import (
     LooseVersion,
     ReturnItem,
@@ -1229,7 +1230,7 @@ class TestDataArray:
         assert expected == actual
 
         del da.coords["x"]
-        del da.indexes["x"]
+        da._indexes = copy_indexes(da._indexes, exclude="x")
         expected = DataArray(da.values, {"y": [0, 1, 2]}, dims=["x", "y"], name="foo")
         assert_identical(da, expected)
 

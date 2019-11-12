@@ -36,9 +36,6 @@ class Indexes(collections.abc.Mapping):
     def __getitem__(self, key):
         return self._indexes[key]
 
-    def __delitem__(self, key):
-        del self._indexes[key]
-
     def __repr__(self):
         return formatting.indexes_repr(self)
 
