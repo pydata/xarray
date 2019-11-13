@@ -204,7 +204,7 @@ def merge_indexes(
     """
     vars_to_replace: Dict[Hashable, Variable] = {}
     vars_to_remove: List[Hashable] = []
-    dims_to_replace: Dict[Hashable, Variable] = {}
+    dims_to_replace: Dict[Hashable, Hashable] = {}
     error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
@@ -270,8 +270,9 @@ def merge_indexes(
     for k, v in new_variables.items():
         if any(d in dims_to_replace for d in v.dims):
             new_dims = [dims_to_replace.get(d, d) for d in v.dims]
-            new_variables[k] = type(v)(new_dims, v.data, attrs=v.attrs,
-                                       encoding=v.encoding, fastpath=True)
+            new_variables[k] = type(v)(
+                new_dims, v.data, attrs=v.attrs, encoding=v.encoding, fastpath=True
+            )
     new_coord_names = coord_names | set(vars_to_replace)
     new_coord_names -= set(vars_to_remove)
     return new_variables, new_coord_names
