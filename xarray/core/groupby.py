@@ -557,6 +557,60 @@ class GroupBy(SupportsArithmetic):
         out = ops.fillna(self, value)
         return out
 
+    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+        """Compute the qth quantile over each array in the groups and
+        concatenate them together into a new array.
+
+        Parameters
+        ----------
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1
+            inclusive.
+        dim : `...`, str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+            Defaults to the grouped dimension.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+
+        Returns
+        -------
+        quantiles : Variable
+            If `q` is a single quantile, then the result
+            is a scalar. If multiple percentiles are given, first axis of
+            the result corresponds to the quantile and a quantile dimension
+            is added to the return array. The other dimensions are the
+            dimensions that remain after the reduction of the array.
+
+        See Also
+        --------
+        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        DataArray.quantile
+        """
+        if dim is None:
+            dim = self._group_dim
+
+        out = self.map(
+            self._obj.__class__.quantile,
+            shortcut=False,
+            q=q,
+            dim=dim,
+            interpolation=interpolation,
+            keep_attrs=keep_attrs,
+        )
+
+        if np.asarray(q, dtype=np.float64).ndim == 0:
+            out = out.drop_vars("quantile")
+        return out
+
     def where(self, cond, other=dtypes.NA):
         """Return elements from `self` or `other` depending on `cond`.
 
@@ -736,60 +790,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
-
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
-        """Compute the qth quantile over each array in the groups and
-        concatenate them together into a new array.
-
-        Parameters
-        ----------
-        q : float in range of [0,1] (or sequence of floats)
-            Quantile to compute, which must be between 0 and 1
-            inclusive.
-        dim : `...`, str or sequence of str, optional
-            Dimension(s) over which to apply quantile.
-            Defaults to the grouped dimension.
-        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
-            This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
-
-        Returns
-        -------
-        quantiles : Variable
-            If `q` is a single quantile, then the result
-            is a scalar. If multiple percentiles are given, first axis of
-            the result corresponds to the quantile and a quantile dimension
-            is added to the return array. The other dimensions are the
-            dimensions that remain after the reduction of the array.
-
-        See Also
-        --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
-        DataArray.quantile
-        """
-        if dim is None:
-            dim = self._group_dim
-
-        out = self.map(
-            self._obj.__class__.quantile,
-            shortcut=False,
-            q=q,
-            dim=dim,
-            interpolation=interpolation,
-            keep_attrs=keep_attrs,
-        )
-
-        if np.asarray(q, dtype=np.float64).ndim == 0:
-            out = out.drop_vars("quantile")
-        return out
 
     def reduce(
         self, func, dim=None, axis=None, keep_attrs=None, shortcut=True, **kwargs
