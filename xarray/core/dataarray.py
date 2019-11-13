@@ -458,12 +458,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
         def subset(dim, label):
             array = self.loc[{dim: label}]
-            if dim in array.coords:
-                del array.coords[dim]
             array.attrs = {}
-            return array
+            return as_variable(array)
 
         variables = {label: subset(dim, label) for label in self.get_index(dim)}
+        variables.update({k: v for k, v in self._coords.items() if k != dim})
         indexes = copy_indexes(self._indexes, exclude=dim)
         coord_names = set(self._coords) - set([dim])
         dataset = Dataset._from_vars_and_coord_names(
