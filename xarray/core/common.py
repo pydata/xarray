@@ -43,14 +43,12 @@ class ImplementsArrayReduce:
         if include_skipna:
 
             def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                return self.reduce(
-                    func, dim, axis, skipna=skipna, allow_lazy=True, **kwargs
-                )
+                return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
 
         else:
 
             def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore
-                return self.reduce(func, dim, axis, allow_lazy=True, **kwargs)
+                return self.reduce(func, dim, axis, **kwargs)
 
         return wrapped_func
 
@@ -83,20 +81,13 @@ class ImplementsDatasetReduce:
 
             def wrapped_func(self, dim=None, skipna=None, **kwargs):
                 return self.reduce(
-                    func,
-                    dim,
-                    skipna=skipna,
-                    numeric_only=numeric_only,
-                    allow_lazy=True,
-                    **kwargs,
+                    func, dim, skipna=skipna, numeric_only=numeric_only, **kwargs
                 )
 
         else:
 
             def wrapped_func(self, dim=None, **kwargs):  # type: ignore
-                return self.reduce(
-                    func, dim, numeric_only=numeric_only, allow_lazy=True, **kwargs
-                )
+                return self.reduce(func, dim, numeric_only=numeric_only, **kwargs)
 
         return wrapped_func
 

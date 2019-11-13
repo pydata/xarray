@@ -585,9 +585,7 @@ class GroupBy(SupportsArithmetic):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-        return self.reduce(
-            op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs, allow_lazy=True
-        )
+        return self.reduce(op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs)
 
     def first(self, skipna=None, keep_attrs=None):
         """Return the first element of each group along the group dimension
