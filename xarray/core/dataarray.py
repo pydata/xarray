@@ -1601,10 +1601,9 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
-        _check_inplace(inplace)
-        indexes = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
-        coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
-        return self._replace(coords=coords)
+        ds = self._to_temp_dataset().set_index(indexes, append=append,
+                                               inplace=inplace, **indexes_kwargs)
+        return self._from_temp_dataset(ds)
 
     def reset_index(
         self,

@@ -204,6 +204,7 @@ def merge_indexes(
     """
     vars_to_replace: Dict[Hashable, Variable] = {}
     vars_to_remove: List[Hashable] = []
+    dims_to_replace: Dict[Hashable, Variable] = {}
     error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
@@ -244,7 +245,7 @@ def merge_indexes(
         if not len(names) and len(var_names) == 1:
             idx = pd.Index(variables[var_names[0]].values)
 
-        else:
+        else:  # MultiIndex
             for n in var_names:
                 try:
                     var = variables[n]
@@ -256,15 +257,23 @@ def merge_indexes(
                 levels.append(cat.categories)
 
             idx = pd.MultiIndex(levels, codes, names=names)
+            for n in names:
+                dims_to_replace[n] = dim
 
         vars_to_replace[dim] = IndexVariable(dim, idx)
         vars_to_remove.extend(var_names)
 
     new_variables = {k: v for k, v in variables.items() if k not in vars_to_remove}
     new_variables.update(vars_to_replace)
+
+    # update dimensions if necessary  GH: 3512
+    for k, v in new_variables.items():
+        if any(d in dims_to_replace for d in v.dims):
+            new_dims = [dims_to_replace.get(d, d) for d in v.dims]
+            new_variables[k] = type(v)(new_dims, v.data, attrs=v.attrs,
+                                       encoding=v.encoding, fastpath=True)
     new_coord_names = coord_names | set(vars_to_replace)
     new_coord_names -= set(vars_to_remove)
-
     return new_variables, new_coord_names
 
 
