@@ -1754,6 +1754,13 @@ class ZarrBase(CFEncodedBase):
     def test_dataset_caching(self):
         super().test_dataset_caching()
 
+    def test_nested_dictionary(self):
+        original = create_test_data()
+        original.attrs["foo"] = {"bar": {"baz": 3}}
+        with self.create_zarr_target() as store_target:
+            original.to_zarr(store_target, mode="w")
+            assert_identical(original, xr.open_zarr(store_target))
+
     def test_append_write(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:

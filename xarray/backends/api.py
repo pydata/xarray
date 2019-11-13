@@ -179,7 +179,7 @@ def _validate_dataset_names(dataset):
         check_name(k)
 
 
-def _validate_attrs(dataset):
+def _validate_attrs(dataset, backend="netCDF"):
     """`attrs` must have a string key and a value which is either: a number,
     a string, an ndarray or a list/tuple of numbers/strings.
     """
@@ -197,6 +197,9 @@ def _validate_attrs(dataset):
                 "Invalid name for attr: {} must be a string for "
                 "serialization to netCDF files".format(name)
             )
+
+        if isinstance(value, dict) and ("zarr" in backend):
+            value = [value]
 
         if not isinstance(value, (str, Number, np.ndarray, np.number, list, tuple)):
             raise TypeError(
@@ -1299,7 +1302,7 @@ def to_zarr(
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
-    _validate_attrs(dataset)
+    _validate_attrs(dataset, backend="zarr")
 
     if mode == "a":
         _validate_datatypes_for_zarr_append(dataset)

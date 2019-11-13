@@ -96,6 +96,8 @@ Bug fixes
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
 - Allow appending datetime and bool data variables to zarr stores.
   (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
+- Allow nested dictionaries in zarr attributes.
+  (:issue:`3517`). By `Eduardo Gonzalez <https://github.com/eddienko>`_.
 
 Documentation
 ~~~~~~~~~~~~~
