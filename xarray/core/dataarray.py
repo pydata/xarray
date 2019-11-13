@@ -378,10 +378,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
-        if indexes is None or not indexes:
-            self._indexes = default_indexes(self._coords, self.dims)
-        else:
-            self._indexes = indexes
+        self._indexes = indexes
 
         self._file_obj = None
 
