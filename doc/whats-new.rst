@@ -91,7 +91,6 @@ Bug fixes
 - Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
   :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
-
 - Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
