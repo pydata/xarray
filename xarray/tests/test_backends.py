@@ -2812,10 +2812,9 @@ class TestDask(DatasetIOBase):
                 [tmp1, tmp2], concat_dim="x", combine="nested", master_file=-1
             ) as actual:
                 # attributes are inherited from the master file
-                assert actual.test2 == ds2.test2
+                assert actual.attrs["test2"] == ds2.attrs["test2"]
                 # attributes from ds1 are not retained, e.g.,
-                with raises_regex(AttributeError, "no attribute"):
-                    actual.test1
+                assert "test1" not in actual.attrs
 
     def test_open_mfdataset_master_file_path(self):
         original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -2830,10 +2829,9 @@ class TestDask(DatasetIOBase):
                 [tmp1, tmp2], concat_dim="x", combine="nested", master_file=tmp2
             ) as actual:
                 # attributes are inherited from the master file
-                assert actual.test2 == ds2.test2
+                assert actual.attrs["test2"] == ds2.attrs["test2"]
                 # attributes from ds1 are not retained, e.g.,
-                with raises_regex(AttributeError, "no attribute"):
-                    actual.test1
+                assert "test1" not in actual.attrs
 
     def test_open_mfdataset_auto_combine(self):
         original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
