@@ -1283,6 +1283,32 @@ def test_token_identical(obj, transform):
     )
 
 
+def test_recursive_token():
+    """Test that tokenization is invoked recursively, and doesn't just rely on the
+    output of str()
+    """
+    a = np.ones(10000)
+    b = np.ones(10000)
+    b[5000] = 2
+    assert str(a) == str(b)
+    assert dask.base.tokenize(a) != dask.base.tokenize(b)
+
+    # Test DataArray and Variable
+    da_a = DataArray(a)
+    da_b = DataArray(b)
+    assert dask.base.tokenize(da_a) != dask.base.tokenize(da_b)
+
+    # Test Dataset
+    ds_a = da_a.to_dataset(name="x")
+    ds_b = da_b.to_dataset(name="x")
+    assert dask.base.tokenize(ds_a) != dask.base.tokenize(ds_b)
+
+    # Test IndexVariable
+    da_a = DataArray(a, dims=["x"], coords={"x": a})
+    da_b = DataArray(a, dims=["x"], coords={"x": b})
+    assert dask.base.tokenize(da_a) != dask.base.tokenize(da_b)
+
+
 @requires_scipy_or_netCDF4
 def test_normalize_token_with_backend(map_ds):
     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp_file:

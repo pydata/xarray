@@ -755,7 +755,9 @@ class DataArray(AbstractArray, DataWithCoords):
             return dataset
 
     def __dask_tokenize__(self):
-        return (type(self), self._variable, self._coords, self._name)
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._variable, self._coords, self._name))
 
     def __dask_graph__(self):
         return self._to_temp_dataset().__dask_graph__()
