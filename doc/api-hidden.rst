@@ -2,6 +2,8 @@
 .. This extra page is a work around for sphinx not having any support for
 .. hiding an autosummary table.
 
+:orphan:
+
 .. currentmodule:: xarray
 
 .. autosummary::
