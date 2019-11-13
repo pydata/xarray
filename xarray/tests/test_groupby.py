@@ -210,6 +210,98 @@ def test_da_groupby_quantile():
     assert_identical(expected, actual)
 
 
+def test_ds_groupby_quantile():
+    ds = xr.Dataset(
+        data_vars={"a": ("x", [1, 2, 3, 4, 5, 6])}, coords={"x": [1, 1, 1, 2, 2, 2]}
+    )
+
+    # Scalar quantile
+    expected = xr.Dataset({"a": ("x", [2, 5])}, coords={"x": [1, 2]})
+    actual = ds.groupby("x").quantile(0.5)
+    assert_identical(expected, actual)
+
+    # Vector quantile
+    expected = xr.Dataset(
+        data_vars={"a": (("x", "quantile"), [[1, 3], [4, 6]])},
+        coords={"x": [1, 2], "quantile": [0, 1]},
+    )
+    actual = ds.groupby("x").quantile([0, 1])
+    assert_identical(expected, actual)
+
+    # Multiple dimensions
+    ds = xr.Dataset(
+        data_vars={
+            "a": (
+                ("x", "y"),
+                [[1, 11, 26], [2, 12, 22], [3, 13, 23], [4, 16, 24], [5, 15, 25]],
+            )
+        },
+        coords={"x": [1, 1, 1, 2, 2], "y": [0, 0, 1]},
+    )
+
+    actual_x = ds.groupby("x").quantile(0, dim=...)
+    expected_x = xr.Dataset({"a": ("x", [1, 4])}, coords={"x": [1, 2]})
+    assert_identical(expected_x, actual_x)
+
+    actual_y = ds.groupby("y").quantile(0, dim=...)
+    expected_y = xr.Dataset({"a": ("y", [1, 22])}, coords={"y": [0, 1]})
+    assert_identical(expected_y, actual_y)
+
+    actual_xx = ds.groupby("x").quantile(0)
+    expected_xx = xr.Dataset(
+        {"a": (("x", "y"), [[1, 11, 22], [4, 15, 24]])},
+        coords={"x": [1, 2], "y": [0, 0, 1]},
+    )
+    assert_identical(expected_xx, actual_xx)
+
+    actual_yy = ds.groupby("y").quantile(0)
+    expected_yy = xr.Dataset(
+        {"a": (("x", "y"), [[1, 26], [2, 22], [3, 23], [4, 24], [5, 25]])},
+        coords={"x": [1, 1, 1, 2, 2], "y": [0, 1]},
+    ).transpose()
+    assert_identical(expected_yy, actual_yy)
+
+    times = pd.date_range("2000-01-01", periods=365)
+    x = [0, 1]
+    foo = xr.Dataset(
+        {"a": (("time", "x"), np.reshape(np.arange(365 * 2), (365, 2)))},
+        coords=dict(time=times, x=x),
+    )
+    g = foo.groupby(foo.time.dt.month)
+
+    actual = g.quantile(0, dim=...)
+    expected = xr.Dataset(
+        {
+            "a": (
+                "month",
+                [
+                    0.0,
+                    62.0,
+                    120.0,
+                    182.0,
+                    242.0,
+                    304.0,
+                    364.0,
+                    426.0,
+                    488.0,
+                    548.0,
+                    610.0,
+                    670.0,
+                ],
+            )
+        },
+        coords={"month": np.arange(1, 13)},
+    )
+    assert_identical(expected, actual)
+
+    actual = g.quantile(0, dim="time").isel(month=slice(None, 2))
+    expected = xr.Dataset(
+        data_vars={"a": (("month", "x"), [[0.0, 1], [62.0, 63]])},
+        coords={"month": [1, 2], "x": [0, 1]},
+    )
+    assert_identical(expected, actual)
+
+
 def test_da_groupby_assign_coords():
     actual = xr.DataArray(
         [[3, 4, 5], [6, 7, 8]], dims=["y", "x"], coords={"y": range(2), "x": range(3)}
