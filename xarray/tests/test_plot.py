@@ -2168,7 +2168,13 @@ def test_plot_transposed_nondim_coord(plotfunc):
     getattr(da.plot, plotfunc)(x="zt", y="x")
 
 
-def test_plot_transposes_properly():
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["pcolormesh", "imshow"])
+def test_plot_transposes_properly(plotfunc):
+    # test that we aren't mistakenly transposing when the 2 dimensions have equal sizes.
     da = xr.DataArray([np.sin(2 * np.pi / 10 * np.arange(10))] * 10, dims=("y", "x"))
-    hdl = da.plot(x="x", y="y")
-    assert np.all(hdl.get_array() == da.to_masked_array().ravel())
+    hdl = getattr(da.plot, plotfunc)(x="x", y="y")
+    # get_array doesn't work for contour, contourf. It returns the colormap intervals.
+    # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
+    # to ravel() on the LHS
+    assert np.all(hdl.get_array().ravel() == da.to_masked_array().ravel())
