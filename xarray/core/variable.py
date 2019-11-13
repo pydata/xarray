@@ -1,5 +1,6 @@
 import functools
 import itertools
+import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
@@ -1427,7 +1428,7 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=False,
+        allow_lazy=None,
         **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
@@ -1468,7 +1469,17 @@ class Variable(
 
         if dim is not None:
             axis = self.get_axis_num(dim)
+
+        if allow_lazy is not None:
+            warnings.warn(
+                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
+                DeprecationWarning,
+            )
+        else:
+            allow_lazy = True
+
         input_data = self.data if allow_lazy else self.values
+
         if axis is not None:
             data = func(input_data, axis=axis, **kwargs)
         else:
