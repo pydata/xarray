@@ -1,5 +1,6 @@
 import functools
 import itertools
+import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
@@ -393,7 +394,9 @@ class Variable(
     def __dask_tokenize__(self):
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
-        return type(self), self._dims, self.data, self._attrs
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._dims, self.data, self._attrs))
 
     def __dask_graph__(self):
         if isinstance(self._data, dask_array_type):
@@ -1236,7 +1239,9 @@ class Variable(
             dims = self.dims[::-1]
         dims = tuple(infix_dims(dims, self.dims))
         axes = self.get_axis_num(dims)
-        if len(dims) < 2:  # no need to transpose if only one dimension
+        if len(dims) < 2 or dims == self.dims:
+            # no need to transpose if only one dimension
+            # or dims are in same order
             return self.copy(deep=False)
 
         data = as_indexable(self._data).transpose(axes)
@@ -1423,7 +1428,7 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=False,
+        allow_lazy=None,
         **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
@@ -1464,7 +1469,17 @@ class Variable(
 
         if dim is not None:
             axis = self.get_axis_num(dim)
+
+        if allow_lazy is not None:
+            warnings.warn(
+                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
+                DeprecationWarning,
+            )
+        else:
+            allow_lazy = True
+
         input_data = self.data if allow_lazy else self.values
+
         if axis is not None:
             data = func(input_data, axis=axis, **kwargs)
         else:
@@ -1595,22 +1610,24 @@ class Variable(
             return False
         return self.equals(other, equiv=equiv)
 
-    def identical(self, other):
+    def identical(self, other, equiv=duck_array_ops.array_equiv):
         """Like equals, but also checks attributes.
         """
         try:
-            return utils.dict_equiv(self.attrs, other.attrs) and self.equals(other)
+            return utils.dict_equiv(self.attrs, other.attrs) and self.equals(
+                other, equiv=equiv
+            )
         except (TypeError, AttributeError):
             return False
 
-    def no_conflicts(self, other):
+    def no_conflicts(self, other, equiv=duck_array_ops.array_notnull_equiv):
         """True if the intersection of two Variable's non-null data is
         equal; otherwise false.
 
         Variables can thus still be equal if there are locations where either,
         or both, contain NaN values.
         """
-        return self.broadcast_equals(other, equiv=duck_array_ops.array_notnull_equiv)
+        return self.broadcast_equals(other, equiv=equiv)
 
     def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
         """Compute the qth quantile of the data along the specified dimension.
@@ -1969,8 +1986,10 @@ class IndexVariable(Variable):
             self._data = PandasIndexAdapter(self._data)
 
     def __dask_tokenize__(self):
+        from dask.base import normalize_token
+
         # Don't waste time converting pd.Index to np.ndarray
-        return (type(self), self._dims, self._data.array, self._attrs)
+        return normalize_token((type(self), self._dims, self._data.array, self._attrs))
 
     def load(self):
         # data is already loaded into memory for IndexVariable
