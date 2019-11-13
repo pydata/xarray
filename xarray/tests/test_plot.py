@@ -2167,4 +2167,4 @@ def test_plot_transposed_nondim_coord(plotfunc):
 def test_plot_transposes_properly():
     da = xr.DataArray([np.sin(2 * np.pi / 10 * np.arange(10))] * 10, dims=("y", "x"))
     hdl = da.plot(x="x", y="y")
-    np.all(hdl.get_array() == da.to_masked_array().ravel())
+    assert np.all(hdl.get_array() == da.to_masked_array().ravel())

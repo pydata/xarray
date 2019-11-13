@@ -693,7 +693,7 @@ def _plot2d(plotfunc):
             dims = yx_dims + tuple(d for d in darray.dims if d not in yx_dims)
             if dims != darray.dims:
                 darray = darray.transpose(*dims, transpose_coords=True)
-        elif xval.shape[-1] == darray.shape[0]:
+        elif darray[xlab].dims[-1] == darray.dims[0]:
             darray = darray.transpose(transpose_coords=True)
 
         # Pass the data as a masked ndarray too
