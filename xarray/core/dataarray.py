@@ -367,7 +367,9 @@ class DataArray(AbstractArray, DataWithCoords):
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
-            indexes = dict(_extract_indexes_from_coords(coords))
+            indexes = dict(
+                _extract_indexes_from_coords(coords)
+            )  # needed for to_dataset
 
         # These fully describe a DataArray
         self._variable = variable
