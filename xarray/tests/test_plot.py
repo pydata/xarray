@@ -1838,7 +1838,11 @@ class TestFacetedLinePlots(PlotTestCase):
             assert substring_in_axes(self.darray.name, ax)
 
     def test_test_empty_cell(self):
-        g = self.darray.isel(row=1).drop("row").plot(col="col", hue="hue", col_wrap=2)
+        g = (
+            self.darray.isel(row=1)
+            .drop_vars("row")
+            .plot(col="col", hue="hue", col_wrap=2)
+        )
         bottomright = g.axes[-1, -1]
         assert not bottomright.has_data()
         assert not bottomright.get_visible()

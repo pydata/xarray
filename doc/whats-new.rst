@@ -38,6 +38,19 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
+  dropping variables (including coordinates). The existing ``drop`` methods remain as a backward compatible 
+  option for dropping either labels or variables, but using the more specific methods is encouraged.
+  (:pull:`3475`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:meth:`Dataset.map` & :py:meth:`GroupBy.map` & :py:meth:`Resample.map` have been added for 
+  mapping / applying a function over each item in the collection, reflecting the widely used
+  and least surprising name for this operation.
+  The existing ``apply`` methods remain for backward compatibility, though using the ``map``
+  methods is encouraged.
+  (:pull:`3459`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:meth:`Dataset.transpose` and :py:meth:`DataArray.transpose` now support an ellipsis (`...`)
   to represent all 'other' dimensions. For example, to move one dimension to the front,
   use `.transpose('x', ...)`. (:pull:`3421`)
@@ -70,6 +83,9 @@ Bug fixes
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Use dask names to compare dask objects prior to comparing values after computation.
+  (:issue:`3068`, :issue:`3311`, :issue:`3454`, :pull:`3453`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
@@ -81,7 +97,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- Fix leap year condition in example (http://xarray.pydata.org/en/stable/examples/monthly-means.html) by `Mickaël Lalande <https://github.com/mickaellalande>`_.
+- Fix leap year condition in example (http://xarray.pydata.org/en/stable/examples/monthly-means.html)
+  by `Mickaël Lalande <https://github.com/mickaellalande>`_.
 - Fix the documentation of :py:meth:`DataArray.resample` and
   :py:meth:`Dataset.resample` and explicitly state that a
   datetime-like dimension is required. (:pull:`3400`)
@@ -97,7 +114,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
-  (:pull:`3238`) by `Justus Magin <https://github.com/keewis>`_.
+  (:pull:`3238`, :pull:`3447`, :pull:`3508`) by `Justus Magin <https://github.com/keewis>`_.
 
   .. note::
 
@@ -107,9 +124,14 @@ Internal Changes
     ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
     Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
 
-- Use Python 3.6 idioms throughout the codebase. (:pull:3419)
+- Use Python 3.6 idioms throughout the codebase. (:pull:`3419`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
+- Run basic CI tests on Python 3.8. (:pull:`3477`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
+- Enable type checking on default sentinel values (:pull:`3472`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.14.0:
 
@@ -3717,7 +3739,7 @@ Breaking changes
   warnings: methods and attributes that were deprecated in xray v0.3 or earlier
   (e.g., ``dimensions``, ``attributes```) have gone away.
 
-.. _bottleneck: https://github.com/kwgoodman/bottleneck
+.. _bottleneck: https://github.com/pydata/bottleneck
 
 Enhancements
 ~~~~~~~~~~~~
@@ -3748,6 +3770,7 @@ Enhancements
   explicitly listed variables or index labels:
 
   .. ipython:: python
+     :okwarning:
 
       # drop variables
       ds = xray.Dataset({'x': 0, 'y': 1})

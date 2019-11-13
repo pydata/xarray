@@ -16,7 +16,7 @@ steps:
         --pre \
         --upgrade \
         matplotlib \
-        pandas=0.26.0.dev0+628.g03c1a3db2 \  # FIXME https://github.com/pydata/xarray/issues/3440
+        pandas \
         scipy
         # numpy \  # FIXME https://github.com/pydata/xarray/issues/3409
     pip install \
