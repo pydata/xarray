@@ -10,7 +10,7 @@ from .variable import Variable
 
 
 class Indexes(collections.abc.Mapping):
-    """Mutable proxy for Dataset or DataArrary indexes."""
+    """Immutable proxy for Dataset or DataArrary indexes."""
 
     __slots__ = ("_indexes",)
 
