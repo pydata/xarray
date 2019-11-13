@@ -735,12 +735,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             if shortcut:
                 coord_var = as_variable(coord)
                 combined._coords[coord.name] = coord_var
-                if combined._indexes is not None:
-                    combined._indexes[coord.name] = coord_var.to_index()
             else:
                 combined.coords[coord.name] = coord
-                if combined._indexes is not None:
-                    combined._indexes[coord.name] = coord.to_index()
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
