@@ -1183,7 +1183,7 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_selection_multiindex_from_level(self):
-        #GH: 3512
+        # GH: 3512
         da = DataArray([0, 1], dims=['x'], coords={'x': [0, 1], 'y': 'a'})
         db = DataArray([2, 3], dims=['x'], coords={'x': [0, 1], 'y': 'b'})
         data = xr.concat([da, db], dim='x').set_index(xy=['x', 'y'])

@@ -48,7 +48,7 @@ from .coordinates import (
     assert_coordinate_consistent,
     remap_label_indexers,
 )
-from .dataset import Dataset, merge_indexes, split_indexes
+from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .merge import PANDAS_TYPES
