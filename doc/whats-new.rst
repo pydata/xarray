@@ -220,6 +220,9 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian/>`_.
+- Warn if the ``dim`` kwarg is passed to rolling operations. This is redundant since a dimension is
+  specified when the :py:class:`DatasetRolling` or :py:class:`DataArrayRolling` object is created.
+  (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian/>`_.
 
 Documentation
 ~~~~~~~~~~~~~
