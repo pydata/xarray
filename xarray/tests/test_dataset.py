@@ -2460,6 +2460,7 @@ class TestDataset:
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
 
+    @requires_cftime
     def test_rename_does_not_change_index_type(self):
         # make sure CFTimeIndex is not converted to DatetimeIndex #3522
 
