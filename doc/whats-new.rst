@@ -135,7 +135,7 @@ Internal Changes
 - Enable type checking on default sentinel values (:pull:`3472`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
-- Add :py:meth:`DataArray._replace` for simpler replacing of a subset of attributes (:pull:`3472`)
+- Add :py:meth:`Variable._replace` for simpler replacing of a subset of attributes (:pull:`3472`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.14.0:
