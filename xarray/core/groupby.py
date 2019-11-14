@@ -584,11 +584,12 @@ class GroupBy(SupportsArithmetic):
         Returns
         -------
         quantiles : Variable
-            If `q` is a single quantile, then the result
-            is a scalar. If multiple percentiles are given, first axis of
-            the result corresponds to the quantile and a quantile dimension
-            is added to the return array. The other dimensions are the
-            dimensions that remain after the reduction of the array.
+            If `q` is a single quantile, then the result is a
+            scalar. If multiple percentiles are given, first axis of
+            the result corresponds to the quantile. In either case a
+            quantile dimension is added to the return array. The other
+            dimensions are the dimensions that remain after the
+            reduction of the array.
 
         See Also
         --------
@@ -607,8 +608,6 @@ class GroupBy(SupportsArithmetic):
             keep_attrs=keep_attrs,
         )
 
-        if np.asarray(q, dtype=np.float64).ndim == 0:
-            out = out.drop_vars("quantile")
         return out
 
     def where(self, cond, other=dtypes.NA):
