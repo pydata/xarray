@@ -656,4 +656,4 @@ def open_zarr(
             return var
 
     variables = {k: maybe_chunk(k, v, chunks) for k, v in ds.variables.items()}
-    return ds._replace_vars_and_dims(variables)
+    return ds._replace_with_new_dims(variables)

@@ -589,6 +589,11 @@ class TestDataset:
         assert "dim1" not in ds.coords
         assert len(ds.coords) == 4
 
+        assert list(ds._indexes) == ["time", "dim2", "dim3"]
+
+        coords_only = Dataset(ds.coords)
+        assert list(coords_only._indexes) == ["time", "dim2", "dim3"]
+
         assert Dataset({"x": np.int64(1), "y": np.float32([1, 2])}).nbytes == 16
 
     def test_asarray(self):
