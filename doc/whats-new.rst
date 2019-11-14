@@ -72,8 +72,6 @@ New Features
   <https://docs.dask.org/en/latest/custom-collections.html#deterministic-hashing>`_
   for xarray objects. Note that xarray objects with a dask.array backend already used
   deterministic hashing in previous releases; this change implements it when whole
-  xarray objects are embedded in a dask graph, e.g. when :py:meth:`DataArray.map_blocks` is
-  invoked. (:issue:`3378`, :pull:`3446`)
   xarray objects are embedded in a dask graph, e.g. when :meth:`DataArray.map` is
   invoked. (:issue:`3378`, :pull:`3446`, :pull:`3515`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
