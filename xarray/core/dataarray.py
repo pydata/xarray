@@ -1020,7 +1020,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # Much faster algorithm for when all indexers are ints, slices, one-dimensional
         # lists, or zero or one-dimensional np.ndarray's
 
-        data = self._variable.isel(indexers)
+        variable = self._variable.isel(indexers)
 
         coords = {}
         for coord_name, coord_value in self._coords.items():
@@ -1033,7 +1033,7 @@ class DataArray(AbstractArray, DataWithCoords):
                     continue
             coords[coord_name] = coord_value
 
-        return DataArray(data=data, coords=coords, name=self.name, fastpath=True)
+        return self._replace(variable=variable, coords=coords)
 
     def sel(
         self,
