@@ -322,8 +322,8 @@ Broadcasting by dimension name
 ``DataArray`` objects are automatically align themselves ("broadcasting" in
 the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
-operations to work, as commonly done in numpy with :py:func:`np.reshape` or
-:py:const:`np.newaxis`.
+operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or
+:py:const:`numpy.newaxis`.
 
 This is best illustrated by a few examples. Consider two one-dimensional
 arrays with different sizes aligned along different dimensions:
