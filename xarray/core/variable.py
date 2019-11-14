@@ -1,5 +1,6 @@
 import functools
 import itertools
+import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
@@ -393,7 +394,9 @@ class Variable(
     def __dask_tokenize__(self):
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
-        return type(self), self._dims, self.data, self._attrs
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._dims, self.data, self._attrs))
 
     def __dask_graph__(self):
         if isinstance(self._data, dask_array_type):
@@ -1425,7 +1428,7 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=False,
+        allow_lazy=None,
         **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
@@ -1466,7 +1469,17 @@ class Variable(
 
         if dim is not None:
             axis = self.get_axis_num(dim)
+
+        if allow_lazy is not None:
+            warnings.warn(
+                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
+                DeprecationWarning,
+            )
+        else:
+            allow_lazy = True
+
         input_data = self.data if allow_lazy else self.values
+
         if axis is not None:
             data = func(input_data, axis=axis, **kwargs)
         else:
@@ -1973,8 +1986,10 @@ class IndexVariable(Variable):
             self._data = PandasIndexAdapter(self._data)
 
     def __dask_tokenize__(self):
+        from dask.base import normalize_token
+
         # Don't waste time converting pd.Index to np.ndarray
-        return (type(self), self._dims, self._data.array, self._attrs)
+        return normalize_token((type(self), self._dims, self._data.array, self._attrs))
 
     def load(self):
         # data is already loaded into memory for IndexVariable

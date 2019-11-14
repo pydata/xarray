@@ -74,6 +74,8 @@ New Features
   deterministic hashing in previous releases; this change implements it when whole
   xarray objects are embedded in a dask graph, e.g. when :py:meth:`DataArray.map_blocks` is
   invoked. (:issue:`3378`, :pull:`3446`)
+  xarray objects are embedded in a dask graph, e.g. when :meth:`DataArray.map` is
+  invoked. (:issue:`3378`, :pull:`3446`, :pull:`3515`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
 - xarray now respects the ``DataArray.encoding["coordinates"]`` attribute when writing to disk.
@@ -91,9 +93,14 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Rolling reduction operations no longer compute dask arrays by default. (:issue:`3161`).
+  In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
   :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
+- Allow appending datetime and bool data variables to zarr stores.
+  (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -220,6 +227,9 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian/>`_.
+- Warn if the ``dim`` kwarg is passed to rolling operations. This is redundant since a dimension is
+  specified when the :py:class:`DatasetRolling` or :py:class:`DataArrayRolling` object is created.
+  (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian/>`_.
 
 Documentation
 ~~~~~~~~~~~~~
