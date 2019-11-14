@@ -79,6 +79,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Harmonize `_FillValue`, `missing_value` during encoding and decoding steps. (:pull:`3502`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
