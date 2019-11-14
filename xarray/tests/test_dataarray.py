@@ -4198,6 +4198,9 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     )
     assert_array_equal(actual.values, expected)
 
+    with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
+        getattr(rolling_obj, name)(dim="time")
+
     # Test center
     rolling_obj = da.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()["time"]
@@ -4213,6 +4216,9 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     # dask version
     rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
+    if name != "count":
+        with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
+            getattr(rolling_obj, name)(dim="time")
     # numpy version
     rolling_obj = da_dask.load().rolling(
         time=window, min_periods=min_periods, center=center

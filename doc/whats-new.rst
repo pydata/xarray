@@ -79,6 +79,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Harmonize `_FillValue`, `missing_value` during encoding and decoding steps. (:pull:`3502`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
@@ -88,9 +90,14 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Rolling reduction operations no longer compute dask arrays by default. (:issue:`3161`).
+  In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
   :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
+- Allow appending datetime and bool data variables to zarr stores.
+  (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -111,7 +118,8 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
-  (:pull:`3238`, :pull:`3447`, :pull:`3508`) by `Justus Magin <https://github.com/keewis>`_.
+  (:pull:`3238`, :pull:`3447`, :pull:`3493`, :pull:`3508`)
+  by `Justus Magin <https://github.com/keewis>`_.
 
   .. note::
 
@@ -128,6 +136,9 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
 - Enable type checking on default sentinel values (:pull:`3472`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
+- Add :py:meth:`Variable._replace` for simpler replacing of a subset of attributes (:pull:`3472`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.14.0:
@@ -217,6 +228,9 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian/>`_.
+- Warn if the ``dim`` kwarg is passed to rolling operations. This is redundant since a dimension is
+  specified when the :py:class:`DatasetRolling` or :py:class:`DataArrayRolling` object is created.
+  (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian/>`_.
 
 Documentation
 ~~~~~~~~~~~~~
