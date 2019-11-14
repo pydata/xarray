@@ -102,7 +102,6 @@ class TestEncodeCFVariable:
         with pytest.warns(Warning, match="floating point data as an integer"):
             conventions.encode_cf_variable(v)
 
-    @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_multidimensional_coordinates(self):
         # regression test for GH1763
         # Set up test case with coordinates that have overlapping (but not
