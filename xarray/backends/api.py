@@ -718,7 +718,7 @@ def open_mfdataset(
     autoclose=None,
     parallel=False,
     join="outer",
-    master_file=0,
+    attrs_file=0,
     **kwargs,
 ):
     """Open multiple files as a single dataset.
@@ -730,7 +730,7 @@ def open_mfdataset(
     ``combine_by_coords`` and ``combine_nested``. By default the old (now deprecated)
     ``auto_combine`` will be used, please specify either ``combine='by_coords'`` or
     ``combine='nested'`` in future. Requires dask to be installed. See documentation for
-    details on dask [1]. Global attributes from the ``master_file`` are used
+    details on dask [1]. Global attributes from the ``attrs_file`` are used
     for the combined dataset.
 
     Parameters
@@ -826,7 +826,7 @@ def open_mfdataset(
         - 'override': if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    master_file : int or str, optional
+    attrs_file : int or str, optional
         Index or path of the file used to read global attributes from.
         For instance use -1 to read history from the last file.
         Note that wildcard matches are sorted by filename.
@@ -966,9 +966,9 @@ def open_mfdataset(
     combined._file_obj = _MultiFileCloser(file_objs)
 
     # read global attributes from the master file path or index
-    if isinstance(master_file, str):
-        master_file = paths.index(master_file)
-    combined.attrs = datasets[master_file].attrs
+    if isinstance(attrs_file, str):
+        attrs_file = paths.index(attrs_file)
+    combined.attrs = datasets[attrs_file].attrs
 
     return combined
 

@@ -2799,7 +2799,7 @@ class TestDask(DatasetIOBase):
                     with raises_regex(AttributeError, "no attribute"):
                         actual.test2
 
-    def test_open_mfdataset_master_file_index(self):
+    def test_open_mfdataset_attrs_file_index(self):
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_files(2) as (tmp1, tmp2):
             ds1 = original.isel(x=slice(5))
@@ -2809,14 +2809,14 @@ class TestDask(DatasetIOBase):
             ds1.to_netcdf(tmp1)
             ds2.to_netcdf(tmp2)
             with open_mfdataset(
-                [tmp1, tmp2], concat_dim="x", combine="nested", master_file=-1
+                [tmp1, tmp2], concat_dim="x", combine="nested", attrs_file=-1
             ) as actual:
                 # attributes are inherited from the master file
                 assert actual.attrs["test2"] == ds2.attrs["test2"]
                 # attributes from ds1 are not retained, e.g.,
                 assert "test1" not in actual.attrs
 
-    def test_open_mfdataset_master_file_path(self):
+    def test_open_mfdataset_attrs_file_path(self):
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_files(2) as (tmp1, tmp2):
             ds1 = original.isel(x=slice(5))
@@ -2826,7 +2826,7 @@ class TestDask(DatasetIOBase):
             ds1.to_netcdf(tmp1)
             ds2.to_netcdf(tmp2)
             with open_mfdataset(
-                [tmp1, tmp2], concat_dim="x", combine="nested", master_file=tmp2
+                [tmp1, tmp2], concat_dim="x", combine="nested", attrs_file=tmp2
             ) as actual:
                 # attributes are inherited from the master file
                 assert actual.attrs["test2"] == ds2.attrs["test2"]
