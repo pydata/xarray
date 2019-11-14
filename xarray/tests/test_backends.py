@@ -33,6 +33,7 @@ from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.coding.variables import SerializationWarning
+from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
@@ -531,14 +532,26 @@ class DatasetIOBase:
                 assert_identical(expected, actual)
 
     def test_roundtrip_global_coordinates(self):
-        original = Dataset({"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])})
+        original = Dataset(
+            {"foo": ("x", [0, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
+        )
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
+
+        # test that global "coordinates" is as expected
+        _, attrs = encode_dataset_coordinates(original)
+        assert attrs["coordinates"] == "y"
+
+        # test warning when global "coordinates" is already set
+        original.attrs["coordinates"] = "foo"
+        with pytest.warns(SerializationWarning):
+            _, attrs = encode_dataset_coordinates(original)
+            assert attrs["coordinates"] == "foo"
 
     def test_roundtrip_coordinates_with_space(self):
         original = Dataset(coords={"x": 0, "y z": 1})
         expected = Dataset({"y z": 1}, {"x": 0})
-        with pytest.warns(xr.SerializationWarning):
+        with pytest.warns(SerializationWarning):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
 

@@ -692,7 +692,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 f"cannot serialize global coordinates {global_coordinates!r} because the global "
                 f"attribute 'coordinates' already exists. This may prevent faithful roundtripping"
                 f"of xarray datasets",
-                UserWarning,
+                SerializationWarning,
             )
         else:
             attributes["coordinates"] = " ".join(map(str, global_coordinates))
