@@ -542,6 +542,15 @@ class VariableSubclassobjects:
         with raises_regex(ValueError, "must match shape of object"):
             orig.copy(data=new_data)
 
+    def test_replace(self):
+        var = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
+        result = var._replace()
+        assert_identical(result, var)
+
+        new_data = np.arange(4).reshape(2, 2)
+        result = var._replace(data=new_data)
+        assert_equal(result.data, new_data)
+
     def test_real_and_imag(self):
         v = self.cls("x", np.arange(3) - 1j * np.arange(3), {"foo": "bar"})
         expected_re = self.cls("x", np.arange(3), {"foo": "bar"})
