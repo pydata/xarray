@@ -1940,7 +1940,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             dims.update(dict(zip(var_value.dims, var_value.shape)))
 
         # Restore order
-        dims = {k: dims[k] for k, v in self._dims.items() if k in dims}
+        dims = {k: dims[k] for k in self._dims if k in dims}
 
         return self._construct_direct(
             variables=variables,
