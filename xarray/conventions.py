@@ -662,6 +662,8 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
 
     variables = {k: v.copy(deep=False) for k, v in variables.items()}
+
+    # keep track of variable names written to file under the "coordinates" attributes
     written_coords = set()
     for name, var in variables.items():
         encoding = var.encoding
@@ -676,14 +678,13 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         if "coordinates" in attrs:
             written_coords.update(attrs["coordinates"].split())
 
-    global_coordinates.difference_update(written_coords)
-
     # These coordinates are not associated with any particular variables, so we
     # save them under a global 'coordinates' attribute so xarray can roundtrip
     # the dataset faithfully. Because this serialization goes beyond CF
     # conventions, only do it if necessary.
     # Reference discussion:
     # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/007571.html
+    global_coordinates.difference_update(written_coords)
     if global_coordinates:
         attributes = dict(attributes)
         if "coordinates" in attributes:
