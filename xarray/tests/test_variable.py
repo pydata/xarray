@@ -1154,6 +1154,26 @@ class TestVariable(VariableSubclassobjects):
     def test_getitem_basic(self):
         v = self.cls(["x", "y"], [[0, 1, 2], [3, 4, 5]])
 
+        # int argument
+        v_new = v[0]
+        assert v_new.dims == ("y",)
+        assert_array_equal(v_new, v._data[0])
+
+        # slice argument
+        v_new = v[:2]
+        assert v_new.dims == ("x", "y")
+        assert_array_equal(v_new, v._data[:2])
+
+        # list arguments
+        v_new = v[[0]]
+        assert v_new.dims == ("x", "y")
+        assert_array_equal(v_new, v._data[[0]])
+
+        v_new = v[[]]
+        assert v_new.dims == ("x", "y")
+        assert_array_equal(v_new, v._data[[]])
+
+        # dict arguments
         v_new = v[dict(x=0)]
         assert v_new.dims == ("y",)
         assert_array_equal(v_new, v._data[0])
@@ -1194,6 +1214,8 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.isel(time=0), v[0])
         assert_identical(v.isel(time=slice(0, 3)), v[:3])
         assert_identical(v.isel(x=0), v[:, 0])
+        assert_identical(v.isel(x=[0, 2]), v[:, [0, 2]])
+        assert_identical(v.isel(time=[]), v[[]])
         with raises_regex(ValueError, "do not exist"):
             v.isel(not_a_dim=0)
 

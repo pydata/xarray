@@ -51,6 +51,7 @@ from .coordinates import (
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes
+from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
@@ -1012,8 +1013,27 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.sel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
-        ds = self._to_temp_dataset().isel(drop=drop, indexers=indexers)
-        return self._from_temp_dataset(ds)
+        if any(is_fancy_indexer(idx) for idx in indexers.values()):
+            ds = self._to_temp_dataset()._isel_fancy(indexers, drop=drop)
+            return self._from_temp_dataset(ds)
+
+        # Much faster algorithm for when all indexers are ints, slices, one-dimensional
+        # lists, or zero or one-dimensional np.ndarray's
+
+        data = self._variable.isel(indexers)
+
+        coords = {}
+        for coord_name, coord_value in self._coords.items():
+            coord_indexers = {
+                k: v for k, v in indexers.items() if k in coord_value.dims
+            }
+            if coord_indexers:
+                coord_value = coord_value.isel(coord_indexers)
+                if drop and coord_value.ndim == 0:
+                    continue
+            coords[coord_name] = coord_value
+
+        return DataArray(data=data, coords=coords, name=self.name, fastpath=True)
 
     def sel(
         self,

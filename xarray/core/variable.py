@@ -617,7 +617,10 @@ class Variable(
                 k = k.data
             if not isinstance(k, BASIC_INDEXING_TYPES):
                 k = np.asarray(k)
-                if k.dtype.kind == "b":
+                if k.size == 0:
+                    # Slice by empty list; numpy could not infer the dtype
+                    k = k.astype(int)
+                elif k.dtype.kind == "b":
                     (k,) = np.nonzero(k)
             new_key.append(k)
 
