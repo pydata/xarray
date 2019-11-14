@@ -79,6 +79,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix a bug in `set_index` in case that an existing dimension becomes a level variable of MultiIndex. (:pull:`3520`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Harmonize `_FillValue`, `missing_value` during encoding and decoding steps. (:pull:`3502`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_. 
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
