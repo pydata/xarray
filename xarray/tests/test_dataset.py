@@ -8,6 +8,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.core.indexes.datetimes import DatetimeIndex
 
 import xarray as xr
 from xarray import (
@@ -22,6 +23,7 @@ from xarray import (
     open_dataset,
     set_options,
 )
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
@@ -2457,6 +2459,29 @@ class TestDataset:
         names_dict_bad = {"x_bad": "x_new"}
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
+
+    def test_rename_does_not_change_index_type(self):
+        # make sure CFTimeIndex is not converted to DatetimeIndex #3522
+
+        time = xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+
+        ds = Dataset(coords={"time": time})
+
+        # make sure renaming does not change the type of the index
+        assert isinstance(ds.indexes["time"], CFTimeIndex)
+        assert isinstance(ds.rename().indexes["time"], CFTimeIndex)
+        assert isinstance(ds.rename_dims().indexes["time"], CFTimeIndex)
+        assert isinstance(ds.rename_vars().indexes["time"], CFTimeIndex)
+
+        time = pd.date_range(start="2000", periods=6, freq="2MS")
+
+        ds = Dataset(coords={"time": time})
+
+        # make sure renaming does not change the type of the index
+        assert isinstance(ds.indexes["time"], DatetimeIndex)
+        assert isinstance(ds.rename().indexes["time"], DatetimeIndex)
+        assert isinstance(ds.rename_dims().indexes["time"], DatetimeIndex)
+        assert isinstance(ds.rename_vars().indexes["time"], DatetimeIndex)
 
     def test_swap_dims(self):
         original = Dataset({"x": [1, 2, 3], "y": ("x", list("abc")), "z": 42})

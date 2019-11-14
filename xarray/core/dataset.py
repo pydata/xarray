@@ -2667,7 +2667,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     verify_integrity=False,
                 )
             else:
-                index = pd.Index(v, name=new_name)
+                index = v
+                index.name = new_name
             indexes[new_name] = index
         return indexes
 
