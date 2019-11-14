@@ -549,7 +549,7 @@ class VariableSubclassobjects:
 
         new_data = np.arange(4).reshape(2, 2)
         result = var._replace(data=new_data)
-        assert_equal(result.data, new_data)
+        assert_array_equal(result.data, new_data)
 
     def test_real_and_imag(self):
         v = self.cls("x", np.arange(3) - 1j * np.arange(3), {"foo": "bar"})
