@@ -8,6 +8,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.core.indexes.datetimes import DatetimeIndex
 
 import xarray as xr
 from xarray import (
@@ -22,6 +23,7 @@ from xarray import (
     open_dataset,
     set_options,
 )
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
@@ -2457,6 +2459,53 @@ class TestDataset:
         names_dict_bad = {"x_bad": "x_new"}
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
+
+    @requires_cftime
+    def test_rename_does_not_change_CFTimeIndex_type(self):
+        # make sure CFTimeIndex is not converted to DatetimeIndex #3522
+
+        time = xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+        orig = Dataset(coords={"time": time})
+
+        renamed = orig.rename(time="time_new")
+        assert "time_new" in renamed.indexes
+        assert isinstance(renamed.indexes["time_new"], CFTimeIndex)
+        assert renamed.indexes["time_new"].name == "time_new"
+
+        # check original has not changed
+        assert "time" in orig.indexes
+        assert isinstance(orig.indexes["time"], CFTimeIndex)
+        assert orig.indexes["time"].name == "time"
+
+        # note: rename_dims(time="time_new") drops "ds.indexes"
+        renamed = orig.rename_dims()
+        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+
+        renamed = orig.rename_vars()
+        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+
+    def test_rename_does_not_change_DatetimeIndex_type(self):
+        # make sure DatetimeIndex is conderved on rename
+
+        time = pd.date_range(start="2000", periods=6, freq="2MS")
+        orig = Dataset(coords={"time": time})
+
+        renamed = orig.rename(time="time_new")
+        assert "time_new" in renamed.indexes
+        assert isinstance(renamed.indexes["time_new"], DatetimeIndex)
+        assert renamed.indexes["time_new"].name == "time_new"
+
+        # check original has not changed
+        assert "time" in orig.indexes
+        assert isinstance(orig.indexes["time"], DatetimeIndex)
+        assert orig.indexes["time"].name == "time"
+
+        # note: rename_dims(time="time_new") drops "ds.indexes"
+        renamed = orig.rename_dims()
+        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+
+        renamed = orig.rename_vars()
+        assert isinstance(renamed.indexes["time"], DatetimeIndex)
 
     def test_swap_dims(self):
         original = Dataset({"x": [1, 2, 3], "y": ("x", list("abc")), "z": 42})
