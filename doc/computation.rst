@@ -95,6 +95,9 @@ for filling missing values via 1D interpolation.
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
 of which values to use as the index in the interpolation.
+xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
+data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
+for more.
 
 Aggregation
 ===========
@@ -183,7 +186,7 @@ a value when aggregating:
 
    Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects.
 
-.. _bottleneck: https://github.com/kwgoodman/bottleneck/
+.. _bottleneck: https://github.com/pydata/bottleneck/
 
 We can also manually iterate through ``Rolling`` objects:
 
@@ -462,13 +465,13 @@ Datasets support most of the same methods found on data arrays:
     abs(ds)
 
 Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
-alternatively you can use :py:meth:`~xarray.Dataset.apply` to apply a function
+alternatively you can use :py:meth:`~xarray.Dataset.map` to map a function
 to each variable in a dataset:
 
 .. ipython:: python
 
     np.sin(ds)
-    ds.apply(np.sin)
+    ds.map(np.sin)
 
 Datasets also use looping over variables for *broadcasting* in binary
 arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:

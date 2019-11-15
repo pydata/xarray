@@ -8,6 +8,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.core.indexes.datetimes import DatetimeIndex
 
 import xarray as xr
 from xarray import (
@@ -22,6 +23,7 @@ from xarray import (
     open_dataset,
     set_options,
 )
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
@@ -90,6 +92,14 @@ def create_append_test_data(seed=None):
     string_var = np.array(["ae", "bc", "df"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
     unicode_var = ["áó", "áó", "áó"]
+    datetime_var = np.array(
+        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
+    )
+    datetime_var_to_append = np.array(
+        ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
+    )
+    bool_var = np.array([True, False, True], dtype=np.bool)
+    bool_var_to_append = np.array([False, True], dtype=np.bool)
 
     ds = xr.Dataset(
         data_vars={
@@ -102,6 +112,8 @@ def create_append_test_data(seed=None):
             "unicode_var": xr.DataArray(
                 unicode_var, coords=[time1], dims=["time"]
             ).astype(np.unicode_),
+            "datetime_var": xr.DataArray(datetime_var, coords=[time1], dims=["time"]),
+            "bool_var": xr.DataArray(bool_var, coords=[time1], dims=["time"]),
         }
     )
 
@@ -118,6 +130,10 @@ def create_append_test_data(seed=None):
             "unicode_var": xr.DataArray(
                 unicode_var[:nt2], coords=[time2], dims=["time"]
             ).astype(np.unicode_),
+            "datetime_var": xr.DataArray(
+                datetime_var_to_append, coords=[time2], dims=["time"]
+            ),
+            "bool_var": xr.DataArray(bool_var_to_append, coords=[time2], dims=["time"]),
         }
     )
 
@@ -2444,6 +2460,53 @@ class TestDataset:
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
 
+    @requires_cftime
+    def test_rename_does_not_change_CFTimeIndex_type(self):
+        # make sure CFTimeIndex is not converted to DatetimeIndex #3522
+
+        time = xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+        orig = Dataset(coords={"time": time})
+
+        renamed = orig.rename(time="time_new")
+        assert "time_new" in renamed.indexes
+        assert isinstance(renamed.indexes["time_new"], CFTimeIndex)
+        assert renamed.indexes["time_new"].name == "time_new"
+
+        # check original has not changed
+        assert "time" in orig.indexes
+        assert isinstance(orig.indexes["time"], CFTimeIndex)
+        assert orig.indexes["time"].name == "time"
+
+        # note: rename_dims(time="time_new") drops "ds.indexes"
+        renamed = orig.rename_dims()
+        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+
+        renamed = orig.rename_vars()
+        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+
+    def test_rename_does_not_change_DatetimeIndex_type(self):
+        # make sure DatetimeIndex is conderved on rename
+
+        time = pd.date_range(start="2000", periods=6, freq="2MS")
+        orig = Dataset(coords={"time": time})
+
+        renamed = orig.rename(time="time_new")
+        assert "time_new" in renamed.indexes
+        assert isinstance(renamed.indexes["time_new"], DatetimeIndex)
+        assert renamed.indexes["time_new"].name == "time_new"
+
+        # check original has not changed
+        assert "time" in orig.indexes
+        assert isinstance(orig.indexes["time"], DatetimeIndex)
+        assert orig.indexes["time"].name == "time"
+
+        # note: rename_dims(time="time_new") drops "ds.indexes"
+        renamed = orig.rename_dims()
+        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+
+        renamed = orig.rename_vars()
+        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+
     def test_swap_dims(self):
         original = Dataset({"x": [1, 2, 3], "y": ("x", list("abc")), "z": 42})
         expected = Dataset({"z": 42}, {"x": ("y", [1, 2, 3]), "y": list("abc")})
@@ -3310,17 +3373,17 @@ class TestDataset:
             return x
 
         for k in ["x", "c", "y"]:
-            actual = data.groupby(k, squeeze=False).apply(identity)
+            actual = data.groupby(k, squeeze=False).map(identity)
             assert_equal(data, actual)
 
     def test_groupby_returns_new_type(self):
         data = Dataset({"z": (["x", "y"], np.random.randn(3, 5))})
 
-        actual = data.groupby("x").apply(lambda ds: ds["z"])
+        actual = data.groupby("x").map(lambda ds: ds["z"])
         expected = data["z"]
         assert_identical(expected, actual)
 
-        actual = data["z"].groupby("x").apply(lambda x: x.to_dataset())
+        actual = data["z"].groupby("x").map(lambda x: x.to_dataset())
         expected = data
         assert_identical(expected, actual)
 
@@ -3639,7 +3702,7 @@ class TestDataset:
         times = pd.date_range("2000", freq="D", periods=3)
         ds = xr.Dataset({"foo": ("time", [1.0, 1.0, 1.0]), "time": times})
         expected = xr.Dataset({"foo": ("time", [3.0, 3.0, 3.0]), "time": times})
-        actual = ds.resample(time="D").apply(func, args=(1.0,), arg3=1.0)
+        actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
 
     def test_to_array(self):
@@ -4515,30 +4578,35 @@ class TestDataset:
         actual = ds.count()
         assert_identical(expected, actual)
 
-    def test_apply(self):
+    def test_map(self):
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
-        assert_identical(data.apply(np.mean), data.mean())
+        assert_identical(data.map(np.mean), data.mean())
 
         expected = data.mean(keep_attrs=True)
-        actual = data.apply(lambda x: x.mean(keep_attrs=True), keep_attrs=True)
+        actual = data.map(lambda x: x.mean(keep_attrs=True), keep_attrs=True)
         assert_identical(expected, actual)
 
-        assert_identical(
-            data.apply(lambda x: x, keep_attrs=True), data.drop_vars("time")
-        )
+        assert_identical(data.map(lambda x: x, keep_attrs=True), data.drop_vars("time"))
 
         def scale(x, multiple=1):
             return multiple * x
 
-        actual = data.apply(scale, multiple=2)
+        actual = data.map(scale, multiple=2)
         assert_equal(actual["var1"], 2 * data["var1"])
         assert_identical(actual["numbers"], data["numbers"])
 
-        actual = data.apply(np.asarray)
+        actual = data.map(np.asarray)
         expected = data.drop_vars("time")  # time is not used on a data var
         assert_equal(expected, actual)
+
+    def test_apply_pending_deprecated_map(self):
+        data = create_test_data()
+        data.attrs["foo"] = "bar"
+
+        with pytest.warns(PendingDeprecationWarning):
+            assert_identical(data.apply(np.mean), data.mean())
 
     def make_example_math_dataset(self):
         variables = {
@@ -4566,15 +4634,15 @@ class TestDataset:
     def test_unary_ops(self):
         ds = self.make_example_math_dataset()
 
-        assert_identical(ds.apply(abs), abs(ds))
-        assert_identical(ds.apply(lambda x: x + 4), ds + 4)
+        assert_identical(ds.map(abs), abs(ds))
+        assert_identical(ds.map(lambda x: x + 4), ds + 4)
 
         for func in [
             lambda x: x.isnull(),
             lambda x: x.round(),
             lambda x: x.astype(int),
         ]:
-            assert_identical(ds.apply(func), func(ds))
+            assert_identical(ds.map(func), func(ds))
 
         assert_identical(ds.isnull(), ~ds.notnull())
 
@@ -4587,7 +4655,7 @@ class TestDataset:
     def test_dataset_array_math(self):
         ds = self.make_example_math_dataset()
 
-        expected = ds.apply(lambda x: x - ds["foo"])
+        expected = ds.map(lambda x: x - ds["foo"])
         assert_identical(expected, ds - ds["foo"])
         assert_identical(expected, -ds["foo"] + ds)
         assert_identical(expected, ds - ds["foo"].variable)
@@ -4596,7 +4664,7 @@ class TestDataset:
         actual -= ds["foo"]
         assert_identical(expected, actual)
 
-        expected = ds.apply(lambda x: x + ds["bar"])
+        expected = ds.map(lambda x: x + ds["bar"])
         assert_identical(expected, ds + ds["bar"])
         actual = ds.copy(deep=True)
         actual += ds["bar"]
@@ -4612,7 +4680,7 @@ class TestDataset:
         assert_identical(ds, ds + 0 * ds)
         assert_identical(ds, ds + {"foo": 0, "bar": 0})
 
-        expected = ds.apply(lambda x: 2 * x)
+        expected = ds.map(lambda x: 2 * x)
         assert_identical(expected, 2 * ds)
         assert_identical(expected, ds + ds)
         assert_identical(expected, ds + ds.data_vars)
@@ -4709,7 +4777,7 @@ class TestDataset:
         assert_identical(expected, actual)
 
         actual = ds.transpose("x", "y")
-        expected = ds.apply(lambda x: x.transpose("x", "y", transpose_coords=True))
+        expected = ds.map(lambda x: x.transpose("x", "y", transpose_coords=True))
         assert_identical(expected, actual)
 
         ds = create_test_data()
