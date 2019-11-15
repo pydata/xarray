@@ -83,6 +83,10 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when 
+  calling :py:meth:`Dataset.rename` (also :py:meth:`Dataset.rename_dims`
+  and :py:meth:`xr.Dataset.rename_vars`). By `Mathias Hauser <https://github.com/mathause>`_
+  (:issue:`3522`).
 - Fix a bug in `set_index` in case that an existing dimension becomes a level variable of MultiIndex. (:pull:`3520`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Harmonize `_FillValue`, `missing_value` during encoding and decoding steps. (:pull:`3502`)
