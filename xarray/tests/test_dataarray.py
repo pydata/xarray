@@ -1182,6 +1182,16 @@ class TestDataArray:
         expected = expected.set_index(xy=["x", "y"]).unstack()
         assert_identical(expected, actual)
 
+    def test_selection_multiindex_from_level(self):
+        # GH: 3512
+        da = DataArray([0, 1], dims=["x"], coords={"x": [0, 1], "y": "a"})
+        db = DataArray([2, 3], dims=["x"], coords={"x": [0, 1], "y": "b"})
+        data = xr.concat([da, db], dim="x").set_index(xy=["x", "y"])
+        assert data.dims == ("xy",)
+        actual = data.sel(y="a")
+        expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop("y")
+        assert_equal(actual, expected)
+
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims="x")
         expected = DataArray(range(5), dims="x", name="x")
@@ -4188,6 +4198,9 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     )
     assert_array_equal(actual.values, expected)
 
+    with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
+        getattr(rolling_obj, name)(dim="time")
+
     # Test center
     rolling_obj = da.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()["time"]
@@ -4203,6 +4216,9 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     # dask version
     rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
+    if name != "count":
+        with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
+            getattr(rolling_obj, name)(dim="time")
     # numpy version
     rolling_obj = da_dask.load().rolling(
         time=window, min_periods=min_periods, center=center

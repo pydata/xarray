@@ -204,6 +204,7 @@ def merge_indexes(
     """
     vars_to_replace: Dict[Hashable, Variable] = {}
     vars_to_remove: List[Hashable] = []
+    dims_to_replace: Dict[Hashable, Hashable] = {}
     error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
@@ -244,7 +245,7 @@ def merge_indexes(
         if not len(names) and len(var_names) == 1:
             idx = pd.Index(variables[var_names[0]].values)
 
-        else:
+        else:  # MultiIndex
             for n in var_names:
                 try:
                     var = variables[n]
@@ -256,15 +257,22 @@ def merge_indexes(
                 levels.append(cat.categories)
 
             idx = pd.MultiIndex(levels, codes, names=names)
+            for n in names:
+                dims_to_replace[n] = dim
 
         vars_to_replace[dim] = IndexVariable(dim, idx)
         vars_to_remove.extend(var_names)
 
     new_variables = {k: v for k, v in variables.items() if k not in vars_to_remove}
     new_variables.update(vars_to_replace)
+
+    # update dimensions if necessary  GH: 3512
+    for k, v in new_variables.items():
+        if any(d in dims_to_replace for d in v.dims):
+            new_dims = [dims_to_replace.get(d, d) for d in v.dims]
+            new_variables[k] = v._replace(dims=new_dims)
     new_coord_names = coord_names | set(vars_to_replace)
     new_coord_names -= set(vars_to_remove)
-
     return new_variables, new_coord_names
 
 
@@ -411,8 +419,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     coordinates used for label based indexing.
     """
 
-    _accessors: Optional[Dict[str, Any]]
     _attrs: Optional[Dict[Hashable, Any]]
+    _cache: Dict[str, Any]
     _coord_names: Set[Hashable]
     _dims: Dict[Hashable, int]
     _encoding: Optional[Dict[Hashable, Any]]
@@ -420,8 +428,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _variables: Dict[Hashable, Variable]
 
     __slots__ = (
-        "_accessors",
         "_attrs",
+        "_cache",
         "_coord_names",
         "_dims",
         "_encoding",
@@ -527,7 +535,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             data_vars, coords, compat=compat
         )
 
-        self._accessors = None
         self._attrs = dict(attrs) if attrs is not None else None
         self._file_obj = None
         self._encoding = None
@@ -652,7 +659,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self
 
     def __dask_tokenize__(self):
-        return (type(self), self._variables, self._coord_names, self._attrs)
+        from dask.base import normalize_token
+
+        return normalize_token(
+            (type(self), self._variables, self._coord_names, self._attrs)
+        )
 
     def __dask_graph__(self):
         graphs = {k: v.__dask_graph__() for k, v in self.variables.items()}
@@ -858,7 +869,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._attrs = attrs
         obj._file_obj = file_obj
         obj._encoding = encoding
-        obj._accessors = None
         return obj
 
     @classmethod
@@ -3898,43 +3908,68 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, Hashable] = True,
+        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
         **kwargs: Any,
     ) -> "Dataset":
-        """Interpolate values according to different methods.
+        """Fill in NaNs by interpolating according to different methods.
 
         Parameters
         ----------
-        dim : Hashable
+        dim : str
             Specifies the dimension along which to interpolate.
+
         method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
                   'polynomial', 'barycentric', 'krog', 'pchip',
                   'spline'}, optional
-
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation (Default). Additional keyword
-              arguments are passed to ``numpy.interp``
-            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
-              'polynomial': are passed to ``scipy.interpolate.interp1d``. If
-              method=='polynomial', the ``order`` keyword argument must also be
+              arguments are passed to :py:func:`numpy.interp`
+            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
+              are passed to :py:func:`scipy.interpolate.interp1d`. If
+              ``method='polynomial'``, the ``order`` keyword argument must also be
               provided.
-            - 'barycentric', 'krog', 'pchip', 'spline': use their respective
-              ``scipy.interpolate`` classes.
-        use_coordinate : boolean or str, default True
+            - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
+              respective :py:class:`scipy.interpolate` classes.
+        use_coordinate : bool, str, default True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
-            eqaully-spaced along `dim`. If True, the IndexVariable `dim` is
-            used. If use_coordinate is a string, it specifies the name of a
+            eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
+            used. If ``use_coordinate`` is a string, it specifies the name of a
             coordinate variariable to use as the index.
         limit : int, default None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
-            or None for no limit.
-        kwargs : any
-            parameters passed verbatim to the underlying interplation function
+            or None for no limit. This filling is done regardless of the size of
+            the gap in the data. To only interpolate over gaps less than a given length,
+            see ``max_gap``.
+        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, default None.
+            Maximum size of gap, a continuous sequence of NaNs, that will be filled.
+            Use None for no limit. When interpolating along a datetime64 dimension
+            and ``use_coordinate=True``, ``max_gap`` can be one of the following:
+
+            - a string that is valid input for pandas.to_timedelta
+            - a :py:class:`numpy.timedelta64` object
+            - a :py:class:`pandas.Timedelta` object
+            Otherwise, ``max_gap`` must be an int or a float. Use of ``max_gap`` with unlabeled
+            dimensions has not been implemented yet. Gap length is defined as the difference
+            between coordinate values at the first data point after a gap and the last value
+            before a gap. For gaps at the beginning (end), gap length is defined as the difference
+            between coordinate values at the first (last) valid data point and the first (last) NaN.
+            For example, consider::
+
+                <xarray.DataArray (x: 9)>
+                array([nan, nan, nan,  1., nan, nan,  4., nan, nan])
+                Coordinates:
+                  * x        (x) int64 0 1 2 3 4 5 6 7 8
+
+            The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
+        kwargs : dict, optional
+            parameters passed verbatim to the underlying interpolation function
 
         Returns
         -------
-        Dataset
+        interpolated: Dataset
+            Filled in Dataset.
 
         See also
         --------
@@ -3950,6 +3985,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             method=method,
             limit=limit,
             use_coordinate=use_coordinate,
+            max_gap=max_gap,
             **kwargs,
         )
         return new
@@ -4030,7 +4066,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         keep_attrs: bool = None,
         keepdims: bool = False,
         numeric_only: bool = False,
-        allow_lazy: bool = False,
+        allow_lazy: bool = None,
         **kwargs: Any,
     ) -> "Dataset":
         """Reduce this dataset by applying `func` along some dimension(s).
