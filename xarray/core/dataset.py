@@ -2667,8 +2667,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     verify_integrity=False,
                 )
             else:
-                index = v
-                index.name = new_name
+                index = v.rename(new_name)
             indexes[new_name] = index
         return indexes
 
