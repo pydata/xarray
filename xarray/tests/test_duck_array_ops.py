@@ -274,23 +274,28 @@ def assert_dask_array(da, dask):
 
 
 @arm_xfail
-@pytest.mark.parametrize("dask", [False, True])
-def test_datetime_reduce(dask):
-    time = np.array(pd.date_range("15/12/1999", periods=11))
-    time[8:11] = np.nan
-    da = DataArray(np.linspace(0, 365, num=11), dims="time", coords={"time": time})
+def test_datetime_mean():
+    # Note: only testing numpy, as dask is broken upstream
+    da = DataArray(
+        np.array(["2010-01-01", "NaT", "2010-01-03"], dtype="M8"), dims=["time"]
+    )
+    expect = DataArray(np.array("2010-01-02", dtype="M8"))
+    expect_nat = DataArray(np.array("NaT", dtype="M8"))
 
-    if dask and has_dask:
-        chunks = {"time": 5}
-        da = da.chunk(chunks)
+    actual = da.mean()
+    assert_equal(actual, expect)
+    actual = da.mean(skipna=False)
+    assert_equal(actual, expect_nat)
 
-    actual = da["time"].mean()
-    assert not pd.isnull(actual)
-    actual = da["time"].mean(skipna=False)
-    assert pd.isnull(actual)
+    # tests for 1d array full of NaT
+    assert_equal(da[[1]].mean(), expect_nat)
+    assert_equal(da[[1]].mean(skipna=False), expect_nat)
 
-    # test for a 0d array
-    assert da["time"][0].mean() == da["time"][:1].mean()
+    # tests for a 0d array
+    assert_equal(da[0].mean(), da[0])
+    assert_equal(da[0].mean(skipna=False), da[0])
+    assert_equal(da[1].mean(), expect_nat)
+    assert_equal(da[1].mean(skipna=False), expect_nat)
 
 
 @requires_cftime

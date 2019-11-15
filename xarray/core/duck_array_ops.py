@@ -357,6 +357,7 @@ def _datetime_crude_nanmin(array):
 
     - can't accept an axis parameter
     - will return incorrect results if the array exclusively contains NaT
+    - doesn't work with dask!
     """
     if LooseVersion(np.__version__) < "1.18":
         # numpy.min < 1.18 incorrectly skips NaT - which we exploit here
@@ -371,10 +372,8 @@ def _datetime_crude_nanmin(array):
     array = array.ravel()
     array = array[~pandas_isnull(array)]
 
-    assert array.dtype.kind in "Mm"
     assert array.dtype.itemsize == 8
     initial = np.array(2 ** 63 - 1, dtype=array.dtype)
-
     return min(array, initial=initial, skipna=False)
 
 
