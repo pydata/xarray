@@ -38,6 +38,10 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+
+- Added the ``max_gap`` kwarg to :py:meth:`~xarray.DataArray.interpolate_na` and
+  :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
+  gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
   :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
   dropping variables (including coordinates). The existing ``drop`` methods remain as a backward compatible 
@@ -76,9 +80,17 @@ New Features
   invoked. (:issue:`3378`, :pull:`3446`, :pull:`3515`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
+- Add the documented-but-missing :py:meth:`xarray.core.groupby.DatasetGroupBy.quantile`.
+  (:issue:`3525`, :pull:`3527`). By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
+- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when 
+  calling :py:meth:`Dataset.rename` (also :py:meth:`Dataset.rename_dims`
+  and :py:meth:`xr.Dataset.rename_vars`). By `Mathias Hauser <https://github.com/mathause>`_
+  (:issue:`3522`).
+- Fix a bug in `set_index` in case that an existing dimension becomes a level variable of MultiIndex. (:pull:`3520`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Harmonize `_FillValue`, `missing_value` during encoding and decoding steps. (:pull:`3502`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_. 
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
