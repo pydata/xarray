@@ -80,6 +80,8 @@ New Features
   invoked. (:issue:`3378`, :pull:`3446`, :pull:`3515`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
+- Add the documented-but-missing :py:meth:`xarray.core.groupby.DatasetGroupBy.quantile`.
+  (:issue:`3525`, :pull:`3527`). By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
