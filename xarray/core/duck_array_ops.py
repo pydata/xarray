@@ -10,6 +10,7 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
+from distutils.version import LooseVersion
 
 from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
@@ -351,6 +352,32 @@ cumsum_1d.numeric_only = True
 _mean = _create_nan_agg_method("mean")
 
 
+def _datetime_crude_nanmin(array):
+    """Implement nanmin for datetime64 arrays, with caveats:
+
+    - can't accept an axis parameter
+    - will return incorrect results if the array exclusively contains NaT
+    """
+    if LooseVersion(np.__version__) < "1.18":
+        # numpy.min < 1.18 incorrectly skips NaT - which we exploit here
+        return min(array, skipna=False)
+    # This requires numpy >= 1.15
+
+    from .dataarray import DataArray
+    from .variable import Variable
+
+    if isinstance(array, (DataArray, Variable)):
+        array = array.data
+    array = array.ravel()
+    array = array[~pandas_isnull(array)]
+
+    assert array.dtype.kind in "Mm"
+    assert array.dtype.itemsize == 8
+    initial = np.array(2 ** 63 - 1, dtype=array.dtype)
+
+    return min(array, initial=initial, skipna=False)
+
+
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to an array of floats.
 
@@ -370,7 +397,10 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """
     # TODO: make this function dask-compatible?
     if offset is None:
-        offset = array.min()
+        if array.dtype.kind in "Mm":
+            offset = _datetime_crude_nanmin(array)
+        else:
+            offset = min(array)
     array = array - offset
 
     if not hasattr(array, "dtype"):  # scalar is converted to 0d-array
@@ -401,7 +431,8 @@ def mean(array, axis=None, skipna=None, **kwargs):
 
     array = asarray(array)
     if array.dtype.kind in "Mm":
-        offset = min(array)
+        offset = _datetime_crude_nanmin(array)
+
         # xarray always uses np.datetime64[ns] for np.datetime64 data
         dtype = "timedelta64[ns]"
         return (
