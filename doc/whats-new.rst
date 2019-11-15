@@ -38,6 +38,10 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+
+- Added the ``max_gap`` kwarg to :py:meth:`~xarray.DataArray.interpolate_na` and
+  :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
+  gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
   :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
   dropping variables (including coordinates). The existing ``drop`` methods remain as a backward compatible 
