@@ -419,8 +419,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     coordinates used for label based indexing.
     """
 
-    _accessors: Optional[Dict[str, Any]]
     _attrs: Optional[Dict[Hashable, Any]]
+    _cache: Dict[str, Any]
     _coord_names: Set[Hashable]
     _dims: Dict[Hashable, int]
     _encoding: Optional[Dict[Hashable, Any]]
@@ -428,8 +428,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _variables: Dict[Hashable, Variable]
 
     __slots__ = (
-        "_accessors",
         "_attrs",
+        "_cache",
         "_coord_names",
         "_dims",
         "_encoding",
@@ -535,7 +535,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             data_vars, coords, compat=compat
         )
 
-        self._accessors = None
         self._attrs = dict(attrs) if attrs is not None else None
         self._file_obj = None
         self._encoding = None
@@ -870,7 +869,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._attrs = attrs
         obj._file_obj = file_obj
         obj._encoding = encoding
-        obj._accessors = None
         return obj
 
     @classmethod
