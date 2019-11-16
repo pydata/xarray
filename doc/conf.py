@@ -346,4 +346,5 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "matplotlib": ("https://matplotlib.org", None),
+    "dask": ("https://docs.dask.org/en/latest", None),
 }
