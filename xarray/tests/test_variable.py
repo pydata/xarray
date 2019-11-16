@@ -1864,12 +1864,12 @@ class TestVariableWithDask(VariableSubclassobjects):
 
 
 @requires_sparse
-class TestVariableWithSparse():
+class TestVariableWithSparse:
     # TODO inherit VariableSubclassobjects to cover more tests
 
     def test_as_sparse(self):
         data = np.arange(12).reshape(3, 4)
-        var = Variable(('x', 'y'), data)._as_sparse(fill_value=-1)
+        var = Variable(("x", "y"), data)._as_sparse(fill_value=-1)
         actual = var._to_dense()
         assert_identical(var, actual)
 

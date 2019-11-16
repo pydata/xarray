@@ -998,6 +998,7 @@ class Variable(
         use sparse-array as backend.
         """
         import sparse
+
         # TODO  what to do if dask-backended?
         if fill_value is dtypes.NA:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
@@ -1005,8 +1006,8 @@ class Variable(
             dtype = self.dtype
 
         if sparse_format is _default:
-            sparse_format = 'coo'
-        as_sparse = getattr(sparse, 'as_{}'.format(sparse_format.lower()))
+            sparse_format = "coo"
+        as_sparse = getattr(sparse, "as_{}".format(sparse_format.lower()))
         data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
         return self._replace(data=data)
 
@@ -1014,7 +1015,7 @@ class Variable(
         """
         Change backend from sparse to np.array
         """
-        if hasattr(self._data, 'todense'):
+        if hasattr(self._data, "todense"):
             return self._replace(data=self._data.todense())
         return self.copy(deep=False)
 

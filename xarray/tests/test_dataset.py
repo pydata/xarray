@@ -1755,17 +1755,13 @@ class TestDataset:
         actual = data.reindex(dim3=dim3, sparse=True)
         expected = data.reindex(dim3=dim3, sparse=False)
         for k, v in data.data_vars.items():
-            np.testing.assert_equal(
-                actual[k].data.todense(), expected[k].data
-            )
+            np.testing.assert_equal(actual[k].data.todense(), expected[k].data)
 
-        data['var3'] = data['var3'].astype(int)
+        data["var3"] = data["var3"].astype(int)
         actual = data.reindex(dim3=dim3, sparse=True, fill_value=-10)
         expected = data.reindex(dim3=dim3, sparse=False, fill_value=-10)
         for k, v in data.data_vars.items():
-            np.testing.assert_equal(
-                actual[k].data.todense(), expected[k].data
-            )
+            np.testing.assert_equal(actual[k].data.todense(), expected[k].data)
 
     def test_reindex_warning(self):
         data = create_test_data()
@@ -2841,8 +2837,7 @@ class TestDataset:
         # test fill_value
         actual = ds.unstack("index", sparse=True)
         expected = ds.unstack("index")
-        assert actual['var'].variable._to_dense().equals(
-            expected['var'].variable)
+        assert actual["var"].variable._to_dense().equals(expected["var"].variable)
 
         actual = ds["var"].unstack("index", sparse=True)
         expected = ds["var"].unstack("index")

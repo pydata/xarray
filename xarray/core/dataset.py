@@ -2446,7 +2446,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             tolerance,
             copy=copy,
             fill_value=fill_value,
-            sparse=sparse
+            sparse=sparse,
         )
         coord_names = set(self._coord_names)
         coord_names.update(indexers)
@@ -3377,7 +3377,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dim: Union[Hashable, Iterable[Hashable]] = None,
         fill_value: Any = dtypes.NA,
-        sparse: bool = False
+        sparse: bool = False,
     ) -> "Dataset":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
