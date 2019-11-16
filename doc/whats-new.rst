@@ -42,6 +42,7 @@ New Features
   :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`, 
   :py:meth:`~xarray.Dataset.reindex` (:issue:`3518`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Added the ``fill_value`` option to :py:meth:`~xarray.DataArray.unstack` and
   :py:meth:`~xarray.Dataset.unstack` (:issue:`3518`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.

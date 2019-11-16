@@ -2820,7 +2820,7 @@ class TestDataset:
         actual = ds.unstack("index", fill_value=-1)
         expected = ds.unstack("index").fillna(-1).astype(np.int)
         assert actual["var"].dtype == np.int
-        assert actual.equals(expected)
+        assert_equal(actual, expected)
 
         actual = ds["var"].unstack("index", fill_value=-1)
         expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
