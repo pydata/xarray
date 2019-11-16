@@ -39,6 +39,9 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Added the ``fill_value`` option to :py:meth:`~xarray.DataArray.unstack` and
+  :py:meth:`~xarray.Dataset.unstack` (:issue:`3518`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added the ``max_gap`` kwarg to :py:meth:`~xarray.DataArray.interpolate_na` and
   :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
   gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
