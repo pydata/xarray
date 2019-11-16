@@ -887,14 +887,14 @@ def test_combine_by_coords_distant_cftime_dates():
     time_2 = [cftime.DatetimeGregorian(4600, 12, 31)]
     time_3 = [cftime.DatetimeGregorian(5100, 12, 31)]
 
-    da_1 = DataArray([0], dims=['time'], coords=[time_1], name="a").to_dataset()
-    da_2 = DataArray([1], dims=['time'], coords=[time_2], name="a").to_dataset()
-    da_3 = DataArray([2], dims=['time'], coords=[time_3], name="a").to_dataset()
+    da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
+    da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
+    da_3 = DataArray([2], dims=["time"], coords=[time_3], name="a").to_dataset()
 
     result = combine_by_coords([da_1, da_2, da_3])
 
     expected_time = np.concatenate([time_1, time_2, time_3])
     expected = DataArray(
-        [0, 1, 2], dims=['time'], coords=[expected_time],
-        name='a').to_dataset()
+        [0, 1, 2], dims=["time"], coords=[expected_time], name="a"
+    ).to_dataset()
     assert_identical(result, expected)
