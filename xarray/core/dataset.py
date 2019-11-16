@@ -3333,7 +3333,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable) -> "Dataset":
+    def _unstack_once(self, dim: Hashable, fill_value, sparse: bool) -> "Dataset":
         index = self.get_index(dim)
         index = index.remove_unused_levels()
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -3342,7 +3342,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if index.equals(full_idx):
             obj = self
         else:
-            obj = self.reindex({dim: full_idx}, copy=False)
+            obj = self.reindex({dim: full_idx}, copy=False, fill_value=fill_value)
 
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
@@ -3368,7 +3368,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    def unstack(self, dim: Union[Hashable, Iterable[Hashable]] = None) -> "Dataset":
+    def unstack(
+        self,
+        dim: Union[Hashable, Iterable[Hashable]] = None,
+        fill_value: Any = dtypes.NA,
+        sparse: bool = False,
+    ) -> "Dataset":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -3380,6 +3385,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : Hashable or iterable of Hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
+        fill_value: value to be filled. By default, np.nan
+        sparse: use sparse if True.
 
         Returns
         -------
@@ -3417,7 +3424,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            result = result._unstack_once(dim)
+            result = result._unstack_once(dim, fill_value, sparse)
         return result
 
     def update(self, other: "CoercibleMapping", inplace: bool = None) -> "Dataset":

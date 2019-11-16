@@ -1726,7 +1726,10 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def unstack(
-        self, dim: Union[Hashable, Sequence[Hashable], None] = None
+        self,
+        dim: Union[Hashable, Sequence[Hashable], None] = None,
+        fill_value: Any = dtypes.NA,
+        sparse: bool = False,
     ) -> "DataArray":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
@@ -1739,6 +1742,8 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : hashable or sequence of hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
+        fill_value: value to be filled. By default, np.nan
+        sparse: use sparse if True.
 
         Returns
         -------

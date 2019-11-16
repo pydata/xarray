@@ -1341,7 +1341,7 @@ class Variable(
 
     def stack(self, dimensions=None, **dimensions_kwargs):
         """
-        Stack any number of existing dimensions into a single new dimension.
+        Stack any nimber of existing dimensions into a single new dimension.
 
         New dimensions will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
