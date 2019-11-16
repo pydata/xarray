@@ -2657,13 +2657,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 continue
             if isinstance(v, pd.MultiIndex):
                 new_names = [name_dict.get(k, k) for k in v.names]
-                index = pd.MultiIndex(
-                    v.levels,
-                    v.labels,
-                    v.sortorder,
-                    names=new_names,
-                    verify_integrity=False,
-                )
+                index = v.rename(names=new_names)
             else:
                 index = v.rename(new_name)
             indexes[new_name] = index
