@@ -1756,12 +1756,14 @@ class TestDataset:
         expected = data.reindex(dim3=dim3, sparse=False)
         for k, v in data.data_vars.items():
             np.testing.assert_equal(actual[k].data.todense(), expected[k].data)
+        assert actual['var3'].data.density < 1.0
 
         data["var3"] = data["var3"].astype(int)
         actual = data.reindex(dim3=dim3, sparse=True, fill_value=-10)
         expected = data.reindex(dim3=dim3, sparse=False, fill_value=-10)
         for k, v in data.data_vars.items():
             np.testing.assert_equal(actual[k].data.todense(), expected[k].data)
+        assert actual['var3'].data.density < 1.0
 
     def test_reindex_warning(self):
         data = create_test_data()
@@ -2827,7 +2829,7 @@ class TestDataset:
         assert actual.equals(expected)
 
     @requires_sparse
-    def test_unstack_fill_value(self):
+    def test_unstack_sparse(self):
         ds = xr.Dataset(
             {"var": (("x",), np.arange(6))},
             coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
@@ -2838,10 +2840,12 @@ class TestDataset:
         actual = ds.unstack("index", sparse=True)
         expected = ds.unstack("index")
         assert actual["var"].variable._to_dense().equals(expected["var"].variable)
+        assert actual["var"].data.density < 1.0
 
         actual = ds["var"].unstack("index", sparse=True)
         expected = ds["var"].unstack("index")
         assert actual.variable._to_dense().equals(expected.variable)
+        assert actual.data.density < 1.0
 
     def test_stack_unstack_fast(self):
         ds = Dataset(
