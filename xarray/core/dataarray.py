@@ -1773,7 +1773,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.stack
         """
-        ds = self._to_temp_dataset().unstack(dim)
+        ds = self._to_temp_dataset().unstack(dim, fill_value)
         return self._from_temp_dataset(ds)
 
     def to_unstacked_dataset(self, dim, level=0):
