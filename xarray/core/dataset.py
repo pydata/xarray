@@ -3333,7 +3333,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable, fill_value, sparse: bool) -> "Dataset":
+    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
         index = self.get_index(dim)
         index = index.remove_unused_levels()
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -3372,7 +3372,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dim: Union[Hashable, Iterable[Hashable]] = None,
         fill_value: Any = dtypes.NA,
-        sparse: bool = False,
     ) -> "Dataset":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
@@ -3386,7 +3385,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
         fill_value: value to be filled. By default, np.nan
-        sparse: use sparse if True.
 
         Returns
         -------
@@ -3424,7 +3422,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            result = result._unstack_once(dim, fill_value, sparse)
+            result = result._unstack_once(dim, fill_value)
         return result
 
     def update(self, other: "CoercibleMapping", inplace: bool = None) -> "Dataset":
