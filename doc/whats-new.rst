@@ -40,6 +40,11 @@ New Features
 
 - Added the ``max_gap`` kwarg to :py:meth:`DataArray.interpolate_na` and
   :py:meth:`Dataset.interpolate_na`. This controls the maximum size of the data
+- Added the ``fill_value`` option to :py:meth:`~xarray.DataArray.unstack` and
+  :py:meth:`~xarray.Dataset.unstack` (:issue:`3518`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Added the ``max_gap`` kwarg to :py:meth:`~xarray.DataArray.interpolate_na` and
+  :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
   gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
   :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
