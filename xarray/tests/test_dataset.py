@@ -1756,14 +1756,14 @@ class TestDataset:
         expected = data.reindex(dim3=dim3, sparse=False)
         for k, v in data.data_vars.items():
             np.testing.assert_equal(actual[k].data.todense(), expected[k].data)
-        assert actual['var3'].data.density < 1.0
+        assert actual["var3"].data.density < 1.0
 
         data["var3"] = data["var3"].astype(int)
         actual = data.reindex(dim3=dim3, sparse=True, fill_value=-10)
         expected = data.reindex(dim3=dim3, sparse=False, fill_value=-10)
         for k, v in data.data_vars.items():
             np.testing.assert_equal(actual[k].data.todense(), expected[k].data)
-        assert actual['var3'].data.density < 1.0
+        assert actual["var3"].data.density < 1.0
 
     def test_reindex_warning(self):
         data = create_test_data()
