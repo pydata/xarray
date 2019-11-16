@@ -33,6 +33,7 @@ from . import (
     assert_identical,
     raises_regex,
     requires_dask,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -1860,6 +1861,17 @@ class TestVariableWithDask(VariableSubclassobjects):
             v._getitem_with_mask(indexer, fill_value=-1),
             self.cls(("x", "y"), [[0, -1], [-1, 2]]),
         )
+
+
+@requires_sparse
+class TestVariableWithSparse():
+    # TODO inherit VariableSubclassobjects to cover more tests
+
+    def test_as_sparse(self):
+        data = np.arange(12).reshape(3, 4)
+        var = Variable(('x', 'y'), data)._as_sparse(fill_value=-1)
+        actual = var._to_dense()
+        assert_identical(var, actual)
 
 
 class TestIndexVariable(VariableSubclassobjects):

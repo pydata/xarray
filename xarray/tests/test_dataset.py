@@ -1748,6 +1748,25 @@ class TestDataset:
         actual = ds.reindex(x=[0, 1, 3], y=[0, 1])
         assert_identical(expected, actual)
 
+    @requires_sparse
+    def test_reindex_sparse(self):
+        data = create_test_data()
+        dim3 = list("abdeghijk")
+        actual = data.reindex(dim3=dim3, sparse=True)
+        expected = data.reindex(dim3=dim3, sparse=False)
+        for k, v in data.data_vars.items():
+            np.testing.assert_equal(
+                actual[k].data.todense(), expected[k].data
+            )
+
+        data['var3'] = data['var3'].astype(int)
+        actual = data.reindex(dim3=dim3, sparse=True, fill_value=-10)
+        expected = data.reindex(dim3=dim3, sparse=False, fill_value=-10)
+        for k, v in data.data_vars.items():
+            np.testing.assert_equal(
+                actual[k].data.todense(), expected[k].data
+            )
+
     def test_reindex_warning(self):
         data = create_test_data()
 
@@ -2810,6 +2829,24 @@ class TestDataset:
         actual = ds["var"].unstack("index", fill_value=-1)
         expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
         assert actual.equals(expected)
+
+    @requires_sparse
+    def test_unstack_fill_value(self):
+        ds = xr.Dataset(
+            {"var": (("x",), np.arange(6))},
+            coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
+        )
+        # make ds incomplete
+        ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
+        # test fill_value
+        actual = ds.unstack("index", sparse=True)
+        expected = ds.unstack("index")
+        assert actual['var'].variable._to_dense().equals(
+            expected['var'].variable)
+
+        actual = ds["var"].unstack("index", sparse=True)
+        expected = ds["var"].unstack("index")
+        assert actual.variable._to_dense().equals(expected.variable)
 
     def test_stack_unstack_fast(self):
         ds = Dataset(

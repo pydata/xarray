@@ -13,12 +13,14 @@ import pandas as pd
 
 from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import dask_array_type
+from .pycompat import dask_array_type, sparse_array_type
 
 try:
     import dask.array as dask_array
+    import sparse
 except ImportError:
     dask_array = None  # type: ignore
+    sparse = None  # type: ignore
 
 
 def _dask_or_eager_func(
@@ -251,6 +253,9 @@ def count(data, axis=None):
 
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
+    # sparse support
+    if isinstance(x, sparse_array_type) or isinstance(y, sparse_array_type):
+        return sparse.where(condition, x, y)
     return _where(condition, *as_shared_dtype([x, y]))
 
 

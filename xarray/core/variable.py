@@ -993,6 +993,31 @@ class Variable(
 
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
+    def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
+        """
+        use sparse-array as backend.
+        """
+        import sparse
+        # TODO  what to do if dask-backended?
+        if fill_value is dtypes.NA:
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        else:
+            dtype = self.dtype
+
+        if sparse_format is _default:
+            sparse_format = 'coo'
+        as_sparse = getattr(sparse, 'as_{}'.format(sparse_format.lower()))
+        data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
+        return self._replace(data=data)
+
+    def _to_dense(self):
+        """
+        Change backend from sparse to np.array
+        """
+        if hasattr(self._data, 'todense'):
+            return self._replace(data=self._data.todense())
+        return self.copy(deep=False)
+
     def isel(
         self: VariableType,
         indexers: Mapping[Hashable, Any] = None,
@@ -2019,6 +2044,14 @@ class IndexVariable(Variable):
 
     def chunk(self, chunks=None, name=None, lock=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
+        return self.copy(deep=False)
+
+    def _as_sparse(self, sparse_format=_default, fill_value=_default):
+        # Dummy
+        return self.copy(deep=False)
+
+    def _to_dense(self):
+        # Dummy
         return self.copy(deep=False)
 
     def _finalize_indexing_result(self, dims, data):

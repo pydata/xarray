@@ -2254,6 +2254,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         tolerance: Number = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
+        sparse: bool = False,
         **indexers_kwargs: Any,
     ) -> "Dataset":
         """Conform this object onto a new set of indexes, filling in
@@ -2286,6 +2287,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             the input. In either case, a new xarray object is always returned.
         fill_value : scalar, optional
             Value to use for newly missing values
+        sparse: use sparse-array. By default, False
         **indexers_kwarg : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -2444,6 +2446,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             tolerance,
             copy=copy,
             fill_value=fill_value,
+            sparse=sparse
         )
         coord_names = set(self._coord_names)
         coord_names.update(indexers)
@@ -3333,7 +3336,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
+    def _unstack_once(self, dim: Hashable, fill_value, sparse) -> "Dataset":
         index = self.get_index(dim)
         index = index.remove_unused_levels()
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -3342,7 +3345,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if index.equals(full_idx):
             obj = self
         else:
-            obj = self.reindex({dim: full_idx}, copy=False, fill_value=fill_value)
+            obj = self.reindex(
+                {dim: full_idx}, copy=False, fill_value=fill_value, sparse=sparse
+            )
 
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
@@ -3372,6 +3377,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dim: Union[Hashable, Iterable[Hashable]] = None,
         fill_value: Any = dtypes.NA,
+        sparse: bool = False
     ) -> "Dataset":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
@@ -3385,6 +3391,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
         fill_value: value to be filled. By default, np.nan
+        sparse: use sparse-array if True
 
         Returns
         -------
@@ -3422,7 +3429,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            result = result._unstack_once(dim, fill_value)
+            result = result._unstack_once(dim, fill_value, sparse)
         return result
 
     def update(self, other: "CoercibleMapping", inplace: bool = None) -> "Dataset":
