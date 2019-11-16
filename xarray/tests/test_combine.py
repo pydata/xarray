@@ -881,6 +881,7 @@ class TestAutoCombineDeprecation:
 
 @requires_cftime
 def test_combine_by_coords_distant_cftime_dates():
+    # Regression test for https://github.com/pydata/xarray/issues/3535
     import cftime
 
     time_1 = [cftime.DatetimeGregorian(4500, 12, 31)]
