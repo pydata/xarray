@@ -2794,6 +2794,23 @@ class TestDataset:
         with raises_regex(ValueError, "do not have a MultiIndex"):
             ds.unstack("x")
 
+    def test_unstack_fill_value(self):
+        ds = xr.Dataset(
+            {"var": (("x",), np.arange(6))},
+            coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
+        )
+        # make ds incomplete
+        ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
+        # test fill_value
+        actual = ds.unstack("index", fill_value=-1)
+        expected = ds.unstack("index").fillna(-1).astype(np.int)
+        assert actual["var"].dtype == np.int
+        assert_equal(actual, expected)
+
+        actual = ds["var"].unstack("index", fill_value=-1)
+        expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
+        assert actual.equals(expected)
+
     def test_stack_unstack_fast(self):
         ds = Dataset(
             {
