@@ -113,7 +113,10 @@ Bug fixes
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
 - Allow appending datetime and bool data variables to zarr stores.
   (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
-
+- Fix :py:meth:`xarray.combine_by_coords` when combining cftime coordinates
+  which span long time intervals (:issue:`3535`).  By `Spencer Clark
+  <https://github.com/spencerkclark/>`_.
+  
 Documentation
 ~~~~~~~~~~~~~
 - Fix leap year condition in example (http://xarray.pydata.org/en/stable/examples/monthly-means.html)
