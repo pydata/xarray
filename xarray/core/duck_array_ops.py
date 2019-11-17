@@ -20,11 +20,6 @@ try:
 except ImportError:
     dask_array = None  # type: ignore
 
-try:
-    import sparse
-except ImportError:
-    sparse = None  # type: ignore
-
 
 def _dask_or_eager_func(
     name,
@@ -256,10 +251,6 @@ def count(data, axis=None):
 
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
-    # TODO sparse is not working with np.result_type and x.astype(copy=False)
-    # The following two lines may be removed after they are supported.
-    if isinstance(x, sparse_array_type) or isinstance(y, sparse_array_type):
-        return sparse.where(condition, x, y)
     return _where(condition, *as_shared_dtype([x, y]))
 
 
