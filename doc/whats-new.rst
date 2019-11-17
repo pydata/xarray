@@ -413,7 +413,7 @@ Enhancements
   when the user passes invalid arguments (:issue:`3176`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
-- :py:func:`filter_by_attrs` now filters the coordinates as well as the variables.
+- :py:meth:`Dataset.filter_by_attrs` now filters the coordinates as well as the variables.
   By `Spencer Jones <https://github.com/cspencerjones>`_.
 
 Bug fixes
@@ -1117,7 +1117,7 @@ Enhancements
   (:issue:`2230`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
-- :py:meth:`plot()` now accepts the kwargs
+- :py:func:`~plot.plot()` now accepts the kwargs
   ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
 
@@ -1440,7 +1440,7 @@ Bug fixes
 - ``ValueError`` is raised when coordinates with the wrong size are assigned to
   a :py:class:`DataArray`. (:issue:`2112`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- Fixed a bug in :py:meth:`~xarary.DatasArray.rolling` with bottleneck. Also,
+- Fixed a bug in :py:meth:`~xarray.DataArray.rolling` with bottleneck. Also,
   fixed a bug in rolling an integer dask array. (:issue:`2113`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fixed a bug where `keep_attrs=True` flag was neglected if
@@ -1629,7 +1629,7 @@ Enhancements
   1D coordinate (e.g. time) and a 2D coordinate (e.g. depth as a function of
   time) (:issue:`1737`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- :py:func:`~plot()` rotates x-axis ticks if x-axis is time.
+- :py:func:`~plot.plot()` rotates x-axis ticks if x-axis is time.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:func:`~plot.line()` can draw multiple lines if provided with a
   2D variable.
@@ -2550,7 +2550,7 @@ Enhancements
   raising an error (:issue:`1082`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Options for axes sharing between subplots are exposed to
-  :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
+  :py:class:`~xarray.plot.FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
   sharing can be disabled for polar plots.
   By `Bas Hoonhout <https://github.com/hoonhout>`_.
 - New utility functions :py:func:`~xarray.testing.assert_equal`,
@@ -2646,10 +2646,9 @@ Bug fixes
 Performance improvements
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-- :py:meth:`~xarray.Dataset.isel_points` and
-  :py:meth:`~xarray.Dataset.sel_points` now use vectorised indexing in numpy
-  and dask (:issue:`1161`), which can result in several orders of magnitude
-  speedup.
+- ``xarray.Dataset.isel_points`` and ``xarray.Dataset.sel_points`` now
+  use vectorised indexing in numpy and dask (:issue:`1161`), which can
+  result in several orders of magnitude speedup.
   By `Jonathan Chambers <https://github.com/mangecoeur>`_.
 
 .. _whats-new.0.8.2:
@@ -2758,16 +2757,17 @@ Enhancements
   any number of ``Dataset`` and/or ``DataArray`` variables. See :ref:`merge`
   for more details. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- DataArray and Dataset method :py:meth:`resample` now supports the
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now support the
   ``keep_attrs=False`` option that determines whether variable and dataset
   attributes are retained in the resampled object. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
-- Better multi-index support in DataArray and Dataset :py:meth:`sel` and
-  :py:meth:`loc` methods, which now behave more closely to pandas and which
-  also accept dictionaries for indexing based on given level names and labels
-  (see :ref:`multi-level indexing`). By
-  `Benoit Bovy <https://github.com/benbovy>`_.
+- Better multi-index support in :py:meth:`DataArray.sel`,
+  :py:meth:`DataArray.loc`, :py:meth:`Dataset.sel` and
+  :py:meth:`Dataset.loc`, which now behave more closely to pandas and
+  which also accept dictionaries for indexing based on given level names
+  and labels (see :ref:`multi-level indexing`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 - New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
   :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
@@ -2783,7 +2783,7 @@ Enhancements
   allowing more control on the colorbar (:issue:`872`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
-- New Dataset method :py:meth:`filter_by_attrs`, akin to
+- New Dataset method :py:meth:`Dataset.filter_by_attrs`, akin to
   ``netCDF4.Dataset.get_variables_by_attributes``, to easily filter
   data variables using its attributes.
   `Filipe Fernandes <https://github.com/ocefpaf>`_.
@@ -2910,7 +2910,7 @@ Enhancements
 
 - Numerical operations now return empty objects on no overlapping labels rather
   than raising ``ValueError`` (:issue:`739`).
-- :py:class:`~pd.Series` is now supported as valid input to the ``Dataset``
+- :py:class:`~pandas.Series` is now supported as valid input to the ``Dataset``
   constructor (:issue:`740`).
 
 Bug fixes
@@ -2929,7 +2929,7 @@ Bug fixes
   reindexing leads to NaN values (:issue:`738`).
 - ``Dataset.rename`` and ``DataArray.rename`` support the old and new names
   being the same (:issue:`724`).
-- Fix :py:meth:`~xarray.Dataset.from_dataset` for DataFrames with Categorical
+- Fix :py:meth:`~xarray.Dataset.from_dataframe` for DataFrames with Categorical
   column and a MultiIndex index (:issue:`737`).
 - Fixes to ensure xarray works properly after the upcoming pandas v0.18 and
   NumPy v1.11 releases.
@@ -3101,7 +3101,7 @@ Enhancements
   moves both data and coordinates.
 - Assigning a ``pandas`` object directly as a ``Dataset`` variable is now permitted. Its
   index names correspond to the ``dims`` of the ``Dataset``, and its data is aligned.
-- Passing a :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` to a Dataset constructor
+- Passing a :py:class:`pandas.DataFrame` or ``pandas.Panel`` to a Dataset constructor
   is now permitted.
 - New function ``xray.broadcast`` for explicitly broadcasting
   ``DataArray`` and ``Dataset`` objects against each other. For example:
