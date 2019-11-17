@@ -403,7 +403,7 @@ class DataArray(AbstractArray, DataWithCoords):
     ) -> "DataArray":
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
-            indexes = copy_indexes(self._indexes)
+            indexes = self._indexes
         elif variable.dims == self.dims:
             # Shape has changed (e.g. from reduce(..., keepdims=True)
             new_sizes = dict(zip(self.dims, variable.shape))
@@ -493,7 +493,7 @@ class DataArray(AbstractArray, DataWithCoords):
         if shallow_copy:
             for k in variables:
                 variables[k] = variables[k].copy(deep=False)
-        indexes = copy_indexes(self._indexes)
+        indexes = self._indexes
 
         coord_names = set(self._coords)
         dataset = Dataset._from_vars_and_coord_names(
@@ -944,7 +944,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         variable = self.variable.copy(deep=deep, data=data)
         coords = {k: v.copy(deep=deep) for k, v in self._coords.items()}
-        indexes = copy_indexes(self._indexes)
+        indexes = self._indexes
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
