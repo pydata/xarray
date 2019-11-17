@@ -317,7 +317,7 @@ Breaking changes
 - :py:meth:`DataArray.to_dataset` requires ``name`` to be passed as a kwarg (previously ambiguous
   positional arguments were deprecated)
 - Reindexing with variables of a different dimension now raise an error (previously deprecated)
-- :py:func:`~xarray.broadcast_array` is removed (previously deprecated in favor of
+- ``xarray.broadcast_array`` is removed (previously deprecated in favor of
   :py:func:`~xarray.broadcast`)
 - :py:meth:`Variable.expand_dims` is removed (previously deprecated in favor of
   :py:meth:`Variable.set_dims`)
@@ -402,7 +402,7 @@ Enhancements
   with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
   By `Ulrich Herter <https://github.com/ulijh>`_.
 
-- :py:meth:`~xarray.Dataset.drop` now supports keyword arguments; dropping index
+- ``xarray.Dataset.drop`` now supports keyword arguments; dropping index
   labels by using both ``dim`` and ``labels`` or using a
   :py:class:`~xarray.core.coordinates.DataArrayCoordinates` object are
   deprecated (:issue:`2910`).
@@ -585,7 +585,7 @@ Enhancements to existing functionality
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Better warning message when supplying invalid objects to ``xr.merge``
   (:issue:`2948`).  By `Mathias Hauser <https://github.com/mathause>`_.
-- Add ``errors`` keyword argument to :py:meth:`Dataset.drop` and :py:meth:`Dataset.drop_dims`
+- Add ``errors`` keyword argument to ``Dataset.drop`` and :py:meth:`Dataset.drop_dims`
   that allows ignoring errors if a passed label or dimension is not in the dataset
   (:issue:`2994`).
   By `Andrew Ross <https://github.com/andrew-c-ross>`_.
@@ -1184,7 +1184,7 @@ Bug fixes
 - Follow up the renamings in dask; from dask.ghost to dask.overlap
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
-- Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
+- Now :py:func:`~xarray.apply_ufunc` raises a ValueError when the size of
   ``input_core_dims`` is inconsistent with the number of arguments.
   (:issue:`2341`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -1477,7 +1477,7 @@ Enhancements
   supplied list, returning a bool array. See :ref:`selecting values with isin`
   for full details. Similar to the ``np.isin`` function.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
+- Some speed improvement to construct :py:class:`~xarray.core.rolling.DataArrayRolling`
   object (:issue:`1993`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Handle variables with different values for ``missing_value`` and
@@ -1557,8 +1557,8 @@ Enhancements
   NumPy. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
-  :py:func:`~xarray.DataArrayRolling` object now supports
-  :py:func:`~xarray.DataArrayRolling.construct` method that returns a view
+  :py:func:`~xarray.core.rolling.DataArrayRolling` object now supports
+  :py:func:`~xarray.core.rolling.DataArrayRolling.construct` method that returns a view
   of the DataArray / Dataset object with the rolling-window dimension added
   to the last axis. This enables more flexible operation, such as strided
   rolling, windowed rolling, ND-rolling, short-time FFT and convolution.
@@ -1904,7 +1904,7 @@ Enhancements
   concatenated array/dataset (:issue:`1521`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
-- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
+- Speed-up (x 100) of ``xarray.conventions.decode_cf_datetime``.
   By `Christian Chwala <https://github.com/cchwala>`_.
 
 **IO related improvements**
