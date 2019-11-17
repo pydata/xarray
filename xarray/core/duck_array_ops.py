@@ -17,9 +17,12 @@ from .pycompat import dask_array_type, sparse_array_type
 
 try:
     import dask.array as dask_array
-    import sparse
 except ImportError:
     dask_array = None  # type: ignore
+
+try:
+    import sparse
+except ImportError:
     sparse = None  # type: ignore
 
 
@@ -253,7 +256,8 @@ def count(data, axis=None):
 
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
-    # sparse support
+    # TODO sparse is not working with np.result_type and x.astype(copy=False)
+    # The following two lines may be removed after they are supported.
     if isinstance(x, sparse_array_type) or isinstance(y, sparse_array_type):
         return sparse.where(condition, x, y)
     return _where(condition, *as_shared_dtype([x, y]))

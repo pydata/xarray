@@ -2254,7 +2254,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         tolerance: Number = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
-        sparse: bool = False,
         **indexers_kwargs: Any,
     ) -> "Dataset":
         """Conform this object onto a new set of indexes, filling in
@@ -2430,6 +2429,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         the original and desired indexes. If you do want to fill in the `NaN` values present in the
         original dataset, use the :py:meth:`~Dataset.fillna()` method.
 
+        """
+        return self._reindex(
+            indexers,
+            method,
+            tolerance,
+            copy,
+            fill_value,
+            sparse=False,
+            **indexers_kwargs,
+        )
+
+    def _reindex(
+        self,
+        indexers: Mapping[Hashable, Any] = None,
+        method: str = None,
+        tolerance: Number = None,
+        copy: bool = True,
+        fill_value: Any = dtypes.NA,
+        sparse: bool = False,
+        **indexers_kwargs: Any,
+    ) -> "Dataset":
+        """
+        same to _reindex but support sparse option
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
 
@@ -3345,7 +3367,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if index.equals(full_idx):
             obj = self
         else:
-            obj = self.reindex(
+            obj = self._reindex(
                 {dim: full_idx}, copy=False, fill_value=fill_value, sparse=sparse
             )
 

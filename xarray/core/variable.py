@@ -1003,11 +1003,15 @@ class Variable(
         if fill_value is dtypes.NA:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
-            dtype = self.dtype
+            dtype = dtypes.result_type(self.dtype, fill_value)
 
         if sparse_format is _default:
             sparse_format = "coo"
-        as_sparse = getattr(sparse, "as_{}".format(sparse_format.lower()))
+        try:
+            as_sparse = getattr(sparse, "as_{}".format(sparse_format.lower()))
+        except AttributeError:
+            raise ValueError("{} is not a valid sparse format".format(sparse_format))
+
         data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
         return self._replace(data=data)
 
