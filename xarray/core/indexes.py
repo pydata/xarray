@@ -101,10 +101,10 @@ def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
 
 
 def copy_indexes(
-    indexes: Optional[Dict[Hashable, pd.Index]],
-    deep: bool = True,
-    exclude: Optional[Any] = None,
+    indexes: Optional[Dict[Hashable, pd.Index]], exclude: Optional[Any] = None
 ) -> Optional[Dict[Hashable, pd.Index]]:
+    """ Creates new indexes dict from existing dict optionally excluding some dimensions.
+    """
     if exclude is None:
         exclude = ()
 
@@ -112,9 +112,7 @@ def copy_indexes(
         exclude = (exclude,)
 
     if indexes is not None:
-        new_indexes = {
-            k: v.copy(deep=deep) for k, v in indexes.items() if k not in exclude
-        }
+        new_indexes = {k: v for k, v in indexes.items() if k not in exclude}
     else:
         new_indexes = None  # type: ignore
 
