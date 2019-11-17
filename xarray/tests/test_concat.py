@@ -35,17 +35,28 @@ def test_concat_compat():
         },
         coords={"x": [0, 1], "y": [1], "z": [-1, -2], "q": [0]},
     )
-
+    ds_concat = Dataset(
+        {
+            "has_x_y": (
+                ("q", "y", "x"),
+                [[[np.nan, np.nan], [3, 4]], [[1, 2], [np.nan, np.nan]]],
+            ),
+            "has_x": (("q", "x"), [[1, 2], [1, 2]]),
+            "no_x_y": (("q", "z"), [[1, 2], [1, 2]]),
+        },
+        coords={"x": [0, 1], "y": [0, 1], "z": [-1, -2], "q": [0, np.nan]},
+    )
     result = concat([ds1, ds2], dim="y", data_vars="minimal", compat="broadcast_equals")
     assert_equal(ds2.no_x_y, result.no_x_y.transpose())
 
     for var in ["has_x", "no_x_y"]:
         assert "y" not in result[var]
 
+    result2 = concat([ds2, ds1], dim="q")
+    assert_equal(ds_concat, result2)
+
     with raises_regex(ValueError, "coordinates in some datasets but not others"):
         concat([ds1, ds2], dim="q")
-    with raises_regex(ValueError, "'q' is not present in all datasets"):
-        concat([ds2, ds1], dim="q")
 
 
 class TestConcatDataset:

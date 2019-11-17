@@ -1,7 +1,9 @@
 import pandas as pd
+import numpy as np
 
 from . import dtypes, utils
 from .alignment import align
+from .common import full_like
 from .duck_array_ops import lazy_array_equiv
 from .merge import _VALID_COMPAT, unique_variable
 from .variable import IndexVariable, Variable, as_variable
@@ -370,10 +372,22 @@ def _dataset_concat(
     # n.b. this loop preserves variable order, needed for groupby.
     for k in datasets[0].variables:
         if k in concat_over:
-            try:
-                vars = ensure_common_dims([ds.variables[k] for ds in datasets])
-            except KeyError:
-                raise ValueError("%r is not present in all datasets." % k)
+            variables = []
+            for ds in datasets:
+                # if one of the variables doesn't exist find one which does
+                # and use it to create a fill value
+                if k not in ds.variables:
+                    for ds in datasets:
+                        if k in ds.variables:
+                            # found one to use as a fill value, fill with np.nan
+                            filled = full_like(
+                                ds.variables[k], fill_value=np.nan, dtype=np.double
+                            )
+                            break
+                    variables.append(filled)
+                else:
+                    variables.append(ds.variables[k])
+            vars = ensure_common_dims(variables)
             combined = concat_vars(vars, dim, positions)
             assert isinstance(combined, Variable)
             result_vars[k] = combined

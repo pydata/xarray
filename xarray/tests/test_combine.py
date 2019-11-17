@@ -742,8 +742,14 @@ class TestAutoCombineOldAPI:
             Dataset({"x": ("a", [0]), "y": ("a", [0])}),
             Dataset({"y": ("a", [1]), "x": ("a", [1])}),
         ]
+
         actual = auto_combine(objs)
         expected = Dataset({"x": ("a", [0, 1]), "y": ("a", [0, 1])})
+        assert_identical(expected, actual)
+
+        objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
+        actual = auto_combine(objs)
+        expected = Dataset({"x": [0], "y": [0, np.nan]})
         assert_identical(expected, actual)
 
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"y": [1], "x": [1]})]
@@ -752,10 +758,6 @@ class TestAutoCombineOldAPI:
 
         objs = [Dataset({"x": 0}), Dataset({"x": 1})]
         with raises_regex(ValueError, "cannot infer dimension"):
-            auto_combine(objs)
-
-        objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with raises_regex(ValueError, "'y' is not present in all datasets"):
             auto_combine(objs)
 
     def test_auto_combine_previously_failed(self):
