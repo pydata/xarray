@@ -2566,8 +2566,8 @@ Enhancements
   similar to what the command line utility ``ncdump -h`` produces (:issue:`1150`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 - Added the ability write unlimited netCDF dimensions with the ``scipy`` and
-  ``netcdf4`` backends via the new :py:attr:`~xray.Dataset.encoding` attribute
-  or via the ``unlimited_dims`` argument to :py:meth:`~xray.Dataset.to_netcdf`.
+  ``netcdf4`` backends via the new ``xray.Dataset.encoding`` attribute
+  or via the ``unlimited_dims`` argument to ``xray.Dataset.to_netcdf``.
   By `Joe Hamman <https://github.com/jhamman>`_.
 - New :py:meth:`~DataArray.quantile` method to calculate quantiles from
   DataArray objects (:issue:`1187`).
@@ -2980,7 +2980,7 @@ recommend switching your import statements to ``import xarray as xr``.
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- The internal data model used by :py:class:`~xray.DataArray` has been
+- The internal data model used by ``xray.DataArray`` has been
   rewritten to fix several outstanding issues (:issue:`367`, :issue:`634`,
   `this stackoverflow report`_). Internally, ``DataArray`` is now implemented
   in terms of ``._variable`` and ``._coords`` attributes instead of holding
@@ -3018,7 +3018,7 @@ Breaking changes
       * x        (x) int64 0 1 2
 
 - It is no longer possible to convert a DataArray to a Dataset with
-  :py:meth:`xray.DataArray.to_dataset` if it is unnamed. This will now
+  ``xray.DataArray.to_dataset`` if it is unnamed. This will now
   raise ``ValueError``. If the array is unnamed, you need to supply the
   ``name`` argument.
 
@@ -3087,7 +3087,7 @@ Enhancements
 - Plotting: more control on colormap parameters (:issue:`642`). ``vmin`` and
   ``vmax`` will not be silently ignored anymore. Setting ``center=False``
   prevents automatic selection of a divergent colormap.
-- New :py:meth:`~xray.Dataset.shift` and :py:meth:`~xray.Dataset.roll` methods
+- New ``xray.Dataset.shift`` and ``xray.Dataset.roll`` methods
   for shifting/rotating datasets or arrays along a dimension:
 
   .. ipython:: python
@@ -3103,7 +3103,7 @@ Enhancements
   index names correspond to the ``dims`` of the ``Dataset``, and its data is aligned.
 - Passing a :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` to a Dataset constructor
   is now permitted.
-- New function :py:func:`~xray.broadcast` for explicitly broadcasting
+- New function ``xray.broadcast`` for explicitly broadcasting
   ``DataArray`` and ``Dataset`` objects against each other. For example:
 
   .. ipython:: python
@@ -3161,7 +3161,7 @@ API Changes
 ~~~~~~~~~~~
 
 - The handling of colormaps and discrete color lists for 2D plots in
-  :py:meth:`~xray.DataArray.plot` was changed to provide more compatibility
+  ``xray.DataArray.plot`` was changed to provide more compatibility
   with matplotlib's ``contour`` and ``contourf`` functions (:issue:`538`).
   Now discrete lists of colors should be specified using ``colors`` keyword,
   rather than ``cmap``.
@@ -3169,10 +3169,10 @@ API Changes
 Enhancements
 ~~~~~~~~~~~~
 
-- Faceted plotting through :py:class:`~xray.plot.FacetGrid` and the
-  :py:meth:`~xray.plot.plot` method. See :ref:`plotting.faceting` for more details
+- Faceted plotting through ``xray.plot.FacetGrid`` and the
+  ``xray.plot.plot`` method. See :ref:`plotting.faceting` for more details
   and examples.
-- :py:meth:`~xray.Dataset.sel` and :py:meth:`~xray.Dataset.reindex` now support
+- ``xray.Dataset.sel`` and ``xray.Dataset.reindex`` now support
   the ``tolerance`` argument for controlling nearest-neighbor selection
   (:issue:`629`):
 
@@ -3189,12 +3189,12 @@ Enhancements
       * x        (x) float64 0.9 1.5
 
   This feature requires pandas v0.17 or newer.
-- New ``encoding`` argument in :py:meth:`~xray.Dataset.to_netcdf` for writing
+- New ``encoding`` argument in ``xray.Dataset.to_netcdf`` for writing
   netCDF files with compression, as described in the new documentation
   section on :ref:`io.netcdf.writing_encoded`.
-- Add :py:attr:`~xray.Dataset.real` and :py:attr:`~xray.Dataset.imag`
+- Add ``xray.Dataset.real`` and ``xray.Dataset.imag``
   attributes to Dataset and DataArray (:issue:`553`).
-- More informative error message with :py:meth:`~xray.Dataset.from_dataframe`
+- More informative error message with ``xray.Dataset.from_dataframe``
   if the frame has duplicate columns.
 - xray now uses deterministic names for dask arrays it creates or opens from
   disk. This allows xray users to take advantage of dask's nascent support for
@@ -3209,9 +3209,9 @@ Bug fixes
 - Aggregation functions now correctly skip ``NaN`` for data for ``complex128``
   dtype (:issue:`554`).
 - Fixed indexing 0d arrays with unicode dtype (:issue:`568`).
-- :py:meth:`~xray.DataArray.name` and Dataset keys must be a string or None to
+- ``xray.DataArray.name`` and Dataset keys must be a string or None to
   be written to netCDF (:issue:`533`).
-- :py:meth:`~xray.DataArray.where` now uses dask instead of numpy if either the
+- ``xray.DataArray.where`` now uses dask instead of numpy if either the
   array or ``other`` is a dask array. Previously, if ``other`` was a numpy array
   the method was evaluated eagerly.
 - Global attributes are now handled more consistently when loading remote
@@ -3238,15 +3238,15 @@ v0.6.0 (21 August 2015)
 
 This release includes numerous bug fixes and enhancements. Highlights
 include the introduction of a plotting module and the new Dataset and DataArray
-methods :py:meth:`~xray.Dataset.isel_points`, :py:meth:`~xray.Dataset.sel_points`,
-:py:meth:`~xray.Dataset.where` and :py:meth:`~xray.Dataset.diff`. There are no
+methods ``xray.Dataset.isel_points``, ``xray.Dataset.sel_points``,
+``xray.Dataset.where`` and ``xray.Dataset.diff``. There are no
 breaking changes from v0.5.2.
 
 Enhancements
 ~~~~~~~~~~~~
 
 - Plotting methods have been implemented on DataArray objects
-  :py:meth:`~xray.DataArray.plot` through integration with matplotlib
+  ``xray.DataArray.plot`` through integration with matplotlib
   (:issue:`185`). For an introduction, see :ref:`plotting`.
 - Variables in netCDF files with multiple missing values are now decoded as NaN
   after issuing a warning if open_dataset is called with mask_and_scale=True.
@@ -3255,7 +3255,7 @@ Enhancements
 - Dataset variables are now written to netCDF files in order of appearance
   when using the netcdf4 backend (:issue:`479`).
 
-- Added :py:meth:`~xray.Dataset.isel_points` and :py:meth:`~xray.Dataset.sel_points`
+- Added ``xray.Dataset.isel_points`` and ``xray.Dataset.sel_points``
   to support pointwise indexing of Datasets and DataArrays (:issue:`475`).
 
   .. ipython::
@@ -3300,7 +3300,7 @@ Enhancements
         x        (points) |S1 'a' 'b' 'g'
       * points   (points) int64 0 1 2
 
-- New :py:meth:`~xray.Dataset.where` method for masking xray objects according
+- New ``xray.Dataset.where`` method for masking xray objects according
   to some criteria. This works particularly well with multi-dimensional data:
 
   .. ipython:: python
@@ -3311,11 +3311,10 @@ Enhancements
     @savefig where_example.png width=4in height=4in
     ds.distance.where(ds.distance < 100).plot()
 
-- Added new methods :py:meth:`DataArray.diff <xray.DataArray.diff>`
-  and :py:meth:`Dataset.diff <xray.Dataset.diff>` for finite
-  difference calculations along a given axis.
+- Added new methods ``xray.DataArray.diff`` and ``xray.Dataset.diff``
+  for finite difference calculations along a given axis.
 
-- New :py:meth:`~xray.DataArray.to_masked_array` convenience method for
+- New ``xray.DataArray.to_masked_array`` convenience method for
   returning a numpy.ma.MaskedArray.
 
   .. ipython:: python
@@ -3324,7 +3323,7 @@ Enhancements
     da.where(da < 0.5)
     da.where(da < 0.5).to_masked_array(copy=True)
 
-- Added new flag "drop_variables" to :py:meth:`~xray.open_dataset` for
+- Added new flag "drop_variables" to ``xray.open_dataset`` for
   excluding variables from being parsed. This may be useful to drop
   variables with problems or inconsistent values.
 
@@ -3353,7 +3352,7 @@ options for ``xray.concat``.
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- The optional arguments ``concat_over`` and ``mode`` in :py:func:`~xray.concat` have
+- The optional arguments ``concat_over`` and ``mode`` in ``xray.concat`` have
   been removed and replaced by ``data_vars`` and ``coords``. The new arguments are both
   more easily understood and more robustly implemented, and allowed us to fix a bug
   where ``concat`` accidentally loaded data into memory. If you set values for
@@ -3363,16 +3362,16 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:func:`~xray.open_mfdataset` now supports a ``preprocess`` argument for
+- ``xray.open_mfdataset`` now supports a ``preprocess`` argument for
   preprocessing datasets prior to concatenaton. This is useful if datasets
   cannot be otherwise merged automatically, e.g., if the original datasets
   have conflicting index coordinates (:issue:`443`).
-- :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` now use a
+- ``xray.open_dataset`` and ``xray.open_mfdataset`` now use a
   global thread lock by default for reading from netCDF files with dask. This
   avoids possible segmentation faults for reading from netCDF4 files when HDF5
   is not configured properly for concurrent access (:issue:`444`).
 - Added support for serializing arrays of complex numbers with `engine='h5netcdf'`.
-- The new :py:func:`~xray.save_mfdataset` function allows for saving multiple
+- The new ``xray.save_mfdataset`` function allows for saving multiple
   datasets to disk simultaneously. This is useful when processing large datasets
   with dask.array. For example, to save a dataset too big to fit into memory
   to one file per year, we could write:
@@ -3391,7 +3390,7 @@ Bug fixes
 
 - Fixed ``min``, ``max``, ``argmin`` and ``argmax`` for arrays with string or
   unicode types (:issue:`453`).
-- :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` support
+- ``xray.open_dataset`` and ``xray.open_mfdataset`` support
   supplying chunks as a single integer.
 - Fixed a bug in serializing scalar datetime variable to netCDF.
 - Fixed a bug that could occur in serialization of 0-dimensional integer arrays.
@@ -3408,9 +3407,9 @@ adds the ``pipe`` method, copied from pandas.
 Enhancements
 ~~~~~~~~~~~~
 
-- Added :py:meth:`~xray.Dataset.pipe`, replicating the `new pandas method`_ in version
+- Added ``xray.Dataset.pipe``, replicating the `new pandas method`_ in version
   0.16.2. See :ref:`transforming datasets` for more details.
-- :py:meth:`~xray.Dataset.assign` and :py:meth:`~xray.Dataset.assign_coords`
+- ``xray.Dataset.assign`` and ``xray.Dataset.assign_coords``
   now assign new variables in sorted (alphabetical) order, mirroring the
   behavior in pandas. Previously, the order was arbitrary.
 
@@ -3432,7 +3431,7 @@ Highlights
 
 The headline feature in this release is experimental support for out-of-core
 computing (data that doesn't fit into memory) with dask_. This includes a new
-top-level function :py:func:`~xray.open_mfdataset` that makes it easy to open
+top-level function ``xray.open_mfdataset`` that makes it easy to open
 a collection of netCDF (using dask) as a single ``xray.Dataset`` object. For
 more on dask, read the `blog post introducing xray + dask`_ and the new
 documentation section :doc:`dask`.
@@ -3447,7 +3446,7 @@ Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - The logic used for choosing which variables are concatenated with
-  :py:func:`~xray.concat` has changed. Previously, by default any variables
+  ``xray.concat`` has changed. Previously, by default any variables
   which were equal across a dimension were not concatenated. This lead to some
   surprising behavior, where the behavior of groupby and concat operations
   could depend on runtime values (:issue:`268`). For example:
@@ -3482,8 +3481,8 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
-- New :py:meth:`~xray.Dataset.to_array` and enhanced
-  :py:meth:`~xray.DataArray.to_dataset` methods make it easy to switch back
+- New ``xray.Dataset.to_array`` and enhanced
+  ``xray.DataArray.to_dataset`` methods make it easy to switch back
   and forth between arrays and datasets:
 
   .. ipython:: python
@@ -3493,7 +3492,7 @@ Enhancements
       ds.to_array()
       ds.to_array().to_dataset(dim='variable')
 
-- New :py:meth:`~xray.Dataset.fillna` method to fill missing values, modeled
+- New ``xray.Dataset.fillna`` method to fill missing values, modeled
   off the pandas method of the same name:
 
   .. ipython:: python
@@ -3505,7 +3504,7 @@ Enhancements
   index based alignment and broadcasting like standard binary operations. It
   also can be applied by group, as illustrated in
   :ref:`fill with climatology`.
-- New :py:meth:`~xray.Dataset.assign` and :py:meth:`~xray.Dataset.assign_coords`
+- New ``xray.Dataset.assign`` and ``xray.Dataset.assign_coords``
   methods patterned off the new :py:meth:`DataFrame.assign <pandas.DataFrame.assign>`
   method in pandas:
 
@@ -3517,8 +3516,8 @@ Enhancements
 
   These methods return a new Dataset (or DataArray) with updated data or
   coordinate variables.
-- :py:meth:`~xray.Dataset.sel` now supports the ``method`` parameter, which works
-  like the paramter of the same name on :py:meth:`~xray.Dataset.reindex`. It
+- ``xray.Dataset.sel`` now supports the ``method`` parameter, which works
+  like the paramter of the same name on ``xray.Dataset.reindex``. It
   provides a simple interface for doing nearest-neighbor interpolation:
 
   .. use verbatim because I can't seem to install pandas 0.16.1 on RTD :(
@@ -3555,7 +3554,7 @@ Enhancements
 - Accessing data from remote datasets now has retrying logic (with exponential
   backoff) that should make it robust to occasional bad responses from DAP
   servers.
-- You can control the width of the Dataset repr with :py:class:`xray.set_options`.
+- You can control the width of the Dataset repr with ``xray.set_options``.
   It can be used either as a context manager, in which case the default is restored
   outside the context:
 
@@ -3581,7 +3580,7 @@ Deprecations
 ~~~~~~~~~~~~
 
 - The method ``load_data()`` has been renamed to the more succinct
-  :py:meth:`~xray.Dataset.load`.
+  ``xray.Dataset.load``.
 
 v0.4.1 (18 March 2015)
 ----------------------
@@ -3594,7 +3593,7 @@ Enhancements
 
 - New documentation sections on :ref:`time-series` and
   :ref:`combining multiple files`.
-- :py:meth:`~xray.Dataset.resample` lets you resample a dataset or data array to
+- ``xray.Dataset.resample`` lets you resample a dataset or data array to
   a new temporal resolution. The syntax is the `same as pandas`_, except you
   need to supply the time dimension explicitly:
 
@@ -3637,7 +3636,7 @@ Enhancements
       array.resample('1D', dim='time', how='first')
 
 
-- :py:meth:`~xray.Dataset.swap_dims` allows for easily swapping one dimension
+- ``xray.Dataset.swap_dims`` allows for easily swapping one dimension
   out for another:
 
   .. ipython:: python
@@ -3647,7 +3646,7 @@ Enhancements
        ds.swap_dims({'x': 'y'})
 
   This was possible in earlier versions of xray, but required some contortions.
-- :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
+- ``xray.open_dataset`` and ``xray.Dataset.to_netcdf`` now
   accept an ``engine`` argument to explicitly select which underlying library
   (netcdf4 or scipy) is used for reading/writing a netCDF file.
 
@@ -3682,7 +3681,7 @@ Breaking changes
 
 - We now automatically align index labels in arithmetic, dataset construction,
   merging and updating. This means the need for manually invoking methods like
-  :py:func:`~xray.align` and :py:meth:`~xray.Dataset.reindex_like` should be
+  ``xray.align`` and ``xray.Dataset.reindex_like`` should be
   vastly reduced.
 
   :ref:`For arithmetic<math automatic alignment>`, we align
@@ -3734,7 +3733,7 @@ Breaking changes
       (a + b).coords
 
   This functionality can be controlled through the ``compat`` option, which
-  has also been added to the :py:class:`~xray.Dataset` constructor.
+  has also been added to the ``xray.Dataset`` constructor.
 - Datetime shortcuts such as ``'time.month'`` now return a ``DataArray`` with
   the name ``'month'``, not ``'time.month'`` (:issue:`345`). This makes it
   easier to index the resulting arrays when they are used with ``groupby``:
@@ -3772,7 +3771,7 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
-- Support for :py:meth:`~xray.Dataset.reindex` with a fill method. This
+- Support for ``xray.Dataset.reindex`` with a fill method. This
   provides a useful shortcut for upsampling:
 
   .. ipython:: python
@@ -3786,16 +3785,15 @@ Enhancements
 - Use functions that return generic ndarrays with DataArray.groupby.apply and
   Dataset.apply (:issue:`327` and :issue:`329`). Thanks Jeff Gerard!
 - Consolidated the functionality of ``dumps`` (writing a dataset to a netCDF3
-  bytestring) into :py:meth:`~xray.Dataset.to_netcdf` (:issue:`333`).
-- :py:meth:`~xray.Dataset.to_netcdf` now supports writing to groups in netCDF4
+  bytestring) into ``xray.Dataset.to_netcdf`` (:issue:`333`).
+- ``xray.Dataset.to_netcdf`` now supports writing to groups in netCDF4
   files (:issue:`333`). It also finally has a full docstring -- you should read
   it!
-- :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
+- ``xray.open_dataset`` and ``xray.Dataset.to_netcdf`` now
   work on netCDF3 files when netcdf4-python is not installed as long as scipy
   is available (:issue:`333`).
-- The new :py:meth:`Dataset.drop <xray.Dataset.drop>` and
-  :py:meth:`DataArray.drop <xray.DataArray.drop>` methods makes it easy to drop
-  explicitly listed variables or index labels:
+- The new ``xray.Dataset.drop`` and ``xray.DataArray.drop`` methods
+  makes it easy to drop explicitly listed variables or index labels:
 
   .. ipython:: python
      :okwarning:
@@ -3808,7 +3806,7 @@ Enhancements
       arr = xray.DataArray([1, 2, 3], coords=[('x', list('abc'))])
       arr.drop(['a', 'c'], dim='x')
 
-- :py:meth:`~xray.Dataset.broadcast_equals` has been added to correspond to
+- ``xray.Dataset.broadcast_equals`` has been added to correspond to
   the new ``compat`` option.
 - Long attributes are now truncated at 500 characters when printing a dataset
   (:issue:`338`). This should make things more convenient for working with
@@ -3834,8 +3832,8 @@ Deprecations
 ~~~~~~~~~~~~
 
 - ``dump`` and ``dumps`` have been deprecated in favor of
-  :py:meth:`~xray.Dataset.to_netcdf`.
-- ``drop_vars`` has been deprecated in favor of :py:meth:`~xray.Dataset.drop`.
+  ``xray.Dataset.to_netcdf``.
+- ``drop_vars`` has been deprecated in favor of ``xray.Dataset.drop``.
 
 Future plans
 ~~~~~~~~~~~~
@@ -3965,10 +3963,10 @@ backwards incompatible changes.
 New features
 ~~~~~~~~~~~~
 
-- Added :py:meth:`~xray.Dataset.count` and :py:meth:`~xray.Dataset.dropna`
+- Added ``xray.Dataset.count`` and ``xray.Dataset.dropna``
   methods, copied from pandas, for working with missing values (:issue:`247`,
   :issue:`58`).
-- Added :py:meth:`DataArray.to_pandas <xray.DataArray.to_pandas>` for
+- Added ``xray.DataArray.to_pandas`` for
   converting a data array into the pandas object with the same dimensionality
   (1D to Series, 2D to DataFrame, etc.) (:issue:`255`).
 - Support for reading gzipped netCDF3 files (:issue:`239`).
@@ -4001,7 +3999,7 @@ New features
   of arrays of metadata that describe the grid on which the points in "variable"
   arrays lie. They are preserved (when unambiguous) even though mathematical
   operations.
-- **Dataset math** :py:class:`~xray.Dataset` objects now support all arithmetic
+- **Dataset math** ``xray.Dataset`` objects now support all arithmetic
   operations directly. Dataset-array operations map across all dataset
   variables; dataset-dataset operations act on each pair of variables with the
   same name.
@@ -4017,7 +4015,7 @@ Backwards incompatible changes
 
 - ``Dataset.__eq__`` and ``Dataset.__ne__`` are now element-wise operations
   instead of comparing all values to obtain a single boolean. Use the method
-  :py:meth:`~xray.Dataset.equals` instead.
+  ``xray.Dataset.equals`` instead.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -4026,7 +4024,7 @@ Deprecations
 - ``Dataset.select_vars`` deprecated: index a ``Dataset`` with a list of
   variable names instead.
 - ``DataArray.select_vars`` and ``DataArray.drop_vars`` deprecated: use
-  :py:meth:`~xray.DataArray.reset_coords` instead.
+  ``xray.DataArray.reset_coords`` instead.
 
 v0.2 (14 August 2014)
 ---------------------
@@ -4038,14 +4036,14 @@ fixes. Here are the highlights:
   possible to create a DataArray without using a Dataset. This is highlighted
   in the refreshed :doc:`tutorial`.
 - You can perform aggregation operations like ``mean`` directly on
-  :py:class:`~xray.Dataset` objects, thanks to Joe Hamman. These aggregation
+  ``xray.Dataset`` objects, thanks to Joe Hamman. These aggregation
   methods also worked on grouped datasets.
 - xray now works on Python 2.6, thanks to Anna Kuznetsova.
 - A number of methods and attributes were given more sensible (usually shorter)
   names: ``labeled`` -> ``sel``,  ``indexed`` -> ``isel``, ``select`` ->
   ``select_vars``, ``unselect`` -> ``drop_vars``, ``dimensions`` -> ``dims``,
   ``coordinates`` -> ``coords``, ``attributes`` -> ``attrs``.
-- New :py:meth:`~xray.Dataset.load_data` and :py:meth:`~xray.Dataset.close`
+- New ``xray.Dataset.load_data`` and ``xray.Dataset.close``
   methods for datasets facilitate lower level of control of data loaded from
   disk.
 
