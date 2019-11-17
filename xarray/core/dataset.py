@@ -2657,15 +2657,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 continue
             if isinstance(v, pd.MultiIndex):
                 new_names = [name_dict.get(k, k) for k in v.names]
-                index = pd.MultiIndex(
-                    v.levels,
-                    v.labels,
-                    v.sortorder,
-                    names=new_names,
-                    verify_integrity=False,
-                )
+                index = v.rename(names=new_names)
             else:
-                index = pd.Index(v, name=new_name)
+                index = v.rename(new_name)
             indexes[new_name] = index
         return indexes
 
@@ -3333,7 +3327,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable) -> "Dataset":
+    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
         index = self.get_index(dim)
         index = index.remove_unused_levels()
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -3342,7 +3336,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if index.equals(full_idx):
             obj = self
         else:
-            obj = self.reindex({dim: full_idx}, copy=False)
+            obj = self.reindex({dim: full_idx}, copy=False, fill_value=fill_value)
 
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
@@ -3368,7 +3362,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    def unstack(self, dim: Union[Hashable, Iterable[Hashable]] = None) -> "Dataset":
+    def unstack(
+        self,
+        dim: Union[Hashable, Iterable[Hashable]] = None,
+        fill_value: Any = dtypes.NA,
+    ) -> "Dataset":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -3380,6 +3378,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : Hashable or iterable of Hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
+        fill_value: value to be filled. By default, np.nan
 
         Returns
         -------
@@ -3417,7 +3416,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            result = result._unstack_once(dim)
+            result = result._unstack_once(dim, fill_value)
         return result
 
     def update(self, other: "CoercibleMapping", inplace: bool = None) -> "Dataset":
