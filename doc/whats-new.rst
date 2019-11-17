@@ -804,7 +804,7 @@ Bug fixes
   instead to the name of the first DataArray in the list as it did before.
   (:issue:`2775`). By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
-- Per `CF conventions
+- Per the `CF conventions section on calendars
   <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
   specifying ``'standard'`` as the calendar type in
   :py:meth:`~xarray.cftime_range` now correctly refers to the ``'gregorian'``
