@@ -1835,6 +1835,14 @@ class TestVariable(VariableSubclassobjects):
         actual = v.coarsen(dict(x=2, y=2), func="count", boundary="exact")
         assert_equal(actual, expected)
 
+        actual = v.coarsen(dict(x=2, y=2), func="sum", boundary="exact", skipna=False)
+        expected = self.cls(("x", "y"), [[np.nan, 18], [42, np.nan]])
+        assert_equal(actual, expected)
+
+        actual = v.coarsen(dict(x=2, y=2), func="sum", boundary="exact", skipna=True)
+        expected = self.cls(("x", "y"), [[10, 18], [42, 35]])
+        assert_equal(actual, expected)
+
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
