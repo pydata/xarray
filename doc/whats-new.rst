@@ -112,9 +112,9 @@ Bug fixes
   In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`GroupBy.reduce` when reducing over multiple dimensions.
-  (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
+  (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian>`_
 - Allow appending datetime and bool data variables to zarr stores.
-  (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
+  (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -234,9 +234,9 @@ Bug fixes
   (:issue:`3317`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Line plots with the ``x`` or ``y`` argument set to a 1D non-dimensional coord
   now plot the correct data for 2D DataArrays
-  (:issue:`3334`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  (:issue:`3334`). By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Make :py:func:`~xarray.concat` more robust when merging variables present in some datasets but
-  not others (:issue:`508`). By `Deepak Cherian <http://github.com/dcherian>`_.
+  not others (:issue:`508`). By `Deepak Cherian <https://github.com/dcherian>`_.
 - The default behaviour of reducing across all dimensions for
   :py:class:`~xarray.core.groupby.DataArrayGroupBy` objects has now been properly removed
   as was done for :py:class:`~xarray.core.groupby.DatasetGroupBy` in 0.13.0 (:issue:`3337`).
@@ -244,18 +244,18 @@ Bug fixes
   Also raise nicer error message when no groups are created (:issue:`1764`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
-  By `Deepak Cherian <https://github.com/dcherian/>`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Warn if the ``dim`` kwarg is passed to rolling operations. This is redundant since a dimension is
   specified when the :py:class:`DatasetRolling` or :py:class:`DataArrayRolling` object is created.
-  (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian/>`_.
+  (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
 - Created a glossary of important xarray terms (:issue:`2410`, :pull:`3352`).
-  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 - Created a "How do I..." section (:ref:`howdoi`) for solutions to common questions. (:pull:`3357`).
-  By `Deepak Cherian <https://github.com/dcherian/>`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
   (pull:`3331`, pull:`3331`). By `Justus Magin <https://github.com/keewis>`_.
 - Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`,
@@ -263,7 +263,7 @@ Documentation
   :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`, :py:meth:`Dataset.fillna` (:pull:`3328`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fixed documentation to clean up an unwanted file created in ``ipython`` example
-  (:pull:`3353`). By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+  (:pull:`3353`). By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 .. _whats-new.0.13.0:
 
@@ -353,7 +353,7 @@ New functions/methods
 
 - Added :py:meth:`DataArray.broadcast_like` and :py:meth:`Dataset.broadcast_like`.
   By `Deepak Cherian <https://github.com/dcherian>`_ and `David Mertz
-  <http://github.com/DavidMertz>`_.
+  <https://github.com/DavidMertz>`_.
 
 - Dataset plotting API for visualizing dependencies between two DataArrays!
   Currently only :py:meth:`Dataset.plot.scatter` is implemented.
@@ -406,7 +406,7 @@ Enhancements
   labels by using both ``dim`` and ``labels`` or using a
   :py:class:`~xarray.core.coordinates.DataArrayCoordinates` object are
   deprecated (:issue:`2910`).
-  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 - Added examples of :py:meth:`Dataset.set_index` and
   :py:meth:`DataArray.set_index`, as well are more specific error messages
@@ -440,7 +440,7 @@ Bug fixes
   By `Hasan Ahmad <https://github.com/HasanAhmadQ7>`_.
 - Fixed bug in ``combine_by_coords()`` causing a `ValueError` if the input had
   an unused dimension with coordinates which were not monotonic (:issue:`3150`).
-  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fixed crash when applying ``distributed.Client.compute()`` to a DataArray
   (:issue:`3171`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Better error message when using groupby on an empty DataArray (:issue:`3037`).
@@ -464,7 +464,7 @@ Documentation
 
 - Fixed documentation to clean up unwanted files created in ``ipython`` examples
   (:issue:`3227`).
-  By `Gregory Gundersen <https://github.com/gwgundersen/>`_.
+  By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 .. _whats-new.0.12.3:
 
@@ -534,7 +534,7 @@ New functions/methods
   To avoid FutureWarnings switch to using ``combine_nested`` or
   ``combine_by_coords``, (or set the ``combine`` argument in
   ``open_mfdataset``). (:issue:`2159`)
-  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 - :py:meth:`~xarray.DataArray.rolling_exp` and
   :py:meth:`~xarray.Dataset.rolling_exp` added, similar to pandas'
@@ -580,7 +580,7 @@ Enhancements to existing functionality
   :py:meth:`DataArray.groupby_bins`, and :py:meth:`DataArray.resample` now
   accept a keyword argument ``restore_coord_dims`` which keeps the order
   of the dimensions of multi-dimensional coordinates intact (:issue:`1856`).
-  By `Peter Hausamann <http://github.com/phausamann>`_.
+  By `Peter Hausamann <https://github.com/phausamann>`_.
 - Clean up Python 2 compatibility in code (:issue:`2950`)
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Better warning message when supplying invalid objects to ``xr.merge``
@@ -781,7 +781,7 @@ Bug fixes
   `Spencer Clark <https://github.com/spencerkclark>`_.
 - Line plots with the ``x`` argument set to a non-dimensional coord now plot
   the correct data for 1D DataArrays.
-  (:issue:`2725`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  (:issue:`2725`). By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Subtracting a scalar ``cftime.datetime`` object from a
   :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
   instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
@@ -797,12 +797,12 @@ Bug fixes
   By `Yohai Bar-Sinai <https://github.com/yohai>`_.
 - Fixed error when trying to reduce a DataArray using a function which does not
   require an axis argument. (:issue:`2768`)
-  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Concatenating a sequence of :py:class:`~xarray.DataArray` with varying names
   sets the name of the output array to ``None``, instead of the name of the
   first input array. If the names are the same it sets the name to that,
   instead to the name of the first DataArray in the list as it did before.
-  (:issue:`2775`). By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  (:issue:`2775`). By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 - Per `CF conventions
   <http://cfconventions.org/cf-conventions/cf-conventions.html#calendar>`_,
@@ -822,7 +822,7 @@ Bug fixes
   (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
   (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Fixed performance regression with ``open_mfdataset`` (:issue:`2662`).
-  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fixed supplying an explicit dimension in the ``concat_dim`` argument to
   to ``open_mfdataset`` (:issue:`2647`).
   By `Ben Root <https://github.com/WeatherGod>`_.
@@ -887,13 +887,13 @@ Enhancements
   but were not explicitly closed. This is mostly useful for debugging; we
   recommend enabling it in your test suites if you use xarray for IO.
   By `Stephan Hoyer <https://github.com/shoyer>`_
-- Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
+- Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://github.com/mrocklin>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
   ``loffset`` kwarg just like Pandas.
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Datasets are now guaranteed to have a ``'source'`` encoding, so the source
   file name is always stored (:issue:`2550`).
-  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - The ``apply`` methods for ``DatasetGroupBy``, ``DataArrayGroupBy``,
   ``DatasetResample`` and ``DataArrayResample`` now support passing positional
   arguments to the applied function as a tuple to the ``args`` argument.
@@ -1015,7 +1015,7 @@ Enhancements
   dataset and dataarray attrs upon operations. The option is set with
   ``xarray.set_options(keep_attrs=True)``, and the default is to use the old
   behaviour.
-  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added a new backend for the GRIB file format based on ECMWF *cfgrib*
   python driver and *ecCodes* C-library. (:issue:`2475`)
   By `Alessandro Amici <https://github.com/alexamici>`_,
@@ -1071,7 +1071,7 @@ Bug fixes
   CFTimeIndex is now allowed (:issue:`2484`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid use of Dask's deprecated ``get=`` parameter in tests
-  by `Matthew Rocklin <https://github.com/mrocklin/>`_.
+  by `Matthew Rocklin <https://github.com/mrocklin>`_.
 - An ``OverflowError`` is now accurately raised and caught during the
   encoding process if a reference date is used that is so distant that
   the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
