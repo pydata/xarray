@@ -1267,7 +1267,7 @@ Enhancements
 
 - :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
   methods are newly added.
-  See :ref:`interpolating values with interp` for the detail.
+  See :ref:`interp` for the detail.
   (:issue:`2079`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
@@ -1384,7 +1384,7 @@ non-standard calendars used in climate modeling.
 Documentation
 ~~~~~~~~~~~~~
 
-- New FAQ entry, :ref:`faq.other_projects`.
+- New FAQ entry, :ref:`related-projects`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :ref:`assigning_values` now includes examples on how to select and assign
   values to a :py:class:`~xarray.DataArray` with ``.loc``.
@@ -3251,7 +3251,7 @@ Enhancements
 - Variables in netCDF files with multiple missing values are now decoded as NaN
   after issuing a warning if open_dataset is called with mask_and_scale=True.
 - We clarified our rules for when the result from an xray operation is a copy
-  vs. a view (see :ref:`copies vs views` for more details).
+  vs. a view (see :ref:`copies_vs_views` for more details).
 - Dataset variables are now written to netCDF files in order of appearance
   when using the netcdf4 backend (:issue:`479`).
 
@@ -4034,7 +4034,7 @@ fixes. Here are the highlights:
 
 - There is now a direct constructor for ``DataArray`` objects, which makes it
   possible to create a DataArray without using a Dataset. This is highlighted
-  in the refreshed :doc:`tutorial`.
+  in the refreshed ``tutorial``.
 - You can perform aggregation operations like ``mean`` directly on
   ``xray.Dataset`` objects, thanks to Joe Hamman. These aggregation
   methods also worked on grouped datasets.
