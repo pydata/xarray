@@ -326,7 +326,7 @@ Broadcasting by dimension name
 the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
 operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or
-:py:const:`numpy.newaxis`.
+:py:data:`numpy.newaxis`.
 
 This is best illustrated by a few examples. Consider two one-dimensional
 arrays with different sizes aligned along different dimensions:
@@ -566,7 +566,7 @@ to set ``axis=-1``. As an example, here is how we would wrap
 
 Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
 nicely with tools for building vectorized functions, like
-:func:`numpy.broadcast_arrays` and :func:`numpy.vectorize`. For high performance
+:py:func:`numpy.broadcast_arrays` and :py:class:`numpy.vectorize`. For high performance
 needs, consider using Numba's :doc:`vectorize and guvectorize <numba:user/vectorize>`.
 
 In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize
