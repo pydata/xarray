@@ -399,7 +399,7 @@ Enhancements
   By `Gerardo Rivera <https://github.com/dangomelon>`_.
 
 - :py:func:`~xarray.Dataset.to_netcdf()` now supports the ``invalid_netcdf`` kwarg when used
-  with ``engine="h5netcdf"``. It is passed to :py:func:`h5netcdf.File`.
+  with ``engine="h5netcdf"``. It is passed to ``h5netcdf.File``.
   By `Ulrich Herter <https://github.com/ulijh>`_.
 
 - ``xarray.Dataset.drop`` now supports keyword arguments; dropping index
