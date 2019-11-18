@@ -100,7 +100,7 @@ Bug fixes
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
 - Allow appending datetime and bool data variables to zarr stores.
   (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
-- Make :py:func:`~xarray.concat` more robust when merging variables present in some datasets but
+- Make :py:func:`~xarray.concat` more robust when concatenating variables present in some datasets but
   not others (:issue:`508`). By `Scott Chamberlin <http://github.com/scottcha>`_.
 
 Documentation
