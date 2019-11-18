@@ -274,14 +274,14 @@ def assert_dask_array(da, dask):
 
 
 @arm_xfail
-@pytest.mark.parametrize("dask", [False, True])
+@pytest.mark.parametrize("dask", [False, True] if has_dask else [False])
 def test_datetime_mean(dask):
     # Note: only testing numpy, as dask is broken upstream
     da = DataArray(
         np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8"),
         dims=["time"],
     )
-    if dask and has_dask:
+    if dask:
         # Trigger use case where a chunk is full of NaT
         da = da.chunk({"time": 3})
 

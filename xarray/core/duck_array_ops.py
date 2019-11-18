@@ -10,7 +10,6 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
-from distutils.version import LooseVersion
 
 from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
