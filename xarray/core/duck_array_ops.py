@@ -352,29 +352,30 @@ cumsum_1d.numeric_only = True
 _mean = _create_nan_agg_method("mean")
 
 
-def _datetime_crude_nanmin(array):
-    """Implement nanmin for datetime64 arrays, with caveats:
+def _datetime_nanmin(array):
+    """nanmin() function for datetime64.
 
-    - can't accept an axis parameter
-    - will return incorrect results if the array exclusively contains NaT
-    - doesn't work with dask!
+    Caveats that this function deals with:
+
+    - In numpy < 1.18, min() on datetime64 incorrectly ignores NaT
+    - numpy nanmin() don't work on datetime64 (all versions at the moment of writing)
+    - dask min() does not work on datetime64 (all versions at the moment of writing)
     """
-    if LooseVersion(np.__version__) < "1.18":
-        # numpy.min < 1.18 incorrectly skips NaT - which we exploit here
-        return min(array, skipna=False)
-    # This requires numpy >= 1.15
-
     from .dataarray import DataArray
     from .variable import Variable
 
     if isinstance(array, (DataArray, Variable)):
         array = array.data
-    array = array.ravel()
-    array = array[~pandas_isnull(array)]
 
-    assert array.dtype.itemsize == 8
-    initial = np.array(2 ** 63 - 1, dtype=array.dtype)
-    return min(array, initial=initial, skipna=False)
+    assert array.dtype.kind in "mM"
+    dtype = array.dtype
+    # (NaT).astype(float) does not produce NaN...
+    array = where(pandas_isnull(array), np.nan, array.astype(float))
+    array = min(array, skipna=True)
+    if isinstance(array, float):
+        array = np.array(array)
+    # ...but (NaN).astype("M8") does produce NaT
+    return array.astype(dtype)
 
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
@@ -397,7 +398,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # TODO: make this function dask-compatible?
     if offset is None:
         if array.dtype.kind in "Mm":
-            offset = _datetime_crude_nanmin(array)
+            offset = _datetime_nanmin(array)
         else:
             offset = min(array)
     array = array - offset
@@ -430,7 +431,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
 
     array = asarray(array)
     if array.dtype.kind in "Mm":
-        offset = _datetime_crude_nanmin(array)
+        offset = _datetime_nanmin(array)
 
         # xarray always uses np.datetime64[ns] for np.datetime64 data
         dtype = "timedelta64[ns]"

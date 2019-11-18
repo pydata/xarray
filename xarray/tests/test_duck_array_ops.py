@@ -274,17 +274,28 @@ def assert_dask_array(da, dask):
 
 
 @arm_xfail
-def test_datetime_mean():
+@pytest.mark.parametrize("dask", [False, True])
+def test_datetime_mean(dask):
     # Note: only testing numpy, as dask is broken upstream
     da = DataArray(
-        np.array(["2010-01-01", "NaT", "2010-01-03"], dtype="M8"), dims=["time"]
+        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8"),
+        dims=["time"],
     )
+    if dask and has_dask:
+        # Trigger use case where a chunk is full of NaT
+        da = da.chunk({"time": 3})
+
     expect = DataArray(np.array("2010-01-02", dtype="M8"))
     expect_nat = DataArray(np.array("NaT", dtype="M8"))
 
     actual = da.mean()
+    if dask:
+        assert actual.chunks is not None
     assert_equal(actual, expect)
+
     actual = da.mean(skipna=False)
+    if dask:
+        assert actual.chunks is not None
     assert_equal(actual, expect_nat)
 
     # tests for 1d array full of NaT

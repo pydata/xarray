@@ -115,8 +115,8 @@ Bug fixes
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
 - Allow appending datetime and bool data variables to zarr stores.
   (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
-- Add support for numpy >=1.18 (:issue:`3409`).
-  By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Add support for numpy >=1.18 (); bugfix mean() on datetime64 arrays on dask backend
+  (:issue:`3409`, :pull:`3537`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Add support for pandas >=0.26 (:issue:`3440`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add support for pseudonetcdf >=3.1 (:pull:`3485`).
