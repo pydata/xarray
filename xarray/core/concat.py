@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 
 from . import dtypes, utils
 from .alignment import align
@@ -379,9 +378,16 @@ def _dataset_concat(
                 if k not in ds.variables:
                     for ds in datasets:
                         if k in ds.variables:
-                            # found one to use as a fill value, fill with np.nan
+                            # found one to use as a fill value, fill with fill_value
+                            if fill_value is dtypes.NA:
+                                dtype, fill_value = dtypes.maybe_promote(
+                                    ds.variables[k].dtype
+                                )
+                            else:
+                                dtype = ds.variables[k].dtype
+
                             filled = full_like(
-                                ds.variables[k], fill_value=np.nan, dtype=np.double
+                                ds.variables[k], fill_value=fill_value, dtype=dtype
                             )
                             break
                     variables.append(filled)

@@ -338,16 +338,28 @@ class TestConcatDataset:
             Dataset({"a": ("x", [2, 3]), "x": [1, 2]}),
             Dataset({"a": ("x", [1, 2]), "x": [0, 1]}),
         ]
+
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_expected = np.nan
+        else:
+            fill_value_expected = fill_value
+
         expected = Dataset(
-            {"a": (("t", "x"), [[fill_value, 2, 3], [1, 2, fill_value]])},
+            {
+                "a": (
+                    ("t", "x"),
+                    [[fill_value_expected, 2, 3], [1, 2, fill_value_expected]],
+                )
+            },
             {"x": [0, 1, 2]},
         )
         actual = concat(datasets, dim="t", fill_value=fill_value)
         assert_identical(actual, expected)
+
+        # check that the dtype is as expected
+        assert expected.a.dtype == type(fill_value_expected)
 
 
 class TestConcatDataArray:
