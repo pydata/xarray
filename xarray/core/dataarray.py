@@ -249,14 +249,14 @@ class DataArray(AbstractArray, DataWithCoords):
         Dictionary for holding arbitrary metadata.
     """
 
-    _accessors: Optional[Dict[str, Any]]  # noqa
+    _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _name: Optional[Hashable]
     _variable: Variable
 
     __slots__ = (
-        "_accessors",
+        "_cache",
         "_coords",
         "_file_obj",
         "_indexes",
@@ -373,7 +373,6 @@ class DataArray(AbstractArray, DataWithCoords):
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
-        self._accessors = None
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
@@ -1727,7 +1726,9 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def unstack(
-        self, dim: Union[Hashable, Sequence[Hashable], None] = None
+        self,
+        dim: Union[Hashable, Sequence[Hashable], None] = None,
+        fill_value: Any = dtypes.NA,
     ) -> "DataArray":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
@@ -1740,6 +1741,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : hashable or sequence of hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
+        fill_value: value to be filled. By default, np.nan
 
         Returns
         -------
@@ -1771,7 +1773,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.stack
         """
-        ds = self._to_temp_dataset().unstack(dim)
+        ds = self._to_temp_dataset().unstack(dim, fill_value)
         return self._from_temp_dataset(ds)
 
     def to_unstacked_dataset(self, dim, level=0):
@@ -2018,44 +2020,69 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def interpolate_na(
         self,
-        dim=None,
+        dim: Hashable = None,
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
+        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
         **kwargs: Any,
     ) -> "DataArray":
-        """Interpolate values according to different methods.
+        """Fill in NaNs by interpolating according to different methods.
 
         Parameters
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
-        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
-                  'polynomial', 'barycentric', 'krog', 'pchip',
-                  'spline', 'akima'}, optional
+        method : str, optional
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation (Default). Additional keyword
-              arguments are passed to ``numpy.interp``
-            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
-              'polynomial': are passed to ``scipy.interpolate.interp1d``. If
-              method=='polynomial', the ``order`` keyword argument must also be
+              arguments are passed to :py:func:`numpy.interp`
+            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
+              are passed to :py:func:`scipy.interpolate.interp1d`. If
+              ``method='polynomial'``, the ``order`` keyword argument must also be
               provided.
-            - 'barycentric', 'krog', 'pchip', 'spline', and `akima`: use their
-              respective``scipy.interpolate`` classes.
-        use_coordinate : boolean or str, default True
+            - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
+              respective :py:class:`scipy.interpolate` classes.
+        use_coordinate : bool, str, default True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
-            eqaully-spaced along `dim`. If True, the IndexVariable `dim` is
-            used. If use_coordinate is a string, it specifies the name of a
+            eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
+            used. If ``use_coordinate`` is a string, it specifies the name of a
             coordinate variariable to use as the index.
         limit : int, default None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
-            or None for no limit.
+            or None for no limit. This filling is done regardless of the size of
+            the gap in the data. To only interpolate over gaps less than a given length,
+            see ``max_gap``.
+        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, default None.
+            Maximum size of gap, a continuous sequence of NaNs, that will be filled.
+            Use None for no limit. When interpolating along a datetime64 dimension
+            and ``use_coordinate=True``, ``max_gap`` can be one of the following:
+
+            - a string that is valid input for pandas.to_timedelta
+            - a :py:class:`numpy.timedelta64` object
+            - a :py:class:`pandas.Timedelta` object
+            Otherwise, ``max_gap`` must be an int or a float. Use of ``max_gap`` with unlabeled
+            dimensions has not been implemented yet. Gap length is defined as the difference
+            between coordinate values at the first data point after a gap and the last value
+            before a gap. For gaps at the beginning (end), gap length is defined as the difference
+            between coordinate values at the first (last) valid data point and the first (last) NaN.
+            For example, consider::
+
+                <xarray.DataArray (x: 9)>
+                array([nan, nan, nan,  1., nan, nan,  4., nan, nan])
+                Coordinates:
+                  * x        (x) int64 0 1 2 3 4 5 6 7 8
+
+            The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
+        kwargs : dict, optional
+            parameters passed verbatim to the underlying interpolation function
 
         Returns
         -------
-        DataArray
+        interpolated: DataArray
+            Filled in DataArray.
 
         See also
         --------
@@ -2070,6 +2097,7 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method,
             limit=limit,
             use_coordinate=use_coordinate,
+            max_gap=max_gap,
             **kwargs,
         )
 
