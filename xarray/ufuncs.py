@@ -79,7 +79,7 @@ class _UFuncDispatcher:
         return res
 
 
-def _skip_signature(doc):
+def _skip_signature(doc, name):
     if not isinstance(doc, str):
         return doc
 
@@ -120,7 +120,7 @@ def _create_op(name):
     func.__name__ = name
     doc = getattr(_np, name).__doc__
 
-    doc = _remove_unused_reference_labels(_skip_signature(_dedent(doc)))
+    doc = _remove_unused_reference_labels(_skip_signature(_dedent(doc), name))
 
     func.__doc__ = (
         "xarray specific variant of numpy.%s. Handles "
