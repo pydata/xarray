@@ -201,7 +201,7 @@ class DataArrayRolling(Rolling):
 
             yield (label, window)
 
-    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
+    def construct(self, window_dim, stride=None, fill_value=dtypes.NA):
         """
         Convert this rolling object to xr.DataArray,
         where the window dimension is stacked as a new dimension
@@ -240,6 +240,9 @@ class DataArrayRolling(Rolling):
         """
 
         from .dataarray import DataArray
+
+        if stride is None:
+            stride = self.stride
 
         window = self.obj.variable.rolling_window(
             self.dim, self.window, window_dim, self.center, fill_value=fill_value
@@ -373,7 +376,7 @@ class DataArrayRolling(Rolling):
 
 
 class DatasetRolling(Rolling):
-    __slots__ = ("rollings",)
+    __slots__ = ("rollings","stride")
 
     def __init__(self, obj, windows, min_periods=None, center=False, stride=1):
         """
@@ -414,6 +417,7 @@ class DatasetRolling(Rolling):
         super().__init__(obj, windows, min_periods, center)
         if self.dim not in self.obj.dims:
             raise KeyError(self.dim)
+        self.stride = stride
         # Keep each Rolling object as a dictionary
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
@@ -471,7 +475,7 @@ class DatasetRolling(Rolling):
             **kwargs,
         )
 
-    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
+    def construct(self, window_dim, stride=None, fill_value=dtypes.NA):
         """
         Convert this rolling object to xr.Dataset,
         where the window dimension is stacked as a new dimension
@@ -491,6 +495,9 @@ class DatasetRolling(Rolling):
         """
 
         from .dataset import Dataset
+
+        if stride is None:
+            stride = self.stride
 
         dataset = {}
         for key, da in self.obj.data_vars.items():
