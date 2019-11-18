@@ -17,8 +17,10 @@ from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array
+    from . import dask_array_compat
 except ImportError:
     dask_array = None  # type: ignore
+    dask_array_compat = None
 
 
 def _dask_or_eager_func(
@@ -455,4 +457,4 @@ def rolling_window(array, axis, window, center, fill_value):
     else:  # np.ndarray
         return nputils.rolling_window(array, axis, window, center, fill_value)
 
-pad = _dask_or_eager_func("pad")
+pad = _dask_or_eager_func("pad", dask_module=dask_array_compat)

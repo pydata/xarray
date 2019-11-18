@@ -89,3 +89,59 @@ else:
             meta = meta.astype(dtype)
 
         return meta
+
+
+# TODO figure out how Dask versioning works
+# if LooseVersion(dask_version) >= LooseVersion("1.7.0"):
+try:
+    pad = da.pad
+except AttributeError:
+    def pad(array, pad_width, mode="constant", **kwargs):
+        """
+        Return a new dask.DataArray wit padding. This functions implements a
+        constant padding for versions of Dask that do not implement this yet.
+
+        Parameters
+        ----------
+        array: Array to pad
+
+        pad_width: List of the form [(before, after)]
+            Number of values padded to the edges of axis.
+        """
+        if mode != "constant":
+            raise NotImplementedError() # TODO add error message
+
+        try:
+            fill_value = kwargs["constant_values"]
+            dtype = array.dtype
+        except KeyError:
+            dtype, fill_value = dtypes.maybe_promote(array.dtype)
+
+        for axis, pad in enumerate(pad_width):
+            before_shape = list(array.shape)
+            before_shape[axis] = pad[0]
+            before_chunks = list(array.chunks)
+            before_chunks[axis] = (pad[0],)
+            after_shape = list(array.shape)
+            after_shape[axis] = pad[1]
+            after_chunks = list(array.chunks)
+            after_chunks[axis] = (pad[1],)
+
+            arrays = []
+            if pad[0] > 0:
+                arrays.append(
+                    da.full(
+                        before_shape, fill_value, dtype=dtype, chunks=before_chunks
+                    )
+                )
+            arrays.append(array)
+            if pad[1] > 0:
+                arrays.append(
+                    da.full(
+                        after_shape, fill_value, dtype=dtype, chunks=after_chunks
+                    )
+                )
+            if len(arrays) > 1:
+                array = da.concatenate(arrays, axis=axis)
+
+        return array

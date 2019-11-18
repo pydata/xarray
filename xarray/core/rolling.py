@@ -330,7 +330,7 @@ class DataArrayRolling(Rolling):
             else:
                 shift = (-self.window // 2) + 1
                 valid = (slice(None),) * axis + (slice(-shift, None),)
-            padded = padded.pad_with_fill_value({self.dim: (0, -shift)})
+            padded = padded.pad({self.dim: (0, -shift)}, mode="constant")
 
         if isinstance(padded.data, dask_array_type):
             raise AssertionError("should not be reachable")

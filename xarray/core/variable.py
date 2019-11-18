@@ -1099,7 +1099,6 @@ class Variable(
             result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
 
-
     def pad(self,
         pad_widths: Mapping[Hashable, Tuple[int, int]] = None,
         mode: str = "constant",
@@ -1113,10 +1112,11 @@ class Variable(
         if mode in ["maximum", "mean", "median", "minimum"]:
             opt_kwargs.setdefault("stat_length", tuple((n, n) for n in self.data.shape))
 
-        dtype = self.dtype
-        if mode == "constant":
-            if "constant_values" not in opt_kwargs:
-                dtype, opt_kwargs["constant_values"] = dtypes.maybe_promote(self.dtype)
+
+        if mode == "constant" and "constant_values" not in opt_kwargs:
+            dtype, opt_kwargs["constant_values"] = dtypes.maybe_promote(self.dtype)
+        else:
+            dtype = self.dtype
 
         pad_widths = either_dict_or_kwargs(pad_widths, kwargs, "pad")
         pads = [(0, 0) if d not in pad_widths else pad_widths[d] for d in self.dims]
@@ -1128,68 +1128,6 @@ class Variable(
             **opt_kwargs
         )
 
-        return type(self)(self.dims, array)
-
-    def pad_with_fill_value(
-        self, pad_widths=None, fill_value=dtypes.NA, **pad_widths_kwargs
-    ):
-        """
-        Return a new Variable with paddings.
-
-        Parameters
-        ----------
-        pad_width: Mapping of the form {dim: (before, after)}
-            Number of values padded to the edges of each dimension.
-        **pad_widths_kwargs:
-            Keyword argument for pad_widths
-        """
-        pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
-
-        if fill_value is dtypes.NA:
-            dtype, fill_value = dtypes.maybe_promote(self.dtype)
-        else:
-            dtype = self.dtype
-
-        if isinstance(self.data, dask_array_type):
-            array = self.data
-
-            # Dask does not yet support pad. We manually implement it.
-            # https://github.com/dask/dask/issues/1926
-            for d, pad in pad_widths.items():
-                axis = self.get_axis_num(d)
-                before_shape = list(array.shape)
-                before_shape[axis] = pad[0]
-                before_chunks = list(array.chunks)
-                before_chunks[axis] = (pad[0],)
-                after_shape = list(array.shape)
-                after_shape[axis] = pad[1]
-                after_chunks = list(array.chunks)
-                after_chunks[axis] = (pad[1],)
-
-                arrays = []
-                if pad[0] > 0:
-                    arrays.append(
-                        da.full(
-                            before_shape, fill_value, dtype=dtype, chunks=before_chunks
-                        )
-                    )
-                arrays.append(array)
-                if pad[1] > 0:
-                    arrays.append(
-                        da.full(
-                            after_shape, fill_value, dtype=dtype, chunks=after_chunks
-                        )
-                    )
-                if len(arrays) > 1:
-                    array = da.concatenate(arrays, axis=axis)
-        else:
-            pads = [(0, 0) if d not in pad_widths else pad_widths[d] for d in self.dims]
-            array = np.pad(
-                self.data.astype(dtype, copy=False),
-                pads,
-                mode="constant",
-                constant_values=fill_value,
-            )
         return type(self)(self.dims, array)
 
     def _roll_one_dim(self, dim, count):
@@ -1887,7 +1825,7 @@ class Variable(
                     pad_widths = {d: (0, pad)}
                 else:
                     pad_widths = {d: (pad, 0)}
-                variable = variable.pad_with_fill_value(pad_widths)
+                variable = variable.pad(pad_widths, mode="constant")
             else:
                 raise TypeError(
                     "{} is invalid for boundary. Valid option is 'exact', "
