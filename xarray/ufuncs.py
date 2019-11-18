@@ -80,6 +80,9 @@ class _UFuncDispatcher:
 
 
 def _skip_signature(doc):
+    if not isinstance(doc, str):
+        return doc
+
     if doc.startswith(name):
         signature_end = doc.find("\n\n")
         doc = doc[signature_end + 2 :]
@@ -88,6 +91,9 @@ def _skip_signature(doc):
 
 
 def _remove_unused_reference_labels(doc):
+    if not isinstance(doc, str):
+        return doc
+
     max_references = 5
     for num in range(max_references):
         label = f".. [{num}]"
@@ -112,9 +118,9 @@ def _dedent(doc):
 def _create_op(name):
     func = _UFuncDispatcher(name)
     func.__name__ = name
-    doc = _remove_unused_reference_labels(
-        _skip_signature(_dedent(getattr(_np, name).__doc__))
-    )
+    doc = getattr(_np, name).__doc__
+
+    doc = _remove_unused_reference_labels(_skip_signature(_dedent(doc)))
 
     func.__doc__ = (
         "xarray specific variant of numpy.%s. Handles "
