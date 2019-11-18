@@ -3928,6 +3928,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
               provided.
             - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
+
         use_coordinate : bool, str, default True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
@@ -3947,6 +3948,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - a string that is valid input for pandas.to_timedelta
             - a :py:class:`numpy.timedelta64` object
             - a :py:class:`pandas.Timedelta` object
+
             Otherwise, ``max_gap`` must be an int or a float. Use of ``max_gap`` with unlabeled
             dimensions has not been implemented yet. Gap length is defined as the difference
             between coordinate values at the first data point after a gap and the last value
