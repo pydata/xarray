@@ -78,7 +78,8 @@ def concat(
         to assign each dataset along the concatenated dimension. If not
         supplied, objects are concatenated in the provided order.
     fill_value : scalar, optional
-        Value to use for newly missing values
+        Value to use for newly missing values as well as to fill values where the
+        variable is not present in all datasets.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         String indicating how to combine differing indexes
         (excluding dim) in objects
