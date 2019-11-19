@@ -239,7 +239,7 @@ class DataArray(AbstractArray, DataWithCoords):
     ----------
     dims : tuple
         Dimension names associated with this array.
-    values : np.ndarray
+    values : numpy.ndarray
         Access or modify DataArray values as a numpy array.
     coords : dict-like
         Dictionary of DataArray objects that label values along each dimension.
