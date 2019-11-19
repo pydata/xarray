@@ -5321,7 +5321,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 datetime_unit, _ = np.datetime_data(coord_var.dtype)
             elif datetime_unit is None:
                 datetime_unit = "s"  # Default to seconds for cftime objects
-            coord_var = datetime_to_numeric(coord_var, datetime_unit=datetime_unit)
+            coord_var = coord_var._replace(
+                data=datetime_to_numeric(coord_var.data, datetime_unit=datetime_unit)
+            )
 
         variables = {}
         coord_names = set()
