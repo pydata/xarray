@@ -15,7 +15,7 @@ What's New
 
 .. _whats-new.0.14.1:
 
-v0.14.1 (unreleased)
+v0.14.1 (19 Nov 2019)
 --------------------
 
 Breaking changes
@@ -41,23 +41,20 @@ New Features
   :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`, 
   :py:meth:`~xarray.Dataset.reindex` (:issue:`3518`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
-- Added the ``max_gap`` kwarg to :py:meth:`DataArray.interpolate_na` and
-  :py:meth:`Dataset.interpolate_na`. This controls the maximum size of the data
 - Added the ``fill_value`` option to :py:meth:`DataArray.unstack` and
   :py:meth:`Dataset.unstack` (:issue:`3518`, :pull:`3541`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added the ``max_gap`` kwarg to :py:meth:`~xarray.DataArray.interpolate_na` and
   :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
   gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
-- :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` have been added for dropping labels.
+- Added :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` for dropping labels.
   :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
   dropping variables (including coordinates). The existing :py:meth:`Dataset.drop` &
   :py:meth:`DataArray.drop` methods remain as a backward compatible
   option for dropping either labels or variables, but using the more specific methods is encouraged.
   (:pull:`3475`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- :py:meth:`Dataset.map` & :py:meth:`GroupBy.map` & :py:meth:`Resample.map` have been added for 
+- Added :py:meth:`Dataset.map` & :py:meth:`GroupBy.map` & :py:meth:`Resample.map` for 
   mapping / applying a function over each item in the collection, reflecting the widely used
   and least surprising name for this operation.
   The existing ``apply`` methods remain for backward compatibility, though using the ``map``
@@ -131,7 +128,7 @@ Documentation
 - Fix leap year condition in `monthly means example <http://xarray.pydata.org/en/stable/examples/monthly-means.html>`_.
   By `Mickaël Lalande <https://github.com/mickaellalande>`_.
 - Fix the documentation of :py:meth:`DataArray.resample` and
-  :py:meth:`Dataset.resample` — explicitly state that a
+  :py:meth:`Dataset.resample`,  explicitly stating that a
   datetime-like dimension is required. (:pull:`3400`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Update the :ref:`terminology` page to address multidimensional coordinates. (:pull:`3410`)
