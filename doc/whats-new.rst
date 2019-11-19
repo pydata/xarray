@@ -15,6 +15,31 @@ What's New
 
 .. _whats-new.0.14.1:
 
+
+v0.15.0 (unreleased)
+--------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+New Features
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+
 v0.14.1 (19 Nov 2019)
 --------------------
 
