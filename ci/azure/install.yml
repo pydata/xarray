@@ -16,9 +16,9 @@ steps:
         --pre \
         --upgrade \
         matplotlib \
+        numpy \
         pandas \
         scipy
-        # numpy \  # FIXME https://github.com/pydata/xarray/issues/3409
     pip install \
         --no-deps \
         --upgrade \
