@@ -255,11 +255,11 @@ Combining along multiple dimensions
   ``combine_nested``.
 
 For combining many objects along multiple dimensions xarray provides
-:py:func:`~xarray.combine_nested`` and :py:func:`~xarray.combine_by_coords`. These
+:py:func:`~xarray.combine_nested` and :py:func:`~xarray.combine_by_coords`. These
 functions use a combination of ``concat`` and ``merge`` across different
 variables to combine many objects into one.
 
-:py:func:`~xarray.combine_nested`` requires specifying the order in which the
+:py:func:`~xarray.combine_nested` requires specifying the order in which the
 objects should be combined, while :py:func:`~xarray.combine_by_coords` attempts to
 infer this ordering automatically from the coordinates in the data.
 

@@ -108,7 +108,7 @@ def align(
 
     Returns
     -------
-    aligned : same as *objects
+    aligned : same as `*objects`
         Tuple of objects with aligned coordinates.
 
     Raises

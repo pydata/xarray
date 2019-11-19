@@ -2,6 +2,8 @@
 .. This extra page is a work around for sphinx not having any support for
 .. hiding an autosummary table.
 
+:orphan:
+
 .. currentmodule:: xarray
 
 .. autosummary::
@@ -30,9 +32,11 @@
    core.groupby.DatasetGroupBy.first
    core.groupby.DatasetGroupBy.last
    core.groupby.DatasetGroupBy.fillna
+   core.groupby.DatasetGroupBy.quantile
    core.groupby.DatasetGroupBy.where
 
    Dataset.argsort
+   Dataset.astype
    Dataset.clip
    Dataset.conj
    Dataset.conjugate
@@ -71,6 +75,7 @@
    core.groupby.DataArrayGroupBy.first
    core.groupby.DataArrayGroupBy.last
    core.groupby.DataArrayGroupBy.fillna
+   core.groupby.DataArrayGroupBy.quantile
    core.groupby.DataArrayGroupBy.where
 
    DataArray.argsort

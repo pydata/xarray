@@ -13,6 +13,7 @@ priority order:
 Once NumPy 1.10 comes out with support for overriding ufuncs, this module will
 hopefully no longer be necessary.
 """
+import textwrap
 import warnings as _warnings
 
 import numpy as _np
@@ -78,10 +79,49 @@ class _UFuncDispatcher:
         return res
 
 
+def _skip_signature(doc, name):
+    if not isinstance(doc, str):
+        return doc
+
+    if doc.startswith(name):
+        signature_end = doc.find("\n\n")
+        doc = doc[signature_end + 2 :]
+
+    return doc
+
+
+def _remove_unused_reference_labels(doc):
+    if not isinstance(doc, str):
+        return doc
+
+    max_references = 5
+    for num in range(max_references):
+        label = f".. [{num}]"
+        reference = f"[{num}]_"
+        index = f"{num}.    "
+
+        if label not in doc or reference in doc:
+            continue
+
+        doc = doc.replace(label, index)
+
+    return doc
+
+
+def _dedent(doc):
+    if not isinstance(doc, str):
+        return doc
+
+    return textwrap.dedent(doc)
+
+
 def _create_op(name):
     func = _UFuncDispatcher(name)
     func.__name__ = name
     doc = getattr(_np, name).__doc__
+
+    doc = _remove_unused_reference_labels(_skip_signature(_dedent(doc), name))
+
     func.__doc__ = (
         "xarray specific variant of numpy.%s. Handles "
         "xarray.Dataset, xarray.DataArray, xarray.Variable, "

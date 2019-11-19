@@ -285,7 +285,7 @@ automate `embarrassingly parallel
 <https://en.wikipedia.org/wiki/Embarrassingly_parallel>`__ "map" type operations
 where a function written for processing NumPy arrays should be repeatedly
 applied to xarray objects containing Dask arrays. It works similarly to
-:py:func:`dask.array.map_blocks` and :py:func:`dask.array.atop`, but without
+:py:func:`dask.array.map_blocks` and :py:func:`dask.array.blockwise`, but without
 requiring an intermediate layer of abstraction.
 
 For the best performance when using Dask's multi-threaded scheduler, wrap a

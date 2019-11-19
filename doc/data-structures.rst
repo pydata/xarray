@@ -45,7 +45,7 @@ Creating a DataArray
 The :py:class:`~xarray.DataArray` constructor takes:
 
 - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
-  :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
+  :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or ``pandas.Panel``)
 - ``coords``: a list or dictionary of coordinates. If a list, it should be a
   list of tuples where the first element is the dimension name and the second
   element is the corresponding coordinate array_like object.
@@ -125,7 +125,7 @@ As a dictionary with coords across multiple dimensions:
 
 If you create a ``DataArray`` by supplying a pandas
 :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or
-:py:class:`~pandas.Panel`, any non-specified arguments in the
+``pandas.Panel``, any non-specified arguments in the
 ``DataArray`` constructor will be filled in from the pandas object:
 
 .. ipython:: python
@@ -301,7 +301,7 @@ names, and its data is aligned to any existing dimensions.
 
 You can also create an dataset from:
 
-- A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
+- A :py:class:`pandas.DataFrame` or ``pandas.Panel`` along its columns and items
   respectively, by passing it into the :py:class:`~xarray.Dataset` directly
 - A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xarray.Dataset.from_dataframe>`,
   which will additionally handle MultiIndexes See :ref:`pandas`

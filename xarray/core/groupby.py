@@ -573,6 +573,7 @@ class GroupBy(SupportsArithmetic):
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
+
                 * linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
@@ -728,17 +729,19 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Callable to apply to each array.
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
+
             (1) The action of `func` does not depend on any of the array
                 metadata (attributes or coordinates) but only on the data and
                 dimensions.
             (2) The action of `func` creates arrays with homogeneous metadata,
                 that is, with the same dimensions and attributes.
+
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-        args : tuple, optional
+        ``*args`` : tuple, optional
             Positional arguments passed to `func`.
-        **kwargs
+        ``**kwargs``
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
         Returns

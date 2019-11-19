@@ -947,7 +947,7 @@ def apply_ufunc(
     appropriately for use in `apply`. You may find helper functions such as
     numpy.broadcast_arrays helpful in writing your function. `apply_ufunc` also
     works well with numba's vectorize and guvectorize. Further explanation with
-    examples are provided in the xarray documentation [3].
+    examples are provided in the xarray documentation [3]_.
 
     See also
     --------
