@@ -360,12 +360,6 @@ def _datetime_nanmin(array):
     - numpy nanmin() don't work on datetime64 (all versions at the moment of writing)
     - dask min() does not work on datetime64 (all versions at the moment of writing)
     """
-    from .dataarray import DataArray
-    from .variable import Variable
-
-    if isinstance(array, (DataArray, Variable)):
-        array = array.data
-
     assert array.dtype.kind in "mM"
     dtype = array.dtype
     # (NaT).astype(float) does not produce NaN...
