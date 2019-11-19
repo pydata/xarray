@@ -2799,6 +2799,42 @@ class TestDataset:
         with raises_regex(ValueError, "do not have a MultiIndex"):
             ds.unstack("x")
 
+    def test_unstack_fill_value(self):
+        ds = xr.Dataset(
+            {"var": (("x",), np.arange(6))},
+            coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
+        )
+        # make ds incomplete
+        ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
+        # test fill_value
+        actual = ds.unstack("index", fill_value=-1)
+        expected = ds.unstack("index").fillna(-1).astype(np.int)
+        assert actual["var"].dtype == np.int
+        assert_equal(actual, expected)
+
+        actual = ds["var"].unstack("index", fill_value=-1)
+        expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
+        assert actual.equals(expected)
+
+    @requires_sparse
+    def test_unstack_sparse(self):
+        ds = xr.Dataset(
+            {"var": (("x",), np.arange(6))},
+            coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
+        )
+        # make ds incomplete
+        ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
+        # test fill_value
+        actual = ds.unstack("index", sparse=True)
+        expected = ds.unstack("index")
+        assert actual["var"].variable._to_dense().equals(expected["var"].variable)
+        assert actual["var"].data.density < 1.0
+
+        actual = ds["var"].unstack("index", sparse=True)
+        expected = ds["var"].unstack("index")
+        assert actual.variable._to_dense().equals(expected.variable)
+        assert actual.data.density < 1.0
+
     def test_stack_unstack_fast(self):
         ds = Dataset(
             {
@@ -5862,7 +5898,9 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate("time", datetime_unit="D")
     expected_data = np.trapz(
-        da, duck_array_ops.datetime_to_numeric(da["time"], datetime_unit="D"), axis=0
+        da.data,
+        duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
+        axis=0,
     )
     expected = xr.DataArray(
         expected_data,
