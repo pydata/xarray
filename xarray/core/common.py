@@ -91,15 +91,23 @@ class ImplementsDatasetReduce:
 
         return wrapped_func
 
-    _reduce_extra_args_docstring = """dim : str or sequence of str, optional
+    _reduce_extra_args_docstring = dedent(
+        """
+        dim : str or sequence of str, optional
             Dimension(s) over which to apply `{name}`.  By default `{name}` is
-            applied over all dimensions."""
+            applied over all dimensions.
+        """
+    ).strip()
 
-    _cum_extra_args_docstring = """dim : str or sequence of str, optional
+    _cum_extra_args_docstring = dedent(
+        """
+        dim : str or sequence of str, optional
             Dimension over which to apply `{name}`.
         axis : int or sequence of int, optional
             Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied."""
+            and 'axis' arguments can be supplied.
+        """
+    ).strip()
 
 
 class AbstractArray(ImplementsArrayReduce):
@@ -454,7 +462,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def assign_attrs(self, *args, **kwargs):
         """Assign new attrs to this object.
 
-        Returns a new object equivalent to self.attrs.update(*args, **kwargs).
+        Returns a new object equivalent to ``self.attrs.update(*args, **kwargs)``.
 
         Parameters
         ----------
@@ -481,7 +489,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         **kwargs,
     ) -> T:
         """
-        Apply func(self, *args, **kwargs)
+        Apply ``func(self, *args, **kwargs)``
 
         This method replicates the pandas method of the same name.
 
@@ -810,6 +818,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         window : A single mapping from a dimension name to window value,
                  optional
+
             dim : str
                 Name of the dimension to create the rolling exponential window
                 along (e.g., `time`).
@@ -848,6 +857,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dim: dict, optional
             Mapping from the dimension name to the window size.
+
             dim : str
                 Name of the dimension to create the rolling iterator
                 along (e.g., `time`).
@@ -858,7 +868,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func: function (name) that is applied to the coordintes,
+        coord_func : function (name) that is applied to the coordintes,
             or a mapping from coordinate name to function (name).
 
         Returns
@@ -921,7 +931,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Parameters
         ----------
         indexer : {dim: freq}, optional
-            Mapping from the dimension name to resample frequency. The
+            Mapping from the dimension name to resample frequency [1]_. The
             dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
