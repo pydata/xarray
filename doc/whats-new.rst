@@ -87,7 +87,7 @@ New Features
   `Guido Imperiale <https://github.com/crusaderky>`_.
 - Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
   and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
-  By `Deepak Cherian <https://github.com/dcherian/>`_
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - Add the documented-but-missing :py:meth:`DatasetGroupBy.quantile`.
   (:issue:`3525`, :pull:`3527`). By `Justus Magin <https://github.com/keewis>`_.
 
