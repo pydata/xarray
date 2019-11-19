@@ -115,6 +115,12 @@ Bug fixes
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
 - Allow appending datetime and bool data variables to zarr stores.
   (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
+- Add support for numpy >=1.18 (); bugfix mean() on datetime64 arrays on dask backend
+  (:issue:`3409`, :pull:`3537`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Add support for pandas >=0.26 (:issue:`3440`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add support for pseudonetcdf >=3.1 (:pull:`3485`).
+  By `Barron Henderson <https://github.com/barronh>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -133,7 +139,6 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
   (:pull:`3238`, :pull:`3447`, :pull:`3493`, :pull:`3508`)
   by `Justus Magin <https://github.com/keewis>`_.
