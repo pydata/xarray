@@ -37,6 +37,10 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Added the ``sparse`` option to :py:meth:`~xarray.DataArray.unstack`, 
+  :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`, 
+  :py:meth:`~xarray.Dataset.reindex` (:issue:`3518`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Added the ``max_gap`` kwarg to :py:meth:`DataArray.interpolate_na` and
   :py:meth:`Dataset.interpolate_na`. This controls the maximum size of the data
