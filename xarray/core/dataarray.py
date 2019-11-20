@@ -3221,7 +3221,8 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         other: DataArray
             The other array with which the correlation will be computed
-        dim: The dimension along which the correlation will be computed
+        dim: str, optional
+            The dimension along which the correlation will be computed
 
         Returns
         -------
