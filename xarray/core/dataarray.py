@@ -3110,6 +3110,38 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return map_blocks(func, self, args, kwargs)
 
+    def pad(
+        self,
+        pad_widths: Mapping[Hashable, Tuple[int,int]] = None,
+        mode: str = "constant",
+        pad_options: dict = {},
+        **pad_widths_kwargs: Any,
+    ) -> "DataArray":
+        """
+
+        """
+        pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
+
+        variable = self.variable.pad(
+            pad_widths=pad_widths, mode=mode, **pad_options
+        )
+
+        if mode in ("edge", "reflect", "symmetric", "wrap"):
+            coord_pad_mode = mode
+            coord_pad_options = pad_options
+        else:
+            coord_pad_mode = "constant"
+            coord_pad_options = {}
+
+        coords = {}
+        for name, dim in self.coords.items():
+            if name in pad_widths:
+                coords[name] = dim.variable.pad({name: pad_widths[name]}, mode=coord_pad_mode, **coord_pad_options)
+            else:
+                coords[name] = as_variable(dim, name=name)
+
+        return self._replace(variable=variable, coords=coords)
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
