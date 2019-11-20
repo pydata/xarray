@@ -3195,6 +3195,47 @@ class DataArray(AbstractArray, DataWithCoords):
         Returns
         -------
         covariance: DataArray
+
+        See also
+        --------
+        pandas.Series.cov: corresponding pandas function
+
+        Examples
+        --------
+
+        >>> da_self = DataArray(np.random.random((3, 5)), 
+        ...                     dims=("space", "time"), 
+        ...                     coords=[('space', ['IA', 'IL', 'IN']), 
+        ...                             ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+        >>> da_self
+        <xarray.DataArray (space: 3, time: 5)>
+        array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
+               [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
+               [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+ 
+        >>> da_other = DataArray(np.random.random((3, 5)), 
+        ...                     dims=("space", "time"), 
+        ...                     coords=[('space', ['IA', 'IL', 'IN']), 
+        ...                             ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+        >>> da_other
+        <xarray.DataArray (space: 3, time: 5)>
+        array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
+              [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
+              [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+        >>> da_self.cov(da_other)
+        <xarray.DataArray ()>
+        array(0.03823054)
+        >>> da_self.cov(da_other, dim='time')
+        <xarray.DataArray (space: 3)>
+        array([0.00207952, 0.01024296, 0.08214707])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
         """
         # 1. Broadcast the two arrays
         self, other = broadcast(self, other)
@@ -3227,6 +3268,47 @@ class DataArray(AbstractArray, DataWithCoords):
         Returns
         -------
         correlation: DataArray
+
+        See also
+        --------
+        pandas.Series.corr: corresponding pandas function
+
+        Examples
+        --------
+
+        >>> da_self = DataArray(np.random.random((3, 5)), 
+        ...                     dims=("space", "time"), 
+        ...                     coords=[('space', ['IA', 'IL', 'IN']), 
+        ...                             ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+        >>> da_self
+        <xarray.DataArray (space: 3, time: 5)>
+        array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
+               [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
+               [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+ 
+        >>> da_other = DataArray(np.random.random((3, 5)), 
+        ...                     dims=("space", "time"), 
+        ...                     coords=[('space', ['IA', 'IL', 'IN']), 
+        ...                             ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+        >>> da_other
+        <xarray.DataArray (space: 3, time: 5)>
+        array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
+              [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
+              [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+        >>> da_self.corr(da_other)
+        <xarray.DataArray ()>
+        array(0.67407116)
+        >>> da_self.corr(da_other, dim='time')
+        <xarray.DataArray (space: 3)>
+        array([0.23150267, 0.24900968, 0.9061562 ])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
         """
         # 1. Broadcast the two arrays
         self, other = broadcast(self, other)
