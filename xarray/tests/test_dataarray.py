@@ -4080,24 +4080,31 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
-    # TODO: use fixture or randomly created array instead of load_dataset
     @requires_scipy_or_netCDF4
     def test_corr(self):
-        # self: Load demo data and trim it's size
-        ds = xr.tutorial.load_dataset("air_temperature")
-        air = ds.air[:18, ...]
+        # self: Create DataArray and trim it's size
+        # TODO: replace this by fixture, but how?
+
+        times = pd.date_range("2000-01-01", freq="1D", periods=21)
+        values = np.random.random((3, 21, 4))
+        values.ravel()[np.random.choice(values.size, 10, replace=False)] = np.nan
+        da = DataArray(values, dims=("a", "time", "x"))
+        da["time"] = times
+
+        da_self = da.isel(time=range(0, 18))
+
         # other: select missaligned data, and smooth it to dampen the correlation with self.
-        air_smooth = (
-            ds.air[2:20, ...].rolling(time=3, center=True).mean(dim="time")
+        da_smooth = (
+            da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time")
         )  # .
-        # A handy function to select an example grid
 
         def select_pts(da):
-            return da.sel(lat=45, lon=250)
+            return da.sel(a=1, x=2)
+
 
         # Test #1: Misaligned 1-D dataarrays with missing values
-        ts1 = select_pts(air.copy())
-        ts2 = select_pts(air_smooth.copy())
+        ts1 = select_pts(da.copy())
+        ts2 = select_pts(da_smooth.copy())
 
         def pd_corr(ts1, ts2):
             """Ensure the ts are aligned and missing values ignored"""
@@ -4114,12 +4121,12 @@ class TestDataArray:
         np.allclose(expected, actual)
 
         # Test #2: Misaligned N-D dataarrays with missing values
-        actual_ND = air.corr(air_smooth, dim="time")
+        actual_ND = da_self.corr(da_smooth, dim="time")
         actual = select_pts(actual_ND)
         np.allclose(expected, actual)
 
         # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
-        actual_ND = air_smooth.corr(ts1, dim="time")
+        actual_ND = da_smooth.corr(ts1, dim="time")
         actual = select_pts(actual_ND)
         np.allclose(actual, expected)
 
