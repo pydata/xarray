@@ -79,8 +79,11 @@ Time required: about an hour.
 
     Google search will turn up examples of prior release announcements (look for
     "ANN xarray").
-    You can get a list of contributors with script (NB: this has limited testing),
-    replacing `v0.X.Y` with the _previous_ release
+    You can get a list of contributors with:
+    ```
+    git log "$(git tag | sort -V | sed -n 'x;$p').." --format="%aN" | sort -u
+    ```
+    or by replacing `v0.X.Y` with the _previous_ release in:
     ```
     git log v0.X.Y.. --format="%aN" | sort -u
     ```
