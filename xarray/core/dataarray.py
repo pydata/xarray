@@ -3195,7 +3195,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        covariance: DataArray
+        covariance : DataArray
         """
         # 1. Broadcast the two arrays
         self, other = broadcast(self, other)
