@@ -536,6 +536,8 @@ DataArray methods
    DataArray.chunk
    DataArray.unify_chunks
    DataArray.map_blocks
+   DataArray.cov
+   DataArray.corr
 
 GroupBy objects
 ===============
