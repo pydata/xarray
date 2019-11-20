@@ -81,7 +81,7 @@ Time required: about an hour.
     "ANN xarray").
     You can get a list of contributors with:
     ```
-    git log "$(git tag | sort -V | sed -n 'x;$p').." --format="%aN" | sort -u
+    git log "$(git tag --sort="v:refname" | sed -n 'x;$p').." --format="%aN" | sort -u
     ```
     or by replacing `v0.X.Y` with the _previous_ release in:
     ```
