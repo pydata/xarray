@@ -3236,10 +3236,10 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return self.cov(other, dim=dim) / (self_std * other_std)
 
-
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
