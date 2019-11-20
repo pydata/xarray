@@ -82,7 +82,7 @@ Time required: about an hour.
     You can get a list of contributors with script (NB: this has limited testing),
     replacing `v0.X.Y` with the _previous_ release
     ```
-    git log v0.X.Y.. --format="%aN" --reverse | sort -u
+    git log v0.X.Y.. --format="%aN" | sort -u
     ```
 
 Note on version numbering:
