@@ -85,28 +85,13 @@ def _infer_coords_and_dims(
 ) -> "Tuple[Dict[Any, Variable], Tuple[Hashable, ...]]":
     """All the logic for creating a new DataArray"""
 
-<<<<<<< HEAD
-    if (
-        coords is not None
-        and not utils.is_dict_like(coords)
-        and len(coords) != len(shape)
-    ):
-        raise ValueError(
-            "coords is not dict-like, but it has %s items, "
-            "which does not match the %s dimensions of the "
-            "data" % (len(coords), len(shape))
-        )
-
-    if isinstance(dims, str):
-=======
     if (coords is not None and not utils.is_dict_like(coords)
             and len(coords) != len(shape)):
         raise ValueError('coords is not dict-like, but it has %s items, '
                          'which does not match the %s dimensions of the '
                          'data' % (len(coords), len(shape)))
 
-    if isinstance(dims, basestring):
->>>>>>> Made the code PEP8 compatible
+    if isinstance(dims, str):
         dims = (dims,)
 
     if dims is None:
@@ -2481,14 +2466,8 @@ class DataArray(AbstractArray, DataWithCoords):
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
 
-<<<<<<< HEAD
-        return utils.dict_equiv(self.coords, other.coords, compat=compat) and compat(
-            self, other
-        )
-=======
         return (utils.dict_equiv(self.coords, other.coords, compat=compat)
                 and compat(self, other))
->>>>>>> Made the code PEP8 compatible
 
     def broadcast_equals(self, other: "DataArray") -> bool:
         """Two DataArrays are broadcast equal if they are equal after
@@ -2535,12 +2514,8 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.equal
         """
         try:
-<<<<<<< HEAD
-            return self.name == other.name and self._all_compat(other, "identical")
-=======
             return (self.name == other.name
                     and self._all_compat(other, 'identical'))
->>>>>>> Made the code PEP8 compatible
         except (TypeError, AttributeError):
             return False
 
@@ -3081,7 +3056,6 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().differentiate(coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
-<<<<<<< HEAD
     def integrate(
         self, dim: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
     ) -> "DataArray":
@@ -3204,10 +3178,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return map_blocks(func, self, args, kwargs)
 
-    def cov(self, other, dim = None):
-=======
     def cov(self, other, dim=None):
->>>>>>> Made the code PEP8 compatible
         """Compute covariance between two DataArray objects along a shared dimension.
 
         Parameters
