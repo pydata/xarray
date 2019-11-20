@@ -4080,6 +4080,7 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
+    # TODO: use fixture or randomly created array instead of load_dataset
     @requires_scipy_or_netCDF4
     def test_corr(self):
         # self: Load demo data and trim it's size
