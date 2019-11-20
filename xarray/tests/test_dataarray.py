@@ -4101,7 +4101,6 @@ class TestDataArray:
         def select_pts(da):
             return da.sel(a=1, x=2)
 
-
         # Test #1: Misaligned 1-D dataarrays with missing values
         ts1 = select_pts(da.copy())
         ts2 = select_pts(da_smooth.copy())
