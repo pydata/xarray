@@ -3188,7 +3188,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        other: DataArray
+        other : DataArray
             The other array with which the covariance will be computed
         dim : str, optional
             The dimension along which the covariance will be computed
