@@ -3226,7 +3226,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        correlation: DataArray
+        correlation : DataArray
         """
         # 1. Broadcast the two arrays
         self, other = broadcast(self, other)
