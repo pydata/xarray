@@ -4081,10 +4081,12 @@ class TestDataArray:
 
     def test_corr(self):
         # self: Load demo data and trim it's size
-        ds = xr.tutorial.load_dataset('air_temperature')
+        ds = xr.tutorial.load_dataset("air_temperature")
         air = ds.air[:18, ...]
         # other: select missaligned data, and smooth it to dampen the correlation with self.
-        air_smooth = ds.air[2:20, ...].rolling(time=3, center=True).mean(dim='time')  # .
+        air_smooth = (
+            ds.air[2:20, ...].rolling(time=3, center=True).mean(dim="time")
+        )  # .
         # A handy function to select an example grid
 
         def select_pts(da):
@@ -4109,12 +4111,12 @@ class TestDataArray:
         np.allclose(expected, actual)
 
         # Test #2: Misaligned N-D dataarrays with missing values
-        actual_ND = air.corr(air_smooth, dim='time')
+        actual_ND = air.corr(air_smooth, dim="time")
         actual = select_pts(actual_ND)
         np.allclose(expected, actual)
 
         # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
-        actual_ND = air_smooth.corr(ts1, dim='time')
+        actual_ND = air_smooth.corr(ts1, dim="time")
         actual = select_pts(actual_ND)
         np.allclose(actual, expected)
 
@@ -4482,17 +4484,21 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord)
-                    == original.get_axis_num(
-                        original.coords[coord.var_name].dims))
+                coord.points, CFDatetimeCoder().encode(original_coord).values
+            )
+            assert actual.coord_dims(coord) == original.get_axis_num(
+                original.coords[coord.var_name].dims
+            )
 
-        assert (actual.coord('distance2').attributes['foo']
-                == original.coords['distance2'].attrs['foo'])
-        assert (actual.coord('distance').units
-                == cf_units.Unit(original.coords['distance'].units))
-        assert actual.attributes['baz'] == original.attrs['baz']
-        assert actual.standard_name == original.attrs['standard_name']
+        assert (
+            actual.coord("distance2").attributes["foo"]
+            == original.coords["distance2"].attrs["foo"]
+        )
+        assert actual.coord("distance").units == cf_units.Unit(
+            original.coords["distance"].units
+        )
+        assert actual.attributes["baz"] == original.attrs["baz"]
+        assert actual.standard_name == original.attrs["standard_name"]
 
         roundtripped = DataArray.from_iris(actual)
         assert_identical(original, roundtripped)
@@ -4554,17 +4560,21 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord)
-                    == original.get_axis_num(
-                        original.coords[coord.var_name].dims))
+                coord.points, CFDatetimeCoder().encode(original_coord).values
+            )
+            assert actual.coord_dims(coord) == original.get_axis_num(
+                original.coords[coord.var_name].dims
+            )
 
-        assert (actual.coord('distance2').attributes['foo'] == original.coords[
-            'distance2'].attrs['foo'])
-        assert (actual.coord('distance').units
-                == cf_units.Unit(original.coords['distance'].units))
-        assert actual.attributes['baz'] == original.attrs['baz']
-        assert actual.standard_name == original.attrs['standard_name']
+        assert (
+            actual.coord("distance2").attributes["foo"]
+            == original.coords["distance2"].attrs["foo"]
+        )
+        assert actual.coord("distance").units == cf_units.Unit(
+            original.coords["distance"].units
+        )
+        assert actual.attributes["baz"] == original.attrs["baz"]
+        assert actual.standard_name == original.attrs["standard_name"]
 
         roundtripped = DataArray.from_iris(actual)
         assert_identical(original, roundtripped)

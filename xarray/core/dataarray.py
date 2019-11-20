@@ -85,11 +85,16 @@ def _infer_coords_and_dims(
 ) -> "Tuple[Dict[Any, Variable], Tuple[Hashable, ...]]":
     """All the logic for creating a new DataArray"""
 
-    if (coords is not None and not utils.is_dict_like(coords)
-            and len(coords) != len(shape)):
-        raise ValueError('coords is not dict-like, but it has %s items, '
-                         'which does not match the %s dimensions of the '
-                         'data' % (len(coords), len(shape)))
+    if (
+        coords is not None
+        and not utils.is_dict_like(coords)
+        and len(coords) != len(shape)
+    ):
+        raise ValueError(
+            "coords is not dict-like, but it has %s items, "
+            "which does not match the %s dimensions of the "
+            "data" % (len(coords), len(shape))
+        )
 
     if isinstance(dims, str):
         dims = (dims,)
@@ -2466,8 +2471,9 @@ class DataArray(AbstractArray, DataWithCoords):
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
 
-        return (utils.dict_equiv(self.coords, other.coords, compat=compat)
-                and compat(self, other))
+        return utils.dict_equiv(self.coords, other.coords, compat=compat) and compat(
+            self, other
+        )
 
     def broadcast_equals(self, other: "DataArray") -> bool:
         """Two DataArrays are broadcast equal if they are equal after
@@ -2514,8 +2520,7 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.equal
         """
         try:
-            return (self.name == other.name
-                    and self._all_compat(other, 'identical'))
+            return self.name == other.name and self._all_compat(other, "identical")
         except (TypeError, AttributeError):
             return False
 
