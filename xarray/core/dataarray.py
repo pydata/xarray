@@ -3188,9 +3188,10 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        other: DataArray
+        other : DataArray
             The other array with which the covariance will be computed
-        dim: The dimension along which the covariance will be computed
+        dim : str, optional
+            The dimension along which the covariance will be computed
 
         Returns
         -------
@@ -3250,7 +3251,7 @@ class DataArray(AbstractArray, DataWithCoords):
         demeaned_self = self - self.mean(dim=dim)
         demeaned_other = other - other.mean(dim=dim)
 
-        # 4. Compute  covariance along the given dim
+        # 4. Compute covariance along the given dim
         cov = (demeaned_self * demeaned_other).sum(dim=dim) / (valid_count)
 
         return cov
@@ -3260,7 +3261,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        other: DataArray
+        other : DataArray
             The other array with which the correlation will be computed
         dim: str, optional
             The dimension along which the correlation will be computed
