@@ -151,7 +151,9 @@ We'll now kick off a two-step process:
 .. code-block:: none
 
    # Create and activate the build environment
-   conda env create -f ci/requirements/py36.yml
+   # This is for Linux and MacOS. On Windows, use py37-windows.yml instead.
+   conda env create -f ci/requirements/py37.yml
+
    conda activate xarray-tests
 
    # or with older versions of Anaconda:
