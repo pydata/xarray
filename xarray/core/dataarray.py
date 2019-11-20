@@ -3210,7 +3210,7 @@ class DataArray(AbstractArray, DataWithCoords):
         demeaned_self = self - self.mean(dim=dim)
         demeaned_other = other - other.mean(dim=dim)
 
-        # 4. Compute  covariance along the given dim
+        # 4. Compute covariance along the given dim
         cov = (demeaned_self * demeaned_other).sum(dim=dim) / (valid_count)
 
         return cov
