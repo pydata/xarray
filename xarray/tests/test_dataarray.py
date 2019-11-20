@@ -27,6 +27,7 @@ from xarray.tests import (
     requires_iris,
     requires_numbagg,
     requires_scipy,
+    requires_scipy_or_netCDF4,
     requires_sparse,
     source_ndarray,
 )
@@ -4079,6 +4080,7 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
+    @requires_scipy_or_netCDF4
     def test_corr(self):
         # self: Load demo data and trim it's size
         ds = xr.tutorial.load_dataset("air_temperature")
