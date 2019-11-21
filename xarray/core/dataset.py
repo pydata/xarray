@@ -5161,11 +5161,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         new = self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
         )
-        if "quantile" in new.dims:
-            new.coords["quantile"] = Variable("quantile", q)
-        else:
-            new.coords["quantile"] = q
-        return new
+        return new.assign_coords(quantile=q)
 
     def rank(self, dim, pct=False, keep_attrs=None):
         """Ranks the data.
