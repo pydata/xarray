@@ -8,8 +8,10 @@ dependencies:
   - cartopy
   - cfgrib
   - h5netcdf
+  - ipykernel
   - ipython
   - iris
+  - jupyter_client
   - nbsphinx
   - netcdf4
   - numpy
