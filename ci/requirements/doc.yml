@@ -6,6 +6,7 @@ dependencies:
   - python=3.7
   - bottleneck
   - cartopy
+  - eccodes
   - h5netcdf
   - ipykernel
   - ipython
