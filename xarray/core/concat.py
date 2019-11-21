@@ -45,6 +45,7 @@ def concat(
           * 'all': All data variables will be concatenated.
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
+
         If objects are DataArrays, data_vars must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
         These coordinate variables will be concatenated together:

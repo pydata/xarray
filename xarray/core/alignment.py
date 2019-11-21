@@ -108,7 +108,7 @@ def align(
 
     Returns
     -------
-    aligned : same as *objects
+    aligned : same as `*objects`
         Tuple of objects with aligned coordinates.
 
     Raises
@@ -466,6 +466,7 @@ def reindex_variables(
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
+    sparse: bool = False,
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
@@ -503,6 +504,8 @@ def reindex_variables(
         the input. In either case, new xarray objects are always returned.
     fill_value : scalar, optional
         Value to use for newly missing values
+    sparse: bool, optional
+        Use an sparse-array
 
     Returns
     -------
@@ -571,6 +574,8 @@ def reindex_variables(
 
     for name, var in variables.items():
         if name not in indexers:
+            if sparse:
+                var = var._as_sparse(fill_value=fill_value)
             key = tuple(
                 slice(None) if d in unchanged_dims else int_indexers.get(d, slice(None))
                 for d in var.dims

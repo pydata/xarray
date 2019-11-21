@@ -1509,7 +1509,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
-                               'zlib': True}, ...}``
+            'zlib': True}, ...}``
 
             The `h5netcdf` engine supports both the NetCDF4-style compression
             encoding parameters ``{'zlib': True, 'complevel': 9}`` and the h5py
@@ -2118,7 +2118,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexers: Union[Mapping[Hashable, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "Dataset":
-        """Returns a new dataset with each array indexed along every `n`th
+        """Returns a new dataset with each array indexed along every `n`-th
         value for the specified dimension(s)
 
         Parameters
@@ -2127,7 +2127,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             A dict with keys matching dimensions and integer values `n`
             or a single integer `n` applied over all dimensions.
             One of indexers or indexers_kwargs must be provided.
-        **indexers_kwargs : {dim: n, ...}, optional
+        ``**indexers_kwargs`` : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2286,6 +2286,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             the input. In either case, a new xarray object is always returned.
         fill_value : scalar, optional
             Value to use for newly missing values
+        sparse: use sparse-array. By default, False
         **indexers_kwarg : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -2429,6 +2430,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         original dataset, use the :py:meth:`~Dataset.fillna()` method.
 
         """
+        return self._reindex(
+            indexers,
+            method,
+            tolerance,
+            copy,
+            fill_value,
+            sparse=False,
+            **indexers_kwargs,
+        )
+
+    def _reindex(
+        self,
+        indexers: Mapping[Hashable, Any] = None,
+        method: str = None,
+        tolerance: Number = None,
+        copy: bool = True,
+        fill_value: Any = dtypes.NA,
+        sparse: bool = False,
+        **indexers_kwargs: Any,
+    ) -> "Dataset":
+        """
+        same to _reindex but support sparse option
+        """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
 
         bad_dims = [d for d in indexers if d not in self.dims]
@@ -2444,6 +2468,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             tolerance,
             copy=copy,
             fill_value=fill_value,
+            sparse=sparse,
         )
         coord_names = set(self._coord_names)
         coord_names.update(indexers)
@@ -2657,13 +2682,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 continue
             if isinstance(v, pd.MultiIndex):
                 new_names = [name_dict.get(k, k) for k in v.names]
-                index = pd.MultiIndex(
-                    v.levels,
-                    v.labels,
-                    v.sortorder,
-                    names=new_names,
-                    verify_integrity=False,
-                )
+                index = v.rename(names=new_names)
             else:
                 index = v.rename(new_name)
             indexes[new_name] = index
@@ -3333,7 +3352,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
+    def _unstack_once(self, dim: Hashable, fill_value, sparse) -> "Dataset":
         index = self.get_index(dim)
         index = index.remove_unused_levels()
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -3342,7 +3361,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if index.equals(full_idx):
             obj = self
         else:
-            obj = self.reindex({dim: full_idx}, copy=False, fill_value=fill_value)
+            obj = self._reindex(
+                {dim: full_idx}, copy=False, fill_value=fill_value, sparse=sparse
+            )
 
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
@@ -3372,6 +3393,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dim: Union[Hashable, Iterable[Hashable]] = None,
         fill_value: Any = dtypes.NA,
+        sparse: bool = False,
     ) -> "Dataset":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
@@ -3385,6 +3407,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
         fill_value: value to be filled. By default, np.nan
+        sparse: use sparse-array if True
 
         Returns
         -------
@@ -3422,7 +3445,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            result = result._unstack_once(dim, fill_value)
+            result = result._unstack_once(dim, fill_value, sparse)
         return result
 
     def update(self, other: "CoercibleMapping", inplace: bool = None) -> "Dataset":
@@ -3482,6 +3505,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                   'no_conflicts'}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
+
             - 'broadcast_equals': all values must be equal when variables are
               broadcast against each other to ensure common dimensions.
             - 'equals': all values and dimensions must be the same.
@@ -3490,6 +3514,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
+
         join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -3630,7 +3655,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
         **labels_kwargs : {dim: label, ...}, optional
-            The keyword arguments form of ``dim`` and ``labels`
+            The keyword arguments form of ``dim`` and ``labels``
 
         Returns
         -------
@@ -3920,6 +3945,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
+
         method : str, optional
             String indicating which method to use for interpolation:
 
@@ -3931,6 +3957,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
               provided.
             - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
+
         use_coordinate : bool, str, default True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
@@ -3950,6 +3977,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - a string that is valid input for pandas.to_timedelta
             - a :py:class:`numpy.timedelta64` object
             - a :py:class:`pandas.Timedelta` object
+
             Otherwise, ``max_gap`` must be an int or a float. Use of ``max_gap`` with unlabeled
             dimensions has not been implemented yet. Gap length is defined as the difference
             between coordinate values at the first data point after a gap and the last value
@@ -5257,7 +5285,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         datetime_unit
             Can be specify the unit if datetime coordinate is used. One of
             {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
-             'as'}
+            'as'}
 
         Returns
         -------
@@ -5322,7 +5350,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 datetime_unit, _ = np.datetime_data(coord_var.dtype)
             elif datetime_unit is None:
                 datetime_unit = "s"  # Default to seconds for cftime objects
-            coord_var = datetime_to_numeric(coord_var, datetime_unit=datetime_unit)
+            coord_var = coord_var._replace(
+                data=datetime_to_numeric(coord_var.data, datetime_unit=datetime_unit)
+            )
 
         variables = {}
         coord_names = set()
