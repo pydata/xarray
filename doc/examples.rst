@@ -9,3 +9,4 @@ Examples
     examples/multidimensional-coords
     examples/visualization_gallery
     examples/ROMS_ocean_model
+    examples/ERA5-GRIB-example
