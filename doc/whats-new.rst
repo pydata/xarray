@@ -31,7 +31,7 @@ Bug fixes
 ~~~~~~~~~
 - Fix :py:meth:`xarray.combine_by_coords` when combining cftime coordinates
   which span long time intervals (:issue:`3535`).  By `Spencer Clark
-  <https://github.com/spencerkclark/>`_.
+  <https://github.com/spencerkclark>`_.
 
 
 Documentation
@@ -143,7 +143,7 @@ Bug fixes
 - Fix :py:meth:`GroupBy.reduce` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian>`_
 - Allow appending datetime and bool data variables to zarr stores.
-  (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa/>`_.
+  (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa>`_.
 - Add support for numpy >=1.18 (); bugfix mean() on datetime64 arrays on dask backend
   (:issue:`3409`, :pull:`3537`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Add support for pandas >=0.26 (:issue:`3440`).
