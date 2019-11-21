@@ -2781,7 +2781,7 @@ Enhancements
 - Groupby operations now support grouping over multidimensional variables. A new
   method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
   allow users to specify bins for grouping. The new features are described in
-  :ref:`groupby.multidim` and :ref:`examples.multidim`.
+  :ref:`groupby.multidim` and :ref:`/examples/multidimensional-coords.ipynb`.
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
@@ -3846,7 +3846,7 @@ Enhancements
 - Long attributes are now truncated at 500 characters when printing a dataset
   (:issue:`338`). This should make things more convenient for working with
   datasets interactively.
-- Added a new documentation example, :ref:`monthly means example`. Thanks Joe
+- Added a new documentation example, :ref:`/examples/monthly-means.ipynb`. Thanks Joe
   Hamman!
 
 Bug fixes
