@@ -33,7 +33,18 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Switch doc examples to use nbsphinx and replace sphinx_gallery with
+  notebook.
+  (:pull:`3105`, :pull:`3106`, :pull:`3121`)
+  By `Ryan Abernathey <https://github.com/rabernat>`
+- Added example notebook demonstrating use of xarray with Regional Ocean
+  Modeling System (ROMS) ocean hydrodynamic model output.
+  (:pull:`3116`).
+  By `Robert Hetland <https://github.com/hetland>`
+- Added example notebook demonstrating the visualization of ERA5 GRIB
+  data. (:pull:`3199`)
+  By `Zach Bruick <https://github.com/zbruick>` and
+  `Stephan Siemen <https://github.com/StephanSiemen>`
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -256,10 +267,6 @@ Enhancements
 - Speed up :py:meth:`Dataset.isel` up to 33% and :py:meth:`DataArray.isel` up to 25% for small
   arrays (:issue:`2799`, :pull:`3375`). By
   `Guido Imperiale <https://github.com/crusaderky>`_.
-- Added example notebook demonstrating use of xarray with Regional Ocean
-  Modeling System (ROMS) ocean hydrodynamic model output.
-  (:issue:`3116`).
-  By `Robert Hetland <https://github.com/hetland>`
 
 Bug fixes
 ~~~~~~~~~
