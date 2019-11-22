@@ -50,8 +50,8 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Indexes, default_indexes
-from .merge import PANDAS_TYPES
+from .indexes import Indexes, propagate_indexes, default_indexes
+from .merge import PANDAS_TYPES, _extract_indexes_from_coords
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
@@ -353,6 +353,9 @@ class DataArray(AbstractArray, DataWithCoords):
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
+            indexes = dict(
+                _extract_indexes_from_coords(coords)
+            )  # needed for to_dataset
 
         # These fully describe a DataArray
         self._variable = variable
@@ -386,6 +389,7 @@ class DataArray(AbstractArray, DataWithCoords):
     ) -> "DataArray":
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
+            indexes = self._indexes
         elif variable.dims == self.dims:
             # Shape has changed (e.g. from reduce(..., keepdims=True)
             new_sizes = dict(zip(self.dims, variable.shape))
@@ -394,12 +398,19 @@ class DataArray(AbstractArray, DataWithCoords):
                 for k, v in self._coords.items()
                 if v.shape == tuple(new_sizes[d] for d in v.dims)
             }
+            changed_dims = [
+                k for k in variable.dims if variable.sizes[k] != self.sizes[k]
+            ]
+            indexes = propagate_indexes(self._indexes, exclude=changed_dims)
         else:
             allowed_dims = set(variable.dims)
             coords = {
                 k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
             }
-        return self._replace(variable, coords, name)
+            indexes = propagate_indexes(
+                self._indexes, exclude=(set(self.dims) - allowed_dims)
+            )
+        return self._replace(variable, coords, name, indexes=indexes)
 
     def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
         if not len(indexes):
@@ -430,19 +441,21 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
+        """ splits dataarray along dimension 'dim' """
+
         def subset(dim, label):
             array = self.loc[{dim: label}]
-            if dim in array.coords:
-                del array.coords[dim]
             array.attrs = {}
-            return array
+            return as_variable(array)
 
         variables = {label: subset(dim, label) for label in self.get_index(dim)}
-
-        coords = self.coords.to_dataset()
-        if dim in coords:
-            del coords[dim]
-        return Dataset(variables, coords, self.attrs)
+        variables.update({k: v for k, v in self._coords.items() if k != dim})
+        indexes = propagate_indexes(self._indexes, exclude=dim)
+        coord_names = set(self._coords) - set([dim])
+        dataset = Dataset._from_vars_and_coord_names(
+            variables, coord_names, indexes=indexes, attrs=self.attrs
+        )
+        return dataset
 
     def _to_dataset_whole(
         self, name: Hashable = None, shallow_copy: bool = True
@@ -466,8 +479,12 @@ class DataArray(AbstractArray, DataWithCoords):
         if shallow_copy:
             for k in variables:
                 variables[k] = variables[k].copy(deep=False)
+        indexes = self._indexes
+
         coord_names = set(self._coords)
-        dataset = Dataset._from_vars_and_coord_names(variables, coord_names)
+        dataset = Dataset._from_vars_and_coord_names(
+            variables, coord_names, indexes=indexes
+        )
         return dataset
 
     def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
@@ -913,7 +930,8 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         variable = self.variable.copy(deep=deep, data=data)
         coords = {k: v.copy(deep=deep) for k, v in self._coords.items()}
-        return self._replace(variable, coords)
+        indexes = self._indexes
+        return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
         return self.copy(deep=False)

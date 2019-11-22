@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from . import formatting
+from .utils import is_scalar
 from .variable import Variable
 
 
@@ -34,9 +35,6 @@ class Indexes(collections.abc.Mapping):
 
     def __getitem__(self, key):
         return self._indexes[key]
-
-    def __delitem__(self, key):
-        del self._indexes[key]
 
     def __repr__(self):
         return formatting.indexes_repr(self)
@@ -100,3 +98,22 @@ def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
         return index[-count:].append(index[:-count])
     else:
         return index[:]
+
+
+def propagate_indexes(
+    indexes: Optional[Dict[Hashable, pd.Index]], exclude: Optional[Any] = None
+) -> Optional[Dict[Hashable, pd.Index]]:
+    """ Creates new indexes dict from existing dict optionally excluding some dimensions.
+    """
+    if exclude is None:
+        exclude = ()
+
+    if is_scalar(exclude):
+        exclude = (exclude,)
+
+    if indexes is not None:
+        new_indexes = {k: v for k, v in indexes.items() if k not in exclude}
+    else:
+        new_indexes = None  # type: ignore
+
+    return new_indexes
