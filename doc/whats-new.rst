@@ -29,6 +29,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
@@ -138,8 +140,6 @@ Bug fixes
 - Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
   :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
-- Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add support for cftime>=1.0.4. By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Rolling reduction operations no longer compute dask arrays by default. (:issue:`3161`).
   In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
