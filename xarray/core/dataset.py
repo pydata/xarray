@@ -59,7 +59,13 @@ from .coordinates import (
     remap_label_indexers,
 )
 from .duck_array_ops import datetime_to_numeric
-from .indexes import Indexes, default_indexes, isel_variable_and_index, roll_index
+from .indexes import (
+    Indexes,
+    default_indexes,
+    isel_variable_and_index,
+    propagate_indexes,
+    roll_index,
+)
 from .merge import (
     dataset_merge_method,
     dataset_update_method,
@@ -872,8 +878,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return obj
 
     @classmethod
-    def _from_vars_and_coord_names(cls, variables, coord_names, attrs=None):
-        return cls._construct_direct(variables, coord_names, attrs=attrs)
+    def _from_vars_and_coord_names(
+        cls, variables, coord_names, indexes=None, attrs=None
+    ):
+        return cls._construct_direct(
+            variables, coord_names, indexes=indexes, attrs=attrs
+        )
 
     def _replace(
         self,
@@ -4386,10 +4396,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         coords = dict(self.coords)
         coords[dim] = list(self.data_vars)
+        indexes = propagate_indexes(self._indexes)
 
         dims = (dim,) + broadcast_vars[0].dims
 
-        return DataArray(data, coords, dims, attrs=self.attrs, name=name)
+        return DataArray(
+            data, coords, dims, attrs=self.attrs, name=name, indexes=indexes
+        )
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self.variables if k not in self.dims]
