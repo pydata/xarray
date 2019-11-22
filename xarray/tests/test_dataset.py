@@ -1274,6 +1274,12 @@ class TestDataset:
         assert_equal(data.isel(td=0), data.sel(td=pd.Timedelta("0h")))
         assert_equal(data.isel(td=slice(1, 3)), data.sel(td=slice("1 days", "2 days")))
 
+    def test_sel_slice_0darray(self):
+        data = create_test_data()
+        actual = data.sel(dim2=slice(None, xr.DataArray(2, dims=[])))
+        expected = data.sel(dim2=slice(None, 2))
+        assert_equal(actual, expected)        
+        
     def test_sel_dataarray(self):
         data = create_test_data()
 

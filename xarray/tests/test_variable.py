@@ -114,6 +114,16 @@ class VariableSubclassobjects:
             ind = Variable(("a",), [True, False, True])
             v[ind]
 
+    def test_getitem_0darray_slice(self):
+        v = self.cls(["x"], np.arange(15))
+        sl = slice(0, 1)
+        slv = slice(Variable((), 0), 1)
+        assert_identical(v.isel(x=sl), v.isel(x=slv))
+
+        sl = slice(0, -1, 1)
+        slv = slice(0, Variable((), -1), 1)
+        assert_identical(v.isel(x=sl), v.isel(x=slv))
+
     def test_getitem_with_mask(self):
         v = self.cls(["x"], [0, 1, 2])
         assert_identical(v._getitem_with_mask(-1), Variable((), np.nan))

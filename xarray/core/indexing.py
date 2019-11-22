@@ -49,6 +49,13 @@ def _expand_slice(slice_, size):
     return np.arange(*slice_.indices(size))
 
 
+def sanitize_slice(sl):
+    """ Allow DataArray or Variable as start, stop, step """
+    return slice(
+        *[s.item() if hasattr(s, "item") else s for s in [sl.start, sl.stop, sl.step]]
+    )
+
+
 def _sanitize_slice_element(x):
     from .variable import Variable
     from .dataarray import DataArray

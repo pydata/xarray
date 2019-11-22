@@ -529,8 +529,13 @@ class Variable(
             positions.
         """
         key = self._item_key_to_tuple(key)  # key is a tuple
+
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
+        # Convert a 0d-array in a [start, stop, step] to an integer
+        key = tuple(
+            indexing.sanitize_slice(k) if isinstance(k, slice) else k for k in key
+        )
         # Convert a scalar Variable to an integer
         key = tuple(
             k.data.item() if isinstance(k, Variable) and k.ndim == 0 else k for k in key
