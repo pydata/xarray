@@ -1375,3 +1375,41 @@ def test_lazy_array_equiv_merge(compat):
             xr.merge([da1, da3], compat=compat)
     with raise_if_dask_computes(max_computes=2):
         xr.merge([da1, da2 / 2], compat=compat)
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+@pytest.mark.parametrize(
+    "transform",
+    [
+        lambda a: a.copy(),
+        lambda a: a.isel(x=np.arange(a.x)),
+        lambda a: a.isel(x=slice(None, None)),
+        lambda a: a.sel(x=a.x),
+        lambda a: a.sel(x=a.x.values),
+        lambda a: a.transpose(...),
+        lambda a: a.squeeze(),
+        lambda a: a.sortby("x"),
+        lambda a: a.reindex(x=a.x),
+        lambda a: a.reindex_like(a),
+        lambda a: a.pipe(lambda x: x),
+        lambda a: a.map(lambda x: x),
+        lambda a: a.reduce(lambda x: x),
+        lambda a: a["a"].broadcast_like(a["a"]),
+        lambda a: a.groupby("x").map(lambda x: x),
+        lambda a: a.where(xr.full_like(a, fill_value=True)),
+        lambda a: xr.align([a, a])[0],
+        lambda a: xr.broadcast([a["a"], a["a"]])[0],
+        lambda a: xr.where(xr.full_like(a, fill_value=True), a, np.nan),
+        # assign, assign_coords, assign_attrs, update
+        # rename, rename_vars, rename_dims,
+        # swap_dims, expand_dims
+        # set_coords / reset_coords
+        # set_index / reset_index
+        # stack / unstack
+        # to_temp_datasets, from_temp_dataset
+    ],
+)
+def test_transforms_pass_lazy_array_equiv(obj, transform):
+    with raise_if_dask_computes():
+        assert_equal(obj, transform(obj))
