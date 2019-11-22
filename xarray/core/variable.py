@@ -1751,7 +1751,7 @@ class Variable(
         # for backward compatibility
         result = result.transpose("quantile", ...)
         if scalar:
-            result = result.squeeze()
+            result = result.squeeze("quantile")
         if keep_attrs:
             result.attrs = self._attrs
         return result
