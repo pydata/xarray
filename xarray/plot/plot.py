@@ -269,7 +269,7 @@ def line(
         if None, use the default for the matplotlib function.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
-    *args, **kwargs : optional
+    ``*args``, ``**kwargs`` : optional
         Additional arguments to matplotlib.pyplot.plot
     """
     # Handle facetgrids first

@@ -557,6 +557,60 @@ class GroupBy(SupportsArithmetic):
         out = ops.fillna(self, value)
         return out
 
+    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+        """Compute the qth quantile over each array in the groups and
+        concatenate them together into a new array.
+
+        Parameters
+        ----------
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1
+            inclusive.
+        dim : `...`, str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+            Defaults to the grouped dimension.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+
+        Returns
+        -------
+        quantiles : Variable
+            If `q` is a single quantile, then the result is a
+            scalar. If multiple percentiles are given, first axis of
+            the result corresponds to the quantile. In either case a
+            quantile dimension is added to the return array. The other
+            dimensions are the dimensions that remain after the
+            reduction of the array.
+
+        See Also
+        --------
+        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        DataArray.quantile
+        """
+        if dim is None:
+            dim = self._group_dim
+
+        out = self.map(
+            self._obj.__class__.quantile,
+            shortcut=False,
+            q=q,
+            dim=dim,
+            interpolation=interpolation,
+            keep_attrs=keep_attrs,
+        )
+
+        return out
+
     def where(self, cond, other=dtypes.NA):
         """Return elements from `self` or `other` depending on `cond`.
 
@@ -585,9 +639,7 @@ class GroupBy(SupportsArithmetic):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-        return self.reduce(
-            op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs, allow_lazy=True
-        )
+        return self.reduce(op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs)
 
     def first(self, skipna=None, keep_attrs=None):
         """Return the first element of each group along the group dimension
@@ -677,17 +729,19 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Callable to apply to each array.
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
+
             (1) The action of `func` does not depend on any of the array
                 metadata (attributes or coordinates) but only on the data and
                 dimensions.
             (2) The action of `func` creates arrays with homogeneous metadata,
                 that is, with the same dimensions and attributes.
+
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-        args : tuple, optional
+        ``*args`` : tuple, optional
             Positional arguments passed to `func`.
-        **kwargs
+        ``**kwargs``
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
         Returns
@@ -738,60 +792,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
-
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
-        """Compute the qth quantile over each array in the groups and
-        concatenate them together into a new array.
-
-        Parameters
-        ----------
-        q : float in range of [0,1] (or sequence of floats)
-            Quantile to compute, which must be between 0 and 1
-            inclusive.
-        dim : `...`, str or sequence of str, optional
-            Dimension(s) over which to apply quantile.
-            Defaults to the grouped dimension.
-        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
-            This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
-
-        Returns
-        -------
-        quantiles : Variable
-            If `q` is a single quantile, then the result
-            is a scalar. If multiple percentiles are given, first axis of
-            the result corresponds to the quantile and a quantile dimension
-            is added to the return array. The other dimensions are the
-            dimensions that remain after the reduction of the array.
-
-        See Also
-        --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
-        DataArray.quantile
-        """
-        if dim is None:
-            dim = self._group_dim
-
-        out = self.map(
-            self._obj.__class__.quantile,
-            shortcut=False,
-            q=q,
-            dim=dim,
-            interpolation=interpolation,
-            keep_attrs=keep_attrs,
-        )
-
-        if np.asarray(q, dtype=np.float64).ndim == 0:
-            out = out.drop_vars("quantile")
-        return out
 
     def reduce(
         self, func, dim=None, axis=None, keep_attrs=None, shortcut=True, **kwargs

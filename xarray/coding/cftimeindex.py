@@ -506,7 +506,7 @@ class CFTimeIndex(pd.Index):
 
         Returns
         -------
-        Index
+        pandas.Index
             Index of formatted strings
 
         Examples

@@ -33,6 +33,7 @@ from . import (
     assert_identical,
     raises_regex,
     requires_dask,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -541,6 +542,15 @@ class VariableSubclassobjects:
         new_data = np.arange(5, 20)
         with raises_regex(ValueError, "must match shape of object"):
             orig.copy(data=new_data)
+
+    def test_replace(self):
+        var = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
+        result = var._replace()
+        assert_identical(result, var)
+
+        new_data = np.arange(4).reshape(2, 2)
+        result = var._replace(data=new_data)
+        assert_array_equal(result.data, new_data)
 
     def test_real_and_imag(self):
         v = self.cls("x", np.arange(3) - 1j * np.arange(3), {"foo": "bar"})
@@ -1477,6 +1487,10 @@ class TestVariable(VariableSubclassobjects):
 
         with raises_regex(ValueError, "cannot supply both"):
             v.mean(dim="x", axis=0)
+        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
+            v.mean(dim="x", allow_lazy=True)
+        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
+            v.mean(dim="x", allow_lazy=False)
 
     def test_quantile(self):
         v = Variable(["x", "y"], self.d)
@@ -1847,6 +1861,17 @@ class TestVariableWithDask(VariableSubclassobjects):
             v._getitem_with_mask(indexer, fill_value=-1),
             self.cls(("x", "y"), [[0, -1], [-1, 2]]),
         )
+
+
+@requires_sparse
+class TestVariableWithSparse:
+    # TODO inherit VariableSubclassobjects to cover more tests
+
+    def test_as_sparse(self):
+        data = np.arange(12).reshape(3, 4)
+        var = Variable(("x", "y"), data)._as_sparse(fill_value=-1)
+        actual = var._to_dense()
+        assert_identical(var, actual)
 
 
 class TestIndexVariable(VariableSubclassobjects):
