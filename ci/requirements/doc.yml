@@ -6,9 +6,13 @@ dependencies:
   - python=3.7
   - bottleneck
   - cartopy
+  - eccodes
   - h5netcdf
+  - ipykernel
   - ipython
   - iris
+  - jupyter_client
+  - nbsphinx
   - netcdf4
   - numpy
   - numpydoc
@@ -16,6 +20,9 @@ dependencies:
   - rasterio
   - seaborn
   - sphinx
-  - sphinx-gallery
   - sphinx_rtd_theme
   - zarr
+  - pip
+  - pip:
+    - cfgrib
+
