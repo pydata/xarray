@@ -100,7 +100,7 @@ def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
         return index[:]
 
 
-def copy_indexes(
+def propagate_indexes(
     indexes: Optional[Dict[Hashable, pd.Index]], exclude: Optional[Any] = None
 ) -> Optional[Dict[Hashable, pd.Index]]:
     """ Creates new indexes dict from existing dict optionally excluding some dimensions.

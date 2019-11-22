@@ -10,7 +10,7 @@ from .arithmetic import SupportsArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
-from .indexes import copy_indexes
+from .indexes import propagate_indexes
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -530,7 +530,7 @@ class GroupBy(SupportsArithmetic):
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
-            obj._indexes = copy_indexes(obj._indexes, exclude=self._inserted_dims)
+            obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
         return obj
 
     def fillna(self, value):

@@ -61,9 +61,9 @@ from .coordinates import (
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
     Indexes,
-    copy_indexes,
     default_indexes,
     isel_variable_and_index,
+    propagate_indexes,
     roll_index,
 )
 from .merge import (
@@ -4357,7 +4357,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         coords = dict(self.coords)
         coords[dim] = list(self.data_vars)
-        indexes = copy_indexes(self._indexes)
+        indexes = propagate_indexes(self._indexes)
 
         dims = (dim,) + broadcast_vars[0].dims
 

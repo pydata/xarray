@@ -50,7 +50,7 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Indexes, copy_indexes, default_indexes
+from .indexes import Indexes, propagate_indexes, default_indexes
 from .merge import PANDAS_TYPES, _extract_indexes_from_coords
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
@@ -415,13 +415,13 @@ class DataArray(AbstractArray, DataWithCoords):
             changed_dims = [
                 k for k in variable.dims if variable.sizes[k] != self.sizes[k]
             ]
-            indexes = copy_indexes(self._indexes, exclude=changed_dims)
+            indexes = propagate_indexes(self._indexes, exclude=changed_dims)
         else:
             allowed_dims = set(variable.dims)
             coords = {
                 k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
             }
-            indexes = copy_indexes(
+            indexes = propagate_indexes(
                 self._indexes, exclude=(set(self.dims) - allowed_dims)
             )
         return self._replace(variable, coords, name, indexes=indexes)
@@ -464,7 +464,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         variables = {label: subset(dim, label) for label in self.get_index(dim)}
         variables.update({k: v for k, v in self._coords.items() if k != dim})
-        indexes = copy_indexes(self._indexes, exclude=dim)
+        indexes = propagate_indexes(self._indexes, exclude=dim)
         coord_names = set(self._coords) - set([dim])
         dataset = Dataset._from_vars_and_coord_names(
             variables, coord_names, indexes=indexes, attrs=self.attrs
