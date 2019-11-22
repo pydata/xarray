@@ -30,6 +30,8 @@ Top-level functions
    zeros_like
    ones_like
    dot
+   cov
+   corr
    map_blocks
 
 Dataset
@@ -342,6 +344,8 @@ Computation
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
+   DataArray.cov
+   DataArray.corr
    DataArray.quantile
    DataArray.differentiate
    DataArray.integrate
@@ -536,8 +540,6 @@ DataArray methods
    DataArray.chunk
    DataArray.unify_chunks
    DataArray.map_blocks
-   DataArray.cov
-   DataArray.corr
 
 GroupBy objects
 ===============

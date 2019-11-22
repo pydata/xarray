@@ -22,9 +22,8 @@ from typing import (
 )
 
 import numpy as np
-
 from . import duck_array_ops, utils
-from .alignment import deep_align
+from .alignment import broadcast, deep_align
 from .merge import merge_coordinates_without_align
 from .pycompat import dask_array_type
 from .utils import is_dict_like
@@ -86,7 +85,9 @@ class _UFuncSignature:
     @property
     def all_core_dims(self):
         if self._all_core_dims is None:
-            self._all_core_dims = self.all_input_core_dims | self.all_output_core_dims
+            self._all_core_dims = (
+                self.all_input_core_dims | self.all_output_core_dims
+            )
         return self._all_core_dims
 
     @property
@@ -111,12 +112,18 @@ class _UFuncSignature:
 
     def __repr__(self):
         return "{}({!r}, {!r})".format(
-            type(self).__name__, list(self.input_core_dims), list(self.output_core_dims)
+            type(self).__name__,
+            list(self.input_core_dims),
+            list(self.output_core_dims),
         )
 
     def __str__(self):
-        lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
-        rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
+        lhs = ",".join(
+            "({})".format(",".join(dims)) for dims in self.input_core_dims
+        )
+        rhs = ",".join(
+            "({})".format(",".join(dims)) for dims in self.output_core_dims
+        )
         return f"{lhs}->{rhs}"
 
     def to_gufunc_string(self):
@@ -164,7 +171,9 @@ def _get_coords_list(args) -> List["Coordinates"]:
 
 
 def build_output_coords(
-    args: list, signature: _UFuncSignature, exclude_dims: AbstractSet = frozenset()
+    args: list,
+    signature: _UFuncSignature,
+    exclude_dims: AbstractSet = frozenset(),
 ) -> "List[Dict[Any, Variable]]":
     """Build output coordinates for an operation.
 
@@ -200,7 +209,9 @@ def build_output_coords(
         dropped_dims = signature.all_input_core_dims - set(output_dims)
         if dropped_dims:
             filtered = {
-                k: v for k, v in merged_vars.items() if dropped_dims.isdisjoint(v.dims)
+                k: v
+                for k, v in merged_vars.items()
+                if dropped_dims.isdisjoint(v.dims)
             }
         else:
             filtered = merged_vars
@@ -210,7 +221,12 @@ def build_output_coords(
 
 
 def apply_dataarray_vfunc(
-    func, *args, signature, join="inner", exclude_dims=frozenset(), keep_attrs=False
+    func,
+    *args,
+    signature,
+    join="inner",
+    exclude_dims=frozenset(),
+    keep_attrs=False,
 ):
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
@@ -219,7 +235,11 @@ def apply_dataarray_vfunc(
 
     if len(args) > 1:
         args = deep_align(
-            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
+            args,
+            join=join,
+            copy=False,
+            exclude=exclude_dims,
+            raise_on_invalid=False,
         )
 
     if keep_attrs and hasattr(args[0], "name"):
@@ -283,10 +303,15 @@ def join_dict_keys(
 
 
 def collect_dict_values(
-    objects: Iterable[Union[Mapping, Any]], keys: Iterable, fill_value: object = None
+    objects: Iterable[Union[Mapping, Any]],
+    keys: Iterable,
+    fill_value: object = None,
 ) -> List[list]:
     return [
-        [obj.get(key, fill_value) if is_dict_like(obj) else obj for obj in objects]
+        [
+            obj.get(key, fill_value) if is_dict_like(obj) else obj
+            for obj in objects
+        ]
         for key in keys
     ]
 
@@ -332,7 +357,8 @@ def apply_dict_of_variables_vfunc(
 
 
 def _fast_dataset(
-    variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
+    variables: Dict[Hashable, Variable],
+    coord_variables: Mapping[Hashable, Variable],
 ) -> "Dataset":
     """Create a dataset as quickly as possible.
 
@@ -362,7 +388,10 @@ def apply_dataset_vfunc(
 
     first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
 
-    if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
+    if (
+        dataset_join not in _JOINS_WITHOUT_FILL_VALUES
+        and fill_value is _NO_FILL_VALUE
+    ):
         raise TypeError(
             "to apply an operation to datasets with different "
             "data variables with apply_ufunc, you must supply the "
@@ -371,18 +400,28 @@ def apply_dataset_vfunc(
 
     if len(args) > 1:
         args = deep_align(
-            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
+            args,
+            join=join,
+            copy=False,
+            exclude=exclude_dims,
+            raise_on_invalid=False,
         )
 
     list_of_coords = build_output_coords(args, signature, exclude_dims)
     args = [getattr(arg, "data_vars", arg) for arg in args]
 
     result_vars = apply_dict_of_variables_vfunc(
-        func, *args, signature=signature, join=dataset_join, fill_value=fill_value
+        func,
+        *args,
+        signature=signature,
+        join=dataset_join,
+        fill_value=fill_value,
     )
 
     if signature.num_outputs > 1:
-        out = tuple(_fast_dataset(*args) for args in zip(result_vars, list_of_coords))
+        out = tuple(
+            _fast_dataset(*args) for args in zip(result_vars, list_of_coords)
+        )
     else:
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
@@ -577,7 +616,9 @@ def apply_variable_ufunc(
                 "``.load()`` or ``.compute()``"
             )
         elif dask == "parallelized":
-            input_dims = [broadcast_dims + dims for dims in signature.input_core_dims]
+            input_dims = [
+                broadcast_dims + dims for dims in signature.input_core_dims
+            ]
             numpy_func = func
 
             def func(*arrays):
@@ -603,7 +644,8 @@ def apply_variable_ufunc(
     if signature.num_outputs == 1:
         result_data = (result_data,)
     elif (
-        not isinstance(result_data, tuple) or len(result_data) != signature.num_outputs
+        not isinstance(result_data, tuple)
+        or len(result_data) != signature.num_outputs
     ):
         raise ValueError(
             "applied function does not have the number of "
@@ -647,7 +689,13 @@ def apply_variable_ufunc(
 
 
 def _apply_blockwise(
-    func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None
+    func,
+    args,
+    input_dims,
+    output_dims,
+    signature,
+    output_dtypes,
+    output_sizes=None,
 ):
     import dask.array
 
@@ -684,7 +732,9 @@ def _apply_blockwise(
         raise ValueError(
             "when using dask='parallelized' with apply_ufunc, "
             "output core dimensions not found on inputs must "
-            "have explicitly set sizes with ``output_sizes``: {}".format(new_dims)
+            "have explicitly set sizes with ``output_sizes``: {}".format(
+                new_dims
+            )
         )
 
     for n, (data, core_dims) in enumerate(zip(args, signature.input_core_dims)):
@@ -991,7 +1041,9 @@ def apply_ufunc(
     if vectorize:
         if signature.all_core_dims:
             func = np.vectorize(
-                func, otypes=output_dtypes, signature=signature.to_gufunc_string()
+                func,
+                otypes=output_dtypes,
+                signature=signature.to_gufunc_string(),
             )
         else:
             func = np.vectorize(func, otypes=output_dtypes)
@@ -1045,6 +1097,162 @@ def apply_ufunc(
         return variables_vfunc(*args)
     else:
         return apply_array_ufunc(func, *args, dask=dask)
+
+
+# TODO: up to now, cov is only implicitly tested via corr(), is that sufficient?
+def cov(da_a, da_b, dim=None):
+    """Compute covariance between two DataArray objects along a shared dimension.
+
+    Parameters
+    ----------
+    arrays: DataArray (or Variable) objects
+        Arrays to compute.
+    dim : str, optional
+        The dimension along which the covariance will be computed
+
+    Returns
+    -------
+    covariance: DataArray
+
+    See also
+    --------
+    pandas.Series.cov: corresponding pandas function
+
+    Examples
+    --------
+
+    >>> da_a = DataArray(np.random.random((3, 5)), 
+    ...                  dims=("space", "time"), 
+    ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    >>> da_a
+    <xarray.DataArray (space: 3, time: 5)>
+    array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
+            [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
+            [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+
+    >>> da_b = DataArray(np.random.random((3, 5)), 
+    ...                  dims=("space", "time"), 
+    ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    >>> da_b
+    <xarray.DataArray (space: 3, time: 5)>
+    array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
+            [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
+            [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+    >>> xr.cov(da_a, da_b)
+    <xarray.DataArray ()>
+    array(0.03823054)
+    >>> xr.cov(da_a, da_b, dim='time')
+    <xarray.DataArray (space: 3)>
+    array([0.00207952, 0.01024296, 0.08214707])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    """
+
+    # 1. Broadcast the two arrays
+    da_a, da_b = broadcast(da_a, da_b)
+
+    # 2. Ignore the nans
+    valid_values = da_a.notnull() & da_b.notnull()
+    da_a = da_a.where(valid_values, drop=True)
+    da_b = da_b.where(valid_values, drop=True)
+    valid_count = valid_values.sum(dim)
+
+    # 3. Compute mean and standard deviation along the given dim
+    demeaned_da_a = da_a - da_a.mean(dim=dim)
+    demeaned_da_b = da_b - da_b.mean(dim=dim)
+
+    # 4. Compute covariance along the given dim
+    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim) / (valid_count)
+
+    return cov
+
+
+def corr(da_a, da_b, dim=None):
+    """Compute correlation between two DataArray objects along a shared dimension.
+
+    Parameters
+    ----------
+    da_b : DataArray
+        The da_b array with which the correlation will be computed
+    dim: str, optional
+        The dimension along which the correlation will be computed
+
+    Returns
+    -------
+    correlation: DataArray
+
+    See also
+    --------
+    pandas.Series.corr: corresponding pandas function
+
+    Examples
+    --------
+
+    >>> da_a = DataArray(np.random.random((3, 5)), 
+    ...                  dims=("space", "time"), 
+    ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    >>> da_a
+    <xarray.DataArray (space: 3, time: 5)>
+    array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
+            [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
+            [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+
+    >>> da_b = DataArray(np.random.random((3, 5)), 
+    ...                  dims=("space", "time"), 
+    ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    >>> da_b
+    <xarray.DataArray (space: 3, time: 5)>
+    array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
+            [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
+            [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+    >>> xr.corr(da_a, da_b)
+    <xarray.DataArray ()>
+    array(0.67407116)
+    >>> xr.corr(da_a, da_b, dim='time')
+    <xarray.DataArray (space: 3)>
+    array([0.23150267, 0.24900968, 0.9061562 ])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    """
+    from .dataarray import DataArray
+
+    if any(not isinstance(arr, (Variable, DataArray)) for arr in [da_a, da_b]):
+        raise TypeError(
+            "Only xr.DataArray and xr.Variable are supported."
+            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+        )
+
+    # 1. Broadcast the two arrays
+    da_a, da_b = broadcast(da_a, da_b)
+
+    # 2. Ignore the nans
+    valid_values = da_a.notnull() & da_b.notnull()
+    da_a = da_a.where(valid_values, drop=True)
+    da_b = da_b.where(valid_values, drop=True)
+
+    # 3. Compute correlation based on standard deviations and cov()
+    da_a_std = da_a.std(dim=dim)
+    da_b_std = da_b.std(dim=dim)
+
+    corr = cov(da_a, da_b, dim=dim) / (da_a_std * da_b_std)
+
+    return corr
 
 
 def dot(*arrays, dims=None, **kwargs):
@@ -1161,11 +1369,15 @@ def dot(*arrays, dims=None, **kwargs):
     dims = tuple(dims)  # make dims a tuple
 
     # dimensions to be parallelized
-    broadcast_dims = tuple(d for d in all_dims if d in common_dims and d not in dims)
+    broadcast_dims = tuple(
+        d for d in all_dims if d in common_dims and d not in dims
+    )
     input_core_dims = [
         [d for d in arr.dims if d not in broadcast_dims] for arr in arrays
     ]
-    output_core_dims = [tuple(d for d in all_dims if d not in dims + broadcast_dims)]
+    output_core_dims = [
+        tuple(d for d in all_dims if d not in dims + broadcast_dims)
+    ]
 
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position
@@ -1271,3 +1483,4 @@ def where(cond, x, y):
         dataset_join="exact",
         dask="allowed",
     )
+

@@ -10,8 +10,11 @@ from .core.alignment import align, broadcast
 from .core.common import full_like, zeros_like, ones_like
 from .core.concat import concat
 from .core.combine import combine_by_coords, combine_nested, auto_combine
-from .core.computation import apply_ufunc, dot, where
-from .core.extensions import register_dataarray_accessor, register_dataset_accessor
+from .core.computation import apply_ufunc, dot, where, cov, corr
+from .core.extensions import (
+    register_dataarray_accessor,
+    register_dataset_accessor,
+)
 from .core.variable import as_variable, Variable, IndexVariable, Coordinate
 from .core.dataset import Dataset
 from .core.dataarray import DataArray

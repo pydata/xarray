@@ -40,7 +40,6 @@ from .alignment import (
     _get_broadcast_dims_map_common_coords,
     align,
     reindex_like_indexers,
-    broadcast,
 )
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
@@ -54,7 +53,13 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .merge import PANDAS_TYPES
 from .options import OPTIONS
-from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
+from .utils import (
+    Default,
+    ReprObject,
+    _check_inplace,
+    _default,
+    either_dict_or_kwargs,
+)
 from .variable import (
     IndexVariable,
     Variable,
@@ -178,7 +183,9 @@ def _check_data_shape(data, coords, dims):
                     for k in dims
                 )
         else:
-            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
+            data_shape = tuple(
+                as_variable(coord, "foo").size for coord in coords
+            )
         data = np.full(data_shape, data)
     return data
 
@@ -394,10 +401,14 @@ class DataArray(AbstractArray, DataWithCoords):
             coords = self._coords
         if name is _default:
             name = self.name
-        return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
+        return type(self)(
+            variable, coords, name=name, fastpath=True, indexes=indexes
+        )
 
     def _replace_maybe_drop_dims(
-        self, variable: Variable, name: Union[Hashable, None, Default] = _default
+        self,
+        variable: Variable,
+        name: Union[Hashable, None, Default] = _default,
     ) -> "DataArray":
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
@@ -412,11 +423,15 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             allowed_dims = set(variable.dims)
             coords = {
-                k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
+                k: v
+                for k, v in self._coords.items()
+                if set(v.dims) <= allowed_dims
             }
         return self._replace(variable, coords, name)
 
-    def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
+    def _overwrite_indexes(
+        self, indexes: Mapping[Hashable, Any]
+    ) -> "DataArray":
         if not len(indexes):
             return self
         coords = self._coords.copy()
@@ -485,7 +500,9 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset = Dataset._from_vars_and_coord_names(variables, coord_names)
         return dataset
 
-    def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
+    def to_dataset(
+        self, dim: Hashable = None, *, name: Hashable = None
+    ) -> Dataset:
         """Convert a DataArray to a Dataset.
 
         Parameters
@@ -757,7 +774,9 @@ class DataArray(AbstractArray, DataWithCoords):
     def __dask_tokenize__(self):
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._variable, self._coords, self._name))
+        return normalize_token(
+            (type(self), self._variable, self._coords, self._name)
+        )
 
     def __dask_graph__(self):
         return self._to_temp_dataset().__dask_graph__()
@@ -1105,7 +1124,9 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def broadcast_like(
-        self, other: Union["DataArray", Dataset], exclude: Iterable[Hashable] = None
+        self,
+        other: Union["DataArray", Dataset],
+        exclude: Iterable[Hashable] = None,
     ) -> "DataArray":
         """Broadcast this DataArray against another Dataset or DataArray.
 
@@ -1164,7 +1185,9 @@ class DataArray(AbstractArray, DataWithCoords):
             exclude = set(exclude)
         args = align(other, self, join="outer", copy=False, exclude=exclude)
 
-        dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
+        dims_map, common_coords = _get_broadcast_dims_map_common_coords(
+            args, exclude
+        )
 
         return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
@@ -1414,7 +1437,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def rename(
         self,
-        new_name_or_name_dict: Union[Hashable, Mapping[Hashable, Hashable]] = None,
+        new_name_or_name_dict: Union[
+            Hashable, Mapping[Hashable, Hashable]
+        ] = None,
         **names: Hashable,
     ) -> "DataArray":
         """Returns a new DataArray with renamed coordinates or a new name.
@@ -1444,7 +1469,9 @@ class DataArray(AbstractArray, DataWithCoords):
             new_name_or_name_dict = cast(
                 Mapping[Hashable, Hashable], new_name_or_name_dict
             )
-            name_dict = either_dict_or_kwargs(new_name_or_name_dict, names, "rename")
+            name_dict = either_dict_or_kwargs(
+                new_name_or_name_dict, names, "rename"
+            )
             dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset)
         else:
@@ -1494,7 +1521,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def expand_dims(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]] = None,
+        dim: Union[
+            None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]
+        ] = None,
         axis=None,
         **dim_kwargs: Any,
     ) -> "DataArray":
@@ -1533,7 +1562,9 @@ class DataArray(AbstractArray, DataWithCoords):
             This object, but with an additional dimension(s).
         """
         if isinstance(dim, int):
-            raise TypeError("dim should be hashable or sequence/mapping of hashables")
+            raise TypeError(
+                "dim should be hashable or sequence/mapping of hashables"
+            )
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
@@ -1664,14 +1695,18 @@ class DataArray(AbstractArray, DataWithCoords):
             coordinates.
         """
         _check_inplace(inplace)
-        dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
+        dim_order = either_dict_or_kwargs(
+            dim_order, dim_order_kwargs, "reorder_levels"
+        )
         replace_coords = {}
         for dim, order in dim_order.items():
             coord = self._coords[dim]
             index = coord.to_index()
             if not isinstance(index, pd.MultiIndex):
                 raise ValueError("coordinate %r has no MultiIndex" % dim)
-            replace_coords[dim] = IndexVariable(coord.dims, index.reorder_levels(order))
+            replace_coords[dim] = IndexVariable(
+                coord.dims, index.reorder_levels(order)
+            )
         coords = self._coords.copy()
         coords.update(replace_coords)
         return self._replace(coords=coords)
@@ -1845,7 +1880,9 @@ class DataArray(AbstractArray, DataWithCoords):
         # unstacked dataset
         return Dataset(data_dict)
 
-    def transpose(self, *dims: Hashable, transpose_coords: bool = None) -> "DataArray":
+    def transpose(
+        self, *dims: Hashable, transpose_coords: bool = None
+    ) -> "DataArray":
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1882,7 +1919,9 @@ class DataArray(AbstractArray, DataWithCoords):
                 coords[name] = coord.variable.transpose(*coord_dims)
             return self._replace(variable, coords)
         else:
-            if transpose_coords is None and any(self[c].ndim > 1 for c in self.coords):
+            if transpose_coords is None and any(
+                self[c].ndim > 1 for c in self.coords
+            ):
                 warnings.warn(
                     "This DataArray contains multi-dimensional "
                     "coordinates. In the future, these coordinates "
@@ -1898,7 +1937,10 @@ class DataArray(AbstractArray, DataWithCoords):
         return self.transpose()
 
     def drop_vars(
-        self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
+        self,
+        names: Union[Hashable, Iterable[Hashable]],
+        *,
+        errors: str = "raise",
     ) -> "DataArray":
         """Drop variables from this DataArray.
 
@@ -2214,7 +2256,9 @@ class DataArray(AbstractArray, DataWithCoords):
             summarized data and the indicated dimension(s) removed.
         """
 
-        var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
+        var = self.variable.reduce(
+            func, dim, axis, keep_attrs, keepdims, **kwargs
+        )
         return self._replace_maybe_drop_dims(var)
 
     def to_pandas(self) -> Union["DataArray", pd.Series, pd.DataFrame]:
@@ -2408,11 +2452,15 @@ class DataArray(AbstractArray, DataWithCoords):
         except KeyError:
             raise ValueError("cannot convert dict without the key 'data''")
         else:
-            obj = cls(data, coords, d.get("dims"), d.get("name"), d.get("attrs"))
+            obj = cls(
+                data, coords, d.get("dims"), d.get("name"), d.get("attrs")
+            )
         return obj
 
     @classmethod
-    def from_series(cls, series: pd.Series, sparse: bool = False) -> "DataArray":
+    def from_series(
+        cls, series: pd.Series, sparse: bool = False
+    ) -> "DataArray":
         """Convert a pandas.Series into an xarray.DataArray.
 
         If the series's index is a MultiIndex, it will be expanded into a
@@ -2471,9 +2519,9 @@ class DataArray(AbstractArray, DataWithCoords):
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
 
-        return utils.dict_equiv(self.coords, other.coords, compat=compat) and compat(
-            self, other
-        )
+        return utils.dict_equiv(
+            self.coords, other.coords, compat=compat
+        ) and compat(self, other)
 
     def broadcast_equals(self, other: "DataArray") -> bool:
         """Two DataArrays are broadcast equal if they are equal after
@@ -2520,7 +2568,9 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.equal
         """
         try:
-            return self.name == other.name and self._all_compat(other, "identical")
+            return self.name == other.name and self._all_compat(
+                other, "identical"
+            )
         except (TypeError, AttributeError):
             return False
 
@@ -2550,7 +2600,9 @@ class DataArray(AbstractArray, DataWithCoords):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             with np.errstate(all="ignore"):
-                return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+                return self.__array_wrap__(
+                    f(self.variable.data, *args, **kwargs)
+                )
 
         return func
 
@@ -2566,7 +2618,9 @@ class DataArray(AbstractArray, DataWithCoords):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
             if isinstance(other, DataArray):
-                align_type = OPTIONS["arithmetic_join"] if join is None else join
+                align_type = (
+                    OPTIONS["arithmetic_join"] if join is None else join
+                )
                 self, other = align(self, other, join=align_type, copy=False)
             other_variable = getattr(other, "variable", other)
             other_coords = getattr(other, "coords", None)
@@ -2604,7 +2658,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return func
 
-    def _copy_attrs_from(self, other: Union["DataArray", Dataset, Variable]) -> None:
+    def _copy_attrs_from(
+        self, other: Union["DataArray", Dataset, Variable]
+    ) -> None:
         self.attrs = other.attrs
 
     @property
@@ -2655,7 +2711,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return title
 
-    def diff(self, dim: Hashable, n: int = 1, label: Hashable = "upper") -> "DataArray":
+    def diff(
+        self, dim: Hashable, n: int = 1, label: Hashable = "upper"
+    ) -> "DataArray":
         """Calculate the n-th order discrete difference along given axis.
 
         Parameters
@@ -2804,7 +2862,9 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._replace(self.variable.imag)
 
     def dot(
-        self, other: "DataArray", dims: Union[Hashable, Sequence[Hashable], None] = None
+        self,
+        other: "DataArray",
+        dims: Union[Hashable, Sequence[Hashable], None] = None,
     ) -> "DataArray":
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -2854,9 +2914,140 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return computation.dot(self, other, dims=dims)
 
+    def cov(self, other: "DataArray", dim) -> "DataArray":
+        """Compute covariance with another DataArray object along a shared dimension.
+
+        Parameters
+        ----------
+        other : DataArray
+            The other array with which the covariance will be computed
+        dim: str, optional
+            The dimension along which the covariance will be computed
+
+        Returns
+        -------
+        covariance: DataArray
+
+        See also
+        --------
+        pandas.Series.cov: corresponding pandas function
+
+        Examples
+        --------
+        
+        >>> da_a = DataArray(np.random.random((3, 5)), 
+        ...                  dims=("space", "time"), 
+        ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+        ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+        >>> da_a
+        <xarray.DataArray (space: 3, time: 5)>
+        array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
+                [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
+                [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+
+        >>> da_b = DataArray(np.random.random((3, 5)), 
+        ...                  dims=("space", "time"), 
+        ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+        ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+        >>> da_b
+        <xarray.DataArray (space: 3, time: 5)>
+        array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
+                [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
+                [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+        >>> da_a.cov(da_b)
+        <xarray.DataArray ()>
+        array(0.03823054)
+        >>> da_a.cov(da_b, dim='time')
+        <xarray.DataArray (space: 3)>
+        array([0.00207952, 0.01024296, 0.08214707])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        """
+        if isinstance(other, Dataset):
+            raise NotImplementedError(
+                "covariance is not yet supported with Dataset objects."
+            )
+        if not isinstance(other, DataArray):
+            raise TypeError("covariance only operates on DataArrays.")
+
+        return computation.cov(self, other, dim=dim)
+
+    def corr(self, other: "DataArray", dim) -> "DataArray":
+        """Compute correlation with another DataArray object along a shared dimension.
+
+        Parameters
+        ----------
+        other : DataArray
+            The other array with which the correlation will be computed
+        dim: str, optional
+            The dimension along which the correlation will be computed
+
+        Returns
+        -------
+        correlation: DataArray
+
+        See also
+        --------
+        pandas.Series.corr: corresponding pandas function
+
+        Examples
+        --------
+        
+        >>> da_a = DataArray(np.random.random((3, 5)), 
+        ...                  dims=("space", "time"), 
+        ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+        ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+        >>> da_a
+        <xarray.DataArray (space: 3, time: 5)>
+        array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
+                [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
+                [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+
+        >>> da_b = DataArray(np.random.random((3, 5)), 
+        ...                  dims=("space", "time"), 
+        ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+        ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+        >>> da_b
+        <xarray.DataArray (space: 3, time: 5)>
+        array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
+                [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
+                [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+        >>> da_a.corr(da_b)
+        <xarray.DataArray ()>
+        array(0.67407116)
+        >>> da_a.corr(da_b, dim='time')
+        <xarray.DataArray (space: 3)>
+        array([0.23150267, 0.24900968, 0.9061562 ])
+        Coordinates:
+        * space    (space) <U2 'IA' 'IL' 'IN'
+
+        """
+        if isinstance(other, Dataset):
+            raise NotImplementedError(
+                "correlation is not yet supported with Dataset objects."
+            )
+        if not isinstance(other, DataArray):
+            raise TypeError("correlation only operates on DataArrays.")
+
+        return computation.cov(self, other, dim=dim)
+
     def sortby(
         self,
-        variables: Union[Hashable, "DataArray", Sequence[Union[Hashable, "DataArray"]]],
+        variables: Union[
+            Hashable, "DataArray", Sequence[Union[Hashable, "DataArray"]]
+        ],
         ascending: bool = True,
     ) -> "DataArray":
         """Sort object by labels or values (along an axis).
@@ -3058,11 +3249,15 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         """
-        ds = self._to_temp_dataset().differentiate(coord, edge_order, datetime_unit)
+        ds = self._to_temp_dataset().differentiate(
+            coord, edge_order, datetime_unit
+        )
         return self._from_temp_dataset(ds)
 
     def integrate(
-        self, dim: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
+        self,
+        dim: Union[Hashable, Sequence[Hashable]],
+        datetime_unit: str = None,
     ) -> "DataArray":
         """ integrate the array with the trapezoidal rule.
 
@@ -3182,148 +3377,6 @@ class DataArray(AbstractArray, DataWithCoords):
         from .parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs)
-
-    def cov(self, other, dim=None):
-        """Compute covariance between two DataArray objects along a shared dimension.
-
-        Parameters
-        ----------
-        other : DataArray
-            The other array with which the covariance will be computed
-        dim : str, optional
-            The dimension along which the covariance will be computed
-
-        Returns
-        -------
-        covariance: DataArray
-
-        See also
-        --------
-        pandas.Series.cov: corresponding pandas function
-
-        Examples
-        --------
-
-        >>> da_self = DataArray(np.random.random((3, 5)), 
-        ...                     dims=("space", "time"), 
-        ...                     coords=[('space', ['IA', 'IL', 'IN']), 
-        ...                             ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
-        >>> da_self
-        <xarray.DataArray (space: 3, time: 5)>
-        array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
-               [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
-               [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
-        Coordinates:
-        * space    (space) <U2 'IA' 'IL' 'IN'
-        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
- 
-        >>> da_other = DataArray(np.random.random((3, 5)), 
-        ...                     dims=("space", "time"), 
-        ...                     coords=[('space', ['IA', 'IL', 'IN']), 
-        ...                             ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
-        >>> da_other
-        <xarray.DataArray (space: 3, time: 5)>
-        array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
-              [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
-              [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
-        Coordinates:
-        * space    (space) <U2 'IA' 'IL' 'IN'
-        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
-        >>> da_self.cov(da_other)
-        <xarray.DataArray ()>
-        array(0.03823054)
-        >>> da_self.cov(da_other, dim='time')
-        <xarray.DataArray (space: 3)>
-        array([0.00207952, 0.01024296, 0.08214707])
-        Coordinates:
-        * space    (space) <U2 'IA' 'IL' 'IN'
-        """
-        # 1. Broadcast the two arrays
-        self, other = broadcast(self, other)
-
-        # 2. Ignore the nans
-        valid_values = self.notnull() & other.notnull()
-        self = self.where(valid_values, drop=True)
-        other = other.where(valid_values, drop=True)
-        valid_count = valid_values.sum(dim)
-
-        # 3. Compute mean and standard deviation along the given dim
-        demeaned_self = self - self.mean(dim=dim)
-        demeaned_other = other - other.mean(dim=dim)
-
-        # 4. Compute covariance along the given dim
-        cov = (demeaned_self * demeaned_other).sum(dim=dim) / (valid_count)
-
-        return cov
-
-    def corr(self, other, dim=None):
-        """Compute correlation between two DataArray objects along a shared dimension.
-
-        Parameters
-        ----------
-        other : DataArray
-            The other array with which the correlation will be computed
-        dim: str, optional
-            The dimension along which the correlation will be computed
-
-        Returns
-        -------
-        correlation: DataArray
-
-        See also
-        --------
-        pandas.Series.corr: corresponding pandas function
-
-        Examples
-        --------
-
-        >>> da_self = DataArray(np.random.random((3, 5)), 
-        ...                     dims=("space", "time"), 
-        ...                     coords=[('space', ['IA', 'IL', 'IN']), 
-        ...                             ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
-        >>> da_self
-        <xarray.DataArray (space: 3, time: 5)>
-        array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
-               [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
-               [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
-        Coordinates:
-        * space    (space) <U2 'IA' 'IL' 'IN'
-        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
- 
-        >>> da_other = DataArray(np.random.random((3, 5)), 
-        ...                     dims=("space", "time"), 
-        ...                     coords=[('space', ['IA', 'IL', 'IN']), 
-        ...                             ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
-        >>> da_other
-        <xarray.DataArray (space: 3, time: 5)>
-        array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
-              [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
-              [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
-        Coordinates:
-        * space    (space) <U2 'IA' 'IL' 'IN'
-        * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
-        >>> da_self.corr(da_other)
-        <xarray.DataArray ()>
-        array(0.67407116)
-        >>> da_self.corr(da_other, dim='time')
-        <xarray.DataArray (space: 3)>
-        array([0.23150267, 0.24900968, 0.9061562 ])
-        Coordinates:
-        * space    (space) <U2 'IA' 'IL' 'IN'
-        """
-        # 1. Broadcast the two arrays
-        self, other = broadcast(self, other)
-
-        # 2. Ignore the nans
-        valid_values = self.notnull() & other.notnull()
-        self = self.where(valid_values, drop=True)
-        other = other.where(valid_values, drop=True)
-
-        # 3. Compute correlation based on standard deviations and cov()
-        self_std = self.std(dim=dim)
-        other_std = other.std(dim=dim)
-
-        return self.cov(other, dim=dim) / (self_std * other_std)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
