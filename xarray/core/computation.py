@@ -85,9 +85,7 @@ class _UFuncSignature:
     @property
     def all_core_dims(self):
         if self._all_core_dims is None:
-            self._all_core_dims = (
-                self.all_input_core_dims | self.all_output_core_dims
-            )
+            self._all_core_dims = self.all_input_core_dims | self.all_output_core_dims
         return self._all_core_dims
 
     @property
@@ -118,12 +116,8 @@ class _UFuncSignature:
         )
 
     def __str__(self):
-        lhs = ",".join(
-            "({})".format(",".join(dims)) for dims in self.input_core_dims
-        )
-        rhs = ",".join(
-            "({})".format(",".join(dims)) for dims in self.output_core_dims
-        )
+        lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
+        rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
         return f"{lhs}->{rhs}"
 
     def to_gufunc_string(self):
@@ -171,9 +165,7 @@ def _get_coords_list(args) -> List["Coordinates"]:
 
 
 def build_output_coords(
-    args: list,
-    signature: _UFuncSignature,
-    exclude_dims: AbstractSet = frozenset(),
+    args: list, signature: _UFuncSignature, exclude_dims: AbstractSet = frozenset(),
 ) -> "List[Dict[Any, Variable]]":
     """Build output coordinates for an operation.
 
@@ -209,9 +201,7 @@ def build_output_coords(
         dropped_dims = signature.all_input_core_dims - set(output_dims)
         if dropped_dims:
             filtered = {
-                k: v
-                for k, v in merged_vars.items()
-                if dropped_dims.isdisjoint(v.dims)
+                k: v for k, v in merged_vars.items() if dropped_dims.isdisjoint(v.dims)
             }
         else:
             filtered = merged_vars
@@ -221,12 +211,7 @@ def build_output_coords(
 
 
 def apply_dataarray_vfunc(
-    func,
-    *args,
-    signature,
-    join="inner",
-    exclude_dims=frozenset(),
-    keep_attrs=False,
+    func, *args, signature, join="inner", exclude_dims=frozenset(), keep_attrs=False,
 ):
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
@@ -235,11 +220,7 @@ def apply_dataarray_vfunc(
 
     if len(args) > 1:
         args = deep_align(
-            args,
-            join=join,
-            copy=False,
-            exclude=exclude_dims,
-            raise_on_invalid=False,
+            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False,
         )
 
     if keep_attrs and hasattr(args[0], "name"):
@@ -303,15 +284,10 @@ def join_dict_keys(
 
 
 def collect_dict_values(
-    objects: Iterable[Union[Mapping, Any]],
-    keys: Iterable,
-    fill_value: object = None,
+    objects: Iterable[Union[Mapping, Any]], keys: Iterable, fill_value: object = None,
 ) -> List[list]:
     return [
-        [
-            obj.get(key, fill_value) if is_dict_like(obj) else obj
-            for obj in objects
-        ]
+        [obj.get(key, fill_value) if is_dict_like(obj) else obj for obj in objects]
         for key in keys
     ]
 
@@ -357,8 +333,7 @@ def apply_dict_of_variables_vfunc(
 
 
 def _fast_dataset(
-    variables: Dict[Hashable, Variable],
-    coord_variables: Mapping[Hashable, Variable],
+    variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable],
 ) -> "Dataset":
     """Create a dataset as quickly as possible.
 
@@ -388,10 +363,7 @@ def apply_dataset_vfunc(
 
     first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
 
-    if (
-        dataset_join not in _JOINS_WITHOUT_FILL_VALUES
-        and fill_value is _NO_FILL_VALUE
-    ):
+    if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
             "to apply an operation to datasets with different "
             "data variables with apply_ufunc, you must supply the "
@@ -400,28 +372,18 @@ def apply_dataset_vfunc(
 
     if len(args) > 1:
         args = deep_align(
-            args,
-            join=join,
-            copy=False,
-            exclude=exclude_dims,
-            raise_on_invalid=False,
+            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False,
         )
 
     list_of_coords = build_output_coords(args, signature, exclude_dims)
     args = [getattr(arg, "data_vars", arg) for arg in args]
 
     result_vars = apply_dict_of_variables_vfunc(
-        func,
-        *args,
-        signature=signature,
-        join=dataset_join,
-        fill_value=fill_value,
+        func, *args, signature=signature, join=dataset_join, fill_value=fill_value,
     )
 
     if signature.num_outputs > 1:
-        out = tuple(
-            _fast_dataset(*args) for args in zip(result_vars, list_of_coords)
-        )
+        out = tuple(_fast_dataset(*args) for args in zip(result_vars, list_of_coords))
     else:
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
@@ -616,9 +578,7 @@ def apply_variable_ufunc(
                 "``.load()`` or ``.compute()``"
             )
         elif dask == "parallelized":
-            input_dims = [
-                broadcast_dims + dims for dims in signature.input_core_dims
-            ]
+            input_dims = [broadcast_dims + dims for dims in signature.input_core_dims]
             numpy_func = func
 
             def func(*arrays):
@@ -644,8 +604,7 @@ def apply_variable_ufunc(
     if signature.num_outputs == 1:
         result_data = (result_data,)
     elif (
-        not isinstance(result_data, tuple)
-        or len(result_data) != signature.num_outputs
+        not isinstance(result_data, tuple) or len(result_data) != signature.num_outputs
     ):
         raise ValueError(
             "applied function does not have the number of "
@@ -689,13 +648,7 @@ def apply_variable_ufunc(
 
 
 def _apply_blockwise(
-    func,
-    args,
-    input_dims,
-    output_dims,
-    signature,
-    output_dtypes,
-    output_sizes=None,
+    func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None,
 ):
     import dask.array
 
@@ -732,9 +685,7 @@ def _apply_blockwise(
         raise ValueError(
             "when using dask='parallelized' with apply_ufunc, "
             "output core dimensions not found on inputs must "
-            "have explicitly set sizes with ``output_sizes``: {}".format(
-                new_dims
-            )
+            "have explicitly set sizes with ``output_sizes``: {}".format(new_dims)
         )
 
     for n, (data, core_dims) in enumerate(zip(args, signature.input_core_dims)):
@@ -1041,9 +992,7 @@ def apply_ufunc(
     if vectorize:
         if signature.all_core_dims:
             func = np.vectorize(
-                func,
-                otypes=output_dtypes,
-                signature=signature.to_gufunc_string(),
+                func, otypes=output_dtypes, signature=signature.to_gufunc_string(),
             )
         else:
             func = np.vectorize(func, otypes=output_dtypes)
@@ -1369,15 +1318,11 @@ def dot(*arrays, dims=None, **kwargs):
     dims = tuple(dims)  # make dims a tuple
 
     # dimensions to be parallelized
-    broadcast_dims = tuple(
-        d for d in all_dims if d in common_dims and d not in dims
-    )
+    broadcast_dims = tuple(d for d in all_dims if d in common_dims and d not in dims)
     input_core_dims = [
         [d for d in arr.dims if d not in broadcast_dims] for arr in arrays
     ]
-    output_core_dims = [
-        tuple(d for d in all_dims if d not in dims + broadcast_dims)
-    ]
+    output_core_dims = [tuple(d for d in all_dims if d not in dims + broadcast_dims)]
 
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position
@@ -1483,4 +1428,3 @@ def where(cond, x, y):
         dataset_join="exact",
         dask="allowed",
     )
-

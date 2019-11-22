@@ -42,7 +42,9 @@ class TestDataArray:
         self.ds = Dataset({"foo": self.v})
         self.dv = self.ds["foo"]
 
-        self.mindex = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("level_1", "level_2"))
+        self.mindex = pd.MultiIndex.from_product(
+            [["a", "b"], [1, 2]], names=("level_1", "level_2")
+        )
         self.mda = DataArray([0, 1, 2, 3], coords={"x": self.mindex}, dims="x")
 
     def test_repr(self):
@@ -76,11 +78,13 @@ class TestDataArray:
         assert expected == repr(self.mda)
 
     @pytest.mark.skipif(
-        LooseVersion(np.__version__) < "1.15", reason="old versions of numpy have different printing behavior",
+        LooseVersion(np.__version__) < "1.15",
+        reason="old versions of numpy have different printing behavior",
     )
     def test_repr_multiindex_long(self):
         mindex_long = pd.MultiIndex.from_product(
-            [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]], names=("level_1", "level_2"),
+            [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]],
+            names=("level_1", "level_2"),
         )
         mda_long = DataArray(list(range(32)), coords={"x": mindex_long}, dims="x")
         expected = dedent(
@@ -151,36 +155,53 @@ class TestDataArray:
         # GH837, GH861
         # checking array subtraction when dims are the same
         p_data = np.array(
-            [("Abe", 180), ("Stacy", 150), ("Dick", 200)], dtype=[("name", "|S256"), ("height", object)],
+            [("Abe", 180), ("Stacy", 150), ("Dick", 200)],
+            dtype=[("name", "|S256"), ("height", object)],
         )
-        weights_0 = DataArray([80, 56, 120], dims=["participant"], coords={"participant": p_data})
-        weights_1 = DataArray([81, 52, 115], dims=["participant"], coords={"participant": p_data})
+        weights_0 = DataArray(
+            [80, 56, 120], dims=["participant"], coords={"participant": p_data}
+        )
+        weights_1 = DataArray(
+            [81, 52, 115], dims=["participant"], coords={"participant": p_data}
+        )
         actual = weights_1 - weights_0
 
-        expected = DataArray([1, -4, -5], dims=["participant"], coords={"participant": p_data})
+        expected = DataArray(
+            [1, -4, -5], dims=["participant"], coords={"participant": p_data}
+        )
 
         assert_identical(actual, expected)
 
         # checking array subraction when dims are not the same
         p_data_alt = np.array(
-            [("Abe", 180), ("Stacy", 151), ("Dick", 200)], dtype=[("name", "|S256"), ("height", object)],
+            [("Abe", 180), ("Stacy", 151), ("Dick", 200)],
+            dtype=[("name", "|S256"), ("height", object)],
         )
-        weights_1 = DataArray([81, 52, 115], dims=["participant"], coords={"participant": p_data_alt})
+        weights_1 = DataArray(
+            [81, 52, 115], dims=["participant"], coords={"participant": p_data_alt}
+        )
         actual = weights_1 - weights_0
 
-        expected = DataArray([1, -5], dims=["participant"], coords={"participant": p_data[[0, 2]]})
+        expected = DataArray(
+            [1, -5], dims=["participant"], coords={"participant": p_data[[0, 2]]}
+        )
 
         assert_identical(actual, expected)
 
         # checking array subraction when dims are not the same and one
         # is np.nan
         p_data_nan = np.array(
-            [("Abe", 180), ("Stacy", np.nan), ("Dick", 200)], dtype=[("name", "|S256"), ("height", object)],
+            [("Abe", 180), ("Stacy", np.nan), ("Dick", 200)],
+            dtype=[("name", "|S256"), ("height", object)],
         )
-        weights_1 = DataArray([81, 52, 115], dims=["participant"], coords={"participant": p_data_nan})
+        weights_1 = DataArray(
+            [81, 52, 115], dims=["participant"], coords={"participant": p_data_nan}
+        )
         actual = weights_1 - weights_0
 
-        expected = DataArray([1, -5], dims=["participant"], coords={"participant": p_data[[0, 2]]})
+        expected = DataArray(
+            [1, -5], dims=["participant"], coords={"participant": p_data[[0, 2]]}
+        )
 
         assert_identical(actual, expected)
 
@@ -231,12 +252,20 @@ class TestDataArray:
 
         actual = DataArray(data, [["a", "b"], [-1, -2, -3]])
         expected = Dataset(
-            {None: (["dim_0", "dim_1"], data), "dim_0": ("dim_0", ["a", "b"]), "dim_1": ("dim_1", [-1, -2, -3]),}
+            {
+                None: (["dim_0", "dim_1"], data),
+                "dim_0": ("dim_0", ["a", "b"]),
+                "dim_1": ("dim_1", [-1, -2, -3]),
+            }
         )[None]
         assert_identical(expected, actual)
 
-        actual = DataArray(data, [pd.Index(["a", "b"], name="x"), pd.Index([-1, -2, -3], name="y")])
-        expected = Dataset({None: (["x", "y"], data), "x": ("x", ["a", "b"]), "y": ("y", [-1, -2, -3])})[None]
+        actual = DataArray(
+            data, [pd.Index(["a", "b"], name="x"), pd.Index([-1, -2, -3], name="y")]
+        )
+        expected = Dataset(
+            {None: (["x", "y"], data), "x": ("x", ["a", "b"]), "y": ("y", [-1, -2, -3])}
+        )[None]
         assert_identical(expected, actual)
 
         coords = [["a", "b"], [-1, -2, -3]]
@@ -309,7 +338,11 @@ class TestDataArray:
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
         expected = DataArray(
-            data, coords={"x": ["a", "b"], "y": [-1, -2]}, dims=["x", "y"], name="foobar", attrs={"bar": 2},
+            data,
+            coords={"x": ["a", "b"], "y": [-1, -2]},
+            dims=["x", "y"],
+            name="foobar",
+            attrs={"bar": 2},
         )
         actual = DataArray(expected)
         assert_identical(expected, actual)
@@ -317,7 +350,11 @@ class TestDataArray:
         actual = DataArray(expected.values, actual.coords)
         assert_equal(expected, actual)
 
-        frame = pd.DataFrame(data, index=pd.Index(["a", "b"], name="x"), columns=pd.Index([-1, -2], name="y"),)
+        frame = pd.DataFrame(
+            data,
+            index=pd.Index(["a", "b"], name="x"),
+            columns=pd.Index([-1, -2], name="y"),
+        )
         actual = DataArray(frame)
         assert_equal(expected, actual)
 
@@ -335,7 +372,9 @@ class TestDataArray:
             assert_identical(expected, actual)
 
         expected = DataArray(
-            data, coords={"x": ["a", "b"], "y": [-1, -2], "a": 0, "z": ("x", [-0.5, 0.5])}, dims=["x", "y"],
+            data,
+            coords={"x": ["a", "b"], "y": [-1, -2], "a": 0, "z": ("x", [-0.5, 0.5])},
+            dims=["x", "y"],
         )
         actual = DataArray(expected)
         assert_identical(expected, actual)
@@ -494,19 +533,37 @@ class TestDataArray:
         assert_identical(orig, orig[[0, 1], [0]])
 
         actual = orig[0, 0]
-        expected = DataArray(10, {"x": 1, "y": 3, "z": 4, "x2": "a", "y2": "c", "xy": "d"})
+        expected = DataArray(
+            10, {"x": 1, "y": 3, "z": 4, "x2": "a", "y2": "c", "xy": "d"}
+        )
         assert_identical(expected, actual)
 
         actual = orig[0, :]
         expected = DataArray(
-            [10], {"x": 1, "y": [3], "z": 4, "x2": "a", "y2": ("y", ["c"]), "xy": ("y", ["d"]),}, dims="y",
+            [10],
+            {
+                "x": 1,
+                "y": [3],
+                "z": 4,
+                "x2": "a",
+                "y2": ("y", ["c"]),
+                "xy": ("y", ["d"]),
+            },
+            dims="y",
         )
         assert_identical(expected, actual)
 
         actual = orig[:, 0]
         expected = DataArray(
             [10, 20],
-            {"x": [1, 2], "y": 3, "z": 4, "x2": ("x", ["a", "b"]), "y2": "c", "xy": ("x", ["d", "e"]),},
+            {
+                "x": [1, 2],
+                "y": 3,
+                "z": 4,
+                "x2": ("x", ["a", "b"]),
+                "y2": "c",
+                "xy": ("x", ["d", "e"]),
+            },
             dims="x",
         )
         assert_identical(expected, actual)
@@ -519,7 +576,9 @@ class TestDataArray:
         assert_array_equal(actual, da.values[[[0, 1], [0, 1]], :])
 
         da = DataArray(
-            np.arange(12).reshape((3, 4)), dims=["x", "y"], coords={"x": [0, 1, 2], "y": ["a", "b", "c", "d"]},
+            np.arange(12).reshape((3, 4)),
+            dims=["x", "y"],
+            coords={"x": [0, 1, 2], "y": ["a", "b", "c", "d"]},
         )
         ind = xr.DataArray([[0, 1], [0, 1]], dims=["X", "Y"])
         actual = da[ind]
@@ -536,7 +595,9 @@ class TestDataArray:
     def test_getitem_empty_index(self):
         da = DataArray(np.arange(12).reshape((3, 4)), dims=["x", "y"])
         assert_identical(da[{"x": []}], DataArray(np.zeros((0, 4)), dims=["x", "y"]))
-        assert_identical(da.loc[{"y": []}], DataArray(np.zeros((3, 0)), dims=["x", "y"]))
+        assert_identical(
+            da.loc[{"y": []}], DataArray(np.zeros((3, 0)), dims=["x", "y"])
+        )
         assert_identical(da[[]], DataArray(np.zeros((0, 4)), dims=["x", "y"]))
 
     def test_setitem(self):
@@ -553,7 +614,13 @@ class TestDataArray:
             expected = np.arange(6).reshape(3, 2)
             orig = DataArray(
                 np.arange(6).reshape(3, 2),
-                {"x": [1, 2, 3], "y": ["a", "b"], "z": 4, "x2": ("x", ["a", "b", "c"]), "y2": ("y", ["d", "e"]),},
+                {
+                    "x": [1, 2, 3],
+                    "y": ["a", "b"],
+                    "z": 4,
+                    "x2": ("x", ["a", "b", "c"]),
+                    "y2": ("y", ["d", "e"]),
+                },
                 dims=["x", "y"],
             )
             orig[t] = 1
@@ -595,7 +662,11 @@ class TestDataArray:
             return DataArray(
                 np.ones((4, 3, 2)),
                 dims=["x", "y", "z"],
-                coords={"x": np.arange(4), "y": ["a", "b", "c"], "non-dim": ("x", [1, 3, 4, 2]),},
+                coords={
+                    "x": np.arange(4),
+                    "y": ["a", "b", "c"],
+                    "non-dim": ("x", [1, 3, 4, 2]),
+                },
             )
 
         da = get_data()
@@ -614,14 +685,18 @@ class TestDataArray:
         da = get_data()
         # conflict in the assigning values
         value = xr.DataArray(
-            np.zeros((3, 3, 2)), dims=["x", "y", "z"], coords={"x": [0, 1, 2], "non-dim": ("x", [0, 2, 4])},
+            np.zeros((3, 3, 2)),
+            dims=["x", "y", "z"],
+            coords={"x": [0, 1, 2], "non-dim": ("x", [0, 2, 4])},
         )
         with raises_regex(IndexError, "dimension coordinate 'x'"):
             da[dict(x=ind)] = value
 
         # consistent coordinate in the assigning values
         value = xr.DataArray(
-            np.zeros((3, 3, 2)), dims=["x", "y", "z"], coords={"x": [1, 2, 3], "non-dim": ("x", [0, 2, 4])},
+            np.zeros((3, 3, 2)),
+            dims=["x", "y", "z"],
+            coords={"x": [1, 2, 3], "non-dim": ("x", [0, 2, 4])},
         )
         da[dict(x=ind)] = value
         assert np.allclose(da[dict(x=ind)].values, 0)
@@ -630,20 +705,26 @@ class TestDataArray:
 
         # Conflict in the non-dimension coordinate
         value = xr.DataArray(
-            np.zeros((3, 3, 2)), dims=["x", "y", "z"], coords={"x": [1, 2, 3], "non-dim": ("x", [0, 2, 4])},
+            np.zeros((3, 3, 2)),
+            dims=["x", "y", "z"],
+            coords={"x": [1, 2, 3], "non-dim": ("x", [0, 2, 4])},
         )
         da[dict(x=ind)] = value  # should not raise
 
         # conflict in the assigning values
         value = xr.DataArray(
-            np.zeros((3, 3, 2)), dims=["x", "y", "z"], coords={"x": [0, 1, 2], "non-dim": ("x", [0, 2, 4])},
+            np.zeros((3, 3, 2)),
+            dims=["x", "y", "z"],
+            coords={"x": [0, 1, 2], "non-dim": ("x", [0, 2, 4])},
         )
         with raises_regex(IndexError, "dimension coordinate 'x'"):
             da[dict(x=ind)] = value
 
         # consistent coordinate in the assigning values
         value = xr.DataArray(
-            np.zeros((3, 3, 2)), dims=["x", "y", "z"], coords={"x": [1, 2, 3], "non-dim": ("x", [0, 2, 4])},
+            np.zeros((3, 3, 2)),
+            dims=["x", "y", "z"],
+            coords={"x": [1, 2, 3], "non-dim": ("x", [0, 2, 4])},
         )
         da[dict(x=ind)] = value  # should not raise
 
@@ -695,17 +776,25 @@ class TestDataArray:
         # regression test for #1405
         da = DataArray([1, 2, 3], dims="x")
         # uint64
-        assert_identical(da.isel(x=np.array([0], dtype="uint64")), da.isel(x=np.array([0])))
+        assert_identical(
+            da.isel(x=np.array([0], dtype="uint64")), da.isel(x=np.array([0]))
+        )
         # uint32
-        assert_identical(da.isel(x=np.array([0], dtype="uint32")), da.isel(x=np.array([0])))
+        assert_identical(
+            da.isel(x=np.array([0], dtype="uint32")), da.isel(x=np.array([0]))
+        )
         # int64
-        assert_identical(da.isel(x=np.array([0], dtype="int64")), da.isel(x=np.array([0])))
+        assert_identical(
+            da.isel(x=np.array([0], dtype="int64")), da.isel(x=np.array([0]))
+        )
 
     @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_isel_fancy(self):
         shape = (10, 7, 6)
         np_array = np.random.random(shape)
-        da = DataArray(np_array, dims=["time", "y", "x"], coords={"time": np.arange(0, 100, 10)})
+        da = DataArray(
+            np_array, dims=["time", "y", "x"], coords={"time": np.arange(0, 100, 10)}
+        )
         y = [1, 3]
         x = [3, 0]
 
@@ -719,9 +808,13 @@ class TestDataArray:
         np.testing.assert_equal(actual, expected)
 
         # a few corner cases
-        da.isel(time=(("points",), [1, 2]), x=(("points",), [2, 2]), y=(("points",), [3, 4]))
+        da.isel(
+            time=(("points",), [1, 2]), x=(("points",), [2, 2]), y=(("points",), [3, 4])
+        )
         np.testing.assert_allclose(
-            da.isel(time=(("p",), [1]), x=(("p",), [2]), y=(("p",), [4])).values.squeeze(),
+            da.isel(
+                time=(("p",), [1]), x=(("p",), [2]), y=(("p",), [4])
+            ).values.squeeze(),
             np_array[1, 4, 2].squeeze(),
         )
         da.isel(time=(("points",), [1, 2]))
@@ -733,7 +826,8 @@ class TestDataArray:
 
         # test that the order of the indexers doesn't matter
         assert_identical(
-            da.isel(y=(("points",), y), x=(("points",), x)), da.isel(x=(("points",), x), y=(("points",), y)),
+            da.isel(y=(("points",), y), x=(("points",), x)),
+            da.isel(x=(("points",), x), y=(("points",), y)),
         )
 
         # make sure we're raising errors in the right places
@@ -771,7 +865,9 @@ class TestDataArray:
         assert "b" in actual.dims
         assert_identical(actual["a"], stations["a"])
         assert_identical(actual["b"], stations["b"])
-        expected = da.variable[:, stations["dim2s"].variable, stations["dim1s"].variable]
+        expected = da.variable[
+            :, stations["dim2s"].variable, stations["dim1s"].variable
+        ]
         assert_array_equal(actual, expected)
 
     def test_sel(self):
@@ -803,7 +899,9 @@ class TestDataArray:
         assert "new_dim" in actual.dims
 
         # with coordinate
-        ind = DataArray(["a", "b", "c"], dims=["new_dim"], coords={"new_dim": [0, 1, 2]})
+        ind = DataArray(
+            ["a", "b", "c"], dims=["new_dim"], coords={"new_dim": [0, 1, 2]}
+        )
         actual = da.sel(x=ind)
         assert_array_equal(actual, da.isel(x=[0, 1, 2]))
         assert "new_dim" in actual.dims
@@ -837,12 +935,16 @@ class TestDataArray:
         actual = array.sel(float32_coord=float_values[1:3])
         # case coords are float16 and label is list of floats
         coord_values_16 = np.asarray(float_values, dtype="float16")
-        expected_16 = DataArray(data_values[1:3], [("float16_coord", coord_values_16[1:3])])
+        expected_16 = DataArray(
+            data_values[1:3], [("float16_coord", coord_values_16[1:3])]
+        )
         array_16 = DataArray(data_values, [("float16_coord", coord_values_16)])
         actual_16 = array_16.sel(float16_coord=float_values[1:3])
 
         # case coord, label are scalars
-        expected_scalar = DataArray(data_values[2], coords={"float32_coord": coord_values[2]})
+        expected_scalar = DataArray(
+            data_values[2], coords={"float32_coord": coord_values[2]}
+        )
         actual_scalar = array.sel(float32_coord=float_values[2])
 
         assert_equal(expected, actual)
@@ -895,8 +997,12 @@ class TestDataArray:
     def test_head(self):
         assert_equal(self.dv.isel(x=slice(5)), self.dv.head(x=5))
         assert_equal(self.dv.isel(x=slice(0)), self.dv.head(x=0))
-        assert_equal(self.dv.isel({dim: slice(6) for dim in self.dv.dims}), self.dv.head(6))
-        assert_equal(self.dv.isel({dim: slice(5) for dim in self.dv.dims}), self.dv.head())
+        assert_equal(
+            self.dv.isel({dim: slice(6) for dim in self.dv.dims}), self.dv.head(6)
+        )
+        assert_equal(
+            self.dv.isel({dim: slice(5) for dim in self.dv.dims}), self.dv.head()
+        )
         with raises_regex(TypeError, "either dict-like or a single int"):
             self.dv.head([3])
         with raises_regex(TypeError, "expected integer type"):
@@ -908,9 +1014,12 @@ class TestDataArray:
         assert_equal(self.dv.isel(x=slice(-5, None)), self.dv.tail(x=5))
         assert_equal(self.dv.isel(x=slice(0)), self.dv.tail(x=0))
         assert_equal(
-            self.dv.isel({dim: slice(-6, None) for dim in self.dv.dims}), self.dv.tail(6),
+            self.dv.isel({dim: slice(-6, None) for dim in self.dv.dims}),
+            self.dv.tail(6),
         )
-        assert_equal(self.dv.isel({dim: slice(-5, None) for dim in self.dv.dims}), self.dv.tail())
+        assert_equal(
+            self.dv.isel({dim: slice(-5, None) for dim in self.dv.dims}), self.dv.tail()
+        )
         with raises_regex(TypeError, "either dict-like or a single int"):
             self.dv.tail([3])
         with raises_regex(TypeError, "expected integer type"):
@@ -921,7 +1030,8 @@ class TestDataArray:
     def test_thin(self):
         assert_equal(self.dv.isel(x=slice(None, None, 5)), self.dv.thin(x=5))
         assert_equal(
-            self.dv.isel({dim: slice(None, None, 6) for dim in self.dv.dims}), self.dv.thin(6),
+            self.dv.isel({dim: slice(None, None, 6) for dim in self.dv.dims}),
+            self.dv.thin(6),
         )
         with raises_regex(TypeError, "either dict-like or a single int"):
             self.dv.thin([3])
@@ -971,7 +1081,11 @@ class TestDataArray:
             return DataArray(
                 np.ones((4, 3, 2)),
                 dims=["x", "y", "z"],
-                coords={"x": np.arange(4), "y": ["a", "b", "c"], "non-dim": ("x", [1, 3, 4, 2]),},
+                coords={
+                    "x": np.arange(4),
+                    "y": ["a", "b", "c"],
+                    "non-dim": ("x", [1, 3, 4, 2]),
+                },
             )
 
         da = get_data()
@@ -990,14 +1104,18 @@ class TestDataArray:
         da = get_data()
         # conflict in the assigning values
         value = xr.DataArray(
-            np.zeros((3, 3, 2)), dims=["x", "y", "z"], coords={"x": [0, 1, 2], "non-dim": ("x", [0, 2, 4])},
+            np.zeros((3, 3, 2)),
+            dims=["x", "y", "z"],
+            coords={"x": [0, 1, 2], "non-dim": ("x", [0, 2, 4])},
         )
         with raises_regex(IndexError, "dimension coordinate 'x'"):
             da.loc[dict(x=ind)] = value
 
         # consistent coordinate in the assigning values
         value = xr.DataArray(
-            np.zeros((3, 3, 2)), dims=["x", "y", "z"], coords={"x": [1, 2, 3], "non-dim": ("x", [0, 2, 4])},
+            np.zeros((3, 3, 2)),
+            dims=["x", "y", "z"],
+            coords={"x": [1, 2, 3], "non-dim": ("x", [0, 2, 4])},
         )
         da.loc[dict(x=ind)] = value
         assert np.allclose(da[dict(x=ind)].values, 0)
@@ -1010,7 +1128,9 @@ class TestDataArray:
         assert data.loc[False] == 1
 
     def test_selection_multiindex(self):
-        mindex = pd.MultiIndex.from_product([["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three"))
+        mindex = pd.MultiIndex.from_product(
+            [["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three")
+        )
         mdata = DataArray(range(8), [("x", mindex)])
 
         def test_sel(lab_indexer, pos_indexer, replaced_idx=False, renamed_dim=None):
@@ -1047,7 +1167,11 @@ class TestDataArray:
 
     def test_selection_multiindex_remove_unused(self):
         # GH2619. For MultiIndex, we need to call remove_unused.
-        ds = xr.DataArray(np.arange(40).reshape(8, 5), dims=["x", "y"], coords={"x": np.arange(8), "y": np.arange(5)},)
+        ds = xr.DataArray(
+            np.arange(40).reshape(8, 5),
+            dims=["x", "y"],
+            coords={"x": np.arange(8), "y": np.arange(5)},
+        )
         ds = ds.stack(xy=["x", "y"])
         ds_isel = ds.isel(xy=ds["x"] < 4)
         with pytest.raises(KeyError):
@@ -1132,11 +1256,15 @@ class TestDataArray:
         actual = da[0].coords.to_index()
         assert expected.equals(actual)
 
-        expected = pd.MultiIndex.from_product([[1, 2], ["a", "b", "c"]], names=["x", "y"])
+        expected = pd.MultiIndex.from_product(
+            [[1, 2], ["a", "b", "c"]], names=["x", "y"]
+        )
         actual = da.coords.to_index()
         assert expected.equals(actual)
 
-        expected = pd.MultiIndex.from_product([["a", "b", "c"], [1, 2]], names=["y", "x"])
+        expected = pd.MultiIndex.from_product(
+            [["a", "b", "c"], [1, 2]], names=["y", "x"]
+        )
         actual = da.coords.to_index(["y", "x"])
         assert expected.equals(actual)
 
@@ -1144,17 +1272,23 @@ class TestDataArray:
             da.coords.to_index(["x"])
 
     def test_coord_coords(self):
-        orig = DataArray([10, 20], {"x": [1, 2], "x2": ("x", ["a", "b"]), "z": 4}, dims="x")
+        orig = DataArray(
+            [10, 20], {"x": [1, 2], "x2": ("x", ["a", "b"]), "z": 4}, dims="x"
+        )
 
         actual = orig.coords["x"]
-        expected = DataArray([1, 2], {"z": 4, "x2": ("x", ["a", "b"]), "x": [1, 2]}, dims="x", name="x")
+        expected = DataArray(
+            [1, 2], {"z": 4, "x2": ("x", ["a", "b"]), "x": [1, 2]}, dims="x", name="x"
+        )
         assert_identical(expected, actual)
 
         del actual.coords["x2"]
         assert_identical(expected.reset_coords("x2", drop=True), actual)
 
         actual.coords["x3"] = ("x", ["a", "b"])
-        expected = DataArray([1, 2], {"z": 4, "x3": ("x", ["a", "b"]), "x": [1, 2]}, dims="x", name="x")
+        expected = DataArray(
+            [1, 2], {"z": 4, "x3": ("x", ["a", "b"]), "x": [1, 2]}, dims="x", name="x"
+        )
         assert_identical(expected, actual)
 
     def test_reset_coords(self):
@@ -1190,7 +1324,9 @@ class TestDataArray:
         assert_identical(actual, expected)
 
         actual = data.reset_coords(drop=True)
-        expected = DataArray(np.zeros((3, 4)), coords={"y": range(4)}, dims=["x", "y"], name="foo")
+        expected = DataArray(
+            np.zeros((3, 4)), coords={"y": range(4)}, dims=["x", "y"], name="foo"
+        )
         assert_identical(actual, expected)
 
         actual = data.copy()
@@ -1198,7 +1334,12 @@ class TestDataArray:
         assert_identical(actual, expected)
 
         actual = data.reset_coords("bar", drop=True)
-        expected = DataArray(np.zeros((3, 4)), {"baz": ("y", range(4)), "y": range(4)}, dims=["x", "y"], name="foo",)
+        expected = DataArray(
+            np.zeros((3, 4)),
+            {"baz": ("y", range(4)), "y": range(4)},
+            dims=["x", "y"],
+            name="foo",
+        )
         assert_identical(actual, expected)
 
         with pytest.raises(TypeError):
@@ -1237,7 +1378,9 @@ class TestDataArray:
         rhs = DataArray([2, 3, 4], [("x", [1, 2, 3])])
         lhs.coords["rhs"] = rhs
 
-        expected = DataArray([1, 2, 3], coords={"rhs": ("x", [np.nan, 2, 3]), "x": [0, 1, 2]}, dims="x")
+        expected = DataArray(
+            [1, 2, 3], coords={"rhs": ("x", [np.nan, 2, 3]), "x": [0, 1, 2]}, dims="x"
+        )
         assert_identical(lhs, expected)
 
     def test_set_coords_update_index(self):
@@ -1260,8 +1403,16 @@ class TestDataArray:
         assert_identical(actual, expected)
 
     def test_broadcast_like(self):
-        arr1 = DataArray(np.ones((2, 3)), dims=["x", "y"], coords={"x": ["a", "b"], "y": ["a", "b", "c"]},)
-        arr2 = DataArray(np.ones((3, 2)), dims=["x", "y"], coords={"x": ["a", "b", "c"], "y": ["a", "b"]},)
+        arr1 = DataArray(
+            np.ones((2, 3)),
+            dims=["x", "y"],
+            coords={"x": ["a", "b"], "y": ["a", "b", "c"]},
+        )
+        arr2 = DataArray(
+            np.ones((3, 2)),
+            dims=["x", "y"],
+            coords={"x": ["a", "b", "c"], "y": ["a", "b"]},
+        )
         orig1, orig2 = broadcast(arr1, arr2)
         new1 = arr1.broadcast_like(arr2)
         new2 = arr2.broadcast_like(arr1)
@@ -1345,17 +1496,23 @@ class TestDataArray:
         assert_identical(renamed, renamed_kwargs)
 
     def test_init_value(self):
-        expected = DataArray(np.full((3, 4), 3), dims=["x", "y"], coords=[range(3), range(4)])
+        expected = DataArray(
+            np.full((3, 4), 3), dims=["x", "y"], coords=[range(3), range(4)]
+        )
         actual = DataArray(3, dims=["x", "y"], coords=[range(3), range(4)])
         assert_identical(expected, actual)
 
         expected = DataArray(
-            np.full((1, 10, 2), 0), dims=["w", "x", "y"], coords={"x": np.arange(10), "y": ["north", "south"]},
+            np.full((1, 10, 2), 0),
+            dims=["w", "x", "y"],
+            coords={"x": np.arange(10), "y": ["north", "south"]},
         )
         actual = DataArray(0, dims=expected.dims, coords=expected.coords)
         assert_identical(expected, actual)
 
-        expected = DataArray(np.full((10, 2), np.nan), coords=[("x", np.arange(10)), ("y", ["a", "b"])])
+        expected = DataArray(
+            np.full((10, 2), np.nan), coords=[("x", np.arange(10)), ("y", ["a", "b"])]
+        )
         actual = DataArray(coords=[("x", np.arange(10)), ("y", ["a", "b"])])
         assert_identical(expected, actual)
 
@@ -1372,7 +1529,10 @@ class TestDataArray:
 
     def test_expand_dims_error(self):
         array = DataArray(
-            np.random.randn(3, 4), dims=["x", "dim_0"], coords={"x": np.linspace(0.0, 1.0, 3)}, attrs={"key": "entry"},
+            np.random.randn(3, 4),
+            dims=["x", "dim_0"],
+            coords={"x": np.linspace(0.0, 1.0, 3)},
+            attrs={"key": "entry"},
         )
 
         with raises_regex(TypeError, "dim should be hashable or"):
@@ -1401,7 +1561,10 @@ class TestDataArray:
         array.expand_dims(dim=["y", "z"], axis=[2, 3])
 
         array = DataArray(
-            np.random.randn(3, 4), dims=["x", "dim_0"], coords={"x": np.linspace(0.0, 1.0, 3)}, attrs={"key": "entry"},
+            np.random.randn(3, 4),
+            dims=["x", "dim_0"],
+            coords={"x": np.linspace(0.0, 1.0, 3)},
+            attrs={"key": "entry"},
         )
         with pytest.raises(TypeError):
             array.expand_dims({"new_dim": 3.2})
@@ -1412,7 +1575,10 @@ class TestDataArray:
 
     def test_expand_dims(self):
         array = DataArray(
-            np.random.randn(3, 4), dims=["x", "dim_0"], coords={"x": np.linspace(0.0, 1.0, 3)}, attrs={"key": "entry"},
+            np.random.randn(3, 4),
+            dims=["x", "dim_0"],
+            coords={"x": np.linspace(0.0, 1.0, 3)},
+            attrs={"key": "entry"},
         )
         # pass only dim label
         actual = array.expand_dims(dim="y")
@@ -1513,7 +1679,12 @@ class TestDataArray:
 
         other_way_expected = DataArray(
             array.values * np.ones([3, 3, 4]),
-            coords={"dim_1": ["a", "b", "c"], "x": np.linspace(0, 1, 3), "dim_0": range(4), "z": 1.0,},
+            coords={
+                "dim_1": ["a", "b", "c"],
+                "x": np.linspace(0, 1, 3),
+                "dim_0": range(4),
+                "z": 1.0,
+            },
             dims=["dim_1", "x", "dim_0"],
             attrs={"key": "entry"},
         ).drop_vars("dim_0")
@@ -1539,7 +1710,9 @@ class TestDataArray:
         assert_identical(array, expected)
 
         array2d = DataArray(
-            np.random.rand(2, 2), coords={"x": ("x", [0, 1]), "level": ("y", [1, 2])}, dims=("x", "y"),
+            np.random.rand(2, 2),
+            coords={"x": ("x", [0, 1]), "level": ("y", [1, 2])},
+            dims=("x", "y"),
         )
         with raises_regex(ValueError, "dimension mismatch"):
             array2d.set_index(x="level")
@@ -1713,7 +1886,9 @@ class TestDataArray:
 
         actual = orig + orig[0, 0]
         exp_coords = {k: v for k, v in coords.items() if k != "lat"}
-        expected = DataArray(orig.values + orig.values[0, 0], exp_coords, dims=["x", "y"])
+        expected = DataArray(
+            orig.values + orig.values[0, 0], exp_coords, dims=["x", "y"]
+        )
         assert_identical(expected, actual)
 
         actual = orig[0, 0] + orig
@@ -1799,7 +1974,9 @@ class TestDataArray:
 
         actual = sim.copy()
         actual["tmin"] = sim["tmin"] - obs["tmin"]
-        expected = Dataset({"tmin": ("x", np.ones(5)), "tmax": ("x", sim["tmax"].values)}, obs.coords)
+        expected = Dataset(
+            {"tmin": ("x", np.ones(5)), "tmax": ("x", sim["tmax"].values)}, obs.coords
+        )
         assert_identical(actual, expected)
 
         actual = sim.copy()
@@ -1813,9 +1990,17 @@ class TestDataArray:
         # test GH3000
         a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
         if pd.__version__ < "0.24.0":
-            b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])], labels=[[], []], names=["x", "y"],)
+            b = pd.MultiIndex(
+                levels=[pd.Int64Index([]), pd.Int64Index([0])],
+                labels=[[], []],
+                names=["x", "y"],
+            )
         else:
-            b = pd.MultiIndex(levels=[pd.Int64Index([]), pd.Int64Index([0])], codes=[[], []], names=["x", "y"],)
+            b = pd.MultiIndex(
+                levels=[pd.Int64Index([]), pd.Int64Index([0])],
+                codes=[[], []],
+                names=["x", "y"],
+            )
         pd.util.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
@@ -1835,7 +2020,11 @@ class TestDataArray:
 
     def test_stack_unstack_decreasing_coordinate(self):
         # regression test for GH980
-        orig = DataArray(np.random.rand(3, 4), dims=("y", "x"), coords={"x": np.arange(4), "y": np.arange(3, 0, -1)},)
+        orig = DataArray(
+            np.random.rand(3, 4),
+            dims=("y", "x"),
+            coords={"x": np.arange(4), "y": np.arange(3, 0, -1)},
+        )
         stacked = orig.stack(allpoints=["y", "x"])
         actual = stacked.unstack("allpoints")
         assert_identical(orig, actual)
@@ -1848,7 +2037,9 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_stack_nonunique_consistency(self):
-        orig = DataArray([[0, 1], [2, 3]], dims=["x", "y"], coords={"x": [0, 1], "y": [0, 0]})
+        orig = DataArray(
+            [[0, 1], [2, 3]], dims=["x", "y"], coords={"x": [0, 1], "y": [0, 0]}
+        )
         actual = orig.stack(z=["x", "y"])
         expected = DataArray(orig.to_pandas().stack(), dims="z")
         assert_identical(expected, actual)
@@ -1862,7 +2053,12 @@ class TestDataArray:
         da = DataArray(
             np.random.randn(3, 4, 5),
             dims=("x", "y", "z"),
-            coords={"x": range(3), "y": range(4), "z": range(5), "xy": (("x", "y"), np.random.randn(3, 4)),},
+            coords={
+                "x": range(3),
+                "y": range(4),
+                "z": range(5),
+                "xy": (("x", "y"), np.random.randn(3, 4)),
+            },
         )
 
         actual = da.transpose(transpose_coords=False)
@@ -1873,7 +2069,12 @@ class TestDataArray:
         expected = DataArray(
             da.values.T,
             dims=("z", "y", "x"),
-            coords={"x": da.x.values, "y": da.y.values, "z": da.z.values, "xy": (("y", "x"), da.xy.values.T),},
+            coords={
+                "x": da.x.values,
+                "y": da.y.values,
+                "z": da.z.values,
+                "xy": (("y", "x"), da.xy.values.T),
+            },
         )
         assert_equal(expected, actual)
 
@@ -2068,7 +2269,9 @@ class TestDataArray:
         # Mean on all axes loses non-constant coordinates
         actual = orig.mean(keepdims=True)
         expected = DataArray(
-            orig.data.mean(keepdims=True), dims=orig.dims, coords={k: v for k, v in coords.items() if k in ["c"]},
+            orig.data.mean(keepdims=True),
+            dims=orig.dims,
+            coords={k: v for k, v in coords.items() if k in ["c"]},
         )
         assert_equal(actual, expected)
 
@@ -2127,9 +2330,13 @@ class TestDataArray:
 
     def test_quantile(self):
         for q in [0.25, [0.50], [0.25, 0.75]]:
-            for axis, dim in zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]):
+            for axis, dim in zip(
+                [None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]
+            ):
                 actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True)
-                expected = np.nanpercentile(self.dv.values, np.array(q) * 100, axis=axis)
+                expected = np.nanpercentile(
+                    self.dv.values, np.array(q) * 100, axis=axis
+                )
                 np.testing.assert_allclose(actual.values, expected)
                 assert actual.attrs == self.attrs
 
@@ -2186,7 +2393,9 @@ class TestDataArray:
 
         fill_value = DataArray([0, 1], dims="y")
         actual = a.fillna(fill_value)
-        expected = DataArray([[0, 1], [1, 1], [0, 1], [3, 3]], coords={"x": range(4)}, dims=("x", "y"))
+        expected = DataArray(
+            [[0, 1], [1, 1], [0, 1], [3, 3]], coords={"x": range(4)}, dims=("x", "y")
+        )
         assert_identical(expected, actual)
 
         expected = b.copy()
@@ -2196,7 +2405,9 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_groupby_iter(self):
-        for ((act_x, act_dv), (exp_x, exp_ds)) in zip(self.dv.groupby("y"), self.ds.groupby("y")):
+        for ((act_x, act_dv), (exp_x, exp_ds)) in zip(
+            self.dv.groupby("y"), self.ds.groupby("y")
+        ):
             assert exp_x == act_x
             assert_identical(exp_ds["foo"], act_dv)
         for ((_, exp_dv), act_dv) in zip(self.dv.groupby("x"), self.dv):
@@ -2237,7 +2448,14 @@ class TestDataArray:
         expected_sum_all = Dataset(
             {
                 "foo": Variable(
-                    ["abc"], np.array([self.x[:, :9].sum(), self.x[:, 10:].sum(), self.x[:, 9:10].sum(),]).T,
+                    ["abc"],
+                    np.array(
+                        [
+                            self.x[:, :9].sum(),
+                            self.x[:, 10:].sum(),
+                            self.x[:, 9:10].sum(),
+                        ]
+                    ).T,
                 ),
                 "abc": Variable(["abc"], np.array(["a", "b", "c"])),
             }
@@ -2246,7 +2464,10 @@ class TestDataArray:
         assert_allclose(expected_sum_all, grouped.sum(...))
 
         expected = DataArray(
-            [array["y"].values[idx].sum() for idx in [slice(9), slice(10, None), slice(9, 10)]],
+            [
+                array["y"].values[idx].sum()
+                for idx in [slice(9), slice(10, None), slice(9, 10)]
+            ],
             [["a", "b", "c"]],
             ["abc"],
         )
@@ -2259,7 +2480,13 @@ class TestDataArray:
             {
                 "foo": (
                     ["x", "abc"],
-                    np.array([self.x[:, :9].sum(1), self.x[:, 10:].sum(1), self.x[:, 9:10].sum(1),]).T,
+                    np.array(
+                        [
+                            self.x[:, :9].sum(1),
+                            self.x[:, 10:].sum(1),
+                            self.x[:, 9:10].sum(1),
+                        ]
+                    ).T,
                 ),
                 "abc": Variable(["abc"], np.array(["a", "b", "c"])),
             }
@@ -2276,7 +2503,11 @@ class TestDataArray:
                 "foo": Variable(
                     ["x", "abc"],
                     np.array(
-                        [self.x[:, :9].sum(axis=-1), self.x[:, 10:].sum(axis=-1), self.x[:, 9:10].sum(axis=-1),]
+                        [
+                            self.x[:, :9].sum(axis=-1),
+                            self.x[:, 10:].sum(axis=-1),
+                            self.x[:, 9:10].sum(axis=-1),
+                        ]
                     ).T,
                 ),
                 "abc": Variable(["abc"], np.array(["a", "b", "c"])),
@@ -2287,7 +2518,9 @@ class TestDataArray:
 
     def test_groupby_count(self):
         array = DataArray(
-            [0, 0, np.nan, np.nan, 0, 0], coords={"cat": ("x", ["a", "b", "b", "c", "c", "c"])}, dims="x",
+            [0, 0, np.nan, np.nan, 0, 0],
+            coords={"cat": ("x", ["a", "b", "b", "c", "c", "c"])},
+            dims="x",
         )
         actual = array.groupby("cat").count()
         expected = DataArray([1, 1, 2], coords=[("cat", ["a", "b", "c"])])
@@ -2301,7 +2534,9 @@ class TestDataArray:
         for shortcut in [True, False]:
             for keep_attrs in [True, False]:
                 print(f"shortcut={shortcut}, keep_attrs={keep_attrs}")
-                actual = array.groupby("abc").reduce(np.mean, keep_attrs=keep_attrs, shortcut=shortcut)
+                actual = array.groupby("abc").reduce(
+                    np.mean, keep_attrs=keep_attrs, shortcut=shortcut
+                )
                 expected = array.groupby("abc").mean()
                 if keep_attrs:
                     expected.attrs["foo"] = "bar"
@@ -2315,7 +2550,9 @@ class TestDataArray:
         grouped = array.groupby("abc")
 
         expected_ds = array.to_dataset()
-        exp_data = np.hstack([center(self.x[:, :9]), center(self.x[:, 9:10]), center(self.x[:, 10:])])
+        exp_data = np.hstack(
+            [center(self.x[:, :9]), center(self.x[:, 9:10]), center(self.x[:, 10:])]
+        )
         expected_ds["foo"] = (["x", "y"], exp_data)
         expected_centered = expected_ds["foo"]
         assert_allclose(expected_centered, grouped.map(center))
@@ -2374,7 +2611,9 @@ class TestDataArray:
             array += grouped
 
     def test_groupby_math_not_aligned(self):
-        array = DataArray(range(4), {"b": ("x", [0, 0, 1, 1]), "x": [0, 1, 2, 3]}, dims="x")
+        array = DataArray(
+            range(4), {"b": ("x", [0, 0, 1, 1]), "x": [0, 1, 2, 3]}, dims="x"
+        )
         other = DataArray([10], coords={"b": [0]}, dims="b")
         actual = array.groupby("b") + other
         expected = DataArray([10, 11, np.nan, np.nan], array.coords)
@@ -2391,7 +2630,11 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_groupby_restore_dim_order(self):
-        array = DataArray(np.random.randn(5, 3), coords={"a": ("x", range(5)), "b": ("y", range(3))}, dims=["x", "y"],)
+        array = DataArray(
+            np.random.randn(5, 3),
+            coords={"a": ("x", range(5)), "b": ("y", range(3))},
+            dims=["x", "y"],
+        )
         for by, expected_dims in [
             ("x", ("x", "y")),
             ("y", ("x", "y")),
@@ -2404,7 +2647,11 @@ class TestDataArray:
     def test_groupby_restore_coord_dims(self):
         array = DataArray(
             np.random.randn(5, 3),
-            coords={"a": ("x", range(5)), "b": ("y", range(3)), "c": (("x", "y"), np.random.randn(5, 3)),},
+            coords={
+                "a": ("x", range(5)),
+                "b": ("y", range(3)),
+                "c": (("x", "y"), np.random.randn(5, 3)),
+            },
             dims=["x", "y"],
         )
 
@@ -2414,7 +2661,9 @@ class TestDataArray:
             ("a", ("a", "y")),
             ("b", ("x", "b")),
         ]:
-            result = array.groupby(by, restore_coord_dims=True).map(lambda x: x.squeeze())["c"]
+            result = array.groupby(by, restore_coord_dims=True).map(
+                lambda x: x.squeeze()
+            )["c"]
             assert result.dims == expected_dims
 
         with pytest.warns(FutureWarning):
@@ -2444,7 +2693,10 @@ class TestDataArray:
     def make_groupby_multidim_example_array(self):
         return DataArray(
             [[[0, 1], [2, 3]], [[5, 10], [15, 20]]],
-            coords={"lon": (["ny", "nx"], [[30, 40], [40, 50]]), "lat": (["ny", "nx"], [[10, 10], [20, 20]]),},
+            coords={
+                "lon": (["ny", "nx"], [[30, 40], [40, 50]]),
+                "lat": (["ny", "nx"], [[10, 10], [20, 20]]),
+            },
             dims=["time", "ny", "nx"],
         )
 
@@ -2461,7 +2713,9 @@ class TestDataArray:
         array = self.make_groupby_multidim_example_array()
         actual = array.groupby("lon").map(lambda x: x - x.mean())
         expected = DataArray(
-            [[[-2.5, -6.0], [-5.0, -8.5]], [[2.5, 3.0], [8.0, 8.5]]], coords=array.coords, dims=array.dims,
+            [[[-2.5, -6.0], [-5.0, -8.5]], [[2.5, 3.0], [8.0, 8.5]]],
+            coords=array.coords,
+            dims=array.dims,
         )
         assert_identical(expected, actual)
 
@@ -2473,7 +2727,9 @@ class TestDataArray:
         # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         bins = [0, 1.5, 5]
         bin_coords = pd.cut(array["dim_0"], bins).categories
-        expected = DataArray([1, 5], dims="dim_0_bins", coords={"dim_0_bins": bin_coords})
+        expected = DataArray(
+            [1, 5], dims="dim_0_bins", coords={"dim_0_bins": bin_coords}
+        )
         # the problem with this is that it overwrites the dimensions of array!
         # actual = array.groupby('dim_0', bins=bins).sum()
         actual = array.groupby_bins("dim_0", bins).map(lambda x: x.sum())
@@ -2507,7 +2763,9 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_groupby_bins_sort(self):
-        data = xr.DataArray(np.arange(100), dims="x", coords={"x": np.linspace(-100, 100, num=100)})
+        data = xr.DataArray(
+            np.arange(100), dims="x", coords={"x": np.linspace(-100, 100, num=100)}
+        )
         binned_mean = data.groupby_bins("x", bins=11).mean()
         assert binned_mean.to_index().is_monotonic
 
@@ -2566,7 +2824,9 @@ class TestDataArray:
         # regression test for http://stackoverflow.com/questions/33158558/
         array = Dataset({"time": times})["time"]
         actual = array.resample(time="1D").last()
-        expected_times = pd.to_datetime(["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"])
+        expected_times = pd.to_datetime(
+            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"]
+        )
         expected = DataArray(expected_times, [("time", times[::4])], name="time")
         assert_identical(expected, actual)
 
@@ -2603,7 +2863,9 @@ class TestDataArray:
         assert "tc" not in actual.coords
 
         # Up-sample - interpolation
-        actual = array.resample(time="1H", restore_coord_dims=True).interpolate("linear")
+        actual = array.resample(time="1H", restore_coord_dims=True).interpolate(
+            "linear"
+        )
         assert "tc" not in actual.coords
 
     def test_resample_keep_attrs(self):
@@ -2668,7 +2930,11 @@ class TestDataArray:
         expected_data = np.repeat(data, 2, axis=-1)
         expected_times = times.to_series().resample("3H").asfreq().index
         expected_data = expected_data[..., : len(expected_times)]
-        expected = DataArray(expected_data, {"time": expected_times, "x": xs, "y": ys}, ("x", "y", "time"),)
+        expected = DataArray(
+            expected_data,
+            {"time": expected_times, "x": xs, "y": ys},
+            ("x", "y", "time"),
+        )
         assert_identical(expected, actual)
 
         # Backward-fill
@@ -2677,7 +2943,11 @@ class TestDataArray:
         expected_data = np.flipud(expected_data.T).T
         expected_times = times.to_series().resample("3H").asfreq().index
         expected_data = expected_data[..., : len(expected_times)]
-        expected = DataArray(expected_data, {"time": expected_times, "x": xs, "y": ys}, ("x", "y", "time"),)
+        expected = DataArray(
+            expected_data,
+            {"time": expected_times, "x": xs, "y": ys},
+            ("x", "y", "time"),
+        )
         assert_identical(expected, actual)
 
         # As frequency
@@ -2685,7 +2955,11 @@ class TestDataArray:
         expected_data = np.repeat(data, 2, axis=-1).astype(float)[..., :-1]
         expected_data[..., 1::2] = np.nan
         expected_times = times.to_series().resample("3H").asfreq().index
-        expected = DataArray(expected_data, {"time": expected_times, "x": xs, "y": ys}, ("x", "y", "time"),)
+        expected = DataArray(
+            expected_data,
+            {"time": expected_times, "x": xs, "y": ys},
+            ("x", "y", "time"),
+        )
         assert_identical(expected, actual)
 
         # Pad
@@ -2694,7 +2968,11 @@ class TestDataArray:
         expected_data[..., 1::2] = expected_data[..., ::2]
         expected_data = expected_data[..., :-1]
         expected_times = times.to_series().resample("3H").asfreq().index
-        expected = DataArray(expected_data, {"time": expected_times, "x": xs, "y": ys}, ("x", "y", "time"),)
+        expected = DataArray(
+            expected_data,
+            {"time": expected_times, "x": xs, "y": ys},
+            ("x", "y", "time"),
+        )
         assert_identical(expected, actual)
 
     def test_upsample_tolerance(self):
@@ -2736,9 +3014,20 @@ class TestDataArray:
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
             actual = array.resample(time="1H").interpolate(kind)
-            f = interp1d(np.arange(len(times)), data, kind=kind, axis=-1, bounds_error=True, assume_sorted=True,)
+            f = interp1d(
+                np.arange(len(times)),
+                data,
+                kind=kind,
+                axis=-1,
+                bounds_error=True,
+                assume_sorted=True,
+            )
             expected_data = f(new_times_idx)
-            expected = DataArray(expected_data, {"time": expected_times, "x": xs, "y": ys}, ("x", "y", "time"),)
+            expected = DataArray(
+                expected_data,
+                {"time": expected_times, "x": xs, "y": ys},
+                ("x", "y", "time"),
+            )
             # Use AllClose because there are some small differences in how
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
@@ -2749,14 +3038,20 @@ class TestDataArray:
         dates = pd.date_range("2007-02-01", "2007-03-01", freq="D")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
         result = da.resample(time="M").interpolate("linear")
-        expected_times = np.array([np.datetime64("2007-02-28"), np.datetime64("2007-03-31")])
+        expected_times = np.array(
+            [np.datetime64("2007-02-28"), np.datetime64("2007-03-31")]
+        )
         expected = xr.DataArray([27.0, np.nan], [("time", expected_times)])
         assert_equal(result, expected)
 
     @requires_scipy
     def test_upsample_interpolate_regression_1605(self):
         dates = pd.date_range("2016-01-01", "2016-03-31", freq="1D")
-        expected = xr.DataArray(np.random.random((len(dates), 2, 3)), dims=("time", "x", "y"), coords={"time": dates},)
+        expected = xr.DataArray(
+            np.random.random((len(dates), 2, 3)),
+            dims=("time", "x", "y"),
+            coords={"time": dates},
+        )
         actual = expected.resample(time="1D").interpolate("linear")
         assert_allclose(actual, expected, rtol=1e-16)
 
@@ -2781,9 +3076,20 @@ class TestDataArray:
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
             actual = array.chunk(chunks).resample(time="1H").interpolate(kind)
             actual = actual.compute()
-            f = interp1d(np.arange(len(times)), data, kind=kind, axis=-1, bounds_error=True, assume_sorted=True,)
+            f = interp1d(
+                np.arange(len(times)),
+                data,
+                kind=kind,
+                axis=-1,
+                bounds_error=True,
+                assume_sorted=True,
+            )
             expected_data = f(new_times_idx)
-            expected = DataArray(expected_data, {"time": expected_times, "x": xs, "y": ys}, ("x", "y", "time"),)
+            expected = DataArray(
+                expected_data,
+                {"time": expected_times, "x": xs, "y": ys},
+                ("x", "y", "time"),
+            )
             # Use AllClose because there are some small differences in how
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
@@ -2791,11 +3097,15 @@ class TestDataArray:
 
         # Check that an error is raised if an attempt is made to interpolate
         # over a chunked dimension
-        with raises_regex(NotImplementedError, "Chunking along the dimension to be interpolated"):
+        with raises_regex(
+            NotImplementedError, "Chunking along the dimension to be interpolated"
+        ):
             array.chunk({"time": 1}).resample(time="1H").interpolate("linear")
 
     def test_align(self):
-        array = DataArray(np.random.random((6, 8)), coords={"x": list("abcdef")}, dims=["x", "y"])
+        array = DataArray(
+            np.random.random((6, 8)), coords={"x": list("abcdef")}, dims=["x", "y"]
+        )
         array1, array2 = align(array, array[:5], join="inner")
         assert_identical(array1, array[:5])
         assert_identical(array2, array[:5])
@@ -2839,11 +3149,15 @@ class TestDataArray:
     def test_align_override(self):
         left = DataArray([1, 2, 3], dims="x", coords={"x": [0, 1, 2]})
         right = DataArray(
-            np.arange(9).reshape((3, 3)), dims=["x", "y"], coords={"x": [0.1, 1.1, 2.1], "y": [1, 2, 3]},
+            np.arange(9).reshape((3, 3)),
+            dims=["x", "y"],
+            coords={"x": [0.1, 1.1, 2.1], "y": [1, 2, 3]},
         )
 
         expected_right = DataArray(
-            np.arange(9).reshape(3, 3), dims=["x", "y"], coords={"x": [0, 1, 2], "y": [1, 2, 3]},
+            np.arange(9).reshape(3, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1, 2], "y": [1, 2, 3]},
         )
 
         new_left, new_right = align(left, right, join="override")
@@ -2854,7 +3168,9 @@ class TestDataArray:
         assert_identical(left, new_left)
         assert_identical(right, new_right)
 
-        new_left, new_right = xr.align(left.isel(x=0, drop=True), right, exclude="x", join="override")
+        new_left, new_right = xr.align(
+            left.isel(x=0, drop=True), right, exclude="x", join="override"
+        )
         assert_identical(left.isel(x=0, drop=True), new_left)
         assert_identical(right, new_right)
 
@@ -2864,8 +3180,16 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "darrays",
         [
-            [DataArray(0), DataArray([1], [("x", [1])]), DataArray([2, 3], [("x", [2, 3])]),],
-            [DataArray([2, 3], [("x", [2, 3])]), DataArray([1], [("x", [1])]), DataArray(0),],
+            [
+                DataArray(0),
+                DataArray([1], [("x", [1])]),
+                DataArray([2, 3], [("x", [2, 3])]),
+            ],
+            [
+                DataArray([2, 3], [("x", [2, 3])]),
+                DataArray([1], [("x", [1])]),
+                DataArray(0),
+            ],
         ],
     )
     def test_align_override_error(self, darrays):
@@ -2878,9 +3202,17 @@ class TestDataArray:
         z = DataArray([1], dims=["a"], coords={"a": [20], "b": 7})
 
         x2, y2, z2 = align(x, y, z, join="outer", exclude=["b"])
-        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]], coords=[("a", [-2, -1, 20]), ("b", [3, 4])],)
-        expected_y2 = DataArray([[np.nan, np.nan], [1, 2], [3, 4]], coords=[("a", [-2, -1, 20]), ("b", [5, 6])],)
-        expected_z2 = DataArray([np.nan, np.nan, 1], dims=["a"], coords={"a": [-2, -1, 20], "b": 7})
+        expected_x2 = DataArray(
+            [[3, 4], [1, 2], [np.nan, np.nan]],
+            coords=[("a", [-2, -1, 20]), ("b", [3, 4])],
+        )
+        expected_y2 = DataArray(
+            [[np.nan, np.nan], [1, 2], [3, 4]],
+            coords=[("a", [-2, -1, 20]), ("b", [5, 6])],
+        )
+        expected_z2 = DataArray(
+            [np.nan, np.nan, 1], dims=["a"], coords={"a": [-2, -1, 20], "b": 7}
+        )
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
         assert_identical(expected_z2, z2)
@@ -2922,7 +3254,8 @@ class TestDataArray:
 
         with raises_regex(ValueError, "cannot be aligned"):
             align(
-                DataArray([1, 2, 3], dims=["x"]), DataArray([1, 2], coords=[("x", [0, 1])]),
+                DataArray([1, 2, 3], dims=["x"]),
+                DataArray([1, 2], coords=[("x", [0, 1])]),
             )
 
     def test_broadcast_arrays(self):
@@ -2947,8 +3280,14 @@ class TestDataArray:
         # broadcast on misaligned coords must auto-align
         x = DataArray([[1, 2], [3, 4]], coords=[("a", [-1, -2]), ("b", [3, 4])])
         y = DataArray([1, 2], coords=[("a", [-1, 20])])
-        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]], coords=[("a", [-2, -1, 20]), ("b", [3, 4])],)
-        expected_y2 = DataArray([[np.nan, np.nan], [1, 1], [2, 2]], coords=[("a", [-2, -1, 20]), ("b", [3, 4])],)
+        expected_x2 = DataArray(
+            [[3, 4], [1, 2], [np.nan, np.nan]],
+            coords=[("a", [-2, -1, 20]), ("b", [3, 4])],
+        )
+        expected_y2 = DataArray(
+            [[np.nan, np.nan], [1, 1], [2, 2]],
+            coords=[("a", [-2, -1, 20]), ("b", [3, 4])],
+        )
         x2, y2 = broadcast(x, y)
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
@@ -2977,9 +3316,14 @@ class TestDataArray:
         z = DataArray(5, coords={"b": 5})
 
         x2, y2, z2 = broadcast(x, y, z, exclude=["b"])
-        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]], coords=[("a", [-2, -1, 20]), ("b", [3, 4])],)
+        expected_x2 = DataArray(
+            [[3, 4], [1, 2], [np.nan, np.nan]],
+            coords=[("a", [-2, -1, 20]), ("b", [3, 4])],
+        )
         expected_y2 = DataArray([np.nan, 1, 2], coords=[("a", [-2, -1, 20])])
-        expected_z2 = DataArray([5, 5, 5], dims=["a"], coords={"a": [-2, -1, 20], "b": 5})
+        expected_z2 = DataArray(
+            [5, 5, 5], dims=["a"], coords={"a": [-2, -1, 20], "b": 5}
+        )
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
         assert_identical(expected_z2, z2)
@@ -3013,7 +3357,9 @@ class TestDataArray:
 
         # 2d
         values = np.random.randn(3, 2)
-        da = DataArray(values, coords=[("x", ["a", "b", "c"]), ("y", [0, 1])], name="foo")
+        da = DataArray(
+            values, coords=[("x", ["a", "b", "c"]), ("y", [0, 1])], name="foo"
+        )
         actual = da.to_pandas()
         assert_array_equal(actual.values, values)
         assert_array_equal(actual.index, ["a", "b", "c"])
@@ -3035,7 +3381,9 @@ class TestDataArray:
 
     def test_to_dataframe(self):
         # regression test for #260
-        arr = DataArray(np.random.randn(3, 4), [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
+        arr = DataArray(
+            np.random.randn(3, 4), [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo"
+        )
         expected = arr.to_series()
         actual = arr.to_dataframe()["foo"]
         assert_array_equal(expected.values, actual.values)
@@ -3080,7 +3428,9 @@ class TestDataArray:
         # test name is None
         actual.name = None
         expected_da = self.dv.rename(None)
-        assert_identical(expected_da, DataArray.from_series(actual).drop_vars(["x", "y"]))
+        assert_identical(
+            expected_da, DataArray.from_series(actual).drop_vars(["x", "y"])
+        )
 
     @requires_sparse
     def test_from_series_sparse(self):
@@ -3114,7 +3464,9 @@ class TestDataArray:
         assert "'a'" in repr(arr)  # should not error
 
     def test_to_and_from_dict(self):
-        array = DataArray(np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo")
+        array = DataArray(
+            np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
+        )
         expected = {
             "name": "foo",
             "dims": ("x", "y"),
@@ -3149,7 +3501,9 @@ class TestDataArray:
             "data": array.values,
             "coords": {"x": {"data": ["a", "b"]}},
         }
-        with raises_regex(ValueError, "cannot convert dict when coords are missing the key 'dims'"):
+        with raises_regex(
+            ValueError, "cannot convert dict when coords are missing the key 'dims'"
+        ):
             DataArray.from_dict(d)
 
         # this one is missing some necessary information
@@ -3254,7 +3608,10 @@ class TestDataArray:
 
         original = DataArray(
             np.arange(6).reshape(2, 3),
-            [("distance", [-2, 2], {"units": "meters"}), ("time", pd.date_range("2000-01-01", periods=3)),],
+            [
+                ("distance", [-2, 2], {"units": "meters"}),
+                ("time", pd.date_range("2000-01-01", periods=3)),
+            ],
             name="foo",
             attrs={"baz": 123},
         )
@@ -3296,7 +3653,12 @@ class TestDataArray:
         lat = DataArray(lonlat[0], dims=["y", "x"], name="lat")
         x = DataArray(np.arange(lon.shape[1]), dims=["x"], name="x")
         y = DataArray(np.arange(lon.shape[0]), dims=["y"], name="y")
-        original = DataArray(lonlat.sum(axis=0), dims=["y", "x"], coords=dict(x=x, y=y, lon=lon, lat=lat), name="sst",)
+        original = DataArray(
+            lonlat.sum(axis=0),
+            dims=["y", "x"],
+            coords=dict(x=x, y=y, lon=lon, lat=lat),
+            name="sst",
+        )
         actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().asma())
@@ -3315,7 +3677,9 @@ class TestDataArray:
         lon = DataArray(np.random.uniform(size=5), dims=["cell"], name="lon")
         lat = DataArray(np.random.uniform(size=5), dims=["cell"], name="lat")
         cell = DataArray(np.arange(5), dims=["cell"], name="cell")
-        original = DataArray(np.arange(5), dims=["cell"], coords={"lon": lon, "lat": lat, "cell": cell})
+        original = DataArray(
+            np.arange(5), dims=["cell"], coords={"lon": lon, "lat": lat, "cell": cell}
+        )
         actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().getValue())
@@ -3377,7 +3741,9 @@ class TestDataArray:
 
     def test__title_for_slice(self):
         array = DataArray(
-            np.ones((4, 3, 2)), dims=["a", "b", "c"], coords={"a": range(4), "b": range(3), "c": range(2)},
+            np.ones((4, 3, 2)),
+            dims=["a", "b", "c"],
+            coords={"a": range(4), "b": range(3), "c": range(2)},
         )
         assert "" == array._title_for_slice()
         assert "c = 0" == array.isel(c=0)._title_for_slice()
@@ -3469,8 +3835,22 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "deep, expected_orig",
         [
-            [True, xr.DataArray(xr.IndexVariable("a", np.array([1, 2])), coords={"a": [1, 2]}, dims=["a"],),],
-            [False, xr.DataArray(xr.IndexVariable("a", np.array([999, 2])), coords={"a": [999, 2]}, dims=["a"],),],
+            [
+                True,
+                xr.DataArray(
+                    xr.IndexVariable("a", np.array([1, 2])),
+                    coords={"a": [1, 2]},
+                    dims=["a"],
+                ),
+            ],
+            [
+                False,
+                xr.DataArray(
+                    xr.IndexVariable("a", np.array([999, 2])),
+                    coords={"a": [999, 2]},
+                    dims=["a"],
+                ),
+            ],
         ],
     )
     def test_copy_coords(self, deep, expected_orig):
@@ -3478,12 +3858,18 @@ class TestDataArray:
         for some reason. In windows coords seem to be immutable unless it's one
         dataarray deep copied from another."""
         da = xr.DataArray(
-            np.ones([2, 2, 2]), coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1]}, dims=["a", "b", "c"],
+            np.ones([2, 2, 2]),
+            coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1]},
+            dims=["a", "b", "c"],
         )
         da_cp = da.copy(deep)
         da_cp["a"].data[0] = 999
 
-        expected_cp = xr.DataArray(xr.IndexVariable("a", np.array([999, 2])), coords={"a": [999, 2]}, dims=["a"],)
+        expected_cp = xr.DataArray(
+            xr.IndexVariable("a", np.array([999, 2])),
+            coords={"a": [999, 2]},
+            dims=["a"],
+        )
         assert_identical(da_cp["a"], expected_cp)
 
         assert_identical(da["a"], expected_orig)
@@ -3568,7 +3954,7 @@ class TestDataArray:
             da.dot(dm.to_dataset(name="dm"))
         with pytest.raises(TypeError):
             da.dot(dm.values)
-    
+
     def test_corr(self):
 
         # TODO: the following lines are simply copy pasted from test_computation, isn't there a DRYer way of testing this?
@@ -3648,7 +4034,9 @@ class TestDataArray:
         missing_0 = xr.DataArray(coords_r, [(dim, coords_r)])
         with xr.set_options(arithmetic_join=align_type):
             actual = missing_0 + missing_3
-        missing_0_aligned, missing_3_aligned = xr.align(missing_0, missing_3, join=align_type)
+        missing_0_aligned, missing_3_aligned = xr.align(
+            missing_0, missing_3, join=align_type
+        )
         expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])])
         assert_equal(actual, expected)
 
@@ -3658,23 +4046,37 @@ class TestDataArray:
         ar2 = DataArray([2], [("x", ["d"])])
 
         actual = ar0.combine_first(ar1)
-        expected = DataArray([[0, 0, np.nan], [0, 0, 1], [np.nan, 1, 1]], [("x", ["a", "b", "c"]), ("y", [-1, 0, 1])],)
+        expected = DataArray(
+            [[0, 0, np.nan], [0, 0, 1], [np.nan, 1, 1]],
+            [("x", ["a", "b", "c"]), ("y", [-1, 0, 1])],
+        )
         assert_equal(actual, expected)
 
         actual = ar1.combine_first(ar0)
-        expected = DataArray([[0, 0, np.nan], [0, 1, 1], [np.nan, 1, 1]], [("x", ["a", "b", "c"]), ("y", [-1, 0, 1])],)
+        expected = DataArray(
+            [[0, 0, np.nan], [0, 1, 1], [np.nan, 1, 1]],
+            [("x", ["a", "b", "c"]), ("y", [-1, 0, 1])],
+        )
         assert_equal(actual, expected)
 
         actual = ar0.combine_first(ar2)
-        expected = DataArray([[0, 0], [0, 0], [2, 2]], [("x", ["a", "b", "d"]), ("y", [-1, 0])])
+        expected = DataArray(
+            [[0, 0], [0, 0], [2, 2]], [("x", ["a", "b", "d"]), ("y", [-1, 0])]
+        )
         assert_equal(actual, expected)
 
     def test_sortby(self):
-        da = DataArray([[1, 2], [3, 4], [5, 6]], [("x", ["c", "b", "a"]), ("y", [1, 0])])
+        da = DataArray(
+            [[1, 2], [3, 4], [5, 6]], [("x", ["c", "b", "a"]), ("y", [1, 0])]
+        )
 
-        sorted1d = DataArray([[5, 6], [3, 4], [1, 2]], [("x", ["a", "b", "c"]), ("y", [1, 0])])
+        sorted1d = DataArray(
+            [[5, 6], [3, 4], [1, 2]], [("x", ["a", "b", "c"]), ("y", [1, 0])]
+        )
 
-        sorted2d = DataArray([[6, 5], [4, 3], [2, 1]], [("x", ["a", "b", "c"]), ("y", [0, 1])])
+        sorted2d = DataArray(
+            [[6, 5], [4, 3], [2, 1]], [("x", ["a", "b", "c"]), ("y", [0, 1])]
+        )
 
         expected = sorted1d
         dax = DataArray([100, 99, 98], [("x", ["c", "b", "a"])])
@@ -3739,7 +4141,9 @@ def da(request):
 
     if request.param == "repeating_ints":
         return DataArray(
-            np.tile(np.arange(12), 5).reshape(5, 4, 3), coords={"x": list("abc"), "y": list("defg")}, dims=list("zyx"),
+            np.tile(np.arange(12), 5).reshape(5, 4, 3),
+            coords={"x": list("abc"), "y": list("defg")},
+            dims=list("zyx"),
         )
 
 
@@ -3758,14 +4162,18 @@ def da_dask(seed=123):
 def test_isin(da):
 
     expected = DataArray(
-        np.asarray([[0, 0, 0], [1, 0, 0]]), dims=list("yx"), coords={"x": list("abc"), "y": list("de")},
+        np.asarray([[0, 0, 0], [1, 0, 0]]),
+        dims=list("yx"),
+        coords={"x": list("abc"), "y": list("de")},
     ).astype("bool")
 
     result = da.isin([3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
 
     expected = DataArray(
-        np.asarray([[0, 0, 1], [1, 0, 0]]), dims=list("yx"), coords={"x": list("abc"), "y": list("de")},
+        np.asarray([[0, 0, 1], [1, 0, 0]]),
+        dims=list("yx"),
+        coords={"x": list("abc"), "y": list("de")},
     ).astype("bool")
     result = da.isin([2, 3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
@@ -3795,7 +4203,8 @@ def test_rolling_iter(da):
         assert_array_equal(actual.isnull(), expected.isnull())
         if (~actual.isnull()).sum() > 0:
             np.allclose(
-                actual.values[actual.values.nonzero()], expected.values[expected.values.nonzero()],
+                actual.values[actual.values.nonzero()],
+                expected.values[expected.values.nonzero()],
             )
 
 
@@ -3831,7 +4240,9 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 
     func_name = f"move_{name}"
     actual = getattr(rolling_obj, name)()
-    expected = getattr(bn, func_name)(da.values, window=7, axis=1, min_count=min_periods)
+    expected = getattr(bn, func_name)(
+        da.values, window=7, axis=1, min_count=min_periods
+    )
     assert_array_equal(actual.values, expected)
 
     with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
@@ -3856,7 +4267,9 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
         with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
             getattr(rolling_obj, name)(dim="time")
     # numpy version
-    rolling_obj = da_dask.load().rolling(time=window, min_periods=min_periods, center=center)
+    rolling_obj = da_dask.load().rolling(
+        time=window, min_periods=min_periods, center=center
+    )
     expected = getattr(rolling_obj, name)()
 
     # using all-close because rolling over ghost cells introduces some
@@ -3864,7 +4277,9 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     assert_allclose(actual, expected)
 
     # with zero chunked array GH:2113
-    rolling_obj = da_dask.chunk().rolling(time=window, min_periods=min_periods, center=center)
+    rolling_obj = da_dask.chunk().rolling(
+        time=window, min_periods=min_periods, center=center
+    )
     actual = getattr(rolling_obj, name)().load()
     assert_allclose(actual, expected)
 
@@ -3874,7 +4289,9 @@ def test_rolling_wrapped_dask_nochunk(center):
     # GH:2113
     pytest.importorskip("dask.array")
 
-    da_day_clim = xr.DataArray(np.arange(1, 367), coords=[np.arange(1, 367)], dims="dayofyear")
+    da_day_clim = xr.DataArray(
+        np.arange(1, 367), coords=[np.arange(1, 367)], dims="dayofyear"
+    )
     expected = da_day_clim.rolling(dayofyear=31, center=center).mean()
     actual = da_day_clim.chunk().rolling(dayofyear=31, center=center).mean()
     assert_allclose(actual, expected)
@@ -3892,7 +4309,9 @@ def test_rolling_pandas_compat(center, window, min_periods):
 
     s_rolling = s.rolling(window, center=center, min_periods=min_periods).mean()
     da_rolling = da.rolling(index=window, center=center, min_periods=min_periods).mean()
-    da_rolling_np = da.rolling(index=window, center=center, min_periods=min_periods).reduce(np.nanmean)
+    da_rolling_np = da.rolling(
+        index=window, center=center, min_periods=min_periods
+    ).reduce(np.nanmean)
 
     np.testing.assert_allclose(s_rolling.values, da_rolling.values)
     np.testing.assert_allclose(s_rolling.index, da_rolling["index"])
@@ -3919,7 +4338,9 @@ def test_rolling_construct(center, window):
     np.testing.assert_allclose(s_rolling.index[::2], da_rolling_mean["index"])
 
     # with fill_value
-    da_rolling_mean = da_rolling.construct("window", stride=2, fill_value=0.0).mean("window")
+    da_rolling_mean = da_rolling.construct("window", stride=2, fill_value=0.0).mean(
+        "window"
+    )
     assert da_rolling_mean.isnull().sum() == 0
     assert (da_rolling_mean == 0.0).sum() >= 0
 
@@ -3952,7 +4373,9 @@ def test_rolling_reduce(da, center, min_periods, window, name):
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "max"))
 def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
-    da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time").isnull()
+    da = DataArray(
+        [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"
+    ).isnull()
 
     if min_periods is not None and window < min_periods:
         min_periods = window
@@ -3978,7 +4401,20 @@ def test_rolling_count_correct():
     expecteds = [
         DataArray([1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims="time"),
         DataArray(
-            [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,], dims="time",
+            [
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+                np.nan,
+            ],
+            dims="time",
         ),
         DataArray([np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims="time"),
     ]
@@ -4042,17 +4478,31 @@ class TestIrisConversion:
         assert actual.var_name == original.name
         assert tuple(d.var_name for d in actual.dim_coords) == original.dims
         assert actual.cell_methods == (
-            iris.coords.CellMethod(method="mean", coords=("height",), intervals=(), comments=("A cell method",),),
+            iris.coords.CellMethod(
+                method="mean",
+                coords=("height",),
+                intervals=(),
+                comments=("A cell method",),
+            ),
         )
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
-            assert_array_equal(coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert actual.coord_dims(coord) == original.get_axis_num(original.coords[coord.var_name].dims)
+            assert_array_equal(
+                coord.points, CFDatetimeCoder().encode(original_coord).values
+            )
+            assert actual.coord_dims(coord) == original.get_axis_num(
+                original.coords[coord.var_name].dims
+            )
 
-        assert actual.coord("distance2").attributes["foo"] == original.coords["distance2"].attrs["foo"]
-        assert actual.coord("distance").units == cf_units.Unit(original.coords["distance"].units)
+        assert (
+            actual.coord("distance2").attributes["foo"]
+            == original.coords["distance2"].attrs["foo"]
+        )
+        assert actual.coord("distance").units == cf_units.Unit(
+            original.coords["distance"].units
+        )
         assert actual.attributes["baz"] == original.attrs["baz"]
         assert actual.standard_name == original.attrs["standard_name"]
 
@@ -4081,7 +4531,12 @@ class TestIrisConversion:
             da.from_array(np.arange(-1, 5, dtype="float").reshape(2, 3), 3),
             coord_dict,
             name="Temperature",
-            attrs=dict(baz=123, units="Kelvin", standard_name="fire_temperature", long_name="Fire Temperature",),
+            attrs=dict(
+                baz=123,
+                units="Kelvin",
+                standard_name="fire_temperature",
+                long_name="Fire Temperature",
+            ),
             dims=("distance", "time"),
         )
 
@@ -4092,22 +4547,38 @@ class TestIrisConversion:
         actual = original.to_iris()
 
         # Be careful not to trigger the loading of the iris data
-        actual_data = actual.core_data() if hasattr(actual, "core_data") else actual.data
+        actual_data = (
+            actual.core_data() if hasattr(actual, "core_data") else actual.data
+        )
         assert_array_equal(actual_data, original.data)
         assert actual.var_name == original.name
         assert tuple(d.var_name for d in actual.dim_coords) == original.dims
         assert actual.cell_methods == (
-            iris.coords.CellMethod(method="mean", coords=("height",), intervals=(), comments=("A cell method",),),
+            iris.coords.CellMethod(
+                method="mean",
+                coords=("height",),
+                intervals=(),
+                comments=("A cell method",),
+            ),
         )
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
-            assert_array_equal(coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert actual.coord_dims(coord) == original.get_axis_num(original.coords[coord.var_name].dims)
+            assert_array_equal(
+                coord.points, CFDatetimeCoder().encode(original_coord).values
+            )
+            assert actual.coord_dims(coord) == original.get_axis_num(
+                original.coords[coord.var_name].dims
+            )
 
-        assert actual.coord("distance2").attributes["foo"] == original.coords["distance2"].attrs["foo"]
-        assert actual.coord("distance").units == cf_units.Unit(original.coords["distance"].units)
+        assert (
+            actual.coord("distance2").attributes["foo"]
+            == original.coords["distance2"].attrs["foo"]
+        )
+        assert actual.coord("distance").units == cf_units.Unit(
+            original.coords["distance"].units
+        )
         assert actual.attributes["baz"] == original.attrs["baz"]
         assert actual.standard_name == original.attrs["standard_name"]
 
@@ -4128,8 +4599,20 @@ class TestIrisConversion:
     @pytest.mark.parametrize(
         "var_name, std_name, long_name, name, attrs",
         [
-            ("var_name", "height", "Height", "var_name", {"standard_name": "height", "long_name": "Height"},),
-            (None, "height", "Height", "height", {"standard_name": "height", "long_name": "Height"},),
+            (
+                "var_name",
+                "height",
+                "Height",
+                "var_name",
+                {"standard_name": "height", "long_name": "Height"},
+            ),
+            (
+                None,
+                "height",
+                "Height",
+                "height",
+                {"standard_name": "height", "long_name": "Height"},
+            ),
             (None, None, "Height", "Height", {"long_name": "Height"}),
             (None, None, None, None, {}),
         ],
@@ -4138,7 +4621,9 @@ class TestIrisConversion:
         from iris.cube import Cube
 
         data = []
-        cube = Cube(data, var_name=var_name, standard_name=std_name, long_name=long_name)
+        cube = Cube(
+            data, var_name=var_name, standard_name=std_name, long_name=long_name
+        )
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(data, name=name, attrs=attrs)
         xr.testing.assert_identical(result, expected)
@@ -4147,8 +4632,20 @@ class TestIrisConversion:
     @pytest.mark.parametrize(
         "var_name, std_name, long_name, name, attrs",
         [
-            ("var_name", "height", "Height", "var_name", {"standard_name": "height", "long_name": "Height"},),
-            (None, "height", "Height", "height", {"standard_name": "height", "long_name": "Height"},),
+            (
+                "var_name",
+                "height",
+                "Height",
+                "var_name",
+                {"standard_name": "height", "long_name": "Height"},
+            ),
+            (
+                None,
+                "height",
+                "Height",
+                "height",
+                {"standard_name": "height", "long_name": "Height"},
+            ),
             (None, None, "Height", "Height", {"long_name": "Height"}),
             (None, None, None, "unknown", {}),
         ],
@@ -4157,7 +4654,9 @@ class TestIrisConversion:
         from iris.cube import Cube
         from iris.coords import DimCoord
 
-        latitude = DimCoord([-90, 0, 90], standard_name=std_name, var_name=var_name, long_name=long_name)
+        latitude = DimCoord(
+            [-90, 0, 90], standard_name=std_name, var_name=var_name, long_name=long_name
+        )
         data = [0, 0, 0]
         cube = Cube(data, dim_coords_and_dims=[(latitude, 0)])
         result = xr.DataArray.from_iris(cube)
@@ -4174,7 +4673,9 @@ class TestIrisConversion:
         # same var_name would lead to duplicate dimension names in the
         # DataArray
         longitude = DimCoord([0, 360], standard_name="longitude", var_name="duplicate")
-        latitude = DimCoord([-90, 0, 90], standard_name="latitude", var_name="duplicate")
+        latitude = DimCoord(
+            [-90, 0, 90], standard_name="latitude", var_name="duplicate"
+        )
         data = [[0, 0, 0], [0, 0, 0]]
         cube = Cube(data, dim_coords_and_dims=[(longitude, 0), (latitude, 1)])
         with pytest.raises(ValueError):
@@ -4182,7 +4683,8 @@ class TestIrisConversion:
 
     @requires_iris
     @pytest.mark.parametrize(
-        "coord_values", [["IA", "IL", "IN"], [0, 2, 1]],  # non-numeric values  # non-monotonic values
+        "coord_values",
+        [["IA", "IL", "IN"], [0, 2, 1]],  # non-numeric values  # non-monotonic values
     )
     def test_fallback_to_iris_AuxCoord(self, coord_values):
         from iris.cube import Cube
@@ -4191,13 +4693,17 @@ class TestIrisConversion:
         data = [0, 0, 0]
         da = xr.DataArray(data, coords=[coord_values], dims=["space"])
         result = xr.DataArray.to_iris(da)
-        expected = Cube(data, aux_coords_and_dims=[(AuxCoord(coord_values, var_name="space"), 0)])
+        expected = Cube(
+            data, aux_coords_and_dims=[(AuxCoord(coord_values, var_name="space"), 0)]
+        )
         assert result == expected
 
 
 @requires_numbagg
 @pytest.mark.parametrize("dim", ["time", "x"])
-@pytest.mark.parametrize("window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]])
+@pytest.mark.parametrize(
+    "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
+)
 def test_rolling_exp(da, dim, window_type, window):
     da = da.isel(a=0)
     da = da.where(da > 0.2)
@@ -4209,7 +4715,9 @@ def test_rolling_exp(da, dim, window_type, window):
     assert pandas_array.index.name == "time"
     if dim == "x":
         pandas_array = pandas_array.T
-    expected = xr.DataArray(pandas_array.ewm(**{window_type: window}).mean()).transpose(*da.dims)
+    expected = xr.DataArray(pandas_array.ewm(**{window_type: window}).mean()).transpose(
+        *da.dims
+    )
 
     assert_allclose(expected.variable, result.variable)
 
