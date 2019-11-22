@@ -10,6 +10,7 @@ from .arithmetic import SupportsArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
+from .indexes import propagate_indexes
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -529,7 +530,7 @@ class GroupBy(SupportsArithmetic):
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
-                    del obj.indexes[dim]
+            obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
         return obj
 
     def fillna(self, value):
@@ -786,7 +787,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             combined = self._restore_dim_order(combined)
         if coord is not None:
             if shortcut:
-                combined._coords[coord.name] = as_variable(coord)
+                coord_var = as_variable(coord)
+                combined._coords[coord.name] = coord_var
             else:
                 combined.coords[coord.name] = coord
         combined = self._maybe_restore_empty_groups(combined)
