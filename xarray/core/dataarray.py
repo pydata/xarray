@@ -2861,7 +2861,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return computation.dot(self, other, dims=dims)
 
-    def cov(self, other: "DataArray", dim) -> "DataArray":
+    def cov(self, other: "DataArray", dim=None) -> "DataArray":
         """Compute covariance with another DataArray object along a shared dimension.
 
         Parameters
@@ -2925,7 +2925,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return computation.cov(self, other, dim=dim)
 
-    def corr(self, other: "DataArray", dim) -> "DataArray":
+    def corr(self, other: "DataArray", dim=None) -> "DataArray":
         """Compute correlation with another DataArray object along a shared dimension.
 
         Parameters
