@@ -49,6 +49,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Added a deprecation warning and removed internal usages of the
+  notionally deprecated method ``Dataset._replace_vars_and_dims`` (:pull:`3529`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 
 v0.14.1 (19 Nov 2019)
