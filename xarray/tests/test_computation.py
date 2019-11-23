@@ -842,12 +842,12 @@ def test_corr(da):
     # Test #2: Misaligned N-D dataarrays with missing values
     actual_ND = xr.corr(da, da_smooth, dim="time")
     actual = select_pts(actual_ND)
-    np.allclose(expected, actual)
+    assert np.allclose(expected, actual)
 
     # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
     actual_ND = xr.corr(da_smooth, ts1, dim="time")
     actual = select_pts(actual_ND)
-    np.allclose(actual, expected)
+    assert np.allclose(expected, actual)
 
 
 def test_cov(da):
@@ -876,17 +876,17 @@ def test_cov(da):
 
     expected = pd_cov(ts1, ts2)
     actual = xr.cov(ts1, ts2)
-    np.allclose(expected, actual)
+    assert np.allclose(expected, actual)
 
     # Test #2: Misaligned N-D dataarrays with missing values
     actual_ND = xr.cov(da, da_smooth, dim="time")
     actual = select_pts(actual_ND)
-    np.allclose(expected, actual)
+    assert np.allclose(expected, actual)
 
     # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
     actual_ND = xr.cov(da_smooth, ts1, dim="time")
     actual = select_pts(actual_ND)
-    np.allclose(actual, expected)
+    assert np.allclose(expected, actual)
 
 
 def pandas_median(x):

@@ -1051,8 +1051,10 @@ def cov(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    arrays: DataArray (or Variable) objects
-        Arrays to compute.
+    da_a: DataArray (or Variable) object
+        Array to compute.
+    da_b: DataArray (or Variable) object
+        Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
 
@@ -1063,6 +1065,7 @@ def cov(da_a, da_b, dim=None):
     See also
     --------
     pandas.Series.cov: corresponding pandas function
+    xr.corr: respective function to calculate correlation
 
     Examples
     --------
@@ -1128,8 +1131,10 @@ def corr(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    da_b : DataArray
-        The da_b array with which the correlation will be computed
+    da_a: DataArray (or Variable) object
+        Array to compute.
+    da_b: DataArray (or Variable) object
+        Array to compute.
     dim: str, optional
         The dimension along which the correlation will be computed
 
@@ -1140,6 +1145,7 @@ def corr(da_a, da_b, dim=None):
     See also
     --------
     pandas.Series.corr: corresponding pandas function
+    xr.cov: underlying covariance function
 
     Examples
     --------
@@ -1192,7 +1198,9 @@ def corr(da_a, da_b, dim=None):
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
     da_a = da_a.where(valid_values, drop=True)
-    da_b = da_b.where(valid_values, drop=True)
+    da_b = da_b.where(
+        valid_values, drop=True
+    )  # TODO: avoid drop as explained in https://github.com/pydata/xarray/pull/2652#discussion_r245492002
 
     # 3. Compute correlation based on standard deviations and cov()
     da_a_std = da_a.std(dim=dim)
