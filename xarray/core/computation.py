@@ -342,7 +342,7 @@ def _fast_dataset(
 
     variables.update(coord_variables)
     coord_names = set(coord_variables)
-    return Dataset._from_vars_and_coord_names(variables, coord_names)
+    return Dataset._construct_direct(variables, coord_names)
 
 
 def apply_dataset_vfunc(

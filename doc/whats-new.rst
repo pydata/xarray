@@ -50,6 +50,10 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 
+- Removed internal method ``Dataset._from_vars_and_coord_names``, 
+  which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 v0.14.1 (19 Nov 2019)
 ---------------------
