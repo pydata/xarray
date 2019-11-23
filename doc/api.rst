@@ -676,7 +676,7 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.CachingFileManager
    backends.DummyFileManager
 
-Deprecated / Pending Deprecataion
+Deprecated / Pending Deprecation
 ================================
 
    Dataset.drop
