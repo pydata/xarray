@@ -25,7 +25,7 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Added - :py:func:`xarray.cov`, :py:meth:`DataArray.cov`, :py:func:`xarray.corr`, and :py:meth:`DataArray.corr` (:pull:`3550`).
+- Added - :py:func:`xarray.cov` and :py:func:`xarray.corr` (:pull:`3550`).
   By `Robin Beer <https://github.com/r-beer>`_.
 
 

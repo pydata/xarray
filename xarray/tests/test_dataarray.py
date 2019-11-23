@@ -3955,53 +3955,6 @@ class TestDataArray:
         with pytest.raises(TypeError):
             da.dot(dm.values)
 
-    def test_corr(self):
-
-        # TODO: the following lines are simply copy pasted from test_computation, isn't there a DRYer way of testing this?
-
-        times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        values = np.random.random((3, 21, 4))
-        da = xr.DataArray(values, dims=("a", "time", "x"))
-        da["time"] = times
-
-        # other: select missaligned data, and smooth it to dampen the correlation with self.
-        da_smooth = (
-            da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time")
-        )
-
-        da = da.isel(time=range(0, 18))
-
-        def select_pts(array):
-            return array.sel(a=1, x=2)
-
-        # Test #1: Misaligned 1-D dataarrays with missing values
-        ts1 = select_pts(da.copy())
-        ts2 = select_pts(da_smooth.copy())
-
-        def pd_corr(ts1, ts2):
-            """Ensure the ts are aligned and missing values ignored"""
-            # ts1,ts2 = xr.align(ts1,ts2)
-            valid_values = ts1.notnull() & ts2.notnull()
-
-            ts1 = ts1.where(valid_values, drop=True)
-            ts2 = ts2.where(valid_values, drop=True)
-
-            return ts1.to_series().corr(ts2.to_series())
-
-        expected = pd_corr(ts1, ts2)
-        actual = ts1.corr(ts2)
-        np.allclose(expected, actual)
-
-        # Test #2: Misaligned N-D dataarrays with missing values
-        actual_ND = da.corr(da_smooth, dim="time")
-        actual = select_pts(actual_ND)
-        np.allclose(expected, actual)
-
-        # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
-        actual_ND = ts1.corr(da_smooth, dim="time")
-        actual = select_pts(actual_ND)
-        np.allclose(actual, expected)
-
     def test_matmul(self):
 
         # copied from above (could make a fixture)

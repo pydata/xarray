@@ -344,8 +344,6 @@ Computation
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
-   DataArray.cov
-   DataArray.corr
    DataArray.quantile
    DataArray.differentiate
    DataArray.integrate
