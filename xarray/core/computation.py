@@ -1130,7 +1130,7 @@ def cov(da_a, da_b, dim=None):
 
 
 def corr(da_a, da_b, dim=None):
-    """Compute correlation between two DataArray objects along a shared dimension.
+    """Compute the Pearson correlation coefficient between two DataArray objects along a shared dimension.
 
     Parameters
     ----------
