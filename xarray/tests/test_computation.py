@@ -827,7 +827,7 @@ def test_corr(da):
 
     def pd_corr(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
-        # ts1,ts2 = xr.align(ts1,ts2)
+        ts1, ts2 = xr.align(ts1, ts2)
         valid_values = ts1.notnull() & ts2.notnull()
 
         ts1 = ts1.where(valid_values, drop=True)
@@ -866,7 +866,7 @@ def test_cov(da):
 
     def pd_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
-        # ts1,ts2 = xr.align(ts1,ts2)
+        ts1, ts2 = xr.align(ts1, ts2)
         valid_values = ts1.notnull() & ts2.notnull()
 
         ts1 = ts1.where(valid_values, drop=True)
@@ -884,7 +884,7 @@ def test_cov(da):
     assert np.allclose(expected, actual)
 
     # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
-    actual_ND = xr.cov(da_smooth, ts1, dim="time")
+    actual_ND = xr.cov(ts1, da_smooth, dim="time")
     actual = select_pts(actual_ND)
     assert np.allclose(expected, actual)
 
