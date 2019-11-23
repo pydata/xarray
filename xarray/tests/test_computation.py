@@ -23,28 +23,6 @@ from xarray.core.computation import (
 from . import has_dask, raises_regex, requires_dask
 
 
-@pytest.fixture(params=[1])
-def da(request):
-    if request.param == 1:
-        times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        values = np.random.random((3, 21, 4))
-        da = xr.DataArray(values, dims=("a", "time", "x"))
-        da["time"] = times
-        return da
-
-    if request.param == 2:
-        return xr.DataArray(
-            [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"
-        )
-
-    if request.param == "repeating_ints":
-        return xr.DataArray(
-            np.tile(np.arange(12), 5).reshape(5, 4, 3),
-            coords={"x": list("abc"), "y": list("defg")},
-            dims=list("zyx"),
-        )
-
-
 def assert_identical(a, b):
     if hasattr(a, "identical"):
         msg = f"not identical:\n{a!r}\n{b!r}"
@@ -811,21 +789,23 @@ def test_apply_dask_new_output_dimension():
     assert_identical(expected, actual)
 
 
-def test_corr(da):
+da = xr.DataArray(np.random.random((3, 21, 4)),
+                  coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+                  dims=("a", "time", "x"),
+                  )
 
-    # other: select missaligned data, and smooth it to dampen the correlation with self.
-    da_smooth = da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time")
+arrays = [da.isel(time=range(0, 18)),
+          da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time"),
+          xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"),
+          xr.DataArray([[1, 2], [np.nan, np.nan]], dims=['x', 'y']),
+          ]
 
-    da = da.isel(time=range(0, 18))
+@pytest.mark.parametrize("da_b", arrays)
+@pytest.mark.parametrize("da_a", arrays)
+@pytest.mark.parametrize("func", ["cov", "corr"])
+def test_func(func, da_a, da_b):
 
-    def select_pts(array):
-        return array.sel(a=1, x=2)
-
-    # Test #1: Misaligned 1-D dataarrays with missing values
-    ts1 = select_pts(da.copy())
-    ts2 = select_pts(da_smooth.copy())
-
-    def pd_corr(ts1, ts2):
+    def pd_func(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
         valid_values = ts1.notnull() & ts2.notnull()
@@ -833,59 +813,18 @@ def test_corr(da):
         ts1 = ts1.where(valid_values, drop=True)
         ts2 = ts2.where(valid_values, drop=True)
 
-        return ts1.to_series().corr(ts2.to_series())
+        if func == 'cov':
+            return ts1.to_series().cov(ts2.to_series())
+        elif func == 'corr':
+            return ts1.to_series().corr(ts2.to_series())
+        else:
+            assert False  # TODO: raise NotImplementedError
 
-    expected = pd_corr(ts1, ts2)
-    actual = xr.corr(ts1, ts2)
-    assert np.allclose(expected, actual)
-
-    # Test #2: Misaligned N-D dataarrays with missing values
-    actual_ND = xr.corr(da, da_smooth, dim="time")
-    actual = select_pts(actual_ND)
-    assert np.allclose(expected, actual)
-
-    # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
-    actual_ND = xr.corr(da_smooth, ts1, dim="time")
-    actual = select_pts(actual_ND)
-    assert np.allclose(expected, actual)
-
-
-def test_cov(da):
-
-    # other: select missaligned data, and smooth it to dampen the correlation with self.
-    da_smooth = da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time")
-
-    da = da.isel(time=range(0, 18))
-
-    def select_pts(array):
-        return array.sel(a=1, x=2)
-
-    # Test #1: Misaligned 1-D dataarrays with missing values
-    ts1 = select_pts(da.copy())
-    ts2 = select_pts(da_smooth.copy())
-
-    def pd_cov(ts1, ts2):
-        """Ensure the ts are aligned and missing values ignored"""
-        ts1, ts2 = xr.align(ts1, ts2)
-        valid_values = ts1.notnull() & ts2.notnull()
-
-        ts1 = ts1.where(valid_values, drop=True)
-        ts2 = ts2.where(valid_values, drop=True)
-
-        return ts1.to_series().cov(ts2.to_series())
-
-    expected = pd_cov(ts1, ts2)
-    actual = xr.cov(ts1, ts2)
-    assert np.allclose(expected, actual)
-
-    # Test #2: Misaligned N-D dataarrays with missing values
-    actual_ND = xr.cov(da, da_smooth, dim="time")
-    actual = select_pts(actual_ND)
-    assert np.allclose(expected, actual)
-
-    # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
-    actual_ND = xr.cov(ts1, da_smooth, dim="time")
-    actual = select_pts(actual_ND)
+    expected = pd_func(da_a, da_b)
+    if func == 'cov':
+        actual = xr.cov(da_a, da_b)
+    elif func == 'corr':
+        actual = xr.corr(da_a, da_b)
     assert np.allclose(expected, actual)
 
 
