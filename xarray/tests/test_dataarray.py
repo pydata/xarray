@@ -1190,7 +1190,7 @@ class TestDataArray:
         data = xr.concat([da, db], dim="x").set_index(xy=["x", "y"])
         assert data.dims == ("xy",)
         actual = data.sel(y="a")
-        expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop("y")
+        expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop_vars("y")
         assert_equal(actual, expected)
 
     def test_virtual_default_coords(self):
