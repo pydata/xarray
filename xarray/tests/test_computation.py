@@ -485,7 +485,7 @@ def test_unified_dim_sizes():
     ) == {"x": 1}
     assert unified_dim_sizes(
         [xr.Variable("x", [1]), xr.Variable("y", [1, 2])]
-    ) == {"x": 1, "y": 2,}
+    ) == {"x": 1, "y": 2, }
     assert unified_dim_sizes(
         [
             xr.Variable(("x", "z"), [[1]]),
