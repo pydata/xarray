@@ -877,14 +877,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._encoding = encoding
         return obj
 
-    @classmethod
-    def _from_vars_and_coord_names(
-        cls, variables, coord_names, indexes=None, attrs=None
-    ):
-        return cls._construct_direct(
-            variables, coord_names, indexes=indexes, attrs=attrs
-        )
-
     def _replace(
         self,
         variables: Dict[Hashable, Variable] = None,
