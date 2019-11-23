@@ -1278,8 +1278,8 @@ class TestDataset:
         data = create_test_data()
         actual = data.sel(dim2=slice(None, xr.DataArray(2, dims=[])))
         expected = data.sel(dim2=slice(None, 2))
-        assert_equal(actual, expected)        
-        
+        assert_equal(actual, expected)
+
     def test_sel_dataarray(self):
         data = create_test_data()
 
@@ -1354,8 +1354,8 @@ class TestDataset:
         assert np.allclose(actual["new_dim"].values, ind["new_dim"].values)
 
     def test_sel_dataarray0d(self):
-        da = xr.DataArray([0.5, 4.5, 2.5], dims=['x'], coords={'x': [0, 0, 2]})
-        actual = da.sel(x=da['x'][0])
+        da = xr.DataArray([0.5, 4.5, 2.5], dims=["x"], coords={"x": [0, 0, 2]})
+        actual = da.sel(x=da["x"][0])
         expected = da.sel(x=0)
         assert_equal(actual, expected)
 

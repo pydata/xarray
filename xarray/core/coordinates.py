@@ -400,6 +400,6 @@ def remap_label_indexers(
             # ensures alignments
             coords = {k: var for k, var in v._coords.items() if k not in indexers}
             pos = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
-            if pos.dtype.kind == 'i':
+            if pos.dtype.kind == "i":
                 pos_indexers[k] = pos
     return pos_indexers, new_indexes
