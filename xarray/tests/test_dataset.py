@@ -1353,6 +1353,12 @@ class TestDataset:
         assert_equal(actual.drop_vars("new_dim"), expected)
         assert np.allclose(actual["new_dim"].values, ind["new_dim"].values)
 
+    def test_sel_dataarray0d(self):
+        da = xr.DataArray([0.5, 4.5, 2.5], dims=['x'], coords={'x': [0, 0, 2]})
+        actual = da.sel(x=da['x'][0])
+        expected = da.sel(x=0)
+        assert_equal(actual, expected)
+
     def test_sel_dataarray_mindex(self):
         midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
         mds = xr.Dataset(
