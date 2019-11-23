@@ -110,9 +110,7 @@ class _UFuncSignature:
 
     def __repr__(self):
         return "{}({!r}, {!r})".format(
-            type(self).__name__,
-            list(self.input_core_dims),
-            list(self.output_core_dims),
+            type(self).__name__, list(self.input_core_dims), list(self.output_core_dims)
         )
 
     def __str__(self):
@@ -165,7 +163,7 @@ def _get_coords_list(args) -> List["Coordinates"]:
 
 
 def build_output_coords(
-    args: list, signature: _UFuncSignature, exclude_dims: AbstractSet = frozenset(),
+    args: list, signature: _UFuncSignature, exclude_dims: AbstractSet = frozenset()
 ) -> "List[Dict[Any, Variable]]":
     """Build output coordinates for an operation.
 
@@ -211,7 +209,7 @@ def build_output_coords(
 
 
 def apply_dataarray_vfunc(
-    func, *args, signature, join="inner", exclude_dims=frozenset(), keep_attrs=False,
+    func, *args, signature, join="inner", exclude_dims=frozenset(), keep_attrs=False
 ):
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
@@ -220,7 +218,7 @@ def apply_dataarray_vfunc(
 
     if len(args) > 1:
         args = deep_align(
-            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False,
+            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
     if keep_attrs and hasattr(args[0], "name"):
@@ -284,7 +282,7 @@ def join_dict_keys(
 
 
 def collect_dict_values(
-    objects: Iterable[Union[Mapping, Any]], keys: Iterable, fill_value: object = None,
+    objects: Iterable[Union[Mapping, Any]], keys: Iterable, fill_value: object = None
 ) -> List[list]:
     return [
         [obj.get(key, fill_value) if is_dict_like(obj) else obj for obj in objects]
@@ -333,7 +331,7 @@ def apply_dict_of_variables_vfunc(
 
 
 def _fast_dataset(
-    variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable],
+    variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
 ) -> "Dataset":
     """Create a dataset as quickly as possible.
 
@@ -372,14 +370,14 @@ def apply_dataset_vfunc(
 
     if len(args) > 1:
         args = deep_align(
-            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False,
+            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
     list_of_coords = build_output_coords(args, signature, exclude_dims)
     args = [getattr(arg, "data_vars", arg) for arg in args]
 
     result_vars = apply_dict_of_variables_vfunc(
-        func, *args, signature=signature, join=dataset_join, fill_value=fill_value,
+        func, *args, signature=signature, join=dataset_join, fill_value=fill_value
     )
 
     if signature.num_outputs > 1:
@@ -648,7 +646,7 @@ def apply_variable_ufunc(
 
 
 def _apply_blockwise(
-    func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None,
+    func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None
 ):
     import dask.array
 
@@ -992,7 +990,7 @@ def apply_ufunc(
     if vectorize:
         if signature.all_core_dims:
             func = np.vectorize(
-                func, otypes=output_dtypes, signature=signature.to_gufunc_string(),
+                func, otypes=output_dtypes, signature=signature.to_gufunc_string()
             )
         else:
             func = np.vectorize(func, otypes=output_dtypes)

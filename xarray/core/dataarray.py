@@ -53,13 +53,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes
 from .merge import PANDAS_TYPES
 from .options import OPTIONS
-from .utils import (
-    Default,
-    ReprObject,
-    _check_inplace,
-    _default,
-    either_dict_or_kwargs,
-)
+from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
     Variable,
@@ -402,7 +396,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
 
     def _replace_maybe_drop_dims(
-        self, variable: Variable, name: Union[Hashable, None, Default] = _default,
+        self, variable: Variable, name: Union[Hashable, None, Default] = _default
     ) -> "DataArray":
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
@@ -1110,7 +1104,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def broadcast_like(
-        self, other: Union["DataArray", Dataset], exclude: Iterable[Hashable] = None,
+        self, other: Union["DataArray", Dataset], exclude: Iterable[Hashable] = None
     ) -> "DataArray":
         """Broadcast this DataArray against another Dataset or DataArray.
 
@@ -1903,7 +1897,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self.transpose()
 
     def drop_vars(
-        self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise",
+        self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "DataArray":
         """Drop variables from this DataArray.
 
@@ -2809,9 +2803,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._replace(self.variable.imag)
 
     def dot(
-        self,
-        other: "DataArray",
-        dims: Union[Hashable, Sequence[Hashable], None] = None,
+        self, other: "DataArray", dims: Union[Hashable, Sequence[Hashable], None] = None
     ) -> "DataArray":
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -3068,7 +3060,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def integrate(
-        self, dim: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None,
+        self, dim: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
     ) -> "DataArray":
         """ integrate the array with the trapezoidal rule.
 
