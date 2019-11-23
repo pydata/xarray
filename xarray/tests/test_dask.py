@@ -1377,37 +1377,49 @@ def test_lazy_array_equiv_merge(compat):
         xr.merge([da1, da2 / 2], compat=compat)
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 @pytest.mark.parametrize(
     "transform",
     [
         lambda a: a.copy(),
-        lambda a: a.isel(x=np.arange(a.x)),
+        pytest.param(lambda a: a.isel(x=np.arange(a.x)), marks=pytest.mark.xfail),
         lambda a: a.isel(x=slice(None, None)),
-        lambda a: a.sel(x=a.x),
-        lambda a: a.sel(x=a.x.values),
+        pytest.param(lambda a: a.sel(x=a.x), marks=pytest.mark.xfail),
+        pytest.param(lambda a: a.sel(x=a.x.values), marks=pytest.mark.xfail),
         lambda a: a.transpose(...),
         lambda a: a.squeeze(),
-        lambda a: a.sortby("x"),
+        pytest.param(lambda a: a.sortby("x"), marks=pytest.mark.xfail),
         lambda a: a.reindex(x=a.x),
         lambda a: a.reindex_like(a),
         lambda a: a.pipe(lambda x: x),
-        lambda a: a.map(lambda x: x),
-        lambda a: a.reduce(lambda x: x),
-        lambda a: a["a"].broadcast_like(a["a"]),
-        lambda a: a.groupby("x").map(lambda x: x),
-        lambda a: a.where(xr.full_like(a, fill_value=True)),
-        lambda a: xr.align([a, a])[0],
-        lambda a: xr.broadcast([a["a"], a["a"]])[0],
-        lambda a: xr.where(xr.full_like(a, fill_value=True), a, np.nan),
+        pytest.param(lambda a: a["a"].broadcast_like(a["a"]), marks=pytest.mark.xfail),
+        pytest.param(
+            lambda a: a.groupby("x").map(lambda x: x), marks=pytest.mark.xfail
+        ),
+        pytest.param(
+            lambda a: a.where(xr.full_like(a, fill_value=True)), marks=pytest.mark.xfail
+        ),
+        pytest.param(lambda a: xr.align([a, a])[0], marks=pytest.mark.xfail),
+        pytest.param(
+            lambda a: xr.broadcast([a["a"], a["a"]])[0], marks=pytest.mark.xfail
+        ),
+        pytest.param(
+            lambda a: xr.where(xr.full_like(a, fill_value=True), a, np.nan),
+            marks=pytest.mark.xfail,
+        ),
+        pytest.param(
+            lambda a: a.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
+            marks=pytest.mark.xfail,
+        ),
         # assign, assign_coords, assign_attrs, update
-        # rename, rename_vars, rename_dims,
+        # rename,
         # swap_dims, expand_dims
-        # set_coords / reset_coords
         # set_index / reset_index
         # stack / unstack
-        # to_temp_datasets, from_temp_dataset
+        # to_temp_dataset, from_temp_dataset
+        # Dataset lambda a: a.map(lambda x: x)
+        # Dataset lambda a: a.rename_vars({"a": "a1"}).rename_vars({"a1": "a"}),
+        # Dataset lambda a: a.set_coords("a").reset_coords("a"),
     ],
 )
 def test_transforms_pass_lazy_array_equiv(obj, transform):
