@@ -1048,7 +1048,6 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-# TODO: up to now, cov is only implicitly tested via corr(), is that sufficient?
 def cov(da_a, da_b, dim=None):
     """Compute covariance between two DataArray objects along a shared dimension.
 
@@ -1110,7 +1109,9 @@ def cov(da_a, da_b, dim=None):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-    da_a = da_a.where(valid_values, drop=True)
+    da_a = da_a.where(
+        valid_values, drop=True
+    )  # TODO: avoid drop as explained in https://github.com/pydata/xarray/pull/2652#discussion_r245492002
     da_b = da_b.where(valid_values, drop=True)
     valid_count = valid_values.sum(dim)
 

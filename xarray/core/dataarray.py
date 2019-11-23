@@ -2842,7 +2842,6 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> da = DataArray(da_vals, dims=['x', 'y', 'z'])
         >>> dm_vals = np.arange(4)
         >>> dm = DataArray(dm_vals, dims=['z'])
-
         >>> dm.dims
         ('z')
         >>> da.dims
@@ -2945,7 +2944,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        
+
         >>> da_a = DataArray(np.random.random((3, 5)), 
         ...                  dims=("space", "time"), 
         ...                  coords=[('space', ['IA', 'IL', 'IN']), 
