@@ -1114,7 +1114,9 @@ def cov(da_a, da_b, dim=None):
         valid_values, drop=True
     )  # TODO: avoid drop as explained in https://github.com/pydata/xarray/pull/2652#discussion_r245492002
     da_b = da_b.where(valid_values, drop=True)
-    valid_count = valid_values.sum(dim) - 1  # as in pandas.Series.cov, default to unbiased "N - 1" normalization
+    valid_count = (
+        valid_values.sum(dim) - 1
+    )  # as in pandas.Series.cov, default to unbiased "N - 1" normalization
     # TODO: add parameter "bias" to decide whether or not N-1 normalization should be used
 
     # 3. Compute mean and standard deviation along the given dim
