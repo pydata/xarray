@@ -42,8 +42,9 @@ def open_dataset(
     Parameters
     ----------
     name : str
-        Name of the netcdf file containing the dataset
-        ie. 'air_temperature'
+        Name of the file containing the dataset. If no suffix is given, assumed
+        to be netCDF ('.nc' is appended)
+        e.g. 'air_temperature'
     cache_dir : string, optional
         The directory in which to search for and write cached data.
     cache : boolean, optional
@@ -60,10 +61,13 @@ def open_dataset(
     xarray.open_dataset
 
     """
+    root, ext = _os.path.splitext(name)
+    if not ext:
+        ext = ".nc"
+    fullname = root + ext
     longdir = _os.path.expanduser(cache_dir)
-    fullname = name + ".nc"
     localfile = _os.sep.join((longdir, fullname))
-    md5name = name + ".md5"
+    md5name = fullname + ".md5"
     md5file = _os.sep.join((longdir, md5name))
 
     if not _os.path.exists(localfile):
