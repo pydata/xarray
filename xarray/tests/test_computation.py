@@ -839,7 +839,7 @@ def test_corr(da):
 
     expected = pd_corr(ts1, ts2)
     actual = xr.corr(ts1, ts2)
-    np.allclose(expected, actual)
+    assert np.allclose(expected, actual)
 
     # Test #2: Misaligned N-D dataarrays with missing values
     actual_ND = xr.corr(da, da_smooth, dim="time")
