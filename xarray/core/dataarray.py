@@ -466,7 +466,7 @@ class DataArray(AbstractArray, DataWithCoords):
         variables.update({k: v for k, v in self._coords.items() if k != dim})
         indexes = propagate_indexes(self._indexes, exclude=dim)
         coord_names = set(self._coords) - set([dim])
-        dataset = Dataset._from_vars_and_coord_names(
+        dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
         )
         return dataset
@@ -496,9 +496,7 @@ class DataArray(AbstractArray, DataWithCoords):
         indexes = self._indexes
 
         coord_names = set(self._coords)
-        dataset = Dataset._from_vars_and_coord_names(
-            variables, coord_names, indexes=indexes
-        )
+        dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
         return dataset
 
     def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
