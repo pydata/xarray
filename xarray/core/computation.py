@@ -1069,9 +1069,9 @@ def cov(da_a, da_b, dim=None):
     Examples
     --------
 
-    >>> da_a = DataArray(np.random.random((3, 5)), 
-    ...                  dims=("space", "time"), 
-    ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+    >>> da_a = DataArray(np.random.random((3, 5)),
+    ...                  dims=("space", "time"),
+    ...                  coords=[('space', ['IA', 'IL', 'IN']),
     ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
     >>> da_a
     <xarray.DataArray (space: 3, time: 5)>
@@ -1082,9 +1082,9 @@ def cov(da_a, da_b, dim=None):
     * space    (space) <U2 'IA' 'IL' 'IN'
     * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
 
-    >>> da_b = DataArray(np.random.random((3, 5)), 
-    ...                  dims=("space", "time"), 
-    ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+    >>> da_b = DataArray(np.random.random((3, 5)),
+    ...                  dims=("space", "time"),
+    ...                  coords=[('space', ['IA', 'IL', 'IN']),
     ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
     >>> da_b
     <xarray.DataArray (space: 3, time: 5)>
@@ -1146,9 +1146,9 @@ def corr(da_a, da_b, dim=None):
     Examples
     --------
 
-    >>> da_a = DataArray(np.random.random((3, 5)), 
-    ...                  dims=("space", "time"), 
-    ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+    >>> da_a = DataArray(np.random.random((3, 5)),
+    ...                  dims=("space", "time"),
+    ...                  coords=[('space', ['IA', 'IL', 'IN']),
     ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
     >>> da_a
     <xarray.DataArray (space: 3, time: 5)>
@@ -1159,9 +1159,9 @@ def corr(da_a, da_b, dim=None):
     * space    (space) <U2 'IA' 'IL' 'IN'
     * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
 
-    >>> da_b = DataArray(np.random.random((3, 5)), 
-    ...                  dims=("space", "time"), 
-    ...                  coords=[('space', ['IA', 'IL', 'IN']), 
+    >>> da_b = DataArray(np.random.random((3, 5)),
+    ...                  dims=("space", "time"),
+    ...                  coords=[('space', ['IA', 'IL', 'IN']),
     ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
     >>> da_b
     <xarray.DataArray (space: 3, time: 5)>
