@@ -295,8 +295,12 @@ def test_apply_input_core_dimension():
     assert_identical(expected_dataset_x, first_element(dataset, "x"))
     assert_identical(expected_dataset_y, first_element(dataset, "y"))
 
-    assert_identical(expected_data_array_x, first_element(data_array.groupby("y"), "x"))
-    assert_identical(expected_dataset_x, first_element(dataset.groupby("y"), "x"))
+    assert_identical(
+        expected_data_array_x, first_element(data_array.groupby("y"), "x")
+    )
+    assert_identical(
+        expected_dataset_x, first_element(dataset.groupby("y"), "x")
+    )
 
     def multiply(*args):
         val = args[0]
@@ -353,7 +357,9 @@ def test_apply_output_core_dimension():
     assert_identical(stacked_variable, stack_negative(variable))
     assert_identical(stacked_data_array, stack_negative(data_array))
     assert_identical(stacked_dataset, stack_negative(dataset))
-    assert_identical(stacked_data_array, stack_negative(data_array.groupby("x")))
+    assert_identical(
+        stacked_data_array, stack_negative(data_array.groupby("x"))
+    )
     assert_identical(stacked_dataset, stack_negative(dataset.groupby("x")))
 
     def original_and_stack_negative(obj):
@@ -449,8 +455,12 @@ def test_apply_groupby_add():
     assert_identical(
         expected_data_array, add(data_array.groupby("y"), other_data_array)
     )
-    assert_identical(expected_dataset, add(data_array.groupby("y"), other_dataset))
-    assert_identical(expected_dataset, add(dataset.groupby("y"), other_data_array))
+    assert_identical(
+        expected_dataset, add(data_array.groupby("y"), other_dataset)
+    )
+    assert_identical(
+        expected_dataset, add(dataset.groupby("y"), other_data_array)
+    )
     assert_identical(expected_dataset, add(dataset.groupby("y"), other_dataset))
 
     # cannot be performed with xarray.Variable objects that share a dimension
@@ -470,13 +480,17 @@ def test_apply_groupby_add():
 
 def test_unified_dim_sizes():
     assert unified_dim_sizes([xr.Variable((), 0)]) == {}
-    assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1])]) == {"x": 1}
-    assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("y", [1, 2])]) == {
-        "x": 1,
-        "y": 2,
-    }
     assert unified_dim_sizes(
-        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]]),],
+        [xr.Variable("x", [1]), xr.Variable("x", [1])]
+    ) == {"x": 1}
+    assert unified_dim_sizes(
+        [xr.Variable("x", [1]), xr.Variable("y", [1, 2])]
+    ) == {"x": 1, "y": 2,}
+    assert unified_dim_sizes(
+        [
+            xr.Variable(("x", "z"), [[1]]),
+            xr.Variable(("y", "z"), [[1, 2], [3, 4]]),
+        ],
         exclude_dims={"z"},
     ) == {"x": 1, "y": 2}
 
@@ -496,7 +510,9 @@ def test_broadcast_compat_data_1d():
     assert_identical(data, broadcast_compat_data(var, ("x",), ()))
     assert_identical(data, broadcast_compat_data(var, (), ("x",)))
     assert_identical(data[:], broadcast_compat_data(var, ("w",), ("x",)))
-    assert_identical(data[:, None], broadcast_compat_data(var, ("w", "x", "y"), ()))
+    assert_identical(
+        data[:, None], broadcast_compat_data(var, ("w", "x", "y"), ())
+    )
 
     with pytest.raises(ValueError):
         broadcast_compat_data(var, ("x",), ("w",))
@@ -521,7 +537,8 @@ def test_broadcast_compat_data_2d():
         data[:, :, None], broadcast_compat_data(var, ("w", "x", "y", "z"), ())
     )
     assert_identical(
-        data[None, :, :].T, broadcast_compat_data(var, ("w", "y", "x", "z"), ()),
+        data[None, :, :].T,
+        broadcast_compat_data(var, ("w", "y", "x", "z"), ()),
     )
 
 
@@ -657,7 +674,9 @@ def test_apply_dask_parallelized_one_arg():
     data_array = xr.DataArray(array, dims=("x", "y"))
 
     def parallel_identity(x):
-        return apply_ufunc(identity, x, dask="parallelized", output_dtypes=[x.dtype])
+        return apply_ufunc(
+            identity, x, dask="parallelized", output_dtypes=[x.dtype]
+        )
 
     actual = parallel_identity(data_array)
     assert isinstance(actual.data, da.Array)
@@ -706,15 +725,23 @@ def test_apply_dask_parallelized_errors():
 
     with pytest.raises(NotImplementedError):
         apply_ufunc(
-            identity, data_array, output_core_dims=[["z"], ["z"]], dask="parallelized",
+            identity,
+            data_array,
+            output_core_dims=[["z"], ["z"]],
+            dask="parallelized",
         )
     with raises_regex(ValueError, "dtypes"):
         apply_ufunc(identity, data_array, dask="parallelized")
     with raises_regex(TypeError, "list"):
-        apply_ufunc(identity, data_array, dask="parallelized", output_dtypes=float)
+        apply_ufunc(
+            identity, data_array, dask="parallelized", output_dtypes=float
+        )
     with raises_regex(ValueError, "must have the same length"):
         apply_ufunc(
-            identity, data_array, dask="parallelized", output_dtypes=[float, float],
+            identity,
+            data_array,
+            dask="parallelized",
+            output_dtypes=[float, float],
         )
     with raises_regex(ValueError, "output_sizes"):
         apply_ufunc(
@@ -747,7 +774,8 @@ def test_apply_dask_multiple_inputs():
 
     def covariance(x, y):
         return (
-            (x - x.mean(axis=-1, keepdims=True)) * (y - y.mean(axis=-1, keepdims=True))
+            (x - x.mean(axis=-1, keepdims=True))
+            * (y - y.mean(axis=-1, keepdims=True))
         ).mean(axis=-1)
 
     rs = np.random.RandomState(42)
@@ -816,7 +844,9 @@ def test_apply_dask_new_output_dimension():
 def test_corr(da):
 
     # other: select missaligned data, and smooth it to dampen the correlation with self.
-    da_smooth = da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time")
+    da_smooth = (
+        da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time")
+    )
 
     da = da.isel(time=range(0, 18))
 
@@ -848,6 +878,47 @@ def test_corr(da):
 
     # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
     actual_ND = xr.corr(da_smooth, ts1, dim="time")
+    actual = select_pts(actual_ND)
+    np.allclose(actual, expected)
+
+
+def test_cov(da):
+
+    # other: select missaligned data, and smooth it to dampen the correlation with self.
+    da_smooth = (
+        da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time")
+    )
+
+    da = da.isel(time=range(0, 18))
+
+    def select_pts(array):
+        return array.sel(a=1, x=2)
+
+    # Test #1: Misaligned 1-D dataarrays with missing values
+    ts1 = select_pts(da.copy())
+    ts2 = select_pts(da_smooth.copy())
+
+    def pd_cov(ts1, ts2):
+        """Ensure the ts are aligned and missing values ignored"""
+        # ts1,ts2 = xr.align(ts1,ts2)
+        valid_values = ts1.notnull() & ts2.notnull()
+
+        ts1 = ts1.where(valid_values, drop=True)
+        ts2 = ts2.where(valid_values, drop=True)
+
+        return ts1.to_series().cov(ts2.to_series())
+
+    expected = pd_cov(ts1, ts2)
+    actual = xr.cov(ts1, ts2)
+    np.allclose(expected, actual)
+
+    # Test #2: Misaligned N-D dataarrays with missing values
+    actual_ND = xr.cov(da, da_smooth, dim="time")
+    actual = select_pts(actual_ND)
+    np.allclose(expected, actual)
+
+    # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
+    actual_ND = xr.cov(da_smooth, ts1, dim="time")
     actual = select_pts(actual_ND)
     np.allclose(actual, expected)
 
@@ -955,7 +1026,9 @@ def test_output_wrong_dim_size():
     assert_identical(
         xr.DataArray(array[:5], dims=["z"]), apply_truncate_x_z(data_array)
     )
-    assert_identical(xr.Dataset({"y": ("z", array[:5])}), apply_truncate_x_z(dataset))
+    assert_identical(
+        xr.Dataset({"y": ("z", array[:5])}), apply_truncate_x_z(dataset)
+    )
 
     def apply_truncate_x_x_valid(obj):
         return apply_ufunc(
@@ -966,9 +1039,12 @@ def test_output_wrong_dim_size():
             exclude_dims={"x"},
         )
 
-    assert_identical(xr.Variable("x", array[:5]), apply_truncate_x_x_valid(variable))
     assert_identical(
-        xr.DataArray(array[:5], dims=["x"]), apply_truncate_x_x_valid(data_array),
+        xr.Variable("x", array[:5]), apply_truncate_x_x_valid(variable)
+    )
+    assert_identical(
+        xr.DataArray(array[:5], dims=["x"]),
+        apply_truncate_x_x_valid(data_array),
     )
     assert_identical(
         xr.Dataset({"y": ("x", array[:5])}), apply_truncate_x_x_valid(dataset)
@@ -985,7 +1061,9 @@ def test_dot(use_dask):
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
     c = np.arange(5 * 60).reshape(5, 60)
     da_a = xr.DataArray(a, dims=["a", "b"], coords={"a": np.linspace(0, 1, 30)})
-    da_b = xr.DataArray(b, dims=["a", "b", "c"], coords={"a": np.linspace(0, 1, 30)})
+    da_b = xr.DataArray(
+        b, dims=["a", "b", "c"], coords={"a": np.linspace(0, 1, 30)}
+    )
     da_c = xr.DataArray(c, dims=["c", "e"])
     if use_dask:
         da_a = da_a.chunk({"a": 3})
