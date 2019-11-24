@@ -789,23 +789,37 @@ def test_apply_dask_new_output_dimension():
     assert_identical(expected, actual)
 
 
-da = xr.DataArray(np.random.random((3, 21, 4)),
-                  coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
-                  dims=("a", "time", "x"),
-                  )
+da = xr.DataArray(
+    np.random.random((3, 21, 4)),
+    coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+    dims=("a", "time", "x"),
+)
 
-arrays = [da.isel(time=range(0, 18)),
-          da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time"),
-          xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"),
-          xr.DataArray([[1, 2], [np.nan, np.nan]], dims=['x', 'y']),
-          ]
+arrays = [
+    da.isel(time=range(0, 18)),
+    da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time"),
+    xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"),
+    xr.DataArray([1, 1, np.nan, 2, np.nan, 3, 5, 4, 6, np.nan, 7], dims="time"),
+    xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "y"]),
+    xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "y"]),
+]
 
-@pytest.mark.parametrize("da_b", arrays)
-@pytest.mark.parametrize("da_a", arrays)
-@pytest.mark.parametrize("func", ["cov", "corr"])
-def test_func(func, da_a, da_b):
+array_tuples = [
+    (arrays[0], arrays[0]),
+    (arrays[0], arrays[1]),
+    (arrays[1], arrays[1]),
+    (arrays[2], arrays[2]),
+    (arrays[2], arrays[3]),
+    (arrays[3], arrays[3]),
+    (arrays[4], arrays[4]),
+    (arrays[4], arrays[5]),
+    (arrays[5], arrays[5]),
+]
 
-    def pd_func(ts1, ts2):
+
+@pytest.mark.parametrize("da_a, da_b", array_tuples)
+def test_cov(da_a, da_b):
+    def pandas_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
         valid_values = ts1.notnull() & ts2.notnull()
@@ -813,18 +827,27 @@ def test_func(func, da_a, da_b):
         ts1 = ts1.where(valid_values, drop=True)
         ts2 = ts2.where(valid_values, drop=True)
 
-        if func == 'cov':
-            return ts1.to_series().cov(ts2.to_series())
-        elif func == 'corr':
-            return ts1.to_series().corr(ts2.to_series())
-        else:
-            assert False  # TODO: raise NotImplementedError
+        return ts1.to_series().cov(ts2.to_series())
 
-    expected = pd_func(da_a, da_b)
-    if func == 'cov':
-        actual = xr.cov(da_a, da_b)
-    elif func == 'corr':
-        actual = xr.corr(da_a, da_b)
+    expected = pandas_cov(da_a, da_b)
+    actual = xr.cov(da_a, da_b)
+    assert np.allclose(expected, actual)
+
+
+@pytest.mark.parametrize("da_a, da_b", array_tuples)
+def test_corr(da_a, da_b):
+    def pandas_corr(ts1, ts2):
+        """Ensure the ts are aligned and missing values ignored"""
+        ts1, ts2 = xr.align(ts1, ts2)
+        valid_values = ts1.notnull() & ts2.notnull()
+
+        ts1 = ts1.where(valid_values, drop=True)
+        ts2 = ts2.where(valid_values, drop=True)
+
+        return ts1.to_series().corr(ts2.to_series())
+
+    expected = pandas_corr(da_a, da_b)
+    actual = xr.corr(da_a, da_b)
     assert np.allclose(expected, actual)
 
 

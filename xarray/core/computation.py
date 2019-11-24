@@ -1046,7 +1046,7 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-def cov(da_a, da_b, dim=None):
+def cov(da_a, da_b, dim=None, ddof=1):
     """Compute covariance between two DataArray objects along a shared dimension.
 
     Parameters
@@ -1110,15 +1110,10 @@ def cov(da_a, da_b, dim=None):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-    da_a = da_a.where(
-        valid_values, drop=True
-    )  # TODO: avoid drop as explained in https://github.com/pydata/xarray/pull/2652#discussion_r245492002
+    # TODO: avoid drop
+    da_a = da_a.where(valid_values, drop=True)
     da_b = da_b.where(valid_values, drop=True)
-    valid_count = (
-        valid_values.sum(dim) - 1
-    )  # as in pandas.Series.cov, default to unbiased "N - 1" normalization
-    # TODO: add parameter "bias" to decide whether or not N-1 normalization should be used
-
+    valid_count = valid_values.sum(dim) - ddof
     # 3. Compute mean and standard deviation along the given dim
     demeaned_da_a = da_a - da_a.mean(dim=dim)
     demeaned_da_b = da_b - da_b.mean(dim=dim)
@@ -1129,7 +1124,7 @@ def cov(da_a, da_b, dim=None):
     return cov
 
 
-def corr(da_a, da_b, dim=None):
+def corr(da_a, da_b, dim=None, ddof=0):
     """Compute the Pearson correlation coefficient between two DataArray objects along a shared dimension.
 
     Parameters
@@ -1209,7 +1204,7 @@ def corr(da_a, da_b, dim=None):
     da_a_std = da_a.std(dim=dim)
     da_b_std = da_b.std(dim=dim)
 
-    corr = cov(da_a, da_b, dim=dim) / (da_a_std * da_b_std)
+    corr = cov(da_a, da_b, dim=dim, ddof=ddof) / (da_a_std * da_b_std)
 
     return corr
 
