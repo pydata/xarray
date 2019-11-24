@@ -396,10 +396,11 @@ def remap_label_indexers(
         if isinstance(v, Variable):
             pos_indexers[k] = Variable(v.dims, pos_indexers[k])
         elif isinstance(v, DataArray):
-            # drop coordinates found in indexers since .sel() already
-            # ensures alignments
-            coords = {k: var for k, var in v._coords.items() if k not in indexers}
-            pos = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
-            if pos.dtype.kind == "i":
+            # do not wrap a slice
+            if not isinstance(pos_indexers[k], slice):
+                # drop coordinates found in indexers since .sel() already
+                # ensures alignments
+                coords = {k: var for k, var in v._coords.items() if k not in indexers}
+                pos = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
                 pos_indexers[k] = pos
     return pos_indexers, new_indexes
