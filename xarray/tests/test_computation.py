@@ -800,8 +800,8 @@ arrays = [
     da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time"),
     xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"),
     xr.DataArray([1, 1, np.nan, 2, np.nan, 3, 5, 4, 6, np.nan, 7], dims="time"),
-    xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "y"]),
-    xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "y"]),
+    xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
+    xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
 ]
 
 array_tuples = [
@@ -818,7 +818,8 @@ array_tuples = [
 
 
 @pytest.mark.parametrize("da_a, da_b", array_tuples)
-def test_cov(da_a, da_b):
+@pytest.mark.parametrize("dim", [None, 'time'])
+def test_cov(da_a, da_b, dim):
     def pandas_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
@@ -830,12 +831,13 @@ def test_cov(da_a, da_b):
         return ts1.to_series().cov(ts2.to_series())
 
     expected = pandas_cov(da_a, da_b)
-    actual = xr.cov(da_a, da_b)
+    actual = xr.cov(da_a, da_b, dim)
     assert np.allclose(expected, actual)
 
 
 @pytest.mark.parametrize("da_a, da_b", array_tuples)
-def test_corr(da_a, da_b):
+@pytest.mark.parametrize("dim", [None, 'time'])
+def test_corr(da_a, da_b, dim):
     def pandas_corr(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
@@ -847,7 +849,7 @@ def test_corr(da_a, da_b):
         return ts1.to_series().corr(ts2.to_series())
 
     expected = pandas_corr(da_a, da_b)
-    actual = xr.corr(da_a, da_b)
+    actual = xr.corr(da_a, da_b, dim)
     assert np.allclose(expected, actual)
 
 

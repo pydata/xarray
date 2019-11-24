@@ -1114,6 +1114,12 @@ def cov(da_a, da_b, dim=None, ddof=1):
     da_a = da_a.where(valid_values, drop=True)
     da_b = da_b.where(valid_values, drop=True)
     valid_count = valid_values.sum(dim) - ddof
+    
+    # if dim is not None:
+    #     valid_count = da_a[dim].size - ddof
+    # else:
+    #     valid_count = da_a.size
+
     # 3. Compute mean and standard deviation along the given dim
     demeaned_da_a = da_a - da_a.mean(dim=dim)
     demeaned_da_b = da_b - da_b.mean(dim=dim)
