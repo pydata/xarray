@@ -675,3 +675,12 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.FileManager
    backends.CachingFileManager
    backends.DummyFileManager
+
+Deprecated / Pending Deprecation
+================================
+
+   Dataset.drop
+   DataArray.drop
+   Dataset.apply
+   core.groupby.DataArrayGroupBy.apply
+   core.groupby.DatasetGroupBy.apply
