@@ -818,7 +818,7 @@ array_tuples = [
 
 
 @pytest.mark.parametrize("da_a, da_b", array_tuples)
-@pytest.mark.parametrize("dim", [None, 'time'])
+@pytest.mark.parametrize("dim", [None, "time"])
 def test_cov(da_a, da_b, dim):
     def pandas_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
@@ -836,7 +836,7 @@ def test_cov(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize("da_a, da_b", array_tuples)
-@pytest.mark.parametrize("dim", [None, 'time'])
+@pytest.mark.parametrize("dim", [None, "time"])
 def test_corr(da_a, da_b, dim):
     def pandas_corr(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
