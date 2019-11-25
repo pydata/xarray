@@ -1407,10 +1407,10 @@ def test_lazy_array_equiv_merge(compat):
             lambda a: xr.where(xr.full_like(a, fill_value=True), a, np.nan),
             marks=pytest.mark.xfail,
         ),
-        pytest.param(
-            lambda a: a.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
-            marks=pytest.mark.xfail,
-        ),
+        lambda a: a.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
+        lambda a: a.rename_vars({"cxy": "cnew"}).rename_vars(
+            {"cnew": "cxy"}
+        ),  # indexes fail
         # assign, assign_coords, assign_attrs, update
         # rename,
         # swap_dims, expand_dims
