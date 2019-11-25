@@ -150,11 +150,6 @@ Bug fixes
   ``reset_coords(drop=True)`` should now be unnecessary in most cases.
   (:issue:`3068`, :issue:`3311`, :issue:`3454`, :pull:`3453`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Sync with cftime by removing `dayofwk=-1` for cftime>=1.0.4.
-  By `Anderson Banihirwe <https://github.com/andersy005>`_.
-- Fix :py:meth:`xarray.core.groupby.DataArrayGroupBy.reduce` and
-  :py:meth:`xarray.core.groupby.DatasetGroupBy.reduce` when reducing over multiple dimensions.
-  (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian/>`_
 - Add support for cftime>=1.0.4. By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Rolling reduction operations no longer compute dask arrays by default. (:issue:`3161`).
   In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
