@@ -35,15 +35,30 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Switch doc examples to use nbsphinx and replace sphinx_gallery with
+  notebook.
+  (:pull:`3105`, :pull:`3106`, :pull:`3121`)
+  By `Ryan Abernathey <https://github.com/rabernat>`
+- Added example notebook demonstrating use of xarray with Regional Ocean
+  Modeling System (ROMS) ocean hydrodynamic model output.
+  (:pull:`3116`).
+  By `Robert Hetland <https://github.com/hetland>`
+- Added example notebook demonstrating the visualization of ERA5 GRIB
+  data. (:pull:`3199`)
+  By `Zach Bruick <https://github.com/zbruick>` and
+  `Stephan Siemen <https://github.com/StephanSiemen>`
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
 
+- Removed internal method ``Dataset._from_vars_and_coord_names``, 
+  which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 v0.14.1 (19 Nov 2019)
---------------------
+---------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -2784,7 +2799,7 @@ Enhancements
 - Groupby operations now support grouping over multidimensional variables. A new
   method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
   allow users to specify bins for grouping. The new features are described in
-  :ref:`groupby.multidim` and :ref:`examples.multidim`.
+  :ref:`groupby.multidim` and :ref:`/examples/multidimensional-coords.ipynb`.
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
@@ -3849,7 +3864,7 @@ Enhancements
 - Long attributes are now truncated at 500 characters when printing a dataset
   (:issue:`338`). This should make things more convenient for working with
   datasets interactively.
-- Added a new documentation example, :ref:`monthly means example`. Thanks Joe
+- Added a new documentation example, :ref:`/examples/monthly-means.ipynb`. Thanks Joe
   Hamman!
 
 Bug fixes

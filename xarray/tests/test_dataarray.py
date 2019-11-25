@@ -14,6 +14,7 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
+from xarray.core.indexes import propagate_indexes
 from xarray.tests import (
     LooseVersion,
     ReturnItem,
@@ -1189,7 +1190,7 @@ class TestDataArray:
         data = xr.concat([da, db], dim="x").set_index(xy=["x", "y"])
         assert data.dims == ("xy",)
         actual = data.sel(y="a")
-        expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop("y")
+        expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop_vars("y")
         assert_equal(actual, expected)
 
     def test_virtual_default_coords(self):
@@ -1239,6 +1240,7 @@ class TestDataArray:
         assert expected == actual
 
         del da.coords["x"]
+        da._indexes = propagate_indexes(da._indexes, exclude="x")
         expected = DataArray(da.values, {"y": [0, 1, 2]}, dims=["x", "y"], name="foo")
         assert_identical(da, expected)
 
