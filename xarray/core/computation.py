@@ -22,6 +22,7 @@ from typing import (
 )
 
 import numpy as np
+import xarray as xr
 from . import duck_array_ops, utils
 from .alignment import broadcast, deep_align
 from .merge import merge_coordinates_without_align
@@ -1127,7 +1128,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     # 4. Compute covariance along the given dim
     cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim) / (valid_count)
 
-    return cov
+    return xr.DataArray(cov)
 
 
 def corr(da_a, da_b, dim=None, ddof=0):
@@ -1212,7 +1213,7 @@ def corr(da_a, da_b, dim=None, ddof=0):
 
     corr = cov(da_a, da_b, dim=dim, ddof=ddof) / (da_a_std * da_b_std)
 
-    return corr
+    return xr.DataArray(corr)
 
 
 def dot(*arrays, dims=None, **kwargs):

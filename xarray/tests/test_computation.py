@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_allclose
 
 import xarray as xr
 from xarray.core.computation import (
@@ -789,11 +789,9 @@ def test_apply_dask_new_output_dimension():
     assert_identical(expected, actual)
 
 
-da = xr.DataArray(
-    np.random.random((3, 21, 4)),
-    coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
-    dims=("a", "time", "x"),
-)
+da = xr.DataArray(np.random.random((3, 21, 4)),
+                  coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+                  dims=("a", "time", "x"),)
 
 arrays = [
     da.isel(time=range(0, 18)),
@@ -816,9 +814,8 @@ array_tuples = [
     (arrays[5], arrays[5]),
 ]
 
-
 @pytest.mark.parametrize("da_a, da_b", array_tuples)
-@pytest.mark.parametrize("dim", [None, "time"])
+@pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_cov(da_a, da_b, dim):
     def pandas_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
@@ -832,11 +829,12 @@ def test_cov(da_a, da_b, dim):
 
     expected = pandas_cov(da_a, da_b)
     actual = xr.cov(da_a, da_b, dim)
-    assert np.allclose(expected, actual)
+
+    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("da_a, da_b", array_tuples)
-@pytest.mark.parametrize("dim", [None, "time"])
+@pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_corr(da_a, da_b, dim):
     def pandas_corr(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
@@ -850,7 +848,7 @@ def test_corr(da_a, da_b, dim):
 
     expected = pandas_corr(da_a, da_b)
     actual = xr.corr(da_a, da_b, dim)
-    assert np.allclose(expected, actual)
+    assert_allclose(actual, expected)
 
 
 def pandas_median(x):
