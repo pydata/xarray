@@ -1466,6 +1466,65 @@ class DataArray(AbstractArray, DataWithCoords):
             new_name_or_name_dict = cast(Hashable, new_name_or_name_dict)
             return self._replace(name=new_name_or_name_dict)
 
+    def rename_dims(
+        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims: Hashable
+    ) -> "DataArray":
+        """Returns a new object with renamed dimensions only.
+
+        Parameters
+        ----------
+        dims_dict : dict-like, optional
+            Dictionary whose keys are current dimension names and
+            whose values are the desired names.
+        **dims, optional
+            Keyword form of ``dims_dict``.
+            One of dims_dict or dims must be provided.
+
+        Returns
+        -------
+        renamed : Dataset
+            Dataset with renamed dimensions.
+
+        See Also
+        --------
+        Dataset.swap_dims
+        Dataset.rename
+        Dataset.rename_vars
+        DataArray.rename
+        """
+        dims_dict = either_dict_or_kwargs(dims_dict, dims, "rename_dims")
+        ds = self._to_temp_dataset().rename_dims(dims_dict)
+        return self._from_temp_dataset(ds)
+
+    def rename_vars(
+        self, name_dict: Mapping[Hashable, Hashable] = None, **names: Hashable
+    ) -> "DataArray":
+        """Returns a new object with renamed variables including coordinates
+
+        Parameters
+        ----------
+        name_dict : dict-like, optional
+            Dictionary whose keys are current variable or coordinate names and
+            whose values are the desired names.
+        **names, optional
+            Keyword form of ``name_dict``.
+            One of name_dict or names must be provided.
+
+        Returns
+        -------
+        renamed : Dataset
+            Dataset with renamed variables including coordinates
+
+        See Also
+        --------
+        Dataset.swap_dims
+        Dataset.rename
+        Dataset.rename_dims
+        DataArray.rename
+        """
+        ds = self._to_temp_dataset().rename_vars(name_dict)
+        return self._from_temp_dataset(ds)
+
     def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> "DataArray":
         """Returns a new DataArray with swapped dimensions.
 
