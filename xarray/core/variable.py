@@ -1716,40 +1716,45 @@ class Variable(
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
-        if isinstance(self.data, dask_array_type):
-            raise TypeError(
-                "quantile does not work for arrays stored as dask "
-                "arrays. Load the data via .compute() or .load() "
-                "prior to calling this method."
-            )
 
-        q = np.asarray(q, dtype=np.float64)
-
-        new_dims = list(self.dims)
-        if dim is not None:
-            axis = self.get_axis_num(dim)
-            if utils.is_scalar(dim):
-                new_dims.remove(dim)
-            else:
-                for d in dim:
-                    new_dims.remove(d)
-        else:
-            axis = None
-            new_dims = []
-
-        # Only add the quantile dimension if q is array-like
-        if q.ndim != 0:
-            new_dims = ["quantile"] + new_dims
-
-        qs = np.nanpercentile(
-            self.data, q * 100.0, axis=axis, interpolation=interpolation
-        )
+        from .computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
-        attrs = self._attrs if keep_attrs else None
 
-        return Variable(new_dims, qs, attrs)
+        scalar = utils.is_scalar(q)
+        q = np.atleast_1d(np.asarray(q, dtype=np.float64))
+
+        if dim is None:
+            dim = self.dims
+
+        if utils.is_scalar(dim):
+            dim = [dim]
+
+        def _wrapper(npa, **kwargs):
+            # move quantile axis to end. required for apply_ufunc
+            return np.moveaxis(np.nanpercentile(npa, **kwargs), 0, -1)
+
+        axis = np.arange(-1, -1 * len(dim) - 1, -1)
+        result = apply_ufunc(
+            _wrapper,
+            self,
+            input_core_dims=[dim],
+            exclude_dims=set(dim),
+            output_core_dims=[["quantile"]],
+            output_dtypes=[np.float64],
+            output_sizes={"quantile": len(q)},
+            dask="parallelized",
+            kwargs={"q": q * 100, "axis": axis, "interpolation": interpolation},
+        )
+
+        # for backward compatibility
+        result = result.transpose("quantile", ...)
+        if scalar:
+            result = result.squeeze("quantile")
+        if keep_attrs:
+            result.attrs = self._attrs
+        return result
 
     def rank(self, dim, pct=False):
         """Ranks the data.
