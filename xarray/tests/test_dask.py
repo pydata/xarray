@@ -1399,7 +1399,8 @@ def test_lazy_array_equiv_merge(compat):
         pytest.param(
             lambda a: a.where(xr.full_like(a, fill_value=True)), marks=pytest.mark.xfail
         ),
-        pytest.param(lambda a: xr.align([a, a])[0], marks=pytest.mark.xfail),
+        lambda a: xr.align(a, a)[0],  # remove?
+        lambda a: xr.align(a, xr.zeros_like(a))[0],
         pytest.param(
             lambda a: xr.broadcast([a["a"], a["a"]])[0], marks=pytest.mark.xfail
         ),
@@ -1425,3 +1426,8 @@ def test_lazy_array_equiv_merge(compat):
 def test_transforms_pass_lazy_array_equiv(obj, transform):
     with raise_if_dask_computes():
         assert_equal(obj, transform(obj))
+
+
+# TODO: transpose_coords for dataset
+# getitem with mask
+# __getitem__
