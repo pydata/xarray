@@ -5,7 +5,7 @@ import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Dict, Hashable, Mapping, TypeVar, Union
+from typing import Any, Dict, Hashable, Iterable, Mapping, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -540,6 +540,17 @@ class Variable(
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
 
+        key_dict = dict(zip(self.dims, key))
+        for dim, k in key_dict.items():
+            if isinstance(k, Iterable) or (
+                isinstance(k, Variable) and k.dims == (dim,)  # catch da.sel(x=da.x)
+            ):
+                if duck_array_ops.array_equiv(k, np.arange(self.sizes[dim])):
+                    # short-circuit when keys are effectively slice(None)
+                    # This preserves dask name and allows lazy array equivalence checks
+                    key_dict[dim] = slice(None)
+        key = tuple(key_dict.values())
+
         if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
             return self._broadcast_indexes_basic(key)
 
@@ -1048,7 +1059,9 @@ class Variable(
 
         invalid = indexers.keys() - set(self.dims)
         if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+            raise ValueError(
+                f"dimensions {invalid} do not exist. Expected one or more of {self.dims} "
+            )
 
         key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
         return self[key]
