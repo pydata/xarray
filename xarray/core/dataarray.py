@@ -2981,7 +2981,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     dims=("x", "y"),
         ... )
 
-        Scalar quantile
+        Single quantile
         >>> da.quantile(0)  # or da.quantile(0, dim=...)
         <xarray.DataArray ()>
         array(0.7)
@@ -2994,7 +2994,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * y         (y) float64 1.0 1.5 2.0 2.5
             quantile  float64 0.0
 
-        Quantile array
+        Multiple quantiles
         >>> da.quantile([0, 0.5, 1])
         <xarray.DataArray (quantile: 3)>
         array([0.7, 3.4, 9.4])

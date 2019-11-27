@@ -5125,7 +5125,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
         ... )
 
-        Scalar quantile
+        Single quantile
         >>> ds.quantile(0)  # or ds.quantile(0, dim=...)
         <xarray.Dataset>
         Dimensions:   ()
@@ -5142,7 +5142,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             a         (y) float64 0.7 4.2 2.6 1.5
 
-        Quantile array
+        Multiple quantiles
         >>> ds.quantile([0, 0.5, 1])
         <xarray.Dataset>
         Dimensions:   (quantile: 3)
