@@ -109,7 +109,11 @@ except AttributeError:
             Number of values padded to the edges of axis.
         """
         if mode != "constant":
-            raise NotImplementedError() # TODO add error message
+            raise NotImplementedError(
+                "Pad is not yet implemented for your current version of Dask. "
+                "Please update your version of Dask or use the "
+                "mode=`constant`, that is added by xarray."
+            )
 
         try:
             fill_value = kwargs["constant_values"]

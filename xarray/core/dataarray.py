@@ -3114,11 +3114,111 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         pad_widths: Mapping[Hashable, Tuple[int,int]] = None,
         mode: str = "constant",
-        pad_options: dict = {},
+        pad_options: Dict[str, Any] = {},
         **pad_widths_kwargs: Any,
     ) -> "DataArray":
-        """
+        """Pad this array along one or more dimensions.
 
+        When using one of the modes ("edge", "reflect", "symmetric", "wrap"),
+        coordinates will be padded with the same mode, otherwise coordinates
+        are padded using the "constant" mode with fill_value dtypes.NA.
+
+        Parameters
+        ----------
+        pad_widths : Mapping with the form of {dim: (pad_before, pad_after)}
+            Number of values padded along each dimension.
+        mode : str (taken from numpy docs)
+            One of the following string values or a user supplied function.
+            'constant' (default)
+                Pads with a constant value.
+            'edge'
+                Pads with the edge values of array.
+            'linear_ramp'
+                Pads with the linear ramp between end_value and the
+                array edge value.
+            'maximum'
+                Pads with the maximum value of all or part of the
+                vector along each axis.
+            'mean'
+                Pads with the mean value of all or part of the
+                vector along each axis.
+            'median'
+                Pads with the median value of all or part of the
+                vector along each axis.
+            'minimum'
+                Pads with the minimum value of all or part of the
+                vector along each axis.
+            'reflect'
+                Pads with the reflection of the vector mirrored on
+                the first and last values of the vector along each
+                axis.
+            'symmetric'
+                Pads with the reflection of the vector mirrored
+                along the edge of the array.
+            'wrap'
+                Pads with the wrap of the vector along the axis.
+                The first values are used to pad the end and the
+                end values are used to pad the beginning.
+        pad_options : additional keyword arguments that are passed to pad function
+            stat_length : sequence or int, optional
+                Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
+                values at edge of each axis used to calculate the statistic value.
+                ((before_1, after_1), ... (before_N, after_N)) unique statistic
+                lengths for each axis.
+                ((before, after),) yields same before and after statistic lengths
+                for each axis.
+                (stat_length,) or int is a shortcut for before = after = statistic
+                length for all axes.
+                Default is ``None``, to use the entire axis.
+            constant_values : sequence or scalar, optional
+                Used in 'constant'.  The values to set the padded values for each
+                axis.
+                ``((before_1, after_1), ... (before_N, after_N))`` unique pad constants
+                for each axis.
+                ``((before, after),)`` yields same before and after constants for each
+                axis.
+                ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+                all axes.
+                Default is 0.
+            end_values : sequence or scalar, optional
+                Used in 'linear_ramp'.  The values used for the ending value of the
+                linear_ramp and that will form the edge of the padded array.
+                ``((before_1, after_1), ... (before_N, after_N))`` unique end values
+                for each axis.
+                ``((before, after),)`` yields same before and after end values for each
+                axis.
+                ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+                all axes.
+                Default is 0.
+            reflect_type : {'even', 'odd'}, optional
+                Used in 'reflect', and 'symmetric'.  The 'even' style is the
+                default with an unaltered reflection around the edge value.  For
+                the 'odd' style, the extended part of the array is created by
+                subtracting the reflected values from two times the edge value.
+
+        **pad_widths_kwargs:
+            The keyword arguments form of ``pad_widths``.
+            One of pad_widths or pad_widths_kwarg must be provided.
+
+        Returns
+        -------
+        padded : DataArray
+            DataArray with the padded coordinates and data.
+
+        See also
+        --------
+        shift
+        roll
+
+        Examples
+        --------
+
+        >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0,1,2])])
+        >>> arr.pad(x=(1,2), pad_options={"constant_values" : 0})
+        <xarray.DataArray (x: 6)>
+        array([0, 5, 6, 7, 0, 0])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 2.0 nan nan
         """
         pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
 

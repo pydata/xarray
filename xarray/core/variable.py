@@ -1103,6 +1103,25 @@ class Variable(
         pad_widths: Mapping[Hashable, Tuple[int, int]] = None,
         mode: str = "constant",
         **kwargs: Any):
+        """
+        Return a new Variable with padded data.
+
+        Parameters
+        ----------
+        pad_widths: Mapping with the form of {dim: (pad_before, pad_after)}
+            Number of values padded along each dimension.
+        mode: (str)
+            See numpy / Dask docs
+        **kwargs:
+            A combination of the optional arguments for np.pad/dask.pad
+            and the keyword arguments form of ``pad_widths``.
+            One of pad_widths or pad_widths_kwarg must be provided.
+
+        Returns
+        -------
+        padded : Variable
+            Variable with the same dimensions and attributes but padded data.
+        """
 
         # pop optional arguments from kwargs, so pad_width_kwargs remain
         opt_kwargs_names = ["stat_length", "constant_values", "end_values", "reflect_type"]
@@ -1111,7 +1130,6 @@ class Variable(
         # workaround for Dask's default value of stat_length
         if mode in ["maximum", "mean", "median", "minimum"]:
             opt_kwargs.setdefault("stat_length", tuple((n, n) for n in self.data.shape))
-
 
         if mode == "constant" and "constant_values" not in opt_kwargs:
             dtype, opt_kwargs["constant_values"] = dtypes.maybe_promote(self.dtype)
