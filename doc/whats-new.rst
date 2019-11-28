@@ -48,6 +48,9 @@ Documentation
   data. (:pull:`3199`)
   By `Zach Bruick <https://github.com/zbruick>` and
   `Stephan Siemen <https://github.com/StephanSiemen>`
+- Added examples for `DataArray.quantile`, `Dataset.quantile` and
+  `GroupBy.quantile`. (:pull:`3576`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
