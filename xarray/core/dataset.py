@@ -5116,6 +5116,48 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         numpy.nanpercentile, pandas.Series.quantile, DataArray.quantile
+
+        Examples
+        --------
+
+        >>> ds = xr.Dataset(
+        ...     {"a": (("x", "y"), [[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]])},
+        ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
+        ... )
+
+        Single quantile
+        >>> ds.quantile(0)  # or ds.quantile(0, dim=...)
+        <xarray.Dataset>
+        Dimensions:   ()
+        Coordinates:
+            quantile  float64 0.0
+        Data variables:
+            a         float64 0.7
+        >>> ds.quantile(0, dim="x")
+        <xarray.Dataset>
+        Dimensions:   (y: 4)
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+            quantile  float64 0.0
+        Data variables:
+            a         (y) float64 0.7 4.2 2.6 1.5
+
+        Multiple quantiles
+        >>> ds.quantile([0, 0.5, 1])
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3)
+        Coordinates:
+          * quantile  (quantile) float64 0.0 0.5 1.0
+        Data variables:
+            a         (quantile) float64 0.7 3.4 9.4
+        >>> ds.quantile([0, 0.5, 1], dim="x")
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3, y: 4)
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+          * quantile  (quantile) float64 0.0 0.5 1.0
+        Data variables:
+            a         (quantile, y) float64 0.7 4.2 2.6 1.5 3.6 ... 1.7 6.5 7.3 9.4 1.9
         """
 
         if isinstance(dim, str):
