@@ -2143,8 +2143,8 @@ class TestAsCompatibleData:
         assert isinstance(orig._data, CustomIndexable)
 
         array = CustomWithValuesAttr(np.arange(3))
-        orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
-        assert isinstance(orig._data, CustomWithValuesAttr)
+        orig = Variable(dims=("x"), data=[array], attrs={"foo": "bar"})
+        assert isinstance(orig._data.item(), CustomWithValuesAttr)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
