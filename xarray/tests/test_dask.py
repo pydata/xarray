@@ -1387,8 +1387,8 @@ def test_lazy_array_equiv_merge(compat):
         lambda a: a.sel(x=a.x),
         lambda a: a.sel(x=a.x.values),
         lambda a: a.transpose(...),
-        lambda a: a.squeeze(),
-        lambda a: a.sortby("x"),
+        lambda a: a.squeeze(),  # no dimensions to squeeze
+        lambda a: a.sortby("x"),  # "x" is already sorted
         lambda a: a.reindex(x=a.x),
         lambda a: a.reindex_like(a),
         lambda a: a.pipe(lambda x: x),
