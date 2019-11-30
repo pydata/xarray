@@ -1402,7 +1402,6 @@ def test_lazy_array_equiv_merge(compat):
         # rename,
         # swap_dims, expand_dims
         # set_index / reset_index
-        # stack / unstack
     ],
 )
 def test_transforms_pass_lazy_array_equiv(obj, transform):
@@ -1413,11 +1412,16 @@ def test_transforms_pass_lazy_array_equiv(obj, transform):
 def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
     with raise_if_dask_computes():
         assert_equal(map_ds.cxy, map_ds.cxy.broadcast_like(map_ds.cxy))
+        # assert_equal(
+        #     map_ds.transpose(reversed(list(map_ds.dims)), transpose_coords=False).cxy,
+        #     map_ds.cxy,
+        # )
         assert_equal(map_ds.a, xr.broadcast(map_ds.a, map_ds.a)[0])
         assert_equal(map_ds.map(lambda x: x), map_ds)
         assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
 
         assert_equal(map_da._from_temp_dataset(map_da._to_temp_dataset()), map_da)
+        assert_equal(map_da.astype(map_da.dtype), map_da)
 
 
 # TODO: transpose_coords for dataset
