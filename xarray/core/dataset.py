@@ -941,30 +941,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names, dims, attrs, indexes, inplace=inplace
         )
 
-    def _replace_vars_and_dims(
-        self,
-        variables: Dict[Hashable, Variable],
-        coord_names: set = None,
-        dims: Dict[Hashable, int] = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        inplace: bool = False,
-    ) -> "Dataset":
-        """Deprecated version of _replace_with_new_dims().
-
-        Unlike _replace_with_new_dims(), this method always recalculates
-        indexes from variables.
-        """
-        warnings.warn(
-            "`_replace_vars_and_dims` is deprecated in favor of `_replace_with_new_dims` and will be removed in 0.16",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if dims is None:
-            dims = calculate_dimensions(variables)
-        return self._replace(
-            variables, coord_names, dims, attrs, indexes=None, inplace=inplace
-        )
-
     def _overwrite_indexes(self, indexes: Mapping[Any, pd.Index]) -> "Dataset":
         if not indexes:
             return self
