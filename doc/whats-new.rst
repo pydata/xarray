@@ -32,7 +32,10 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-
+- Use specific type checks in
+  :py:func:`~xarray.core.variable.as_compatible_data` instead of blanket
+  access to ``values`` attribute (:issue:`2097`)
+  By `Yunus Sevinchan <https://github.com/blusquare>`_.
 
 Documentation
 ~~~~~~~~~~~~~
