@@ -1388,44 +1388,36 @@ def test_lazy_array_equiv_merge(compat):
         lambda a: a.sel(x=a.x.values),
         lambda a: a.transpose(...),
         lambda a: a.squeeze(),
-        pytest.param(lambda a: a.sortby("x"), marks=pytest.mark.xfail),
+        lambda a: a.sortby("x"),
         lambda a: a.reindex(x=a.x),
         lambda a: a.reindex_like(a),
         lambda a: a.pipe(lambda x: x),
-        pytest.param(lambda a: a["a"].broadcast_like(a["a"]), marks=pytest.mark.xfail),
-        pytest.param(
-            lambda a: a.groupby("x").map(lambda x: x), marks=pytest.mark.xfail
-        ),
-        pytest.param(
-            lambda a: a.where(xr.full_like(a, fill_value=True)), marks=pytest.mark.xfail
-        ),
-        lambda a: xr.align(a, a)[0],  # remove?
         lambda a: xr.align(a, xr.zeros_like(a))[0],
         pytest.param(
-            lambda a: xr.broadcast([a["a"], a["a"]])[0], marks=pytest.mark.xfail
+            lambda a: a.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
+            marks=pytest.mark.xfail,  # x index is lost.
         ),
-        pytest.param(
-            lambda a: xr.where(xr.full_like(a, fill_value=True), a, np.nan),
-            marks=pytest.mark.xfail,
-        ),
-        lambda a: a.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
-        lambda a: a.rename_vars({"cxy": "cnew"}).rename_vars(
-            {"cnew": "cxy"}
-        ),  # indexes fail
+        lambda a: a.rename_vars({"cxy": "cnew"}).rename_vars({"cnew": "cxy"}),
         # assign, assign_coords, assign_attrs, update
         # rename,
         # swap_dims, expand_dims
         # set_index / reset_index
         # stack / unstack
-        # to_temp_dataset, from_temp_dataset
-        # Dataset lambda a: a.map(lambda x: x)
-        # Dataset lambda a: a.rename_vars({"a": "a1"}).rename_vars({"a1": "a"}),
-        # Dataset lambda a: a.set_coords("a").reset_coords("a"),
     ],
 )
 def test_transforms_pass_lazy_array_equiv(obj, transform):
     with raise_if_dask_computes():
         assert_equal(obj, transform(obj))
+
+
+def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
+    with raise_if_dask_computes():
+        assert_equal(map_ds.cxy, map_ds.cxy.broadcast_like(map_ds.cxy))
+        assert_equal(map_ds.a, xr.broadcast(map_ds.a, map_ds.a)[0])
+        assert_equal(map_ds.map(lambda x: x), map_ds)
+        assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
+
+        assert_equal(map_da._from_temp_dataset(map_da._to_temp_dataset()), map_da)
 
 
 # TODO: transpose_coords for dataset

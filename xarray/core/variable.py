@@ -542,9 +542,11 @@ class Variable(
 
         key_dict = dict(zip(self.dims, key))
         for dim, k in key_dict.items():
-            if isinstance(k, Iterable) or (
-                isinstance(k, Variable) and k.dims == (dim,)  # catch da.sel(x=da.x)
-            ):
+            if isinstance(k, Iterable):
+                # let da.sel(x=da.x) pass but skip if Variable has different dimensions
+                # e.g. da.sel(x=Variable(("points",), [0, 1, 2]))
+                if isinstance(k, Variable) and k.dims != (dim,):
+                    continue
                 if duck_array_ops.array_equiv(k, np.arange(self.sizes[dim])):
                     # short-circuit when keys are effectively slice(None)
                     # This preserves dask name and allows lazy array equivalence checks
