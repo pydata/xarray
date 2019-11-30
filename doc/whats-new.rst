@@ -25,6 +25,9 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
+  now work with dask Variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes
@@ -45,6 +48,9 @@ Documentation
   data. (:pull:`3199`)
   By `Zach Bruick <https://github.com/zbruick>` and
   `Stephan Siemen <https://github.com/StephanSiemen>`
+- Added examples for `DataArray.quantile`, `Dataset.quantile` and
+  `GroupBy.quantile`. (:pull:`3576`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
