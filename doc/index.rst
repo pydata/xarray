@@ -11,7 +11,7 @@ intuitive, more concise, and less error-prone developer experience.
 The package includes a large and growing library of domain-agnostic functions
 for advanced analytics and visualization with these data structures.
 
-Xarray was inspired by and borrows heavily from pandas_, the popular data
+Xarray is inspired by and borrows heavily from pandas_, the popular data
 analysis package focused on labelled tabular data.
 It is particularly tailored to working with netCDF_ files, which were the
 source of xarray's data model, and integrates tightly with dask_ for parallel
@@ -29,6 +29,7 @@ Documentation
 
 * :doc:`why-xarray`
 * :doc:`faq`
+* :doc:`quick-overview`
 * :doc:`examples`
 * :doc:`installing`
 
@@ -39,11 +40,13 @@ Documentation
 
    why-xarray
    faq
+   quick-overview
    examples
    installing
 
 **User Guide**
 
+* :doc:`terminology`
 * :doc:`data-structures`
 * :doc:`indexing`
 * :doc:`interpolation`
@@ -63,6 +66,7 @@ Documentation
    :hidden:
    :caption: User Guide
 
+   terminology
    data-structures
    indexing
    interpolation
@@ -80,6 +84,7 @@ Documentation
 **Help & reference**
 
 * :doc:`whats-new`
+* :doc:`howdoi`
 * :doc:`api`
 * :doc:`internals`
 * :doc:`roadmap`
@@ -92,6 +97,7 @@ Documentation
    :caption: Help & reference
 
    whats-new
+   howdoi
    api
    internals
    roadmap

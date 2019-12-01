@@ -11,9 +11,10 @@ Combining data
     import xarray as xr
     np.random.seed(123456)
 
-* For combining datasets or data arrays along a dimension, see concatenate_.
+* For combining datasets or data arrays along a single dimension, see concatenate_.
 * For combining datasets with different variables, see merge_.
 * For combining datasets or data arrays with different indexes or missing values, see combine_.
+* For combining datasets or data arrays along multiple dimensions see combining.multi_.
 
 .. _concatenate:
 
@@ -77,7 +78,7 @@ Merge
 ~~~~~
 
 To combine variables and coordinates between multiple ``DataArray`` and/or
-``Dataset`` object, use :py:func:`~xarray.merge`. It can merge a list of
+``Dataset`` objects, use :py:func:`~xarray.merge`. It can merge a list of
 ``Dataset``, ``DataArray`` or dictionaries of objects convertible to
 ``DataArray`` objects:
 
@@ -237,3 +238,76 @@ coordinates as long as any non-missing values agree or are disjoint:
 Note that due to the underlying representation of missing values as floating
 point numbers (``NaN``), variable data type is not always preserved when merging
 in this manner.
+
+.. _combining.multi:
+
+Combining along multiple dimensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+  There are currently three combining functions with similar names:
+  :py:func:`~xarray.auto_combine`, :py:func:`~xarray.combine_by_coords`, and
+  :py:func:`~xarray.combine_nested`. This is because
+  ``auto_combine`` is in the process of being deprecated in favour of the other
+  two functions, which are more general. If your code currently relies on
+  ``auto_combine``, then you will be able to get similar functionality by using
+  ``combine_nested``.
+
+For combining many objects along multiple dimensions xarray provides
+:py:func:`~xarray.combine_nested` and :py:func:`~xarray.combine_by_coords`. These
+functions use a combination of ``concat`` and ``merge`` across different
+variables to combine many objects into one.
+
+:py:func:`~xarray.combine_nested` requires specifying the order in which the
+objects should be combined, while :py:func:`~xarray.combine_by_coords` attempts to
+infer this ordering automatically from the coordinates in the data.
+
+:py:func:`~xarray.combine_nested` is useful when you know the spatial
+relationship between each object in advance. The datasets must be provided in
+the form of a nested list, which specifies their relative position and
+ordering. A common task is collecting data from a parallelized simulation where
+each processor wrote out data to a separate file. A domain which was decomposed
+into 4 parts, 2 each along both the x and y axes, requires organising the
+datasets into a doubly-nested list, e.g:
+
+.. ipython:: python
+
+    arr = xr.DataArray(name='temperature', data=np.random.randint(5, size=(2, 2)), dims=['x', 'y'])
+    arr
+    ds_grid = [[arr, arr], [arr, arr]]
+    xr.combine_nested(ds_grid, concat_dim=['x', 'y'])
+
+:py:func:`~xarray.combine_nested` can also be used to explicitly merge datasets
+with different variables. For example if we have 4 datasets, which are divided
+along two times, and contain two different variables, we can pass ``None``
+to ``'concat_dim'`` to specify the dimension of the nested list over which
+we wish to use ``merge`` instead of ``concat``:
+
+.. ipython:: python
+
+    temp = xr.DataArray(name='temperature', data=np.random.randn(2), dims=['t'])
+    precip = xr.DataArray(name='precipitation', data=np.random.randn(2), dims=['t'])
+    ds_grid = [[temp, precip], [temp, precip]]
+    xr.combine_nested(ds_grid, concat_dim=['t', None])
+
+:py:func:`~xarray.combine_by_coords` is for combining objects which have dimension
+coordinates which specify their relationship to and order relative to one
+another, for example a linearly-increasing 'time' dimension coordinate.
+
+Here we combine two datasets using their common dimension coordinates. Notice
+they are concatenated in order based on the values in their dimension
+coordinates, not on their position in the list passed to ``combine_by_coords``.
+
+.. ipython:: python
+    :okwarning:
+
+    x1 = xr.DataArray(name='foo', data=np.random.randn(3), coords=[('x', [0, 1, 2])])
+    x2 = xr.DataArray(name='foo', data=np.random.randn(3), coords=[('x', [3, 4, 5])])
+    xr.combine_by_coords([x2, x1])
+
+These functions can be used by :py:func:`~xarray.open_mfdataset` to open many
+files as one dataset. The particular function used is specified by setting the
+argument ``'combine'`` to ``'by_coords'`` or ``'nested'``. This is useful for
+situations where your data is split across many files in multiple locations,
+which have some known relationship between one another.

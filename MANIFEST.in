@@ -6,3 +6,4 @@ prune doc/generated
 global-exclude .DS_Store
 include versioneer.py
 include xarray/_version.py
+recursive-include xarray/static *

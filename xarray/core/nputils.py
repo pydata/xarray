@@ -5,6 +5,7 @@ import pandas as pd
 
 try:
     import bottleneck as bn
+
     _USE_BOTTLENECK = True
 except ImportError:
     # use numpy methods instead
@@ -15,8 +16,7 @@ except ImportError:
 def _validate_axis(data, axis):
     ndim = data.ndim
     if not -ndim <= axis < ndim:
-        raise IndexError('axis %r out of bounds [-%r, %r)'
-                         % (axis, ndim, ndim))
+        raise IndexError(f"axis {axis!r} out of bounds [-{ndim}, {ndim})")
     if axis < 0:
         axis += ndim
     return axis
@@ -77,13 +77,13 @@ def _ensure_bool_is_ndarray(result, *args):
 
 def array_eq(self, other):
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', r'elementwise comparison failed')
+        warnings.filterwarnings("ignore", r"elementwise comparison failed")
         return _ensure_bool_is_ndarray(self == other, self, other)
 
 
 def array_ne(self, other):
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', r'elementwise comparison failed')
+        warnings.filterwarnings("ignore", r"elementwise comparison failed")
         return _ensure_bool_is_ndarray(self != other, self, other)
 
 
@@ -102,11 +102,11 @@ def _advanced_indexer_subspaces(key):
     """
     if not isinstance(key, tuple):
         key = (key,)
-    advanced_index_positions = [i for i, k in enumerate(key)
-                                if not isinstance(k, slice)]
+    advanced_index_positions = [
+        i for i, k in enumerate(key) if not isinstance(k, slice)
+    ]
 
-    if (not advanced_index_positions or
-            not _is_contiguous(advanced_index_positions)):
+    if not advanced_index_positions or not _is_contiguous(advanced_index_positions):
         # Nothing to reorder: dimensions on the indexing result are already
         # ordered like vindex. See NumPy's rule for "Combining advanced and
         # basic indexing":
@@ -120,7 +120,7 @@ def _advanced_indexer_subspaces(key):
     return mixed_positions, vindex_positions
 
 
-class NumpyVIndexAdapter(object):
+class NumpyVIndexAdapter:
     """Object that implements indexing like vindex on a np.ndarray.
 
     This is a pure Python implementation of (some of) the logic in this NumPy
@@ -137,8 +137,7 @@ class NumpyVIndexAdapter(object):
     def __setitem__(self, key, value):
         """Value must have dimensionality matching the key."""
         mixed_positions, vindex_positions = _advanced_indexer_subspaces(key)
-        self._array[key] = np.moveaxis(value, vindex_positions,
-                                       mixed_positions)
+        self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
 def rolling_window(a, axis, window, center, fill_value):
@@ -150,7 +149,7 @@ def rolling_window(a, axis, window, center, fill_value):
         pads[axis] = (start, end)
     else:
         pads[axis] = (window - 1, 0)
-    a = np.pad(a, pads, mode='constant', constant_values=fill_value)
+    a = np.pad(a, pads, mode="constant", constant_values=fill_value)
     return _rolling_window(a, window, axis)
 
 
@@ -191,33 +190,37 @@ def _rolling_window(a, window, axis=-1):
     a = np.swapaxes(a, axis, -1)
 
     if window < 1:
-        raise ValueError(
-            "`window` must be at least 1. Given : {}".format(window))
+        raise ValueError(f"`window` must be at least 1. Given : {window}")
     if window > a.shape[-1]:
-        raise ValueError("`window` is too long. Given : {}".format(window))
+        raise ValueError(f"`window` is too long. Given : {window}")
 
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
-    rolling = np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides,
-                                              writeable=False)
+    rolling = np.lib.stride_tricks.as_strided(
+        a, shape=shape, strides=strides, writeable=False
+    )
     return np.swapaxes(rolling, -2, axis)
 
 
 def _create_bottleneck_method(name, npmodule=np):
-    def f(values, axis=None, **kwds):
-        dtype = kwds.get('dtype', None)
+    def f(values, axis=None, **kwargs):
+        dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
 
-        if (_USE_BOTTLENECK and bn_func is not None and
-                not isinstance(axis, tuple) and
-                values.dtype.kind in 'uifc' and
-                values.dtype.isnative and
-                (dtype is None or np.dtype(dtype) == values.dtype)):
+        if (
+            _USE_BOTTLENECK
+            and isinstance(values, np.ndarray)
+            and bn_func is not None
+            and not isinstance(axis, tuple)
+            and values.dtype.kind in "uifc"
+            and values.dtype.isnative
+            and (dtype is None or np.dtype(dtype) == values.dtype)
+        ):
             # bottleneck does not take care dtype, min_count
-            kwds.pop('dtype', None)
-            result = bn_func(values, axis=axis, **kwds)
+            kwargs.pop("dtype", None)
+            result = bn_func(values, axis=axis, **kwargs)
         else:
-            result = getattr(npmodule, name)(values, axis=axis, **kwds)
+            result = getattr(npmodule, name)(values, axis=axis, **kwargs)
 
         return result
 
@@ -225,12 +228,14 @@ def _create_bottleneck_method(name, npmodule=np):
     return f
 
 
-nanmin = _create_bottleneck_method('nanmin')
-nanmax = _create_bottleneck_method('nanmax')
-nanmean = _create_bottleneck_method('nanmean')
-nanmedian = _create_bottleneck_method('nanmedian')
-nanvar = _create_bottleneck_method('nanvar')
-nanstd = _create_bottleneck_method('nanstd')
-nanprod = _create_bottleneck_method('nanprod')
-nancumsum = _create_bottleneck_method('nancumsum')
-nancumprod = _create_bottleneck_method('nancumprod')
+nanmin = _create_bottleneck_method("nanmin")
+nanmax = _create_bottleneck_method("nanmax")
+nanmean = _create_bottleneck_method("nanmean")
+nanmedian = _create_bottleneck_method("nanmedian")
+nanvar = _create_bottleneck_method("nanvar")
+nanstd = _create_bottleneck_method("nanstd")
+nanprod = _create_bottleneck_method("nanprod")
+nancumsum = _create_bottleneck_method("nancumsum")
+nancumprod = _create_bottleneck_method("nancumprod")
+nanargmin = _create_bottleneck_method("nanargmin")
+nanargmax = _create_bottleneck_method("nanargmax")

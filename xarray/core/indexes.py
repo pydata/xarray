@@ -1,15 +1,19 @@
 import collections.abc
-from collections import OrderedDict
-from typing import Any, Hashable, Iterable, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Hashable, Iterable, Mapping, Optional, Tuple, Union
 
+import numpy as np
 import pandas as pd
 
 from . import formatting
+from .utils import is_scalar
 from .variable import Variable
 
 
 class Indexes(collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArrary indexes."""
+
+    __slots__ = ("_indexes",)
+
     def __init__(self, indexes):
         """Not for public consumption.
 
@@ -37,9 +41,8 @@ class Indexes(collections.abc.Mapping):
 
 
 def default_indexes(
-    coords: Mapping[Any, Variable],
-    dims: Iterable,
-) -> 'OrderedDict[Any, pd.Index]':
+    coords: Mapping[Any, Variable], dims: Iterable
+) -> Dict[Hashable, pd.Index]:
     """Default indexes for a Dataset/DataArray.
 
     Parameters
@@ -54,15 +57,14 @@ def default_indexes(
     Mapping from indexing keys (levels/dimension names) to indexes used for
     indexing along that dimension.
     """
-    return OrderedDict((key, coords[key].to_index())
-                       for key in dims if key in coords)
+    return {key: coords[key].to_index() for key in dims if key in coords}
 
 
 def isel_variable_and_index(
     name: Hashable,
     variable: Variable,
     index: pd.Index,
-    indexers: Mapping[Any, Union[slice, Variable]],
+    indexers: Mapping[Hashable, Union[int, slice, np.ndarray, Variable]],
 ) -> Tuple[Variable, Optional[pd.Index]]:
     """Index a Variable and pandas.Index together."""
     if not indexers:
@@ -71,8 +73,8 @@ def isel_variable_and_index(
 
     if len(variable.dims) > 1:
         raise NotImplementedError(
-            'indexing multi-dimensional variable with indexes is not '
-            'supported yet')
+            "indexing multi-dimensional variable with indexes is not " "supported yet"
+        )
 
     new_variable = variable.isel(indexers)
 
@@ -87,3 +89,31 @@ def isel_variable_and_index(
         indexer = indexer.data
     new_index = index[indexer]
     return new_variable, new_index
+
+
+def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
+    """Roll an pandas.Index."""
+    count %= index.shape[0]
+    if count != 0:
+        return index[-count:].append(index[:-count])
+    else:
+        return index[:]
+
+
+def propagate_indexes(
+    indexes: Optional[Dict[Hashable, pd.Index]], exclude: Optional[Any] = None
+) -> Optional[Dict[Hashable, pd.Index]]:
+    """ Creates new indexes dict from existing dict optionally excluding some dimensions.
+    """
+    if exclude is None:
+        exclude = ()
+
+    if is_scalar(exclude):
+        exclude = (exclude,)
+
+    if indexes is not None:
+        new_indexes = {k: v for k, v in indexes.items() if k not in exclude}
+    else:
+        new_indexes = None  # type: ignore
+
+    return new_indexes

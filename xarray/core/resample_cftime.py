@@ -36,16 +36,25 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from ..coding.cftimeindex import CFTimeIndex
-from ..coding.cftime_offsets import (cftime_range, normalize_date,
-                                     Day, MonthEnd, QuarterEnd, YearEnd,
-                                     CFTIME_TICKS, to_offset)
 import datetime
+
 import numpy as np
 import pandas as pd
 
+from ..coding.cftime_offsets import (
+    CFTIME_TICKS,
+    Day,
+    MonthEnd,
+    QuarterEnd,
+    YearEnd,
+    cftime_range,
+    normalize_date,
+    to_offset,
+)
+from ..coding.cftimeindex import CFTimeIndex
 
-class CFTimeGrouper(object):
+
+class CFTimeGrouper:
     """This is a simple container for the grouping parameters that implements a
     single method, the only one required for resampling in xarray.  It cannot
     be used in a call to groupby like a pandas.Grouper object can."""
@@ -59,14 +68,14 @@ class CFTimeGrouper(object):
 
         if isinstance(self.freq, (MonthEnd, QuarterEnd, YearEnd)):
             if self.closed is None:
-                self.closed = 'right'
+                self.closed = "right"
             if self.label is None:
-                self.label = 'right'
+                self.label = "right"
         else:
             if self.closed is None:
-                self.closed = 'left'
+                self.closed = "left"
             if self.label is None:
-                self.label = 'left'
+                self.label = "left"
 
     def first_items(self, index):
         """Meant to reproduce the results of the following
@@ -78,8 +87,9 @@ class CFTimeGrouper(object):
         with index being a CFTimeIndex instead of a DatetimeIndex.
         """
 
-        datetime_bins, labels = _get_time_bins(index, self.freq, self.closed,
-                                               self.label, self.base)
+        datetime_bins, labels = _get_time_bins(
+            index, self.freq, self.closed, self.label, self.base
+        )
         if self.loffset is not None:
             if isinstance(self.loffset, datetime.timedelta):
                 labels = labels + self.loffset
@@ -92,12 +102,11 @@ class CFTimeGrouper(object):
         if index[-1] > datetime_bins[-1]:
             raise ValueError("Value falls after last bin")
 
-        integer_bins = np.searchsorted(
-            index, datetime_bins, side=self.closed)[:-1]
+        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[:-1]
         first_items = pd.Series(integer_bins, labels)
 
         # Mask duplicate values with NaNs, preserving the last values
-        non_duplicate = ~first_items.duplicated('last')
+        non_duplicate = ~first_items.duplicated("last")
         return first_items.where(non_duplicate)
 
 
@@ -135,24 +144,26 @@ def _get_time_bins(index, freq, closed, label, base):
     """
 
     if not isinstance(index, CFTimeIndex):
-        raise TypeError('index must be a CFTimeIndex, but got '
-                        'an instance of %r' % type(index).__name__)
+        raise TypeError(
+            "index must be a CFTimeIndex, but got "
+            "an instance of %r" % type(index).__name__
+        )
     if len(index) == 0:
         datetime_bins = labels = CFTimeIndex(data=[], name=index.name)
         return datetime_bins, labels
 
-    first, last = _get_range_edges(index.min(), index.max(), freq,
-                                   closed=closed,
-                                   base=base)
-    datetime_bins = labels = cftime_range(freq=freq,
-                                          start=first,
-                                          end=last,
-                                          name=index.name)
+    first, last = _get_range_edges(
+        index.min(), index.max(), freq, closed=closed, base=base
+    )
+    datetime_bins = labels = cftime_range(
+        freq=freq, start=first, end=last, name=index.name
+    )
 
-    datetime_bins, labels = _adjust_bin_edges(datetime_bins, freq, closed,
-                                              index, labels)
+    datetime_bins, labels = _adjust_bin_edges(
+        datetime_bins, freq, closed, index, labels
+    )
 
-    if label == 'right':
+    if label == "right":
         labels = labels[1:]
     else:
         labels = labels[:-1]
@@ -199,12 +210,12 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
     This is also required for daily frequencies longer than one day and
     year-end frequencies.
     """
-    is_super_daily = (isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)) or
-                      (isinstance(offset, Day) and offset.n > 1))
+    is_super_daily = isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)) or (
+        isinstance(offset, Day) and offset.n > 1
+    )
     if is_super_daily:
-        if closed == 'right':
-            datetime_bins = datetime_bins + datetime.timedelta(days=1,
-                                                               microseconds=-1)
+        if closed == "right":
+            datetime_bins = datetime_bins + datetime.timedelta(days=1, microseconds=-1)
         if datetime_bins[-2] > index.max():
             datetime_bins = datetime_bins[:-1]
             labels = labels[:-1]
@@ -212,7 +223,7 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
     return datetime_bins, labels
 
 
-def _get_range_edges(first, last, offset, closed='left', base=0):
+def _get_range_edges(first, last, offset, closed="left", base=0):
     """ Get the correct starting and ending datetimes for the resampled
     CFTimeIndex range.
 
@@ -243,14 +254,15 @@ def _get_range_edges(first, last, offset, closed='left', base=0):
         Corrected ending datetime object for resampled CFTimeIndex range.
     """
     if isinstance(offset, CFTIME_TICKS):
-        first, last = _adjust_dates_anchored(first, last, offset,
-                                             closed=closed, base=base)
+        first, last = _adjust_dates_anchored(
+            first, last, offset, closed=closed, base=base
+        )
         return first, last
     else:
         first = normalize_date(first)
         last = normalize_date(last)
 
-    if closed == 'left':
+    if closed == "left":
         first = offset.rollback(first)
     else:
         first = first - offset
@@ -259,7 +271,7 @@ def _get_range_edges(first, last, offset, closed='left', base=0):
     return first, last
 
 
-def _adjust_dates_anchored(first, last, offset, closed='right', base=0):
+def _adjust_dates_anchored(first, last, offset, closed="right", base=0):
     """ First and last offsets should be calculated from the start day to fix
     an error cause by resampling across multiple days when a one day period is
     not a multiple of the frequency.
@@ -296,11 +308,9 @@ def _adjust_dates_anchored(first, last, offset, closed='right', base=0):
     start_day = normalize_date(first)
     base_td = type(offset)(n=base).as_timedelta()
     start_day += base_td
-    foffset = exact_cftime_datetime_difference(
-        start_day, first) % offset.as_timedelta()
-    loffset = exact_cftime_datetime_difference(
-        start_day, last) % offset.as_timedelta()
-    if closed == 'right':
+    foffset = exact_cftime_datetime_difference(start_day, first) % offset.as_timedelta()
+    loffset = exact_cftime_datetime_difference(start_day, last) % offset.as_timedelta()
+    if closed == "right":
         if foffset.total_seconds() > 0:
             fresult = first - foffset
         else:

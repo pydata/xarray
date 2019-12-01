@@ -1,0 +1,28 @@
+name: xarray-docs
+channels:
+  # Don't change to pkgs/main, as it causes random timeouts in readthedocs
+  - conda-forge
+dependencies:
+  - python=3.7
+  - bottleneck
+  - cartopy
+  - eccodes
+  - h5netcdf
+  - ipykernel
+  - ipython
+  - iris
+  - jupyter_client
+  - nbsphinx
+  - netcdf4
+  - numpy
+  - numpydoc
+  - pandas<0.25  # Hack around https://github.com/pydata/xarray/issues/3369
+  - rasterio
+  - seaborn
+  - sphinx
+  - sphinx_rtd_theme
+  - zarr
+  - pip
+  - pip:
+    - cfgrib
+

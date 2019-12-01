@@ -1,7 +1,7 @@
 """Coders for individual Variable objects."""
-from typing import Any
 import warnings
 from functools import partial
+from typing import Any, Hashable
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ class SerializationWarning(RuntimeWarning):
     """Warnings about encoding/decoding issues in serialization."""
 
 
-class VariableCoder(object):
+class VariableCoder:
     """Base class for encoding and decoding transformations on variables.
 
     We use coders for transforming variables between xarray's data model and
@@ -32,15 +32,19 @@ class VariableCoder(object):
     variables in the underlying store.
     """
 
-    def encode(self, variable, name=None):
-        # type: (Variable, Any) -> Variable
-        """Convert an encoded variable to a decoded variable."""
-        raise NotImplementedError
+    def encode(
+        self, variable: Variable, name: Hashable = None
+    ) -> Variable:  # pragma: no cover
+        """Convert an encoded variable to a decoded variable
+        """
+        raise NotImplementedError()
 
-    def decode(self, variable, name=None):
-        # type: (Variable, Any) -> Variable
-        """Convert an decoded variable to a encoded variable."""
-        raise NotImplementedError
+    def decode(
+        self, variable: Variable, name: Hashable = None
+    ) -> Variable:  # pragma: no cover
+        """Convert an decoded variable to a encoded variable
+        """
+        raise NotImplementedError()
 
 
 class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -68,8 +72,9 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return self.func(self.array)
 
     def __repr__(self):
-        return ("%s(%r, func=%r, dtype=%r)" %
-                (type(self).__name__, self.array, self.func, self.dtype))
+        return "{}({!r}, func={!r}, dtype={!r})".format(
+            type(self).__name__, self.array, self.func, self.dtype
+        )
 
 
 def lazy_elemwise_func(array, func, dtype):
@@ -104,12 +109,13 @@ def unpack_for_decoding(var):
 
 def safe_setitem(dest, key, value, name=None):
     if key in dest:
-        var_str = ' on variable {!r}'.format(name) if name else ''
+        var_str = f" on variable {name!r}" if name else ""
         raise ValueError(
-            'failed to prevent overwriting existing key {} in attrs{}. '
-            'This is probably an encoding field used by xarray to describe '
-            'how a variable is serialized. To proceed, remove this key from '
-            "the variable's attributes manually.".format(key, var_str))
+            "failed to prevent overwriting existing key {} in attrs{}. "
+            "This is probably an encoding field used by xarray to describe "
+            "how a variable is serialized. To proceed, remove this key from "
+            "the variable's attributes manually.".format(key, var_str)
+        )
     dest[key] = value
 
 
@@ -126,10 +132,7 @@ def pop_to(source, dest, key, name=None):
 
 
 def _apply_mask(
-    data: np.ndarray,
-    encoded_fill_values: list,
-    decoded_fill_value: Any,
-    dtype: Any,
+    data: np.ndarray, encoded_fill_values: list, decoded_fill_value: Any, dtype: Any
 ) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
     data = np.asarray(data, dtype=dtype)
@@ -145,9 +148,30 @@ class CFMaskCoder(VariableCoder):
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-        if encoding.get('_FillValue') is not None:
-            fill_value = pop_to(encoding, attrs, '_FillValue', name=name)
+        fv = encoding.get("_FillValue")
+        mv = encoding.get("missing_value")
+
+        if (
+            fv is not None
+            and mv is not None
+            and not duck_array_ops.allclose_or_equiv(fv, mv)
+        ):
+            raise ValueError(
+                f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
+            )
+
+        if fv is not None:
+            # Ensure _FillValue is cast to same dtype as data's
+            encoding["_FillValue"] = data.dtype.type(fv)
+            fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
+                data = duck_array_ops.fillna(data, fill_value)
+
+        if mv is not None:
+            # Ensure missing_value is cast to same dtype as data's
+            encoding["missing_value"] = data.dtype.type(mv)
+            fill_value = pop_to(encoding, attrs, "missing_value", name=name)
+            if not pd.isnull(fill_value) and fv is None:
                 data = duck_array_ops.fillna(data, fill_value)
 
         return Variable(dims, data, attrs, encoding)
@@ -155,26 +179,35 @@ class CFMaskCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        raw_fill_values = [pop_to(attrs, encoding, attr, name=name)
-                           for attr in ('missing_value', '_FillValue')]
+        raw_fill_values = [
+            pop_to(attrs, encoding, attr, name=name)
+            for attr in ("missing_value", "_FillValue")
+        ]
         if raw_fill_values:
-            encoded_fill_values = {fv for option in raw_fill_values
-                                   for fv in np.ravel(option)
-                                   if not pd.isnull(fv)}
+            encoded_fill_values = {
+                fv
+                for option in raw_fill_values
+                for fv in np.ravel(option)
+                if not pd.isnull(fv)
+            }
 
             if len(encoded_fill_values) > 1:
-                warnings.warn("variable {!r} has multiple fill values {}, "
-                              "decoding all values to NaN."
-                              .format(name, encoded_fill_values),
-                              SerializationWarning, stacklevel=3)
+                warnings.warn(
+                    "variable {!r} has multiple fill values {}, "
+                    "decoding all values to NaN.".format(name, encoded_fill_values),
+                    SerializationWarning,
+                    stacklevel=3,
+                )
 
             dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
 
             if encoded_fill_values:
-                transform = partial(_apply_mask,
-                                    encoded_fill_values=encoded_fill_values,
-                                    decoded_fill_value=decoded_fill_value,
-                                    dtype=dtype)
+                transform = partial(
+                    _apply_mask,
+                    encoded_fill_values=encoded_fill_values,
+                    decoded_fill_value=decoded_fill_value,
+                    dtype=dtype,
+                )
                 data = lazy_elemwise_func(data, transform, dtype)
 
         return Variable(dims, data, attrs, encoding)
@@ -218,34 +251,35 @@ class CFScaleOffsetCoder(VariableCoder):
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-        if 'scale_factor' in encoding or 'add_offset' in encoding:
-            dtype = _choose_float_dtype(data.dtype, 'add_offset' in encoding)
+        if "scale_factor" in encoding or "add_offset" in encoding:
+            dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             data = data.astype(dtype=dtype, copy=True)
-            if 'add_offset' in encoding:
-                data -= pop_to(encoding, attrs, 'add_offset', name=name)
-            if 'scale_factor' in encoding:
-                data /= pop_to(encoding, attrs, 'scale_factor', name=name)
+            if "add_offset" in encoding:
+                data -= pop_to(encoding, attrs, "add_offset", name=name)
+            if "scale_factor" in encoding:
+                data /= pop_to(encoding, attrs, "scale_factor", name=name)
 
         return Variable(dims, data, attrs, encoding)
 
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if 'scale_factor' in attrs or 'add_offset' in attrs:
-            scale_factor = pop_to(attrs, encoding, 'scale_factor', name=name)
-            add_offset = pop_to(attrs, encoding, 'add_offset', name=name)
-            dtype = _choose_float_dtype(data.dtype, 'add_offset' in attrs)
-            transform = partial(_scale_offset_decoding,
-                                scale_factor=scale_factor,
-                                add_offset=add_offset,
-                                dtype=dtype)
+        if "scale_factor" in attrs or "add_offset" in attrs:
+            scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
+            add_offset = pop_to(attrs, encoding, "add_offset", name=name)
+            dtype = _choose_float_dtype(data.dtype, "add_offset" in attrs)
+            transform = partial(
+                _scale_offset_decoding,
+                scale_factor=scale_factor,
+                add_offset=add_offset,
+                dtype=dtype,
+            )
             data = lazy_elemwise_func(data, transform, dtype)
 
         return Variable(dims, data, attrs, encoding)
 
 
 class UnsignedIntegerCoder(VariableCoder):
-
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
@@ -253,12 +287,12 @@ class UnsignedIntegerCoder(VariableCoder):
         # https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
         #     "_Unsigned = "true" to indicate that
         #      integer data should be treated as unsigned"
-        if encoding.get('_Unsigned', 'false') == 'true':
-            pop_to(encoding, attrs, '_Unsigned')
-            signed_dtype = np.dtype('i%s' % data.dtype.itemsize)
-            if '_FillValue' in attrs:
-                new_fill = signed_dtype.type(attrs['_FillValue'])
-                attrs['_FillValue'] = new_fill
+        if encoding.get("_Unsigned", "false") == "true":
+            pop_to(encoding, attrs, "_Unsigned")
+            signed_dtype = np.dtype("i%s" % data.dtype.itemsize)
+            if "_FillValue" in attrs:
+                new_fill = signed_dtype.type(attrs["_FillValue"])
+                attrs["_FillValue"] = new_fill
             data = duck_array_ops.around(data).astype(signed_dtype)
 
         return Variable(dims, data, attrs, encoding)
@@ -266,20 +300,23 @@ class UnsignedIntegerCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if '_Unsigned' in attrs:
-            unsigned = pop_to(attrs, encoding, '_Unsigned')
+        if "_Unsigned" in attrs:
+            unsigned = pop_to(attrs, encoding, "_Unsigned")
 
-            if data.dtype.kind == 'i':
-                if unsigned == 'true':
-                    unsigned_dtype = np.dtype('u%s' % data.dtype.itemsize)
+            if data.dtype.kind == "i":
+                if unsigned == "true":
+                    unsigned_dtype = np.dtype("u%s" % data.dtype.itemsize)
                     transform = partial(np.asarray, dtype=unsigned_dtype)
                     data = lazy_elemwise_func(data, transform, unsigned_dtype)
-                    if '_FillValue' in attrs:
-                        new_fill = unsigned_dtype.type(attrs['_FillValue'])
-                        attrs['_FillValue'] = new_fill
+                    if "_FillValue" in attrs:
+                        new_fill = unsigned_dtype.type(attrs["_FillValue"])
+                        attrs["_FillValue"] = new_fill
             else:
-                warnings.warn("variable %r has _Unsigned attribute but is not "
-                              "of integer type. Ignoring attribute." % name,
-                              SerializationWarning, stacklevel=3)
+                warnings.warn(
+                    "variable %r has _Unsigned attribute but is not "
+                    "of integer type. Ignoring attribute." % name,
+                    SerializationWarning,
+                    stacklevel=3,
+                )
 
         return Variable(dims, data, attrs, encoding)
