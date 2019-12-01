@@ -1135,7 +1135,7 @@ def test_map_blocks_to_array(map_ds):
         actual = xr.map_blocks(lambda x: x.to_array(), map_ds)
 
     # to_array does not preserve name, so cannot use assert_identical
-    assert_equal(actual, map_ds.to_array().compute())
+    assert_equal(actual, map_ds.to_array())
 
 
 @pytest.mark.parametrize(
@@ -1173,7 +1173,7 @@ def test_map_blocks_ds_transformations(func, map_ds):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, map_ds)
 
-    assert_identical(actual, func(map_ds).compute())
+    assert_identical(actual, func(map_ds))
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
