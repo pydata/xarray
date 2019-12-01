@@ -936,19 +936,35 @@ class TestDataset:
         expected_chunks = {"dim1": (8,), "dim2": (9,), "dim3": (10,)}
         assert reblocked.chunks == expected_chunks
 
+        def get_dask_names(ds):
+            return {k: v.data.name for k, v in ds.items()}
+
+        orig_dask_names = get_dask_names(reblocked)
+
         reblocked = data.chunk({"time": 5, "dim1": 5, "dim2": 5, "dim3": 5})
         # time is not a dim in any of the data_vars, so it
         # doesn't get chunked
         expected_chunks = {"dim1": (5, 3), "dim2": (5, 4), "dim3": (5, 5)}
         assert reblocked.chunks == expected_chunks
 
+        # make sure dask names change when rechunking by different amounts
+        # regression test for GH3350
+        new_dask_names = get_dask_names(reblocked)
+        for k, v in new_dask_names.items():
+            assert v != orig_dask_names[k]
+
         reblocked = data.chunk(expected_chunks)
         assert reblocked.chunks == expected_chunks
 
         # reblock on already blocked data
+        orig_dask_names = get_dask_names(reblocked)
         reblocked = reblocked.chunk(expected_chunks)
+        new_dask_names = get_dask_names(reblocked)
         assert reblocked.chunks == expected_chunks
         assert_identical(reblocked, data)
+        # recuhnking with same chunk sizes should not change names
+        for k, v in new_dask_names.items():
+            assert v == orig_dask_names[k]
 
         with raises_regex(ValueError, "some chunks"):
             data.chunk({"foo": 10})

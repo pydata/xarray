@@ -33,6 +33,10 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
+- Make sure dask names change when rechunking by different chunk sizes. Conversely, make sure they
+  stay the same when rechunking by the same chunk size. (:issue:`3350`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
