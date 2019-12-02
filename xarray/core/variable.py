@@ -1825,7 +1825,7 @@ class Variable(
         fill_value:
             value to be filled.
         mode: optional. Default None
-            One of None | 'periodic' | 'reflect'
+            One of None | 'edge' | 'reflect' | 'symmetric' | 'wrap'
             If it is not None, fill_value is ignored.
 
         Returns

@@ -489,6 +489,10 @@ class DatasetRolling(Rolling):
             size of stride for the rolling window.
         fill_value: optional. Default dtypes.NA
             Filling value to match the dimension size.
+        mode: optional. Default None
+            One of None | 'edge' | 'reflect' | 'symmetric' | 'wrap'
+            For the details of the mode, see
+            https://docs.scipy.org/doc/numpy/reference/generated/numpy.pad.html
 
         Returns
         -------
