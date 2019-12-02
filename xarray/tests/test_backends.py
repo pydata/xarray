@@ -3951,6 +3951,7 @@ class TestRasterio:
                     with xr.open_rasterio(tmp_file) as actual:
                         assert_allclose(actual, expected)
 
+    @pytest.mark.xfail(reason="rasterio 1.1.1 is broken. GH3573")
     def test_rasterio_vrt(self):
         import rasterio
 

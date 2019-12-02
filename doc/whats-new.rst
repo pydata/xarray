@@ -29,6 +29,10 @@ New Features
   newly supported in :py:meth:`~xarray.DataArray.rolling.construct`.
   (:issue:`2007`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
+  now work with dask Variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Bug fixes
 ~~~~~~~~~
@@ -48,10 +52,17 @@ Documentation
   data. (:pull:`3199`)
   By `Zach Bruick <https://github.com/zbruick>` and
   `Stephan Siemen <https://github.com/StephanSiemen>`
+- Added examples for `DataArray.quantile`, `Dataset.quantile` and
+  `GroupBy.quantile`. (:pull:`3576`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+
+- Removed internal method ``Dataset._from_vars_and_coord_names``, 
+  which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 
 v0.14.1 (19 Nov 2019)

@@ -466,7 +466,7 @@ class DataArray(AbstractArray, DataWithCoords):
         variables.update({k: v for k, v in self._coords.items() if k != dim})
         indexes = propagate_indexes(self._indexes, exclude=dim)
         coord_names = set(self._coords) - set([dim])
-        dataset = Dataset._from_vars_and_coord_names(
+        dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
         )
         return dataset
@@ -496,9 +496,7 @@ class DataArray(AbstractArray, DataWithCoords):
         indexes = self._indexes
 
         coord_names = set(self._coords)
-        dataset = Dataset._from_vars_and_coord_names(
-            variables, coord_names, indexes=indexes
-        )
+        dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
         return dataset
 
     def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
@@ -2973,6 +2971,43 @@ class DataArray(AbstractArray, DataWithCoords):
         See Also
         --------
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     data=[[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
+        ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
+        ...     dims=("x", "y"),
+        ... )
+
+        Single quantile
+        >>> da.quantile(0)  # or da.quantile(0, dim=...)
+        <xarray.DataArray ()>
+        array(0.7)
+        Coordinates:
+            quantile  float64 0.0
+        >>> da.quantile(0, dim="x")
+        <xarray.DataArray (y: 4)>
+        array([0.7, 4.2, 2.6, 1.5])
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+            quantile  float64 0.0
+
+        Multiple quantiles
+        >>> da.quantile([0, 0.5, 1])
+        <xarray.DataArray (quantile: 3)>
+        array([0.7, 3.4, 9.4])
+        Coordinates:
+          * quantile  (quantile) float64 0.0 0.5 1.0
+        >>> da.quantile([0, 0.5, 1], dim="x")
+        <xarray.DataArray (quantile: 3, y: 4)>
+        array([[0.7 , 4.2 , 2.6 , 1.5 ],
+               [3.6 , 5.75, 6.  , 1.7 ],
+               [6.5 , 7.3 , 9.4 , 1.9 ]])
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+          * quantile  (quantile) float64 0.0 0.5 1.0
         """
 
         ds = self._to_temp_dataset().quantile(

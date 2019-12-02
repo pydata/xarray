@@ -877,14 +877,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._encoding = encoding
         return obj
 
-    @classmethod
-    def _from_vars_and_coord_names(
-        cls, variables, coord_names, indexes=None, attrs=None
-    ):
-        return cls._construct_direct(
-            variables, coord_names, indexes=indexes, attrs=attrs
-        )
-
     def _replace(
         self,
         variables: Dict[Hashable, Variable] = None,
@@ -5124,6 +5116,48 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         numpy.nanpercentile, pandas.Series.quantile, DataArray.quantile
+
+        Examples
+        --------
+
+        >>> ds = xr.Dataset(
+        ...     {"a": (("x", "y"), [[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]])},
+        ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
+        ... )
+
+        Single quantile
+        >>> ds.quantile(0)  # or ds.quantile(0, dim=...)
+        <xarray.Dataset>
+        Dimensions:   ()
+        Coordinates:
+            quantile  float64 0.0
+        Data variables:
+            a         float64 0.7
+        >>> ds.quantile(0, dim="x")
+        <xarray.Dataset>
+        Dimensions:   (y: 4)
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+            quantile  float64 0.0
+        Data variables:
+            a         (y) float64 0.7 4.2 2.6 1.5
+
+        Multiple quantiles
+        >>> ds.quantile([0, 0.5, 1])
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3)
+        Coordinates:
+          * quantile  (quantile) float64 0.0 0.5 1.0
+        Data variables:
+            a         (quantile) float64 0.7 3.4 9.4
+        >>> ds.quantile([0, 0.5, 1], dim="x")
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3, y: 4)
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+          * quantile  (quantile) float64 0.0 0.5 1.0
+        Data variables:
+            a         (quantile, y) float64 0.7 4.2 2.6 1.5 3.6 ... 1.7 6.5 7.3 9.4 1.9
         """
 
         if isinstance(dim, str):
@@ -5174,11 +5208,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         new = self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
         )
-        if "quantile" in new.dims:
-            new.coords["quantile"] = Variable("quantile", q)
-        else:
-            new.coords["quantile"] = q
-        return new
+        return new.assign_coords(quantile=q)
 
     def rank(self, dim, pct=False, keep_attrs=None):
         """Ranks the data.

@@ -22,6 +22,7 @@ from xarray.core.indexing import (
     PandasIndexAdapter,
     VectorizedIndexer,
 )
+from xarray.core.pycompat import dask_array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import requires_bottleneck
@@ -1505,23 +1506,31 @@ class TestVariable(VariableSubclassobjects):
         with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
             v.mean(dim="x", allow_lazy=False)
 
-    def test_quantile(self):
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    @pytest.mark.parametrize(
+        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+    )
+    def test_quantile(self, q, axis, dim):
         v = Variable(["x", "y"], self.d)
-        for q in [0.25, [0.50], [0.25, 0.75]]:
-            for axis, dim in zip(
-                [None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]
-            ):
-                actual = v.quantile(q, dim=dim)
-
-                expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
-                np.testing.assert_allclose(actual.values, expected)
+        actual = v.quantile(q, dim=dim)
+        expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+        np.testing.assert_allclose(actual.values, expected)
 
     @requires_dask
-    def test_quantile_dask_raises(self):
-        # regression for GH1524
-        v = Variable(["x", "y"], self.d).chunk(2)
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    @pytest.mark.parametrize("axis, dim", [[1, "y"], [[1], ["y"]]])
+    def test_quantile_dask(self, q, axis, dim):
+        v = Variable(["x", "y"], self.d).chunk({"x": 2})
+        actual = v.quantile(q, dim=dim)
+        assert isinstance(actual.data, dask_array_type)
+        expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+        np.testing.assert_allclose(actual.values, expected)
 
-        with raises_regex(TypeError, "arrays stored as dask"):
+    @requires_dask
+    def test_quantile_chunked_dim_error(self):
+        v = Variable(["x", "y"], self.d).chunk({"x": 2})
+
+        with raises_regex(ValueError, "dimension 'x'"):
             v.quantile(0.5, dim="x")
 
     @requires_dask
