@@ -1801,7 +1801,7 @@ class Variable(
         return Variable(self.dims, ranked)
 
     def rolling_window(
-        self, dim, window, window_dim, center=False, fill_value=dtypes.NA
+        self, dim, window, window_dim, center=False, fill_value=dtypes.NA, mode=None
     ):
         """
         Make a rolling_window along dim and add a new_dim to the last place.
@@ -1819,6 +1819,9 @@ class Variable(
             of the axis.
         fill_value:
             value to be filled.
+        mode: optional. Default None
+            One of None | 'periodic' | 'reflect'
+            If it is not None, fill_value is ignored.
 
         Returns
         -------
@@ -1856,6 +1859,7 @@ class Variable(
                 window=window,
                 center=center,
                 fill_value=fill_value,
+                mode=mode,
             ),
         )
 

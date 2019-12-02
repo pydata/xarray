@@ -503,10 +503,10 @@ def test_dask_rolling(axis, window, center):
     dx = da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8])
 
     expected = rolling_window(
-        x, axis=axis, window=window, center=center, fill_value=np.nan
+        x, axis=axis, window=window, center=center, fill_value=np.nan, mode=None
     )
     actual = rolling_window(
-        dx, axis=axis, window=window, center=center, fill_value=np.nan
+        dx, axis=axis, window=window, center=center, fill_value=np.nan, mode=None
     )
     assert isinstance(actual, da.Array)
     assert_array_equal(actual, expected)
@@ -515,7 +515,9 @@ def test_dask_rolling(axis, window, center):
     # we need to take care of window size if chunk size is small
     # window/2 should be smaller than the smallest chunk size.
     with pytest.raises(ValueError):
-        rolling_window(dx, axis=axis, window=100, center=center, fill_value=np.nan)
+        rolling_window(
+            dx, axis=axis, window=100, center=center, fill_value=np.nan, mode=None
+        )
 
 
 @pytest.mark.skipif(not has_dask, reason="This is for dask.")

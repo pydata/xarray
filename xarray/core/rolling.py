@@ -193,7 +193,7 @@ class DataArrayRolling(Rolling):
 
             yield (label, window)
 
-    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
+    def construct(self, window_dim, stride=1, fill_value=dtypes.NA, mode=None):
         """
         Convert this rolling object to xr.DataArray,
         where the window dimension is stacked as a new dimension
@@ -206,6 +206,11 @@ class DataArrayRolling(Rolling):
             Size of stride for the rolling window.
         fill_value: optional. Default dtypes.NA
             Filling value to match the dimension size.
+        mode: optional. Default None
+            One of None | 'edge' | 'reflect' | 'symmetric' | 'wrap'
+            For the details of the mode, see
+            https://docs.scipy.org/doc/numpy/reference/generated/numpy.pad.html
+            If it is not None, fill_value is ignored.
 
         Returns
         -------
@@ -234,7 +239,12 @@ class DataArrayRolling(Rolling):
         from .dataarray import DataArray
 
         window = self.obj.variable.rolling_window(
-            self.dim, self.window, window_dim, self.center, fill_value=fill_value
+            self.dim,
+            self.window,
+            window_dim,
+            self.center,
+            fill_value=fill_value,
+            mode=mode,
         )
         result = DataArray(
             window, dims=self.obj.dims + (window_dim,), coords=self.obj.coords
@@ -466,7 +476,7 @@ class DatasetRolling(Rolling):
             **kwargs,
         )
 
-    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
+    def construct(self, window_dim, stride=1, fill_value=dtypes.NA, mode=None):
         """
         Convert this rolling object to xr.Dataset,
         where the window dimension is stacked as a new dimension
@@ -491,7 +501,7 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             if self.dim in da.dims:
                 dataset[key] = self.rollings[key].construct(
-                    window_dim, fill_value=fill_value
+                    window_dim, fill_value=fill_value, mode=mode
                 )
             else:
                 dataset[key] = da

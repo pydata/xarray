@@ -27,7 +27,7 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     return result
 
 
-def rolling_window(a, axis, window, center, fill_value):
+def rolling_window(a, axis, window, center, fill_value, mode):
     """Dask's equivalence to np.utils.rolling_window
     """
     import dask.array as da
@@ -68,25 +68,44 @@ def rolling_window(a, axis, window, center, fill_value):
             # smaller than the depth, we enlarge this and truncate it later.
             drop_size = depth[axis] - pad_size
             pad_size = depth[axis]
-        shape = list(a.shape)
-        shape[axis] = pad_size
-        chunks = list(a.chunks)
-        chunks[axis] = (pad_size,)
-        fill_array = da.full(shape, fill_value, dtype=a.dtype, chunks=chunks)
-        a = da.concatenate([fill_array, a], axis=axis)
 
-    boundary = {d: fill_value for d in range(a.ndim)}
+    # pad manually
+    pads = (
+        ((0, 0),) * axis
+        + ((pad_size + depth[axis], depth[axis]),)
+        + ((0, 0),) * (a.ndim - axis - 1)
+    )
+    if mode is None:
+        a = da.pad(a, pads, mode="constant", constant_values=fill_value)
+    else:
+        a = da.pad(a, pads, mode=mode)
 
-    # create overlap arrays
+    # merge the padded part into the edge block
+    new_chunks = list(a.chunks[axis])
+    first_chunk = new_chunks.pop(0)
+    last_chunk = new_chunks.pop(-1)
+    if len(new_chunks) == 0:
+        new_chunks = (first_chunk + last_chunk,)
+    else:
+        new_chunks[0] += first_chunk
+        new_chunks[-1] += last_chunk
+
+    chunks = list(a.chunks)
+    chunks[axis] = tuple(new_chunks)
+    a = da.rechunk(a, tuple(chunks))
+
+    # create overlap arrays without boundary
+    boundary = {d: "none" for d in range(a.ndim)}
     ag = da.overlap.overlap(a, depth=depth, boundary=boundary)
 
-    # apply rolling func
     def func(x, window, axis=-1):
         x = np.asarray(x)
         rolling = nputils._rolling_window(x, window, axis)
         return rolling[(slice(None),) * axis + (slice(offset, None),)]
 
-    chunks = list(a.chunks)
+    # we need a correct shape
+    chunks = list(ag.chunks)
+    chunks[axis] = tuple([c - (window - 1 + offset) for c in chunks[axis]])
     chunks.append(window)
     out = ag.map_blocks(
         func, dtype=a.dtype, new_axis=a.ndim, chunks=chunks, window=window, axis=axis
