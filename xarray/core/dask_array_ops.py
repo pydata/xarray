@@ -30,13 +30,16 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
 
 def rolling_window(a, axis, window, center, fill_value, mode):
     import dask
+
     if version.LooseVersion(dask.__version__) < "1.7":
         if mode is not None:
-            raise NotImplementedError("dask >= 1.7 is required for mode={}.".format(mode))
+            raise NotImplementedError(
+                "dask >= 1.7 is required for mode={}.".format(mode)
+            )
         return _rolling_window_old_dask(a, axis, window, center, fill_value)
-    
+
     return _rolling_window(a, axis, window, center, fill_value, mode)
-        
+
 
 def _rolling_window(a, axis, window, center, fill_value, mode):
     """Dask's equivalence to np.utils.rolling_window

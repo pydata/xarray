@@ -1893,8 +1893,9 @@ class TestVariableWithDask(VariableSubclassobjects):
         v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
         self._test_rolling_window(v)
         self._test_rolling_window(v.chunk({"x": 4, "y": 5, "z": -1}))
-        
+
         import dask
+
         if LooseVersion(dask.__version__) >= "1.7":
             self._test_rolling_window_mode(v)
             self._test_rolling_window_mode(v.chunk({"x": 4, "y": 5, "z": -1}))
