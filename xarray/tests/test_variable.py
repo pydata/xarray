@@ -25,7 +25,7 @@ from xarray.core.indexing import (
 from xarray.core.pycompat import dask_array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.tests import requires_bottleneck, LooseVersion
+from xarray.tests import requires_bottleneck
 
 from . import (
     assert_allclose,
@@ -823,7 +823,6 @@ class VariableSubclassobjects:
     def test_rolling_window(self):
         v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
         self._test_rolling_window(v)
-        self._test_rolling_window_mode(v)
 
     def _test_rolling_window(self, v):
         # Just a working test. See test_nputils for the algorithm validation
@@ -841,10 +840,6 @@ class VariableSubclassobjects:
             v_loaded = v.load().rolling_window(d, w, d + "_window", center=True)
             assert_array_equal(v_rolling, v_loaded)
 
-    def _test_rolling_window_mode(self, v):
-        # Just a working test. See test_nputils for the algorithm validation
-        v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
-        for (d, w) in [("x", 3), ("y", 5)]:
             # dask and numpy result should be the same
             v_rolling = v.rolling_window(
                 d, w, d + "_window", center=True, mode="symmetric"
@@ -1893,12 +1888,6 @@ class TestVariableWithDask(VariableSubclassobjects):
         v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
         self._test_rolling_window(v)
         self._test_rolling_window(v.chunk({"x": 4, "y": 5, "z": -1}))
-
-        import dask
-
-        if LooseVersion(dask.__version__) >= "1.7":
-            self._test_rolling_window_mode(v)
-            self._test_rolling_window_mode(v.chunk({"x": 4, "y": 5, "z": -1}))
 
 
 @requires_sparse
