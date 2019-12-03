@@ -4053,6 +4053,60 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
+    def test_pad_constant(self):
+        ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
+        actual = ar.pad(dim_0=(1, 3))
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5).astype(np.float32),
+                pad_width=((1, 3), (0, 0), (0, 0)),
+                constant_values=np.nan,
+            )
+        )
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("mode", ("minimum", "maximum", "mean", "median"))
+    @pytest.mark.parametrize("stat_length", (None, 3, (1, 3)))
+    def test_pad_stat_length(self, mode, stat_length):
+
+        ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
+        actual = ar.pad(
+            dim_0=(1, 3),
+            dim_2=(2, 2),
+            mode=mode,
+            pad_options=dict(stat_length=stat_length),
+        )
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5),
+                pad_width=((1, 3), (0, 0), (2, 2)),
+                mode=mode,
+                stat_length=stat_length,
+            )
+        )
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("mode", ("reflect", "symmetric"))
+    @pytest.mark.parametrize("reflect_type", (None, "even", "odd"))
+    def test_pad_reflect(self, mode, reflect_type):
+
+        ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
+        actual = ar.pad(
+            dim_0=(1, 3),
+            dim_2=(2, 2),
+            mode=mode,
+            pad_options=dict(reflect_type=reflect_type),
+        )
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5),
+                pad_width=((1, 3), (0, 0), (2, 2)),
+                mode=mode,
+                reflect_type=reflect_type,
+            )
+        )
+        assert_identical(actual, expected)
+
 
 @pytest.fixture(params=[1])
 def da(request):
