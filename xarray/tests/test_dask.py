@@ -1377,6 +1377,7 @@ def test_lazy_array_equiv_merge(compat):
         xr.merge([da1, da2 / 2], compat=compat)
 
 
+@pytest.mark.filterwarnings("ignore::FutureWarning")
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 @pytest.mark.parametrize(
     "transform",
@@ -1393,11 +1394,6 @@ def test_lazy_array_equiv_merge(compat):
         lambda a: a.reindex_like(a),
         lambda a: a.pipe(lambda x: x),
         lambda a: xr.align(a, xr.zeros_like(a))[0],
-        pytest.param(
-            lambda a: a.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
-            marks=pytest.mark.xfail,  # x index is lost.
-        ),
-        lambda a: a.rename_vars({"cxy": "cnew"}).rename_vars({"cnew": "cxy"}),
         # assign, assign_coords, assign_attrs, update
         # rename,
         # swap_dims, expand_dims
@@ -1412,16 +1408,20 @@ def test_transforms_pass_lazy_array_equiv(obj, transform):
 def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
     with raise_if_dask_computes():
         assert_equal(map_ds.cxy, map_ds.cxy.broadcast_like(map_ds.cxy))
-        # assert_equal(
-        #     map_ds.transpose(reversed(list(map_ds.dims)), transpose_coords=False).cxy,
-        #     map_ds.cxy,
-        # )
         assert_equal(map_ds.a, xr.broadcast(map_ds.a, map_ds.a)[0])
         assert_equal(map_ds.map(lambda x: x), map_ds)
         assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
 
+        # fails because of index error
+        # assert_equal(map_ds.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
+        #             map_ds)
+        assert_equal(
+            map_ds.rename_vars({"cxy": "cnew"}).rename_vars({"cnew": "cxy"}), map_ds
+        )
+
         assert_equal(map_da._from_temp_dataset(map_da._to_temp_dataset()), map_da)
         assert_equal(map_da.astype(map_da.dtype), map_da)
+        assert_equal(map_da.transpose("y", "x", transpose_coords=False).cxy, map_da.cxy)
 
 
 # TODO: transpose_coords for dataset
