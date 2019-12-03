@@ -15,7 +15,7 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.0
   - coveralls
-  - dask=1.2.2
+  - dask=2.0
   - distributed=1.27
   - flake8
   - h5netcdf=0.7
