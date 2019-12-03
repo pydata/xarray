@@ -1382,9 +1382,14 @@ def test_lazy_array_equiv_merge(compat):
 @pytest.mark.parametrize(
     "transform",
     [
+        lambda a: a.assign_attrs(new_attr="anew"),
+        lambda a: a.assign_coords(cxy=a.cxy),
         lambda a: a.copy(),
         lambda a: a.isel(x=np.arange(a.sizes["x"])),
         lambda a: a.isel(x=slice(None)),
+        lambda a: a.loc[dict(x=slice(None))],
+        lambda a: a.loc[dict(x=np.arange(a.sizes["x"]))],
+        lambda a: a.loc[dict(x=a.x)],
         lambda a: a.sel(x=a.x),
         lambda a: a.sel(x=a.x.values),
         lambda a: a.transpose(...),
@@ -1392,11 +1397,11 @@ def test_lazy_array_equiv_merge(compat):
         lambda a: a.sortby("x"),  # "x" is already sorted
         lambda a: a.reindex(x=a.x),
         lambda a: a.reindex_like(a),
+        lambda a: a.rename({"cxy": "cnew"}).rename({"cnew": "cxy"}),
         lambda a: a.pipe(lambda x: x),
         lambda a: xr.align(a, xr.zeros_like(a))[0],
-        # assign, assign_coords, assign_attrs, update
-        # rename,
-        # swap_dims, expand_dims
+        # assign
+        # swap_dims
         # set_index / reset_index
     ],
 )
@@ -1407,10 +1412,11 @@ def test_transforms_pass_lazy_array_equiv(obj, transform):
 
 def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
     with raise_if_dask_computes():
-        assert_equal(map_ds.cxy, map_ds.cxy.broadcast_like(map_ds.cxy))
-        assert_equal(map_ds.a, xr.broadcast(map_ds.a, map_ds.a)[0])
+        assert_equal(map_ds.cxy.broadcast_like(map_ds.cxy), map_ds.cxy)
+        assert_equal(xr.broadcast(map_ds.cxy, map_ds.cxy)[0], map_ds.cxy)
         assert_equal(map_ds.map(lambda x: x), map_ds)
         assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
+        assert_equal(map_ds.update({"a": map_ds.a}), map_ds)
 
         # fails because of index error
         # assert_equal(map_ds.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
