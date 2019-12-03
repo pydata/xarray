@@ -15,8 +15,8 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.0
   - coveralls
-  - dask=2.0
-  - distributed=1.27
+  - dask=1.2.2
+  - distributed=1.28
   - flake8
   - h5netcdf=0.7
   - h5py=2.9  # Policy allows for 2.10, but it's a conflict-fest
