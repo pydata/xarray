@@ -549,7 +549,8 @@ class Variable(
                     continue
                 if duck_array_ops.array_equiv(k, np.arange(self.sizes[dim])):
                     # short-circuit when keys are effectively slice(None)
-                    # This preserves dask name and allows lazy array equivalence checks
+                    # This preserves dask name and passes lazy array equivalence checks
+                    # (see duck_array_ops.lazy_array_equiv)
                     key_dict[dim] = slice(None)
         key = tuple(key_dict.values())
 
