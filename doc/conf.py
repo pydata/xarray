@@ -15,9 +15,14 @@
 
 import datetime
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
+
+root = pathlib.Path(__file__).absolute().parent.parent
+os.environ["PYTHONPATH"] = str(root)
+sys.path.insert(0, str(root))
 
 import xarray
 
