@@ -435,24 +435,18 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
         return
 
     stripped_kwargs = {
-        key: strip_units(
-            convert_units(value, {None: original_unit})
-            if isinstance(value, unit_registry.Quantity)
-            else value
-        )
+        key: strip_units(convert_units(value, {None: original_unit}))
         for key, value in func.kwargs.items()
     }
     units = extract_units(data_array1)
-    # FIXME: should the expected_b have the same units as data_array1
-    # or data_array2?
-    expected_a, expected_b = tuple(
-        attach_units(elem, units)
-        for elem in func(
-            strip_units(data_array1),
-            strip_units(convert_units(data_array2, units)),
-            **stripped_kwargs,
-        )
+    expected_a, expected_b = func(
+        strip_units(data_array1), strip_units(data_array2), **stripped_kwargs
     )
+    expected_a = attach_units(expected_a, units)
+    # FIXME: should expected_b have the same units as data_array1
+    # or data_array2?
+    expected_b = attach_units(expected_b, units)
+
     result_a, result_b = func(data_array1, data_array2)
 
     assert_equal_with_units(expected_a, result_a)
@@ -528,13 +522,13 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
         for key, value in func.kwargs.items()
     }
     units = extract_units(ds1)
-    # FIXME: should the expected_b have the same units as ds1 or ds2?
-    expected_a, expected_b = tuple(
-        attach_units(elem, units)
-        for elem in func(
-            strip_units(ds1), strip_units(convert_units(ds2, units)), **stripped_kwargs
-        )
+    expected_a, expected_b = func(
+        strip_units(ds1), strip_units(convert_units(ds2, units)), **stripped_kwargs
     )
+    expected_a = attach_units(expected_a, units)
+    # FIXME: should expected_b have the same units as ds1 or ds2?
+    expected_b = attach_units(expected_b, units)
+
     result_a, result_b = func(ds1, ds2)
 
     assert_equal_with_units(expected_a, result_a)
