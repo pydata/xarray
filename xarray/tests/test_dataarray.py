@@ -4070,12 +4070,7 @@ class TestDataArray:
     def test_pad_stat_length(self, mode, stat_length):
 
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
-        actual = ar.pad(
-            dim_0=(1, 3),
-            dim_2=(2, 2),
-            mode=mode,
-            pad_options=dict(stat_length=stat_length),
-        )
+        actual = ar.pad(dim_0=(1, 3), dim_2=(2, 2), mode=mode, stat_length=stat_length)
         expected = DataArray(
             np.pad(
                 np.arange(3 * 4 * 5).reshape(3, 4, 5),
@@ -4092,10 +4087,7 @@ class TestDataArray:
 
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
         actual = ar.pad(
-            dim_0=(1, 3),
-            dim_2=(2, 2),
-            mode=mode,
-            pad_options=dict(reflect_type=reflect_type),
+            dim_0=(1, 3), dim_2=(2, 2), mode=mode, reflect_type=reflect_type
         )
         expected = DataArray(
             np.pad(

@@ -3112,9 +3112,18 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def pad(
         self,
-        pad_widths: Mapping[Hashable, Tuple[int,int]] = None,
+        pad_widths: Mapping[Hashable, Tuple[int, int]] = None,
         mode: str = "constant",
-        pad_options: Dict[str, Any] = {},
+        stat_length: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        constant_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        end_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        reflect_type: str = None,
         **pad_widths_kwargs: Any,
     ) -> "DataArray":
         """Pad this array along one or more dimensions.
@@ -3159,42 +3168,41 @@ class DataArray(AbstractArray, DataWithCoords):
                 Pads with the wrap of the vector along the axis.
                 The first values are used to pad the end and the
                 end values are used to pad the beginning.
-        pad_options : additional keyword arguments that are passed to pad function
-            stat_length : sequence or int, optional
-                Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
-                values at edge of each axis used to calculate the statistic value.
-                ((before_1, after_1), ... (before_N, after_N)) unique statistic
-                lengths for each axis.
-                ((before, after),) yields same before and after statistic lengths
-                for each axis.
-                (stat_length,) or int is a shortcut for before = after = statistic
-                length for all axes.
-                Default is ``None``, to use the entire axis.
-            constant_values : sequence or scalar, optional
-                Used in 'constant'.  The values to set the padded values for each
-                axis.
-                ``((before_1, after_1), ... (before_N, after_N))`` unique pad constants
-                for each axis.
-                ``((before, after),)`` yields same before and after constants for each
-                axis.
-                ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
-                all axes.
-                Default is 0.
-            end_values : sequence or scalar, optional
-                Used in 'linear_ramp'.  The values used for the ending value of the
-                linear_ramp and that will form the edge of the padded array.
-                ``((before_1, after_1), ... (before_N, after_N))`` unique end values
-                for each axis.
-                ``((before, after),)`` yields same before and after end values for each
-                axis.
-                ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
-                all axes.
-                Default is 0.
-            reflect_type : {'even', 'odd'}, optional
-                Used in 'reflect', and 'symmetric'.  The 'even' style is the
-                default with an unaltered reflection around the edge value.  For
-                the 'odd' style, the extended part of the array is created by
-                subtracting the reflected values from two times the edge value.
+        stat_length : sequence or int, optional
+            Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
+            values at edge of each axis used to calculate the statistic value.
+            ((before_1, after_1), ... (before_N, after_N)) unique statistic
+            lengths for each axis.
+            ((before, after),) yields same before and after statistic lengths
+            for each axis.
+            (stat_length,) or int is a shortcut for before = after = statistic
+            length for all axes.
+            Default is ``None``, to use the entire axis.
+        constant_values : sequence or scalar, optional
+            Used in 'constant'.  The values to set the padded values for each
+            axis.
+            ``((before_1, after_1), ... (before_N, after_N))`` unique pad constants
+            for each axis.
+            ``((before, after),)`` yields same before and after constants for each
+            axis.
+            ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+            all axes.
+            Default is 0.
+        end_values : sequence or scalar, optional
+            Used in 'linear_ramp'.  The values used for the ending value of the
+            linear_ramp and that will form the edge of the padded array.
+            ``((before_1, after_1), ... (before_N, after_N))`` unique end values
+            for each axis.
+            ``((before, after),)`` yields same before and after end values for each
+            axis.
+            ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+            all axes.
+            Default is 0.
+        reflect_type : {'even', 'odd'}, optional
+            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+            default with an unaltered reflection around the edge value.  For
+            the 'odd' style, the extended part of the array is created by
+            subtracting the reflected values from two times the edge value.
 
         **pad_widths_kwargs:
             The keyword arguments form of ``pad_widths``.
@@ -3223,12 +3231,22 @@ class DataArray(AbstractArray, DataWithCoords):
         pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
 
         variable = self.variable.pad(
-            pad_widths=pad_widths, mode=mode, **pad_options
+            pad_widths=pad_widths,
+            mode=mode,
+            stat_length=stat_length,
+            constant_values=constant_values,
+            end_values=end_values,
+            reflect_type=reflect_type,
         )
 
         if mode in ("edge", "reflect", "symmetric", "wrap"):
             coord_pad_mode = mode
-            coord_pad_options = pad_options
+            coord_pad_options = {
+                "stat_length": stat_length,
+                "constant_values": constant_values,
+                "end_values": end_values,
+                "reflect_type": reflect_type,
+            }
         else:
             coord_pad_mode = "constant"
             coord_pad_options = {}
@@ -3236,7 +3254,9 @@ class DataArray(AbstractArray, DataWithCoords):
         coords = {}
         for name, dim in self.coords.items():
             if name in pad_widths:
-                coords[name] = dim.variable.pad({name: pad_widths[name]}, mode=coord_pad_mode, **coord_pad_options)
+                coords[name] = dim.variable.pad(
+                    {name: pad_widths[name]}, mode=coord_pad_mode, **coord_pad_options
+                )
             else:
                 coords[name] = as_variable(dim, name=name)
 

@@ -1099,10 +1099,22 @@ class Variable(
             result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
 
-    def pad(self,
+    def pad(
+        self,
         pad_widths: Mapping[Hashable, Tuple[int, int]] = None,
         mode: str = "constant",
-        **kwargs: Any):
+        stat_length: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        constant_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        end_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        reflect_type: str = None,
+        **pad_widths_kwargs: Any,
+    ):
         """
         Return a new Variable with padded data.
 
@@ -1112,9 +1124,7 @@ class Variable(
             Number of values padded along each dimension.
         mode: (str)
             See numpy / Dask docs
-        **kwargs:
-            A combination of the optional arguments for np.pad/dask.pad
-            and the keyword arguments form of ``pad_widths``.
+        **pad_widths_kwarg:
             One of pad_widths or pad_widths_kwarg must be provided.
 
         Returns
@@ -1122,28 +1132,50 @@ class Variable(
         padded : Variable
             Variable with the same dimensions and attributes but padded data.
         """
+        pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
 
-        # pop optional arguments from kwargs, so pad_width_kwargs remain
-        opt_kwargs_names = ["stat_length", "constant_values", "end_values", "reflect_type"]
-        opt_kwargs = {name: kwargs.pop(name) for name in opt_kwargs_names if name in kwargs}
-
-        # workaround for Dask's default value of stat_length
-        if mode in ["maximum", "mean", "median", "minimum"]:
-            opt_kwargs.setdefault("stat_length", tuple((n, n) for n in self.data.shape))
-
-        if mode == "constant" and "constant_values" not in opt_kwargs:
-            dtype, opt_kwargs["constant_values"] = dtypes.maybe_promote(self.dtype)
+        # change default behaviour of pad with mode constant
+        if mode == "constant" and constant_values is None:
+            dtype, constant_values = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
 
-        pad_widths = either_dict_or_kwargs(pad_widths, kwargs, "pad")
+        # create pad_options_kwargs, numpy requires only relevant kwargs to be nonempty
+        if isinstance(stat_length, dict):
+            stat_length = [
+                (n, n) if d not in stat_length else stat_length[d]
+                for d, n in zip(self.dims, self.data.shape)
+            ]
+        if isinstance(constant_values, dict):
+            constant_values = [
+                (0, 0) if d not in constant_values else constant_values[d]
+                for d, n in zip(self.dims, self.data.shape)
+            ]
+        if isinstance(end_values, dict):
+            end_values = [
+                (0, 0) if d not in end_values else end_values[d]
+                for d, n in zip(self.dims, self.data.shape)
+            ]
+
+        # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303
+        if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
+            stat_length = [(n, n) for n in self.data.shape]
+
         pads = [(0, 0) if d not in pad_widths else pad_widths[d] for d in self.dims]
 
+        # numpy/dask work with optional kwargs
+        pad_option_kwargs = {}
+        if stat_length is not None:
+            pad_option_kwargs["stat_length"] = stat_length
+        if constant_values is not None:
+            pad_option_kwargs["constant_values"] = constant_values
+        if end_values is not None:
+            pad_option_kwargs["end_values"] = end_values
+        if reflect_type is not None:
+            pad_option_kwargs["reflect_type"] = reflect_type
+
         array = duck_array_ops.pad(
-            self.data.astype(dtype, copy=False),
-            pads,
-            mode=mode,
-            **opt_kwargs
+            self.data.astype(dtype, copy=False), pads, mode=mode, **pad_option_kwargs
         )
 
         return type(self)(self.dims, array)

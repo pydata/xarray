@@ -796,7 +796,6 @@ class VariableSubclassobjects:
             print(mode)
             actual = v.pad(mode=mode, **xr_arg)
             expected = np.pad(
-                np.array(v.data),
                 np_arg,
                 mode=mode,
             )
