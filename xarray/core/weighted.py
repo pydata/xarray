@@ -1,5 +1,6 @@
+from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Union, overload
+
 from .computation import dot
-from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Tuple, Union, overload
 
 if TYPE_CHECKING:
     from .dataarray import DataArray, Dataset
@@ -50,24 +51,6 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     """
 
 
-def _maybe_get_all_dims(
-    dims: Optional[Union[Hashable, Iterable[Hashable]]],
-    dims1: Tuple[Hashable, ...],
-    dims2: Tuple[Hashable, ...],
-):
-    """ the union of dims1 and dims2 if dims is None
-
-    `dims=None` behaves differently in `dot` and `sum`, so we have to apply
-    `dot` over the union of the dimensions
-
-    """
-
-    if dims is None:
-        dims = tuple(sorted(set(dims1) | set(dims2)))
-
-    return dims
-
-
 class Weighted:
     """A object that implements weighted operations.
 
@@ -86,13 +69,11 @@ class Weighted:
     def __init__(self, obj: "DataArray", weights: "DataArray") -> None:
         ...
 
-    @overload  # noqa: F811 TODO: remove once pyflakes/ flake8 on azure is updated
+    @overload  # noqa: F811
     def __init__(self, obj: "Dataset", weights: "DataArray") -> None:
         ...
 
-    def __init__(  # noqa: F811 TODO: remove once pyflakes/ flake8 on azure is updated
-        self, obj, weights
-    ):
+    def __init__(self, obj, weights):  # noqa: F811
         """
         Create a Weighted object
 
@@ -107,7 +88,7 @@ class Weighted:
 
         Note
         ----
-        Missing values in the weights are replaced with 0. (i.e. no weight).
+        Weights can not contain missing values.
 
         """
 
@@ -117,21 +98,28 @@ class Weighted:
         assert isinstance(weights, DataArray), msg
 
         self.obj = obj
-        self.weights = weights.fillna(0)
+
+        if weights.isnull().any():
+            raise ValueError("`weights` cannot contain missing values.")
+
+        self.weights = weights
 
     def _sum_of_weights(
-        self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
+        self,
+        da: "DataArray",
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
     ) -> "DataArray":
         """ Calculate the sum of weights, accounting for missing values """
 
-        # we need to mask DATA values that are nan; else the weights are wrong
-        mask = ~da.isnull()
+        # we need to mask data values that are nan; else the weights are wrong
+        mask = da.notnull()
 
         # need to infer dims as we use `dot`
-        dims = _maybe_get_all_dims(dim, da.dims, self.weights.dims)
+        if dim is None:
+            dim = ...
 
         # use `dot` to avoid creating large DataArrays (if da and weights do not share all dims)
-        sum_of_weights = dot(mask, self.weights, dims=dims)
+        sum_of_weights = dot(mask, self.weights, dims=dim)
 
         # find all weights that are valid (not 0)
         valid_weights = sum_of_weights != 0.0
@@ -148,15 +136,16 @@ class Weighted:
         """Reduce a DataArray by a by a weighted `sum` along some dimension(s)."""
 
         # need to infer dims as we use `dot`
-        dims = _maybe_get_all_dims(dim, da.dims, self.weights.dims)
+        if dim is None:
+            dim = ...
 
         # use `dot` to avoid creating large DataArrays
 
         # need to mask invalid DATA as dot does not implement skipna
-        if skipna or skipna is None:
-            return dot(da.fillna(0.0), self.weights, dims=dims)
+        if skipna or (skipna is None and da.dtype.kind in "cfO"):
+            return dot(da.fillna(0.0), self.weights, dims=dim)
 
-        return dot(da, self.weights, dims=dims)
+        return dot(da, self.weights, dims=dim)
 
     def _weighted_mean(
         self,
@@ -207,7 +196,7 @@ class Weighted:
 
         msg = "{klass} with weights along dimensions: {weight_dims}"
         return msg.format(
-            klass=self.__class__.__name__, weight_dims=", ".join(self.weights.dims)
+            klass=self.__class__.__name__, weight_dims=", ".join(self.weights.dims),
         )
 
 
@@ -215,18 +204,6 @@ class DataArrayWeighted(Weighted):
     def _implementation(self, func, **kwargs):
 
         return func(self.obj, **kwargs)
-
-
-# add docstrings
-DataArrayWeighted.sum_of_weights.__doc__ = _SUM_OF_WEIGHTS_DOCSTRING.format(
-    cls="DataArray"
-)
-DataArrayWeighted.mean.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
-    cls="DataArray", fcn="mean"
-)
-DataArrayWeighted.sum.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
-    cls="DataArray", fcn="sum"
-)
 
 
 class DatasetWeighted(Weighted):
@@ -242,11 +219,15 @@ class DatasetWeighted(Weighted):
         return Dataset(weighted, coords=self.obj.coords)
 
 
-# add docstring
-DatasetWeighted.sum_of_weights.__doc__ = _SUM_OF_WEIGHTS_DOCSTRING.format(cls="Dataset")
-DatasetWeighted.mean.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
-    cls="Dataset", fcn="mean"
-)
-DatasetWeighted.sum.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
-    cls="Dataset", fcn="sum"
-)
+def _inject_docstring(cls, cls_name):
+
+    cls.sum_of_weights.__doc__ = _SUM_OF_WEIGHTS_DOCSTRING.format(cls=cls_name)
+
+    for operator in ["sum", "mean"]:
+        getattr(cls, operator).__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
+            cls=cls_name, fcn=operator
+        )
+
+
+_inject_docstring(DataArrayWeighted, "DataArray")
+_inject_docstring(DatasetWeighted, "Dataset")
