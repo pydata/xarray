@@ -607,8 +607,6 @@ class GroupBy(SupportsArithmetic):
         ...     dims=("y", "y"),
         ... )
         >>> ds = xr.Dataset({"a": da})
-
-        Single quantile
         >>> da.groupby("x").quantile(0)
         <xarray.DataArray (x: 2, y: 4)>
         array([[0.7, 4.2, 0.7, 1.5],
@@ -625,8 +623,6 @@ class GroupBy(SupportsArithmetic):
           * y         (y) int64 1 2
         Data variables:
             a         (y) float64 0.7 0.7
-
-        Multiple quantiles
         >>> da.groupby("x").quantile([0, 0.5, 1])
         <xarray.DataArray (x: 2, y: 4, quantile: 3)>
         array([[[0.7 , 1.  , 1.3 ],
