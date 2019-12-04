@@ -1974,10 +1974,11 @@ class TestDataArray:
             method("copy"),
             pytest.param(
                 method("astype", np.float32),
-                marks=pytest.mark.xfail(reason="units get stripped"),
+                marks=pytest.mark.xfail(reason="not provided by `pint` yet"),
             ),
             pytest.param(
-                method("item", 1), marks=pytest.mark.xfail(reason="units get stripped")
+                method("item", 1),
+                marks=pytest.mark.xfail(reason="not provided by `pint` yet"),
             ),
         ),
         ids=repr,
