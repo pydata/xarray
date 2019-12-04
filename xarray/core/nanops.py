@@ -25,7 +25,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     """
     if hasattr(axis, "__len__"):  # if tuple or list
         raise ValueError(
-            "min_count is not available for reduction " "with more than one dimensions."
+            "min_count is not available for reduction with more than one dimensions."
         )
 
     if axis is not None and getattr(result, "ndim", False):
