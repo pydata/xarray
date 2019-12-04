@@ -1937,10 +1937,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     else:
                         del indexes[var_name]
             variables[var_name] = var_value
-            dims.update(dict(zip(var_value.dims, var_value.shape)))
-
-        # Restore order
-        dims = {k: dims[k] for k in self._dims if k in dims}
+            dims.update(zip(var_value.dims, var_value.shape))
 
         return self._construct_direct(
             variables=variables,
