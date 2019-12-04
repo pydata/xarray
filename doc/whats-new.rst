@@ -28,7 +28,9 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Weighted array reductions  are now supported via the new :py:meth:`DataArray.weighted`
+  and :py:meth:`Dataset.weighted` methods. By `Mathias Hauser <https://github.com/mathause>`_
+  (:issue:`422`).
 
 Bug fixes
 ~~~~~~~~~
@@ -56,7 +58,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 
-- Removed internal method ``Dataset._from_vars_and_coord_names``, 
+- Removed internal method ``Dataset._from_vars_and_coord_names``,
   which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
@@ -83,8 +85,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Added the ``sparse`` option to :py:meth:`~xarray.DataArray.unstack`, 
-  :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`, 
+- Added the ``sparse`` option to :py:meth:`~xarray.DataArray.unstack`,
+  :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`,
   :py:meth:`~xarray.Dataset.reindex` (:issue:`3518`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added the ``fill_value`` option to :py:meth:`DataArray.unstack` and
@@ -94,13 +96,13 @@ New Features
   :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
   gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` for dropping labels.
-  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for
   dropping variables (including coordinates). The existing :py:meth:`Dataset.drop` &
   :py:meth:`DataArray.drop` methods remain as a backward compatible
   option for dropping either labels or variables, but using the more specific methods is encouraged.
   (:pull:`3475`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Added :py:meth:`Dataset.map` & :py:meth:`GroupBy.map` & :py:meth:`Resample.map` for 
+- Added :py:meth:`Dataset.map` & :py:meth:`GroupBy.map` & :py:meth:`Resample.map` for
   mapping / applying a function over each item in the collection, reflecting the widely used
   and least surprising name for this operation.
   The existing ``apply`` methods remain for backward compatibility, though using the ``map``
@@ -137,13 +139,13 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when 
+- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when
   calling :py:meth:`Dataset.rename`, :py:meth:`Dataset.rename_dims` and :py:meth:`Dataset.rename_vars`.
   By `Mathias Hauser <https://github.com/mathause>`_. (:issue:`3522`).
 - Fix a bug in :py:meth:`DataArray.set_index` in case that an existing dimension becomes a level
   variable of MultiIndex. (:pull:`3520`). By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Harmonize ``_FillValue``, ``missing_value`` during encoding and decoding steps. (:pull:`3502`)
-  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
