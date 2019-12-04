@@ -28,7 +28,9 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
+  and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
+  By `Deepak Cherian <https://github.com/dcherian/>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -132,10 +134,6 @@ New Features
   invoked. (:issue:`3378`, :pull:`3446`, :pull:`3515`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
-- Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
-  and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
-  By `Deepak Cherian <https://github.com/dcherian/>`_
-- Add the documented-but-missing :py:meth:`xarray.core.groupby.DatasetGroupBy.quantile`.
 - Add the documented-but-missing :py:meth:`DatasetGroupBy.quantile`.
   (:issue:`3525`, :pull:`3527`). By `Justus Magin <https://github.com/keewis>`_.
 
