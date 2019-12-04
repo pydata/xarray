@@ -5497,6 +5497,11 @@ def ds(request):
         )
 
 
+def test_coarsen_absent_dims_error(ds):
+    with raises_regex(ValueError, "not found in Dataset."):
+        ds.coarsen(foo=2)
+
+
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
 def test_coarsen(ds, dask, boundary, side):
@@ -5505,12 +5510,11 @@ def test_coarsen(ds, dask, boundary, side):
 
     actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
     assert_equal(
-        actual["z1"], ds["z1"].coarsen(time=2, x=3, boundary=boundary, side=side).max()
+        actual["z1"], ds["z1"].coarsen(x=3, boundary=boundary, side=side).max()
     )
     # coordinate should be mean by default
     assert_equal(
-        actual["time"],
-        ds["time"].coarsen(time=2, x=3, boundary=boundary, side=side).mean(),
+        actual["time"], ds["time"].coarsen(time=2, boundary=boundary, side=side).mean()
     )
 
 
@@ -5521,8 +5525,8 @@ def test_coarsen_coords(ds, dask):
 
     # check if coord_func works
     actual = ds.coarsen(time=2, x=3, boundary="trim", coord_func={"time": "max"}).max()
-    assert_equal(actual["z1"], ds["z1"].coarsen(time=2, x=3, boundary="trim").max())
-    assert_equal(actual["time"], ds["time"].coarsen(time=2, x=3, boundary="trim").max())
+    assert_equal(actual["z1"], ds["z1"].coarsen(x=3, boundary="trim").max())
+    assert_equal(actual["time"], ds["time"].coarsen(time=2, boundary="trim").max())
 
     # raise if exact
     with pytest.raises(ValueError):
