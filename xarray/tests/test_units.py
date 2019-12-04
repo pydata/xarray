@@ -114,7 +114,7 @@ def extract_units(obj):
 
         units = {**vars_units, **coords_units}
     elif isinstance(obj, Quantity):
-        vars_units = {"<array>": array_extract_units(obj)}
+        vars_units = {None: array_extract_units(obj)}
 
         units = {**vars_units}
     else:
