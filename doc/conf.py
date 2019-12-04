@@ -15,9 +15,15 @@
 
 import datetime
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
+
+# make sure the source version is preferred (#3567)
+root = pathlib.Path(__file__).absolute().parent.parent
+os.environ["PYTHONPATH"] = str(root)
+sys.path.insert(0, str(root))
 
 import xarray
 
@@ -351,4 +357,5 @@ intersphinx_mapping = {
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "matplotlib": ("https://matplotlib.org", None),
     "dask": ("https://docs.dask.org/en/latest", None),
+    "cftime": ("https://unidata.github.io/cftime", None),
 }
