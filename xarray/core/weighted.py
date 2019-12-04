@@ -105,9 +105,7 @@ class Weighted:
         self.weights = weights
 
     def _sum_of_weights(
-        self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
     ) -> "DataArray":
         """ Calculate the sum of weights, accounting for missing values """
 
@@ -196,7 +194,7 @@ class Weighted:
 
         msg = "{klass} with weights along dimensions: {weight_dims}"
         return msg.format(
-            klass=self.__class__.__name__, weight_dims=", ".join(self.weights.dims),
+            klass=self.__class__.__name__, weight_dims=", ".join(self.weights.dims)
         )
 
 
