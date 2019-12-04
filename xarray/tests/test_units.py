@@ -205,9 +205,13 @@ def attach_units(obj, units):
 def convert_units(obj, to):
     if isinstance(obj, xr.Dataset):
         data_vars = {
-            name: convert_units(array, to) for name, array in obj.data_vars.items()
+            name: convert_units(array, to).variable
+            for name, array in obj.data_vars.items()
         }
-        coords = {name: convert_units(array, to) for name, array in obj.coords.items()}
+        coords = {
+            name: convert_units(array, to).variable
+            for name, array in obj.coords.items()
+        }
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
     elif isinstance(obj, xr.DataArray):
@@ -219,7 +223,7 @@ def convert_units(obj, to):
         data = convert_units(obj.data, {None: new_units})
 
         coords = {
-            name: (array.dims, convert_units(array.data, to))
+            name: (array.dims, convert_units(array.data, to).variable)
             for name, array in obj.coords.items()
             if name != obj.name
         }
