@@ -351,6 +351,28 @@ def test_apply_ufunc_dataarray(dtype):
     assert_equal_with_units(expected, result)
 
 
+def test_apply_ufunc_dataset(dtype):
+    func = function(
+        xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
+    )
+
+    array1 = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+    array2 = np.linspace(0, 10, 5).astype(dtype) * unit_registry.m
+
+    x = np.arange(5) * unit_registry.s
+    y = np.arange(10) * unit_registry.m
+
+    ds = xr.Dataset(
+        data_vars={"a": (("x", "y"), array1), "b": ("x", array2)},
+        coords={"x": x, "y": y},
+    )
+
+    expected = attach_units(func(strip_units(ds)), extract_units(ds))
+    result = func(ds)
+
+    assert_equal_with_units(expected, result)
+
+
 @pytest.mark.xfail(reason="align strips units")
 @pytest.mark.parametrize(
     "unit,error",
