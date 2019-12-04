@@ -1,16 +1,44 @@
 import warnings
 from functools import partial
-from typing import Any, Callable, Dict, Sequence
+from numbers import Number
+from typing import Any, Callable, Dict, Hashable, Sequence, Union
 
 import numpy as np
 import pandas as pd
 
 from . import utils
-from .common import _contains_datetime_like_objects
+from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
+
+
+def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
+    """
+    Return an object where each NaN element in 'obj' is replaced by the
+    length of the gap the element is in.
+    """
+
+    # make variable so that we get broadcasting for free
+    index = Variable([dim], index)
+
+    # algorithm from https://github.com/pydata/xarray/pull/3302#discussion_r324707072
+    arange = ones_like(obj) * index
+    valid = obj.notnull()
+    valid_arange = arange.where(valid)
+    cumulative_nans = valid_arange.ffill(dim=dim).fillna(index[0])
+
+    nan_block_lengths = (
+        cumulative_nans.diff(dim=dim, label="upper")
+        .reindex({dim: obj[dim]})
+        .where(valid)
+        .bfill(dim=dim)
+        .where(~valid, 0)
+        .fillna(index[-1] - valid_arange.max())
+    )
+
+    return nan_block_lengths
 
 
 class BaseInterpolator:
@@ -71,7 +99,7 @@ class NumpyInterpolator(BaseInterpolator):
             self._yi,
             left=self._left,
             right=self._right,
-            **self.call_kwargs
+            **self.call_kwargs,
         )
 
 
@@ -93,7 +121,7 @@ class ScipyInterpolator(BaseInterpolator):
         copy=False,
         bounds_error=False,
         order=None,
-        **kwargs
+        **kwargs,
     ):
         from scipy.interpolate import interp1d
 
@@ -126,7 +154,7 @@ class ScipyInterpolator(BaseInterpolator):
             bounds_error=False,
             assume_sorted=assume_sorted,
             copy=copy,
-            **self.cons_kwargs
+            **self.cons_kwargs,
         )
 
 
@@ -147,7 +175,7 @@ class SplineInterpolator(BaseInterpolator):
         order=3,
         nu=0,
         ext=None,
-        **kwargs
+        **kwargs,
     ):
         from scipy.interpolate import UnivariateSpline
 
@@ -178,7 +206,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def get_clean_interp_index(arr, dim, use_coordinate=True):
+def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] = True):
     """get index to use for x values in interpolation.
 
     If use_coordinate is True, the coordinate that shares the name of the
@@ -195,23 +223,33 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
             index = arr.coords[use_coordinate]
             if index.ndim != 1:
                 raise ValueError(
-                    "Coordinates used for interpolation must be 1D, "
-                    "%s is %dD." % (use_coordinate, index.ndim)
+                    f"Coordinates used for interpolation must be 1D, "
+                    f"{use_coordinate} is {index.ndim}D."
                 )
+            index = index.to_index()
+
+        # TODO: index.name is None for multiindexes
+        # set name for nice error messages below
+        if isinstance(index, pd.MultiIndex):
+            index.name = dim
+
+        if not index.is_monotonic:
+            raise ValueError(f"Index {index.name!r} must be monotonically increasing")
+
+        if not index.is_unique:
+            raise ValueError(f"Index {index.name!r} has duplicate values")
 
         # raise if index cannot be cast to a float (e.g. MultiIndex)
         try:
             index = index.values.astype(np.float64)
         except (TypeError, ValueError):
             # pandas raises a TypeError
-            # xarray/nuppy raise a ValueError
+            # xarray/numpy raise a ValueError
             raise TypeError(
-                "Index must be castable to float64 to support"
-                "interpolation, got: %s" % type(index)
+                f"Index {index.name!r} must be castable to float64 to support "
+                f"interpolation, got {type(index).__name__}."
             )
-        # check index sorting now so we can skip it later
-        if not (np.diff(index) > 0).all():
-            raise ValueError("Index must be monotonicly increasing")
+
     else:
         axis = arr.get_axis_num(dim)
         index = np.arange(arr.shape[axis], dtype=np.float64)
@@ -220,7 +258,13 @@ def get_clean_interp_index(arr, dim, use_coordinate=True):
 
 
 def interp_na(
-    self, dim=None, use_coordinate=True, method="linear", limit=None, **kwargs
+    self,
+    dim: Hashable = None,
+    use_coordinate: Union[bool, str] = True,
+    method: str = "linear",
+    limit: int = None,
+    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
+    **kwargs,
 ):
     """Interpolate values according to different methods.
     """
@@ -229,6 +273,40 @@ def interp_na(
 
     if limit is not None:
         valids = _get_valid_fill_mask(self, dim, limit)
+
+    if max_gap is not None:
+        max_type = type(max_gap).__name__
+        if not is_scalar(max_gap):
+            raise ValueError("max_gap must be a scalar.")
+
+        if (
+            dim in self.indexes
+            and isinstance(self.indexes[dim], pd.DatetimeIndex)
+            and use_coordinate
+        ):
+            if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
+                raise TypeError(
+                    f"Underlying index is DatetimeIndex. Expected max_gap of type str, pandas.Timedelta or numpy.timedelta64 but received {max_type}"
+                )
+
+            if isinstance(max_gap, str):
+                try:
+                    max_gap = pd.to_timedelta(max_gap)
+                except ValueError:
+                    raise ValueError(
+                        f"Could not convert {max_gap!r} to timedelta64 using pandas.to_timedelta"
+                    )
+
+            if isinstance(max_gap, pd.Timedelta):
+                max_gap = np.timedelta64(max_gap.value, "ns")
+
+            max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
+
+        if not use_coordinate:
+            if not isinstance(max_gap, (Number, np.number)):
+                raise TypeError(
+                    f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
+                )
 
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
@@ -252,6 +330,14 @@ def interp_na(
 
     if limit is not None:
         arr = arr.where(valids)
+
+    if max_gap is not None:
+        if dim not in self.coords:
+            raise NotImplementedError(
+                "max_gap not implemented for unlabeled coordinates yet."
+            )
+        nan_block_lengths = _get_nan_block_lengths(self, dim, index)
+        arr = arr.where(nan_block_lengths <= max_gap)
 
     return arr
 

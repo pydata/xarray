@@ -5,7 +5,23 @@ import pytest
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_identical, raises_regex
+from . import assert_allclose, assert_equal, assert_identical, raises_regex
+
+
+@pytest.fixture
+def dataset():
+    ds = xr.Dataset(
+        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
+        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
+    )
+    ds["boo"] = (("z", "y"), [["f", "g", "h", "j"]] * 2)
+
+    return ds
+
+
+@pytest.fixture
+def array(dataset):
+    return dataset["foo"]
 
 
 def test_consolidate_slices():
@@ -21,33 +37,25 @@ def test_consolidate_slices():
         _consolidate_slices([slice(3), 4])
 
 
-def test_groupby_dims_property():
-    ds = xr.Dataset(
-        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
-        {"x": ["a", "bcd", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
-    )
+def test_groupby_dims_property(dataset):
+    assert dataset.groupby("x").dims == dataset.isel(x=1).dims
+    assert dataset.groupby("y").dims == dataset.isel(y=1).dims
 
-    assert ds.groupby("x").dims == ds.isel(x=1).dims
-    assert ds.groupby("y").dims == ds.isel(y=1).dims
-
-    stacked = ds.stack({"xy": ("x", "y")})
+    stacked = dataset.stack({"xy": ("x", "y")})
     assert stacked.groupby("xy").dims == stacked.isel(xy=0).dims
 
 
-def test_multi_index_groupby_apply():
+def test_multi_index_groupby_map(dataset):
     # regression test for GH873
-    ds = xr.Dataset(
-        {"foo": (("x", "y"), np.random.randn(3, 4))},
-        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4]},
-    )
-    doubled = 2 * ds
-    group_doubled = (
+    ds = dataset.isel(z=1, drop=True)[["foo"]]
+    expected = 2 * ds
+    actual = (
         ds.stack(space=["x", "y"])
         .groupby("space")
-        .apply(lambda x: 2 * x)
+        .map(lambda x: 2 * x)
         .unstack("space")
     )
-    assert doubled.equals(group_doubled)
+    assert_equal(expected, actual)
 
 
 def test_multi_index_groupby_sum():
@@ -58,7 +66,7 @@ def test_multi_index_groupby_sum():
     )
     expected = ds.sum("z")
     actual = ds.stack(space=["x", "y"]).groupby("space").sum("z").unstack("space")
-    assert expected.equals(actual)
+    assert_equal(expected, actual)
 
 
 def test_groupby_da_datetime():
@@ -78,7 +86,7 @@ def test_groupby_da_datetime():
     expected = xr.DataArray(
         [3, 7], coords=dict(reference_date=reference_dates), dims="reference_date"
     )
-    assert actual.equals(expected)
+    assert_equal(expected, actual)
 
 
 def test_groupby_duplicate_coordinate_labels():
@@ -86,7 +94,7 @@ def test_groupby_duplicate_coordinate_labels():
     array = xr.DataArray([1, 2, 3], [("x", [1, 1, 2])])
     expected = xr.DataArray([3, 3], [("x", [1, 2])])
     actual = array.groupby("x").sum()
-    assert expected.equals(actual)
+    assert_equal(expected, actual)
 
 
 def test_groupby_input_mutation():
@@ -99,23 +107,23 @@ def test_groupby_input_mutation():
     assert_identical(array, array_copy)  # should not modify inputs
 
 
-def test_da_groupby_apply_func_args():
+def test_da_groupby_map_func_args():
     def func(arg1, arg2, arg3=0):
         return arg1 + arg2 + arg3
 
     array = xr.DataArray([1, 1, 1], [("x", [1, 2, 3])])
     expected = xr.DataArray([3, 3, 3], [("x", [1, 2, 3])])
-    actual = array.groupby("x").apply(func, args=(1,), arg3=1)
+    actual = array.groupby("x").map(func, args=(1,), arg3=1)
     assert_identical(expected, actual)
 
 
-def test_ds_groupby_apply_func_args():
+def test_ds_groupby_map_func_args():
     def func(arg1, arg2, arg3=0):
         return arg1 + arg2 + arg3
 
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
     expected = xr.Dataset({"foo": ("x", [3, 3, 3])}, {"x": [1, 2, 3]})
-    actual = dataset.groupby("x").apply(func, args=(1,), arg3=1)
+    actual = dataset.groupby("x").map(func, args=(1,), arg3=1)
     assert_identical(expected, actual)
 
 
@@ -129,42 +137,58 @@ def test_da_groupby_empty():
 
 def test_da_groupby_quantile():
 
-    array = xr.DataArray([1, 2, 3, 4, 5, 6], [("x", [1, 1, 1, 2, 2, 2])])
+    array = xr.DataArray(
+        data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+    )
 
     # Scalar quantile
-    expected = xr.DataArray([2, 5], [("x", [1, 2])])
+    expected = xr.DataArray(
+        data=[2, 5], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
+    )
     actual = array.groupby("x").quantile(0.5)
     assert_identical(expected, actual)
 
     # Vector quantile
-    expected = xr.DataArray([[1, 3], [4, 6]], [("x", [1, 2]), ("quantile", [0, 1])])
+    expected = xr.DataArray(
+        data=[[1, 3], [4, 6]],
+        coords={"x": [1, 2], "quantile": [0, 1]},
+        dims=("x", "quantile"),
+    )
     actual = array.groupby("x").quantile([0, 1])
     assert_identical(expected, actual)
 
     # Multiple dimensions
     array = xr.DataArray(
-        [[1, 11, 26], [2, 12, 22], [3, 13, 23], [4, 16, 24], [5, 15, 25]],
-        [("x", [1, 1, 1, 2, 2]), ("y", [0, 0, 1])],
+        data=[[1, 11, 26], [2, 12, 22], [3, 13, 23], [4, 16, 24], [5, 15, 25]],
+        coords={"x": [1, 1, 1, 2, 2], "y": [0, 0, 1]},
+        dims=("x", "y"),
     )
 
-    actual_x = array.groupby("x").quantile(0, dim=xr.ALL_DIMS)
-    expected_x = xr.DataArray([1, 4], [("x", [1, 2])])
+    actual_x = array.groupby("x").quantile(0, dim=...)
+    expected_x = xr.DataArray(
+        data=[1, 4], coords={"x": [1, 2], "quantile": 0}, dims="x"
+    )
     assert_identical(expected_x, actual_x)
 
-    actual_y = array.groupby("y").quantile(0, dim=xr.ALL_DIMS)
-    expected_y = xr.DataArray([1, 22], [("y", [0, 1])])
+    actual_y = array.groupby("y").quantile(0, dim=...)
+    expected_y = xr.DataArray(
+        data=[1, 22], coords={"y": [0, 1], "quantile": 0}, dims="y"
+    )
     assert_identical(expected_y, actual_y)
 
     actual_xx = array.groupby("x").quantile(0)
     expected_xx = xr.DataArray(
-        [[1, 11, 22], [4, 15, 24]], [("x", [1, 2]), ("y", [0, 0, 1])]
+        data=[[1, 11, 22], [4, 15, 24]],
+        coords={"x": [1, 2], "y": [0, 0, 1], "quantile": 0},
+        dims=("x", "y"),
     )
     assert_identical(expected_xx, actual_xx)
 
     actual_yy = array.groupby("y").quantile(0)
     expected_yy = xr.DataArray(
-        [[1, 26], [2, 22], [3, 23], [4, 24], [5, 25]],
-        [("x", [1, 1, 1, 2, 2]), ("y", [0, 1])],
+        data=[[1, 26], [2, 22], [3, 23], [4, 24], [5, 25]],
+        coords={"x": [1, 1, 1, 2, 2], "y": [0, 1], "quantile": 0},
+        dims=("x", "y"),
     )
     assert_identical(expected_yy, actual_yy)
 
@@ -172,14 +196,14 @@ def test_da_groupby_quantile():
     x = [0, 1]
     foo = xr.DataArray(
         np.reshape(np.arange(365 * 2), (365, 2)),
-        coords=dict(time=times, x=x),
+        coords={"time": times, "x": x},
         dims=("time", "x"),
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=xr.ALL_DIMS)
+    actual = g.quantile(0, dim=...)
     expected = xr.DataArray(
-        [
+        data=[
             0.0,
             62.0,
             120.0,
@@ -193,12 +217,111 @@ def test_da_groupby_quantile():
             610.0,
             670.0,
         ],
-        [("month", np.arange(1, 13))],
+        coords={"month": np.arange(1, 13), "quantile": 0},
+        dims="month",
     )
     assert_identical(expected, actual)
 
     actual = g.quantile(0, dim="time")[:2]
-    expected = xr.DataArray([[0.0, 1], [62.0, 63]], [("month", [1, 2]), ("x", [0, 1])])
+    expected = xr.DataArray(
+        data=[[0.0, 1], [62.0, 63]],
+        coords={"month": [1, 2], "x": [0, 1], "quantile": 0},
+        dims=("month", "x"),
+    )
+    assert_identical(expected, actual)
+
+
+def test_ds_groupby_quantile():
+    ds = xr.Dataset(
+        data_vars={"a": ("x", [1, 2, 3, 4, 5, 6])}, coords={"x": [1, 1, 1, 2, 2, 2]}
+    )
+
+    # Scalar quantile
+    expected = xr.Dataset(
+        data_vars={"a": ("x", [2, 5])}, coords={"quantile": 0.5, "x": [1, 2]}
+    )
+    actual = ds.groupby("x").quantile(0.5)
+    assert_identical(expected, actual)
+
+    # Vector quantile
+    expected = xr.Dataset(
+        data_vars={"a": (("x", "quantile"), [[1, 3], [4, 6]])},
+        coords={"x": [1, 2], "quantile": [0, 1]},
+    )
+    actual = ds.groupby("x").quantile([0, 1])
+    assert_identical(expected, actual)
+
+    # Multiple dimensions
+    ds = xr.Dataset(
+        data_vars={
+            "a": (
+                ("x", "y"),
+                [[1, 11, 26], [2, 12, 22], [3, 13, 23], [4, 16, 24], [5, 15, 25]],
+            )
+        },
+        coords={"x": [1, 1, 1, 2, 2], "y": [0, 0, 1]},
+    )
+
+    actual_x = ds.groupby("x").quantile(0, dim=...)
+    expected_x = xr.Dataset({"a": ("x", [1, 4])}, coords={"x": [1, 2], "quantile": 0})
+    assert_identical(expected_x, actual_x)
+
+    actual_y = ds.groupby("y").quantile(0, dim=...)
+    expected_y = xr.Dataset({"a": ("y", [1, 22])}, coords={"y": [0, 1], "quantile": 0})
+    assert_identical(expected_y, actual_y)
+
+    actual_xx = ds.groupby("x").quantile(0)
+    expected_xx = xr.Dataset(
+        {"a": (("x", "y"), [[1, 11, 22], [4, 15, 24]])},
+        coords={"x": [1, 2], "y": [0, 0, 1], "quantile": 0},
+    )
+    assert_identical(expected_xx, actual_xx)
+
+    actual_yy = ds.groupby("y").quantile(0)
+    expected_yy = xr.Dataset(
+        {"a": (("x", "y"), [[1, 26], [2, 22], [3, 23], [4, 24], [5, 25]])},
+        coords={"x": [1, 1, 1, 2, 2], "y": [0, 1], "quantile": 0},
+    ).transpose()
+    assert_identical(expected_yy, actual_yy)
+
+    times = pd.date_range("2000-01-01", periods=365)
+    x = [0, 1]
+    foo = xr.Dataset(
+        {"a": (("time", "x"), np.reshape(np.arange(365 * 2), (365, 2)))},
+        coords=dict(time=times, x=x),
+    )
+    g = foo.groupby(foo.time.dt.month)
+
+    actual = g.quantile(0, dim=...)
+    expected = xr.Dataset(
+        {
+            "a": (
+                "month",
+                [
+                    0.0,
+                    62.0,
+                    120.0,
+                    182.0,
+                    242.0,
+                    304.0,
+                    364.0,
+                    426.0,
+                    488.0,
+                    548.0,
+                    610.0,
+                    670.0,
+                ],
+            )
+        },
+        coords={"month": np.arange(1, 13), "quantile": 0},
+    )
+    assert_identical(expected, actual)
+
+    actual = g.quantile(0, dim="time").isel(month=slice(None, 2))
+    expected = xr.Dataset(
+        data_vars={"a": (("month", "x"), [[0.0, 1], [62.0, 63]])},
+        coords={"month": [1, 2], "x": [0, 1], "quantile": 0},
+    )
     assert_identical(expected, actual)
 
 
@@ -255,6 +378,72 @@ def test_groupby_repr_datetime(obj):
     assert actual == expected
 
 
+def test_groupby_drops_nans():
+    # GH2383
+    # nan in 2D data variable (requires stacking)
+    ds = xr.Dataset(
+        {
+            "variable": (("lat", "lon", "time"), np.arange(60.0).reshape((4, 3, 5))),
+            "id": (("lat", "lon"), np.arange(12.0).reshape((4, 3))),
+        },
+        coords={"lat": np.arange(4), "lon": np.arange(3), "time": np.arange(5)},
+    )
+
+    ds["id"].values[0, 0] = np.nan
+    ds["id"].values[3, 0] = np.nan
+    ds["id"].values[-1, -1] = np.nan
+
+    grouped = ds.groupby(ds.id)
+
+    # non reduction operation
+    expected = ds.copy()
+    expected.variable.values[0, 0, :] = np.nan
+    expected.variable.values[-1, -1, :] = np.nan
+    expected.variable.values[3, 0, :] = np.nan
+    actual = grouped.map(lambda x: x).transpose(*ds.variable.dims)
+    assert_identical(actual, expected)
+
+    # reduction along grouped dimension
+    actual = grouped.mean()
+    stacked = ds.stack({"xy": ["lat", "lon"]})
+    expected = (
+        stacked.variable.where(stacked.id.notnull()).rename({"xy": "id"}).to_dataset()
+    )
+    expected["id"] = stacked.id.values
+    assert_identical(actual, expected.dropna("id").transpose(*actual.dims))
+
+    # reduction operation along a different dimension
+    actual = grouped.mean("time")
+    expected = ds.mean("time").where(ds.id.notnull())
+    assert_identical(actual, expected)
+
+    # NaN in non-dimensional coordinate
+    array = xr.DataArray([1, 2, 3], [("x", [1, 2, 3])])
+    array["x1"] = ("x", [1, 1, np.nan])
+    expected = xr.DataArray(3, [("x1", [1])])
+    actual = array.groupby("x1").sum()
+    assert_equal(expected, actual)
+
+    # NaT in non-dimensional coordinate
+    array["t"] = (
+        "x",
+        [
+            np.datetime64("2001-01-01"),
+            np.datetime64("2001-01-01"),
+            np.datetime64("NaT"),
+        ],
+    )
+    expected = xr.DataArray(3, [("t", [np.datetime64("2001-01-01")])])
+    actual = array.groupby("t").sum()
+    assert_equal(expected, actual)
+
+    # test for repeated coordinate labels
+    array = xr.DataArray([0, 1, 2, 4, 3, 4], [("x", [np.nan, 1, 1, np.nan, 2, np.nan])])
+    expected = xr.DataArray([3, 3], [("x", [1, 2])])
+    actual = array.groupby("x").sum()
+    assert_equal(expected, actual)
+
+
 def test_groupby_grouping_errors():
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
     with raises_regex(ValueError, "None of the data falls within bins with edges"):
@@ -274,6 +463,40 @@ def test_groupby_grouping_errors():
 
     with raises_regex(ValueError, "Failed to group data."):
         dataset.to_array().groupby(dataset.foo * np.nan)
+
+
+def test_groupby_reduce_dimension_error(array):
+    grouped = array.groupby("y")
+    with raises_regex(ValueError, "cannot reduce over dimensions"):
+        grouped.mean()
+
+    with raises_regex(ValueError, "cannot reduce over dimensions"):
+        grouped.mean("huh")
+
+    with raises_regex(ValueError, "cannot reduce over dimensions"):
+        grouped.mean(("x", "y", "asd"))
+
+    grouped = array.groupby("y", squeeze=False)
+    assert_identical(array, grouped.mean())
+
+    assert_identical(array.mean("x"), grouped.reduce(np.mean, "x"))
+    assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
+
+
+def test_groupby_bins_timeseries():
+    ds = xr.Dataset()
+    ds["time"] = xr.DataArray(
+        pd.date_range("2010-08-01", "2010-08-15", freq="15min"), dims="time"
+    )
+    ds["val"] = xr.DataArray(np.ones(*ds["time"].shape), dims="time")
+    time_bins = pd.date_range(start="2010-08-01", end="2010-08-15", freq="24H")
+    actual = ds.groupby_bins("time", time_bins).sum()
+    expected = xr.DataArray(
+        96 * np.ones((14,)),
+        dims=["time_bins"],
+        coords={"time_bins": pd.cut(time_bins, time_bins).categories},
+    ).to_dataset(name="val")
+    assert_identical(actual, expected)
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

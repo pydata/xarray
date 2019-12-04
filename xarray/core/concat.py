@@ -2,6 +2,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
+from .duck_array_ops import lazy_array_equiv
 from .merge import _VALID_COMPAT, unique_variable
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
@@ -44,6 +45,7 @@ def concat(
           * 'all': All data variables will be concatenated.
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
+
         If objects are DataArrays, data_vars must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
         These coordinate variables will be concatenated together:
@@ -148,10 +150,10 @@ def _calc_concat_dim_coord(dim):
         dim = dim_name
     elif not isinstance(dim, DataArray):
         coord = as_variable(dim).to_index_variable()
-        dim, = coord.dims
+        (dim,) = coord.dims
     else:
         coord = dim
-        dim, = coord.dims
+        (dim,) = coord.dims
     return dim, coord
 
 
@@ -189,26 +191,43 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
                     if k not in concat_over:
-                        # Compare the variable of all datasets vs. the one
-                        # of the first dataset. Perform the minimum amount of
-                        # loads in order to avoid multiple loads from disk
-                        # while keeping the RAM footprint low.
-                        v_lhs = datasets[0].variables[k].load()
-                        # We'll need to know later on if variables are equal.
-                        computed = []
-                        for ds_rhs in datasets[1:]:
-                            v_rhs = ds_rhs.variables[k].compute()
-                            computed.append(v_rhs)
-                            if not getattr(v_lhs, compat)(v_rhs):
-                                concat_over.add(k)
-                                equals[k] = False
-                                # computed variables are not to be re-computed
-                                # again in the future
-                                for ds, v in zip(datasets[1:], computed):
-                                    ds.variables[k].data = v.data
+                        equals[k] = None
+                        variables = [ds.variables[k] for ds in datasets]
+                        # first check without comparing values i.e. no computes
+                        for var in variables[1:]:
+                            equals[k] = getattr(variables[0], compat)(
+                                var, equiv=lazy_array_equiv
+                            )
+                            if equals[k] is not True:
+                                # exit early if we know these are not equal or that
+                                # equality cannot be determined i.e. one or all of
+                                # the variables wraps a numpy array
                                 break
-                        else:
-                            equals[k] = True
+
+                        if equals[k] is False:
+                            concat_over.add(k)
+
+                        elif equals[k] is None:
+                            # Compare the variable of all datasets vs. the one
+                            # of the first dataset. Perform the minimum amount of
+                            # loads in order to avoid multiple loads from disk
+                            # while keeping the RAM footprint low.
+                            v_lhs = datasets[0].variables[k].load()
+                            # We'll need to know later on if variables are equal.
+                            computed = []
+                            for ds_rhs in datasets[1:]:
+                                v_rhs = ds_rhs.variables[k].compute()
+                                computed.append(v_rhs)
+                                if not getattr(v_lhs, compat)(v_rhs):
+                                    concat_over.add(k)
+                                    equals[k] = False
+                                    # computed variables are not to be re-computed
+                                    # again in the future
+                                    for ds, v in zip(datasets[1:], computed):
+                                        ds.variables[k].data = v.data
+                                    break
+                            else:
+                                equals[k] = True
 
             elif opt == "all":
                 concat_over.update(
@@ -217,7 +236,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
             elif opt == "minimal":
                 pass
             else:
-                raise ValueError("unexpected value for %s: %s" % (subset, opt))
+                raise ValueError(f"unexpected value for {subset}: {opt}")
         else:
             invalid_vars = [k for k in opt if k not in getattr(datasets[0], subset)]
             if invalid_vars:
@@ -370,7 +389,7 @@ def _dataset_concat(
     result = result.set_coords(coord_names)
     result.encoding = result_encoding
 
-    result = result.drop(unlabeled_dims, errors="ignore")
+    result = result.drop_vars(unlabeled_dims, errors="ignore")
 
     if coord is not None:
         # add concat dimension last to ensure that its in the final Dataset

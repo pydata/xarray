@@ -285,14 +285,14 @@ automate `embarrassingly parallel
 <https://en.wikipedia.org/wiki/Embarrassingly_parallel>`__ "map" type operations
 where a function written for processing NumPy arrays should be repeatedly
 applied to xarray objects containing Dask arrays. It works similarly to
-:py:func:`dask.array.map_blocks` and :py:func:`dask.array.atop`, but without
+:py:func:`dask.array.map_blocks` and :py:func:`dask.array.blockwise`, but without
 requiring an intermediate layer of abstraction.
 
 For the best performance when using Dask's multi-threaded scheduler, wrap a
 function that already releases the global interpreter lock, which fortunately
 already includes most NumPy and Scipy functions. Here we show an example
 using NumPy operations and a fast function from
-`bottleneck <https://github.com/kwgoodman/bottleneck>`__, which
+`bottleneck <https://github.com/pydata/bottleneck>`__, which
 we use to calculate `Spearman's rank-correlation coefficient <https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient>`__:
 
 .. code-block:: python

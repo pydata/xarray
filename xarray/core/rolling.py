@@ -1,4 +1,6 @@
 import functools
+import warnings
+from typing import Callable
 
 import numpy as np
 
@@ -106,7 +108,7 @@ class Rolling:
     def __len__(self):
         return self.obj.sizes[self.dim]
 
-    def _reduce_method(name):
+    def _reduce_method(name: str) -> Callable:  # type: ignore
         array_agg_func = getattr(duck_array_ops, name)
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
@@ -350,6 +352,14 @@ class DataArrayRolling(Rolling):
     def _numpy_or_bottleneck_reduce(
         self, array_agg_func, bottleneck_move_func, **kwargs
     ):
+        if "dim" in kwargs:
+            warnings.warn(
+                f"Reductions will be applied along the rolling dimension '{self.dim}'. Passing the 'dim' kwarg to reduction operations has no effect and will raise an error in xarray 0.16.0.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            del kwargs["dim"]
+
         if bottleneck_move_func is not None and not isinstance(
             self.obj.data, dask_array_type
         ):
@@ -453,7 +463,7 @@ class DatasetRolling(Rolling):
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
             ),
-            **kwargs
+            **kwargs,
         )
 
     def construct(self, window_dim, stride=1, fill_value=dtypes.NA):

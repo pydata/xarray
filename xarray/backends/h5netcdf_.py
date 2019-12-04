@@ -245,7 +245,7 @@ class H5NetCDFStore(WritableCFDataStore):
                 dtype=dtype,
                 dimensions=variable.dims,
                 fillvalue=fillvalue,
-                **kwargs
+                **kwargs,
             )
         else:
             nc4_var = self.ds[name]

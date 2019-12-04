@@ -22,6 +22,7 @@ from xarray.core.indexing import (
     PandasIndexAdapter,
     VectorizedIndexer,
 )
+from xarray.core.pycompat import dask_array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import requires_bottleneck
@@ -33,6 +34,7 @@ from . import (
     assert_identical,
     raises_regex,
     requires_dask,
+    requires_sparse,
     source_ndarray,
 )
 
@@ -215,7 +217,7 @@ class VariableSubclassobjects:
                 return hash(self.item)
 
             def __repr__(self):
-                return "%s(item=%r)" % (type(self).__name__, self.item)
+                return "{}(item={!r})".format(type(self).__name__, self.item)
 
         item = HashableItemWrapper((1, 2, 3))
         x = self.cls("x", [item])
@@ -541,6 +543,15 @@ class VariableSubclassobjects:
         new_data = np.arange(5, 20)
         with raises_regex(ValueError, "must match shape of object"):
             orig.copy(data=new_data)
+
+    def test_replace(self):
+        var = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
+        result = var._replace()
+        assert_identical(result, var)
+
+        new_data = np.arange(4).reshape(2, 2)
+        result = var._replace(data=new_data)
+        assert_array_equal(result.data, new_data)
 
     def test_real_and_imag(self):
         v = self.cls("x", np.arange(3) - 1j * np.arange(3), {"foo": "bar"})
@@ -1280,6 +1291,9 @@ class TestVariable(VariableSubclassobjects):
         w2 = Variable(["d", "b", "c", "a"], np.einsum("abcd->dbca", x))
         assert w2.shape == (5, 3, 4, 2)
         assert_identical(w2, w.transpose("d", "b", "c", "a"))
+        assert_identical(w2, w.transpose("d", ..., "a"))
+        assert_identical(w2, w.transpose("d", "b", "c", ...))
+        assert_identical(w2, w.transpose(..., "b", "c", "a"))
         assert_identical(w, w2.transpose("a", "b", "c", "d"))
         w3 = Variable(["b", "c", "d", "a"], np.einsum("abcd->bcda", x))
         assert_identical(w, w3.transpose("a", "b", "c", "d"))
@@ -1474,24 +1488,36 @@ class TestVariable(VariableSubclassobjects):
 
         with raises_regex(ValueError, "cannot supply both"):
             v.mean(dim="x", axis=0)
+        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
+            v.mean(dim="x", allow_lazy=True)
+        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
+            v.mean(dim="x", allow_lazy=False)
 
-    def test_quantile(self):
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    @pytest.mark.parametrize(
+        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+    )
+    def test_quantile(self, q, axis, dim):
         v = Variable(["x", "y"], self.d)
-        for q in [0.25, [0.50], [0.25, 0.75]]:
-            for axis, dim in zip(
-                [None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]
-            ):
-                actual = v.quantile(q, dim=dim)
-
-                expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
-                np.testing.assert_allclose(actual.values, expected)
+        actual = v.quantile(q, dim=dim)
+        expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+        np.testing.assert_allclose(actual.values, expected)
 
     @requires_dask
-    def test_quantile_dask_raises(self):
-        # regression for GH1524
-        v = Variable(["x", "y"], self.d).chunk(2)
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    @pytest.mark.parametrize("axis, dim", [[1, "y"], [[1], ["y"]]])
+    def test_quantile_dask(self, q, axis, dim):
+        v = Variable(["x", "y"], self.d).chunk({"x": 2})
+        actual = v.quantile(q, dim=dim)
+        assert isinstance(actual.data, dask_array_type)
+        expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+        np.testing.assert_allclose(actual.values, expected)
 
-        with raises_regex(TypeError, "arrays stored as dask"):
+    @requires_dask
+    def test_quantile_chunked_dim_error(self):
+        v = Variable(["x", "y"], self.d).chunk({"x": 2})
+
+        with raises_regex(ValueError, "dimension 'x'"):
             v.quantile(0.5, dim="x")
 
     @requires_dask
@@ -1844,6 +1870,17 @@ class TestVariableWithDask(VariableSubclassobjects):
             v._getitem_with_mask(indexer, fill_value=-1),
             self.cls(("x", "y"), [[0, -1], [-1, 2]]),
         )
+
+
+@requires_sparse
+class TestVariableWithSparse:
+    # TODO inherit VariableSubclassobjects to cover more tests
+
+    def test_as_sparse(self):
+        data = np.arange(12).reshape(3, 4)
+        var = Variable(("x", "y"), data)._as_sparse(fill_value=-1)
+        actual = var._to_dense()
+        assert_identical(var, actual)
 
 
 class TestIndexVariable(VariableSubclassobjects):

@@ -83,8 +83,8 @@ def _infer_line_data(darray, x, y, hue):
                     )
 
             else:
-                xdim, = darray[xname].dims
-                huedim, = darray[huename].dims
+                (xdim,) = darray[xname].dims
+                (huedim,) = darray[huename].dims
                 yplt = darray.transpose(xdim, huedim)
 
         else:
@@ -102,8 +102,8 @@ def _infer_line_data(darray, x, y, hue):
                     )
 
             else:
-                ydim, = darray[yname].dims
-                huedim, = darray[huename].dims
+                (ydim,) = darray[yname].dims
+                (huedim,) = darray[huename].dims
                 xplt = darray.transpose(ydim, huedim)
 
         huelabel = label_from_attrs(darray[huename])
@@ -124,7 +124,7 @@ def plot(
     hue=None,
     rtol=0.01,
     subplot_kws=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Default plot of DataArray using matplotlib.pyplot.
@@ -226,7 +226,7 @@ def line(
     ylim=None,
     add_legend=True,
     _labels=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Line plot of DataArray index against values
@@ -269,7 +269,7 @@ def line(
         if None, use the default for the matplotlib function.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
-    *args, **kwargs : optional
+    ``*args``, ``**kwargs`` : optional
         Additional arguments to matplotlib.pyplot.plot
     """
     # Handle facetgrids first
@@ -288,7 +288,7 @@ def line(
         )
 
     # The allargs dict passed to _easy_facetgrid above contains args
-    if args is ():
+    if args == ():
         args = kwargs.pop("args", ())
     else:
         assert "args" not in kwargs
@@ -404,7 +404,7 @@ def hist(
     yticks=None,
     xlim=None,
     ylim=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Histogram of DataArray
@@ -584,7 +584,7 @@ def _plot2d(plotfunc):
     """
 
     # Build on the original docstring
-    plotfunc.__doc__ = "%s\n%s" % (plotfunc.__doc__, commondoc)
+    plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
     @functools.wraps(plotfunc)
     def newplotfunc(
@@ -621,7 +621,7 @@ def _plot2d(plotfunc):
         xlim=None,
         ylim=None,
         norm=None,
-        **kwargs
+        **kwargs,
     ):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
@@ -734,7 +734,7 @@ def _plot2d(plotfunc):
             vmin=cmap_params["vmin"],
             vmax=cmap_params["vmax"],
             norm=cmap_params["norm"],
-            **kwargs
+            **kwargs,
         )
 
         # Label the plot with metadata
@@ -808,7 +808,7 @@ def _plot2d(plotfunc):
         xlim=None,
         ylim=None,
         norm=None,
-        **kwargs
+        **kwargs,
     ):
         """
         The method should have the same signature as the function.

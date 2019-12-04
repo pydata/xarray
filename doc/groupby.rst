@@ -35,10 +35,11 @@ Let's create a simple example dataset:
 
 .. ipython:: python
 
-    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 3))},
-                    coords={'x': [10, 20, 30, 40],
-                            'letters': ('x', list('abba'))})
-    arr = ds['foo']
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 3))},
+        coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
+    )
+    arr = ds["foo"]
     ds
 
 If we groupby the name of a variable or coordinate in a dataset (we can also
@@ -93,7 +94,7 @@ Apply
 ~~~~~
 
 To apply a function to each group, you can use the flexible
-:py:meth:`~xarray.DatasetGroupBy.apply` method. The resulting objects are automatically
+:py:meth:`~xarray.DatasetGroupBy.map` method. The resulting objects are automatically
 concatenated back together along the group axis:
 
 .. ipython:: python
@@ -101,7 +102,7 @@ concatenated back together along the group axis:
     def standardize(x):
         return (x - x.mean()) / x.std()
 
-    arr.groupby('letters').apply(standardize)
+    arr.groupby('letters').map(standardize)
 
 GroupBy objects also have a :py:meth:`~xarray.DatasetGroupBy.reduce` method and
 methods like :py:meth:`~xarray.DatasetGroupBy.mean` as shortcuts for applying an
@@ -116,7 +117,13 @@ dimensions *other than* the provided one:
 
 .. ipython:: python
 
-    ds.groupby('x').std(xr.ALL_DIMS)
+    ds.groupby('x').std(...)
+
+.. note::
+
+    We use an ellipsis (`...`) here to indicate we want to reduce over all
+    other dimensions  
+
 
 First and last
 ~~~~~~~~~~~~~~
@@ -127,7 +134,7 @@ values for group along the grouped dimension:
 
 .. ipython:: python
 
-    ds.groupby('letters').first(xr.ALL_DIMS)
+    ds.groupby('letters').first(...)
 
 By default, they skip missing values (control this with ``skipna``).
 
@@ -142,7 +149,7 @@ coordinates. For example:
 
 .. ipython:: python
 
-    alt = arr.groupby('letters').mean(xr.ALL_DIMS)
+    alt = arr.groupby('letters').mean(...)
     alt
     ds.groupby('letters') - alt
 
@@ -195,8 +202,8 @@ __ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimen
                 'lat': (['ny','nx'], [[10,10],[20,20]] ),},
         dims=['ny','nx'])
     da
-    da.groupby('lon').sum(xr.ALL_DIMS)
-    da.groupby('lon').apply(lambda x: x - x.mean(), shortcut=False)
+    da.groupby('lon').sum(...)
+    da.groupby('lon').map(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large
 number of bins, coarse-binning via :py:meth:`~xarray.Dataset.groupby_bins`
@@ -213,4 +220,4 @@ applying your function, and then unstacking the result:
 .. ipython:: python
 
    stacked = da.stack(gridcell=['ny', 'nx'])
-   stacked.groupby('gridcell').sum(xr.ALL_DIMS).unstack('gridcell')
+   stacked.groupby('gridcell').sum(...).unstack('gridcell')

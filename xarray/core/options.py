@@ -8,6 +8,7 @@ WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
 CMAP_SEQUENTIAL = "cmap_sequential"
 CMAP_DIVERGENT = "cmap_divergent"
 KEEP_ATTRS = "keep_attrs"
+DISPLAY_STYLE = "display_style"
 
 
 OPTIONS = {
@@ -19,9 +20,11 @@ OPTIONS = {
     CMAP_SEQUENTIAL: "viridis",
     CMAP_DIVERGENT: "RdBu_r",
     KEEP_ATTRS: "default",
+    DISPLAY_STYLE: "text",
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
+_DISPLAY_OPTIONS = frozenset(["text", "html"])
 
 
 def _positive_integer(value):
@@ -35,6 +38,7 @@ _VALIDATORS = {
     FILE_CACHE_MAXSIZE: _positive_integer,
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
     KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
+    DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
 }
 
 
@@ -98,6 +102,9 @@ class set_options:
       attrs, ``False`` to always discard them, or ``'default'`` to use original
       logic that attrs should only be kept in unambiguous circumstances.
       Default: ``'default'``.
+    - ``display_style``: display style to use in jupyter for xarray objects.
+      Default: ``'text'``. Other options are ``'html'``.
+
 
     You can use ``set_options`` either as a context manager:
 
@@ -125,7 +132,7 @@ class set_options:
                     % (k, set(OPTIONS))
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError("option %r given an invalid value: %r" % (k, v))
+                raise ValueError(f"option {k!r} given an invalid value: {v!r}")
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 

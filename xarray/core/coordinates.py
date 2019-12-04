@@ -309,7 +309,7 @@ class DataArrayCoordinates(Coordinates):
         from .dataset import Dataset
 
         coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
-        return Dataset._from_vars_and_coord_names(coords, set(coords))
+        return Dataset._construct_direct(coords, set(coords))
 
     def __delitem__(self, key: Hashable) -> None:
         del self._data._coords[key]
@@ -367,7 +367,7 @@ def remap_label_indexers(
     indexers: Mapping[Hashable, Any] = None,
     method: str = None,
     tolerance=None,
-    **indexers_kwargs: Any
+    **indexers_kwargs: Any,
 ) -> Tuple[dict, dict]:  # TODO more precise return type after annotations in indexing
     """Remap indexers from obj.coords.
     If indexer is an instance of DataArray and it has coordinate, then this coordinate

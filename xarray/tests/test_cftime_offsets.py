@@ -202,7 +202,7 @@ def test_to_offset_annual(month_label, month_int, multiple, offset_str):
     if month_label:
         freq = "-".join([freq, month_label])
     if multiple:
-        freq = "{}".format(multiple) + freq
+        freq = f"{multiple}{freq}"
     result = to_offset(freq)
 
     if multiple and month_int:
@@ -230,7 +230,7 @@ def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
     if month_label:
         freq = "-".join([freq, month_label])
     if multiple:
-        freq = "{}".format(multiple) + freq
+        freq = f"{multiple}{freq}"
     result = to_offset(freq)
 
     if multiple and month_int:
@@ -1187,5 +1187,5 @@ def test_dayofyear_after_cftime_range(freq):
 def test_cftime_range_standard_calendar_refers_to_gregorian():
     from cftime import DatetimeGregorian
 
-    result, = cftime_range("2000", periods=1)
+    (result,) = cftime_range("2000", periods=1)
     assert isinstance(result, DatetimeGregorian)

@@ -1,5 +1,6 @@
 import warnings
 from contextlib import suppress
+from html import escape
 from textwrap import dedent
 from typing import (
     Any,
@@ -18,16 +19,16 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import dtypes, duck_array_ops, formatting, ops
+from . import dtypes, duck_array_ops, formatting, formatting_html, ops
 from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, ReprObject, either_dict_or_kwargs
+from .utils import Frozen, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
-ALL_DIMS = ReprObject("<all-dims>")
+ALL_DIMS = ...
 
 
 C = TypeVar("C")
@@ -42,14 +43,12 @@ class ImplementsArrayReduce:
         if include_skipna:
 
             def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                return self.reduce(
-                    func, dim, axis, skipna=skipna, allow_lazy=True, **kwargs
-                )
+                return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
 
         else:
 
             def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore
-                return self.reduce(func, dim, axis, allow_lazy=True, **kwargs)
+                return self.reduce(func, dim, axis, **kwargs)
 
         return wrapped_func
 
@@ -82,32 +81,33 @@ class ImplementsDatasetReduce:
 
             def wrapped_func(self, dim=None, skipna=None, **kwargs):
                 return self.reduce(
-                    func,
-                    dim,
-                    skipna=skipna,
-                    numeric_only=numeric_only,
-                    allow_lazy=True,
-                    **kwargs
+                    func, dim, skipna=skipna, numeric_only=numeric_only, **kwargs
                 )
 
         else:
 
             def wrapped_func(self, dim=None, **kwargs):  # type: ignore
-                return self.reduce(
-                    func, dim, numeric_only=numeric_only, allow_lazy=True, **kwargs
-                )
+                return self.reduce(func, dim, numeric_only=numeric_only, **kwargs)
 
         return wrapped_func
 
-    _reduce_extra_args_docstring = """dim : str or sequence of str, optional
+    _reduce_extra_args_docstring = dedent(
+        """
+        dim : str or sequence of str, optional
             Dimension(s) over which to apply `{name}`.  By default `{name}` is
-            applied over all dimensions."""
+            applied over all dimensions.
+        """
+    ).strip()
 
-    _cum_extra_args_docstring = """dim : str or sequence of str, optional
+    _cum_extra_args_docstring = dedent(
+        """
+        dim : str or sequence of str, optional
             Dimension over which to apply `{name}`.
         axis : int or sequence of int, optional
             Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied."""
+            and 'axis' arguments can be supplied.
+        """
+    ).strip()
 
 
 class AbstractArray(ImplementsArrayReduce):
@@ -133,6 +133,11 @@ class AbstractArray(ImplementsArrayReduce):
 
     def __repr__(self) -> str:
         return formatting.array_repr(self)
+
+    def _repr_html_(self):
+        if OPTIONS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
+        return formatting_html.array_repr(self)
 
     def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
@@ -167,7 +172,7 @@ class AbstractArray(ImplementsArrayReduce):
         try:
             return self.dims.index(dim)
         except ValueError:
-            raise ValueError("%r not found in array dimensions %r" % (dim, self.dims))
+            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
     def sizes(self: Any) -> Mapping[Hashable, int]:
@@ -225,7 +230,7 @@ class AttrAccessMixin:
                 with suppress(KeyError):
                     return source[name]
         raise AttributeError(
-            "%r object has no attribute %r" % (type(self).__name__, name)
+            "{!r} object has no attribute {!r}".format(type(self).__name__, name)
         )
 
     # This complicated two-method design boosts overall performance of simple operations
@@ -258,7 +263,9 @@ class AttrAccessMixin:
         except AttributeError as e:
             # Don't accidentally shadow custom AttributeErrors, e.g.
             # DataArray.dims.setter
-            if str(e) != "%r object has no attribute %r" % (type(self).__name__, name):
+            if str(e) != "{!r} object has no attribute {!r}".format(
+                type(self).__name__, name
+            ):
                 raise
             raise AttributeError(
                 "cannot set attribute %r on a %r object. Use __setitem__ style"
@@ -455,7 +462,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def assign_attrs(self, *args, **kwargs):
         """Assign new attrs to this object.
 
-        Returns a new object equivalent to self.attrs.update(*args, **kwargs).
+        Returns a new object equivalent to ``self.attrs.update(*args, **kwargs)``.
 
         Parameters
         ----------
@@ -479,10 +486,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self,
         func: Union[Callable[..., T], Tuple[Callable[..., T], str]],
         *args,
-        **kwargs
+        **kwargs,
     ) -> T:
         """
-        Apply func(self, *args, **kwargs)
+        Apply ``func(self, *args, **kwargs)``
 
         This method replicates the pandas method of the same name.
 
@@ -751,7 +758,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
         center: bool = False,
-        **window_kwargs: int
+        **window_kwargs: int,
     ):
         """
         Rolling window object.
@@ -815,7 +822,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self,
         window: Mapping[Hashable, int] = None,
         window_type: str = "span",
-        **window_kwargs
+        **window_kwargs,
     ):
         """
         Exponentially-weighted moving window.
@@ -827,6 +834,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         window : A single mapping from a dimension name to window value,
                  optional
+
             dim : str
                 Name of the dimension to create the rolling exponential window
                 along (e.g., `time`).
@@ -856,7 +864,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         boundary: str = "exact",
         side: Union[str, Mapping[Hashable, str]] = "left",
         coord_func: str = "mean",
-        **window_kwargs: int
+        **window_kwargs: int,
     ):
         """
         Coarsen object.
@@ -865,6 +873,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dim: dict, optional
             Mapping from the dimension name to the window size.
+
             dim : str
                 Name of the dimension to create the rolling iterator
                 along (e.g., `time`).
@@ -875,7 +884,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func: function (name) that is applied to the coordintes,
+        coord_func : function (name) that is applied to the coordintes,
             or a mapping from coordinate name to function (name).
 
         Returns
@@ -926,7 +935,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         keep_attrs: bool = None,
         loffset=None,
         restore_coord_dims: bool = None,
-        **indexer_kwargs: str
+        **indexer_kwargs: str,
     ):
         """Returns a Resample object for performing resampling operations.
 
@@ -938,7 +947,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Parameters
         ----------
         indexer : {dim: freq}, optional
-            Mapping from the dimension name to resample frequency. The
+            Mapping from the dimension name to resample frequency [1]_. The
             dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
@@ -1085,7 +1094,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Same type as caller.
+        Same xarray type as caller, with dtype float64.
 
         Examples
         --------

@@ -83,7 +83,7 @@ def show_versions(file=sys.stdout):
     try:
         sys_info.extend(netcdf_and_hdf5_versions())
     except Exception as e:
-        print("Error collecting netcdf / hdf5 version: {}".format(e))
+        print(f"Error collecting netcdf / hdf5 version: {e}")
 
     deps = [
         # (MODULE_NAME, f(mod) -> mod version)
@@ -141,11 +141,11 @@ def show_versions(file=sys.stdout):
     print("------------------", file=file)
 
     for k, stat in sys_info:
-        print("%s: %s" % (k, stat), file=file)
+        print(f"{k}: {stat}", file=file)
 
     print("", file=file)
     for k, stat in deps_blob:
-        print("%s: %s" % (k, stat), file=file)
+        print(f"{k}: {stat}", file=file)
 
 
 if __name__ == "__main__":

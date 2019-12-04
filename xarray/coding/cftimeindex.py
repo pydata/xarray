@@ -96,6 +96,8 @@ def parse_iso8601(datetime_string):
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
+    import cftime
+
     default = date_type(1, 1, 1)
     result = parse_iso8601(timestr)
     replace = {}
@@ -107,12 +109,12 @@ def _parse_iso8601_with_reso(date_type, timestr):
             # TODO: Consider adding support for sub-second resolution?
             replace[attr] = int(value)
             resolution = attr
-
-    # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
-    # the returned date object in versions of cftime between 1.0.2 and
-    # 1.0.3.4.  It can be removed for versions of cftime greater than
-    # 1.0.3.4.
-    replace["dayofwk"] = -1
+    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
+        # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
+        # the returned date object in versions of cftime between 1.0.2 and
+        # 1.0.3.4.  It can be removed for versions of cftime greater than
+        # 1.0.3.4.
+        replace["dayofwk"] = -1
     return default.replace(**replace), resolution
 
 
@@ -403,7 +405,7 @@ class CFTimeIndex(pd.Index):
         from .cftime_offsets import to_offset
 
         if not isinstance(n, int):
-            raise TypeError("'n' must be an int, got {}.".format(n))
+            raise TypeError(f"'n' must be an int, got {n}.")
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
@@ -504,7 +506,7 @@ class CFTimeIndex(pd.Index):
 
         Returns
         -------
-        Index
+        pandas.Index
             Index of formatted strings
 
         Examples

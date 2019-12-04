@@ -59,8 +59,7 @@ def _sanitize_slice_element(x):
     if isinstance(x, np.ndarray):
         if x.ndim != 0:
             raise ValueError(
-                "cannot use non-scalar arrays in a slice for "
-                "xarray indexing: {}".format(x)
+                f"cannot use non-scalar arrays in a slice for xarray indexing: {x}"
             )
         x = x[()]
 
@@ -128,9 +127,9 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
             # unlike pandas, in xarray we never want to silently convert a
             # slice indexer into an array indexer
             raise KeyError(
-                "cannot represent labeled-based slice indexer for "
-                "dimension %r with a slice over integer positions; "
-                "the index is unsorted or non-unique" % index_name
+                "cannot represent labeled-based slice indexer for dimension "
+                f"{index_name!r} with a slice over integer positions; the index is "
+                "unsorted or non-unique"
             )
 
     elif is_dict_like(label):
@@ -156,7 +155,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
 
             # GH2619. Raise a KeyError if nothing is chosen
             if indexer.dtype.kind == "b" and indexer.sum() == 0:
-                raise KeyError("{} not found".format(label))
+                raise KeyError(f"{label} not found")
 
     elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
         if _is_nested_tuple(label):
@@ -190,7 +189,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
                 )
             indexer = get_indexer_nd(index, label, method, tolerance)
             if np.any(indexer < 0):
-                raise KeyError("not all values found in index %r" % index_name)
+                raise KeyError(f"not all values found in index {index_name!r}")
     return indexer, new_index
 
 
@@ -208,12 +207,12 @@ def get_dim_indexers(data_obj, indexers):
         if k not in data_obj.dims and k not in data_obj._level_coords
     ]
     if invalid:
-        raise ValueError("dimensions or multi-index levels %r do not exist" % invalid)
+        raise ValueError(f"dimensions or multi-index levels {invalid!r} do not exist")
 
     level_indexers = defaultdict(dict)
     dim_indexers = {}
     for key, label in indexers.items():
-        dim, = data_obj[key].dims
+        (dim,) = data_obj[key].dims
         if key != dim:
             # assume here multi-index level indexer
             level_indexers[dim][key] = label
@@ -223,8 +222,8 @@ def get_dim_indexers(data_obj, indexers):
     for dim, level_labels in level_indexers.items():
         if dim_indexers.get(dim, False):
             raise ValueError(
-                "cannot combine multi-index level indexers "
-                "with an indexer for dimension %s" % dim
+                "cannot combine multi-index level indexers with an indexer for "
+                f"dimension {dim}"
             )
         dim_indexers[dim] = level_labels
 
@@ -326,7 +325,7 @@ class ExplicitIndexer:
         return self._key
 
     def __repr__(self):
-        return "{}({})".format(type(self).__name__, self.tuple)
+        return f"{type(self).__name__}({self.tuple})"
 
 
 def as_integer_or_none(value):
@@ -352,7 +351,7 @@ class BasicIndexer(ExplicitIndexer):
 
     def __init__(self, key):
         if not isinstance(key, tuple):
-            raise TypeError("key must be a tuple: {!r}".format(key))
+            raise TypeError(f"key must be a tuple: {key!r}")
 
         new_key = []
         for k in key:
@@ -362,9 +361,7 @@ class BasicIndexer(ExplicitIndexer):
                 k = as_integer_slice(k)
             else:
                 raise TypeError(
-                    "unexpected indexer type for {}: {!r}".format(
-                        type(self).__name__, k
-                    )
+                    f"unexpected indexer type for {type(self).__name__}: {k!r}"
                 )
             new_key.append(k)
 
@@ -384,7 +381,7 @@ class OuterIndexer(ExplicitIndexer):
 
     def __init__(self, key):
         if not isinstance(key, tuple):
-            raise TypeError("key must be a tuple: {!r}".format(key))
+            raise TypeError(f"key must be a tuple: {key!r}")
 
         new_key = []
         for k in key:
@@ -395,20 +392,17 @@ class OuterIndexer(ExplicitIndexer):
             elif isinstance(k, np.ndarray):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
-                        "invalid indexer array, does not have "
-                        "integer dtype: {!r}".format(k)
+                        f"invalid indexer array, does not have integer dtype: {k!r}"
                     )
                 if k.ndim != 1:
                     raise TypeError(
-                        "invalid indexer array for {}, must have "
-                        "exactly 1 dimension: ".format(type(self).__name__, k)
+                        f"invalid indexer array for {type(self).__name__}; must have "
+                        f"exactly 1 dimension: {k!r}"
                     )
                 k = np.asarray(k, dtype=np.int64)
             else:
                 raise TypeError(
-                    "unexpected indexer type for {}: {!r}".format(
-                        type(self).__name__, k
-                    )
+                    f"unexpected indexer type for {type(self).__name__}: {k!r}"
                 )
             new_key.append(k)
 
@@ -429,7 +423,7 @@ class VectorizedIndexer(ExplicitIndexer):
 
     def __init__(self, key):
         if not isinstance(key, tuple):
-            raise TypeError("key must be a tuple: {!r}".format(key))
+            raise TypeError(f"key must be a tuple: {key!r}")
 
         new_key = []
         ndim = None
@@ -439,8 +433,7 @@ class VectorizedIndexer(ExplicitIndexer):
             elif isinstance(k, np.ndarray):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
-                        "invalid indexer array, does not have "
-                        "integer dtype: {!r}".format(k)
+                        f"invalid indexer array, does not have integer dtype: {k!r}"
                     )
                 if ndim is None:
                     ndim = k.ndim
@@ -448,14 +441,12 @@ class VectorizedIndexer(ExplicitIndexer):
                     ndims = [k.ndim for k in key if isinstance(k, np.ndarray)]
                     raise ValueError(
                         "invalid indexer key: ndarray arguments "
-                        "have different numbers of dimensions: {}".format(ndims)
+                        f"have different numbers of dimensions: {ndims}"
                     )
                 k = np.asarray(k, dtype=np.int64)
             else:
                 raise TypeError(
-                    "unexpected indexer type for {}: {!r}".format(
-                        type(self).__name__, k
-                    )
+                    f"unexpected indexer type for {type(self).__name__}: {k!r}"
                 )
             new_key.append(k)
 
@@ -574,7 +565,7 @@ class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array[full_key] = value
 
     def __repr__(self):
-        return "%s(array=%r, key=%r)" % (type(self).__name__, self.array, self.key)
+        return f"{type(self).__name__}(array={self.array!r}, key={self.key!r})"
 
 
 class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
@@ -625,7 +616,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         )
 
     def __repr__(self):
-        return "%s(array=%r, key=%r)" % (type(self).__name__, self.array, self.key)
+        return f"{type(self).__name__}(array={self.array!r}, key={self.key!r})"
 
 
 def _wrap_numpy_scalars(array):
@@ -847,7 +838,7 @@ def decompose_indexer(
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, (BasicIndexer, OuterIndexer)):
         return _decompose_outer_indexer(indexer, shape, indexing_support)
-    raise TypeError("unexpected key type: {}".format(indexer))
+    raise TypeError(f"unexpected key type: {indexer}")
 
 
 def _decompose_slice(key, size):
@@ -1377,7 +1368,7 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
-            key, = key
+            (key,) = key
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
             return NumpyIndexingAdapter(self.array.values)[indexer]
@@ -1413,7 +1404,9 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array  # self.array should be always one-dimensional
 
     def __repr__(self) -> str:
-        return "%s(array=%r, dtype=%r)" % (type(self).__name__, self.array, self.dtype)
+        return "{}(array={!r}, dtype={!r})".format(
+            type(self).__name__, self.array, self.dtype
+        )
 
     def copy(self, deep: bool = True) -> "PandasIndexAdapter":
         # Not the same as just writing `self.array.copy(deep=deep)`, as

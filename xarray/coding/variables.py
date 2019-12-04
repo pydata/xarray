@@ -8,7 +8,6 @@ import pandas as pd
 
 from ..core import dtypes, duck_array_ops, indexing
 from ..core.pycompat import dask_array_type
-from ..core.utils import equivalent
 from ..core.variable import Variable
 
 
@@ -73,11 +72,8 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return self.func(self.array)
 
     def __repr__(self):
-        return "%s(%r, func=%r, dtype=%r)" % (
-            type(self).__name__,
-            self.array,
-            self.func,
-            self.dtype,
+        return "{}({!r}, func={!r}, dtype={!r})".format(
+            type(self).__name__, self.array, self.func, self.dtype
         )
 
 
@@ -113,7 +109,7 @@ def unpack_for_decoding(var):
 
 def safe_setitem(dest, key, value, name=None):
     if key in dest:
-        var_str = " on variable {!r}".format(name) if name else ""
+        var_str = f" on variable {name!r}" if name else ""
         raise ValueError(
             "failed to prevent overwriting existing key {} in attrs{}. "
             "This is probably an encoding field used by xarray to describe "
@@ -155,18 +151,25 @@ class CFMaskCoder(VariableCoder):
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
 
-        if fv is not None and mv is not None and not equivalent(fv, mv):
+        if (
+            fv is not None
+            and mv is not None
+            and not duck_array_ops.allclose_or_equiv(fv, mv)
+        ):
             raise ValueError(
-                "Variable {!r} has multiple fill values {}. "
-                "Cannot encode data. ".format(name, [fv, mv])
+                f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
             )
 
         if fv is not None:
+            # Ensure _FillValue is cast to same dtype as data's
+            encoding["_FillValue"] = data.dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
                 data = duck_array_ops.fillna(data, fill_value)
 
         if mv is not None:
+            # Ensure missing_value is cast to same dtype as data's
+            encoding["missing_value"] = data.dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and fv is None:
                 data = duck_array_ops.fillna(data, fill_value)

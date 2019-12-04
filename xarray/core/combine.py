@@ -531,6 +531,7 @@ def combine_by_coords(
         * 'all': All data variables will be concatenated.
         * list of str: The listed data variables will be concatenated, in
           addition to the 'minimal' data variables.
+
         If objects are DataArrays, `data_vars` must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
         As per the 'data_vars' kwarg, but for coordinate variables.
@@ -747,6 +748,7 @@ def auto_combine(
              'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
+
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -954,7 +956,7 @@ def _auto_concat(
                     "supply the ``concat_dim`` argument "
                     "explicitly"
                 )
-            dim, = concat_dims
+            (dim,) = concat_dims
         return concat(
             datasets,
             dim=dim,

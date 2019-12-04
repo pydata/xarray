@@ -64,7 +64,7 @@ def align(
     copy=True,
     indexes=None,
     exclude=frozenset(),
-    fill_value=dtypes.NA
+    fill_value=dtypes.NA,
 ):
     """
     Given any number of Dataset and/or DataArray objects, returns new
@@ -108,7 +108,7 @@ def align(
 
     Returns
     -------
-    aligned : same as *objects
+    aligned : same as `*objects`
         Tuple of objects with aligned coordinates.
 
     Raises
@@ -252,7 +252,7 @@ def align(
 
     if not indexes and len(objects) == 1:
         # fast path for the trivial case
-        obj, = objects
+        (obj,) = objects
         return (obj.copy(deep=copy),)
 
     all_indexes = defaultdict(list)
@@ -294,9 +294,7 @@ def align(
                 or dim in unlabeled_dim_sizes
             ):
                 if join == "exact":
-                    raise ValueError(
-                        "indexes along dimension {!r} are not equal".format(dim)
-                    )
+                    raise ValueError(f"indexes along dimension {dim!r} are not equal")
                 index = joiner(matching_indexes)
                 joined_indexes[dim] = index
             else:
@@ -402,7 +400,7 @@ def deep_align(
         copy=copy,
         indexes=indexes,
         exclude=exclude,
-        fill_value=fill_value
+        fill_value=fill_value,
     )
 
     for position, key, aligned_obj in zip(positions, keys, aligned):
@@ -468,6 +466,7 @@ def reindex_variables(
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
+    sparse: bool = False,
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
@@ -505,6 +504,8 @@ def reindex_variables(
         the input. In either case, new xarray objects are always returned.
     fill_value : scalar, optional
         Value to use for newly missing values
+    sparse: bool, optional
+        Use an sparse-array
 
     Returns
     -------
@@ -573,6 +574,8 @@ def reindex_variables(
 
     for name, var in variables.items():
         if name not in indexers:
+            if sparse:
+                var = var._as_sparse(fill_value=fill_value)
             key = tuple(
                 slice(None) if d in unchanged_dims else int_indexers.get(d, slice(None))
                 for d in var.dims

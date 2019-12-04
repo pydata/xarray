@@ -1,5 +1,7 @@
+import copy
 import functools
 import itertools
+import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
@@ -23,9 +25,11 @@ from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
 from .utils import (
     OrderedSet,
+    _default,
     decode_numpy_dict_values,
     either_dict_or_kwargs,
     ensure_us_time_resolution,
+    infix_dims,
 )
 
 try:
@@ -113,7 +117,7 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
     elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
         obj = Variable(obj.name, obj)
     elif isinstance(obj, (set, dict)):
-        raise TypeError("variable %r has invalid type %r" % (name, type(obj)))
+        raise TypeError("variable {!r} has invalid type {!r}".format(name, type(obj)))
     elif name is not None:
         data = as_compatible_data(obj)
         if data.ndim != 1:
@@ -389,6 +393,13 @@ class Variable(
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
+    def __dask_tokenize__(self):
+        # Use v.data, instead of v._data, in order to cope with the wrappers
+        # around NetCDF and the like
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._dims, self.data, self._attrs))
+
     def __dask_graph__(self):
         if isinstance(self._data, dask_array_type):
             return self._data.__dask_graph__()
@@ -658,7 +669,7 @@ class Variable(
         try:
             variables = _broadcast_compat_variables(*variables)
         except ValueError:
-            raise IndexError("Dimensions of indexers mismatch: {}".format(key))
+            raise IndexError(f"Dimensions of indexers mismatch: {key}")
 
         out_key = [variable.data for variable in variables]
         out_dims = tuple(out_dims_set)
@@ -878,7 +889,20 @@ class Variable(
         # note:
         # dims is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
-        return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(data=data)
+
+    def _replace(
+        self, dims=_default, data=_default, attrs=_default, encoding=_default
+    ) -> "Variable":
+        if dims is _default:
+            dims = copy.copy(self._dims)
+        if data is _default:
+            data = copy.copy(self.data)
+        if attrs is _default:
+            attrs = copy.copy(self._attrs)
+        if encoding is _default:
+            encoding = copy.copy(self._encoding)
+        return type(self)(dims, data, attrs, encoding, fastpath=True)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -969,10 +993,40 @@ class Variable(
 
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
+    def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
+        """
+        use sparse-array as backend.
+        """
+        import sparse
+
+        # TODO  what to do if dask-backended?
+        if fill_value is dtypes.NA:
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        else:
+            dtype = dtypes.result_type(self.dtype, fill_value)
+
+        if sparse_format is _default:
+            sparse_format = "coo"
+        try:
+            as_sparse = getattr(sparse, "as_{}".format(sparse_format.lower()))
+        except AttributeError:
+            raise ValueError("{} is not a valid sparse format".format(sparse_format))
+
+        data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
+        return self._replace(data=data)
+
+    def _to_dense(self):
+        """
+        Change backend from sparse to np.array
+        """
+        if hasattr(self._data, "todense"):
+            return self._replace(data=self._data.todense())
+        return self.copy(deep=False)
+
     def isel(
         self: VariableType,
         indexers: Mapping[Hashable, Any] = None,
-        **indexers_kwargs: Any
+        **indexers_kwargs: Any,
     ) -> VariableType:
         """Return a new array indexed along the specified dimension(s).
 
@@ -1228,8 +1282,11 @@ class Variable(
         """
         if len(dims) == 0:
             dims = self.dims[::-1]
+        dims = tuple(infix_dims(dims, self.dims))
         axes = self.get_axis_num(dims)
-        if len(dims) < 2:  # no need to transpose if only one dimension
+        if len(dims) < 2 or dims == self.dims:
+            # no need to transpose if only one dimension
+            # or dims are in same order
             return self.copy(deep=False)
 
         data = as_indexable(self._data).transpose(axes)
@@ -1416,8 +1473,8 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=False,
-        **kwargs
+        allow_lazy=None,
+        **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -1450,14 +1507,24 @@ class Variable(
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if dim is common.ALL_DIMS:
+        if dim == ...:
             dim = None
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
         if dim is not None:
             axis = self.get_axis_num(dim)
+
+        if allow_lazy is not None:
+            warnings.warn(
+                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
+                DeprecationWarning,
+            )
+        else:
+            allow_lazy = True
+
         input_data = self.data if allow_lazy else self.values
+
         if axis is not None:
             data = func(input_data, axis=axis, **kwargs)
         else:
@@ -1524,7 +1591,7 @@ class Variable(
             along the given dimension.
         """
         if not isinstance(dim, str):
-            dim, = dim.dims
+            (dim,) = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
         # twice
@@ -1588,22 +1655,24 @@ class Variable(
             return False
         return self.equals(other, equiv=equiv)
 
-    def identical(self, other):
+    def identical(self, other, equiv=duck_array_ops.array_equiv):
         """Like equals, but also checks attributes.
         """
         try:
-            return utils.dict_equiv(self.attrs, other.attrs) and self.equals(other)
+            return utils.dict_equiv(self.attrs, other.attrs) and self.equals(
+                other, equiv=equiv
+            )
         except (TypeError, AttributeError):
             return False
 
-    def no_conflicts(self, other):
+    def no_conflicts(self, other, equiv=duck_array_ops.array_notnull_equiv):
         """True if the intersection of two Variable's non-null data is
         equal; otherwise false.
 
         Variables can thus still be equal if there are locations where either,
         or both, contain NaN values.
         """
-        return self.broadcast_equals(other, equiv=duck_array_ops.array_notnull_equiv)
+        return self.broadcast_equals(other, equiv=equiv)
 
     def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
         """Compute the qth quantile of the data along the specified dimension.
@@ -1647,40 +1716,45 @@ class Variable(
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
-        if isinstance(self.data, dask_array_type):
-            raise TypeError(
-                "quantile does not work for arrays stored as dask "
-                "arrays. Load the data via .compute() or .load() "
-                "prior to calling this method."
-            )
 
-        q = np.asarray(q, dtype=np.float64)
-
-        new_dims = list(self.dims)
-        if dim is not None:
-            axis = self.get_axis_num(dim)
-            if utils.is_scalar(dim):
-                new_dims.remove(dim)
-            else:
-                for d in dim:
-                    new_dims.remove(d)
-        else:
-            axis = None
-            new_dims = []
-
-        # Only add the quantile dimension if q is array-like
-        if q.ndim != 0:
-            new_dims = ["quantile"] + new_dims
-
-        qs = np.nanpercentile(
-            self.data, q * 100.0, axis=axis, interpolation=interpolation
-        )
+        from .computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
-        attrs = self._attrs if keep_attrs else None
 
-        return Variable(new_dims, qs, attrs)
+        scalar = utils.is_scalar(q)
+        q = np.atleast_1d(np.asarray(q, dtype=np.float64))
+
+        if dim is None:
+            dim = self.dims
+
+        if utils.is_scalar(dim):
+            dim = [dim]
+
+        def _wrapper(npa, **kwargs):
+            # move quantile axis to end. required for apply_ufunc
+            return np.moveaxis(np.nanpercentile(npa, **kwargs), 0, -1)
+
+        axis = np.arange(-1, -1 * len(dim) - 1, -1)
+        result = apply_ufunc(
+            _wrapper,
+            self,
+            input_core_dims=[dim],
+            exclude_dims=set(dim),
+            output_core_dims=[["quantile"]],
+            output_dtypes=[np.float64],
+            output_sizes={"quantile": len(q)},
+            dask="parallelized",
+            kwargs={"q": q * 100, "axis": axis, "interpolation": interpolation},
+        )
+
+        # for backward compatibility
+        result = result.transpose("quantile", ...)
+        if scalar:
+            result = result.squeeze("quantile")
+        if keep_attrs:
+            result.attrs = self._attrs
+        return result
 
     def rank(self, dim, pct=False):
         """Ranks the data.
@@ -1803,7 +1877,7 @@ class Variable(
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
-                raise NameError("{} is not a valid method.".format(name))
+                raise NameError(f"{name} is not a valid method.")
         return type(self)(self.dims, func(reshaped, axis=axes), self._attrs)
 
     def _coarsen_reshape(self, windows, boundary, side):
@@ -1822,7 +1896,7 @@ class Variable(
 
         for d, window in windows.items():
             if window <= 0:
-                raise ValueError("window must be > 0. Given {}".format(window))
+                raise ValueError(f"window must be > 0. Given {window}")
 
         variable = self
         for d, window in windows.items():
@@ -1961,6 +2035,12 @@ class IndexVariable(Variable):
         if not isinstance(self._data, PandasIndexAdapter):
             self._data = PandasIndexAdapter(self._data)
 
+    def __dask_tokenize__(self):
+        from dask.base import normalize_token
+
+        # Don't waste time converting pd.Index to np.ndarray
+        return normalize_token((type(self), self._dims, self._data.array, self._attrs))
+
     def load(self):
         # data is already loaded into memory for IndexVariable
         return self
@@ -1974,6 +2054,14 @@ class IndexVariable(Variable):
 
     def chunk(self, chunks=None, name=None, lock=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
+        return self.copy(deep=False)
+
+    def _as_sparse(self, sparse_format=_default, fill_value=_default):
+        # Dummy
+        return self.copy(deep=False)
+
+    def _to_dense(self):
+        # Dummy
         return self.copy(deep=False)
 
     def _finalize_indexing_result(self, dims, data):
@@ -1994,7 +2082,7 @@ class IndexVariable(Variable):
         arrays, if possible.
         """
         if not isinstance(dim, str):
-            dim, = dim.dims
+            (dim,) = dim.dims
 
         variables = list(variables)
         first_var = variables[0]
@@ -2246,7 +2334,7 @@ def assert_unique_multiindex_level_names(variables):
             idx_level_names = var.to_index_variable().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:
-                    level_names[n].append("%r (%s)" % (n, var_name))
+                    level_names[n].append(f"{n!r} ({var_name})")
             if idx_level_names:
                 all_level_names.update(idx_level_names)
 

@@ -92,7 +92,7 @@ def open_example_mfdataset(names, *args, **kwargs):
     return open_mfdataset(
         [os.path.join(os.path.dirname(__file__), "data", name) for name in names],
         *args,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -800,7 +800,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert "coordinates" not in ds["lat"].attrs
                 assert "coordinates" not in ds["lon"].attrs
 
-        modified = original.drop(["temp", "precip"])
+        modified = original.drop_vars(["temp", "precip"])
         with self.roundtrip(modified) as actual:
             assert_identical(actual, modified)
         with create_tmp_file() as tmp_file:
@@ -986,7 +986,7 @@ _counter = itertools.count()
 @contextlib.contextmanager
 def create_tmp_file(suffix=".nc", allow_cleanup_failure=False):
     temp_dir = tempfile.mkdtemp()
-    path = os.path.join(temp_dir, "temp-%s%s" % (next(_counter), suffix))
+    path = os.path.join(temp_dir, "temp-{}{}".format(next(_counter), suffix))
     try:
         yield path
     finally:
@@ -2177,7 +2177,7 @@ class TestH5NetCDFData(NetCDF4Base):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into
         # unicode instead of leaving them as bytes.
-        data = create_test_data().drop("dim3")
+        data = create_test_data().drop_vars("dim3")
         data.attrs["foo"] = "bar"
         valid_engines = ["netcdf4", "h5netcdf"]
         for write_engine in valid_engines:
@@ -2344,7 +2344,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
 
     def test_open_fileobj(self):
         # open in-memory datasets instead of local file paths
-        expected = create_test_data().drop("dim3")
+        expected = create_test_data().drop_vars("dim3")
         expected.attrs["foo"] = "bar"
         with create_tmp_file() as tmp_file:
             expected.to_netcdf(tmp_file, engine="h5netcdf")
@@ -2490,7 +2490,7 @@ def test_open_mfdataset_list_attr():
             f.createDimension("x", 3)
             vlvar = f.createVariable("test_var", np.int32, ("x"))
             # here create an attribute as a list
-            vlvar.test_attr = ["string a {}".format(i), "string b {}".format(i)]
+            vlvar.test_attr = [f"string a {i}", f"string b {i}"]
             vlvar[:] = np.arange(3)
             f.close()
         ds1 = open_dataset(nfiles[0])
@@ -3400,20 +3400,17 @@ class TestPseudoNetCDFFormat:
         actual = camxfile.variables["O3"]
         assert_allclose(expected, actual)
 
-        data = np.array(["2002-06-03"], "datetime64[ns]")
+        data = np.array([[[2002154, 0]]], dtype="i")
         expected = xr.Variable(
-            ("TSTEP",),
+            ("TSTEP", "VAR", "DATE-TIME"),
             data,
             dict(
-                bounds="time_bounds",
-                long_name=(
-                    "synthesized time coordinate "
-                    + "from SDATE, STIME, STEP "
-                    + "global attributes"
-                ),
+                long_name="TFLAG".ljust(16),
+                var_desc="TFLAG".ljust(80),
+                units="DATE-TIME".ljust(16),
             ),
         )
-        actual = camxfile.variables["time"]
+        actual = camxfile.variables["TFLAG"]
         assert_allclose(expected, actual)
         camxfile.close()
 
@@ -3439,18 +3436,15 @@ class TestPseudoNetCDFFormat:
         actual = camxfile.variables["O3"]
         assert_allclose(expected, actual)
 
-        data1 = np.array(["2002-06-03"], "datetime64[ns]")
-        data = np.concatenate([data1] * 2, axis=0)
+        data = np.array([[[2002154, 0]]], dtype="i").repeat(2, 0)
         attrs = dict(
-            bounds="time_bounds",
-            long_name=(
-                "synthesized time coordinate "
-                + "from SDATE, STIME, STEP "
-                + "global attributes"
-            ),
+            long_name="TFLAG".ljust(16),
+            var_desc="TFLAG".ljust(80),
+            units="DATE-TIME".ljust(16),
         )
-        expected = xr.Variable(("TSTEP",), data, attrs)
-        actual = camxfile.variables["time"]
+        dims = ("TSTEP", "VAR", "DATE-TIME")
+        expected = xr.Variable(dims, data, attrs)
+        actual = camxfile.variables["TFLAG"]
         assert_allclose(expected, actual)
         camxfile.close()
 
@@ -3534,7 +3528,7 @@ def create_tmp_geotiff(
             crs=crs,
             transform=transform,
             dtype=rasterio.float32,
-            **open_kwargs
+            **open_kwargs,
         ) as s:
             for attr, val in additional_attrs.items():
                 setattr(s, attr, val)
@@ -3957,6 +3951,7 @@ class TestRasterio:
                     with xr.open_rasterio(tmp_file) as actual:
                         assert_allclose(actual, expected)
 
+    @pytest.mark.xfail(reason="rasterio 1.1.1 is broken. GH3573")
     def test_rasterio_vrt(self):
         import rasterio
 
@@ -4196,7 +4191,7 @@ class TestDataArrayToNetCDF:
         with create_tmp_file() as tmp:
             data.to_netcdf(tmp)
 
-            expected = data.drop("y")
+            expected = data.drop_vars("y")
             with open_dataarray(tmp, drop_variables=["y"]) as loaded:
                 assert_identical(expected, loaded)
 
@@ -4276,7 +4271,7 @@ def test_use_cftime_standard_calendar_default_out_of_range(calendar, units_year)
 
     x = [0, 1]
     time = [0, 720]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     original = DataArray(x, [("time", time)], name="x")
     original = original.to_dataset()
     for v in ["x", "time"]:
@@ -4307,7 +4302,7 @@ def test_use_cftime_true(calendar, units_year):
 
     x = [0, 1]
     time = [0, 720]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     original = DataArray(x, [("time", time)], name="x")
     original = original.to_dataset()
     for v in ["x", "time"]:
@@ -4365,7 +4360,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
     x = [0, 1]
     time = [0, 720]
-    units = "days since {}-01-01".format(units_year)
+    units = f"days since {units_year}-01-01"
     original = DataArray(x, [("time", time)], name="x")
     original = original.to_dataset()
     for v in ["x", "time"]:
@@ -4384,7 +4379,7 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
 def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
     x = [0, 1]
     time = [0, 720]
-    units = "days since {}".format(units_year)
+    units = f"days since {units_year}"
     original = DataArray(x, [("time", time)], name="x")
     original = original.to_dataset()
     for v in ["x", "time"]:
