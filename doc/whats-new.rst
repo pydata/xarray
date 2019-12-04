@@ -34,6 +34,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
