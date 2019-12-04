@@ -1969,7 +1969,7 @@ class TestDataArray:
                 dim={"z": np.linspace(10, 20, 12) * unit_registry.s},
                 axis=1,
             ),
-            method("drop_sel", labels="x"),
+            method("drop_vars", "x"),
             method("reset_coords", names="x2"),
             method("copy"),
             pytest.param(
@@ -4220,7 +4220,7 @@ class TestDataset:
             method("rename_dims", x="offset_x"),
             method("swap_dims", {"x": "x2"}),
             method("expand_dims", v=np.linspace(10, 20, 12) * unit_registry.s, axis=1),
-            method("drop_sel", labels="x"),
+            method("drop_vars", "x"),
             method("drop_dims", "z"),
             method("set_coords", names="c"),
             method("reset_coords", names="x2"),
