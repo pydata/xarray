@@ -1171,7 +1171,7 @@ def test_where_dataset(fill_value, unit, error, dtype):
     x = np.arange(10) * unit_registry.s
 
     ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("x", array2)}, coords={"x": x})
-    cond = ds.x < 5 * unit_registry.s
+    cond = x < 5 * unit_registry.s
     # FIXME: this should work without wrapping in array()
     fill_value = np.array(fill_value) * unit
 
