@@ -349,9 +349,7 @@ def test_apply_ufunc_dataarray(dtype):
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(
-    reason="pint does not implement `np.result_type` and align strips units"
-)
+@pytest.mark.xfail(reason="align strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -433,9 +431,7 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
     assert_equal_with_units(expected_b, result_b)
 
 
-@pytest.mark.xfail(
-    reason="pint does not implement `np.result_type` and align strips units"
-)
+@pytest.mark.xfail(reason="align strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -2307,9 +2303,6 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    @pytest.mark.xfail(
-        reason="pint does not implement np.result_type in __array_function__ yet"
-    )
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -2346,9 +2339,6 @@ class TestDataArray:
 
             assert_equal_with_units(result_array, result_data_array)
 
-    @pytest.mark.xfail(
-        reason="pint does not implement np.result_type in __array_function__ yet"
-    )
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -2750,12 +2740,7 @@ class TestDataset:
                     reason="np.median does not work with dataset yet"
                 ),
             ),
-            pytest.param(
-                function("sum"),
-                marks=pytest.mark.xfail(
-                    reason="np.result_type not implemented by pint"
-                ),
-            ),
+            function("sum"),
             pytest.param(
                 function("prod"),
                 marks=pytest.mark.xfail(reason="not implemented by pint"),
@@ -2781,12 +2766,7 @@ class TestDataset:
             method("min"),
             method("mean"),
             method("median"),
-            pytest.param(
-                method("sum"),
-                marks=pytest.mark.xfail(
-                    reason="np.result_type not implemented by pint"
-                ),
-            ),
+            method("sum"),
             pytest.param(
                 method("prod"),
                 marks=pytest.mark.xfail(reason="not implemented by pint"),
@@ -3162,12 +3142,7 @@ class TestDataset:
     @pytest.mark.parametrize(
         "variant",
         (
-            pytest.param(
-                "masking",
-                marks=pytest.mark.xfail(
-                    reason="np.result_type not implemented by quantity"
-                ),
-            ),
+            "masking",
             pytest.param(
                 "replacing_scalar",
                 marks=pytest.mark.xfail(
@@ -3919,9 +3894,6 @@ class TestDataset:
 
         assert_equal_with_units(result, expected)
 
-    @pytest.mark.xfail(
-        reason="pint does not implement np.result_type in __array_function__ yet"
-    )
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3967,9 +3939,6 @@ class TestDataset:
 
         assert_equal_with_units(result, expected)
 
-    @pytest.mark.xfail(
-        reason="pint does not implement np.result_type in __array_function__ yet"
-    )
     @pytest.mark.parametrize(
         "unit,error",
         (
