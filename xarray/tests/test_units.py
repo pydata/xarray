@@ -205,11 +205,11 @@ def attach_units(obj, units):
 def convert_units(obj, to):
     if isinstance(obj, xr.Dataset):
         data_vars = {
-            name: convert_units(array, to).variable
+            name: convert_units(array.variable, {None: to.get(name)})
             for name, array in obj.data_vars.items()
         }
         coords = {
-            name: convert_units(array, to).variable
+            name: convert_units(array.variable, {None: to.get(name)})
             for name, array in obj.coords.items()
         }
 
@@ -220,10 +220,10 @@ def convert_units(obj, to):
         new_units = (
             to.get(name, None) or to.get("data", None) or to.get(None, None) or 1
         )
-        data = convert_units(obj.data, {None: new_units})
+        data = convert_units(obj.variable, {None: new_units})
 
         coords = {
-            name: (array.dims, convert_units(array.data, to).variable)
+            name: (array.dims, convert_units(array.variable, {None: to.get(name)}))
             for name, array in obj.coords.items()
             if name != obj.name
         }
@@ -231,6 +231,9 @@ def convert_units(obj, to):
         new_obj = xr.DataArray(
             name=name, data=data, coords=coords, attrs=obj.attrs, dims=obj.dims
         )
+    elif isinstance(obj, xr.Variable):
+        new_data = convert_units(obj.data, to)
+        new_obj = obj.copy(data=new_data)
     elif isinstance(obj, unit_registry.Quantity):
         units = to.get(None)
         new_obj = obj.to(units) if units is not None else obj
