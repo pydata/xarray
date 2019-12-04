@@ -1918,7 +1918,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError("dimensions %r do not exist" % invalid)
 
         variables = {}
-        dims = {}
+        dims: Dict[Hashable, Tuple[int, ...]] = {}
         coord_names = self._coord_names.copy()
         indexes = self._indexes.copy() if self._indexes is not None else None
 
