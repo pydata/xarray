@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Union, overload
 
 from .computation import dot
+from .options import _get_keep_attrs
 
 if TYPE_CHECKING:
     from .dataarray import DataArray, Dataset
@@ -23,9 +24,6 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
         If True, the attributes (`attrs`) will be copied from the original
         object to the new one.  If False (default), the new object will be
         returned without attributes.
-    **kwargs : dict
-        Additional keyword arguments passed on to the appropriate array
-        function for calculating `{fcn}` on this object's data.
 
     Returns
     -------
@@ -41,13 +39,15 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     ----------
     dim : str or sequence of str, optional
         Dimension(s) over which to sum the weights.
+    keep_attrs : bool, optional
+        If True, the attributes (`attrs`) will be copied from the original
+        object to the new one.  If False (default), the new object will be
+        returned without attributes.
 
     Returns
     -------
     reduced : {cls}
         New {cls} object with the sum of the weights over the given dimension.
-
-
     """
 
 
@@ -94,8 +94,7 @@ class Weighted:
 
         from .dataarray import DataArray
 
-        msg = "'weights' must be a DataArray"
-        assert isinstance(weights, DataArray), msg
+        assert isinstance(weights, DataArray), "'weights' must be a DataArray"
 
         self.obj = obj
 
@@ -162,32 +161,42 @@ class Weighted:
         # calculate weighted mean
         return weighted_sum / sum_of_weights
 
-    def _implementation(self, func, **kwargs):
+    def _implementation(self, func, dim, **kwargs):
 
         msg = "Use 'Dataset.weighted' or 'DataArray.weighted'"
         raise NotImplementedError(msg)
 
     def sum_of_weights(
-        self, dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
+        self,
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        keep_attrs: Optional[bool] = None,
     ) -> Union["DataArray", "Dataset"]:
 
-        return self._implementation(self._sum_of_weights, dim=dim)
+        return self._implementation(
+            self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
+        )
 
     def sum(
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
+        keep_attrs: Optional[bool] = None,
     ) -> Union["DataArray", "Dataset"]:
 
-        return self._implementation(self._weighted_sum, dim=dim, skipna=skipna)
+        return self._implementation(
+            self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
+        )
 
     def mean(
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
+        keep_attrs: Optional[bool] = None,
     ) -> Union["DataArray", "Dataset"]:
 
-        return self._implementation(self._weighted_mean, dim=dim, skipna=skipna)
+        return self._implementation(
+            self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
+        )
 
     def __repr__(self):
         """provide a nice str repr of our Weighted object"""
@@ -199,22 +208,24 @@ class Weighted:
 
 
 class DataArrayWeighted(Weighted):
-    def _implementation(self, func, **kwargs):
+    def _implementation(self, func, dim, **kwargs):
 
-        return func(self.obj, **kwargs)
+        keep_attrs = kwargs.pop("keep_attrs")
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        weighted = func(self.obj, dim=dim, **kwargs)
+
+        if keep_attrs:
+            weighted.attrs = self.obj.attrs
+
+        return weighted
 
 
 class DatasetWeighted(Weighted):
-    def _implementation(self, func, **kwargs) -> "Dataset":
+    def _implementation(self, func, dim, **kwargs) -> "Dataset":
 
-        from .dataset import Dataset
-
-        weighted = {}
-        for key, da in self.obj.data_vars.items():
-
-            weighted[key] = func(da, **kwargs)
-
-        return Dataset(weighted, coords=self.obj.coords)
+        return self.obj.map(func, dim=dim, **kwargs)
 
 
 def _inject_docstring(cls, cls_name):
