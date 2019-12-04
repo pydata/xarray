@@ -1833,6 +1833,26 @@ class TestVariable(VariableSubclassobjects):
         expected[1, 1] *= 12 / 11
         assert_allclose(actual, expected)
 
+        v = self.cls(("x", "y"), np.arange(4 * 4, dtype=np.float32).reshape(4, 4))
+        actual = v.coarsen(dict(x=2, y=2), func="count", boundary="exact")
+        expected = self.cls(("x", "y"), 4 * np.ones((2, 2)))
+        assert_equal(actual, expected)
+
+        v[0, 0] = np.nan
+        v[-1, -1] = np.nan
+        expected[0, 0] = 3
+        expected[-1, -1] = 3
+        actual = v.coarsen(dict(x=2, y=2), func="count", boundary="exact")
+        assert_equal(actual, expected)
+
+        actual = v.coarsen(dict(x=2, y=2), func="sum", boundary="exact", skipna=False)
+        expected = self.cls(("x", "y"), [[np.nan, 18], [42, np.nan]])
+        assert_equal(actual, expected)
+
+        actual = v.coarsen(dict(x=2, y=2), func="sum", boundary="exact", skipna=True)
+        expected = self.cls(("x", "y"), [[10, 18], [42, 35]])
+        assert_equal(actual, expected)
+
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):

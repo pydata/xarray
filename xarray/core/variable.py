@@ -1864,9 +1864,9 @@ class Variable(
             ),
         )
 
-    def coarsen(self, windows, func, boundary="exact", side="left"):
+    def coarsen(self, windows, func, boundary="exact", side="left", **kwargs):
         """
-        Apply
+        Apply reduction function.
         """
         windows = {k: v for k, v in windows.items() if k in self.dims}
         if not windows:
@@ -1878,11 +1878,11 @@ class Variable(
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-        return type(self)(self.dims, func(reshaped, axis=axes), self._attrs)
+        return self._replace(data=func(reshaped, axis=axes, **kwargs))
 
     def _coarsen_reshape(self, windows, boundary, side):
         """
-        Construct a reshaped-array for corsen
+        Construct a reshaped-array for coarsen
         """
         if not utils.is_dict_like(boundary):
             boundary = {d: boundary for d in windows.keys()}

@@ -31,9 +31,14 @@ New Features
 - Weighted array reductions  are now supported via the new :py:meth:`DataArray.weighted`
   and :py:meth:`Dataset.weighted` methods. By `Mathias Hauser <https://github.com/mathause>`_
   (:issue:`422`).
+- Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
+  and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
+  By `Deepak Cherian <https://github.com/dcherian/>`_
 
 Bug fixes
 ~~~~~~~~~
+- Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
