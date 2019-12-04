@@ -1314,26 +1314,11 @@ class TestDataArray:
                 function("any"),
                 marks=pytest.mark.xfail(reason="not implemented by pint yet"),
             ),
-            pytest.param(
-                function("argmax"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
-                ),
-            ),
-            pytest.param(
-                function("argmin"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
-                ),
-            ),
+            function("argmax"),
+            function("argmin"),
             function("max"),
             function("mean"),
-            pytest.param(
-                function("median"),
-                marks=pytest.mark.xfail(
-                    reason="np.median on DataArray strips the units"
-                ),
-            ),
+            function("median"),
             function("min"),
             pytest.param(
                 function("prod"),
@@ -1360,18 +1345,8 @@ class TestDataArray:
                 method("any"),
                 marks=pytest.mark.xfail(reason="not implemented by pint yet"),
             ),
-            pytest.param(
-                method("argmax"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantities with ndarrays in nanops not implemented"
-                ),
-            ),
-            pytest.param(
-                method("argmin"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantities with ndarrays in nanops not implemented"
-                ),
-            ),
+            method("argmax"),
+            method("argmin"),
             method("max"),
             method("mean"),
             method("median"),
@@ -1402,7 +1377,10 @@ class TestDataArray:
         array = np.arange(10).astype(dtype) * unit_registry.m
         data_array = xr.DataArray(data=array)
 
-        expected = xr.DataArray(data=func(array))
+        # units differ based on the applied function, so we need to
+        # first compute the units
+        units = extract_units(func(array))
+        expected = attach_units(func(strip_units(data_array)), units)
         result = func(data_array)
 
         assert_equal_with_units(expected, result)
