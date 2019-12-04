@@ -70,7 +70,7 @@ class Weighted:
         ...
 
     @overload  # noqa: F811
-    def __init__(self, obj: "Dataset", weights: "DataArray") -> None:
+    def __init__(self, obj: "Dataset", weights: "DataArray") -> None:  # noqa: F811
         ...
 
     def __init__(self, obj, weights):  # noqa: F811
