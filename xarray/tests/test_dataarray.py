@@ -16,7 +16,6 @@ from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.indexes import propagate_indexes
 from xarray.core.utils import is_scalar
-
 from xarray.tests import (
     LooseVersion,
     ReturnItem,

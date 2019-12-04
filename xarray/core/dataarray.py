@@ -50,9 +50,9 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Indexes, propagate_indexes, default_indexes
-from .merge import PANDAS_TYPES, _extract_indexes_from_coords
+from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
+from .merge import PANDAS_TYPES, _extract_indexes_from_coords
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
