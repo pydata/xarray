@@ -29,9 +29,11 @@ pytestmark = [
 
 
 def array_extract_units(obj):
-    raw = obj.data if hasattr(obj, "data") else obj
+    if isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
+        obj = obj.data
+
     try:
-        return raw.units
+        return obj.units
     except AttributeError:
         return None
 
