@@ -28,6 +28,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
+from xarray.core.utils import is_scalar
 
 from . import (
     InaccessibleArray,
@@ -2811,6 +2812,25 @@ class TestDataset:
         expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
         assert actual.equals(expected)
 
+    @requires_sparse
+    def test_unstack_sparse(self):
+        ds = xr.Dataset(
+            {"var": (("x",), np.arange(6))},
+            coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
+        )
+        # make ds incomplete
+        ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
+        # test fill_value
+        actual = ds.unstack("index", sparse=True)
+        expected = ds.unstack("index")
+        assert actual["var"].variable._to_dense().equals(expected["var"].variable)
+        assert actual["var"].data.density < 1.0
+
+        actual = ds["var"].unstack("index", sparse=True)
+        expected = ds["var"].unstack("index")
+        assert actual.variable._to_dense().equals(expected.variable)
+        assert actual.data.density < 1.0
+
     def test_stack_unstack_fast(self):
         ds = Dataset(
             {
@@ -4556,21 +4576,24 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
-    def test_quantile(self):
-
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    def test_quantile(self, q):
         ds = create_test_data(seed=123)
 
-        for q in [0.25, [0.50], [0.25, 0.75]]:
-            for dim in [None, "dim1", ["dim1"]]:
-                ds_quantile = ds.quantile(q, dim=dim)
-                assert "quantile" in ds_quantile
-                for var, dar in ds.data_vars.items():
-                    assert var in ds_quantile
-                    assert_identical(ds_quantile[var], dar.quantile(q, dim=dim))
-            dim = ["dim1", "dim2"]
+        for dim in [None, "dim1", ["dim1"]]:
             ds_quantile = ds.quantile(q, dim=dim)
-            assert "dim3" in ds_quantile.dims
-            assert all(d not in ds_quantile.dims for d in dim)
+            if is_scalar(q):
+                assert "quantile" not in ds_quantile.dims
+            else:
+                assert "quantile" in ds_quantile.dims
+
+            for var, dar in ds.data_vars.items():
+                assert var in ds_quantile
+                assert_identical(ds_quantile[var], dar.quantile(q, dim=dim))
+        dim = ["dim1", "dim2"]
+        ds_quantile = ds.quantile(q, dim=dim)
+        assert "dim3" in ds_quantile.dims
+        assert all(d not in ds_quantile.dims for d in dim)
 
     @requires_bottleneck
     def test_rank(self):
@@ -5878,7 +5901,9 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate("time", datetime_unit="D")
     expected_data = np.trapz(
-        da, duck_array_ops.datetime_to_numeric(da["time"], datetime_unit="D"), axis=0
+        da.data,
+        duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
+        axis=0,
     )
     expected = xr.DataArray(
         expected_data,

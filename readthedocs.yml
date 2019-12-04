@@ -4,5 +4,5 @@ conda:
     file: ci/requirements/doc.yml
 python:
     version: 3.7
-    setup_py_install: true
+    setup_py_install: false
 formats: []

@@ -10,6 +10,7 @@ from .arithmetic import SupportsArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
+from .indexes import propagate_indexes
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -529,7 +530,7 @@ class GroupBy(SupportsArithmetic):
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
-                    del obj.indexes[dim]
+            obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
         return obj
 
     def fillna(self, value):
@@ -573,6 +574,7 @@ class GroupBy(SupportsArithmetic):
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
+
                 * linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
@@ -595,6 +597,59 @@ class GroupBy(SupportsArithmetic):
         --------
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
+        ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
+        ...     dims=("y", "y"),
+        ... )
+        >>> ds = xr.Dataset({"a": da})
+
+        Single quantile
+        >>> da.groupby("x").quantile(0)
+        <xarray.DataArray (x: 2, y: 4)>
+        array([[0.7, 4.2, 0.7, 1.5],
+               [6.5, 7.3, 2.6, 1.9]])
+        Coordinates:
+            quantile  float64 0.0
+          * y         (y) int64 1 1 2 2
+          * x         (x) int64 0 1
+        >>> ds.groupby("y").quantile(0, dim=...)
+        <xarray.Dataset>
+        Dimensions:   (y: 2)
+        Coordinates:
+            quantile  float64 0.0
+          * y         (y) int64 1 2
+        Data variables:
+            a         (y) float64 0.7 0.7
+
+        Multiple quantiles
+        >>> da.groupby("x").quantile([0, 0.5, 1])
+        <xarray.DataArray (x: 2, y: 4, quantile: 3)>
+        array([[[0.7 , 1.  , 1.3 ],
+                [4.2 , 6.3 , 8.4 ],
+                [0.7 , 5.05, 9.4 ],
+                [1.5 , 4.2 , 6.9 ]],
+
+               [[6.5 , 6.5 , 6.5 ],
+                [7.3 , 7.3 , 7.3 ],
+                [2.6 , 2.6 , 2.6 ],
+                [1.9 , 1.9 , 1.9 ]]])
+        Coordinates:
+          * y         (y) int64 1 1 2 2
+          * quantile  (quantile) float64 0.0 0.5 1.0
+          * x         (x) int64 0 1
+        >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3, y: 2)
+        Coordinates:
+          * quantile  (quantile) float64 0.0 0.5 1.0
+          * y         (y) int64 1 2
+        Data variables:
+            a         (y, quantile) float64 0.7 5.35 8.4 0.7 2.25 9.4
         """
         if dim is None:
             dim = self._group_dim
@@ -728,17 +783,19 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Callable to apply to each array.
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
+
             (1) The action of `func` does not depend on any of the array
                 metadata (attributes or coordinates) but only on the data and
                 dimensions.
             (2) The action of `func` creates arrays with homogeneous metadata,
                 that is, with the same dimensions and attributes.
+
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-        args : tuple, optional
+        ``*args`` : tuple, optional
             Positional arguments passed to `func`.
-        **kwargs
+        ``**kwargs``
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
         Returns
@@ -783,7 +840,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             combined = self._restore_dim_order(combined)
         if coord is not None:
             if shortcut:
-                combined._coords[coord.name] = as_variable(coord)
+                coord_var = as_variable(coord)
+                combined._coords[coord.name] = coord_var
             else:
                 combined.coords[coord.name] = coord
         combined = self._maybe_restore_empty_groups(combined)
