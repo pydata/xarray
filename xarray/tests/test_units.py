@@ -1128,7 +1128,6 @@ def test_replication_full_like_dataset(unit, error, dtype):
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="`where` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -1157,21 +1156,19 @@ def test_where_dataarray(fill_value, unit, error, dtype):
 
         return
 
-    fill_value_ = (
-        fill_value.to(unit_registry.m)
-        if isinstance(fill_value, unit_registry.Quantity)
-        and fill_value.check(unit_registry.m)
-        else fill_value
-    )
     expected = attach_units(
-        xr.where(cond, strip_units(x), strip_units(fill_value_)), extract_units(x)
+        xr.where(
+            cond,
+            strip_units(x),
+            strip_units(convert_units(fill_value, {None: unit_registry.m})),
+        ),
+        extract_units(x),
     )
     result = xr.where(cond, x, fill_value)
 
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="`where` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -1202,14 +1199,13 @@ def test_where_dataset(fill_value, unit, error, dtype):
 
         return
 
-    fill_value_ = (
-        fill_value.to(unit_registry.m)
-        if isinstance(fill_value, unit_registry.Quantity)
-        and fill_value.check(unit_registry.m)
-        else fill_value
-    )
     expected = attach_units(
-        xr.where(cond, strip_units(ds), strip_units(fill_value_)), extract_units(ds)
+        xr.where(
+            cond,
+            strip_units(ds),
+            strip_units(convert_units(fill_value, {None: unit_registry.m})),
+        ),
+        extract_units(ds),
     )
     result = xr.where(cond, ds, fill_value)
 
@@ -1227,11 +1223,13 @@ def test_dot_dataarray(dtype):
         np.linspace(10, 20, 10 * 20).reshape(10, 20).astype(dtype) * unit_registry.s
     )
 
-    arr1 = xr.DataArray(data=array1, dims=("x", "y"))
-    arr2 = xr.DataArray(data=array2, dims=("y", "z"))
+    data_array = xr.DataArray(data=array1, dims=("x", "y"))
+    other = xr.DataArray(data=array2, dims=("y", "z"))
 
-    expected = array1.dot(array2)
-    result = xr.dot(arr1, arr2)
+    expected = attach_units(
+        xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
+    )
+    result = xr.dot(data_array, other)
 
     assert_equal_with_units(expected, result)
 
