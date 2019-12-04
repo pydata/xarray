@@ -234,19 +234,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
     Getting items from or doing mathematical operations with a DataArray
     always returns another DataArray.
-
-    Attributes
-    ----------
-    dims : tuple
-        Dimension names associated with this array.
-    values : numpy.ndarray
-        Access or modify DataArray values as a numpy array.
-    coords : dict-like
-        Dictionary of DataArray objects that label values along each dimension.
-    name : str or None
-        Name of this array.
-    attrs : dict
-        Dictionary for holding arbitrary metadata.
     """
 
     _cache: Dict[str, Any]
