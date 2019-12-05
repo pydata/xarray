@@ -223,6 +223,10 @@ def map_blocks(
     indexes = {dim: dataset.indexes[dim] for dim in preserved_indexes}
     indexes.update({k: template.indexes[k] for k in new_indexes})
 
+    # We're building a new HighLevelGraph hlg. We'll have one new layer
+    # for each variable in the dataset, which is the result of the
+    # func applied to the values.
+
     graph: Dict[Any, Any] = {}
     new_layers: DefaultDict[str, Dict[Any, Any]] = collections.defaultdict(dict)
     gname = "{}-{}".format(
@@ -318,6 +322,9 @@ def map_blocks(
     hlg = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
 
     for gname_l, layer in new_layers.items():
+        # Ensure we have a valid HighLevelGraph.
+        # This adds in the getitems for each variable in the dataset.
+        # This just depends on the layer we created earlier ("graph")
         hlg.dependencies[gname_l] = {gname}
         hlg.layers[gname_l] = layer
 

@@ -1190,10 +1190,14 @@ def test_map_blocks_object_method(obj):
 
 
 def test_map_blocks_hlg_layers():
-    ds = xr.Dataset({"x": (("y",), dask.array.ones(10, chunks=(5,)))})
+    # regression test for #3599
+    ds = xr.Dataset({
+        "x": (("a",), dask.array.ones(10, chunks=(5,))),
+        "z": (("b",), dask.array.ones(10, chunks=(5,))),
+    })
     mapped = ds.map_blocks(lambda x: x)
 
-    xr.testing.assert_equal(mapped, ds)  # does not work
+    xr.testing.assert_equal(mapped, ds)
 
 
 def test_make_meta(map_ds):
