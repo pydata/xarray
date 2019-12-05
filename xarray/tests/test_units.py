@@ -1675,30 +1675,56 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(reason="fillna drops the unit")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(
+                unit_registry.cm,
+                None,
+                id="compatible_unit",
+                marks=pytest.mark.xfail(reason="fillna converts to value's unit"),
+            ),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
     @pytest.mark.parametrize(
         "fill_value",
         (
-            pytest.param(
-                -1,
-                id="python scalar",
-                marks=pytest.mark.xfail(
-                    reason="python scalar cannot be converted using astype()"
-                ),
-            ),
-            pytest.param(np.array(-1), id="numpy scalar"),
-            pytest.param(np.array([-1]), id="numpy array"),
+            pytest.param(-1, id="python_scalar"),
+            pytest.param(np.array(-1), id="numpy_scalar"),
+            pytest.param(np.array([-1]), id="numpy_array"),
         ),
     )
-    def test_fillna(self, fill_value, dtype):
-        unit = unit_registry.m
-        array = np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype) * unit
+    def test_fillna(self, fill_value, unit, error, dtype):
+        original_unit = unit_registry.m
+        array = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * original_unit
+        )
         data_array = xr.DataArray(data=array)
 
+        func = method("fillna")
+
+        value = fill_value * unit
+        if error is not None:
+            with pytest.raises(error):
+                func(data_array, value=value)
+
+            return
+
+        units = extract_units(data_array)
         expected = attach_units(
-            strip_units(data_array).fillna(value=fill_value), {"data": unit}
+            func(
+                strip_units(data_array), value=strip_units(convert_units(value, units))
+            ),
+            units,
         )
-        result = data_array.fillna(value=fill_value * unit)
+        result = func(data_array, value=value)
 
         assert_equal_with_units(expected, result)
 
