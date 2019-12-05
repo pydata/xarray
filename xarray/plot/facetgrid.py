@@ -61,6 +61,10 @@ class FacetGrid:
     axes : numpy object array
         Contains axes in corresponding position, as returned from
         plt.subplots
+    col_labels : list
+        list of :class:`matplotlib.text.Text` instances corresponding to column titles.
+    row_labels : list
+        list of :class:`matplotlib.text.Text` instances corresponding to row titles.
     fig : matplotlib.Figure
         The figure containing all the axes
     name_dicts : numpy object array
