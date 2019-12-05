@@ -8,7 +8,7 @@ Use ``air.weighted(weights).mean()`` to calculate the area weighted temperature
 for the air_temperature example dataset. This dataset has a regular latitude/ longitude
 grid, thus the gridcell area decreases towards the pole. For this grid we can use the
 cosine of the latitude as proxy for the grid cell area. Note how the weighted mean
-temperature is higher than the unweighted, because high.
+temperature is higher than the unweighted mean.
 
 
 """
