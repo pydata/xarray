@@ -18,8 +18,6 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
         skips missing values for float dtypes; other dtypes either do not
         have a sentinel missing value (int) or skipna=True has not been
         implemented (object, datetime64 or timedelta64).
-        Note: Missing values in the weights are replaced with 0 (i.e. no
-        weight).
     keep_attrs : bool, optional
         If True, the attributes (`attrs`) will be copied from the original
         object to the new one.  If False (default), the new object will be
@@ -33,7 +31,7 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     """
 
 _SUM_OF_WEIGHTS_DOCSTRING = """
-    Calculate the sum of weights, accounting for missing values
+    Calculate the sum of weights, accounting for missing values in the data
 
     Parameters
     ----------
@@ -88,8 +86,8 @@ class Weighted:
 
         Note
         ----
-        Weights can not contain missing values.
-
+        ``weights`` must be a ``DataArray`` and cannot contain missing values.
+        Missing values can be replaced by `weights.fillna(0)`.
         """
 
         from .dataarray import DataArray
@@ -136,12 +134,11 @@ class Weighted:
         if dim is None:
             dim = ...
 
-        # use `dot` to avoid creating large DataArrays
-
-        # need to mask invalid DATA as dot does not implement skipna
+        # need to mask invalid DATA as `dot` does not implement skipna
         if skipna or (skipna is None and da.dtype.kind in "cfO"):
-            return dot(da.fillna(0.0), self.weights, dims=dim)
+            da = da.fillna(0.0)
 
+        # use `dot` to avoid creating large DataArrays
         return dot(da, self.weights, dims=dim)
 
     def _weighted_mean(
@@ -163,7 +160,7 @@ class Weighted:
 
     def _implementation(self, func, dim, **kwargs):
 
-        msg = "Use 'Dataset.weighted' or 'DataArray.weighted'"
+        msg = "Use `Dataset.weighted` or `DataArray.weighted`"
         raise NotImplementedError(msg)
 
     def sum_of_weights(
