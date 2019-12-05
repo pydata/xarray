@@ -216,7 +216,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u.argmin(dim="x"), actual)
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
-        with raises_regex(NotImplementedError, "dask"):
+        with raises_regex(NotImplementedError, "only works along an axis"):
             v.median()
         with raise_if_dask_computes():
             v.reduce(duck_array_ops.mean)

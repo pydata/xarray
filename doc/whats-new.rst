@@ -25,6 +25,9 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
+  to a single chunk along all reduction axes. (:issue:`2999`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
