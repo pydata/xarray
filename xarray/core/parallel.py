@@ -7,12 +7,14 @@ try:
 except ImportError:
     pass
 
+import collections
 import itertools
 import operator
 from typing import (
     Any,
     Callable,
     Dict,
+    DefaultDict,
     Hashable,
     Mapping,
     Sequence,
@@ -222,6 +224,7 @@ def map_blocks(
     indexes.update({k: template.indexes[k] for k in new_indexes})
 
     graph: Dict[Any, Any] = {}
+    new_layers: DefaultDict[str, Dict[Any, Any]] = collections.defaultdict(dict)
     gname = "{}-{}".format(
         dask.utils.funcname(func), dask.base.tokenize(dataset, args, kwargs)
     )
@@ -310,9 +313,13 @@ def map_blocks(
                     # unchunked dimensions in the input have one chunk in the result
                     key += (0,)
 
-            graph[key] = (operator.getitem, from_wrapper, name)
+            new_layers[gname_l][key] = (operator.getitem, from_wrapper, name)
 
-    graph = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
+    hlg = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
+
+    for gname_l, layer in new_layers.items():
+        hlg.dependencies[gname_l] = {gname}
+        hlg.layers[gname_l] = layer
 
     result = Dataset(coords=indexes, attrs=template.attrs)
     for name, gname_l in var_key_map.items():
@@ -325,7 +332,7 @@ def map_blocks(
                 var_chunks.append((len(indexes[dim]),))
 
         data = dask.array.Array(
-            graph, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
+            hlg, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
         )
         result[name] = (dims, data, template[name].attrs)
 
