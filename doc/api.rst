@@ -161,6 +161,7 @@ Computation
    Dataset.groupby_bins
    Dataset.rolling
    Dataset.rolling_exp
+   Dataset.weighted
    Dataset.coarsen
    Dataset.resample
    Dataset.diff
@@ -336,6 +337,7 @@ Computation
    DataArray.groupby_bins
    DataArray.rolling
    DataArray.rolling_exp
+   DataArray.weighted
    DataArray.coarsen
    DataArray.dt
    DataArray.resample
