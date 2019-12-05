@@ -16,6 +16,7 @@ from xarray.core import duck_array_ops
 from xarray.testing import assert_chunks_equal
 from xarray.tests import mock
 
+from ..core.duck_array_ops import lazy_array_equiv
 from . import (
     assert_allclose,
     assert_array_equal,
@@ -25,7 +26,6 @@ from . import (
     raises_regex,
     requires_scipy_or_netCDF4,
 )
-from ..core.duck_array_ops import lazy_array_equiv
 from .test_backends import create_tmp_file
 
 dask = pytest.importorskip("dask")

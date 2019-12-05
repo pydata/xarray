@@ -1213,6 +1213,19 @@ def posify_mask_indexer(indexer):
     return type(indexer)(key)
 
 
+def is_fancy_indexer(indexer: Any) -> bool:
+    """Return False if indexer is a int, slice, a 1-dimensional list, or a 0 or
+    1-dimensional ndarray; in all other cases return True
+    """
+    if isinstance(indexer, (int, slice)):
+        return False
+    if isinstance(indexer, np.ndarray):
+        return indexer.ndim > 1
+    if isinstance(indexer, list):
+        return bool(indexer) and not isinstance(indexer[0], int)
+    return True
+
+
 class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a NumPy array to use explicit indexing."""
 

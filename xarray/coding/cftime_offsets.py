@@ -42,6 +42,7 @@
 
 import re
 from datetime import timedelta
+from distutils.version import LooseVersion
 from functools import partial
 from typing import ClassVar, Optional
 
@@ -50,7 +51,6 @@ import numpy as np
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
-from distutils.version import LooseVersion
 
 
 def get_date_type(calendar):
