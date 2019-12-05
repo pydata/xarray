@@ -748,7 +748,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             according to its associated weight.
         Note
         ----
-        Missing values in the weights are treated as 0 (i.e. no weight).
+        ``weights`` must be a ``DataArray`` and cannot contain missing values.
+        Missing values can be replaced by `weights.fillna(0)`.
         """
 
         return self._weighted_cls(self, weights)
