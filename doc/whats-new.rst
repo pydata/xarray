@@ -42,17 +42,17 @@ Documentation
 - Switch doc examples to use nbsphinx and replace sphinx_gallery with
   notebook.
   (:pull:`3105`, :pull:`3106`, :pull:`3121`)
-  By `Ryan Abernathey <https://github.com/rabernat>`
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - Added example notebook demonstrating use of xarray with Regional Ocean
   Modeling System (ROMS) ocean hydrodynamic model output.
   (:pull:`3116`).
-  By `Robert Hetland <https://github.com/hetland>`
+  By `Robert Hetland <https://github.com/hetland>`_
 - Added example notebook demonstrating the visualization of ERA5 GRIB
   data. (:pull:`3199`)
-  By `Zach Bruick <https://github.com/zbruick>` and
-  `Stephan Siemen <https://github.com/StephanSiemen>`
-- Added examples for `DataArray.quantile`, `Dataset.quantile` and
-  `GroupBy.quantile`. (:pull:`3576`)
+  By `Zach Bruick <https://github.com/zbruick>`_ and
+  `Stephan Siemen <https://github.com/StephanSiemen>`_
+- Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
+  ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
