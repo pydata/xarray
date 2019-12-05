@@ -243,6 +243,69 @@ You can also use ``construct`` to compute a weighted rolling sum:
 
 .. _comput.coarsen:
 
+Weighted array reductions
+=========================
+
+``DataArray`` and ``Dataset`` objects include :py:meth:`~xarray.DataArray.weighted`
+and :py:meth:`~xarray.Dataset.weighted` array reduction methods. They currently
+support weighted ``sum`` and weighted ``mean``.
+
+.. ipython:: python
+
+  coords = dict(month=('month', [1, 2, 3]))
+
+  prec = xr.DataArray([1.1, 1.0, 0.9], dims=('month', ), coords=coords)
+  weights = xr.DataArray([31, 28, 31], dims=('month', ), coords=coords)
+
+Create a weighted object:
+
+.. ipython:: python
+
+  weighted_prec = prec.weighted(weights)
+  weighted_prec
+
+Calculate the weighted sum:
+
+.. ipython:: python
+
+  weighted_prec.sum()
+
+Calculate the weighted mean:
+
+.. ipython:: python
+
+        weighted_prec.mean(dim="month")
+
+The weighted sum corresponds to:
+
+.. ipython:: python
+
+  weighted_sum = (prec * weights).sum()
+  weighted_sum
+
+and the weighted mean to:
+
+.. ipython:: python
+
+  weighted_mean = weighted_sum / weights.sum()
+  weighted_mean
+
+However, the functions also take missing values in the data into account:
+
+.. ipython:: python
+
+  data = xr.DataArray([np.NaN, 2, 4])
+  weights = xr.DataArray([8, 1, 1])
+
+  data.weighted(weights).mean()
+
+Using ``(data * weights).sum() / weights.sum()`` would (incorrectly) result
+in 0.6.
+
+.. note::
+  ``weights`` must be a ``DataArray`` and cannot contain missing values.
+  Missing values can be replaced manually by `weights.fillna(0)`.
+
 Coarsen large arrays
 ====================
 
