@@ -317,14 +317,18 @@ def map_blocks(
                     # unchunked dimensions in the input have one chunk in the result
                     key += (0,)
 
+            # We're adding multiple new layers to the graph:
+            # The first new layer is the result of the computation on
+            # the array.
+            # Then we add one layer per variable, which extracts the
+            # result for that variable, and depends on just the first new
+            # layer.
             new_layers[gname_l][key] = (operator.getitem, from_wrapper, name)
 
     hlg = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
 
     for gname_l, layer in new_layers.items():
-        # Ensure we have a valid HighLevelGraph.
         # This adds in the getitems for each variable in the dataset.
-        # This just depends on the layer we created earlier ("graph")
         hlg.dependencies[gname_l] = {gname}
         hlg.layers[gname_l] = layer
 
