@@ -28,11 +28,14 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
+  and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
+  By `Deepak Cherian <https://github.com/dcherian/>`_
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -54,8 +57,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-
+- 2x to 5x speed boost (on small arrays) for :py:meth:`Dataset.isel`,
+  :py:meth:`DataArray.isel`, and :py:meth:`DataArray.__getitem__` when indexing by int,
+  slice, list of int, scalar ndarray, or 1-dimensional ndarray.
+  (:pull:`3533`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 - Removed internal method ``Dataset._from_vars_and_coord_names``, 
   which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
@@ -186,6 +191,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
   (:pull:`3238`, :pull:`3447`, :pull:`3493`, :pull:`3508`)
   by `Justus Magin <https://github.com/keewis>`_.

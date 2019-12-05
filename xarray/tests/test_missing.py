@@ -9,8 +9,8 @@ from xarray.core.missing import (
     NumpyInterpolator,
     ScipyInterpolator,
     SplineInterpolator,
-    get_clean_interp_index,
     _get_nan_block_lengths,
+    get_clean_interp_index,
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (

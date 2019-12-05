@@ -347,13 +347,3 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
 
     inject_reduce_methods(cls)
     inject_cum_methods(cls)
-
-
-def inject_coarsen_methods(cls):
-    # standard numpy reduce methods
-    methods = [(name, getattr(duck_array_ops, name)) for name in NAN_REDUCE_METHODS]
-    for name, f in methods:
-        func = cls._reduce_method(f)
-        func.__name__ = name
-        func.__doc__ = _COARSEN_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
-        setattr(cls, name, func)
