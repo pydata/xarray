@@ -21,5 +21,4 @@ dependencies:
   - seaborn
   - sphinx
   - sphinx_rtd_theme
-  - xarray
   - zarr
