@@ -1560,16 +1560,7 @@ class TestDataArray:
 
     @pytest.mark.parametrize(
         "func",
-        (
-            method("conj"),
-            method("argsort"),
-            method("conjugate"),
-            method("round"),
-            pytest.param(
-                method("rank", dim="x"),
-                marks=pytest.mark.xfail(reason="pint does not implement rank yet"),
-            ),
-        ),
+        (method("conj"), method("argsort"), method("conjugate"), method("round")),
         ids=repr,
     )
     def test_numpy_methods(self, func, dtype):
@@ -2887,10 +2878,6 @@ class TestDataset:
             method("argsort"),
             method("conjugate"),
             method("round"),
-            pytest.param(
-                method("rank", dim="x"),
-                marks=pytest.mark.xfail(reason="pint does not implement rank yet"),
-            ),
         ),
         ids=repr,
     )
