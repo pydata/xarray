@@ -81,8 +81,6 @@ Breaking changes
 
 - All leftover support for dates from non-standard calendars through ``netcdftime``, the
   module included in versions of netCDF4 prior to 1.4 that eventually became the
-  cftime package, has been removed in favor of relying solely on the standalone
-  ``cftime`` package (:pull:`3450`).
   `cftime <https://github.com/Unidata/cftime/>`_ package, has been removed in favor of relying solely on
   the standalone ``cftime`` package (:pull:`3450`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -117,10 +115,6 @@ New Features
   to represent all 'other' dimensions. For example, to move one dimension to the front,
   use ``.transpose('x', ...)``. (:pull:`3421`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Changed ``xr.ALL_DIMS`` to equal python's ``Ellipsis`` (`...`), and changed internal usages to use
-  `...` directly. As before, you can use this to instruct a ``groupby`` operation
-  to reduce over all dimensions. While we have no plans to remove ``xr.ALL_DIMS``, we suggest
-  using `...`. (:pull:`3418`)
 - Changed ``xr.ALL_DIMS`` to equal python's ``Ellipsis`` (``...``), and changed internal usages to use
   ``...`` directly. As before, you can use this to instruct a ``groupby`` operation
   to reduce over all dimensions. While we have no plans to remove ``xr.ALL_DIMS``, we suggest
