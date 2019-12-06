@@ -227,7 +227,7 @@ It is required to explicitly specify either
 
 Thus, we could have made the previous plot by specifying ``hue='lat'`` instead of ``x='time'``.
 If required, the automatic legend can be turned off using ``add_legend=False``. Alternatively,
-``hue`` can be passed directly to :py:func:`xarray.plot` as `air.isel(lon=10, lat=[19,21,22]).plot(hue='lat')`.
+``hue`` can be passed directly to :py:func:`xarray.plot.plot` as `air.isel(lon=10, lat=[19,21,22]).plot(hue='lat')`.
 
 
 ========================

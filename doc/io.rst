@@ -47,7 +47,7 @@ read/write netCDF V4 files and use the compression options described below).
 __ https://github.com/Unidata/netcdf4-python
 
 We can save a Dataset to disk using the
-:py:meth:`~Dataset.to_netcdf` method:
+:py:meth:`~xarray.Dataset.to_netcdf` method:
 
 .. ipython:: python
 
@@ -79,7 +79,7 @@ We can load netCDF files to create a new Dataset using
     ds_disk
 
 Similarly, a DataArray can be saved to disk using the
-:py:attr:`DataArray.to_netcdf <xarray.DataArray.to_netcdf>` method, and loaded
+:py:meth:`~xarray.DataArray.to_netcdf` method, and loaded
 from disk using the :py:func:`~xarray.open_dataarray` function. As netCDF files
 correspond to :py:class:`~xarray.Dataset` objects, these functions internally
 convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
@@ -142,10 +142,10 @@ To do so, pass a ``group`` keyword argument to the
 string, e.g., to access subgroup ``'bar'`` within group ``'foo'`` pass
 ``'/foo/bar'`` as the ``group`` argument.
 In a similar way, the ``group`` keyword argument can be given to the
-:py:meth:`~xarray.Dataset.to_netcdf` method to write to a group
+:py:meth:`Dataset.to_netcdf <xarray.Dataset.to_netcdf>` method to write to a group
 in a netCDF file.
 When writing multiple groups in one file, pass ``mode='a'`` to
-:py:meth:`~xarray.Dataset.to_netcdf` to ensure that each call does not delete the file.
+:py:meth:`Dataset.to_netcdf <xarray.Dataset.to_netcdf>` to ensure that each call does not delete the file.
 
 .. _io.encoding:
 
@@ -445,9 +445,9 @@ Invalid netCDF files
 
 The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't 
 allowed in netCDF4 (see
-`h5netcdf documentation <https://github.com/shoyer/h5netcdf#invalid-netcdf-files)>`_.
-This feature is availabe through :py:func:`DataArray.to_netcdf` and
-:py:func:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
+`h5netcdf documentation <https://github.com/shoyer/h5netcdf#invalid-netcdf-files>`_).
+This feature is availabe through :py:meth:`DataArray.to_netcdf <xarray.DataArray.to_netcdf>` and
+:py:meth:`Datset.to_netcdf <xarray.Dataset.to_netcdf>` when used with ``engine="h5netcdf"``
 and currently raises a warning unless ``invalid_netcdf=True`` is set:
 
 .. ipython:: python
