@@ -100,9 +100,9 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
     # copy colors to use for bad, under, and over values in case they have been set to
     # non-default values
-    new_cmap._rgba_bad = getattr(cmap, "_rgba_bad")
-    new_cmap._rgba_under = getattr(cmap, "_rgba_under")
-    new_cmap._rgba_over = getattr(cmap, "_rgba_over")
+    new_cmap._rgba_bad = getattr(cmap, "_rgba_bad", new_cmap._rgba_bad)
+    new_cmap._rgba_under = getattr(cmap, "_rgba_under", new_cmap._rgba_under)
+    new_cmap._rgba_over = getattr(cmap, "_rgba_over", new_cmap._rgba_over)
 
     return new_cmap, cnorm
 
