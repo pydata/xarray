@@ -22,7 +22,7 @@ How do I ...
    * - change the order of dimensions
      - :py:meth:`DataArray.transpose`, :py:meth:`Dataset.transpose`
    * - remove a variable from my object
-     - :py:meth:`Dataset.drop`, :py:meth:`DataArray.drop`
+     - :py:meth:`Dataset.drop_vars`, :py:meth:`DataArray.drop_vars`
    * - remove dimensions of length 1 or 0
      - :py:meth:`DataArray.squeeze`, :py:meth:`Dataset.squeeze`
    * - remove all variables with a particular dimension

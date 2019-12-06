@@ -679,6 +679,9 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
 Deprecated / Pending Deprecation
 ================================
 
+.. autosummary::
+   :toctree: generated/
+
    Dataset.drop
    DataArray.drop
    Dataset.apply
