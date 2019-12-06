@@ -1693,6 +1693,7 @@ class Variable(
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
+
                 * linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
@@ -1700,6 +1701,7 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new

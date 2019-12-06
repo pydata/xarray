@@ -34,6 +34,18 @@
    core.groupby.DatasetGroupBy.fillna
    core.groupby.DatasetGroupBy.quantile
    core.groupby.DatasetGroupBy.where
+   core.groupby.DatasetGroupBy.all
+   core.groupby.DatasetGroupBy.any
+   core.groupby.DatasetGroupBy.argmax
+   core.groupby.DatasetGroupBy.argmin
+   core.groupby.DatasetGroupBy.count
+   core.groupby.DatasetGroupBy.mean
+   core.groupby.DatasetGroupBy.median
+   core.groupby.DatasetGroupBy.min
+   core.groupby.DatasetGroupBy.prod
+   core.groupby.DatasetGroupBy.std
+   core.groupby.DatasetGroupBy.sum
+   core.groupby.DatasetGroupBy.var
 
    Dataset.argsort
    Dataset.astype
@@ -77,6 +89,18 @@
    core.groupby.DataArrayGroupBy.fillna
    core.groupby.DataArrayGroupBy.quantile
    core.groupby.DataArrayGroupBy.where
+   core.groupby.DataArrayGroupBy.all
+   core.groupby.DataArrayGroupBy.any
+   core.groupby.DataArrayGroupBy.argmax
+   core.groupby.DataArrayGroupBy.argmin
+   core.groupby.DataArrayGroupBy.count
+   core.groupby.DataArrayGroupBy.mean
+   core.groupby.DataArrayGroupBy.median
+   core.groupby.DataArrayGroupBy.min
+   core.groupby.DataArrayGroupBy.prod
+   core.groupby.DataArrayGroupBy.std
+   core.groupby.DataArrayGroupBy.sum
+   core.groupby.DataArrayGroupBy.var
 
    DataArray.argsort
    DataArray.clip
@@ -90,6 +114,80 @@
    DataArray.cumsum
    DataArray.cumprod
    DataArray.rank
+
+   Variable.all
+   Variable.any
+   Variable.argmax
+   Variable.argmin
+   Variable.argsort
+   Variable.astype
+   Variable.broadcast_equals
+   Variable.chunk
+   Variable.clip
+   Variable.coarsen
+   Variable.compute
+   Variable.concat
+   Variable.conj
+   Variable.conjugate
+   Variable.copy
+   Variable.count
+   Variable.cumprod
+   Variable.cumsum
+   Variable.equals
+   Variable.fillna
+   Variable.get_axis_num
+   Variable.identical
+   Variable.isel
+   Variable.isnull
+   Variable.item
+   Variable.load
+   Variable.max
+   Variable.mean
+   Variable.median
+   Variable.min
+   Variable.no_conflicts
+   Variable.notnull
+   Variable.pad_with_fill_value
+   Variable.prod
+   Variable.quantile
+   Variable.rank
+   Variable.reduce
+   Variable.roll
+   Variable.rolling_window
+   Variable.round
+   Variable.searchsorted
+   Variable.set_dims
+   Variable.shift
+   Variable.squeeze
+   Variable.stack
+   Variable.std
+   Variable.sum
+   Variable.to_base_variable
+   Variable.to_coord
+   Variable.to_dict
+   Variable.to_index
+   Variable.to_index_variable
+   Variable.to_variable
+   Variable.transpose
+   Variable.unstack
+   Variable.var
+   Variable.where
+
+   Variable.T
+   Variable.attrs
+   Variable.chunks
+   Variable.data
+   Variable.dims
+   Variable.dtype
+   Variable.encoding
+   Variable.imag
+   Variable.nbytes
+   Variable.ndim
+   Variable.real
+   Variable.shape
+   Variable.size
+   Variable.sizes
+   Variable.values
 
    ufuncs.angle
    ufuncs.arccos
