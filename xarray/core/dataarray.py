@@ -235,19 +235,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
     Getting items from or doing mathematical operations with a DataArray
     always returns another DataArray.
-
-    Attributes
-    ----------
-    dims : tuple
-        Dimension names associated with this array.
-    values : numpy.ndarray
-        Access or modify DataArray values as a numpy array.
-    coords : dict-like
-        Dictionary of DataArray objects that label values along each dimension.
-    name : str or None
-        Name of this array.
-    attrs : dict
-        Dictionary for holding arbitrary metadata.
     """
 
     _cache: Dict[str, Any]
@@ -3000,8 +2987,6 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
         ...     dims=("x", "y"),
         ... )
-
-        Single quantile
         >>> da.quantile(0)  # or da.quantile(0, dim=...)
         <xarray.DataArray ()>
         array(0.7)
@@ -3013,8 +2998,6 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * y         (y) float64 1.0 1.5 2.0 2.5
             quantile  float64 0.0
-
-        Multiple quantiles
         >>> da.quantile([0, 0.5, 1])
         <xarray.DataArray (quantile: 3)>
         array([0.7, 3.4, 9.4])

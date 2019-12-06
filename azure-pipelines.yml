@@ -110,5 +110,5 @@ jobs:
   - bash: |
       source activate xarray-tests
       cd doc
-      sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
+      sphinx-build -W --keep-going -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs
