@@ -1,9 +1,14 @@
 from distutils.version import LooseVersion
 from typing import Iterable
 
-import dask.array as da
 import numpy as np
-from dask import __version__ as dask_version
+
+try:
+    import dask.array as da
+    from dask import __version__ as dask_version
+except ImportError:
+    dask_version = "0.0.0"
+    da = None
 
 if LooseVersion(dask_version) >= LooseVersion("2.0.0"):
     meta_from_array = da.utils.meta_from_array
@@ -129,7 +134,7 @@ else:
         return result
 
 
-if LooseVersion(dask_version) >= LooseVersion("2.8.2"):
+if LooseVersion(dask_version) > LooseVersion("2.9.0"):
     nanmedian = da.nanmedian
 else:
 
