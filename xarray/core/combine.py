@@ -88,7 +88,7 @@ def _infer_concat_order_from_coords(datasets):
                 # with the same value have the same coord values throughout.
                 if any(index.size == 0 for index in indexes):
                     raise ValueError("Cannot handle size zero dimensions")
-                first_items = pd.Index([index.take([0]) for index in indexes])
+                first_items = pd.Index([index[0] for index in indexes])
 
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
