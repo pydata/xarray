@@ -2223,15 +2223,14 @@ class TestDataArray:
         result = data_array.loc[values]
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(reason="tries to coerce using asarray")
     @pytest.mark.parametrize(
         "shape",
         (
-            pytest.param((10, 20), id="nothing squeezable"),
-            pytest.param((10, 20, 1), id="last dimension squeezable"),
-            pytest.param((10, 1, 20), id="middle dimension squeezable"),
-            pytest.param((1, 10, 20), id="first dimension squeezable"),
-            pytest.param((1, 10, 1, 20), id="first and last dimension squeezable"),
+            pytest.param((10, 20), id="nothing_squeezable"),
+            pytest.param((10, 20, 1), id="last_dimension_squeezable"),
+            pytest.param((10, 1, 20), id="middle_dimension_squeezable"),
+            pytest.param((1, 10, 20), id="first_dimension_squeezable"),
+            pytest.param((1, 10, 1, 20), id="first_and_last_dimension_squeezable"),
         ),
     )
     def test_squeeze(self, shape, dtype):
@@ -2246,16 +2245,20 @@ class TestDataArray:
             data=array, coords=coords, dims=tuple(names[: len(shape)])
         )
 
-        result_array = array.squeeze()
-        result_data_array = data_array.squeeze()
-        assert_equal_with_units(result_array, result_data_array)
+        expected = attach_units(
+            strip_units(data_array).squeeze(), extract_units(data_array)
+        )
+        result = data_array.squeeze()
+        assert_equal_with_units(expected, result)
 
         # try squeezing the dimensions separately
         names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
         for index, name in enumerate(names):
-            assert_equal_with_units(
-                np.squeeze(array, axis=index), data_array.squeeze(dim=name)
+            expected = attach_units(
+                strip_units(data_array).squeeze(dim=name), extract_units(data_array)
             )
+            result = data_array.squeeze(dim=name)
+            assert_equal_with_units(expected, result)
 
     @pytest.mark.xfail(
         reason="indexes strip units and head / tail / thin only support integers"
