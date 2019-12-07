@@ -2612,7 +2612,7 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(reason="resample strips units")
+    @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
 
@@ -2630,10 +2630,10 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
-            method("assign_coords", {"z": (["x"], np.arange(5) * unit_registry.s)}),
+            method("assign_coords", z=(["x"], np.arange(5) * unit_registry.s)),
             method("first"),
             method("last"),
-            method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
+            method("quantile", q=np.array([0.25, 0.5, 0.75]), dim="x"),
         ),
         ids=repr,
     )
@@ -2646,9 +2646,19 @@ class TestDataArray:
         y = np.arange(array.shape[1]) * 3 * unit_registry.s
 
         data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
-        units = extract_units(data_array)
+        units = {**extract_units(data_array), **{"z": unit_registry.s, "q": None}}
 
-        expected = attach_units(func(strip_units(data_array).groupby("y")), units)
+        stripped_kwargs = {
+            key: (
+                strip_units(value)
+                if not isinstance(value, tuple)
+                else tuple(strip_units(elem) for elem in value)
+            )
+            for key, value in func.kwargs.items()
+        }
+        expected = attach_units(
+            func(strip_units(data_array).groupby("y"), **stripped_kwargs), units
+        )
         result = func(data_array.groupby("y"))
 
         assert_equal_with_units(expected, result)
