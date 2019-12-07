@@ -218,7 +218,7 @@ def convert_units(obj, to):
         name = obj.name
 
         new_units = (
-            to.get(name, None) or to.get("data", None) or to.get(None, None) or 1
+            to.get(name, None) or to.get("data", None) or to.get(None, None) or None
         )
         data = convert_units(obj.variable, {None: new_units})
 
@@ -2013,16 +2013,18 @@ class TestDataArray:
     )
     def test_broadcast_equals(self, unit, dtype):
         left_array = np.ones(shape=(2, 2), dtype=dtype) * unit_registry.m
-        right_array = array_attach_units(
-            np.ones(shape=(2,), dtype=dtype),
-            unit,
-            convert_from=unit_registry.m if left_array.check(unit) else None,
-        )
+        right_array = np.ones(shape=(2,), dtype=dtype) * unit
 
         left = xr.DataArray(data=left_array, dims=("x", "y"))
         right = xr.DataArray(data=right_array, dims="x")
 
-        expected = np.all(left_array == right_array[:, None])
+        units = {
+            **extract_units(left),
+            **({} if left_array.check(unit) else {None: None}),
+        }
+        expected = strip_units(left).broadcast_equals(
+            strip_units(convert_units(right, units))
+        ) & left_array.check(unit)
         result = left.broadcast_equals(right)
 
         assert expected == result
@@ -3488,35 +3490,31 @@ class TestDataset:
     )
     def test_broadcast_equals(self, unit, dtype):
         left_array1 = np.ones(shape=(2, 3), dtype=dtype) * unit_registry.m
-        left_array2 = np.zeros(shape=(2, 6), dtype=dtype) * unit_registry.m
+        left_array2 = np.zeros(shape=(3, 6), dtype=dtype) * unit_registry.m
 
-        right_array1 = array_attach_units(
-            np.ones(shape=(2,), dtype=dtype),
-            unit,
-            convert_from=unit_registry.m if left_array1.check(unit) else None,
-        )
-        right_array2 = array_attach_units(
-            np.ones(shape=(2,), dtype=dtype),
-            unit,
-            convert_from=unit_registry.m if left_array2.check(unit) else None,
-        )
+        right_array1 = np.ones(shape=(2,)) * unit
+        right_array2 = np.ones(shape=(3,)) * unit
 
         left = xr.Dataset(
             data_vars={
                 "a": xr.DataArray(data=left_array1, dims=("x", "y")),
-                "b": xr.DataArray(data=left_array2, dims=("x", "z")),
+                "b": xr.DataArray(data=left_array2, dims=("y", "z")),
             }
         )
         right = xr.Dataset(
             data_vars={
                 "a": xr.DataArray(data=right_array1, dims="x"),
-                "b": xr.DataArray(data=right_array2, dims="x"),
+                "b": xr.DataArray(data=right_array2, dims="y"),
             }
         )
 
-        expected = np.all(left_array1 == right_array1[:, None]) and np.all(
-            left_array2 == right_array2[:, None]
-        )
+        units = {
+            **extract_units(left),
+            **({} if left_array1.check(unit) else {"a": None, "b": None}),
+        }
+        expected = strip_units(left).broadcast_equals(
+            strip_units(convert_units(right, units))
+        ) & left_array1.check(unit)
         result = left.broadcast_equals(right)
 
         assert expected == result
