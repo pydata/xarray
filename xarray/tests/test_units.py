@@ -2210,17 +2210,17 @@ class TestDataArray:
             isinstance(raw_values, (int, float)) and array.check(unit)
         ):
             with pytest.raises(error):
-                data_array.loc[values]
+                data_array.loc[{"x": values}]
 
             return
 
         expected = attach_units(
             strip_units(data_array).loc[
-                strip_units(convert_units(values, {None: array.units}))
+                {"x": strip_units(convert_units(values, {None: array.units}))}
             ],
             extract_units(data_array),
         )
-        result = data_array.loc[values]
+        result = data_array.loc[{"x": values}]
         assert_equal_with_units(expected, result)
 
     @pytest.mark.parametrize(
