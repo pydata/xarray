@@ -2135,7 +2135,7 @@ class TestDataArray:
         array = np.arange(10).astype(dtype) * unit_registry.s
         x = np.arange(len(array)) * unit_registry.m
 
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
         expected = attach_units(
             strip_units(data_array).isel(x=indices), extract_units(data_array)
@@ -2144,13 +2144,11 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(
-        reason="xarray does not support duck arrays in dimension coordinates"
-    )
+    @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
-        "values",
+        "raw_values",
         (
-            pytest.param(12, id="single_value"),
+            pytest.param(10, id="single_value"),
             pytest.param([10, 5, 13], id="list_of_values"),
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
@@ -2161,74 +2159,75 @@ class TestDataArray:
             pytest.param(1, KeyError, id="no_units"),
             pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
             pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.dm, None, id="compatible_unit"),
+            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_sel(self, values, unit, error, dtype):
+    def test_sel(self, raw_values, unit, error, dtype):
         array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
         x = np.arange(len(array)) * unit_registry.m
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
-        values_with_units = values * unit
+        values = raw_values * unit
 
-        if error is not None:
+        if error is not None and not (
+            isinstance(raw_values, (int, float)) and array.check(unit)
+        ):
             with pytest.raises(error):
-                data_array.sel(x=values_with_units)
+                data_array.sel(x=values)
 
             return
 
-        units = extract_units(data_array)
         expected = attach_units(
             strip_units(data_array).sel(
-                x=strip_units(convert_units(values_with_units, units))
+                x=strip_units(convert_units(values, {None: array.units}))
             ),
-            units,
+            extract_units(data_array),
         )
-        result = data_array.sel(x=values_with_units)
+        result = data_array.sel(x=values)
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(
-        reason="xarray does not support duck arrays in dimension coordinates"
-    )
+    @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
-        "values",
+        "raw_values",
         (
-            pytest.param(12, id="single value"),
-            pytest.param([10, 5, 13], id="list of multiple values"),
-            pytest.param(np.array([9, 3, 7, 12]), id="array of multiple values"),
+            pytest.param(10, id="single_value"),
+            pytest.param([10, 5, 13], id="list_of_values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, KeyError, id="no units"),
+            pytest.param(1, KeyError, id="no_units"),
             pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incorrect unit"),
-            pytest.param(unit_registry.s, None, id="correct unit"),
+            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
+            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_loc(self, values, unit, error, dtype):
+    def test_loc(self, raw_values, unit, error, dtype):
         array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
         x = np.arange(len(array)) * unit_registry.s
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
-        values_with_units = values * unit
+        values = raw_values * unit
 
-        if error is not None:
+        if error is not None and not (
+            isinstance(raw_values, (int, float)) and array.check(unit)
+        ):
             with pytest.raises(error):
-                data_array.loc[values_with_units]
+                data_array.loc[values]
 
             return
 
-        units = extract_units(data_array)
         expected = attach_units(
-            strip_units(data_array).sel(
-                x=strip_units(convert_units(values_with_units, units))
-            ),
-            units,
+            strip_units(data_array).loc[
+                strip_units(convert_units(values, {None: array.units}))
+            ],
+            extract_units(data_array),
         )
-        result = data_array.sel(x=values_with_units)
+        result = data_array.loc[values]
         assert_equal_with_units(expected, result)
 
     @pytest.mark.xfail(reason="tries to coerce using asarray")
