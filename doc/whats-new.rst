@@ -34,6 +34,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix :py:meth:`xarray.combine_by_coords` when combining cftime coordinates
+  which span long time intervals (:issue:`3535`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving ``map_blocks`` (:pull:`3598`)
