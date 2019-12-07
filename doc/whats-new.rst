@@ -28,8 +28,8 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
-  and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
+- Added the :py:meth:`count` reduction method to both :py:class:`~core.coarsen.DatasetCoarsen`
+  and :py:class:`~core.coarsen.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 
 Bug fixes
@@ -137,7 +137,7 @@ New Features
   invoked. (:issue:`3378`, :pull:`3446`, :pull:`3515`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
-- Add the documented-but-missing :py:meth:`DatasetGroupBy.quantile`.
+- Add the documented-but-missing :py:meth:`~core.groupby.DatasetGroupBy.quantile`.
   (:issue:`3525`, :pull:`3527`). By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
@@ -269,7 +269,7 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:class:`~xarray.core.GroupBy` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:class:`~core.groupby.GroupBy` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
 
   - Added a repr (:pull:`3344`). Example::
 
@@ -304,7 +304,7 @@ Bug fixes
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Warn if the ``dim`` kwarg is passed to rolling operations. This is redundant since a dimension is
-  specified when the :py:class:`DatasetRolling` or :py:class:`DataArrayRolling` object is created.
+  specified when the :py:class:`~core.rolling.DatasetRolling` or :py:class:`~core.rolling.DataArrayRolling` object is created.
   (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
@@ -377,7 +377,7 @@ Breaking changes
 - Reindexing with variables of a different dimension now raise an error (previously deprecated)
 - ``xarray.broadcast_array`` is removed (previously deprecated in favor of
   :py:func:`~xarray.broadcast`)
-- :py:meth:`Variable.expand_dims` is removed (previously deprecated in favor of
+- ``Variable.expand_dims`` is removed (previously deprecated in favor of
   :py:meth:`Variable.set_dims`)
 
 New functions/methods
@@ -611,7 +611,7 @@ New functions/methods
   By `Alan Brammer <https://github.com/abrammer>`_ and
   `Ryan May <https://github.com/dopplershift>`_.
 
-- :py:meth:`~xarray.core.GroupBy.quantile` is now a method of ``GroupBy``
+- :py:meth:`~core.groupby.GroupBy.quantile` is now a method of ``GroupBy``
   objects  (:issue:`3018`).
   By `David Huard <https://github.com/huard>`_.
 
@@ -1153,7 +1153,7 @@ Announcements of note:
   for more details.
 - We have a new :doc:`roadmap` that outlines our future development plans.
 
-- `Dataset.apply` now properly documents the way `func` is called.
+- ``Dataset.apply`` now properly documents the way `func` is called.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
 
 Enhancements
@@ -1585,7 +1585,7 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
-- Added :py:func:`~xarray.dot`, equivalent to :py:func:`np.einsum`.
+- Added :py:func:`~xarray.dot`, equivalent to :py:func:`numpy.einsum`.
   Also, :py:func:`~xarray.DataArray.dot` now supports ``dims`` option,
   which specifies the dimensions to sum over.
   (:issue:`1951`)
@@ -2390,7 +2390,7 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
-- New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
+- New aggregation on rolling objects :py:meth:`~core.rolling.DataArrayRolling.count`
   which providing a rolling count of valid values (:issue:`1138`).
 
 Bug fixes
