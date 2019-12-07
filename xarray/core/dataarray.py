@@ -50,7 +50,8 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Indexes, propagate_indexes, default_indexes
+from .indexes import Indexes, default_indexes, propagate_indexes
+from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, _extract_indexes_from_coords
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
@@ -234,19 +235,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
     Getting items from or doing mathematical operations with a DataArray
     always returns another DataArray.
-
-    Attributes
-    ----------
-    dims : tuple
-        Dimension names associated with this array.
-    values : numpy.ndarray
-        Access or modify DataArray values as a numpy array.
-    coords : dict-like
-        Dictionary of DataArray objects that label values along each dimension.
-    name : str or None
-        Name of this array.
-    attrs : dict
-        Dictionary for holding arbitrary metadata.
     """
 
     _cache: Dict[str, Any]
@@ -1027,8 +1015,27 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.sel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
-        ds = self._to_temp_dataset().isel(drop=drop, indexers=indexers)
-        return self._from_temp_dataset(ds)
+        if any(is_fancy_indexer(idx) for idx in indexers.values()):
+            ds = self._to_temp_dataset()._isel_fancy(indexers, drop=drop)
+            return self._from_temp_dataset(ds)
+
+        # Much faster algorithm for when all indexers are ints, slices, one-dimensional
+        # lists, or zero or one-dimensional np.ndarray's
+
+        variable = self._variable.isel(indexers)
+
+        coords = {}
+        for coord_name, coord_value in self._coords.items():
+            coord_indexers = {
+                k: v for k, v in indexers.items() if k in coord_value.dims
+            }
+            if coord_indexers:
+                coord_value = coord_value.isel(coord_indexers)
+                if drop and coord_value.ndim == 0:
+                    continue
+            coords[coord_name] = coord_value
+
+        return self._replace(variable=variable, coords=coords)
 
     def sel(
         self,
@@ -2980,8 +2987,6 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
         ...     dims=("x", "y"),
         ... )
-
-        Single quantile
         >>> da.quantile(0)  # or da.quantile(0, dim=...)
         <xarray.DataArray ()>
         array(0.7)
@@ -2993,8 +2998,6 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * y         (y) float64 1.0 1.5 2.0 2.5
             quantile  float64 0.0
-
-        Multiple quantiles
         >>> da.quantile([0, 0.5, 1])
         <xarray.DataArray (quantile: 3)>
         array([0.7, 3.4, 9.4])

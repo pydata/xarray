@@ -6,7 +6,7 @@ dependencies:
   - python=3.7
   - bottleneck
   - cartopy
-  - eccodes
+  - cfgrib
   - h5netcdf
   - ipykernel
   - ipython
@@ -22,7 +22,3 @@ dependencies:
   - sphinx
   - sphinx_rtd_theme
   - zarr
-  - pip
-  - pip:
-    - cfgrib
-

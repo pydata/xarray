@@ -28,7 +28,9 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
+  and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -37,29 +39,35 @@ Bug fixes
   stay the same when rechunking by the same chunk size. (:issue:`3350`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving ``map_blocks`` (:pull:`3598`)
+  By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 - Switch doc examples to use nbsphinx and replace sphinx_gallery with
   notebook.
   (:pull:`3105`, :pull:`3106`, :pull:`3121`)
-  By `Ryan Abernathey <https://github.com/rabernat>`
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - Added example notebook demonstrating use of xarray with Regional Ocean
   Modeling System (ROMS) ocean hydrodynamic model output.
   (:pull:`3116`).
-  By `Robert Hetland <https://github.com/hetland>`
+  By `Robert Hetland <https://github.com/hetland>`_
 - Added example notebook demonstrating the visualization of ERA5 GRIB
   data. (:pull:`3199`)
-  By `Zach Bruick <https://github.com/zbruick>` and
-  `Stephan Siemen <https://github.com/StephanSiemen>`
-- Added examples for `DataArray.quantile`, `Dataset.quantile` and
-  `GroupBy.quantile`. (:pull:`3576`)
+  By `Zach Bruick <https://github.com/zbruick>`_ and
+  `Stephan Siemen <https://github.com/StephanSiemen>`_
+- Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
+  ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-
+- 2x to 5x speed boost (on small arrays) for :py:meth:`Dataset.isel`,
+  :py:meth:`DataArray.isel`, and :py:meth:`DataArray.__getitem__` when indexing by int,
+  slice, list of int, scalar ndarray, or 1-dimensional ndarray.
+  (:pull:`3533`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 - Removed internal method ``Dataset._from_vars_and_coord_names``, 
   which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
@@ -190,6 +198,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 - Added integration tests against `pint <https://pint.readthedocs.io/>`_.
   (:pull:`3238`, :pull:`3447`, :pull:`3493`, :pull:`3508`)
   by `Justus Magin <https://github.com/keewis>`_.
