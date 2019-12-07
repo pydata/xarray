@@ -1768,19 +1768,7 @@ class TestDataArray:
         assert_equal_with_units(expected, result)
 
     @pytest.mark.parametrize(
-        "variant",
-        (
-            pytest.param(
-                "masking",
-                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
-            ),
-            pytest.param("replacing_scalar"),
-            pytest.param("replacing_array"),
-            pytest.param(
-                "dropping",
-                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
-            ),
-        ),
+        "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -2958,25 +2946,9 @@ class TestDataset:
         )
         units = extract_units(ds)
 
-        def strip(value):
-            return (
-                value.magnitude if isinstance(value, unit_registry.Quantity) else value
-            )
-
-        def convert(value, to):
-            if isinstance(value, unit_registry.Quantity) and value.check(to):
-                return value.to(to)
-
-            return value
-
-        scalar_types = (int, float)
         kwargs = {
-            key: (value * unit if isinstance(value, scalar_types) else value)
+            key: (value * unit if isinstance(value, (int, float)) else value)
             for key, value in func.kwargs.items()
-        }
-
-        stripped_kwargs = {
-            key: strip(convert(value, data_unit)) for key, value in kwargs.items()
         }
 
         if error is not None:
@@ -2984,6 +2956,11 @@ class TestDataset:
                 func(ds, **kwargs)
 
             return
+
+        stripped_kwargs = {
+            key: strip_units(convert_units(value, {None: data_unit}))
+            for key, value in kwargs.items()
+        }
 
         result = func(ds, **kwargs)
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
@@ -3065,36 +3042,31 @@ class TestDataset:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(reason="fillna drops the unit")
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(
-                1,
-                DimensionalityError,
-                id="no_unit",
-                marks=pytest.mark.xfail(reason="blocked by the failing `where`"),
-            ),
+            pytest.param(1, DimensionalityError, id="no_unit"),
             pytest.param(
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(
+                unit_registry.cm,
+                None,
+                id="compatible_unit",
+                marks=pytest.mark.xfail(
+                    reason="where converts the array, not the fill value"
+                ),
+            ),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     @pytest.mark.parametrize(
         "fill_value",
         (
-            pytest.param(
-                -1,
-                id="python scalar",
-                marks=pytest.mark.xfail(
-                    reason="python scalar cannot be converted using astype()"
-                ),
-            ),
-            pytest.param(np.array(-1), id="numpy scalar"),
-            pytest.param(np.array([-1]), id="numpy array"),
+            pytest.param(-1, id="python_scalar"),
+            pytest.param(np.array(-1), id="numpy_scalar"),
+            pytest.param(np.array([-1]), id="numpy_array"),
         ),
     )
     def test_fillna(self, fill_value, unit, error, dtype):
@@ -3121,7 +3093,11 @@ class TestDataset:
 
         result = ds.fillna(value=fill_value * unit)
         expected = attach_units(
-            strip_units(ds).fillna(value=fill_value),
+            strip_units(ds).fillna(
+                value=strip_units(
+                    convert_units(fill_value * unit, {None: unit_registry.m})
+                )
+            ),
             {"a": unit_registry.m, "b": unit_registry.m},
         )
 
@@ -3202,26 +3178,7 @@ class TestDataset:
         assert_equal_with_units(result, expected)
 
     @pytest.mark.parametrize(
-        "variant",
-        (
-            "masking",
-            pytest.param(
-                "replacing_scalar",
-                marks=pytest.mark.xfail(
-                    reason="python scalar not convertible using astype"
-                ),
-            ),
-            pytest.param(
-                "replacing_array",
-                marks=pytest.mark.xfail(
-                    reason="replacing using an array drops the units"
-                ),
-            ),
-            pytest.param(
-                "dropping",
-                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
-            ),
-        ),
+        "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -3236,9 +3193,6 @@ class TestDataset:
         ),
     )
     def test_where(self, variant, unit, error, dtype):
-        def _strip_units(mapping):
-            return {key: array_strip_units(value) for key, value in mapping.items()}
-
         original_unit = unit_registry.m
         array1 = np.linspace(0, 1, 10).astype(dtype) * original_unit
         array2 = np.linspace(-1, 0, 10).astype(dtype) * original_unit
@@ -3260,13 +3214,16 @@ class TestDataset:
             "dropping": {"cond": condition, "drop": True},
         }
         kwargs = variant_kwargs.get(variant)
-        kwargs_without_units = _strip_units(kwargs)
-
         if variant not in ("masking", "dropping") and error is not None:
             with pytest.raises(error):
                 ds.where(**kwargs)
 
             return
+
+        kwargs_without_units = {
+            key: strip_units(convert_units(value, {None: original_unit}))
+            for key, value in kwargs.items()
+        }
 
         expected = attach_units(
             strip_units(ds).where(**kwargs_without_units),
