@@ -2544,7 +2544,13 @@ class TestDataArray:
             method("integrate", dim="x"),
             method("quantile", q=[0.25, 0.75]),
             method("reduce", func=np.sum, dim="x"),
-            pytest.param(lambda x: x.dot(x), id="method_dot"),
+            pytest.param(
+                lambda x: x.dot(x),
+                id="method_dot",
+                marks=pytest.mark.xfail(
+                    reason="pint does not implement the dot method"
+                ),
+            ),
         ),
         ids=repr,
     )
@@ -2557,7 +2563,16 @@ class TestDataArray:
         y = np.arange(array.shape[1]) * unit_registry.s
 
         data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
-        units = extract_units(data_array)
+
+        # we want to make sure the output unit is correct
+        units = {
+            **extract_units(data_array),
+            **(
+                {}
+                if isinstance(func, (function, method))
+                else extract_units(func(array.reshape(-1)))
+            ),
+        }
 
         expected = attach_units(func(strip_units(data_array)), units)
         result = func(data_array)
