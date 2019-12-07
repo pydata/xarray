@@ -2260,27 +2260,12 @@ class TestDataArray:
             result = data_array.squeeze(dim=name)
             assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(
-        reason="indexes strip units and head / tail / thin only support integers"
-    )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
     @pytest.mark.parametrize(
         "func",
         (method("head", x=7, y=3), method("tail", x=7, y=3), method("thin", x=7, y=3)),
         ids=repr,
     )
-    def test_head_tail_thin(self, func, unit, error, dtype):
+    def test_head_tail_thin(self, func, dtype):
         array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
 
         coords = {
@@ -2288,18 +2273,12 @@ class TestDataArray:
             "y": np.arange(5) * unit_registry.m,
         }
 
-        arr = xr.DataArray(data=array, coords=coords, dims=("x", "y"))
+        data_array = xr.DataArray(data=array, coords=coords, dims=("x", "y"))
 
-        kwargs = {name: value * unit for name, value in func.kwargs.items()}
-
-        if error is not None:
-            with pytest.raises(error):
-                func(arr, **kwargs)
-
-            return
-
-        expected = attach_units(func(strip_units(arr)), extract_units(arr))
-        result = func(arr, **kwargs)
+        expected = attach_units(
+            func(strip_units(data_array)), extract_units(data_array)
+        )
+        result = func(data_array)
 
         assert_equal_with_units(expected, result)
 
@@ -3742,21 +3721,6 @@ class TestDataset:
         result = ds.loc[{"x": values_with_units}]
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(
-        reason="indexes strip units and head / tail / thin only support integers"
-    )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -3766,7 +3730,7 @@ class TestDataset:
         ),
         ids=repr,
     )
-    def test_head_tail_thin(self, func, unit, error, dtype):
+    def test_head_tail_thin(self, func, dtype):
         array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
         array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
 
@@ -3784,16 +3748,8 @@ class TestDataset:
             coords=coords,
         )
 
-        kwargs = {name: value * unit for name, value in func.kwargs.items()}
-
-        if error is not None:
-            with pytest.raises(error):
-                func(ds, **kwargs)
-
-            return
-
         expected = attach_units(func(strip_units(ds)), extract_units(ds))
-        result = func(ds, **kwargs)
+        result = func(ds)
 
         assert_equal_with_units(expected, result)
 
