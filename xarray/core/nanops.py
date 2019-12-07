@@ -9,6 +9,7 @@ try:
     from . import dask_array_compat
 except ImportError:
     dask_array = None
+    dask_array_compat = None  # type: ignore
 
 
 def _replace_nan(a, val):
