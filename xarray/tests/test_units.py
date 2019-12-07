@@ -2524,8 +2524,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, result)
 
-        assert False
-
     @pytest.mark.parametrize(
         "func",
         (
