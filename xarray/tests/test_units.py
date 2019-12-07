@@ -1213,7 +1213,6 @@ def test_where_dataset(fill_value, unit, error, dtype):
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="pint does not implement `np.einsum`")
 def test_dot_dataarray(dtype):
     array1 = (
         np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
@@ -1410,13 +1409,7 @@ class TestDataArray:
             pytest.param(lambda x: 2 * x, id="multiply"),
             pytest.param(lambda x: x + x, id="add"),
             pytest.param(lambda x: x[0] + x, id="add scalar"),
-            pytest.param(
-                lambda x: x.T @ x,
-                id="matrix multiply",
-                marks=pytest.mark.xfail(
-                    reason="pint does not implement `np.einsum` yet"
-                ),
-            ),
+            pytest.param(lambda x: x.T @ x, id="matrix multiply"),
         ),
     )
     def test_binary_operations(self, func, dtype):
@@ -2569,11 +2562,7 @@ class TestDataArray:
             method("integrate", dim="x"),
             method("quantile", q=[0.25, 0.75]),
             method("reduce", func=np.sum, dim="x"),
-            pytest.param(
-                lambda x: x.dot(x),
-                id="method_dot",
-                marks=pytest.mark.xfail(reason="pint does not implement einsum"),
-            ),
+            pytest.param(lambda x: x.dot(x), id="method_dot"),
         ),
         ids=repr,
     )
@@ -3157,7 +3146,6 @@ class TestDataset:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(reason="pint does not implement `numpy.isin`")
     @pytest.mark.parametrize(
         "unit",
         (
