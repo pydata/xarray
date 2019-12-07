@@ -15,9 +15,15 @@
 
 import datetime
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
+
+# make sure the source version is preferred (#3567)
+root = pathlib.Path(__file__).absolute().parent.parent
+os.environ["PYTHONPATH"] = str(root)
+sys.path.insert(0, str(root))
 
 import xarray
 
@@ -76,7 +82,7 @@ extensions = [
     "numpydoc",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
-    "sphinx_gallery.gen_gallery",
+    "nbsphinx",
 ]
 
 extlinks = {
@@ -84,12 +90,16 @@ extlinks = {
     "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
 }
 
-sphinx_gallery_conf = {
-    "examples_dirs": "gallery",
-    "gallery_dirs": "auto_gallery",
-    "backreferences_dir": False,
-    "expected_failing_examples": list(allowed_failures),
-}
+nbsphinx_timeout = 600
+nbsphinx_execute = "always"
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+
+You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+
+.. |Binder| image:: https://mybinder.org/badge.svg
+   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+"""
 
 autosummary_generate = True
 autodoc_typehints = "none"
@@ -137,7 +147,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build"]
+exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -347,4 +357,5 @@ intersphinx_mapping = {
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "matplotlib": ("https://matplotlib.org", None),
     "dask": ("https://docs.dask.org/en/latest", None),
+    "cftime": ("https://unidata.github.io/cftime", None),
 }

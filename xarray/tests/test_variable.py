@@ -22,6 +22,7 @@ from xarray.core.indexing import (
     PandasIndexAdapter,
     VectorizedIndexer,
 )
+from xarray.core.pycompat import dask_array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import requires_bottleneck
@@ -1155,6 +1156,26 @@ class TestVariable(VariableSubclassobjects):
     def test_getitem_basic(self):
         v = self.cls(["x", "y"], [[0, 1, 2], [3, 4, 5]])
 
+        # int argument
+        v_new = v[0]
+        assert v_new.dims == ("y",)
+        assert_array_equal(v_new, v._data[0])
+
+        # slice argument
+        v_new = v[:2]
+        assert v_new.dims == ("x", "y")
+        assert_array_equal(v_new, v._data[:2])
+
+        # list arguments
+        v_new = v[[0]]
+        assert v_new.dims == ("x", "y")
+        assert_array_equal(v_new, v._data[[0]])
+
+        v_new = v[[]]
+        assert v_new.dims == ("x", "y")
+        assert_array_equal(v_new, v._data[[]])
+
+        # dict arguments
         v_new = v[dict(x=0)]
         assert v_new.dims == ("y",)
         assert_array_equal(v_new, v._data[0])
@@ -1195,6 +1216,8 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.isel(time=0), v[0])
         assert_identical(v.isel(time=slice(0, 3)), v[:3])
         assert_identical(v.isel(x=0), v[:, 0])
+        assert_identical(v.isel(x=[0, 2]), v[:, [0, 2]])
+        assert_identical(v.isel(time=[]), v[[]])
         with raises_regex(ValueError, "do not exist"):
             v.isel(not_a_dim=0)
 
@@ -1492,23 +1515,31 @@ class TestVariable(VariableSubclassobjects):
         with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
             v.mean(dim="x", allow_lazy=False)
 
-    def test_quantile(self):
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    @pytest.mark.parametrize(
+        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+    )
+    def test_quantile(self, q, axis, dim):
         v = Variable(["x", "y"], self.d)
-        for q in [0.25, [0.50], [0.25, 0.75]]:
-            for axis, dim in zip(
-                [None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]
-            ):
-                actual = v.quantile(q, dim=dim)
-
-                expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
-                np.testing.assert_allclose(actual.values, expected)
+        actual = v.quantile(q, dim=dim)
+        expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+        np.testing.assert_allclose(actual.values, expected)
 
     @requires_dask
-    def test_quantile_dask_raises(self):
-        # regression for GH1524
-        v = Variable(["x", "y"], self.d).chunk(2)
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    @pytest.mark.parametrize("axis, dim", [[1, "y"], [[1], ["y"]]])
+    def test_quantile_dask(self, q, axis, dim):
+        v = Variable(["x", "y"], self.d).chunk({"x": 2})
+        actual = v.quantile(q, dim=dim)
+        assert isinstance(actual.data, dask_array_type)
+        expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+        np.testing.assert_allclose(actual.values, expected)
 
-        with raises_regex(TypeError, "arrays stored as dask"):
+    @requires_dask
+    def test_quantile_chunked_dim_error(self):
+        v = Variable(["x", "y"], self.d).chunk({"x": 2})
+
+        with raises_regex(ValueError, "dimension 'x'"):
             v.quantile(0.5, dim="x")
 
     @requires_dask
@@ -1823,6 +1854,26 @@ class TestVariable(VariableSubclassobjects):
         expected[0, 1] *= 12 / 11
         expected[1, 1] *= 12 / 11
         assert_allclose(actual, expected)
+
+        v = self.cls(("x", "y"), np.arange(4 * 4, dtype=np.float32).reshape(4, 4))
+        actual = v.coarsen(dict(x=2, y=2), func="count", boundary="exact")
+        expected = self.cls(("x", "y"), 4 * np.ones((2, 2)))
+        assert_equal(actual, expected)
+
+        v[0, 0] = np.nan
+        v[-1, -1] = np.nan
+        expected[0, 0] = 3
+        expected[-1, -1] = 3
+        actual = v.coarsen(dict(x=2, y=2), func="count", boundary="exact")
+        assert_equal(actual, expected)
+
+        actual = v.coarsen(dict(x=2, y=2), func="sum", boundary="exact", skipna=False)
+        expected = self.cls(("x", "y"), [[np.nan, 18], [42, np.nan]])
+        assert_equal(actual, expected)
+
+        actual = v.coarsen(dict(x=2, y=2), func="sum", boundary="exact", skipna=True)
+        expected = self.cls(("x", "y"), [[10, 18], [42, 35]])
+        assert_equal(actual, expected)
 
 
 @requires_dask
