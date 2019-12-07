@@ -38,7 +38,6 @@ Bug fixes
 - Make sure dask names change when rechunking by different chunk sizes. Conversely, make sure they
   stay the same when rechunking by the same chunk size. (:issue:`3350`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving ``map_blocks`` (:pull:`3598`)
