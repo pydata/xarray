@@ -380,7 +380,7 @@ def test_apply_ufunc_dataset(dtype):
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="align strips units")
+@pytest.mark.xfail(reason="blocked by `reindex` / `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -406,11 +406,7 @@ def test_apply_ufunc_dataset(dtype):
 def test_align_dataarray(fill_value, variant, unit, error, dtype):
     original_unit = unit_registry.m
 
-    variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
-    }
+    variants = {"data": (unit, 1, 1), "dims": (1, unit, 1), "coords": (1, 1, unit)}
     data_unit, dim_unit, coord_unit = variants.get(variant)
 
     array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * original_unit
@@ -438,17 +434,20 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
         return
 
     stripped_kwargs = {
-        key: strip_units(convert_units(value, {None: original_unit}))
+        key: strip_units(
+            convert_units(value, {None: original_unit if data_unit != 1 else None})
+        )
         for key, value in func.kwargs.items()
     }
-    units = extract_units(data_array1)
+    units_a = extract_units(data_array1)
+    units_b = extract_units(data_array2)
     expected_a, expected_b = func(
-        strip_units(data_array1), strip_units(data_array2), **stripped_kwargs
+        strip_units(data_array1),
+        strip_units(convert_units(data_array2, units_a)),
+        **stripped_kwargs,
     )
-    expected_a = attach_units(expected_a, units)
-    # FIXME: should expected_b have the same units as data_array1
-    # or data_array2?
-    expected_b = attach_units(expected_b, units)
+    expected_a = attach_units(expected_a, units_a)
+    expected_b = convert_units(attach_units(expected_b, units_a), units_b)
 
     result_a, result_b = func(data_array1, data_array2)
 
@@ -456,7 +455,7 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
     assert_equal_with_units(expected_b, result_b)
 
 
-@pytest.mark.xfail(reason="align strips units")
+@pytest.mark.xfail(reason="blocked by `reindex` / `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -482,11 +481,7 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
 def test_align_dataset(fill_value, unit, variant, error, dtype):
     original_unit = unit_registry.m
 
-    variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
-    }
+    variants = {"data": (unit, 1, 1), "dims": (1, unit, 1), "coords": (1, 1, unit)}
     data_unit, dim_unit, coord_unit = variants.get(variant)
 
     array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * original_unit
@@ -517,7 +512,9 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
         return
 
     stripped_kwargs = {
-        key: strip_units(convert_units(value, {None: original_unit}))
+        key: strip_units(
+            convert_units(value, {None: original_unit if data_unit != 1 else None})
+        )
         for key, value in func.kwargs.items()
     }
     units_a = extract_units(ds1)
@@ -526,7 +523,6 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
         strip_units(ds1), strip_units(convert_units(ds2, units_a)), **stripped_kwargs
     )
     expected_a = attach_units(expected_a, units_a)
-    # FIXME: should expected_b have the same units as ds1 or ds2?
     expected_b = convert_units(attach_units(expected_b, units_a), units_b)
 
     result_a, result_b = func(ds1, ds2)
@@ -737,7 +733,6 @@ def test_combine_nested(variant, unit, error, dtype):
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="`concat` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -778,15 +773,18 @@ def test_concat_dataarray(variant, unit, error, dtype):
 
         return
 
+    units = extract_units(arr1)
     expected = attach_units(
-        xr.concat([strip_units(arr1), strip_units(arr2)], dim="x"), extract_units(arr1)
+        xr.concat(
+            [strip_units(arr1), strip_units(convert_units(arr2, units))], dim="x"
+        ),
+        units,
     )
     result = xr.concat([arr1, arr2], dim="x")
 
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="`concat` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -827,15 +825,17 @@ def test_concat_dataset(variant, unit, error, dtype):
 
         return
 
+    units = extract_units(ds1)
     expected = attach_units(
-        xr.concat([strip_units(ds1), strip_units(ds2)], dim="x"), extract_units(ds1)
+        xr.concat([strip_units(ds1), strip_units(convert_units(ds2, units))], dim="x"),
+        units,
     )
     result = xr.concat([ds1, ds2], dim="x")
 
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="blocked by `where`")
+@pytest.mark.xfail(reason="blocked by `reindex` / `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -925,7 +925,7 @@ def test_merge_dataarray(variant, unit, error, dtype):
     assert_equal_with_units(expected, result)
 
 
-@pytest.mark.xfail(reason="blocked by `where`")
+@pytest.mark.xfail(reason="blocked by `reindex` / `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -1656,17 +1656,10 @@ class TestDataArray:
             * unit_registry.degK
         )
         x = np.arange(len(array))
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
-
-        result_without_units = func(strip_units(data_array), dim="x")
-        result = xr.DataArray(
-            data=result_without_units.data * unit_registry.degK,
-            coords={"x": x},
-            dims=["x"],
-        )
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
         expected = attach_units(
-            func(strip_units(data_array), dim="x"), {"data": unit_registry.degK}
+            func(strip_units(data_array), dim="x"), extract_units(data_array)
         )
         result = func(data_array, dim="x")
 
@@ -1742,7 +1735,13 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit",
         (
-            pytest.param(1, id="no_unit"),
+            pytest.param(
+                1,
+                id="no_unit",
+                marks=pytest.mark.xfail(
+                    reason="pint's isin implementation does not work well with mixed args"
+                ),
+            ),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
             pytest.param(unit_registry.cm, id="compatible_unit"),
@@ -1768,7 +1767,19 @@ class TestDataArray:
         assert_equal_with_units(expected, result)
 
     @pytest.mark.parametrize(
-        "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
+        "variant",
+        (
+            pytest.param(
+                "masking",
+                marks=pytest.mark.xfail(reason="array(nan) is not a quantity"),
+            ),
+            "replacing_scalar",
+            "replacing_array",
+            pytest.param(
+                "dropping",
+                marks=pytest.mark.xfail(reason="array(nan) is not a quantity"),
+            ),
+        ),
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -2816,7 +2827,9 @@ class TestDataset:
                     reason="np.median does not work with dataset yet"
                 ),
             ),
-            function("sum"),
+            pytest.param(
+                function("sum"), marks=pytest.mark.xfail(reason="blocked by `where`")
+            ),
             pytest.param(
                 function("prod"),
                 marks=pytest.mark.xfail(reason="not implemented by pint"),
@@ -2826,9 +2839,7 @@ class TestDataset:
             function("cumsum"),
             pytest.param(
                 function("cumprod"),
-                marks=pytest.mark.xfail(
-                    reason="pint does not support cumprod on non-dimensionless yet"
-                ),
+                marks=pytest.mark.xfail(reason="fails within xarray"),
             ),
             pytest.param(
                 method("all"), marks=pytest.mark.xfail(reason="not implemented by pint")
@@ -2842,7 +2853,9 @@ class TestDataset:
             method("min"),
             method("mean"),
             method("median"),
-            method("sum"),
+            pytest.param(
+                method("sum"), marks=pytest.mark.xfail(reason="blocked by `where`")
+            ),
             pytest.param(
                 method("prod"),
                 marks=pytest.mark.xfail(reason="not implemented by pint"),
@@ -2851,17 +2864,21 @@ class TestDataset:
             method("var"),
             method("cumsum"),
             pytest.param(
-                method("cumprod"),
-                marks=pytest.mark.xfail(
-                    reason="pint does not support cumprod on non-dimensionless yet"
-                ),
+                method("cumprod"), marks=pytest.mark.xfail(reason="fails within xarray")
             ),
         ),
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        unit_a = unit_registry.Pa
-        unit_b = unit_registry.kg / unit_registry.m ** 3
+        unit_a = (
+            unit_registry.Pa if func.name != "cumprod" else unit_registry.dimensionless
+        )
+        unit_b = (
+            unit_registry.kg / unit_registry.m ** 3
+            if func.name != "cumprod"
+            else unit_registry.dimensionless
+        )
+        print(unit_a, unit_b)
         a = xr.DataArray(data=np.linspace(0, 1, 10).astype(dtype) * unit_a, dims="x")
         b = xr.DataArray(data=np.linspace(-1, 0, 10).astype(dtype) * unit_b, dims="x")
         x = xr.DataArray(data=np.arange(10).astype(dtype) * unit_registry.m, dims="x")
@@ -2874,7 +2891,10 @@ class TestDataset:
         result = func(ds)
         expected = attach_units(
             func(strip_units(ds)),
-            {"a": array_extract_units(func(a)), "b": array_extract_units(func(b))},
+            {
+                "a": extract_units(func(a)).get(None),
+                "b": extract_units(func(b)).get(None),
+            },
         )
 
         assert_equal_with_units(result, expected)
@@ -3153,7 +3173,13 @@ class TestDataset:
     @pytest.mark.parametrize(
         "unit",
         (
-            pytest.param(1, id="no_unit"),
+            pytest.param(
+                1,
+                id="no_unit",
+                marks=pytest.mark.xfail(
+                    reason="pint's isin implementation does not work well with mixed args"
+                ),
+            ),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
             pytest.param(unit_registry.cm, id="compatible_unit"),
@@ -3199,7 +3225,19 @@ class TestDataset:
         assert_equal_with_units(result, expected)
 
     @pytest.mark.parametrize(
-        "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
+        "variant",
+        (
+            pytest.param(
+                "masking",
+                marks=pytest.mark.xfail(reason="array(nan) is not a quantity"),
+            ),
+            "replacing_scalar",
+            "replacing_array",
+            pytest.param(
+                "dropping",
+                marks=pytest.mark.xfail(reason="array(nan) is not a quantity"),
+            ),
+        ),
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -3345,11 +3383,7 @@ class TestDataset:
             pytest.param(1, id="no_unit"),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(reason="identical does not check units yet"),
-            ),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
@@ -3365,6 +3399,13 @@ class TestDataset:
     )
     @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
     def test_comparisons(self, func, variation, unit, dtype):
+        def is_compatible(a, b):
+            a = a if a is not None else 1
+            b = b if b is not None else 1
+            quantity = np.arange(5) * a
+
+            return a == b or quantity.check(b)
+
         array1 = np.linspace(0, 5, 10).astype(dtype)
         array2 = np.linspace(-5, 0, 10).astype(dtype)
 
@@ -3376,11 +3417,7 @@ class TestDataset:
         x = coord * original_unit
         y = coord * original_unit
 
-        units = {
-            "data": (unit, original_unit, original_unit),
-            "dims": (original_unit, unit, original_unit),
-            "coords": (original_unit, original_unit, unit),
-        }
+        units = {"data": (unit, 1, 1), "dims": (1, unit, 1), "coords": (1, 1, unit)}
         data_unit, dim_unit, coord_unit = units.get(variation)
 
         ds = xr.Dataset(
@@ -3391,31 +3428,23 @@ class TestDataset:
             coords={"x": x, "y": ("x", y)},
         )
 
-        other = attach_units(
-            strip_units(ds),
-            {
-                "a": (data_unit, original_unit if quantity1.check(data_unit) else None),
-                "b": (data_unit, original_unit if quantity2.check(data_unit) else None),
-                "x": (dim_unit, original_unit if x.check(dim_unit) else None),
-                "y": (coord_unit, original_unit if y.check(coord_unit) else None),
-            },
-        )
+        other_units = {
+            "a": data_unit if quantity1.check(data_unit) else None,
+            "b": data_unit if quantity2.check(data_unit) else None,
+            "x": dim_unit if x.check(dim_unit) else None,
+            "y": coord_unit if y.check(coord_unit) else None,
+        }
+        other = attach_units(strip_units(convert_units(ds, other_units)), other_units)
 
-        # TODO: test dim coord once indexes leave units intact
-        # also, express this in terms of calls on the raw data array
-        # and then check the units
-        equal_arrays = (
-            np.all(ds.a.data == other.a.data)
-            and np.all(ds.b.data == other.b.data)
-            and (np.all(x == other.x.data) or True)  # dims can't be checked yet
-            and np.all(y == other.y.data)
-        )
-        equal_units = (
-            data_unit == original_unit
-            and coord_unit == original_unit
-            and dim_unit == original_unit
-        )
-        expected = equal_arrays and (func.name != "identical" or equal_units)
+        units = extract_units(ds)
+        other_units = extract_units(other)
+
+        equal_ds = all(
+            is_compatible(units[name], other_units[name]) for name in units.keys()
+        ) and (strip_units(ds).equals(strip_units(convert_units(other, units))))
+        equal_units = units == other_units
+        expected = equal_ds and (func.name != "identical" or equal_units)
+
         result = func(ds, other)
 
         assert expected == result
@@ -3676,7 +3705,7 @@ class TestDataset:
         result = ds.sel(x=values)
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(False, reason="indexes don't support units")
+    @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -3964,6 +3993,7 @@ class TestDataset:
 
         assert_equal_with_units(result, expected)
 
+    @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3976,9 +4006,13 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_reindex(self, unit, error):
-        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
+    def test_reindex(self, unit, error, dtype):
+        array1 = (
+            np.linspace(1, 2, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
+        )
+        array2 = (
+            np.linspace(1, 2, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
+        )
 
         coords = {
             "x": np.arange(10) * unit_registry.m,
@@ -4011,6 +4045,7 @@ class TestDataset:
 
         assert_equal_with_units(result, expected)
 
+    @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -4117,8 +4152,7 @@ class TestDataset:
             method("groupby_bins", "x", bins=4),
             method("coarsen", x=2),
             pytest.param(
-                method("rolling", x=3),
-                marks=pytest.mark.xfail(False, reason="strips units"),
+                method("rolling", x=3), marks=pytest.mark.xfail(reason="strips units")
             ),
             pytest.param(
                 method("rolling_exp", x=3),
