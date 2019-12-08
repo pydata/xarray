@@ -2152,7 +2152,7 @@ class TestDataArray:
         values = raw_values * unit
 
         if error is not None and not (
-            isinstance(raw_values, (int, float)) and array.check(unit)
+            isinstance(raw_values, (int, float)) and x.check(unit)
         ):
             with pytest.raises(error):
                 data_array.sel(x=values)
@@ -3260,7 +3260,7 @@ class TestDataset:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(reason="uses Dataset.where, which currently fails")
+    @pytest.mark.xfail(reason="wrong argument order for `where`")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3276,11 +3276,11 @@ class TestDataset:
     def test_combine_first(self, unit, error, dtype):
         array1 = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
-            * unit_registry.degK
+            * unit_registry.m
         )
         array2 = (
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
-            * unit_registry.Pa
+            * unit_registry.m
         )
         x = np.arange(len(array1))
         ds = xr.Dataset(
@@ -3307,7 +3307,11 @@ class TestDataset:
             return
 
         expected = attach_units(
-            strip_units(ds).combine_first(strip_units(other)),
+            strip_units(ds).combine_first(
+                strip_units(
+                    convert_units(other, {"a": unit_registry.m, "b": unit_registry.m})
+                )
+            ),
             {"a": unit_registry.m, "b": unit_registry.m},
         )
         result = ds.combine_first(other)
@@ -3505,7 +3509,6 @@ class TestDataset:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(reason="tries to subscript scalar quantities")
     def test_to_stacked_array(self, dtype):
         labels = np.arange(5).astype(dtype) * unit_registry.s
         arrays = {name: np.linspace(0, 1, 10) * unit_registry.m for name in labels}
@@ -3534,12 +3537,10 @@ class TestDataset:
             method("stack", a=("x", "y")),
             method("set_index", x="x2"),
             pytest.param(
-                method("shift", x=2), marks=pytest.mark.xfail(reason="sets all to nan")
+                method("shift", x=2),
+                marks=pytest.mark.xfail(reason="tries to concatenate nan arrays"),
             ),
-            pytest.param(
-                method("roll", x=2, roll_coords=False),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
+            method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
         ids=repr,
@@ -3605,31 +3606,29 @@ class TestDataset:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(
-        reason="xarray does not support duck arrays in dimension coordinates"
-    )
+    @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
-        "values",
+        "raw_values",
         (
-            pytest.param(12, id="single_value"),
+            pytest.param(10, id="single_value"),
             pytest.param([10, 5, 13], id="list_of_values"),
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
     @pytest.mark.parametrize(
-        "units,error",
+        "unit,error",
         (
             pytest.param(1, KeyError, id="no_units"),
             pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
             pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.ms, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.s, None, id="same_unit"),
+            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_sel(self, values, units, error, dtype):
+    def test_sel(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
-        x = np.arange(len(array1)) * unit_registry.s
+        x = np.arange(len(array1)) * unit_registry.m
 
         ds = xr.Dataset(
             data_vars={
@@ -3639,46 +3638,46 @@ class TestDataset:
             coords={"x": x},
         )
 
-        values_with_units = values * units
+        values = raw_values * unit
 
-        if error is not None:
+        if error is not None and not (
+            isinstance(raw_values, (int, float)) and x.check(unit)
+        ):
             with pytest.raises(error):
-                ds.sel(x=values_with_units)
+                ds.sel(x=values)
 
             return
 
         expected = attach_units(
-            strip_units(ds).sel(x=values),
-            {"a": unit_registry.degK, "b": unit_registry.Pa, "x": unit_registry.s},
+            strip_units(ds).sel(x=strip_units(convert_units(values, {None: x.units}))),
+            {"a": array1.units, "b": array2.units, "x": x.units},
         )
-        result = ds.sel(x=values_with_units)
+        result = ds.sel(x=values)
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(
-        reason="xarray does not support duck arrays in dimension coordinates"
-    )
+    @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
-        "values",
+        "raw_values",
         (
-            pytest.param(12, id="single value"),
-            pytest.param([10, 5, 13], id="list of multiple values"),
-            pytest.param(np.array([9, 3, 7, 12]), id="array of multiple values"),
+            pytest.param(10, id="single_value"),
+            pytest.param([10, 5, 13], id="list_of_values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
     @pytest.mark.parametrize(
-        "units,error",
+        "unit,error",
         (
             pytest.param(1, KeyError, id="no_units"),
             pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
             pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.ms, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.s, None, id="same_unit"),
+            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_loc(self, values, units, error, dtype):
+    def test_loc(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
-        x = np.arange(len(array1)) * unit_registry.s
+        x = np.arange(len(array1)) * unit_registry.m
 
         ds = xr.Dataset(
             data_vars={
@@ -3688,19 +3687,23 @@ class TestDataset:
             coords={"x": x},
         )
 
-        values_with_units = values * units
+        values = raw_values * unit
 
-        if error is not None:
+        if error is not None and not (
+            isinstance(raw_values, (int, float)) and x.check(unit)
+        ):
             with pytest.raises(error):
-                ds.loc[{"x": values_with_units}]
+                ds.loc[{"x": values}]
 
             return
 
         expected = attach_units(
-            strip_units(ds).loc[{"x": values}],
-            {"a": unit_registry.degK, "b": unit_registry.Pa, "x": unit_registry.s},
+            strip_units(ds).loc[
+                {"x": strip_units(convert_units(values, {None: x.units}))}
+            ],
+            {"a": array1.units, "b": array2.units, "x": x.units},
         )
-        result = ds.loc[{"x": values_with_units}]
+        result = ds.loc[{"x": values}]
         assert_equal_with_units(expected, result)
 
     @pytest.mark.parametrize(
@@ -3819,8 +3822,10 @@ class TestDataset:
 
             return
 
+        units = extract_units(ds)
         expected = attach_units(
-            strip_units(ds).interp(x=strip_units(new_coords)), extract_units(ds)
+            strip_units(ds).interp(x=strip_units(convert_units(new_coords, units))),
+            units,
         )
         result = ds.interp(x=new_coords)
 
@@ -3879,8 +3884,9 @@ class TestDataset:
 
             return
 
+        units = extract_units(ds)
         expected = attach_units(
-            strip_units(ds).interp_like(strip_units(other)), extract_units(ds)
+            strip_units(ds).interp_like(strip_units(convert_units(other, units))), units
         )
         result = ds.interp_like(other)
 
@@ -3924,8 +3930,10 @@ class TestDataset:
 
             return
 
+        units = extract_units(ds)
         expected = attach_units(
-            strip_units(ds).reindex(x=strip_units(new_coords)), extract_units(ds)
+            strip_units(ds).reindex(x=strip_units(convert_units(new_coords, units))),
+            units,
         )
         result = ds.reindex(x=new_coords)
 
@@ -3983,8 +3991,10 @@ class TestDataset:
 
             return
 
+        units = extract_units(ds)
         expected = attach_units(
-            strip_units(ds).reindex_like(strip_units(other)), extract_units(ds)
+            strip_units(ds).reindex_like(strip_units(convert_units(other, units))),
+            units,
         )
         result = ds.reindex_like(other)
 
@@ -3996,20 +4006,9 @@ class TestDataset:
             method("diff", dim="x"),
             method("differentiate", coord="x"),
             method("integrate", coord="x"),
-            pytest.param(
-                method("quantile", q=[0.25, 0.75]),
-                marks=pytest.mark.xfail(
-                    reason="pint does not implement nanpercentile yet"
-                ),
-            ),
-            pytest.param(
-                method("reduce", func=np.sum, dim="x"),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
-            pytest.param(
-                method("map", np.fabs),
-                marks=pytest.mark.xfail(reason="fabs strips units"),
-            ),
+            method("quantile", q=[0.25, 0.75]),
+            method("reduce", func=np.sum, dim="x"),
+            method("map", np.fabs),
         ),
         ids=repr,
     )
@@ -4042,20 +4041,16 @@ class TestDataset:
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                method("groupby", "x"), marks=pytest.mark.xfail(reason="strips units")
-            ),
-            pytest.param(
-                method("groupby_bins", "x", bins=4),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
+            method("groupby", "x"),
+            method("groupby_bins", "x", bins=4),
             method("coarsen", x=2),
             pytest.param(
-                method("rolling", x=3), marks=pytest.mark.xfail(reason="strips units")
+                method("rolling", x=3),
+                marks=pytest.mark.xfail(False, reason="strips units"),
             ),
             pytest.param(
                 method("rolling_exp", x=3),
-                marks=pytest.mark.xfail(reason="strips units"),
+                marks=pytest.mark.xfail(reason="uses numbagg which strips units"),
             ),
         ),
         ids=repr,
@@ -4088,7 +4083,7 @@ class TestDataset:
 
         assert_equal_with_units(expected, result)
 
-    @pytest.mark.xfail(reason="strips units")
+    @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
     def test_resample(self, dtype):
         array1 = (
             np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
@@ -4119,22 +4114,11 @@ class TestDataset:
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                method("assign", c=lambda ds: 10 * ds.b),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
-            pytest.param(
-                method("assign_coords", v=("x", np.arange(10) * unit_registry.s)),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
-            pytest.param(method("first")),
-            pytest.param(method("last")),
-            pytest.param(
-                method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
-                marks=pytest.mark.xfail(
-                    reason="dataset groupby does not implement quantile"
-                ),
-            ),
+            method("assign", c=lambda ds: 10 * ds.b),
+            method("assign_coords", v=("x", np.arange(10) * unit_registry.s)),
+            method("first"),
+            method("last"),
+            method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
         ),
         ids=repr,
     )
@@ -4214,16 +4198,16 @@ class TestDataset:
             },
             coords={"x": x, "y": y, "z": z, "x2": ("x", x2)},
         )
-        units = extract_units(ds)
-        units.update(
-            {
+        units = {
+            **extract_units(ds),
+            **{
                 "y2": unit_registry.mm,
                 "x_mm": unit_registry.mm,
                 "offset_x": unit_registry.m,
                 "d": unit_registry.Pa,
                 "temperature": unit_registry.degK,
-            }
-        )
+            },
+        }
 
         stripped_kwargs = {
             key: strip_units(value) for key, value in func.kwargs.items()
