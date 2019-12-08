@@ -4059,6 +4059,7 @@ class TestDataArray:
         expected = DataArray(
             np.pad(
                 np.arange(3 * 4 * 5).reshape(3, 4, 5).astype(np.float32),
+                mode="constant",
                 pad_width=((1, 3), (0, 0), (0, 0)),
                 constant_values=np.nan,
             )
@@ -4089,14 +4090,15 @@ class TestDataArray:
         actual = ar.pad(
             dim_0=(1, 3), dim_2=(2, 2), mode=mode, reflect_type=reflect_type
         )
-        expected = DataArray(
-            np.pad(
-                np.arange(3 * 4 * 5).reshape(3, 4, 5),
-                pad_width=((1, 3), (0, 0), (2, 2)),
-                mode=mode,
-                reflect_type=reflect_type,
-            )
-        )
+        np_kwargs = {
+            "array": np.arange(3 * 4 * 5).reshape(3, 4, 5),
+            "pad_width": ((1, 3), (0, 0), (2, 2)),
+            "mode": mode,
+        }
+        # numpy does not support reflect_type=None
+        if reflect_type is not None:
+            np_kwargs["reflect_type"] = reflect_type
+        expected = DataArray(np.pad(**np_kwargs))
         assert_identical(actual, expected)
 
 

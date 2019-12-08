@@ -1104,13 +1104,13 @@ class Variable(
         pad_widths: Mapping[Hashable, Tuple[int, int]] = None,
         mode: str = "constant",
         stat_length: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         constant_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         end_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         reflect_type: str = None,
         **pad_widths_kwargs: Any,

@@ -4,6 +4,8 @@ import dask.array as da
 import numpy as np
 from dask import __version__ as dask_version
 
+from . import dtypes
+
 if LooseVersion(dask_version) >= LooseVersion("2.0.0"):
     meta_from_array = da.utils.meta_from_array
 else:
@@ -96,6 +98,7 @@ else:
 try:
     pad = da.pad
 except AttributeError:
+
     def pad(array, pad_width, mode="constant", **kwargs):
         """
         Return a new dask.DataArray wit padding. This functions implements a
@@ -134,16 +137,12 @@ except AttributeError:
             arrays = []
             if pad[0] > 0:
                 arrays.append(
-                    da.full(
-                        before_shape, fill_value, dtype=dtype, chunks=before_chunks
-                    )
+                    da.full(before_shape, fill_value, dtype=dtype, chunks=before_chunks)
                 )
             arrays.append(array)
             if pad[1] > 0:
                 arrays.append(
-                    da.full(
-                        after_shape, fill_value, dtype=dtype, chunks=after_chunks
-                    )
+                    da.full(after_shape, fill_value, dtype=dtype, chunks=after_chunks)
                 )
             if len(arrays) > 1:
                 array = da.concatenate(arrays, axis=axis)
