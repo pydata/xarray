@@ -406,7 +406,11 @@ def test_apply_ufunc_dataset(dtype):
 def test_align_dataarray(fill_value, variant, unit, error, dtype):
     original_unit = unit_registry.m
 
-    variants = {"data": (unit, 1, 1), "dims": (1, unit, 1), "coords": (1, 1, unit)}
+    variants = {
+        "data": (unit, 1, 1),
+        "dims": (original_unit, unit, 1),
+        "coords": (original_unit, 1, unit),
+    }
     data_unit, dim_unit, coord_unit = variants.get(variant)
 
     array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * original_unit
@@ -1152,7 +1156,9 @@ def test_where_dataarray(fill_value, unit, error, dtype):
     cond = x < 5 * unit_registry.m
     fill_value = fill_value * unit
 
-    if error is not None:
+    if error is not None and not (
+        np.isnan(fill_value) and not isinstance(fill_value, Quantity)
+    ):
         with pytest.raises(error):
             xr.where(cond, x, fill_value)
 
@@ -1194,7 +1200,9 @@ def test_where_dataset(fill_value, unit, error, dtype):
     cond = x < 5 * unit_registry.s
     fill_value = fill_value * unit
 
-    if error is not None:
+    if error is not None and not (
+        np.isnan(fill_value) and not isinstance(fill_value, Quantity)
+    ):
         with pytest.raises(error):
             xr.where(cond, ds, fill_value)
 
@@ -1374,8 +1382,10 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        array = np.arange(10).astype(dtype) * unit_registry.m
-        data_array = xr.DataArray(data=array)
+        array = np.arange(10).astype(dtype) * (
+            unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
+        )
+        data_array = xr.DataArray(data=array, dims="x")
 
         # units differ based on the applied function, so we need to
         # first compute the units
@@ -2878,7 +2888,6 @@ class TestDataset:
             if func.name != "cumprod"
             else unit_registry.dimensionless
         )
-        print(unit_a, unit_b)
         a = xr.DataArray(data=np.linspace(0, 1, 10).astype(dtype) * unit_a, dims="x")
         b = xr.DataArray(data=np.linspace(-1, 0, 10).astype(dtype) * unit_b, dims="x")
         x = xr.DataArray(data=np.arange(10).astype(dtype) * unit_registry.m, dims="x")
@@ -4032,14 +4041,15 @@ class TestDataset:
 
         if error is not None:
             with pytest.raises(error):
-                ds.interp(x=new_coords)
+                ds.reindex(x=new_coords)
 
             return
 
-        units = extract_units(ds)
         expected = attach_units(
-            strip_units(ds).reindex(x=strip_units(convert_units(new_coords, units))),
-            units,
+            strip_units(ds).reindex(
+                x=strip_units(convert_units(new_coords, {None: coords["x"].units}))
+            ),
+            extract_units(ds),
         )
         actual = ds.reindex(x=new_coords)
 
