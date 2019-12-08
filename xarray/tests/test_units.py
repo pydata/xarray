@@ -566,7 +566,6 @@ def test_broadcast_dataset(dtype):
     assert_equal_with_units(expected, actual)
 
 
-@pytest.mark.xfail(reason="`combine_by_coords` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -637,7 +636,6 @@ def test_combine_by_coords(variant, unit, error, dtype):
     assert_equal_with_units(expected, actual)
 
 
-@pytest.mark.xfail(reason="blocked by `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -646,7 +644,12 @@ def test_combine_by_coords(variant, unit, error, dtype):
             unit_registry.dimensionless, DimensionalityError, id="dimensionless"
         ),
         pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
+        pytest.param(
+            unit_registry.mm,
+            None,
+            id="compatible_unit",
+            marks=pytest.mark.xfail(reason="wrong order of arguments to `where`"),
+        ),
         pytest.param(unit_registry.m, None, id="identical_unit"),
     ),
     ids=repr,
@@ -1326,18 +1329,16 @@ class TestDataArray:
             function("argmin"),
             function("max"),
             function("mean"),
-            function("median"),
+            pytest.param(
+                function("median"),
+                marks=pytest.mark.xfail(reason="not implemented by xarray"),
+            ),
             function("min"),
             pytest.param(
                 function("prod"),
                 marks=pytest.mark.xfail(reason="not implemented by pint yet"),
             ),
-            pytest.param(
-                function("sum"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
-                ),
-            ),
+            function("sum"),
             function("std"),
             function("var"),
             function("cumsum"),
@@ -1365,12 +1366,7 @@ class TestDataArray:
                     reason="comparison of quantity with ndarrays in nanops not implemented"
                 ),
             ),
-            pytest.param(
-                method("sum"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
-                ),
-            ),
+            method("sum"),
             method("std"),
             method("var"),
             method("cumsum"),
@@ -1973,7 +1969,6 @@ class TestDataArray:
 
         assert expected == actual
 
-    @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
         "unit",
         (
@@ -2642,7 +2637,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, actual)
 
-    @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
 
@@ -2837,9 +2831,7 @@ class TestDataset:
                     reason="np.median does not work with dataset yet"
                 ),
             ),
-            pytest.param(
-                function("sum"), marks=pytest.mark.xfail(reason="blocked by `where`")
-            ),
+            function("sum"),
             pytest.param(
                 function("prod"),
                 marks=pytest.mark.xfail(reason="not implemented by pint"),
@@ -2863,9 +2855,7 @@ class TestDataset:
             method("min"),
             method("mean"),
             method("median"),
-            pytest.param(
-                method("sum"), marks=pytest.mark.xfail(reason="blocked by `where`")
-            ),
+            method("sum"),
             pytest.param(
                 method("prod"),
                 marks=pytest.mark.xfail(reason="not implemented by pint"),
@@ -3182,13 +3172,7 @@ class TestDataset:
     @pytest.mark.parametrize(
         "unit",
         (
-            pytest.param(
-                1,
-                id="no_unit",
-                marks=pytest.mark.xfail(
-                    reason="pint's isin implementation does not work well with mixed args"
-                ),
-            ),
+            pytest.param(1, id="no_unit"),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
             pytest.param(unit_registry.cm, id="compatible_unit"),
@@ -3234,19 +3218,7 @@ class TestDataset:
         assert_equal_with_units(actual, expected)
 
     @pytest.mark.parametrize(
-        "variant",
-        (
-            pytest.param(
-                "masking",
-                marks=pytest.mark.xfail(reason="array(nan) is not a quantity"),
-            ),
-            "replacing_scalar",
-            "replacing_array",
-            pytest.param(
-                "dropping",
-                marks=pytest.mark.xfail(reason="array(nan) is not a quantity"),
-            ),
-        ),
+        "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -3458,7 +3430,6 @@ class TestDataset:
 
         assert expected == actual
 
-    @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
         "unit",
         (
@@ -4002,7 +3973,7 @@ class TestDataset:
 
         assert_equal_with_units(actual, expected)
 
-    @pytest.mark.xfail(reason="blocked by `where`")
+    @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -4055,7 +4026,7 @@ class TestDataset:
 
         assert_equal_with_units(actual, expected)
 
-    @pytest.mark.xfail(reason="blocked by `where`")
+    @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -4199,7 +4170,6 @@ class TestDataset:
 
         assert_equal_with_units(expected, actual)
 
-    @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
     def test_resample(self, dtype):
         array1 = (
             np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
@@ -4333,7 +4303,6 @@ class TestDataset:
 
         assert_equal_with_units(expected, actual)
 
-    @pytest.mark.xfail(reason="blocked by reindex")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -4346,7 +4315,16 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    @pytest.mark.parametrize("variant", ("data", "dims", "coords"))
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
     def test_merge(self, variant, unit, error, dtype):
         original_data_unit = unit_registry.m
         original_dim_unit = unit_registry.m
