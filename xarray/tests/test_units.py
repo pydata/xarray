@@ -353,9 +353,9 @@ def test_apply_ufunc_dataarray(dtype):
     data_array = xr.DataArray(data=array, dims="x", coords={"x": x})
 
     expected = attach_units(func(strip_units(data_array)), extract_units(data_array))
-    result = func(data_array)
+    actual = func(data_array)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 def test_apply_ufunc_dataset(dtype):
@@ -375,9 +375,9 @@ def test_apply_ufunc_dataset(dtype):
     )
 
     expected = attach_units(func(strip_units(ds)), extract_units(ds))
-    result = func(ds)
+    actual = func(ds)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
@@ -449,10 +449,10 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
     expected_a = attach_units(expected_a, units_a)
     expected_b = convert_units(attach_units(expected_b, units_a), units_b)
 
-    result_a, result_b = func(data_array1, data_array2)
+    actual_a, actual_b = func(data_array1, data_array2)
 
-    assert_equal_with_units(expected_a, result_a)
-    assert_equal_with_units(expected_b, result_b)
+    assert_equal_with_units(expected_a, actual_a)
+    assert_equal_with_units(expected_b, actual_b)
 
 
 @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
@@ -525,10 +525,10 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
     expected_a = attach_units(expected_a, units_a)
     expected_b = convert_units(attach_units(expected_b, units_a), units_b)
 
-    result_a, result_b = func(ds1, ds2)
+    actual_a, actual_b = func(ds1, ds2)
 
-    assert_equal_with_units(expected_a, result_a)
-    assert_equal_with_units(expected_b, result_b)
+    assert_equal_with_units(expected_a, actual_a)
+    assert_equal_with_units(expected_b, actual_b)
 
 
 def test_broadcast_dataarray(dtype):
@@ -542,10 +542,10 @@ def test_broadcast_dataarray(dtype):
         attach_units(elem, extract_units(a))
         for elem in xr.broadcast(strip_units(a), strip_units(b))
     )
-    result_a, result_b = xr.broadcast(a, b)
+    actual_a, actual_b = xr.broadcast(a, b)
 
-    assert_equal_with_units(expected_a, result_a)
-    assert_equal_with_units(expected_b, result_b)
+    assert_equal_with_units(expected_a, actual_a)
+    assert_equal_with_units(expected_b, actual_b)
 
 
 def test_broadcast_dataset(dtype):
@@ -557,9 +557,9 @@ def test_broadcast_dataset(dtype):
     (expected,) = tuple(
         attach_units(elem, extract_units(ds)) for elem in xr.broadcast(strip_units(ds))
     )
-    (result,) = xr.broadcast(ds)
+    (actual,) = xr.broadcast(ds)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.xfail(reason="`combine_by_coords` strips units")
@@ -628,9 +628,9 @@ def test_combine_by_coords(variant, unit, error, dtype):
         ),
         units,
     )
-    result = xr.combine_by_coords([ds, other])
+    actual = xr.combine_by_coords([ds, other])
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.xfail(reason="blocked by `where`")
@@ -728,9 +728,9 @@ def test_combine_nested(variant, unit, error, dtype):
         ),
         units,
     )
-    result = func([[ds1, ds2], [ds3, ds4]])
+    actual = func([[ds1, ds2], [ds3, ds4]])
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -780,9 +780,9 @@ def test_concat_dataarray(variant, unit, error, dtype):
         ),
         units,
     )
-    result = xr.concat([arr1, arr2], dim="x")
+    actual = xr.concat([arr1, arr2], dim="x")
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -830,9 +830,9 @@ def test_concat_dataset(variant, unit, error, dtype):
         xr.concat([strip_units(ds1), strip_units(convert_units(ds2, units))], dim="x"),
         units,
     )
-    result = xr.concat([ds1, ds2], dim="x")
+    actual = xr.concat([ds1, ds2], dim="x")
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
@@ -920,9 +920,9 @@ def test_merge_dataarray(variant, unit, error, dtype):
         func([strip_units(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]),
         units,
     )
-    result = func([arr1, arr2, arr3])
+    actual = func([arr1, arr2, arr3])
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
@@ -1003,9 +1003,9 @@ def test_merge_dataset(variant, unit, error, dtype):
     expected = attach_units(
         func([strip_units(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]), units
     )
-    result = func([ds1, ds2, ds3])
+    actual = func([ds1, ds2, ds3])
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
@@ -1015,9 +1015,9 @@ def test_replication_dataarray(func, dtype):
 
     numpy_func = getattr(np, func.__name__)
     expected = xr.DataArray(data=numpy_func(array), dims="x")
-    result = func(data_array)
+    actual = func(data_array)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
@@ -1037,9 +1037,9 @@ def test_replication_dataset(func, dtype):
     expected = ds.copy(
         data={name: numpy_func(array.data) for name, array in ds.data_vars.items()}
     )
-    result = func(ds)
+    actual = func(ds)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.xfail(
@@ -1076,9 +1076,9 @@ def test_replication_full_like_dataarray(unit, error, dtype):
     expected = attach_units(
         xr.full_like(strip_units(data_array), fill_value=strip_units(fill_value)), units
     )
-    result = xr.full_like(data_array, fill_value=fill_value)
+    actual = xr.full_like(data_array, fill_value=fill_value)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.xfail(
@@ -1126,9 +1126,9 @@ def test_replication_full_like_dataset(unit, error, dtype):
     expected = attach_units(
         xr.full_like(strip_units(ds), fill_value=strip_units(fill_value)), units
     )
-    result = xr.full_like(ds, fill_value=fill_value)
+    actual = xr.full_like(ds, fill_value=fill_value)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -1166,9 +1166,9 @@ def test_where_dataarray(fill_value, unit, error, dtype):
         ),
         extract_units(x),
     )
-    result = xr.where(cond, x, fill_value)
+    actual = xr.where(cond, x, fill_value)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -1208,9 +1208,9 @@ def test_where_dataset(fill_value, unit, error, dtype):
         ),
         extract_units(ds),
     )
-    result = xr.where(cond, ds, fill_value)
+    actual = xr.where(cond, ds, fill_value)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 def test_dot_dataarray(dtype):
@@ -1229,9 +1229,9 @@ def test_dot_dataarray(dtype):
     expected = attach_units(
         xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
     )
-    result = xr.dot(data_array, other)
+    actual = xr.dot(data_array, other)
 
-    assert_equal_with_units(expected, result)
+    assert_equal_with_units(expected, actual)
 
 
 class TestDataArray:
@@ -1381,9 +1381,9 @@ class TestDataArray:
         # first compute the units
         units = extract_units(func(array))
         expected = attach_units(func(strip_units(data_array)), units)
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -1399,9 +1399,9 @@ class TestDataArray:
 
         units = extract_units(func(array))
         expected = attach_units(func(strip_units(data_array)), units)
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -1418,9 +1418,9 @@ class TestDataArray:
 
         units = extract_units(func(array))
         expected = attach_units(func(strip_units(data_array)), units)
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "comparison",
@@ -1462,7 +1462,7 @@ class TestDataArray:
 
             return
 
-        result = comparison(data_array, to_compare_with)
+        actual = comparison(data_array, to_compare_with)
 
         expected_units = {None: unit_registry.m if array.check(unit) else None}
         expected = array.check(unit) & comparison(
@@ -1470,7 +1470,7 @@ class TestDataArray:
             strip_units(convert_units(to_compare_with, expected_units)),
         )
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "units,error",
@@ -1496,9 +1496,9 @@ class TestDataArray:
             func(strip_units(convert_units(data_array, {None: unit_registry.radians}))),
             {None: unit_registry.dimensionless},
         )
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="xarray's `np.maximum` strips units")
     @pytest.mark.parametrize(
@@ -1533,11 +1533,11 @@ class TestDataArray:
             expected_units,
         )
 
-        result = np.maximum(data_array, 0 * unit)
-        assert_equal_with_units(expected, result)
+        actual = np.maximum(data_array, 0 * unit)
+        assert_equal_with_units(expected, actual)
 
-        result = np.maximum(0 * unit, data_array)
-        assert_equal_with_units(expected, result)
+        actual = np.maximum(0 * unit, data_array)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize("property", ("T", "imag", "real"))
     def test_numpy_properties(self, property, dtype):
@@ -1551,9 +1551,9 @@ class TestDataArray:
         expected = attach_units(
             getattr(strip_units(data_array), property), extract_units(data_array)
         )
-        result = getattr(data_array, property)
+        actual = getattr(data_array, property)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -1566,9 +1566,9 @@ class TestDataArray:
 
         units = extract_units(func(array))
         expected = attach_units(strip_units(data_array), units)
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -1619,9 +1619,9 @@ class TestDataArray:
         expected = attach_units(
             func(strip_units(data_array), **stripped_kwargs), expected_units
         )
-        result = func(data_array, **kwargs)
+        actual = func(data_array, **kwargs)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
@@ -1644,9 +1644,9 @@ class TestDataArray:
         data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
 
         expected = func(strip_units(data_array))
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="ffill and bfill lose units in data")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
@@ -1661,9 +1661,9 @@ class TestDataArray:
         expected = attach_units(
             func(strip_units(data_array), dim="x"), extract_units(data_array)
         )
-        result = func(data_array, dim="x")
+        actual = func(data_array, dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -1714,9 +1714,9 @@ class TestDataArray:
             ),
             units,
         )
-        result = func(data_array, value=value)
+        actual = func(data_array, value=value)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     def test_dropna(self, dtype):
         array = (
@@ -1728,9 +1728,9 @@ class TestDataArray:
 
         units = extract_units(data_array)
         expected = attach_units(strip_units(data_array).dropna(dim="x"), units)
-        result = data_array.dropna(dim="x")
+        actual = data_array.dropna(dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -1762,9 +1762,9 @@ class TestDataArray:
         expected = strip_units(data_array).isin(
             strip_units(convert_units(values, units))
         ) & array.check(unit)
-        result = data_array.isin(values)
+        actual = data_array.isin(values)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "variant",
@@ -1827,9 +1827,9 @@ class TestDataArray:
             strip_units(data_array).where(**kwargs_without_units),
             extract_units(data_array),
         )
-        result = data_array.where(**kwargs)
+        actual = data_array.where(**kwargs)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="interpolate strips units")
     def test_interpolate_na(self, dtype):
@@ -1842,9 +1842,9 @@ class TestDataArray:
 
         units = extract_units(data_array)
         expected = attach_units(strip_units(data_array).interpolate_na(dim="x"), units)
-        result = data_array.interpolate_na(dim="x")
+        actual = data_array.interpolate_na(dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -1892,9 +1892,9 @@ class TestDataArray:
             ),
             units,
         )
-        result = data_array.combine_first(other)
+        actual = data_array.combine_first(other)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -1959,9 +1959,9 @@ class TestDataArray:
         equal_units = units == other_units
         expected = equal_arrays and (func.name != "identical" or equal_units)
 
-        result = func(data_array, other)
+        actual = func(data_array, other)
 
-        assert expected == result
+        assert expected == actual
 
     @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
@@ -1989,9 +1989,9 @@ class TestDataArray:
         expected = attach_units(
             strip_units(arr1).broadcast_like(strip_units(arr2)), extract_units(arr1)
         )
-        result = arr1.broadcast_like(arr2)
+        actual = arr1.broadcast_like(arr2)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -2017,9 +2017,9 @@ class TestDataArray:
         expected = strip_units(left).broadcast_equals(
             strip_units(convert_units(right, units))
         ) & left_array.check(unit)
-        result = left.broadcast_equals(right)
+        actual = left.broadcast_equals(right)
 
-        assert expected == result
+        assert expected == actual
 
     @pytest.mark.parametrize(
         "func",
@@ -2064,9 +2064,9 @@ class TestDataArray:
         units = {**{"x_mm": x2.units, "x2": x2.units}, **extract_units(data_array)}
 
         expected = attach_units(func(strip_units(data_array), **stripped_kwargs), units)
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (pytest.param(method("copy", data=np.arange(20))),), ids=repr
@@ -2091,8 +2091,8 @@ class TestDataArray:
             func(strip_units(data_array)), {None: unit, "x": x.units}
         )
 
-        result = func(data_array, **kwargs)
-        assert_equal_with_units(expected, result)
+        actual = func(data_array, **kwargs)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "indices",
@@ -2110,9 +2110,9 @@ class TestDataArray:
         expected = attach_units(
             strip_units(data_array).isel(x=indices), extract_units(data_array)
         )
-        result = data_array.isel(x=indices)
+        actual = data_array.isel(x=indices)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -2154,8 +2154,8 @@ class TestDataArray:
             ),
             extract_units(data_array),
         )
-        result = data_array.sel(x=values)
-        assert_equal_with_units(expected, result)
+        actual = data_array.sel(x=values)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -2197,8 +2197,8 @@ class TestDataArray:
             ],
             extract_units(data_array),
         )
-        result = data_array.loc[{"x": values}]
-        assert_equal_with_units(expected, result)
+        actual = data_array.loc[{"x": values}]
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -2240,8 +2240,8 @@ class TestDataArray:
             ),
             extract_units(data_array),
         )
-        result = data_array.drop_sel(x=values)
-        assert_equal_with_units(expected, result)
+        actual = data_array.drop_sel(x=values)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "shape",
@@ -2268,8 +2268,8 @@ class TestDataArray:
         expected = attach_units(
             strip_units(data_array).squeeze(), extract_units(data_array)
         )
-        result = data_array.squeeze()
-        assert_equal_with_units(expected, result)
+        actual = data_array.squeeze()
+        assert_equal_with_units(expected, actual)
 
         # try squeezing the dimensions separately
         names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
@@ -2277,8 +2277,8 @@ class TestDataArray:
             expected = attach_units(
                 strip_units(data_array).squeeze(dim=name), extract_units(data_array)
             )
-            result = data_array.squeeze(dim=name)
-            assert_equal_with_units(expected, result)
+            actual = data_array.squeeze(dim=name)
+            assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2298,9 +2298,9 @@ class TestDataArray:
         expected = attach_units(
             func(strip_units(data_array)), extract_units(data_array)
         )
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -2338,9 +2338,9 @@ class TestDataArray:
             ),
             units,
         )
-        result = data_array.interp(x=new_coords)
+        actual = data_array.interp(x=new_coords)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes strip units")
     @pytest.mark.parametrize(
@@ -2382,9 +2382,9 @@ class TestDataArray:
             ),
             units,
         )
-        result = data_array.interp_like(other)
+        actual = data_array.interp_like(other)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -2471,9 +2471,9 @@ class TestDataArray:
             ),
             units,
         )
-        result = data_array.reindex_like(other)
+        actual = data_array.reindex_like(other)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2493,9 +2493,9 @@ class TestDataArray:
         stacked = data_array.stack(z=("x", "y"))
 
         expected = attach_units(func(strip_units(stacked)), {"data": unit_registry.m})
-        result = func(stacked)
+        actual = func(stacked)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     def test_to_unstacked_dataset(self, dtype):
@@ -2516,9 +2516,9 @@ class TestDataArray:
             func(strip_units(data_array)),
             {"y": y.units, **dict(zip(x.magnitude, [array.units] * len(y)))},
         ).rename({elem.magnitude: elem for elem in x})
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2552,9 +2552,9 @@ class TestDataArray:
         )
 
         expected = attach_units(func(strip_units(data_array)), {None: unit_registry.m})
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2595,9 +2595,9 @@ class TestDataArray:
         }
 
         expected = attach_units(func(strip_units(data_array)), units)
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2628,9 +2628,9 @@ class TestDataArray:
         units = extract_units(data_array)
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
-        result = func(data_array).mean()
+        actual = func(data_array).mean()
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
     def test_resample(self, dtype):
@@ -2643,9 +2643,9 @@ class TestDataArray:
         func = method("resample", time="6m")
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
-        result = func(data_array).mean()
+        actual = func(data_array).mean()
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2679,9 +2679,9 @@ class TestDataArray:
         expected = attach_units(
             func(strip_units(data_array).groupby("y"), **stripped_kwargs), units
         )
-        result = func(data_array.groupby("y"))
+        actual = func(data_array.groupby("y"))
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
 
 class TestDataset:
@@ -2752,7 +2752,7 @@ class TestDataset:
 
             return
 
-        result = xr.Dataset(data_vars={"a": arr1, "b": arr2})
+        actual = xr.Dataset(data_vars={"a": arr1, "b": arr2})
 
         expected_units = {
             "a": a.units,
@@ -2766,7 +2766,7 @@ class TestDataset:
             xr.Dataset(data_vars={"a": strip_units(arr1), "b": strip_units(arr2)}),
             expected_units,
         )
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.parametrize(
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
@@ -2888,7 +2888,7 @@ class TestDataset:
 
         ds = xr.Dataset(data_vars={"a": a, "b": b}, coords={"x": x, "y": y})
 
-        result = func(ds)
+        actual = func(ds)
         expected = attach_units(
             func(strip_units(ds)),
             {
@@ -2897,7 +2897,7 @@ class TestDataset:
             },
         )
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.parametrize("property", ("imag", "real"))
     def test_numpy_properties(self, property, dtype):
@@ -2917,10 +2917,10 @@ class TestDataset:
         )
         units = extract_units(ds)
 
-        result = getattr(ds, property)
+        actual = getattr(ds, property)
         expected = attach_units(getattr(strip_units(ds), property), units)
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.parametrize(
         "func",
@@ -2955,10 +2955,10 @@ class TestDataset:
             "y": unit_registry.s,
         }
 
-        result = func(ds)
+        actual = func(ds)
         expected = attach_units(func(strip_units(ds)), units)
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.parametrize("func", (method("clip", min=3, max=8),), ids=repr)
     @pytest.mark.parametrize(
@@ -3003,10 +3003,10 @@ class TestDataset:
             for key, value in kwargs.items()
         }
 
-        result = func(ds, **kwargs)
+        actual = func(ds, **kwargs)
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
@@ -3049,9 +3049,9 @@ class TestDataset:
         )
 
         expected = func(strip_units(ds))
-        result = func(ds)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="ffill and bfill lose the unit")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
@@ -3079,9 +3079,9 @@ class TestDataset:
             func(strip_units(ds), dim="x"),
             {"a": unit_registry.degK, "b": unit_registry.Pa},
         )
-        result = func(ds, dim="x")
+        actual = func(ds, dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -3132,7 +3132,7 @@ class TestDataset:
 
             return
 
-        result = ds.fillna(value=fill_value * unit)
+        actual = ds.fillna(value=fill_value * unit)
         expected = attach_units(
             strip_units(ds).fillna(
                 value=strip_units(
@@ -3142,7 +3142,7 @@ class TestDataset:
             {"a": unit_registry.m, "b": unit_registry.m},
         )
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     def test_dropna(self, dtype):
         array1 = (
@@ -3166,9 +3166,9 @@ class TestDataset:
             strip_units(ds).dropna(dim="x"),
             {"a": unit_registry.degK, "b": unit_registry.Pa},
         )
-        result = ds.dropna(dim="x")
+        actual = ds.dropna(dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -3220,9 +3220,9 @@ class TestDataset:
         ):
             expected.a[:] = False
             expected.b[:] = False
-        result = ds.isin(values)
+        actual = ds.isin(values)
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.parametrize(
         "variant",
@@ -3288,9 +3288,9 @@ class TestDataset:
             strip_units(ds).where(**kwargs_without_units),
             {"a": original_unit, "b": original_unit},
         )
-        result = ds.where(**kwargs)
+        actual = ds.where(**kwargs)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="interpolate strips units")
     def test_interpolate_na(self, dtype):
@@ -3315,9 +3315,9 @@ class TestDataset:
             strip_units(ds).interpolate_na(dim="x"),
             {"a": unit_registry.degK, "b": unit_registry.Pa},
         )
-        result = ds.interpolate_na(dim="x")
+        actual = ds.interpolate_na(dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="wrong argument order for `where`")
     @pytest.mark.parametrize(
@@ -3373,9 +3373,9 @@ class TestDataset:
             ),
             {"a": unit_registry.m, "b": unit_registry.m},
         )
-        result = ds.combine_first(other)
+        actual = ds.combine_first(other)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -3445,9 +3445,9 @@ class TestDataset:
         equal_units = units == other_units
         expected = equal_ds and (func.name != "identical" or equal_units)
 
-        result = func(ds, other)
+        actual = func(ds, other)
 
-        assert expected == result
+        assert expected == actual
 
     @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
@@ -3479,9 +3479,9 @@ class TestDataset:
         expected = attach_units(
             strip_units(ds1).broadcast_like(strip_units(ds2)), extract_units(ds1)
         )
-        result = ds1.broadcast_like(ds2)
+        actual = ds1.broadcast_like(ds2)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -3520,9 +3520,9 @@ class TestDataset:
         expected = strip_units(left).broadcast_equals(
             strip_units(convert_units(right, units))
         ) & left_array1.check(unit)
-        result = left.broadcast_equals(right)
+        actual = left.broadcast_equals(right)
 
-        assert expected == result
+        assert expected == actual
 
     @pytest.mark.parametrize(
         "func",
@@ -3555,9 +3555,9 @@ class TestDataset:
         expected = attach_units(
             func(strip_units(stacked)), {"a": unit_registry.m, "b": unit_registry.m}
         )
-        result = func(stacked)
+        actual = func(stacked)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     def test_to_stacked_array(self, dtype):
         labels = np.arange(5).astype(dtype) * unit_registry.s
@@ -3572,13 +3572,13 @@ class TestDataset:
 
         func = method("to_stacked_array", "z", variable_dim="y", sample_dims=["x"])
 
-        result = func(ds).rename(None)
+        actual = func(ds).rename(None)
         expected = attach_units(
             func(strip_units(ds)).rename(None),
             {None: unit_registry.m, "y": unit_registry.s},
         )
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3623,9 +3623,9 @@ class TestDataset:
         expected = attach_units(
             func(strip_units(ds)), {"a": unit_registry.Pa, "b": unit_registry.degK}
         )
-        result = func(ds)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes strip units")
     @pytest.mark.parametrize(
@@ -3652,9 +3652,9 @@ class TestDataset:
             strip_units(ds).isel(x=indices),
             {"a": unit_registry.s, "b": unit_registry.Pa, "x": unit_registry.m},
         )
-        result = ds.isel(x=indices)
+        actual = ds.isel(x=indices)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3702,8 +3702,8 @@ class TestDataset:
             strip_units(ds).sel(x=strip_units(convert_units(values, {None: x.units}))),
             {"a": array1.units, "b": array2.units, "x": x.units},
         )
-        result = ds.sel(x=values)
-        assert_equal_with_units(expected, result)
+        actual = ds.sel(x=values)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3753,8 +3753,8 @@ class TestDataset:
             ),
             extract_units(ds),
         )
-        result = ds.drop_sel(x=values)
-        assert_equal_with_units(expected, result)
+        actual = ds.drop_sel(x=values)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3804,8 +3804,8 @@ class TestDataset:
             ],
             {"a": array1.units, "b": array2.units, "x": x.units},
         )
-        result = ds.loc[{"x": values}]
-        assert_equal_with_units(expected, result)
+        actual = ds.loc[{"x": values}]
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3835,9 +3835,9 @@ class TestDataset:
         )
 
         expected = attach_units(func(strip_units(ds)), extract_units(ds))
-        result = func(ds)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "shape",
@@ -3874,15 +3874,15 @@ class TestDataset:
 
         expected = attach_units(strip_units(ds).squeeze(), units)
 
-        result = ds.squeeze()
-        assert_equal_with_units(result, expected)
+        actual = ds.squeeze()
+        assert_equal_with_units(actual, expected)
 
         # try squeezing the dimensions separately
         names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
         for name in names:
             expected = attach_units(strip_units(ds).squeeze(dim=name), units)
-            result = ds.squeeze(dim=name)
-            assert_equal_with_units(result, expected)
+            actual = ds.squeeze(dim=name)
+            assert_equal_with_units(actual, expected)
 
     @pytest.mark.xfail(reason="ignores units")
     @pytest.mark.parametrize(
@@ -3928,9 +3928,9 @@ class TestDataset:
             strip_units(ds).interp(x=strip_units(convert_units(new_coords, units))),
             units,
         )
-        result = ds.interp(x=new_coords)
+        actual = ds.interp(x=new_coords)
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.xfail(reason="ignores units")
     @pytest.mark.parametrize(
@@ -3989,9 +3989,9 @@ class TestDataset:
         expected = attach_units(
             strip_units(ds).interp_like(strip_units(convert_units(other, units))), units
         )
-        result = ds.interp_like(other)
+        actual = ds.interp_like(other)
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
@@ -4041,9 +4041,9 @@ class TestDataset:
             strip_units(ds).reindex(x=strip_units(convert_units(new_coords, units))),
             units,
         )
-        result = ds.reindex(x=new_coords)
+        actual = ds.reindex(x=new_coords)
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(actual, expected)
 
     @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
@@ -4103,9 +4103,9 @@ class TestDataset:
             strip_units(ds).reindex_like(strip_units(convert_units(other, units))),
             units,
         )
-        result = ds.reindex_like(other)
+        actual = ds.reindex_like(other)
 
-        assert_equal_with_units(result, expected)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -4141,9 +4141,9 @@ class TestDataset:
         units = extract_units(ds)
 
         expected = attach_units(func(strip_units(ds)), units)
-        result = func(ds)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -4185,9 +4185,9 @@ class TestDataset:
         args = [] if func.name != "groupby" else ["y"]
         reduce_func = method("mean", *args)
         expected = attach_units(reduce_func(func(strip_units(ds))), units)
-        result = reduce_func(func(ds))
+        actual = reduce_func(func(ds))
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
     def test_resample(self, dtype):
@@ -4213,9 +4213,9 @@ class TestDataset:
         func = method("resample", time="6m")
 
         expected = attach_units(func(strip_units(ds)).mean(), units)
-        result = func(ds).mean()
+        actual = func(ds).mean()
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -4256,9 +4256,9 @@ class TestDataset:
         expected = attach_units(
             func(strip_units(ds).groupby("y"), **stripped_kwargs), units
         )
-        result = func(ds.groupby("y"))
+        actual = func(ds.groupby("y"))
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -4319,9 +4319,9 @@ class TestDataset:
             key: strip_units(value) for key, value in func.kwargs.items()
         }
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
-        result = func(ds)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="blocked by reindex")
     @pytest.mark.parametrize(
@@ -4377,6 +4377,6 @@ class TestDataset:
 
         converted = convert_units(right, units)
         expected = attach_units(strip_units(left).merge(strip_units(converted)), units)
-        result = left.merge(right)
+        actual = left.merge(right)
 
-        assert_equal_with_units(expected, result)
+        assert_equal_with_units(expected, actual)
