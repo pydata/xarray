@@ -2,8 +2,6 @@ import warnings
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
-import itertools
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -780,54 +778,69 @@ class VariableSubclassobjects:
         with raises_regex(IndexError, "Dimensions of indexers mis"):
             v[:, ind]
 
-    def test_pad(self):
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            pytest.param("mean", marks=pytest.mark.xfail),
+            pytest.param("median", marks=pytest.mark.xfail),
+            pytest.param("reflect", marks=pytest.mark.xfail),
+            "edge",
+            "linear_ramp",
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize(
+        "xr_arg, np_arg",
+        [
+            [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
+            [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
+            [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
+        ],
+    )
+    def test_pad(self, mode, xr_arg, np_arg):
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
 
-        # TODO "mean", "median" and "reflect" have issues
-        modes = ["edge", "linear_ramp", "maximum", "minimum", "symmetric", "wrap"]
-        xr_args = [{"x": (2, 1)}, {"y": (0, 3)}, {"x": (3, 1), "z": (2, 0)}]
-        np_args = [
-            ((2, 1), (0, 0), (0, 0)),
-            ((0, 0), (0, 3), (0, 0)),
-            ((3, 1), (0, 0), (2, 0)),
-        ]
-        for (xr_arg, np_arg), mode in itertools.product(zip(xr_args, np_args), modes):
-            actual = v.pad(mode=mode, **xr_arg)
-            expected = np.pad(data, np_arg, mode=mode,)
-            assert_array_equal(actual, expected)
-            assert isinstance(actual._data, type(v._data))
+        actual = v.pad(mode=mode, **xr_arg)
+        expected = np.pad(data, np_arg, mode=mode,)
 
-    def test_pad_constant_values(self):
+        assert_array_equal(actual, expected)
+        assert isinstance(actual._data, type(v._data))
+
+    @pytest.mark.parametrize(
+        "xr_arg, np_arg",
+        [
+            [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
+            [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
+            [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
+        ],
+    )
+    def test_pad_constant_values(self, xr_arg, np_arg):
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
 
-        xr_args = [{"x": (2, 1)}, {"y": (0, 3)}, {"x": (3, 1), "z": (2, 0)}]
-        np_args = [
-            ((2, 1), (0, 0), (0, 0)),
-            ((0, 0), (0, 3), (0, 0)),
-            ((3, 1), (0, 0), (2, 0)),
-        ]
-        for xr_arg, np_arg in zip(xr_args, np_args):
-            actual = v.pad(**xr_arg)
-            expected = np.pad(
-                np.array(v.data.astype(float)),
-                np_arg,
-                mode="constant",
-                constant_values=np.nan,
-            )
-            assert_array_equal(actual, expected)
-            assert isinstance(actual._data, type(v._data))
+        actual = v.pad(**xr_arg)
+        expected = np.pad(
+            np.array(v.data.astype(float)),
+            np_arg,
+            mode="constant",
+            constant_values=np.nan,
+        )
+        assert_array_equal(actual, expected)
+        assert isinstance(actual._data, type(v._data))
 
         # for the boolean array, we pad False
         data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
-        for xr_arg, np_arg in zip(xr_args, np_args):
-            actual = v.pad(mode="constant", constant_values=False, **xr_arg)
-            expected = np.pad(
-                np.array(v.data), np_arg, mode="constant", constant_values=False
-            )
-            assert_array_equal(actual, expected)
+
+        actual = v.pad(mode="constant", constant_values=False, **xr_arg)
+        expected = np.pad(
+            np.array(v.data), np_arg, mode="constant", constant_values=False
+        )
+        assert_array_equal(actual, expected)
 
     def test_rolling_window(self):
         # Just a working test. See test_nputils for the algorithm validation
@@ -1868,13 +1881,6 @@ class TestVariableWithDask(VariableSubclassobjects):
             self.cls(("x", "y"), [[0, -1], [-1, 2]]),
         )
 
-    def test_pad(self):
-        import dask
-
-        if LooseVersion(dask.__version__) < "0.18.1":
-            pytest.skip("padding was added in Dask version 0.18.1 ")
-        super().test_pad()
-
 
 class TestIndexVariable(VariableSubclassobjects):
     cls = staticmethod(IndexVariable)
@@ -1981,12 +1987,42 @@ class TestIndexVariable(VariableSubclassobjects):
         super().test_getitem_fancy()
 
     @pytest.mark.xfail
-    def test_pad(self):
-        super().test_pad()
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            pytest.param("mean", marks=pytest.mark.xfail),
+            pytest.param("median", marks=pytest.mark.xfail),
+            pytest.param("reflect", marks=pytest.mark.xfail),
+            "edge",
+            "linear_ramp",
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize(
+        "xr_arg, np_arg",
+        [
+            [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
+            [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
+            [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
+        ],
+    )
+    def test_pad(self, mode, xr_arg, np_arg):
+        super().test_pad(mode, xr_arg, np_arg)
 
     @pytest.mark.xfail
-    def test_pad_constant_values(self):
-        super().test_pad_constant_values()
+    @pytest.mark.parametrize(
+        "xr_arg, np_arg",
+        [
+            [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
+            [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
+            [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
+        ],
+    )
+    def test_pad_constant_values(self, xr_arg, np_arg):
+        super().test_pad_constant_values(xr_arg, np_arg)
 
     @pytest.mark.xfail
     def test_rolling_window(self):

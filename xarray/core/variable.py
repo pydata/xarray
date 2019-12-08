@@ -3,7 +3,7 @@ import itertools
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Dict, Hashable, Mapping, TypeVar, Union, Tuple
+from typing import Any, Dict, Hashable, Mapping, Tuple, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -1101,7 +1101,7 @@ class Variable(
 
     def pad(
         self,
-        pad_widths: Mapping[Hashable, Tuple[int, int]] = None,
+        pad_width: Mapping[Hashable, Tuple[int, int]] = None,
         mode: str = "constant",
         stat_length: Union[
             None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
@@ -1113,26 +1113,26 @@ class Variable(
             None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         reflect_type: str = None,
-        **pad_widths_kwargs: Any,
+        **pad_width_kwargs: Any,
     ):
         """
         Return a new Variable with padded data.
 
         Parameters
         ----------
-        pad_widths: Mapping with the form of {dim: (pad_before, pad_after)}
+        pad_width: Mapping with the form of {dim: (pad_before, pad_after)}
             Number of values padded along each dimension.
         mode: (str)
             See numpy / Dask docs
-        **pad_widths_kwarg:
-            One of pad_widths or pad_widths_kwarg must be provided.
+        **pad_width_kwarg:
+            One of pad_width or pad_width_kwarg must be provided.
 
         Returns
         -------
         padded : Variable
             Variable with the same dimensions and attributes but padded data.
         """
-        pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
+        pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
         # change default behaviour of pad with mode constant
         if mode == "constant" and constant_values is None:
@@ -1161,7 +1161,7 @@ class Variable(
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
             stat_length = [(n, n) for n in self.data.shape]
 
-        pads = [(0, 0) if d not in pad_widths else pad_widths[d] for d in self.dims]
+        pads = [(0, 0) if d not in pad_width else pad_width[d] for d in self.dims]
 
         # numpy/dask work with optional kwargs
         pad_option_kwargs = {}
@@ -1872,10 +1872,10 @@ class Variable(
                 if pad < 0:
                     pad += window
                 if side[d] == "left":
-                    pad_widths = {d: (0, pad)}
+                    pad_width = {d: (0, pad)}
                 else:
-                    pad_widths = {d: (pad, 0)}
-                variable = variable.pad(pad_widths, mode="constant")
+                    pad_width = {d: (pad, 0)}
+                variable = variable.pad(pad_width, mode="constant")
             else:
                 raise TypeError(
                     "{} is invalid for boundary. Valid option is 'exact', "

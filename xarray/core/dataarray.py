@@ -3112,7 +3112,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def pad(
         self,
-        pad_widths: Mapping[Hashable, Tuple[int, int]] = None,
+        pad_width: Mapping[Hashable, Tuple[int, int]] = None,
         mode: str = "constant",
         stat_length: Union[
             None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
@@ -3124,7 +3124,7 @@ class DataArray(AbstractArray, DataWithCoords):
             None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         reflect_type: str = None,
-        **pad_widths_kwargs: Any,
+        **pad_width_kwargs: Any,
     ) -> "DataArray":
         """Pad this array along one or more dimensions.
 
@@ -3134,7 +3134,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        pad_widths : Mapping with the form of {dim: (pad_before, pad_after)}
+        pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
             Number of values padded along each dimension.
         mode : str (taken from numpy docs)
             One of the following string values or a user supplied function.
@@ -3204,9 +3204,9 @@ class DataArray(AbstractArray, DataWithCoords):
             the 'odd' style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
 
-        **pad_widths_kwargs:
-            The keyword arguments form of ``pad_widths``.
-            One of pad_widths or pad_widths_kwarg must be provided.
+        **pad_width_kwargs:
+            The keyword arguments form of ``pad_width``.
+            One of pad_width or pad_width_kwarg must be provided.
 
         Returns
         -------
@@ -3215,8 +3215,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See also
         --------
-        shift
-        roll
+        DataArray.shift, DataArray.roll, numpy.pad, dask.array.pad
 
         Examples
         --------
@@ -3228,10 +3227,10 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) float64 nan 0.0 1.0 2.0 nan nan
         """
-        pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
+        pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
         variable = self.variable.pad(
-            pad_widths=pad_widths,
+            pad_width=pad_width,
             mode=mode,
             stat_length=stat_length,
             constant_values=constant_values,
@@ -3253,9 +3252,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
         coords = {}
         for name, dim in self.coords.items():
-            if name in pad_widths:
+            if name in pad_width:
                 coords[name] = dim.variable.pad(
-                    {name: pad_widths[name]}, mode=coord_pad_mode, **coord_pad_options
+                    {name: pad_width[name]}, mode=coord_pad_mode, **coord_pad_options
                 )
             else:
                 coords[name] = as_variable(dim, name=name)
