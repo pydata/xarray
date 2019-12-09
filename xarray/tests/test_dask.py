@@ -1189,6 +1189,19 @@ def test_map_blocks_object_method(obj):
     assert_identical(expected.compute(), actual.compute())
 
 
+def test_map_blocks_hlg_layers():
+    # regression test for #3599
+    ds = xr.Dataset(
+        {
+            "x": (("a",), dask.array.ones(10, chunks=(5,))),
+            "z": (("b",), dask.array.ones(10, chunks=(5,))),
+        }
+    )
+    mapped = ds.map_blocks(lambda x: x)
+
+    xr.testing.assert_equal(mapped, ds)
+
+
 def test_make_meta(map_ds):
     from ..core.parallel import make_meta
 
