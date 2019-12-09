@@ -39,6 +39,7 @@
    core.groupby.DatasetGroupBy.argmax
    core.groupby.DatasetGroupBy.argmin
    core.groupby.DatasetGroupBy.count
+   core.groupby.DatasetGroupBy.max
    core.groupby.DatasetGroupBy.mean
    core.groupby.DatasetGroupBy.median
    core.groupby.DatasetGroupBy.min
@@ -46,6 +47,44 @@
    core.groupby.DatasetGroupBy.std
    core.groupby.DatasetGroupBy.sum
    core.groupby.DatasetGroupBy.var
+
+   core.resample.DatasetResample.all
+   core.resample.DatasetResample.any
+   core.resample.DatasetResample.apply
+   core.resample.DatasetResample.argmax
+   core.resample.DatasetResample.argmin
+   core.resample.DatasetResample.assign
+   core.resample.DatasetResample.assign_coords
+   core.resample.DatasetResample.bfill
+   core.resample.DatasetResample.count
+   core.resample.DatasetResample.ffill
+   core.resample.DatasetResample.fillna
+   core.resample.DatasetResample.first
+   core.resample.DatasetResample.last
+   core.resample.DatasetResample.map
+   core.resample.DatasetResample.max
+   core.resample.DatasetResample.mean
+   core.resample.DatasetResample.median
+   core.resample.DatasetResample.min
+   core.resample.DatasetResample.prod
+   core.resample.DatasetResample.quantile
+   core.resample.DatasetResample.reduce
+   core.resample.DatasetResample.std
+   core.resample.DatasetResample.sum
+   core.resample.DatasetResample.var
+   core.resample.DatasetResample.where
+
+   core.rolling.DatasetRolling.argmax
+   core.rolling.DatasetRolling.argmin
+   core.rolling.DatasetRolling.count
+   core.rolling.DatasetRolling.max
+   core.rolling.DatasetRolling.mean
+   core.rolling.DatasetRolling.median
+   core.rolling.DatasetRolling.min
+   core.rolling.DatasetRolling.prod
+   core.rolling.DatasetRolling.std
+   core.rolling.DatasetRolling.sum
+   core.rolling.DatasetRolling.var
 
    Dataset.argsort
    Dataset.astype
@@ -94,6 +133,7 @@
    core.groupby.DataArrayGroupBy.argmax
    core.groupby.DataArrayGroupBy.argmin
    core.groupby.DataArrayGroupBy.count
+   core.groupby.DataArrayGroupBy.max
    core.groupby.DataArrayGroupBy.mean
    core.groupby.DataArrayGroupBy.median
    core.groupby.DataArrayGroupBy.min
@@ -101,6 +141,43 @@
    core.groupby.DataArrayGroupBy.std
    core.groupby.DataArrayGroupBy.sum
    core.groupby.DataArrayGroupBy.var
+
+   core.resample.DataArrayResample.all
+   core.resample.DataArrayResample.any
+   core.resample.DataArrayResample.apply
+   core.resample.DataArrayResample.argmax
+   core.resample.DataArrayResample.argmin
+   core.resample.DataArrayResample.assign_coords
+   core.resample.DataArrayResample.bfill
+   core.resample.DataArrayResample.count
+   core.resample.DataArrayResample.ffill
+   core.resample.DataArrayResample.fillna
+   core.resample.DataArrayResample.first
+   core.resample.DataArrayResample.last
+   core.resample.DataArrayResample.map
+   core.resample.DataArrayResample.max
+   core.resample.DataArrayResample.mean
+   core.resample.DataArrayResample.median
+   core.resample.DataArrayResample.min
+   core.resample.DataArrayResample.prod
+   core.resample.DataArrayResample.quantile
+   core.resample.DataArrayResample.reduce
+   core.resample.DataArrayResample.std
+   core.resample.DataArrayResample.sum
+   core.resample.DataArrayResample.var
+   core.resample.DataArrayResample.where
+
+   core.rolling.DataArrayRolling.argmax
+   core.rolling.DataArrayRolling.argmin
+   core.rolling.DataArrayRolling.count
+   core.rolling.DataArrayRolling.max
+   core.rolling.DataArrayRolling.mean
+   core.rolling.DataArrayRolling.median
+   core.rolling.DataArrayRolling.min
+   core.rolling.DataArrayRolling.prod
+   core.rolling.DataArrayRolling.std
+   core.rolling.DataArrayRolling.sum
+   core.rolling.DataArrayRolling.var
 
    DataArray.argsort
    DataArray.clip
