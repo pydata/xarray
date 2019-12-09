@@ -14,6 +14,8 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
+from xarray.core.indexes import propagate_indexes
+from xarray.core.utils import is_scalar
 from xarray.tests import (
     LooseVersion,
     ReturnItem,
@@ -1182,6 +1184,16 @@ class TestDataArray:
         expected = expected.set_index(xy=["x", "y"]).unstack()
         assert_identical(expected, actual)
 
+    def test_selection_multiindex_from_level(self):
+        # GH: 3512
+        da = DataArray([0, 1], dims=["x"], coords={"x": [0, 1], "y": "a"})
+        db = DataArray([2, 3], dims=["x"], coords={"x": [0, 1], "y": "b"})
+        data = xr.concat([da, db], dim="x").set_index(xy=["x", "y"])
+        assert data.dims == ("xy",)
+        actual = data.sel(y="a")
+        expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop_vars("y")
+        assert_equal(actual, expected)
+
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims="x")
         expected = DataArray(range(5), dims="x", name="x")
@@ -1229,6 +1241,7 @@ class TestDataArray:
         assert expected == actual
 
         del da.coords["x"]
+        da._indexes = propagate_indexes(da._indexes, exclude="x")
         expected = DataArray(da.values, {"y": [0, 1, 2]}, dims=["x", "y"], name="foo")
         assert_identical(da, expected)
 
@@ -2318,17 +2331,20 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
-    def test_quantile(self):
-        for q in [0.25, [0.50], [0.25, 0.75]]:
-            for axis, dim in zip(
-                [None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]
-            ):
-                actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True)
-                expected = np.nanpercentile(
-                    self.dv.values, np.array(q) * 100, axis=axis
-                )
-                np.testing.assert_allclose(actual.values, expected)
-                assert actual.attrs == self.attrs
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    @pytest.mark.parametrize(
+        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+    )
+    def test_quantile(self, q, axis, dim):
+        actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True)
+        expected = np.nanpercentile(self.dv.values, np.array(q) * 100, axis=axis)
+        np.testing.assert_allclose(actual.values, expected)
+        if is_scalar(q):
+            assert "quantile" not in actual.dims
+        else:
+            assert "quantile" in actual.dims
+
+        assert actual.attrs == self.attrs
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
@@ -4188,6 +4204,9 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     )
     assert_array_equal(actual.values, expected)
 
+    with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
+        getattr(rolling_obj, name)(dim="time")
+
     # Test center
     rolling_obj = da.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()["time"]
@@ -4203,6 +4222,9 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     # dask version
     rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
+    if name != "count":
+        with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
+            getattr(rolling_obj, name)(dim="time")
     # numpy version
     rolling_obj = da_dask.load().rolling(
         time=window, min_periods=min_periods, center=center

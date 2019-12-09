@@ -1,5 +1,7 @@
+import copy
 import functools
 import itertools
+import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
@@ -23,10 +25,11 @@ from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
 from .utils import (
     OrderedSet,
+    _default,
     decode_numpy_dict_values,
     either_dict_or_kwargs,
-    infix_dims,
     ensure_us_time_resolution,
+    infix_dims,
 )
 
 try:
@@ -393,7 +396,9 @@ class Variable(
     def __dask_tokenize__(self):
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
-        return type(self), self._dims, self.data, self._attrs
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._dims, self.data, self._attrs))
 
     def __dask_graph__(self):
         if isinstance(self._data, dask_array_type):
@@ -612,7 +617,10 @@ class Variable(
                 k = k.data
             if not isinstance(k, BASIC_INDEXING_TYPES):
                 k = np.asarray(k)
-                if k.dtype.kind == "b":
+                if k.size == 0:
+                    # Slice by empty list; numpy could not infer the dtype
+                    k = k.astype(int)
+                elif k.dtype.kind == "b":
                     (k,) = np.nonzero(k)
             new_key.append(k)
 
@@ -884,7 +892,20 @@ class Variable(
         # note:
         # dims is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
-        return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(data=data)
+
+    def _replace(
+        self, dims=_default, data=_default, attrs=_default, encoding=_default
+    ) -> "Variable":
+        if dims is _default:
+            dims = copy.copy(self._dims)
+        if data is _default:
+            data = copy.copy(self.data)
+        if attrs is _default:
+            attrs = copy.copy(self._attrs)
+        if encoding is _default:
+            encoding = copy.copy(self._encoding)
+        return type(self)(dims, data, attrs, encoding, fastpath=True)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -974,6 +995,36 @@ class Variable(
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
+
+    def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
+        """
+        use sparse-array as backend.
+        """
+        import sparse
+
+        # TODO  what to do if dask-backended?
+        if fill_value is dtypes.NA:
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        else:
+            dtype = dtypes.result_type(self.dtype, fill_value)
+
+        if sparse_format is _default:
+            sparse_format = "coo"
+        try:
+            as_sparse = getattr(sparse, "as_{}".format(sparse_format.lower()))
+        except AttributeError:
+            raise ValueError("{} is not a valid sparse format".format(sparse_format))
+
+        data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
+        return self._replace(data=data)
+
+    def _to_dense(self):
+        """
+        Change backend from sparse to np.array
+        """
+        if hasattr(self._data, "todense"):
+            return self._replace(data=self._data.todense())
+        return self.copy(deep=False)
 
     def isel(
         self: VariableType,
@@ -1425,7 +1476,7 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=False,
+        allow_lazy=None,
         **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
@@ -1466,7 +1517,17 @@ class Variable(
 
         if dim is not None:
             axis = self.get_axis_num(dim)
+
+        if allow_lazy is not None:
+            warnings.warn(
+                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
+                DeprecationWarning,
+            )
+        else:
+            allow_lazy = True
+
         input_data = self.data if allow_lazy else self.values
+
         if axis is not None:
             data = func(input_data, axis=axis, **kwargs)
         else:
@@ -1658,40 +1719,45 @@ class Variable(
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
-        if isinstance(self.data, dask_array_type):
-            raise TypeError(
-                "quantile does not work for arrays stored as dask "
-                "arrays. Load the data via .compute() or .load() "
-                "prior to calling this method."
-            )
 
-        q = np.asarray(q, dtype=np.float64)
-
-        new_dims = list(self.dims)
-        if dim is not None:
-            axis = self.get_axis_num(dim)
-            if utils.is_scalar(dim):
-                new_dims.remove(dim)
-            else:
-                for d in dim:
-                    new_dims.remove(d)
-        else:
-            axis = None
-            new_dims = []
-
-        # Only add the quantile dimension if q is array-like
-        if q.ndim != 0:
-            new_dims = ["quantile"] + new_dims
-
-        qs = np.nanpercentile(
-            self.data, q * 100.0, axis=axis, interpolation=interpolation
-        )
+        from .computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
-        attrs = self._attrs if keep_attrs else None
 
-        return Variable(new_dims, qs, attrs)
+        scalar = utils.is_scalar(q)
+        q = np.atleast_1d(np.asarray(q, dtype=np.float64))
+
+        if dim is None:
+            dim = self.dims
+
+        if utils.is_scalar(dim):
+            dim = [dim]
+
+        def _wrapper(npa, **kwargs):
+            # move quantile axis to end. required for apply_ufunc
+            return np.moveaxis(np.nanpercentile(npa, **kwargs), 0, -1)
+
+        axis = np.arange(-1, -1 * len(dim) - 1, -1)
+        result = apply_ufunc(
+            _wrapper,
+            self,
+            input_core_dims=[dim],
+            exclude_dims=set(dim),
+            output_core_dims=[["quantile"]],
+            output_dtypes=[np.float64],
+            output_sizes={"quantile": len(q)},
+            dask="parallelized",
+            kwargs={"q": q * 100, "axis": axis, "interpolation": interpolation},
+        )
+
+        # for backward compatibility
+        result = result.transpose("quantile", ...)
+        if scalar:
+            result = result.squeeze("quantile")
+        if keep_attrs:
+            result.attrs = self._attrs
+        return result
 
     def rank(self, dim, pct=False):
         """Ranks the data.
@@ -1801,9 +1867,9 @@ class Variable(
             ),
         )
 
-    def coarsen(self, windows, func, boundary="exact", side="left"):
+    def coarsen(self, windows, func, boundary="exact", side="left", **kwargs):
         """
-        Apply
+        Apply reduction function.
         """
         windows = {k: v for k, v in windows.items() if k in self.dims}
         if not windows:
@@ -1815,11 +1881,11 @@ class Variable(
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-        return type(self)(self.dims, func(reshaped, axis=axes), self._attrs)
+        return self._replace(data=func(reshaped, axis=axes, **kwargs))
 
     def _coarsen_reshape(self, windows, boundary, side):
         """
-        Construct a reshaped-array for corsen
+        Construct a reshaped-array for coarsen
         """
         if not utils.is_dict_like(boundary):
             boundary = {d: boundary for d in windows.keys()}
@@ -1973,8 +2039,10 @@ class IndexVariable(Variable):
             self._data = PandasIndexAdapter(self._data)
 
     def __dask_tokenize__(self):
+        from dask.base import normalize_token
+
         # Don't waste time converting pd.Index to np.ndarray
-        return (type(self), self._dims, self._data.array, self._attrs)
+        return normalize_token((type(self), self._dims, self._data.array, self._attrs))
 
     def load(self):
         # data is already loaded into memory for IndexVariable
@@ -1989,6 +2057,14 @@ class IndexVariable(Variable):
 
     def chunk(self, chunks=None, name=None, lock=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
+        return self.copy(deep=False)
+
+    def _as_sparse(self, sparse_format=_default, fill_value=_default):
+        # Dummy
+        return self.copy(deep=False)
+
+    def _to_dense(self):
+        # Dummy
         return self.copy(deep=False)
 
     def _finalize_indexing_result(self, dims, data):

@@ -25,6 +25,7 @@ Geosciences
 - `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
   accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
   subclass.
+- `pyXpcm <https://pyxpcm.readthedocs.io>`_: xarray-based Profile Classification Modelling (PCM), mostly for ocean data.
 - `Regionmask <https://regionmask.readthedocs.io/>`_: plotting and creation of masks of spatial regions
 - `rioxarray <https://corteva.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.

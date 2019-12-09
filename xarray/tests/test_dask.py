@@ -12,9 +12,11 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
+from xarray.core import duck_array_ops
 from xarray.testing import assert_chunks_equal
 from xarray.tests import mock
 
+from ..core.duck_array_ops import lazy_array_equiv
 from . import (
     assert_allclose,
     assert_array_equal,
@@ -24,7 +26,6 @@ from . import (
     raises_regex,
     requires_scipy_or_netCDF4,
 )
-from ..core.duck_array_ops import lazy_array_equiv
 from .test_backends import create_tmp_file
 
 dask = pytest.importorskip("dask")
@@ -217,6 +218,8 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
         with raises_regex(NotImplementedError, "dask"):
             v.median()
+        with raise_if_dask_computes():
+            v.reduce(duck_array_ops.mean)
 
     def test_missing_values(self):
         values = np.array([0, 1, np.nan, 3])
@@ -488,7 +491,17 @@ class TestDataArrayAndDataset(DaskTestCase):
         v = self.lazy_array
 
         expected = u.groupby("x").mean(...)
-        actual = v.groupby("x").mean(...)
+        with raise_if_dask_computes():
+            actual = v.groupby("x").mean(...)
+        self.assertLazyAndAllClose(expected, actual)
+
+    def test_rolling(self):
+        u = self.eager_array
+        v = self.lazy_array
+
+        expected = u.rolling(x=2).mean()
+        with raise_if_dask_computes():
+            actual = v.rolling(x=2).mean()
         self.assertLazyAndAllClose(expected, actual)
 
     def test_groupby_first(self):
@@ -500,7 +513,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         with raises_regex(NotImplementedError, "dask"):
             v.groupby("ab").first()
         expected = u.groupby("ab").first()
-        actual = v.groupby("ab").first(skipna=False)
+        with raise_if_dask_computes():
+            actual = v.groupby("ab").first(skipna=False)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_reindex(self):
@@ -1175,6 +1189,19 @@ def test_map_blocks_object_method(obj):
     assert_identical(expected.compute(), actual.compute())
 
 
+def test_map_blocks_hlg_layers():
+    # regression test for #3599
+    ds = xr.Dataset(
+        {
+            "x": (("a",), dask.array.ones(10, chunks=(5,))),
+            "z": (("b",), dask.array.ones(10, chunks=(5,))),
+        }
+    )
+    mapped = ds.map_blocks(lambda x: x)
+
+    xr.testing.assert_equal(mapped, ds)
+
+
 def test_make_meta(map_ds):
     from ..core.parallel import make_meta
 
@@ -1281,6 +1308,32 @@ def test_token_identical(obj, transform):
     assert dask.base.tokenize(obj.compute()) == dask.base.tokenize(
         transform(obj.compute())
     )
+
+
+def test_recursive_token():
+    """Test that tokenization is invoked recursively, and doesn't just rely on the
+    output of str()
+    """
+    a = np.ones(10000)
+    b = np.ones(10000)
+    b[5000] = 2
+    assert str(a) == str(b)
+    assert dask.base.tokenize(a) != dask.base.tokenize(b)
+
+    # Test DataArray and Variable
+    da_a = DataArray(a)
+    da_b = DataArray(b)
+    assert dask.base.tokenize(da_a) != dask.base.tokenize(da_b)
+
+    # Test Dataset
+    ds_a = da_a.to_dataset(name="x")
+    ds_b = da_b.to_dataset(name="x")
+    assert dask.base.tokenize(ds_a) != dask.base.tokenize(ds_b)
+
+    # Test IndexVariable
+    da_a = DataArray(a, dims=["x"], coords={"x": a})
+    da_b = DataArray(a, dims=["x"], coords={"x": b})
+    assert dask.base.tokenize(da_a) != dask.base.tokenize(da_b)
 
 
 @requires_scipy_or_netCDF4

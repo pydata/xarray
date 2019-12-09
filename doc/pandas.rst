@@ -112,7 +112,7 @@ automatically stacking them into a ``MultiIndex``.
 :py:meth:`DataArray.to_pandas() <xarray.DataArray.to_pandas>` is a shortcut that
 lets you convert a DataArray directly into a pandas object with the same
 dimensionality (i.e., a 1D array is converted to a :py:class:`~pandas.Series`,
-2D to :py:class:`~pandas.DataFrame` and 3D to :py:class:`~pandas.Panel`):
+2D to :py:class:`~pandas.DataFrame` and 3D to ``pandas.Panel``):
 
 .. ipython:: python
 

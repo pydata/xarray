@@ -8,6 +8,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.core.indexes.datetimes import DatetimeIndex
 
 import xarray as xr
 from xarray import (
@@ -22,10 +23,12 @@ from xarray import (
     open_dataset,
     set_options,
 )
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
+from xarray.core.utils import is_scalar
 
 from . import (
     InaccessibleArray,
@@ -90,6 +93,14 @@ def create_append_test_data(seed=None):
     string_var = np.array(["ae", "bc", "df"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
     unicode_var = ["áó", "áó", "áó"]
+    datetime_var = np.array(
+        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
+    )
+    datetime_var_to_append = np.array(
+        ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
+    )
+    bool_var = np.array([True, False, True], dtype=np.bool)
+    bool_var_to_append = np.array([False, True], dtype=np.bool)
 
     ds = xr.Dataset(
         data_vars={
@@ -102,6 +113,8 @@ def create_append_test_data(seed=None):
             "unicode_var": xr.DataArray(
                 unicode_var, coords=[time1], dims=["time"]
             ).astype(np.unicode_),
+            "datetime_var": xr.DataArray(datetime_var, coords=[time1], dims=["time"]),
+            "bool_var": xr.DataArray(bool_var, coords=[time1], dims=["time"]),
         }
     )
 
@@ -118,6 +131,10 @@ def create_append_test_data(seed=None):
             "unicode_var": xr.DataArray(
                 unicode_var[:nt2], coords=[time2], dims=["time"]
             ).astype(np.unicode_),
+            "datetime_var": xr.DataArray(
+                datetime_var_to_append, coords=[time2], dims=["time"]
+            ),
+            "bool_var": xr.DataArray(bool_var_to_append, coords=[time2], dims=["time"]),
         }
     )
 
@@ -2444,6 +2461,53 @@ class TestDataset:
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
 
+    @requires_cftime
+    def test_rename_does_not_change_CFTimeIndex_type(self):
+        # make sure CFTimeIndex is not converted to DatetimeIndex #3522
+
+        time = xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
+        orig = Dataset(coords={"time": time})
+
+        renamed = orig.rename(time="time_new")
+        assert "time_new" in renamed.indexes
+        assert isinstance(renamed.indexes["time_new"], CFTimeIndex)
+        assert renamed.indexes["time_new"].name == "time_new"
+
+        # check original has not changed
+        assert "time" in orig.indexes
+        assert isinstance(orig.indexes["time"], CFTimeIndex)
+        assert orig.indexes["time"].name == "time"
+
+        # note: rename_dims(time="time_new") drops "ds.indexes"
+        renamed = orig.rename_dims()
+        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+
+        renamed = orig.rename_vars()
+        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+
+    def test_rename_does_not_change_DatetimeIndex_type(self):
+        # make sure DatetimeIndex is conderved on rename
+
+        time = pd.date_range(start="2000", periods=6, freq="2MS")
+        orig = Dataset(coords={"time": time})
+
+        renamed = orig.rename(time="time_new")
+        assert "time_new" in renamed.indexes
+        assert isinstance(renamed.indexes["time_new"], DatetimeIndex)
+        assert renamed.indexes["time_new"].name == "time_new"
+
+        # check original has not changed
+        assert "time" in orig.indexes
+        assert isinstance(orig.indexes["time"], DatetimeIndex)
+        assert orig.indexes["time"].name == "time"
+
+        # note: rename_dims(time="time_new") drops "ds.indexes"
+        renamed = orig.rename_dims()
+        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+
+        renamed = orig.rename_vars()
+        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+
     def test_swap_dims(self):
         original = Dataset({"x": [1, 2, 3], "y": ("x", list("abc")), "z": 42})
         expected = Dataset({"z": 42}, {"x": ("y", [1, 2, 3]), "y": list("abc")})
@@ -2730,6 +2794,42 @@ class TestDataset:
             ds.unstack("foo")
         with raises_regex(ValueError, "do not have a MultiIndex"):
             ds.unstack("x")
+
+    def test_unstack_fill_value(self):
+        ds = xr.Dataset(
+            {"var": (("x",), np.arange(6))},
+            coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
+        )
+        # make ds incomplete
+        ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
+        # test fill_value
+        actual = ds.unstack("index", fill_value=-1)
+        expected = ds.unstack("index").fillna(-1).astype(np.int)
+        assert actual["var"].dtype == np.int
+        assert_equal(actual, expected)
+
+        actual = ds["var"].unstack("index", fill_value=-1)
+        expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
+        assert actual.equals(expected)
+
+    @requires_sparse
+    def test_unstack_sparse(self):
+        ds = xr.Dataset(
+            {"var": (("x",), np.arange(6))},
+            coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
+        )
+        # make ds incomplete
+        ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
+        # test fill_value
+        actual = ds.unstack("index", sparse=True)
+        expected = ds.unstack("index")
+        assert actual["var"].variable._to_dense().equals(expected["var"].variable)
+        assert actual["var"].data.density < 1.0
+
+        actual = ds["var"].unstack("index", sparse=True)
+        expected = ds["var"].unstack("index")
+        assert actual.variable._to_dense().equals(expected.variable)
+        assert actual.data.density < 1.0
 
     def test_stack_unstack_fast(self):
         ds = Dataset(
@@ -4476,21 +4576,24 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
-    def test_quantile(self):
-
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    def test_quantile(self, q):
         ds = create_test_data(seed=123)
 
-        for q in [0.25, [0.50], [0.25, 0.75]]:
-            for dim in [None, "dim1", ["dim1"]]:
-                ds_quantile = ds.quantile(q, dim=dim)
-                assert "quantile" in ds_quantile
-                for var, dar in ds.data_vars.items():
-                    assert var in ds_quantile
-                    assert_identical(ds_quantile[var], dar.quantile(q, dim=dim))
-            dim = ["dim1", "dim2"]
+        for dim in [None, "dim1", ["dim1"]]:
             ds_quantile = ds.quantile(q, dim=dim)
-            assert "dim3" in ds_quantile.dims
-            assert all(d not in ds_quantile.dims for d in dim)
+            if is_scalar(q):
+                assert "quantile" not in ds_quantile.dims
+            else:
+                assert "quantile" in ds_quantile.dims
+
+            for var, dar in ds.data_vars.items():
+                assert var in ds_quantile
+                assert_identical(ds_quantile[var], dar.quantile(q, dim=dim))
+        dim = ["dim1", "dim2"]
+        ds_quantile = ds.quantile(q, dim=dim)
+        assert "dim3" in ds_quantile.dims
+        assert all(d not in ds_quantile.dims for d in dim)
 
     @requires_bottleneck
     def test_rank(self):
@@ -5394,6 +5497,11 @@ def ds(request):
         )
 
 
+def test_coarsen_absent_dims_error(ds):
+    with raises_regex(ValueError, "not found in Dataset."):
+        ds.coarsen(foo=2)
+
+
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
 def test_coarsen(ds, dask, boundary, side):
@@ -5402,12 +5510,11 @@ def test_coarsen(ds, dask, boundary, side):
 
     actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
     assert_equal(
-        actual["z1"], ds["z1"].coarsen(time=2, x=3, boundary=boundary, side=side).max()
+        actual["z1"], ds["z1"].coarsen(x=3, boundary=boundary, side=side).max()
     )
     # coordinate should be mean by default
     assert_equal(
-        actual["time"],
-        ds["time"].coarsen(time=2, x=3, boundary=boundary, side=side).mean(),
+        actual["time"], ds["time"].coarsen(time=2, boundary=boundary, side=side).mean()
     )
 
 
@@ -5418,8 +5525,8 @@ def test_coarsen_coords(ds, dask):
 
     # check if coord_func works
     actual = ds.coarsen(time=2, x=3, boundary="trim", coord_func={"time": "max"}).max()
-    assert_equal(actual["z1"], ds["z1"].coarsen(time=2, x=3, boundary="trim").max())
-    assert_equal(actual["time"], ds["time"].coarsen(time=2, x=3, boundary="trim").max())
+    assert_equal(actual["z1"], ds["z1"].coarsen(x=3, boundary="trim").max())
+    assert_equal(actual["time"], ds["time"].coarsen(time=2, boundary="trim").max())
 
     # raise if exact
     with pytest.raises(ValueError):
@@ -5794,7 +5901,9 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate("time", datetime_unit="D")
     expected_data = np.trapz(
-        da, duck_array_ops.datetime_to_numeric(da["time"], datetime_unit="D"), axis=0
+        da.data,
+        duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
+        axis=0,
     )
     expected = xr.DataArray(
         expected_data,

@@ -1,9 +1,8 @@
-name: xarray-tests
+name: xarray-examples
 channels:
   - conda-forge
 dependencies:
   - python=3.7
-  - black
   - boto3
   - bottleneck
   - cartopy
@@ -13,15 +12,13 @@ dependencies:
   - coveralls
   - dask
   - distributed
-  - flake8
+  - dask_labextension
   - h5netcdf
   - h5py
   - hdf5
-  - hypothesis
   - iris
   - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy=0.730  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
@@ -29,17 +26,14 @@ dependencies:
   - pandas
   - pint
   - pip
-  - pseudonetcdf
   - pydap
   - pynio
-  - pytest
-  - pytest-cov
-  - pytest-env
   - rasterio
   - scipy
   - seaborn
   - sparse
   - toolz
+  - xarray
   - zarr
   - pip:
     - numbagg

@@ -95,6 +95,9 @@ for filling missing values via 1D interpolation.
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
 of which values to use as the index in the interpolation.
+xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
+data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
+for more.
 
 Aggregation
 ===========
@@ -322,8 +325,8 @@ Broadcasting by dimension name
 ``DataArray`` objects are automatically align themselves ("broadcasting" in
 the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
-operations to work, as commonly done in numpy with :py:func:`np.reshape` or
-:py:const:`np.newaxis`.
+operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or
+:py:data:`numpy.newaxis`.
 
 This is best illustrated by a few examples. Consider two one-dimensional
 arrays with different sizes aligned along different dimensions:
@@ -563,7 +566,7 @@ to set ``axis=-1``. As an example, here is how we would wrap
 
 Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
 nicely with tools for building vectorized functions, like
-:func:`numpy.broadcast_arrays` and :func:`numpy.vectorize`. For high performance
+:py:func:`numpy.broadcast_arrays` and :py:class:`numpy.vectorize`. For high performance
 needs, consider using Numba's :doc:`vectorize and guvectorize <numba:user/vectorize>`.
 
 In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize
