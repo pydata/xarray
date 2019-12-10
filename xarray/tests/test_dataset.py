@@ -5651,6 +5651,61 @@ def test_rolling_construct(center, window):
     assert (ds_rolling_mean["x"] == 0.0).sum() >= 0
 
 
+@pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("stride", (1, 2, None))
+def test_rolling_stride(center, window, stride):
+    df = pd.DataFrame(
+        {
+            "x": np.random.randn(20),
+            "y": np.random.randn(20),
+            "time": np.linspace(0, 1, 20),
+        }
+    )
+    ds = Dataset.from_dataframe(df)
+
+    df_rolling = df.rolling(window, center=center, min_periods=1).mean()
+    ds_rolling_strided = ds.rolling(
+        index=window, center=center, min_periods=1, stride=stride
+    )
+
+    if stride is None:
+        stride_index = 1
+    else:
+        stride_index = stride
+
+    # with construct
+    ds_rolling_mean = ds_rolling_strided.construct("window").mean("window")
+    np.testing.assert_allclose(
+        df_rolling["x"].values[::stride_index], ds_rolling_mean["x"].values
+    )
+    np.testing.assert_allclose(
+        df_rolling.index[::stride_index], ds_rolling_mean["index"]
+    )
+    np.testing.assert_allclose(
+        df_rolling.index[::stride_index], ds_rolling_mean["index"]
+    )
+
+    # with bottleneck
+    ds_rolling_strided_mean = ds_rolling_strided.mean()
+    np.testing.assert_allclose(
+        df_rolling["x"].values[::stride_index], ds_rolling_strided_mean["x"].values
+    )
+    np.testing.assert_allclose(
+        df_rolling.index[::stride_index], ds_rolling_strided_mean["index"]
+    )
+    np.testing.assert_allclose(
+        df_rolling.index[::stride_index], ds_rolling_strided_mean["index"]
+    )
+
+    # with fill_value
+    ds_rolling_mean = ds_rolling_strided.construct("window", fill_value=0.0).mean(
+        "window"
+    )
+    assert (ds_rolling_mean.isnull().sum() == 0).to_array(dim="vars").all()
+    assert (ds_rolling_mean["x"] == 0.0).sum() >= 0
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("ds", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False))

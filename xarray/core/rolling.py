@@ -181,18 +181,23 @@ class DataArrayRolling(Rolling):
         """
         super().__init__(obj, windows, min_periods=min_periods, center=center)
 
-        self.window_labels = self.obj[self.dim]
-        self.stride = stride
+        if stride is None:
+            self.stride = 1
+        else:
+            self.stride = stride
+
+        window_labels = self.obj[self.dim]
+        self.window_labels = window_labels[:: self.stride]
 
     def __iter__(self):
-        stops = np.arange(1, len(self.window_labels) + 1)
+        stops = np.arange(1, len(self.window_labels) * self.stride + 1)
         starts = stops - int(self.window)
         starts[: int(self.window)] = 0
 
         # apply striding
         stops = stops[:: self.stride]
         starts = starts[:: self.stride]
-        window_labels = self.window_labels[:: self.stride]
+        window_labels = self.window_labels
 
         for (label, start, stop) in zip(window_labels, starts, stops):
             window = self.obj.isel(**{self.dim: slice(start, stop)})
@@ -318,7 +323,6 @@ class DataArrayRolling(Rolling):
         )
         return counts
 
-    # TODO: verify if _bottleneck_reduce needs adjustments for stride
     def _bottleneck_reduce(self, func, **kwargs):
         from .dataarray import DataArray
 
@@ -360,7 +364,7 @@ class DataArrayRolling(Rolling):
             values = values[valid]
         result = DataArray(values, self.obj.coords)
 
-        return result
+        return result.isel(**{self.dim: slice(None, None, self.stride)})
 
     def _numpy_or_bottleneck_reduce(
         self, array_agg_func, bottleneck_move_func, **kwargs
@@ -385,7 +389,7 @@ class DataArrayRolling(Rolling):
 
 
 class DatasetRolling(Rolling):
-    __slots__ = ("rollings","stride")
+    __slots__ = ("rollings", "stride")
 
     def __init__(self, obj, windows, min_periods=None, center=False, stride=1):
         """
@@ -445,7 +449,9 @@ class DatasetRolling(Rolling):
                 reduced[key] = func(self.rollings[key], **kwargs)
             else:
                 reduced[key] = self.obj[key]
-        return Dataset(reduced, coords=self.obj.coords)
+        return Dataset(reduced, coords=self.obj.coords).isel(
+            **{self.dim: slice(None, None, self.stride)}
+        )
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some

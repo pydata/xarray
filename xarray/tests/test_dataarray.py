@@ -4304,6 +4304,73 @@ def test_rolling_construct(center, window):
     assert (da_rolling_mean == 0.0).sum() >= 0
 
 
+@pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("stride", (1, 2, None))
+def test_rolling_stride(center, window, stride):
+    s = pd.Series(np.arange(10))
+    da = DataArray.from_series(s)
+
+    s_rolling = s.rolling(window, center=center, min_periods=1).mean()
+    da_rolling_strided = da.rolling(
+        index=window, center=center, min_periods=1, stride=stride
+    )
+
+    if stride is None:
+        stride_index = 1
+    else:
+        stride_index = stride
+
+    # with construct
+    da_rolling_mean = da_rolling_strided.construct("window").mean("window")
+    np.testing.assert_allclose(s_rolling.values[::stride_index], da_rolling_mean.values)
+    np.testing.assert_allclose(
+        s_rolling.index[::stride_index], da_rolling_mean["index"]
+    )
+    np.testing.assert_allclose(
+        s_rolling.index[::stride_index], da_rolling_mean["index"]
+    )
+
+    # with bottleneck
+    da_rolling_strided_mean = da_rolling_strided.mean()
+    np.testing.assert_allclose(
+        s_rolling.values[::stride_index], da_rolling_strided_mean.values
+    )
+    np.testing.assert_allclose(
+        s_rolling.index[::stride_index], da_rolling_strided_mean["index"]
+    )
+    np.testing.assert_allclose(
+        s_rolling.index[::stride_index], da_rolling_strided_mean["index"]
+    )
+
+    # with fill_value
+    da_rolling_mean = da_rolling_strided.construct("window", fill_value=0.0).mean(
+        "window"
+    )
+    assert da_rolling_mean.isnull().sum() == 0
+    assert (da_rolling_mean == 0.0).sum() >= 0
+
+    # with iter
+    assert len(da_rolling_strided.window_labels) == len(da["index"]) // stride_index
+    assert_identical(da_rolling_strided.window_labels, da["index"][::stride_index])
+
+    for i, (label, window_da) in enumerate(da_rolling_strided):
+        assert label == da["index"].isel(index=i * stride_index)
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "Mean of empty slice")
+            actual = da_rolling_strided_mean.isel(index=i)
+            expected = window_da.mean("index")
+
+        # TODO add assert_allclose_with_nan, which compares nan position
+        # as well as the closeness of the values.
+        assert_array_equal(actual.isnull(), expected.isnull())
+        if (~actual.isnull()).sum() > 0:
+            np.allclose(
+                actual.values, expected.values,
+            )
+
+
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
