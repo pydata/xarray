@@ -372,7 +372,7 @@ class ZarrStore(AbstractWritableDataStore):
         if len(existing_variables) > 0:
             # there are variables to append
             # their encoding must be the same as in the store
-            ds = open_zarr(self.ds.store, chunks=None)
+            ds = open_zarr(self.ds.store, group=self.ds.path, chunks=None)
             variables_with_encoding = {}
             for vn in existing_variables:
                 variables_with_encoding[vn] = variables[vn].copy(deep=False)
@@ -486,7 +486,7 @@ def open_zarr(
         directory in file system where a Zarr DirectoryStore has been stored.
     synchronizer : object, optional
         Array synchronizer provided to zarr
-    group : str, obtional
+    group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
     chunks : int or dict or tuple or {None, 'auto'}, optional
         Chunk sizes along each dimension, e.g., ``5`` or
