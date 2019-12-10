@@ -28,6 +28,19 @@
    Dataset.var
 
    core.rolling.DatasetCoarsen
+   core.rolling.DatasetCoarsen.all
+   core.rolling.DatasetCoarsen.any
+   core.rolling.DatasetCoarsen.argmax
+   core.rolling.DatasetCoarsen.argmin
+   core.rolling.DatasetCoarsen.count
+   core.rolling.DatasetCoarsen.max
+   core.rolling.DatasetCoarsen.mean
+   core.rolling.DatasetCoarsen.median
+   core.rolling.DatasetCoarsen.min
+   core.rolling.DatasetCoarsen.prod
+   core.rolling.DatasetCoarsen.std
+   core.rolling.DatasetCoarsen.sum
+   core.rolling.DatasetCoarsen.var
 
    core.groupby.DatasetGroupBy.assign
    core.groupby.DatasetGroupBy.assign_coords
@@ -125,6 +138,19 @@
    DataArray.var
 
    core.rolling.DataArrayCoarsen
+   core.rolling.DataArrayCoarsen.all
+   core.rolling.DataArrayCoarsen.any
+   core.rolling.DataArrayCoarsen.argmax
+   core.rolling.DataArrayCoarsen.argmin
+   core.rolling.DataArrayCoarsen.count
+   core.rolling.DataArrayCoarsen.max
+   core.rolling.DataArrayCoarsen.mean
+   core.rolling.DataArrayCoarsen.median
+   core.rolling.DataArrayCoarsen.min
+   core.rolling.DataArrayCoarsen.prod
+   core.rolling.DataArrayCoarsen.std
+   core.rolling.DataArrayCoarsen.sum
+   core.rolling.DataArrayCoarsen.var
 
    core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first
