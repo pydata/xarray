@@ -1723,39 +1723,40 @@ class ZarrBase(CFEncodedBase):
                 with xr.decode_cf(store):
                     pass
 
-    def test_write_persistence_modes(self):
+    @pytest.mark.parametrize("group", [None, "group1"])
+    def test_write_persistence_modes(self,group):
         original = create_test_data()
 
         # overwrite mode
-        with self.roundtrip(original, save_kwargs={"mode": "w"}) as actual:
+        with self.roundtrip(original, save_kwargs={"mode": "w","group":group}, open_kwargs={"group":group}) as actual:
             assert_identical(original, actual)
 
         # don't overwrite mode
-        with self.roundtrip(original, save_kwargs={"mode": "w-"}) as actual:
+        with self.roundtrip(original, save_kwargs={"mode": "w-","group":group}, open_kwargs={"group":group}) as actual:
             assert_identical(original, actual)
 
         # make sure overwriting works as expected
         with self.create_zarr_target() as store:
             self.save(original, store)
             # should overwrite with no error
-            self.save(original, store, mode="w")
-            with self.open(store) as actual:
+            self.save(original, store, mode="w", group=group)
+            with self.open(store, group=group) as actual:
                 assert_identical(original, actual)
                 with pytest.raises(ValueError):
                     self.save(original, store, mode="w-")
 
         # check append mode for normal write
-        with self.roundtrip(original, save_kwargs={"mode": "a"}) as actual:
+        with self.roundtrip(original, save_kwargs={"mode": "a","group":group}, open_kwargs={"group":group}) as actual:
             assert_identical(original, actual)
 
-        ds, ds_to_append, _ = create_append_test_data()
-
         # check append mode for append write
+        ds, ds_to_append, _ = create_append_test_data()              
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
-            ds_to_append.to_zarr(store_target, append_dim="time")
+            ds.to_zarr(store_target, mode="w", group=group)
+            ds_to_append.to_zarr(store_target, append_dim="time", group=group)
             original = xr.concat([ds, ds_to_append], dim="time")
-            assert_identical(original, xr.open_zarr(store_target))
+            actual = xr.open_zarr(store_target,group=group)
+            assert_identical(original, actual)
 
     def test_compressor_encoding(self):
         original = create_test_data()
