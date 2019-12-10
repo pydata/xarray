@@ -635,7 +635,25 @@ Plotting
    plot.imshow
    plot.line
    plot.pcolormesh
+
+Faceting
+--------
+.. autosummary::
+   :toctree: generated/
+
    plot.FacetGrid
+   plot.FacetGrid.add_colorbar
+   plot.FacetGrid.add_legend
+   plot.FacetGrid.map
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.map_dataarray_line
+   plot.FacetGrid.map_dataset
+   plot.FacetGrid.set_axis_labels
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_xlabels
+   plot.FacetGrid.set_ylabels
+
 
 Testing
 =======

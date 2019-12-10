@@ -62,6 +62,15 @@ def substring_in_axes(substring, ax):
     return False
 
 
+def substring_not_in_axes(substring, ax):
+    """
+    Return True if a substring is not found anywhere in an axes
+    """
+    alltxt = {t.get_text() for t in ax.findobj(mpl.text.Text)}
+    check = [(substring not in txt) for txt in alltxt]
+    return all(check)
+
+
 def easy_array(shape, start=0, stop=1):
     """
     Make an array with desired shape using np.linspace
@@ -1775,6 +1784,18 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
             assert substring_in_axes(label, ax)
+
+        # ensure that row & col labels can be changed
+        g.set_titles("abc={value}")
+        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+            assert substring_in_axes(f"abc={label}", ax)
+            # previous labels were "row=row0" etc.
+            assert substring_not_in_axes("row=", ax)
+
+        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+            assert substring_in_axes(f"abc={label}", ax)
+            # previous labels were "col=row0" etc.
+            assert substring_not_in_axes("col=", ax)
 
 
 @pytest.mark.filterwarnings("ignore:tight_layout cannot")

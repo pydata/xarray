@@ -487,6 +487,7 @@ Faceting here refers to splitting an array along one or two dimensions and
 plotting each group.
 xarray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays? That's where facets become helpful.
+The general approach to plotting here is called “small multiples”, where the same kind of plot is repeated multiple times, and the specific use of small multiples to display the same relationship conditioned on one ore more other variables is often called a “trellis plot”.
 
 Consider the temperature data set. There are 4 observations per day for two
 years which makes for 2920 values along the time dimension.
@@ -572,8 +573,9 @@ Faceted plotting supports other arguments common to xarray 2d plots.
  FacetGrid Objects
 ===================
 
-:py:class:`xarray.plot.FacetGrid` is used to control the behavior of the
-multiple plots.
+The object returned, ``g`` in the above examples, is a :py:class:`~xarray.plot.FacetGrid`` object
+that links a :py:class:`DataArray` to a matplotlib figure with a particular structure.
+This object can be used to control the behavior of the multiple plots.
 It borrows an API and code from `Seaborn's FacetGrid
 <http://seaborn.pydata.org/tutorial/axis_grids.html>`_.
 The structure is contained within the ``axes`` and ``name_dicts``
@@ -608,6 +610,13 @@ they have been plotted.
 
     @savefig plot_facet_iterator.png
     plt.draw()
+
+
+:py:class:`~xarray.FacetGrid` objects have methods that let you customize the automatically generated
+axis labels, axis ticks and plot titles. See :py:meth:`~xarray.plot.FacetGrid.set_titles`,
+:py:meth:`~xarray.plot.FacetGrid.set_xlabels`, :py:meth:`~xarray.plot.FacetGrid.set_ylabels` and
+:py:meth:`~xarray.plot.FacetGrid.set_ticks` for more information.
+Plotting functions can be applied to each subset of the data by calling :py:meth:`~xarray.plot.FacetGrid.map_dataarray` or to each subplot by calling :py:meth:`FacetGrid.map`.
 
 TODO: add an example of using the ``map`` method to plot dataset variables
 (e.g., with ``plt.quiver``).
