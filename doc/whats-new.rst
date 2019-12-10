@@ -28,8 +28,8 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added the ``count`` reduction method to both :py:class:`~core.coarsen.DatasetCoarsen`
-  and :py:class:`~core.coarsen.DataArrayCoarsen` objects. (:pull:`3500`)
+- Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
+  and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 
 Bug fixes
@@ -66,7 +66,7 @@ Internal Changes
   :py:meth:`DataArray.isel`, and :py:meth:`DataArray.__getitem__` when indexing by int,
   slice, list of int, scalar ndarray, or 1-dimensional ndarray.
   (:pull:`3533`) by `Guido Imperiale <https://github.com/crusaderky>`_.
-- Removed internal method ``Dataset._from_vars_and_coord_names``, 
+- Removed internal method ``Dataset._from_vars_and_coord_names``,
   which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
@@ -93,8 +93,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Added the ``sparse`` option to :py:meth:`~xarray.DataArray.unstack`, 
-  :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`, 
+- Added the ``sparse`` option to :py:meth:`~xarray.DataArray.unstack`,
+  :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`,
   :py:meth:`~xarray.Dataset.reindex` (:issue:`3518`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added the ``fill_value`` option to :py:meth:`DataArray.unstack` and
@@ -104,13 +104,13 @@ New Features
   :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
   gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` for dropping labels.
-  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for
   dropping variables (including coordinates). The existing :py:meth:`Dataset.drop` &
   :py:meth:`DataArray.drop` methods remain as a backward compatible
   option for dropping either labels or variables, but using the more specific methods is encouraged.
   (:pull:`3475`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Added :py:meth:`Dataset.map` & :py:meth:`GroupBy.map` & :py:meth:`Resample.map` for 
+- Added :py:meth:`Dataset.map` & ``GroupBy.map`` & ``Resample.map`` for
   mapping / applying a function over each item in the collection, reflecting the widely used
   and least surprising name for this operation.
   The existing ``apply`` methods remain for backward compatibility, though using the ``map``
@@ -129,7 +129,7 @@ New Features
 - :py:func:`xarray.dot`, and :py:meth:`DataArray.dot` now support the
   ``dims=...`` option to sum over the union of dimensions of all input arrays
   (:issue:`3423`) by `Mathias Hauser <https://github.com/mathause>`_.
-- Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
+- Added new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` to improve
   representation of objects in Jupyter. By default this feature is turned off
   for now. Enable it with ``xarray.set_options(display_style="html")``.
   (:pull:`3425`) by `Benoit Bovy <https://github.com/benbovy>`_ and
@@ -147,13 +147,13 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when 
+- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when
   calling :py:meth:`Dataset.rename`, :py:meth:`Dataset.rename_dims` and :py:meth:`Dataset.rename_vars`.
   By `Mathias Hauser <https://github.com/mathause>`_. (:issue:`3522`).
 - Fix a bug in :py:meth:`DataArray.set_index` in case that an existing dimension becomes a level
   variable of MultiIndex. (:pull:`3520`). By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Harmonize ``_FillValue``, ``missing_value`` during encoding and decoding steps. (:pull:`3502`)
-  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
@@ -168,7 +168,7 @@ Bug fixes
 - Rolling reduction operations no longer compute dask arrays by default. (:issue:`3161`).
   In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix :py:meth:`GroupBy.reduce` when reducing over multiple dimensions.
+- Fix ``GroupBy.reduce`` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian>`_
 - Allow appending datetime and bool data variables to zarr stores.
   (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa>`_.
@@ -218,7 +218,7 @@ Internal Changes
 - Enable type checking on default sentinel values (:pull:`3472`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
-- Add :py:meth:`Variable._replace` for simpler replacing of a subset of attributes (:pull:`3472`)
+- Add ``Variable._replace`` for simpler replacing of a subset of attributes (:pull:`3472`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.14.0:
@@ -274,7 +274,7 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:class:`~core.groupby.GroupBy` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
+- ``core.groupby.GroupBy`` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
 
   - Added a repr (:pull:`3344`). Example::
 
@@ -616,7 +616,7 @@ New functions/methods
   By `Alan Brammer <https://github.com/abrammer>`_ and
   `Ryan May <https://github.com/dopplershift>`_.
 
-- :py:meth:`~core.groupby.GroupBy.quantile` is now a method of ``GroupBy``
+- ``GroupBy.quantile`` is now a method of ``GroupBy``
   objects  (:issue:`3018`).
   By `David Huard <https://github.com/huard>`_.
 

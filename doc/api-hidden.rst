@@ -27,6 +27,8 @@
    Dataset.std
    Dataset.var
 
+   core.rolling.DatasetCoarsen
+
    core.groupby.DatasetGroupBy.assign
    core.groupby.DatasetGroupBy.assign_coords
    core.groupby.DatasetGroupBy.first
@@ -121,6 +123,8 @@
    DataArray.sum
    DataArray.std
    DataArray.var
+
+   core.rolling.DataArrayCoarsen
 
    core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first
