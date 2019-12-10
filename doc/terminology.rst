@@ -1,9 +1,10 @@
+.. currentmodule:: xarray
 .. _terminology:
 
 Terminology
 ===========
 
-*Xarray terminology differs slightly from CF, mathematical conventions, and pandas; and therefore using xarray, understanding the documentation, and parsing error messages is easier once key terminology is defined. This glossary was designed so that more fundamental concepts come first. Thus for new users, this page is best read top-to-bottom. Throughout the glossary,* ``arr`` *will refer to an xarray* :py:class:`~xarray.DataArray` *in any small examples. For more complete examples, please consult the relevant documentation.*
+*Xarray terminology differs slightly from CF, mathematical conventions, and pandas; and therefore using xarray, understanding the documentation, and parsing error messages is easier once key terminology is defined. This glossary was designed so that more fundamental concepts come first. Thus for new users, this page is best read top-to-bottom. Throughout the glossary,* ``arr`` *will refer to an xarray* :py:class:`DataArray` *in any small examples. For more complete examples, please consult the relevant documentation.*
 
 ----
 
@@ -19,7 +20,7 @@ Terminology
 
 .. note::
 
-    The :py:class:`~xarray.Variable` class is low-level interface and can typically be ignored. However, the word "variable" appears often enough in the code and documentation that is useful to understand.
+    The :py:class:`Variable` class is low-level interface and can typically be ignored. However, the word "variable" appears often enough in the code and documentation that is useful to understand.
 
 ----
 
