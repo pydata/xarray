@@ -27,7 +27,6 @@
    Dataset.std
    Dataset.var
 
-   core.rolling.DatasetCoarsen
    core.rolling.DatasetCoarsen.all
    core.rolling.DatasetCoarsen.any
    core.rolling.DatasetCoarsen.argmax
@@ -137,7 +136,6 @@
    DataArray.std
    DataArray.var
 
-   core.rolling.DataArrayCoarsen
    core.rolling.DataArrayCoarsen.all
    core.rolling.DataArrayCoarsen.any
    core.rolling.DataArrayCoarsen.argmax

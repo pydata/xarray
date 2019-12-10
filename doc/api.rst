@@ -564,6 +564,16 @@ Rolling objects
    core.rolling.DatasetRolling.reduce
    core.rolling_exp.RollingExp
 
+Coarsen objects
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.rolling.DataArrayCoarsen
+   core.rolling.DatasetCoarsen
+
+
 Resample objects
 ================
 
