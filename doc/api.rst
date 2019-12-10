@@ -654,6 +654,14 @@ Faceting
    plot.FacetGrid.set_xlabels
    plot.FacetGrid.set_ylabels
 
+Tutorial
+========
+
+.. autosummary::
+   :toctree: generated/
+
+   tutorial.open_dataset
+   tutorial.load_dataset
 
 Testing
 =======
