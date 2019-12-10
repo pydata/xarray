@@ -39,6 +39,12 @@ Bug fixes
   <https://github.com/spencerkclark>`_.
 - Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`~xarray.plot.FacetGrid.set_titles` can now replace existing row titles of a
+  :py:class:`~xarray.plot.FacetGrid` plot. In addition :py:class:`~xarray.plot.FacetGrid` gained
+  two new attributes: :py:attr:`~xarray.plot.FacetGrid.col_labels` and
+  :py:attr:`~xarray.plot.FacetGrid.row_labels` contain matplotlib Text handles for both column and
+  row labels. These can be used to manually change the labels.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving ``map_blocks`` (:pull:`3598`)
   By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 
