@@ -1691,15 +1691,23 @@ class ZarrBase(CFEncodedBase):
                     pass
 
     @pytest.mark.parametrize("group", [None, "group1"])
-    def test_write_persistence_modes(self,group):
+    def test_write_persistence_modes(self, group):
         original = create_test_data()
 
         # overwrite mode
-        with self.roundtrip(original, save_kwargs={"mode": "w","group":group}, open_kwargs={"group":group}) as actual:
+        with self.roundtrip(
+            original,
+            save_kwargs={"mode": "w", "group": group},
+            open_kwargs={"group": group},
+        ) as actual:
             assert_identical(original, actual)
 
         # don't overwrite mode
-        with self.roundtrip(original, save_kwargs={"mode": "w-","group":group}, open_kwargs={"group":group}) as actual:
+        with self.roundtrip(
+            original,
+            save_kwargs={"mode": "w-", "group": group},
+            open_kwargs={"group": group},
+        ) as actual:
             assert_identical(original, actual)
 
         # make sure overwriting works as expected
@@ -1713,16 +1721,20 @@ class ZarrBase(CFEncodedBase):
                     self.save(original, store, mode="w-")
 
         # check append mode for normal write
-        with self.roundtrip(original, save_kwargs={"mode": "a","group":group}, open_kwargs={"group":group}) as actual:
+        with self.roundtrip(
+            original,
+            save_kwargs={"mode": "a", "group": group},
+            open_kwargs={"group": group},
+        ) as actual:
             assert_identical(original, actual)
 
         # check append mode for append write
-        ds, ds_to_append, _ = create_append_test_data()              
+        ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", group=group)
             ds_to_append.to_zarr(store_target, append_dim="time", group=group)
             original = xr.concat([ds, ds_to_append], dim="time")
-            actual = xr.open_zarr(store_target,group=group)
+            actual = xr.open_zarr(store_target, group=group)
             assert_identical(original, actual)
 
     def test_compressor_encoding(self):
