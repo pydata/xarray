@@ -1775,7 +1775,7 @@ Bug fixes
   coordinates of target, destination and keys. If there are any conflict among
   these coordinates, ``IndexError`` will be raised.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- Properly point :py:meth:`DataArray.__dask_scheduler__` to
+- Properly point ``DataArray.__dask_scheduler__`` to
   ``dask.threaded.get``.  By `Matthew Rocklin <https://github.com/mrocklin>`_.
 - Bug fixes in :py:meth:`DataArray.plot.imshow`: all-NaN arrays and arrays
   with size one in some dimension can now be plotted, which is good for
@@ -1987,7 +1987,7 @@ Enhancements
 
 - Support for :py:class:`pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
-  :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
+  ``xarray.to_netcdf``, and :py:func:`~xarray.save_mfdataset`
   (:issue:`799`):
 
   .. ipython::
