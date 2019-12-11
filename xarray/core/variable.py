@@ -5,7 +5,7 @@ import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Dict, Hashable, Iterable, Mapping, TypeVar, Union
+from typing import Any, Dict, Hashable, Mapping, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -539,20 +539,6 @@ class Variable(
         key = tuple(
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
-
-        key_dict = dict(zip(self.dims, key))
-        for dim, k in key_dict.items():
-            if isinstance(k, Iterable):
-                # let da.sel(x=da.x) pass but skip if Variable has different dimensions
-                # e.g. da.sel(x=Variable(("points",), [0, 1, 2]))
-                if isinstance(k, Variable) and k.dims != (dim,):
-                    continue
-                if duck_array_ops.array_equiv(k, np.arange(self.sizes[dim])):
-                    # short-circuit when keys are effectively slice(None)
-                    # This preserves dask name and passes lazy array equivalence checks
-                    # (see duck_array_ops.lazy_array_equiv)
-                    key_dict[dim] = slice(None)
-        key = tuple(key_dict.values())
 
         if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
             return self._broadcast_indexes_basic(key)
