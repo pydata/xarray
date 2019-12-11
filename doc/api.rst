@@ -31,6 +31,8 @@ Top-level functions
    ones_like
    dot
    map_blocks
+   show_versions
+   set_options
 
 Dataset
 =======
