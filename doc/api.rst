@@ -637,6 +637,7 @@ Plotting
    plot.imshow
    plot.line
    plot.pcolormesh
+   plot.FacetGrid
 
 Faceting
 --------

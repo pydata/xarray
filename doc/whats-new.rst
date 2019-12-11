@@ -152,7 +152,7 @@ New Features
 - xarray now respects the ``DataArray.encoding["coordinates"]`` attribute when writing to disk.
   See :ref:`io.coordinates` for more. (:issue:`3351`, :pull:`3487`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Add the documented-but-missing :py:meth:`DatasetGroupBy.quantile`.
+- Add the documented-but-missing :py:meth:`~core.groupby.DatasetGroupBy.quantile`.
   (:issue:`3525`, :pull:`3527`). By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
@@ -477,8 +477,7 @@ Enhancements
 
 - ``xarray.Dataset.drop`` now supports keyword arguments; dropping index
   labels by using both ``dim`` and ``labels`` or using a
-  :py:class:`~xarray.core.coordinates.DataArrayCoordinates` object are
-  deprecated (:issue:`2910`).
+  ``DataArrayCoordinates`` object are deprecated (:issue:`2910`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 - Added examples of :py:meth:`Dataset.set_index` and
