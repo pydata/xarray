@@ -223,6 +223,30 @@ class Properties:
         """
         return self._tslib_round_accessor("round", freq)
 
+
+class DatetimeAccessor(Properties):
+    """Access datetime fields for DataArrays with datetime-like dtypes.
+
+     Similar to pandas, fields can be accessed through the `.dt` attribute
+     for applicable DataArrays:
+
+        >>> ds = xarray.Dataset({'time': pd.date_range(start='2000/01/01',
+        ...                                            freq='D', periods=100)})
+        >>> ds.time.dt
+        <xarray.core.accessors.DatetimeAccessor at 0x10c369f60>
+        >>> ds.time.dt.dayofyear[:5]
+        <xarray.DataArray 'dayofyear' (time: 5)>
+        array([1, 2, 3, 4, 5], dtype=int32)
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+
+     All of the pandas fields are accessible here. Note that these fields are
+     not calendar-aware; if your datetimes are encoded with a non-Gregorian
+     calendar (e.g. a 360-day calendar) using cftime, then some fields like
+     `dayofyear` may not be accurate.
+
+    """
+
     def strftime(self, date_format):
         '''
         Return an array of formatted strings specified by date_format, which
@@ -256,30 +280,6 @@ class Properties:
         return obj_type(
             result, name="strftime", coords=self._obj.coords, dims=self._obj.dims
         )
-
-
-class DatetimeAccessor(Properties):
-    """Access datetime fields for DataArrays with datetime-like dtypes.
-
-     Similar to pandas, fields can be accessed through the `.dt` attribute
-     for applicable DataArrays:
-
-        >>> ds = xarray.Dataset({'time': pd.date_range(start='2000/01/01',
-        ...                                            freq='D', periods=100)})
-        >>> ds.time.dt
-        <xarray.core.accessors.DatetimeAccessor at 0x10c369f60>
-        >>> ds.time.dt.dayofyear[:5]
-        <xarray.DataArray 'dayofyear' (time: 5)>
-        array([1, 2, 3, 4, 5], dtype=int32)
-        Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
-
-     All of the pandas fields are accessible here. Note that these fields are
-     not calendar-aware; if your datetimes are encoded with a non-Gregorian
-     calendar (e.g. a 360-day calendar) using cftime, then some fields like
-     `dayofyear` may not be accurate.
-
-    """
 
     year = Properties._tslib_field_accessor(
         "year", "The year of the datetime", np.int64
