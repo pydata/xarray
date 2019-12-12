@@ -1447,6 +1447,12 @@ def is_np_datetime_like(dtype: DTypeLike) -> bool:
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
+def is_np_timedelta_like(dtype: DTypeLike) -> bool:
+    """Check whether dtype is of the timedelta64 dtype.
+    """
+    return np.issubdtype(dtype, np.timedelta64)
+
+
 def _contains_cftime_datetimes(array) -> bool:
     """Check if an array contains cftime.datetime objects
     """
@@ -1477,9 +1483,3 @@ def _contains_datetime_like_objects(var) -> bool:
     np.datetime64, np.timedelta64, or cftime.datetime)
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
-
-
-def _is_timedelta64_dtype(dtype: DTypeLike) -> bool:
-    """Check whether dtype is of the timedelta64 dtype.
-    """
-    return np.issubdtype(dtype, np.timedelta64)

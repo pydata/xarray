@@ -4,7 +4,7 @@ import pandas as pd
 from .common import (
     _contains_datetime_like_objects,
     is_np_datetime_like,
-    _is_timedelta64_dtype,
+    is_np_timedelta_like,
 )
 from .pycompat import dask_array_type
 
@@ -373,7 +373,7 @@ class CombinedDatetimelikeAccessor(DatetimeAccessor, TimedeltaAccessor):
                 "objects."
             )
 
-        if _is_timedelta64_dtype(obj.dtype):
+        if is_np_timedelta_like(obj.dtype):
             return TimedeltaAccessor(obj)
         else:
             return DatetimeAccessor(obj)
