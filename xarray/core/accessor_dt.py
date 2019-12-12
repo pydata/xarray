@@ -333,7 +333,7 @@ class DatetimeAccessor(Properties):
     weekday = dayofweek
 
     weekday_name = Properties._tslib_field_accessor(
-        "weekday_name", "The name of day in a week (ex: Friday)", object
+        "weekday_name", "The name of day in a week", object
     )
 
     dayofyear = Properties._tslib_field_accessor(
@@ -345,9 +345,7 @@ class DatetimeAccessor(Properties):
     )
     daysinmonth = days_in_month
 
-    season = Properties._tslib_field_accessor(
-        "season", "Season of the year (ex: DJF)", object
-    )
+    season = Properties._tslib_field_accessor("season", "Season of the year", object)
 
     time = Properties._tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
