@@ -424,13 +424,13 @@ class TimedeltaAccessor(Properties):
     * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
     """
 
+    days = Properties._tslib_field_accessor(
+        "days", "Number of days for each element.", np.int64
+    )
     seconds = Properties._tslib_field_accessor(
         "seconds",
         "Number of seconds (>= 0 and less than 1 day) for each element.",
         np.int64,
-    )
-    days = Properties._tslib_field_accessor(
-        "days", "Number of days for each element.", np.int64
     )
     microseconds = Properties._tslib_field_accessor(
         "microseconds",
