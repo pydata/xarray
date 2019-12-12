@@ -13,12 +13,12 @@ from xarray.testing import assert_allclose, assert_identical
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    pint.Quantity([])
-
 unit_registry = pint.UnitRegistry()
 Quantity = unit_registry.Quantity
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    Quantity([])
 
 pytestmark = [
     pytest.mark.skipif(
