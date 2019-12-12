@@ -13,7 +13,7 @@ from . import (
 )
 
 
-class TestDatetimelikeProperties:
+class TestDatetimeAccessor:
     @pytest.fixture(autouse=True)
     def setup(self):
         nt = 100
@@ -155,8 +155,7 @@ class TestTimedeltaAccessor:
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
         lats = np.linspace(0, 20, 10)
-        self.times = pd.date_range(start="2000/01/01", freq="H", periods=nt)
-        self.times = self.times - self.times[0]
+        self.times = pd.timedelta_range(start="1 day", freq="6H", periods=nt)
 
         self.data = xr.DataArray(
             data,
@@ -252,8 +251,7 @@ class TestTimedeltaAccessor:
         assert_equal(round, dask_round.compute())
 
     def test_rounders(self):
-        dates = pd.date_range("2014-01-01", "2014-05-01", freq="H")
-        dates = dates - dates[0]
+        dates = pd.timedelta_range(start="1 day", end="30 days", freq="6H")
         xdates = xr.DataArray(np.arange(len(dates)), dims=["time"], coords=[dates])
         assert_array_equal(dates.floor("D").values, xdates.time.dt.floor("D").values)
         assert_array_equal(dates.ceil("D").values, xdates.time.dt.ceil("D").values)
