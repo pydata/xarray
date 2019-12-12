@@ -693,12 +693,7 @@ def test_combine_by_coords(variant, unit, error, dtype):
             unit_registry.dimensionless, DimensionalityError, id="dimensionless"
         ),
         pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(
-            unit_registry.mm,
-            None,
-            id="compatible_unit",
-            marks=pytest.mark.xfail(reason="wrong order of arguments to `where`"),
-        ),
+        pytest.param(unit_registry.mm, None, id="compatible_unit"),
         pytest.param(unit_registry.m, None, id="identical_unit"),
     ),
     ids=repr,
@@ -891,7 +886,6 @@ def test_concat_dataset(variant, unit, error, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="blocked by `reindex` / `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -997,7 +991,6 @@ def test_merge_dataarray(variant, unit, error, dtype):
     assert_allclose(expected, actual)
 
 
-@pytest.mark.xfail(reason="blocked by `reindex` / `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
