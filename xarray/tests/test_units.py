@@ -570,10 +570,12 @@ def test_broadcast_dataarray(dtype):
     a = xr.DataArray(data=array1, dims="x")
     b = xr.DataArray(data=array2, dims="y")
 
-    expected_a, expected_b = tuple(
-        attach_units(elem, extract_units(a))
-        for elem in xr.broadcast(strip_units(a), strip_units(b))
-    )
+    units_a = extract_units(a)
+    units_b = extract_units(b)
+    expected_a, expected_b = xr.broadcast(strip_units(a), strip_units(b))
+    expected_a = attach_units(expected_a, units_a)
+    expected_b = convert_units(attach_units(expected_b, units_a), units_b)
+
     actual_a, actual_b = xr.broadcast(a, b)
 
     assert_identical(expected_a, actual_a)
@@ -584,14 +586,33 @@ def test_broadcast_dataset(dtype):
     array1 = np.linspace(0, 10, 2) * unit_registry.Pa
     array2 = np.linspace(0, 10, 3) * unit_registry.Pa
 
-    ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("y", array2)})
+    x1 = np.arange(2)
+    y1 = np.arange(3)
 
-    (expected,) = tuple(
-        attach_units(elem, extract_units(ds)) for elem in xr.broadcast(strip_units(ds))
+    x2 = np.arange(2, 4)
+    y2 = np.arange(3, 6)
+
+    ds = xr.Dataset(
+        data_vars={"a": ("x", array1), "b": ("y", array2)}, coords={"x": x1, "y": y1}
     )
-    (actual,) = xr.broadcast(ds)
+    other = xr.Dataset(
+        data_vars={
+            "a": ("x", array1.to(unit_registry.hPa)),
+            "b": ("y", array2.to(unit_registry.hPa)),
+        },
+        coords={"x": x2, "y": y2},
+    )
 
-    assert_equal_with_units(expected, actual)
+    units_a = extract_units(ds)
+    units_b = extract_units(other)
+    expected_a, expected_b = xr.broadcast(strip_units(ds), strip_units(other))
+    expected_a = attach_units(expected_a, units_a)
+    expected_b = attach_units(expected_b, units_b)
+
+    actual_a, actual_b = xr.broadcast(ds, other)
+
+    assert_identical(expected_a, actual_a)
+    assert_identical(expected_b, actual_b)
 
 
 @pytest.mark.parametrize(
@@ -943,18 +964,33 @@ def test_merge_dataarray(variant, unit, error, dtype):
     )
 
     func = function(xr.merge)
-    if error is not None:
+    if error is not None and variant != "data":
         with pytest.raises(error):
             func([arr1, arr2, arr3])
 
         return
 
-    units = {name: original_unit for name in list("abcuvwxyz")}
+    units = {name: original_unit for name in list("uvwxyz")}
     convert_and_strip = lambda arr: strip_units(convert_units(arr, units))
-    expected = attach_units(
-        func([strip_units(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]),
-        units,
+    expected_units = {
+        "a": original_unit,
+        "b": data_unit,
+        "c": data_unit,
+        "u": coord_unit,
+        "v": coord_unit,
+        "w": coord_unit,
+        "x": original_unit,
+        "y": original_unit,
+        "z": dim_unit,
+    }
+    expected = convert_units(
+        attach_units(
+            func([strip_units(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]),
+            {**units, **{"a": original_unit, "b": data_unit, "c": data_unit}},
+        ),
+        expected_units,
     )
+
     actual = func([arr1, arr2, arr3])
 
     assert extract_units(expected) == extract_units(actual)
@@ -1002,7 +1038,7 @@ def test_merge_dataset(variant, unit, error, dtype):
 
     ds1 = xr.Dataset(
         data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
-        coords={"x": x, "y": y, "z": ("x", z)},
+        coords={"x": x, "y": y, "u": ("x", z)},
     )
     ds2 = xr.Dataset(
         data_vars={
@@ -1012,18 +1048,18 @@ def test_merge_dataset(variant, unit, error, dtype):
         coords={
             "x": np.arange(3) * dim_unit,
             "y": np.arange(2, 4) * dim_unit,
-            "z": ("x", np.arange(-3, 0) * coord_unit),
+            "u": ("x", np.arange(-3, 0) * coord_unit),
         },
     )
     ds3 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.zeros_like(array1) * np.nan * data_unit),
-            "b": (("y", "x"), np.zeros_like(array2) * np.nan * data_unit),
+            "a": (("y", "x"), np.full_like(array1, np.nan) * data_unit),
+            "b": (("y", "x"), np.full_like(array2, np.nan) * data_unit),
         },
         coords={
             "x": np.arange(3, 6) * dim_unit,
             "y": np.arange(4, 6) * dim_unit,
-            "z": ("x", np.arange(3, 6) * coord_unit),
+            "u": ("x", np.arange(3, 6) * coord_unit),
         },
     )
 
@@ -1036,8 +1072,19 @@ def test_merge_dataset(variant, unit, error, dtype):
 
     units = extract_units(ds1)
     convert_and_strip = lambda ds: strip_units(convert_units(ds, units))
-    expected = attach_units(
-        func([strip_units(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]), units
+    expected_units = {
+        "a": data_unit,
+        "b": data_unit,
+        "x": original_unit,
+        "y": original_unit,
+        "u": coord_unit,
+    }
+    expected = convert_units(
+        attach_units(
+            func([strip_units(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]),
+            {**units, **{"a": original_unit, "b": original_unit, "z": original_unit}},
+        ),
+        expected_units,
     )
     actual = func([ds1, ds2, ds3])
 
@@ -1051,7 +1098,8 @@ def test_replication_dataarray(func, dtype):
     data_array = xr.DataArray(data=array, dims="x")
 
     numpy_func = getattr(np, func.__name__)
-    expected = xr.DataArray(data=numpy_func(array), dims="x")
+    units = extract_units(numpy_func(data_array))
+    expected = attach_units(func(data_array), units)
     actual = func(data_array)
 
     assert_identical(expected, actual)
@@ -1071,9 +1119,9 @@ def test_replication_dataset(func, dtype):
     )
 
     numpy_func = getattr(np, func.__name__)
-    expected = ds.copy(
-        data={name: numpy_func(array.data) for name, array in ds.data_vars.items()}
-    )
+    units = extract_units(ds.map(numpy_func))
+    expected = attach_units(func(strip_units(ds)), units)
+
     actual = func(ds)
 
     assert_identical(expected, actual)
