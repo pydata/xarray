@@ -8,6 +8,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 from xarray.core.npcompat import IS_NEP18_ACTIVE
+from xarray.testing import assert_allclose, assert_identical
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
@@ -364,7 +365,7 @@ def test_apply_ufunc_dataarray(dtype):
     expected = attach_units(func(strip_units(data_array)), extract_units(data_array))
     actual = func(data_array)
 
-    assert_equal_with_units(expected, actual)
+    assert_identical(expected, actual)
 
 
 def test_apply_ufunc_dataset(dtype):
@@ -386,7 +387,7 @@ def test_apply_ufunc_dataset(dtype):
     expected = attach_units(func(strip_units(ds)), extract_units(ds))
     actual = func(ds)
 
-    assert_equal_with_units(expected, actual)
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -470,8 +471,10 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
 
     actual_a, actual_b = func(data_array1, data_array2)
 
-    assert_equal_with_units(expected_a, actual_a)
-    assert_equal_with_units(expected_b, actual_b)
+    assert_allclose(expected_a, actual_a)
+    assert extract_units(expected_a) == extract_units(actual_a)
+    assert_allclose(expected_b, actual_b)
+    assert extract_units(expected_b) == extract_units(actual_b)
 
 
 @pytest.mark.parametrize(
@@ -554,8 +557,10 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
 
     actual_a, actual_b = func(ds1, ds2)
 
-    assert_equal_with_units(expected_a, actual_a)
-    assert_equal_with_units(expected_b, actual_b)
+    assert_allclose(expected_a, actual_a)
+    assert extract_units(expected_a) == extract_units(actual_a)
+    assert_allclose(expected_b, actual_b)
+    assert extract_units(expected_b) == extract_units(actual_b)
 
 
 def test_broadcast_dataarray(dtype):
@@ -571,8 +576,8 @@ def test_broadcast_dataarray(dtype):
     )
     actual_a, actual_b = xr.broadcast(a, b)
 
-    assert_equal_with_units(expected_a, actual_a)
-    assert_equal_with_units(expected_b, actual_b)
+    assert_identical(expected_a, actual_a)
+    assert_identical(expected_b, actual_b)
 
 
 def test_broadcast_dataset(dtype):
@@ -656,7 +661,7 @@ def test_combine_by_coords(variant, unit, error, dtype):
     )
     actual = xr.combine_by_coords([ds, other])
 
-    assert_equal_with_units(expected, actual)
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -760,7 +765,7 @@ def test_combine_nested(variant, unit, error, dtype):
     )
     actual = func([[ds1, ds2], [ds3, ds4]])
 
-    assert_equal_with_units(expected, actual)
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -812,7 +817,7 @@ def test_concat_dataarray(variant, unit, error, dtype):
     )
     actual = xr.concat([arr1, arr2], dim="x")
 
-    assert_equal_with_units(expected, actual)
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -862,7 +867,7 @@ def test_concat_dataset(variant, unit, error, dtype):
     )
     actual = xr.concat([ds1, ds2], dim="x")
 
-    assert_equal_with_units(expected, actual)
+    assert_identical(expected, actual)
 
 
 @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
@@ -952,7 +957,8 @@ def test_merge_dataarray(variant, unit, error, dtype):
     )
     actual = func([arr1, arr2, arr3])
 
-    assert_equal_with_units(expected, actual)
+    assert extract_units(expected) == extract_units(actual)
+    assert_allclose(expected, actual)
 
 
 @pytest.mark.xfail(reason="blocked by `reindex` / `where`")
@@ -1035,7 +1041,8 @@ def test_merge_dataset(variant, unit, error, dtype):
     )
     actual = func([ds1, ds2, ds3])
 
-    assert_equal_with_units(expected, actual)
+    assert extract_units(expected) == extract_units(actual)
+    assert_allclose(expected, actual)
 
 
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
@@ -1047,7 +1054,7 @@ def test_replication_dataarray(func, dtype):
     expected = xr.DataArray(data=numpy_func(array), dims="x")
     actual = func(data_array)
 
-    assert_equal_with_units(expected, actual)
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
@@ -1069,7 +1076,7 @@ def test_replication_dataset(func, dtype):
     )
     actual = func(ds)
 
-    assert_equal_with_units(expected, actual)
+    assert_identical(expected, actual)
 
 
 @pytest.mark.xfail(
