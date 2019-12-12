@@ -12,6 +12,8 @@ from . import (
     requires_dask,
 )
 
+from .test_dask import raise_if_dask_computes, assert_chunks_equal
+
 
 class TestDatetimeAccessor:
     @pytest.fixture(autouse=True)
@@ -205,13 +207,14 @@ class TestTimedeltaAccessor:
             nontime_data.time.dt
 
     @requires_dask
-    def test_dask_field_access(self):
+    @pytest.mark.parametrize(
+        "field", ["days", "seconds", "microseconds", "nanoseconds"]
+    )
+    def test_dask_field_access(self, field):
         import dask.array as da
 
-        days = self.times_data.dt.days
-        seconds = self.times_data.dt.seconds
-        microseconds = self.times_data.dt.microseconds
-        nanoseconds = self.times_data.dt.nanoseconds
+        expected = getattr(self.times_data.dt, field)
+
         floor = self.times_data.dt.floor("D")
         ceil = self.times_data.dt.ceil("D")
         round = self.times_data.dt.round("D")
@@ -220,32 +223,17 @@ class TestTimedeltaAccessor:
         dask_times_2d = xr.DataArray(
             dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
         )
-        dask_days = dask_times_2d.dt.days
-        dask_seconds = dask_times_2d.dt.seconds
-        dask_microseconds = dask_times_2d.dt.microseconds
-        dask_nanoseconds = dask_times_2d.dt.nanoseconds
+
+        with raise_if_dask_computes():
+            actual = getattr(dask_times_2d.dt, field)
+
+        assert isinstance(actual.data, da.Array)
+        assert_chunks_equal(actual, dask_times_2d)
+        assert_equal(actual, expected)
         dask_floor = dask_times_2d.dt.floor("D")
         dask_ceil = dask_times_2d.dt.ceil("D")
         dask_round = dask_times_2d.dt.round("D")
 
-        # Test that the data isn't eagerly evaluated
-        assert isinstance(dask_days.data, da.Array)
-        assert isinstance(dask_seconds.data, da.Array)
-        assert isinstance(dask_microseconds.data, da.Array)
-        assert isinstance(dask_nanoseconds.data, da.Array)
-
-        # Double check that outcome chunksize is unchanged
-        dask_chunks = dask_times_2d.chunks
-        assert dask_days.data.chunks == dask_chunks
-        assert dask_seconds.data.chunks == dask_chunks
-        assert dask_microseconds.data.chunks == dask_chunks
-        assert dask_nanoseconds.data.chunks == dask_chunks
-
-        # Check the actual output from the accessors
-        assert_equal(days, dask_days.compute())
-        assert_equal(seconds, dask_seconds.compute())
-        assert_equal(microseconds, dask_microseconds.compute())
-        assert_equal(nanoseconds, dask_nanoseconds.compute())
         assert_equal(floor, dask_floor.compute())
         assert_equal(ceil, dask_ceil.compute())
         assert_equal(round, dask_round.compute())
