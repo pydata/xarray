@@ -153,6 +153,22 @@ class Properties:
     def __init__(self, obj):
         self._obj = obj
 
+    def _tslib_field_accessor(  # type: ignore
+        name: str, docstring: str = None, dtype: np.dtype = None
+    ):
+        def f(self, dtype=dtype):
+            if dtype is None:
+                dtype = self._obj.dtype
+            obj_type = type(self._obj)
+            result = _get_date_field(self._obj.data, name, dtype)
+            return obj_type(
+                result, name=name, coords=self._obj.coords, dims=self._obj.dims
+            )
+
+        f.__name__ = name
+        f.__doc__ = docstring
+        return property(f)
+
     def _tslib_round_accessor(self, name, freq):
         obj_type = type(self._obj)
         result = _round_field(self._obj.data, name, freq)
@@ -265,94 +281,74 @@ class DatetimeAccessor(Properties):
 
     """
 
-    def _tslib_field_accessor(  # type: ignore
-        name: str, docstring: str = None, dtype: np.dtype = None
-    ):
-        def f(self, dtype=dtype):
-            if dtype is None:
-                dtype = self._obj.dtype
-            obj_type = type(self._obj)
-            result = _get_date_field(self._obj.data, name, dtype)
-            return obj_type(
-                result, name=name, coords=self._obj.coords, dims=self._obj.dims
-            )
-
-        f.__name__ = name
-        f.__doc__ = docstring
-        return property(f)
-
-    year = _tslib_field_accessor("year", "The year of the datetime", np.int64)
-    month = _tslib_field_accessor(
+    year = Properties._tslib_field_accessor(
+        "year", "The year of the datetime", np.int64
+    )
+    month = Properties._tslib_field_accessor(
         "month", "The month as January=1, December=12", np.int64
     )
-    day = _tslib_field_accessor("day", "The days of the datetime", np.int64)
-    hour = _tslib_field_accessor("hour", "The hours of the datetime", np.int64)
-    minute = _tslib_field_accessor("minute", "The minutes of the datetime", np.int64)
-    second = _tslib_field_accessor("second", "The seconds of the datetime", np.int64)
-    microsecond = _tslib_field_accessor(
+    day = Properties._tslib_field_accessor("day", "The days of the datetime", np.int64)
+    hour = Properties._tslib_field_accessor(
+        "hour", "The hours of the datetime", np.int64
+    )
+    minute = Properties._tslib_field_accessor(
+        "minute", "The minutes of the datetime", np.int64
+    )
+    second = Properties._tslib_field_accessor(
+        "second", "The seconds of the datetime", np.int64
+    )
+    microsecond = Properties._tslib_field_accessor(
         "microsecond", "The microseconds of the datetime", np.int64
     )
-    nanosecond = _tslib_field_accessor(
+    nanosecond = Properties._tslib_field_accessor(
         "nanosecond", "The nanoseconds of the datetime", np.int64
     )
-    weekofyear = _tslib_field_accessor(
+    weekofyear = Properties._tslib_field_accessor(
         "weekofyear", "The week ordinal of the year", np.int64
     )
     week = weekofyear
-    dayofweek = _tslib_field_accessor(
+    dayofweek = Properties._tslib_field_accessor(
         "dayofweek", "The day of the week with Monday=0, Sunday=6", np.int64
     )
     weekday = dayofweek
 
-    weekday_name = _tslib_field_accessor(
+    weekday_name = Properties._tslib_field_accessor(
         "weekday_name", "The name of day in a week (ex: Friday)", object
     )
 
-    dayofyear = _tslib_field_accessor(
+    dayofyear = Properties._tslib_field_accessor(
         "dayofyear", "The ordinal day of the year", np.int64
     )
-    quarter = _tslib_field_accessor("quarter", "The quarter of the date")
-    days_in_month = _tslib_field_accessor(
+    quarter = Properties._tslib_field_accessor("quarter", "The quarter of the date")
+    days_in_month = Properties._tslib_field_accessor(
         "days_in_month", "The number of days in the month", np.int64
     )
     daysinmonth = days_in_month
 
-    season = _tslib_field_accessor("season", "Season of the year (ex: DJF)", object)
+    season = Properties._tslib_field_accessor(
+        "season", "Season of the year (ex: DJF)", object
+    )
 
-    time = _tslib_field_accessor(
+    time = Properties._tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
     )
 
 
 class TimedeltaAccessor(Properties):
-    def _tslib_field_accessor(  # type: ignore
-        name: str, docstring: str = None, dtype: np.dtype = None
-    ):
-        def f(self, dtype=dtype):
-            if dtype is None:
-                dtype = self._obj.dtype
-            obj_type = type(self._obj)
-            result = _get_date_field(self._obj.data, name, dtype)
-            return obj_type(
-                result, name=name, coords=self._obj.coords, dims=self._obj.dims
-            )
-
-        f.__name__ = name
-        f.__doc__ = docstring
-        return property(f)
-
-    seconds = _tslib_field_accessor(
+    seconds = Properties._tslib_field_accessor(
         "seconds",
         "Number of seconds (>= 0 and less than 1 day) for each element.",
         np.int64,
     )
-    days = _tslib_field_accessor("days", "Number of days for each element.", np.int64)
-    microseconds = _tslib_field_accessor(
+    days = Properties._tslib_field_accessor(
+        "days", "Number of days for each element.", np.int64
+    )
+    microseconds = Properties._tslib_field_accessor(
         "microseconds",
         "Number of microseconds (>= 0 and less than 1 second) for each element.",
         np.int64,
     )
-    nanoseconds = _tslib_field_accessor(
+    nanoseconds = Properties._tslib_field_accessor(
         "nanoseconds",
         "Number of nanoseconds (>= 0 and less than 1 microsecond) for each element.",
         np.int64,
