@@ -16,6 +16,7 @@ DimensionalityError = pint.errors.DimensionalityError
 unit_registry = pint.UnitRegistry()
 Quantity = unit_registry.Quantity
 
+# silence pint's BehaviorChangeWarning
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     Quantity([])
