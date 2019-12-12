@@ -1,7 +1,11 @@
 import numpy as np
 import pandas as pd
 
-from .common import _contains_datetime_like_objects, is_np_datetime_like
+from .common import (
+    _contains_datetime_like_objects,
+    is_np_datetime_like,
+    _is_timedelta64_dtype,
+)
 from .pycompat import dask_array_type
 
 
@@ -145,96 +149,9 @@ def _strftime(values, date_format):
         return access_method(values, date_format)
 
 
-class DatetimeAccessor:
-    """Access datetime fields for DataArrays with datetime-like dtypes.
-
-     Similar to pandas, fields can be accessed through the `.dt` attribute
-     for applicable DataArrays:
-
-        >>> ds = xarray.Dataset({'time': pd.date_range(start='2000/01/01',
-        ...                                            freq='D', periods=100)})
-        >>> ds.time.dt
-        <xarray.core.accessors.DatetimeAccessor at 0x10c369f60>
-        >>> ds.time.dt.dayofyear[:5]
-        <xarray.DataArray 'dayofyear' (time: 5)>
-        array([1, 2, 3, 4, 5], dtype=int32)
-        Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
-
-     All of the pandas fields are accessible here. Note that these fields are
-     not calendar-aware; if your datetimes are encoded with a non-Gregorian
-     calendar (e.g. a 360-day calendar) using cftime, then some fields like
-     `dayofyear` may not be accurate.
-
-     """
-
+class Properties:
     def __init__(self, obj):
-        if not _contains_datetime_like_objects(obj):
-            raise TypeError(
-                "'dt' accessor only available for "
-                "DataArray with datetime64 timedelta64 dtype or "
-                "for arrays containing cftime datetime "
-                "objects."
-            )
         self._obj = obj
-
-    def _tslib_field_accessor(  # type: ignore
-        name: str, docstring: str = None, dtype: np.dtype = None
-    ):
-        def f(self, dtype=dtype):
-            if dtype is None:
-                dtype = self._obj.dtype
-            obj_type = type(self._obj)
-            result = _get_date_field(self._obj.data, name, dtype)
-            return obj_type(
-                result, name=name, coords=self._obj.coords, dims=self._obj.dims
-            )
-
-        f.__name__ = name
-        f.__doc__ = docstring
-        return property(f)
-
-    year = _tslib_field_accessor("year", "The year of the datetime", np.int64)
-    month = _tslib_field_accessor(
-        "month", "The month as January=1, December=12", np.int64
-    )
-    day = _tslib_field_accessor("day", "The days of the datetime", np.int64)
-    hour = _tslib_field_accessor("hour", "The hours of the datetime", np.int64)
-    minute = _tslib_field_accessor("minute", "The minutes of the datetime", np.int64)
-    second = _tslib_field_accessor("second", "The seconds of the datetime", np.int64)
-    microsecond = _tslib_field_accessor(
-        "microsecond", "The microseconds of the datetime", np.int64
-    )
-    nanosecond = _tslib_field_accessor(
-        "nanosecond", "The nanoseconds of the datetime", np.int64
-    )
-    weekofyear = _tslib_field_accessor(
-        "weekofyear", "The week ordinal of the year", np.int64
-    )
-    week = weekofyear
-    dayofweek = _tslib_field_accessor(
-        "dayofweek", "The day of the week with Monday=0, Sunday=6", np.int64
-    )
-    weekday = dayofweek
-
-    weekday_name = _tslib_field_accessor(
-        "weekday_name", "The name of day in a week (ex: Friday)", object
-    )
-
-    dayofyear = _tslib_field_accessor(
-        "dayofyear", "The ordinal day of the year", np.int64
-    )
-    quarter = _tslib_field_accessor("quarter", "The quarter of the date")
-    days_in_month = _tslib_field_accessor(
-        "days_in_month", "The number of days in the month", np.int64
-    )
-    daysinmonth = days_in_month
-
-    season = _tslib_field_accessor("season", "Season of the year (ex: DJF)", object)
-
-    time = _tslib_field_accessor(
-        "time", "Timestamps corresponding to datetimes", object
-    )
 
     def _tslib_round_accessor(self, name, freq):
         obj_type = type(self._obj)
@@ -323,3 +240,140 @@ class DatetimeAccessor:
         return obj_type(
             result, name="strftime", coords=self._obj.coords, dims=self._obj.dims
         )
+
+
+class DatetimeProperties(Properties):
+    """Access datetime fields for DataArrays with datetime-like dtypes.
+
+     Similar to pandas, fields can be accessed through the `.dt` attribute
+     for applicable DataArrays:
+
+        >>> ds = xarray.Dataset({'time': pd.date_range(start='2000/01/01',
+        ...                                            freq='D', periods=100)})
+        >>> ds.time.dt
+        <xarray.core.accessors.DatetimeAccessor at 0x10c369f60>
+        >>> ds.time.dt.dayofyear[:5]
+        <xarray.DataArray 'dayofyear' (time: 5)>
+        array([1, 2, 3, 4, 5], dtype=int32)
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+
+     All of the pandas fields are accessible here. Note that these fields are
+     not calendar-aware; if your datetimes are encoded with a non-Gregorian
+     calendar (e.g. a 360-day calendar) using cftime, then some fields like
+     `dayofyear` may not be accurate.
+
+    """
+
+    def _tslib_field_accessor(  # type: ignore
+        name: str, docstring: str = None, dtype: np.dtype = None
+    ):
+        def f(self, dtype=dtype):
+            if dtype is None:
+                dtype = self._obj.dtype
+            obj_type = type(self._obj)
+            result = _get_date_field(self._obj.data, name, dtype)
+            return obj_type(
+                result, name=name, coords=self._obj.coords, dims=self._obj.dims
+            )
+
+        f.__name__ = name
+        f.__doc__ = docstring
+        return property(f)
+
+    year = _tslib_field_accessor("year", "The year of the datetime", np.int64)
+    month = _tslib_field_accessor(
+        "month", "The month as January=1, December=12", np.int64
+    )
+    day = _tslib_field_accessor("day", "The days of the datetime", np.int64)
+    hour = _tslib_field_accessor("hour", "The hours of the datetime", np.int64)
+    minute = _tslib_field_accessor("minute", "The minutes of the datetime", np.int64)
+    second = _tslib_field_accessor("second", "The seconds of the datetime", np.int64)
+    microsecond = _tslib_field_accessor(
+        "microsecond", "The microseconds of the datetime", np.int64
+    )
+    nanosecond = _tslib_field_accessor(
+        "nanosecond", "The nanoseconds of the datetime", np.int64
+    )
+    weekofyear = _tslib_field_accessor(
+        "weekofyear", "The week ordinal of the year", np.int64
+    )
+    week = weekofyear
+    dayofweek = _tslib_field_accessor(
+        "dayofweek", "The day of the week with Monday=0, Sunday=6", np.int64
+    )
+    weekday = dayofweek
+
+    weekday_name = _tslib_field_accessor(
+        "weekday_name", "The name of day in a week (ex: Friday)", object
+    )
+
+    dayofyear = _tslib_field_accessor(
+        "dayofyear", "The ordinal day of the year", np.int64
+    )
+    quarter = _tslib_field_accessor("quarter", "The quarter of the date")
+    days_in_month = _tslib_field_accessor(
+        "days_in_month", "The number of days in the month", np.int64
+    )
+    daysinmonth = days_in_month
+
+    season = _tslib_field_accessor("season", "Season of the year (ex: DJF)", object)
+
+    time = _tslib_field_accessor(
+        "time", "Timestamps corresponding to datetimes", object
+    )
+
+
+class TimedeltaProperties(Properties):
+    def _tslib_field_accessor(  # type: ignore
+        name: str, docstring: str = None, dtype: np.dtype = None
+    ):
+        def f(self, dtype=dtype):
+            if dtype is None:
+                dtype = self._obj.dtype
+            obj_type = type(self._obj)
+            result = _get_date_field(self._obj.data, name, dtype)
+            return obj_type(
+                result, name=name, coords=self._obj.coords, dims=self._obj.dims
+            )
+
+        f.__name__ = name
+        f.__doc__ = docstring
+        return property(f)
+
+    seconds = _tslib_field_accessor(
+        "seconds",
+        "Number of seconds (>= 0 and less than 1 day) for each element.",
+        np.int64,
+    )
+    days = _tslib_field_accessor("days", "Number of days for each element.", np.int64)
+    microseconds = _tslib_field_accessor(
+        "microseconds",
+        "Number of microseconds (>= 0 and less than 1 second) for each element.",
+        np.int64,
+    )
+    nanoseconds = _tslib_field_accessor(
+        "nanoseconds",
+        "Number of nanoseconds (>= 0 and less than 1 microsecond) for each element.",
+        np.int64,
+    )
+
+
+class CombinedDatetimelikeProperties(DatetimeProperties, TimedeltaProperties):
+    def __new__(cls, obj):
+        # CombinedDatetimelikeProperites isn't really instatiated. Instead
+        # we need to choose which parent (datetime or timedelta) is
+        # appropriate. Since we're checking the dtypes anyway, we'll just
+        # do all the validation here.
+        if not _contains_datetime_like_objects(obj):
+            raise TypeError(
+                "'.dt' accessor only available for "
+                "DataArray with datetime64 timedelta64 dtype or "
+                "for arrays containing cftime datetime "
+                "objects."
+            )
+
+        if _is_timedelta64_dtype(obj.dtype):
+            return TimedeltaProperties(obj)
+        else:
+            return DatetimeProperties(obj)

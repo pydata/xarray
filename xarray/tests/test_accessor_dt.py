@@ -13,7 +13,7 @@ from . import (
 )
 
 
-class TestDatetimeAccessor:
+class TestDatetimelikeProperties:
     @pytest.fixture(autouse=True)
     def setup(self):
         nt = 100
@@ -142,6 +142,118 @@ class TestDatetimeAccessor:
 
     def test_rounders(self):
         dates = pd.date_range("2014-01-01", "2014-05-01", freq="H")
+        xdates = xr.DataArray(np.arange(len(dates)), dims=["time"], coords=[dates])
+        assert_array_equal(dates.floor("D").values, xdates.time.dt.floor("D").values)
+        assert_array_equal(dates.ceil("D").values, xdates.time.dt.ceil("D").values)
+        assert_array_equal(dates.round("D").values, xdates.time.dt.round("D").values)
+
+
+class TestTimedeltaProperties:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        nt = 100
+        data = np.random.rand(10, 10, nt)
+        lons = np.linspace(0, 11, 10)
+        lats = np.linspace(0, 20, 10)
+        self.times = pd.date_range(start="2000/01/01", freq="H", periods=nt)
+        self.times = self.times - self.times[0]
+
+        self.data = xr.DataArray(
+            data,
+            coords=[lons, lats, self.times],
+            dims=["lon", "lat", "time"],
+            name="data",
+        )
+
+        self.times_arr = np.random.choice(self.times, size=(10, 10, nt))
+        self.times_data = xr.DataArray(
+            self.times_arr,
+            coords=[lons, lats, self.times],
+            dims=["lon", "lat", "time"],
+            name="data",
+        )
+
+    def test_field_access(self):
+        days = xr.DataArray(
+            self.times.days, name="days", coords=[self.times], dims=["time"]
+        )
+        seconds = xr.DataArray(
+            self.times.seconds, name="seconds", coords=[self.times], dims=["time"]
+        )
+        microseconds = xr.DataArray(
+            self.times.microseconds,
+            name="microseconds",
+            coords=[self.times],
+            dims=["time"],
+        )
+        nanoseconds = xr.DataArray(
+            self.times.nanoseconds,
+            name="nanoseconds",
+            coords=[self.times],
+            dims=["time"],
+        )
+
+        assert_equal(days, self.data.time.dt.days)
+        assert_equal(seconds, self.data.time.dt.seconds)
+        assert_equal(microseconds, self.data.time.dt.microseconds)
+        assert_equal(nanoseconds, self.data.time.dt.nanoseconds)
+
+    def test_not_datetime_type(self):
+        nontime_data = self.data.copy()
+        int_data = np.arange(len(self.data.time)).astype("int8")
+        nontime_data["time"].values = int_data
+        with raises_regex(TypeError, "dt"):
+            nontime_data.time.dt
+
+    @requires_dask
+    def test_dask_field_access(self):
+        import dask.array as da
+
+        days = self.times_data.dt.days
+        seconds = self.times_data.dt.seconds
+        microseconds = self.times_data.dt.microseconds
+        nanoseconds = self.times_data.dt.nanoseconds
+        floor = self.times_data.dt.floor("D")
+        ceil = self.times_data.dt.ceil("D")
+        round = self.times_data.dt.round("D")
+
+        dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
+        dask_times_2d = xr.DataArray(
+            dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
+        )
+        dask_days = dask_times_2d.dt.days
+        dask_seconds = dask_times_2d.dt.seconds
+        dask_microseconds = dask_times_2d.dt.microseconds
+        dask_nanoseconds = dask_times_2d.dt.nanoseconds
+        dask_floor = dask_times_2d.dt.floor("D")
+        dask_ceil = dask_times_2d.dt.ceil("D")
+        dask_round = dask_times_2d.dt.round("D")
+
+        # Test that the data isn't eagerly evaluated
+        assert isinstance(dask_days.data, da.Array)
+        assert isinstance(dask_seconds.data, da.Array)
+        assert isinstance(dask_microseconds.data, da.Array)
+        assert isinstance(dask_nanoseconds.data, da.Array)
+
+        # Double check that outcome chunksize is unchanged
+        dask_chunks = dask_times_2d.chunks
+        assert dask_days.data.chunks == dask_chunks
+        assert dask_seconds.data.chunks == dask_chunks
+        assert dask_microseconds.data.chunks == dask_chunks
+        assert dask_nanoseconds.data.chunks == dask_chunks
+
+        # Check the actual output from the accessors
+        assert_equal(days, dask_days.compute())
+        assert_equal(seconds, dask_seconds.compute())
+        assert_equal(microseconds, dask_microseconds.compute())
+        assert_equal(nanoseconds, dask_nanoseconds.compute())
+        assert_equal(floor, dask_floor.compute())
+        assert_equal(ceil, dask_ceil.compute())
+        assert_equal(round, dask_round.compute())
+
+    def test_rounders(self):
+        dates = pd.date_range("2014-01-01", "2014-05-01", freq="H")
+        dates = dates - dates[0]
         xdates = xr.DataArray(np.arange(len(dates)), dims=["time"], coords=[dates])
         assert_array_equal(dates.floor("D").values, xdates.time.dt.floor("D").values)
         assert_array_equal(dates.ceil("D").values, xdates.time.dt.ceil("D").values)
