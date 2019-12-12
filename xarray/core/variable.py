@@ -1137,7 +1137,7 @@ class Variable(
             Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -1245,7 +1245,7 @@ class Variable(
             left.
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
