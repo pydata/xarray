@@ -353,6 +353,34 @@ class DatetimeAccessor(Properties):
         "time", "Timestamps corresponding to datetimes", object
     )
 
+    is_month_start = Properties._tslib_field_accessor(
+        "is_month_start",
+        "Indicates whether the date is the first day of the month.",
+        bool,
+    )
+    is_month_end = Properties._tslib_field_accessor(
+        "is_month_end", "Indicates whether the date is the last day of the month.", bool
+    )
+    is_quarter_start = Properties._tslib_field_accessor(
+        "is_quarter_start",
+        "Indicator for whether the date is the first day of a quarter.",
+        bool,
+    )
+    is_quarter_end = Properties._tslib_field_accessor(
+        "is_quarter_end",
+        "Indicator for whether the date is the last day of a quarter.",
+        bool,
+    )
+    is_year_start = Properties._tslib_field_accessor(
+        "is_year_start", "Indicate whether the date is the first day of a year.", bool
+    )
+    is_year_end = Properties._tslib_field_accessor(
+        "is_year_end", "Indicate whether the date is the last day of the year.", bool
+    )
+    is_leap_year = Properties._tslib_field_accessor(
+        "is_leap_year", "Boolean indicator if the date belongs to a leap year.", bool
+    )
+
 
 class TimedeltaAccessor(Properties):
     """Access Timedelta fields for DataArrays with Timedelta-like dtypes.

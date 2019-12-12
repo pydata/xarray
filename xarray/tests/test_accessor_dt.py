@@ -39,7 +39,32 @@ class TestDatetimeAccessor:
             name="data",
         )
 
-    @pytest.mark.parametrize("field", ["year", "month", "day", "hour"])
+    @pytest.mark.parametrize(
+        "field",
+        [
+            "year",
+            "month",
+            "day",
+            "hour",
+            "minute",
+            "second",
+            "microsecond",
+            "nanosecond",
+            "week",
+            "weekofyear",
+            "dayofweek",
+            "weekday",
+            "dayofyear",
+            "quarter",
+            "is_month_start",
+            "is_month_end",
+            "is_quarter_start",
+            "is_quarter_end",
+            "is_year_start",
+            "is_year_end",
+            "is_leap_year",
+        ],
+    )
     def test_field_access(self, field):
         expected = xr.DataArray(
             getattr(self.times, field), name=field, coords=[self.times], dims=["time"]
@@ -60,7 +85,32 @@ class TestDatetimeAccessor:
             nontime_data.time.dt
 
     @requires_dask
-    @pytest.mark.parametrize("field", ["year", "month", "day", "hour"])
+    @pytest.mark.parametrize(
+        "field",
+        [
+            "year",
+            "month",
+            "day",
+            "hour",
+            "minute",
+            "second",
+            "microsecond",
+            "nanosecond",
+            "week",
+            "weekofyear",
+            "dayofweek",
+            "weekday",
+            "dayofyear",
+            "quarter",
+            "is_month_start",
+            "is_month_end",
+            "is_quarter_start",
+            "is_quarter_end",
+            "is_year_start",
+            "is_year_end",
+            "is_leap_year",
+        ],
+    )
     def test_dask_field_access(self, field):
         import dask.array as da
 
@@ -76,7 +126,7 @@ class TestDatetimeAccessor:
 
         assert isinstance(actual.data, da.Array)
         assert_chunks_equal(actual, dask_times_2d)
-        assert_equal(actual, expected)
+        assert_equal(actual.compute(), expected.compute())
 
     @requires_dask
     @pytest.mark.parametrize(
