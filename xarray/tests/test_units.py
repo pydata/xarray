@@ -958,10 +958,9 @@ def test_merge_dataarray(variant, unit, error, dtype):
         dims=("y", "z"),
     )
 
-    func = function(xr.merge)
     if error is not None and variant != "data":
         with pytest.raises(error):
-            func([arr1, arr2, arr3])
+            xr.merge([arr1, arr2, arr3])
 
         return
 
@@ -980,13 +979,15 @@ def test_merge_dataarray(variant, unit, error, dtype):
     }
     expected = convert_units(
         attach_units(
-            func([strip_units(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]),
+            xr.merge(
+                [strip_units(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]
+            ),
             {**units, **{"a": original_unit, "b": data_unit, "c": data_unit}},
         ),
         expected_units,
     )
 
-    actual = func([arr1, arr2, arr3])
+    actual = xr.merge([arr1, arr2, arr3])
 
     assert extract_units(expected) == extract_units(actual)
     assert_allclose(expected, actual)
