@@ -1,4 +1,5 @@
 import operator
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,9 @@ from xarray.core.npcompat import IS_NEP18_ACTIVE
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    pint.Quantity([])
 
 unit_registry = pint.UnitRegistry()
 Quantity = unit_registry.Quantity
