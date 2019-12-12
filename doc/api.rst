@@ -593,6 +593,7 @@ Accessors
    :toctree: generated/
 
    core.accessor_dt.DatetimeAccessor
+   core.accessor_dt.TimedeltaAccessor
    core.accessor_str.StringAccessor
 
 Custom Indexes

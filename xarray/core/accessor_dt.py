@@ -227,23 +227,43 @@ class Properties:
 class DatetimeAccessor(Properties):
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
-     Similar to pandas, fields can be accessed through the `.dt` attribute
-     for applicable DataArrays:
+    Fields can be accessed through the `.dt` attribute
+    for applicable DataArrays.
 
-        >>> ds = xarray.Dataset({'time': pd.date_range(start='2000/01/01',
-        ...                                            freq='D', periods=100)})
-        >>> ds.time.dt
-        <xarray.core.accessors.DatetimeAccessor at 0x10c369f60>
-        >>> ds.time.dt.dayofyear[:5]
-        <xarray.DataArray 'dayofyear' (time: 5)>
-        array([1, 2, 3, 4, 5], dtype=int32)
-        Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+    Notes
+    ------
+    Note that these fields are not calendar-aware; if your datetimes are encoded
+    with a non-Gregorian calendar (e.g. a 360-day calendar) using cftime,
+    then some fields like `dayofyear` may not be accurate.
 
-     All of the pandas fields are accessible here. Note that these fields are
-     not calendar-aware; if your datetimes are encoded with a non-Gregorian
-     calendar (e.g. a 360-day calendar) using cftime, then some fields like
-     `dayofyear` may not be accurate.
+    Examples
+    ---------
+    >>> import xarray as xr
+    >>> import pandas as pd
+    >>> dates = pd.date_range(start='2000/01/01', freq='D', periods=10)
+    >>> ts = xr.DataArray(dates, dims=('time'))
+    >>> ts
+    <xarray.DataArray (time: 10)>
+    array(['2000-01-01T00:00:00.000000000', '2000-01-02T00:00:00.000000000',
+        '2000-01-03T00:00:00.000000000', '2000-01-04T00:00:00.000000000',
+        '2000-01-05T00:00:00.000000000', '2000-01-06T00:00:00.000000000',
+        '2000-01-07T00:00:00.000000000', '2000-01-08T00:00:00.000000000',
+        '2000-01-09T00:00:00.000000000', '2000-01-10T00:00:00.000000000'],
+        dtype='datetime64[ns]')
+    Coordinates:
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
+    >>> ts.dt
+    <xarray.core.accessor_dt.DatetimeAccessor object at 0x118b54d68>
+    >>> ts.dt.dayofyear
+    <xarray.DataArray 'dayofyear' (time: 10)>
+    array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10])
+    Coordinates:
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
+    >>> ts.dt.quarter
+    <xarray.DataArray 'quarter' (time: 10)>
+    array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    Coordinates:
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
 
     """
 
@@ -335,6 +355,47 @@ class DatetimeAccessor(Properties):
 
 
 class TimedeltaAccessor(Properties):
+    """Access Timedelta fields for DataArrays with Timedelta-like dtypes.
+
+    Fields can be accessed through the `.dt` attribute for applicable DataArrays.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import xarray as xr
+    >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
+    >>> ts = xr.DataArray(dates, dims=('time'))
+    >>> ts
+    <xarray.DataArray (time: 20)>
+    array([ 86400000000000, 108000000000000, 129600000000000, 151200000000000,
+        172800000000000, 194400000000000, 216000000000000, 237600000000000,
+        259200000000000, 280800000000000, 302400000000000, 324000000000000,
+        345600000000000, 367200000000000, 388800000000000, 410400000000000,
+        432000000000000, 453600000000000, 475200000000000, 496800000000000],
+        dtype='timedelta64[ns]')
+    Coordinates:
+    * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+    >>> ts.dt
+    <xarray.core.accessor_dt.TimedeltaAccessor object at 0x109a27d68>
+    >>> ts.dt.days
+    <xarray.DataArray 'days' (time: 20)>
+    array([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5])
+    Coordinates:
+    * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+    >>> ts.dt.microseconds
+    <xarray.DataArray 'microseconds' (time: 20)>
+    array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    Coordinates:
+    * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+    >>> ts.dt.seconds
+    <xarray.DataArray 'seconds' (time: 20)>
+    array([    0, 21600, 43200, 64800,     0, 21600, 43200, 64800,     0,
+        21600, 43200, 64800,     0, 21600, 43200, 64800,     0, 21600,
+        43200, 64800])
+    Coordinates:
+    * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+    """
+
     seconds = Properties._tslib_field_accessor(
         "seconds",
         "Number of seconds (>= 0 and less than 1 day) for each element.",
@@ -357,7 +418,7 @@ class TimedeltaAccessor(Properties):
 
 class CombinedDatetimelikeAccessor(DatetimeAccessor, TimedeltaAccessor):
     def __new__(cls, obj):
-        # CombinedDatetimelikeProperites isn't really instatiated. Instead
+        # CombinedDatetimelikeAccessor isn't really instatiated. Instead
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
