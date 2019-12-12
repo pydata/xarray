@@ -207,6 +207,11 @@ def attach_units(obj, units):
 
 
 def convert_units(obj, to):
+    # preprocess
+    to = {
+        key: None if not isinstance(value, unit_registry.Unit) else value
+        for key, value in to.items()
+    }
     if isinstance(obj, xr.Dataset):
         data_vars = {
             name: convert_units(array.variable, {None: to.get(name)})
