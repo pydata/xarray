@@ -242,7 +242,7 @@ class Properties:
         )
 
 
-class DatetimeProperties(Properties):
+class DatetimeAccessor(Properties):
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
      Similar to pandas, fields can be accessed through the `.dt` attribute
@@ -324,7 +324,7 @@ class DatetimeProperties(Properties):
     )
 
 
-class TimedeltaProperties(Properties):
+class TimedeltaAccessor(Properties):
     def _tslib_field_accessor(  # type: ignore
         name: str, docstring: str = None, dtype: np.dtype = None
     ):
@@ -359,7 +359,7 @@ class TimedeltaProperties(Properties):
     )
 
 
-class CombinedDatetimelikeProperties(DatetimeProperties, TimedeltaProperties):
+class CombinedDatetimelikeAccessor(DatetimeAccessor, TimedeltaAccessor):
     def __new__(cls, obj):
         # CombinedDatetimelikeProperites isn't really instatiated. Instead
         # we need to choose which parent (datetime or timedelta) is
@@ -374,6 +374,6 @@ class CombinedDatetimelikeProperties(DatetimeProperties, TimedeltaProperties):
             )
 
         if _is_timedelta64_dtype(obj.dtype):
-            return TimedeltaProperties(obj)
+            return TimedeltaAccessor(obj)
         else:
-            return DatetimeProperties(obj)
+            return DatetimeAccessor(obj)

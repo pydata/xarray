@@ -148,7 +148,7 @@ class TestDatetimelikeProperties:
         assert_array_equal(dates.round("D").values, xdates.time.dt.round("D").values)
 
 
-class TestTimedeltaProperties:
+class TestTimedeltaAccessor:
     @pytest.fixture(autouse=True)
     def setup(self):
         nt = 100

@@ -33,7 +33,7 @@ from . import (
     rolling,
     utils,
 )
-from .accessor_dt import CombinedDatetimelikeProperties
+from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
     _broadcast_helper,
@@ -258,7 +258,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
-    dt = property(CombinedDatetimelikeProperties)
+    dt = property(CombinedDatetimelikeAccessor)
 
     def __init__(
         self,
