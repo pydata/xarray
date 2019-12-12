@@ -31,6 +31,8 @@ New Features
 - Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
   and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Support `.dt` accessor for timedelta via :py:class:`core.accessor_dt.TimedeltaAccessor`
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Bug fixes
 ~~~~~~~~~
