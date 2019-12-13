@@ -527,7 +527,7 @@ def open_dataset(
         if engine == "scipy":
             store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
         elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore(
+            store = backends.H5NetCDFStore.open(
                 filename_or_obj, group=group, lock=lock, **backend_kwargs
             )
 
