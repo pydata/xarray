@@ -346,7 +346,10 @@ class Variable(
     def data(self, data):
         data = as_compatible_data(data)
         if data.shape != self.shape:
-            raise ValueError("replacement data must match the Variable's shape")
+            raise ValueError(
+                f"replacement data must match the Variable's shape. "
+                f"data.shape is {data.shape}; Variable.shape is {self.shape}"
+            )
         self._data = data
 
     def load(self, **kwargs):
