@@ -503,7 +503,7 @@ def open_dataset(
         elif engine == "pydap":
             store = backends.PydapDataStore.open(filename_or_obj, **backend_kwargs)
         elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore(
+            store = backends.H5NetCDFStore.open(
                 filename_or_obj, group=group, lock=lock, **backend_kwargs
             )
         elif engine == "pynio":
@@ -981,7 +981,7 @@ def open_mfdataset(
 WRITEABLE_STORES: Dict[str, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
-    "h5netcdf": backends.H5NetCDFStore,
+    "h5netcdf": backends.H5NetCDFStore.open,
 }
 
 
