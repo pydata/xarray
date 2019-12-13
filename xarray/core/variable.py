@@ -348,7 +348,7 @@ class Variable(
         if data.shape != self.shape:
             raise ValueError(
                 f"replacement data must match the Variable's shape. "
-                f"data.shape is {data.shape}; Variable.shape is {self.shape}"
+                f"replacement data has shape {data.shape}; Variable has shape {self.shape}"
             )
         self._data = data
 
