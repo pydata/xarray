@@ -2347,6 +2347,7 @@ class TestH5NetCDFData(NetCDF4Base):
 
     def test_already_open_dataset_group(self):
         import h5netcdf
+
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 group = nc.createGroup("g")

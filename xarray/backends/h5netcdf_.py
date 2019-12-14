@@ -80,9 +80,7 @@ class H5NetCDFStore(WritableCFDataStore):
         "_mode",
     )
 
-    def __init__(
-            self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False
-    ):
+    def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
 
         import h5netcdf
 
@@ -126,9 +124,7 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = CachingFileManager(
-            h5netcdf.File, filename, mode=mode, kwargs=kwargs
-        )
+        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
