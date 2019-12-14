@@ -31,6 +31,9 @@ New Features
 - Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
   and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Add `attrs_file` option in :py:func:`~xarray.open_mfdataset` to choose the
+  source file for global attributes in a multi-file dataset (:issue:`2382`,
+  :pull:`3498`) by `Julien Seguinot <https://github.com/juseg>_`.
 
 Bug fixes
 ~~~~~~~~~
@@ -153,9 +156,6 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add the documented-but-missing :py:meth:`DatasetGroupBy.quantile`.
   (:issue:`3525`, :pull:`3527`). By `Justus Magin <https://github.com/keewis>`_.
-- Add `attrs_file` option in :py:func:`~xarray.open_mfdataset` to choose the
-  source file for global attributes in a multi-file dataset (:issue:`2382`,
-  :pull:`3498`) by `Julien Seguinot <https://github.com/juseg>_`.
 
 Bug fixes
 ~~~~~~~~~
