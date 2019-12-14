@@ -88,7 +88,7 @@ def _infer_concat_order_from_coords(datasets):
                 # with the same value have the same coord values throughout.
                 if any(index.size == 0 for index in indexes):
                     raise ValueError("Cannot handle size zero dimensions")
-                first_items = pd.Index([index.take([0]) for index in indexes])
+                first_items = pd.Index([index[0] for index in indexes])
 
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
@@ -531,6 +531,7 @@ def combine_by_coords(
         * 'all': All data variables will be concatenated.
         * list of str: The listed data variables will be concatenated, in
           addition to the 'minimal' data variables.
+
         If objects are DataArrays, `data_vars` must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
         As per the 'data_vars' kwarg, but for coordinate variables.
@@ -747,6 +748,7 @@ def auto_combine(
              'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
+
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.

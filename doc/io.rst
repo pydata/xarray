@@ -437,8 +437,22 @@ like ``'days'`` for ``timedelta64`` data. ``calendar`` should be one of the cale
 supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'noleap',
 '365_day', '360_day', 'julian', 'all_leap', '366_day'.
 
-By default, xarray uses the 'proleptic_gregorian' calendar and units of the smallest time
+By default, xarray uses the ``'proleptic_gregorian'`` calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
+
+
+.. _io.coordinates:
+
+Coordinates
+...........
+
+You can control the ``coordinates`` attribute written to disk by specifying ``DataArray.encoding["coordinates"]``.
+If not specified, xarray automatically sets ``DataArray.encoding["coordinates"]`` to a space-delimited list
+of names of coordinate variables that share dimensions with the ``DataArray`` being written.
+This allows perfect roundtripping of xarray datasets but may not be desirable.
+When an xarray ``Dataset`` contains non-dimensional coordinates that do not share dimensions with any of
+the variables, these coordinate variable names are saved under a "global" ``"coordinates"`` attribute.
+This is not CF-compliant but again facilitates roundtripping of xarray datasets.
 
 Invalid netCDF files
 ~~~~~~~~~~~~~~~~~~~~
@@ -735,8 +749,8 @@ The ``x`` and ``y`` coordinates are generated out of the file's metadata
 (``bounds``, ``width``, ``height``), and they can be understood as cartesian
 coordinates defined in the file's projection provided by the ``crs`` attribute.
 ``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
-See :ref:`recipes.rasterio` for an example of how to convert these to
-longitudes and latitudes.
+See :ref:`/examples/visualization_gallery.ipynb#Parsing-rasterio-geocoordinates`
+for an example of how to convert these to longitudes and latitudes.
 
 .. warning::
 

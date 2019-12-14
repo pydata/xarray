@@ -730,13 +730,13 @@ def open_mfdataset(
     ``combine_by_coords`` and ``combine_nested``. By default the old (now deprecated)
     ``auto_combine`` will be used, please specify either ``combine='by_coords'`` or
     ``combine='nested'`` in future. Requires dask to be installed. See documentation for
-    details on dask [1]. Global attributes from the ``attrs_file`` are used
+    details on dask [1]_. Global attributes from the ``attrs_file`` are used
     for the combined dataset.
 
     Parameters
     ----------
     paths : str or sequence
-        Either a string glob in the form "path/to/my/files/*.nc" or an explicit list of
+        Either a string glob in the form ``"path/to/my/files/*.nc"`` or an explicit list of
         files to open. Paths can be given as strings or as pathlib Paths. If
         concatenation along more than one dimension is desired, then ``paths`` must be a
         nested list-of-lists (see ``manual_combine`` for details). (A string glob will
@@ -746,7 +746,7 @@ def open_mfdataset(
         In general, these should divide the dimensions of each dataset. If int, chunk
         each dimension by ``chunks``. By default, chunks will be chosen to load entire
         input files into memory at once. This has a major impact on performance: please
-        see the full documentation for more details [2].
+        see the full documentation for more details [2]_.
     concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
         if any of the dimensions along which you want to concatenate is not a dimension
@@ -762,6 +762,7 @@ def open_mfdataset(
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
+
          * 'broadcast_equals': all values must be equal when variables are
            broadcast against each other to ensure common dimensions.
          * 'equals': all values and dimensions must be the same.
@@ -771,6 +772,7 @@ def open_mfdataset(
            must be equal. The returned dataset then contains the combination
            of all non-null values.
          * 'override': skip comparing and pick variable from first dataset
+
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
@@ -1249,6 +1251,8 @@ def _validate_datatypes_for_zarr_append(dataset):
     def check_dtype(var):
         if (
             not np.issubdtype(var.dtype, np.number)
+            and not np.issubdtype(var.dtype, np.datetime64)
+            and not np.issubdtype(var.dtype, np.bool)
             and not coding.strings.is_unicode_dtype(var.dtype)
             and not var.dtype == object
         ):
@@ -1256,8 +1260,9 @@ def _validate_datatypes_for_zarr_append(dataset):
             raise ValueError(
                 "Invalid dtype for data variable: {} "
                 "dtype must be a subtype of number, "
-                "a fixed sized string, a fixed size "
-                "unicode string or an object".format(var)
+                "datetime, bool, a fixed sized string, "
+                "a fixed size unicode string or an "
+                "object".format(var)
             )
 
     for k in dataset.data_vars.values():
