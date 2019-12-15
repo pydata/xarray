@@ -370,6 +370,7 @@
    IndexVariable.equals
    IndexVariable.fillna
    IndexVariable.get_axis_num
+   IndexVariable.get_level_variable
    IndexVariable.identical
    IndexVariable.isel
    IndexVariable.isnull
