@@ -276,6 +276,72 @@
    DataArray.cumprod
    DataArray.rank
 
+   core.accessor_dt.DatetimeAccessor.ceil
+   core.accessor_dt.DatetimeAccessor.floor
+   core.accessor_dt.DatetimeAccessor.round
+   core.accessor_dt.DatetimeAccessor.strftime
+   core.accessor_dt.DatetimeAccessor.day
+   core.accessor_dt.DatetimeAccessor.dayofweek
+   core.accessor_dt.DatetimeAccessor.dayofyear
+   core.accessor_dt.DatetimeAccessor.days_in_month
+   core.accessor_dt.DatetimeAccessor.daysinmonth
+   core.accessor_dt.DatetimeAccessor.hour
+   core.accessor_dt.DatetimeAccessor.microsecond
+   core.accessor_dt.DatetimeAccessor.minute
+   core.accessor_dt.DatetimeAccessor.month
+   core.accessor_dt.DatetimeAccessor.nanosecond
+   core.accessor_dt.DatetimeAccessor.quarter
+   core.accessor_dt.DatetimeAccessor.season
+   core.accessor_dt.DatetimeAccessor.second
+   core.accessor_dt.DatetimeAccessor.time
+   core.accessor_dt.DatetimeAccessor.week
+   core.accessor_dt.DatetimeAccessor.weekday
+   core.accessor_dt.DatetimeAccessor.weekday_name
+   core.accessor_dt.DatetimeAccessor.weekofyear
+   core.accessor_dt.DatetimeAccessor.year
+
+   core.accessor_str.StringAccessor.capitalize
+   core.accessor_str.StringAccessor.center
+   core.accessor_str.StringAccessor.contains
+   core.accessor_str.StringAccessor.count
+   core.accessor_str.StringAccessor.decode
+   core.accessor_str.StringAccessor.encode
+   core.accessor_str.StringAccessor.endswith
+   core.accessor_str.StringAccessor.find
+   core.accessor_str.StringAccessor.get
+   core.accessor_str.StringAccessor.index
+   core.accessor_str.StringAccessor.isalnum
+   core.accessor_str.StringAccessor.isalpha
+   core.accessor_str.StringAccessor.isdecimal
+   core.accessor_str.StringAccessor.isdigit
+   core.accessor_str.StringAccessor.islower
+   core.accessor_str.StringAccessor.isnumeric
+   core.accessor_str.StringAccessor.isspace
+   core.accessor_str.StringAccessor.istitle
+   core.accessor_str.StringAccessor.isupper
+   core.accessor_str.StringAccessor.len
+   core.accessor_str.StringAccessor.ljust
+   core.accessor_str.StringAccessor.lower
+   core.accessor_str.StringAccessor.lstrip
+   core.accessor_str.StringAccessor.match
+   core.accessor_str.StringAccessor.pad
+   core.accessor_str.StringAccessor.repeat
+   core.accessor_str.StringAccessor.replace
+   core.accessor_str.StringAccessor.rfind
+   core.accessor_str.StringAccessor.rindex
+   core.accessor_str.StringAccessor.rjust
+   core.accessor_str.StringAccessor.rstrip
+   core.accessor_str.StringAccessor.slice
+   core.accessor_str.StringAccessor.slice_replace
+   core.accessor_str.StringAccessor.startswith
+   core.accessor_str.StringAccessor.strip
+   core.accessor_str.StringAccessor.swapcase
+   core.accessor_str.StringAccessor.title
+   core.accessor_str.StringAccessor.translate
+   core.accessor_str.StringAccessor.upper
+   core.accessor_str.StringAccessor.wrap
+   core.accessor_str.StringAccessor.zfill
+
    Variable.all
    Variable.any
    Variable.argmax
