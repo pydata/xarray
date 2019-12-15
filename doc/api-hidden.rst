@@ -301,7 +301,6 @@
    Variable.unstack
    Variable.var
    Variable.where
-
    Variable.T
    Variable.attrs
    Variable.chunks
@@ -317,6 +316,81 @@
    Variable.size
    Variable.sizes
    Variable.values
+
+   IndexVariable.all
+   IndexVariable.any
+   IndexVariable.argmax
+   IndexVariable.argmin
+   IndexVariable.argsort
+   IndexVariable.astype
+   IndexVariable.broadcast_equals
+   IndexVariable.chunk
+   IndexVariable.clip
+   IndexVariable.coarsen
+   IndexVariable.compute
+   IndexVariable.concat
+   IndexVariable.conj
+   IndexVariable.conjugate
+   IndexVariable.copy
+   IndexVariable.count
+   IndexVariable.cumprod
+   IndexVariable.cumsum
+   IndexVariable.equals
+   IndexVariable.fillna
+   IndexVariable.get_axis_num
+   IndexVariable.identical
+   IndexVariable.isel
+   IndexVariable.isnull
+   IndexVariable.item
+   IndexVariable.load
+   IndexVariable.max
+   IndexVariable.mean
+   IndexVariable.median
+   IndexVariable.min
+   IndexVariable.no_conflicts
+   IndexVariable.notnull
+   IndexVariable.pad_with_fill_value
+   IndexVariable.prod
+   IndexVariable.quantile
+   IndexVariable.rank
+   IndexVariable.reduce
+   IndexVariable.roll
+   IndexVariable.rolling_window
+   IndexVariable.round
+   IndexVariable.searchsorted
+   IndexVariable.set_dims
+   IndexVariable.shift
+   IndexVariable.squeeze
+   IndexVariable.stack
+   IndexVariable.std
+   IndexVariable.sum
+   IndexVariable.to_base_variable
+   IndexVariable.to_coord
+   IndexVariable.to_dict
+   IndexVariable.to_index
+   IndexVariable.to_index_variable
+   IndexVariable.to_variable
+   IndexVariable.transpose
+   IndexVariable.unstack
+   IndexVariable.var
+   IndexVariable.where
+   IndexVariable.T
+   IndexVariable.attrs
+   IndexVariable.chunks
+   IndexVariable.data
+   IndexVariable.dims
+   IndexVariable.dtype
+   IndexVariable.encoding
+   IndexVariable.imag
+   IndexVariable.level_names
+   IndexVariable.name
+   IndexVariable.nbytes
+   IndexVariable.ndim
+   IndexVariable.real
+   IndexVariable.shape
+   IndexVariable.size
+   IndexVariable.sizes
+   IndexVariable.values
 
    ufuncs.angle
    ufuncs.arccos
