@@ -450,3 +450,41 @@
    CFTimeIndex.value_counts
    CFTimeIndex.view
    CFTimeIndex.where
+
+   CFTimeIndex.T
+   CFTimeIndex.array
+   CFTimeIndex.asi8
+   CFTimeIndex.base
+   CFTimeIndex.data
+   CFTimeIndex.date_type
+   CFTimeIndex.day
+   CFTimeIndex.dayofweek
+   CFTimeIndex.dayofyear
+   CFTimeIndex.dtype
+   CFTimeIndex.dtype_str
+   CFTimeIndex.empty
+   CFTimeIndex.flags
+   CFTimeIndex.has_duplicates
+   CFTimeIndex.hasnans
+   CFTimeIndex.hour
+   CFTimeIndex.inferred_type
+   CFTimeIndex.is_all_dates
+   CFTimeIndex.is_monotonic
+   CFTimeIndex.is_monotonic_increasing
+   CFTimeIndex.is_monotonic_decreasing
+   CFTimeIndex.is_unique
+   CFTimeIndex.itemsize
+   CFTimeIndex.microsecond
+   CFTimeIndex.minute
+   CFTimeIndex.month
+   CFTimeIndex.name
+   CFTimeIndex.names
+   CFTimeIndex.nbytes
+   CFTimeIndex.ndim
+   CFTimeIndex.nlevels
+   CFTimeIndex.second
+   CFTimeIndex.shape
+   CFTimeIndex.size
+   CFTimeIndex.strides
+   CFTimeIndex.values
+   CFTimeIndex.year
