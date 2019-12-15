@@ -477,7 +477,7 @@ Enhancements
 
 - ``xarray.Dataset.drop`` now supports keyword arguments; dropping index
   labels by using both ``dim`` and ``labels`` or using a
-  ``DataArrayCoordinates`` object are deprecated (:issue:`2910`).
+  :py:class:`~core.coordinates.DataArrayCoordinates` object are deprecated (:issue:`2910`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 - Added examples of :py:meth:`Dataset.set_index` and

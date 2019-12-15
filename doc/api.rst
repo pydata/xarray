@@ -541,6 +541,15 @@ DataArray methods
    DataArray.unify_chunks
    DataArray.map_blocks
 
+Coordinates objects
+===================
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DataArrayCoordinates
+   core.coordinates.DatasetCoordinates
+
 GroupBy objects
 ===============
 

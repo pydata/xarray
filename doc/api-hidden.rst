@@ -27,6 +27,18 @@
    Dataset.std
    Dataset.var
 
+   core.coordinates.DatasetCoordinates.get
+   core.coordinates.DatasetCoordinates.items
+   core.coordinates.DatasetCoordinates.keys
+   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.to_dataset
+   core.coordinates.DatasetCoordinates.to_index
+   core.coordinates.DatasetCoordinates.update
+   core.coordinates.DatasetCoordinates.values
+   core.coordinates.DatasetCoordinates.dims
+   core.coordinates.DatasetCoordinates.indexes
+   core.coordinates.DatasetCoordinates.variables
+
    core.rolling.DatasetCoarsen.all
    core.rolling.DatasetCoarsen.any
    core.rolling.DatasetCoarsen.argmax
@@ -135,6 +147,18 @@
    DataArray.sum
    DataArray.std
    DataArray.var
+
+   core.coordinates.DataArrayCoordinates.get
+   core.coordinates.DataArrayCoordinates.items
+   core.coordinates.DataArrayCoordinates.keys
+   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.to_dataset
+   core.coordinates.DataArrayCoordinates.to_index
+   core.coordinates.DataArrayCoordinates.update
+   core.coordinates.DataArrayCoordinates.values
+   core.coordinates.DataArrayCoordinates.dims
+   core.coordinates.DataArrayCoordinates.indexes
+   core.coordinates.DataArrayCoordinates.variables
 
    core.rolling.DataArrayCoarsen.all
    core.rolling.DataArrayCoarsen.any
