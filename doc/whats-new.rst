@@ -25,6 +25,10 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Some boundary options ('edge' | 'reflect' | 'symmetric' | 'wrap') are 
+  newly supported in :py:meth:`~xarray.DataArray.rolling.construct`.
+  (:issue:`2007`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.

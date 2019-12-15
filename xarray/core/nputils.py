@@ -140,7 +140,7 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def rolling_window(a, axis, window, center, fill_value):
+def rolling_window(a, axis, window, center, fill_value, mode):
     """ rolling window with padding. """
     pads = [(0, 0) for s in a.shape]
     if center:
@@ -149,7 +149,10 @@ def rolling_window(a, axis, window, center, fill_value):
         pads[axis] = (start, end)
     else:
         pads[axis] = (window - 1, 0)
-    a = np.pad(a, pads, mode="constant", constant_values=fill_value)
+    if mode is None:
+        a = np.pad(a, pads, mode="constant", constant_values=fill_value)
+    else:
+        a = np.pad(a, pads, mode=mode)
     return _rolling_window(a, window, axis)
 
 

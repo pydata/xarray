@@ -821,6 +821,10 @@ class VariableSubclassobjects:
             assert_array_equal(actual, expected)
 
     def test_rolling_window(self):
+        v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
+        self._test_rolling_window(v)
+
+    def _test_rolling_window(self, v):
         # Just a working test. See test_nputils for the algorithm validation
         v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
         for (d, w) in [("x", 3), ("y", 5)]:
@@ -834,6 +838,15 @@ class VariableSubclassobjects:
 
             # dask and numpy result should be the same
             v_loaded = v.load().rolling_window(d, w, d + "_window", center=True)
+            assert_array_equal(v_rolling, v_loaded)
+
+            # dask and numpy result should be the same
+            v_rolling = v.rolling_window(
+                d, w, d + "_window", center=True, mode="symmetric"
+            )
+            v_loaded = v.load().rolling_window(
+                d, w, d + "_window", center=True, mode="symmetric"
+            )
             assert_array_equal(v_rolling, v_loaded)
 
             # numpy backend should not be over-written
@@ -1912,6 +1925,11 @@ class TestVariableWithDask(VariableSubclassobjects):
             v._getitem_with_mask(indexer, fill_value=-1),
             self.cls(("x", "y"), [[0, -1], [-1, 2]]),
         )
+
+    def test_rolling_window(self):
+        v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
+        self._test_rolling_window(v)
+        self._test_rolling_window(v.chunk({"x": 4, "y": 5, "z": -1}))
 
 
 @requires_sparse

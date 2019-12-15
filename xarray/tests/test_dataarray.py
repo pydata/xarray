@@ -4256,6 +4256,14 @@ def test_rolling_wrapped_dask_nochunk(center):
     assert_allclose(actual, expected)
 
 
+@pytest.mark.parametrize("da", (1, 2), indirect=True)
+@pytest.mark.parametrize("center", [True, False])
+@pytest.mark.parametrize("mode", ["edge", "symmetric", "reflect", "wrap"])
+def test_rolling_mode(da, center, mode):
+    # just a working test
+    da.rolling(time=7, center=center).construct("constructed", mode=mode)
+
+
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
