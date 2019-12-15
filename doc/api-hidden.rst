@@ -488,3 +488,104 @@
    CFTimeIndex.strides
    CFTimeIndex.values
    CFTimeIndex.year
+
+   backends.NetCDF4DataStore.close
+   backends.NetCDF4DataStore.encode
+   backends.NetCDF4DataStore.encode_attribute
+   backends.NetCDF4DataStore.encode_variable
+   backends.NetCDF4DataStore.get
+   backends.NetCDF4DataStore.get_attrs
+   backends.NetCDF4DataStore.get_dimensions
+   backends.NetCDF4DataStore.get_encoding
+   backends.NetCDF4DataStore.get_variables
+   backends.NetCDF4DataStore.items
+   backends.NetCDF4DataStore.keys
+   backends.NetCDF4DataStore.load
+   backends.NetCDF4DataStore.open
+   backends.NetCDF4DataStore.open_store_variable
+   backends.NetCDF4DataStore.prepare_variable
+   backends.NetCDF4DataStore.set_attribute
+   backends.NetCDF4DataStore.set_attributes
+   backends.NetCDF4DataStore.set_dimension
+   backends.NetCDF4DataStore.set_dimensions
+   backends.NetCDF4DataStore.set_variable
+   backends.NetCDF4DataStore.set_variables
+   backends.NetCDF4DataStore.store
+   backends.NetCDF4DataStore.store_dataset
+   backends.NetCDF4DataStore.sync
+   backends.NetCDF4DataStore.values
+
+   backends.H5NetCDFStore.close
+   backends.H5NetCDFStore.encode
+   backends.H5NetCDFStore.encode_attribute
+   backends.H5NetCDFStore.encode_variable
+   backends.H5NetCDFStore.get
+   backends.H5NetCDFStore.get_attrs
+   backends.H5NetCDFStore.get_dimensions
+   backends.H5NetCDFStore.get_encoding
+   backends.H5NetCDFStore.get_variables
+   backends.H5NetCDFStore.items
+   backends.H5NetCDFStore.keys
+   backends.H5NetCDFStore.load
+   backends.H5NetCDFStore.open_store_variable
+   backends.H5NetCDFStore.prepare_variable
+   backends.H5NetCDFStore.set_attribute
+   backends.H5NetCDFStore.set_attributes
+   backends.H5NetCDFStore.set_dimension
+   backends.H5NetCDFStore.set_dimensions
+   backends.H5NetCDFStore.set_variable
+   backends.H5NetCDFStore.set_variables
+   backends.H5NetCDFStore.store
+   backends.H5NetCDFStore.store_dataset
+   backends.H5NetCDFStore.sync
+   backends.H5NetCDFStore.values
+
+   backends.PydapDataStore.close
+   backends.PydapDataStore.get
+   backends.PydapDataStore.get_attrs
+   backends.PydapDataStore.get_dimensions
+   backends.PydapDataStore.get_encoding
+   backends.PydapDataStore.get_variables
+   backends.PydapDataStore.items
+   backends.PydapDataStore.keys
+   backends.PydapDataStore.load
+   backends.PydapDataStore.open
+   backends.PydapDataStore.open_store_variable
+   backends.PydapDataStore.values
+
+   backends.ScipyDataStore.close
+   backends.ScipyDataStore.encode
+   backends.ScipyDataStore.encode_attribute
+   backends.ScipyDataStore.encode_variable
+   backends.ScipyDataStore.get
+   backends.ScipyDataStore.get_attrs
+   backends.ScipyDataStore.get_dimensions
+   backends.ScipyDataStore.get_encoding
+   backends.ScipyDataStore.get_variables
+   backends.ScipyDataStore.items
+   backends.ScipyDataStore.keys
+   backends.ScipyDataStore.load
+   backends.ScipyDataStore.open_store_variable
+   backends.ScipyDataStore.prepare_variable
+   backends.ScipyDataStore.set_attribute
+   backends.ScipyDataStore.set_attributes
+   backends.ScipyDataStore.set_dimension
+   backends.ScipyDataStore.set_dimensions
+   backends.ScipyDataStore.set_variable
+   backends.ScipyDataStore.set_variables
+   backends.ScipyDataStore.store
+   backends.ScipyDataStore.store_dataset
+   backends.ScipyDataStore.sync
+   backends.ScipyDataStore.values
+
+   backends.FileManager.acquire
+   backends.FileManager.acquire_context
+   backends.FileManager.close
+
+   backends.CachingFileManager.acquire
+   backends.CachingFileManager.acquire_context
+   backends.CachingFileManager.close
+
+   backends.DummyFileManager.acquire
+   backends.DummyFileManager.acquire_context
+   backends.DummyFileManager.close
