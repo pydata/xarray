@@ -76,7 +76,9 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
+   Dataset.get
    Dataset.items
+   Dataset.keys
    Dataset.values
 
 Dataset contents
