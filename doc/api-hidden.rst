@@ -128,6 +128,8 @@
    core.rolling.DatasetRolling.rollings
    core.rolling.DatasetRolling.window
 
+   core.rolling_exp.RollingExp.mean
+
    Dataset.argsort
    Dataset.astype
    Dataset.clip
