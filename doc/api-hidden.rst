@@ -52,6 +52,12 @@
    core.rolling.DatasetCoarsen.std
    core.rolling.DatasetCoarsen.sum
    core.rolling.DatasetCoarsen.var
+   core.rolling.DatasetCoarsen.boundary
+   core.rolling.DatasetCoarsen.coord_func
+   core.rolling.DatasetCoarsen.obj
+   core.rolling.DatasetCoarsen.side
+   core.rolling.DatasetCoarsen.trim_excess
+   core.rolling.DatasetCoarsen.windows
 
    core.groupby.DatasetGroupBy.assign
    core.groupby.DatasetGroupBy.assign_coords
@@ -73,6 +79,8 @@
    core.groupby.DatasetGroupBy.std
    core.groupby.DatasetGroupBy.sum
    core.groupby.DatasetGroupBy.var
+   core.groupby.DatasetGroupBy.dims
+   core.groupby.DatasetGroupBy.groups
 
    core.resample.DatasetResample.all
    core.resample.DatasetResample.any
@@ -99,6 +107,8 @@
    core.resample.DatasetResample.sum
    core.resample.DatasetResample.var
    core.resample.DatasetResample.where
+   core.resample.DatasetResample.dims
+   core.resample.DatasetResample.groups
 
    core.rolling.DatasetRolling.argmax
    core.rolling.DatasetRolling.argmin
@@ -111,6 +121,12 @@
    core.rolling.DatasetRolling.std
    core.rolling.DatasetRolling.sum
    core.rolling.DatasetRolling.var
+   core.rolling.DatasetRolling.center
+   core.rolling.DatasetRolling.dim
+   core.rolling.DatasetRolling.min_periods
+   core.rolling.DatasetRolling.obj
+   core.rolling.DatasetRolling.rollings
+   core.rolling.DatasetRolling.window
 
    Dataset.argsort
    Dataset.astype
@@ -173,6 +189,12 @@
    core.rolling.DataArrayCoarsen.std
    core.rolling.DataArrayCoarsen.sum
    core.rolling.DataArrayCoarsen.var
+   core.rolling.DataArrayCoarsen.boundary
+   core.rolling.DataArrayCoarsen.coord_func
+   core.rolling.DataArrayCoarsen.obj
+   core.rolling.DataArrayCoarsen.side
+   core.rolling.DataArrayCoarsen.trim_excess
+   core.rolling.DataArrayCoarsen.windows
 
    core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first
@@ -193,6 +215,8 @@
    core.groupby.DataArrayGroupBy.std
    core.groupby.DataArrayGroupBy.sum
    core.groupby.DataArrayGroupBy.var
+   core.groupby.DataArrayGroupBy.dims
+   core.groupby.DataArrayGroupBy.groups
 
    core.resample.DataArrayResample.all
    core.resample.DataArrayResample.any
@@ -218,6 +242,8 @@
    core.resample.DataArrayResample.sum
    core.resample.DataArrayResample.var
    core.resample.DataArrayResample.where
+   core.resample.DataArrayResample.dims
+   core.resample.DataArrayResample.groups
 
    core.rolling.DataArrayRolling.argmax
    core.rolling.DataArrayRolling.argmin
@@ -230,6 +256,12 @@
    core.rolling.DataArrayRolling.std
    core.rolling.DataArrayRolling.sum
    core.rolling.DataArrayRolling.var
+   core.rolling.DataArrayRolling.center
+   core.rolling.DataArrayRolling.dim
+   core.rolling.DataArrayRolling.min_periods
+   core.rolling.DataArrayRolling.obj
+   core.rolling.DataArrayRolling.window
+   core.rolling.DataArrayRolling.window_labels
 
    DataArray.argsort
    DataArray.clip
