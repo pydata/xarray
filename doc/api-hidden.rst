@@ -538,6 +538,14 @@
    backends.NetCDF4DataStore.store_dataset
    backends.NetCDF4DataStore.sync
    backends.NetCDF4DataStore.values
+   backends.NetCDF4DataStore.attrs
+   backends.NetCDF4DataStore.autoclose
+   backends.NetCDF4DataStore.dimensions
+   backends.NetCDF4DataStore.ds
+   backends.NetCDF4DataStore.format
+   backends.NetCDF4DataStore.is_remote
+   backends.NetCDF4DataStore.lock
+   backends.NetCDF4DataStore.variables
 
    backends.H5NetCDFStore.close
    backends.H5NetCDFStore.encode
@@ -563,6 +571,10 @@
    backends.H5NetCDFStore.store_dataset
    backends.H5NetCDFStore.sync
    backends.H5NetCDFStore.values
+   backends.H5NetCDFStore.attrs
+   backends.H5NetCDFStore.dimensions
+   backends.H5NetCDFStore.ds
+   backends.H5NetCDFStore.variables
 
    backends.PydapDataStore.close
    backends.PydapDataStore.get
@@ -576,6 +588,9 @@
    backends.PydapDataStore.open
    backends.PydapDataStore.open_store_variable
    backends.PydapDataStore.values
+   backends.PydapDataStore.attrs
+   backends.PydapDataStore.dimensions
+   backends.PydapDataStore.variables
 
    backends.ScipyDataStore.close
    backends.ScipyDataStore.encode
@@ -601,6 +616,10 @@
    backends.ScipyDataStore.store_dataset
    backends.ScipyDataStore.sync
    backends.ScipyDataStore.values
+   backends.ScipyDataStore.attrs
+   backends.ScipyDataStore.dimensions
+   backends.ScipyDataStore.ds
+   backends.ScipyDataStore.variables
 
    backends.FileManager.acquire
    backends.FileManager.acquire_context
