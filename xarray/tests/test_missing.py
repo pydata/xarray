@@ -497,22 +497,31 @@ def test_get_clean_interp_index_calendar(cf_da, calendar):
     Another option would be to have an index in units of years, but this would likely create other difficulties.
     """
     i = get_clean_interp_index(cf_da(calendar), dim="time")
-    np.testing.assert_array_equal(i, range(10))
+    np.testing.assert_array_equal(i, np.arange(10) * 1e9 * 86400)
 
 
 @requires_cftime
 @pytest.mark.parametrize(
-    ("calendar", "freq"),
-    zip(["julian", "gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"]),
+    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
 )
 def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     """In the gregorian case, the index should be proportional to normal datetimes."""
     g = cf_da(calendar, freq=freq)
     g["stime"] = xr.Variable(data=g.time.to_index().to_datetimeindex(), dims=("time",))
 
-    gi = get_clean_interp_index(g, "time") * 1e9 * 86400  # Convert days to nanoseconds
+    gi = get_clean_interp_index(g, "time")
     si = get_clean_interp_index(g, "time", use_coordinate="stime")
     np.testing.assert_array_equal(gi, si)
+
+
+@pytest.mark.xfail
+def test_get_clean_interp_index_overflow():
+    da = xr.DataArray(
+        [0, 1, 2],
+        dims=("time",),
+        coords={"time": xr.cftime_range("0000-01-01", periods=3, calendar="360_day")},
+    )
+    get_clean_interp_index(da, "time")
 
 
 @pytest.fixture

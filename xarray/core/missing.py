@@ -262,11 +262,11 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
         raise ValueError(f"Index {index.name!r} has duplicate values")
 
     # Special case for non-standard calendar indexes
-    # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of days
+    # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
     if isinstance(index, CFTimeIndex):
         offset = type(index[0])(1970, 1, 1)
         index = Variable(
-            data=datetime_to_numeric(index, offset=offset, datetime_unit="D"),
+            data=datetime_to_numeric(index, offset=offset, datetime_unit="ns"),
             dims=(dim,),
         )
 
