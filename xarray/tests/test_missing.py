@@ -20,10 +20,10 @@ from xarray.tests import (
     requires_bottleneck,
     requires_dask,
     requires_scipy,
+    requires_cftime,
 )
 
 from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
-from . import requires_cftime
 
 
 @pytest.fixture
@@ -31,16 +31,16 @@ def da():
     return xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
 
 
-@pytest.fixture(params=_CFTIME_CALENDARS)
-def calendar(request):
-    return request.param
-
-
 @pytest.fixture
-def cf_da(calendar):
-    times = xr.cftime_range(start="1970-01-01", freq="1D", periods=3, calendar=calendar)
-    values = np.arange(3)
-    return xr.DataArray(values, dims=("time",), coords={"time": times})
+def cf_da():
+    def _cf_da(calendar, freq="1D"):
+        times = xr.cftime_range(
+            start="1970-01-01", freq=freq, periods=10, calendar=calendar
+        )
+        values = np.arange(10)
+        return xr.DataArray(values, dims=("time",), coords={"time": times})
+
+    return _cf_da
 
 
 @pytest.fixture
@@ -488,17 +488,31 @@ def test_interpolate_na_nan_block_lengths(y, lengths):
 
 
 @requires_cftime
-def test_get_clean_interp_index(cf_da):
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_get_clean_interp_index_calendar(cf_da, calendar):
     """The index for CFTimeIndex is in units of days. This means that if two series using a 360 and 365 days
     calendar each have a trend of .01C/year, the linear regression coefficients will be different because they
     have different number of days.
 
     Another option would be to have an index in units of years, but this would likely create other difficulties.
     """
-    from xarray.core.missing import get_clean_interp_index
+    i = get_clean_interp_index(cf_da(calendar), dim="time")
+    np.testing.assert_array_equal(i, range(10))
 
-    i = get_clean_interp_index(cf_da, dim="time")
-    np.testing.assert_array_equal(i, [0, 1, 2])
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("calendar", "freq"),
+    zip(["julian", "gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"]),
+)
+def test_get_clean_interp_index_dt(cf_da, calendar, freq):
+    """In the gregorian case, the index should be proportional to normal datetimes."""
+    g = cf_da(calendar, freq=freq)
+    g["stime"] = xr.Variable(data=g.time.to_index().to_datetimeindex(), dims=("time",))
+
+    gi = get_clean_interp_index(g, "time") * 1e9 * 86400
+    si = get_clean_interp_index(g, "time", use_coordinate="stime")
+    np.testing.assert_array_equal(gi, si)
 
 
 @pytest.fixture
