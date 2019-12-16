@@ -21,11 +21,20 @@ from xarray.tests import (
     requires_dask,
     requires_scipy,
 )
+from xarray.tests.test_cftime_offsets import calendar
 
+from . import requires_cftime
 
 @pytest.fixture
 def da():
     return xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+
+
+@pytest.fixture
+def cf_da(calendar):
+    times = xr.cftime_range(start="1970-01-01", freq="1D", periods=3, calendar=calendar)
+    values = np.arange(3)
+    return xr.DataArray(values, dims=("time", ), coords={"time": times})
 
 
 @pytest.fixture
@@ -470,6 +479,19 @@ def test_interpolate_na_nan_block_lengths(y, lengths):
     actual = _get_nan_block_lengths(da, dim="y", index=index)
     expected = da.copy(data=lengths * 2)
     assert_equal(actual, expected)
+
+
+@requires_cftime
+def test_get_clean_interp_index(cf_da):
+    """The index for CFTimeIndex is in units of days. This means that if two series using a 360 and 365 days
+    calendar each have a trend of .01C/year, the linear regression coefficients will be different because they
+    have different number of days.
+
+    Another option would be to have an index in units of years, but this would likely create other difficulties.    
+    """
+    from xarray.core.missing import get_clean_interp_index
+    i = get_clean_interp_index(cf_da, dim="time")
+    np.testing.assert_array_equal(i, [0, 1, 2])
 
 
 @pytest.fixture
