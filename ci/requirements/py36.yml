@@ -38,6 +38,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
+  - setuptools
   - sparse
   - toolz
   - zarr

@@ -22,7 +22,7 @@ CLASSIFIERS = [
 ]
 
 PYTHON_REQUIRES = ">=3.6"
-INSTALL_REQUIRES = ["numpy >= 1.14", "pandas >= 0.24"]
+INSTALL_REQUIRES = ["numpy >= 1.14", "pandas >= 0.24", "setuptools"]
 needs_pytest = {"pytest", "test", "ptr"}.intersection(sys.argv)
 SETUP_REQUIRES = ["pytest-runner >= 4.2"] if needs_pytest else []
 TESTS_REQUIRE = ["pytest >= 2.7.1"]

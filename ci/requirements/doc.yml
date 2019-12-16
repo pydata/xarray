@@ -19,6 +19,7 @@ dependencies:
   - pandas<0.25  # Hack around https://github.com/pydata/xarray/issues/3369
   - rasterio
   - seaborn
+  - setuptools
   - sphinx
   - sphinx_rtd_theme
   - zarr

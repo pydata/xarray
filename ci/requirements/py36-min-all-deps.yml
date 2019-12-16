@@ -42,6 +42,7 @@ dependencies:
   - rasterio=1.0
   - scipy=1.0  # Policy allows for 1.2, but scipy>=1.1 breaks numpy=1.14
   - seaborn=0.9
+  - setuptools
   # - sparse  # See py36-min-nep18.yml
   - toolz=0.10
   - zarr=2.3
