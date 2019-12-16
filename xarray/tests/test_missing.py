@@ -21,20 +21,26 @@ from xarray.tests import (
     requires_dask,
     requires_scipy,
 )
-from xarray.tests.test_cftime_offsets import calendar
 
+from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
 from . import requires_cftime
+
 
 @pytest.fixture
 def da():
     return xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
 
 
+@pytest.fixture(params=_CFTIME_CALENDARS)
+def calendar(request):
+    return request.param
+
+
 @pytest.fixture
 def cf_da(calendar):
     times = xr.cftime_range(start="1970-01-01", freq="1D", periods=3, calendar=calendar)
     values = np.arange(3)
-    return xr.DataArray(values, dims=("time", ), coords={"time": times})
+    return xr.DataArray(values, dims=("time",), coords={"time": times})
 
 
 @pytest.fixture
@@ -487,9 +493,10 @@ def test_get_clean_interp_index(cf_da):
     calendar each have a trend of .01C/year, the linear regression coefficients will be different because they
     have different number of days.
 
-    Another option would be to have an index in units of years, but this would likely create other difficulties.    
+    Another option would be to have an index in units of years, but this would likely create other difficulties.
     """
     from xarray.core.missing import get_clean_interp_index
+
     i = get_clean_interp_index(cf_da, dim="time")
     np.testing.assert_array_equal(i, [0, 1, 2])
 

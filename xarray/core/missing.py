@@ -265,7 +265,10 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
     # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of days
     if isinstance(index, CFTimeIndex):
         offset = type(index[0])(1970, 1, 1)
-        index = Variable(data=datetime_to_numeric(index, offset=offset, datetime_unit="D"), dims=(dim,))
+        index = Variable(
+            data=datetime_to_numeric(index, offset=offset, datetime_unit="D"),
+            dims=(dim,),
+        )
 
     # raise if index cannot be cast to a float (e.g. MultiIndex)
     try:
