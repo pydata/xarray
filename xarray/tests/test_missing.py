@@ -510,7 +510,7 @@ def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     g = cf_da(calendar, freq=freq)
     g["stime"] = xr.Variable(data=g.time.to_index().to_datetimeindex(), dims=("time",))
 
-    gi = get_clean_interp_index(g, "time") * 1e9 * 86400
+    gi = get_clean_interp_index(g, "time") * 1e9 * 86400  # Convert days to nanoseconds
     si = get_clean_interp_index(g, "time", use_coordinate="stime")
     np.testing.assert_array_equal(gi, si)
 
