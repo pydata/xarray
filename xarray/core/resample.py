@@ -184,6 +184,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
 
         Apply uses heuristics (like `pandas.GroupBy.apply`) to figure out how
         to stack together the array. The rule is:
+
         1. If the dimension along which the group coordinate is defined is
            still in the first grouped array after applying `func`, then stack
            over this dimension.
@@ -196,11 +197,13 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             Callable to apply to each array.
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
+
             (1) The action of `func` does not depend on any of the array
                 metadata (attributes or coordinates) but only on the data and
                 dimensions.
             (2) The action of `func` creates arrays with homogeneous metadata,
                 that is, with the same dimensions and attributes.
+
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
@@ -275,6 +278,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         Apply uses heuristics (like `pandas.GroupBy.apply`) to figure out how
         to stack together the datasets. The rule is:
+
         1. If the dimension along which the group coordinate is defined is
            still in the first grouped item after applying `func`, then stack
            over this dimension.

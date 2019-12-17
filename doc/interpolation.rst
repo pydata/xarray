@@ -48,7 +48,7 @@ array-like, which gives the interpolated result as an array.
     # interpolation
     da.interp(time=[2.5, 3.5])
 
-To interpolate data with a :py:func:`numpy.datetime64` coordinate you can pass a string.
+To interpolate data with a :py:doc:`numpy.datetime64 <reference/arrays.datetime>` coordinate you can pass a string.
 
 .. ipython:: python
 
@@ -128,7 +128,7 @@ It is now possible to safely compute the difference ``other - interpolated``.
 Interpolation methods
 ---------------------
 
-We use :py:func:`scipy.interpolate.interp1d` for 1-dimensional interpolation and
+We use :py:class:`scipy.interpolate.interp1d` for 1-dimensional interpolation and
 :py:func:`scipy.interpolate.interpn` for multi-dimensional interpolation.
 
 The interpolation method can be specified by the optional ``method`` argument.

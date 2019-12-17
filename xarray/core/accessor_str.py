@@ -854,12 +854,10 @@ class StringAccessor:
         ----------
         pat : string or compiled regex
             String can be a character sequence or regular expression.
-
         repl : string or callable
             Replacement string or a callable. The callable is passed the regex
             match object and must return a replacement string to be used.
             See :func:`re.sub`.
-
         n : int, default -1 (all)
             Number of replacements to make from start
         case : boolean, default None
@@ -873,7 +871,7 @@ class StringAccessor:
             - If True, assumes the passed-in pattern is a regular expression.
             - If False, treats the pattern as a literal string
             - Cannot be set to False if `pat` is a compiled regex or `repl` is
-            a callable.
+              a callable.
 
         Returns
         -------
