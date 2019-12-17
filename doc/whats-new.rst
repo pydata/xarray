@@ -31,6 +31,9 @@ New Features
 - Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
   and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
+  now allow swapping to dimension names that don't exist yet. (:pull:`3636`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
