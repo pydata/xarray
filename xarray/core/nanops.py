@@ -143,6 +143,12 @@ def nanmean(a, axis=None, dtype=None, out=None):
 
 
 def nanmedian(a, axis=None, out=None):
+    # The dask algorithm works by rechunking to one chunk along axis
+    # Make sure we trigger the dask error when passing all dimensions
+    # so that we don't rechunk the entire array to one chunk and
+    # possibly blow memory
+    if axis is not None and len(axis) == a.ndim:
+        axis = None
     return _dask_or_eager_func(
         "nanmedian", dask_module=dask_array_compat, eager_module=nputils
     )(a, axis=axis)
