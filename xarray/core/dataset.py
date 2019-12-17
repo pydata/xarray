@@ -2914,7 +2914,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     "cannot swap from dimension %r because it is "
                     "not an existing dimension" % k
                 )
-            if self.variables[v].dims != (k,):
+            if v in self.variables and self.variables[v].dims != (k,):
                 raise ValueError(
                     "replacement dimension %r is not a 1D "
                     "variable along the old dimension %r" % (v, k)
