@@ -2525,6 +2525,12 @@ class TestDataset:
         with raises_regex(ValueError, "replacement dimension"):
             original.swap_dims({"x": "z"})
 
+        expected = Dataset(
+            {"y": ("u", list("abc")), "z": 42}, coords={"x": ("u", [1, 2, 3])}
+        )
+        actual = original.swap_dims({"x": "u"})
+        assert_identical(expected, actual)
+
     def test_expand_dims_error(self):
         original = Dataset(
             {
