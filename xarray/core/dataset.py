@@ -2923,7 +2923,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         result_dims = {dims_dict.get(dim, dim) for dim in self.dims}
 
         coord_names = self._coord_names.copy()
-        coord_names.update(dims_dict.values())
+        coord_names.update({dim for dim in dims_dict.values() if dim in self.variables})
 
         variables: Dict[Hashable, Variable] = {}
         indexes: Dict[Hashable, pd.Index] = {}
