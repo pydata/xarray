@@ -1480,8 +1480,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
-            are new names. Each value must already be a coordinate on this
-            array.
+            are new names.
 
         Returns
         -------
@@ -1504,6 +1503,13 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
             x        (y) <U1 'a' 'b'
           * y        (y) int64 0 1
+        >>> arr.swap_dims({"x": "z"})
+        <xarray.DataArray (z: 2)>
+        array([0, 1])
+        Coordinates:
+            x        (z) <U1 'a' 'b'
+            y        (z) int64 0 1
+        Dimensions without coordinates: z
 
         See Also
         --------
