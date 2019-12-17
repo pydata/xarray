@@ -141,6 +141,7 @@
    Dataset.cumsum
    Dataset.cumprod
    Dataset.rank
+   Dataset.dump_to_store
 
    DataArray.ndim
    DataArray.nbytes
