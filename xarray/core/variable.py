@@ -1622,8 +1622,9 @@ class Variable(
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
-                    raise ValueError("inconsistent dimensions")
-                utils.remove_incompatible_items(attrs, var.attrs)
+                    raise ValueError(
+                        f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var.dims)}"
+                    )
 
         return cls(dims, data, attrs, encoding)
 
