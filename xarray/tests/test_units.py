@@ -2171,8 +2171,8 @@ class TestDataArray:
                 "with_dims",
                 marks=pytest.mark.xfail(reason="units in indexes are not supported"),
             ),
-            pytest.param("with_coords"),
-            pytest.param("without_coords"),
+            "with_coords",
+            "without_coords",
         ),
     )
     def test_init(self, variant, dtype):
@@ -2246,10 +2246,7 @@ class TestDataArray:
             function("argmin"),
             function("max"),
             function("mean"),
-            pytest.param(
-                function("median"),
-                marks=pytest.mark.xfail(reason="not implemented by xarray"),
-            ),
+            function("median"),
             function("min"),
             pytest.param(
                 function("prod"),
@@ -2259,10 +2256,7 @@ class TestDataArray:
             function("std"),
             function("var"),
             function("cumsum"),
-            pytest.param(
-                function("cumprod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
+            function("cumprod"),
             pytest.param(
                 method("all"),
                 marks=pytest.mark.xfail(reason="not implemented by pint yet"),
@@ -2279,18 +2273,13 @@ class TestDataArray:
             method("min"),
             pytest.param(
                 method("prod"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
-                ),
+                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
             ),
             method("sum"),
             method("std"),
             method("var"),
             method("cumsum"),
-            pytest.param(
-                method("cumprod"),
-                marks=pytest.mark.xfail(reason="pint does not implement cumprod yet"),
-            ),
+            method("cumprod"),
         ),
         ids=repr,
     )
