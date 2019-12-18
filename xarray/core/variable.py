@@ -346,7 +346,10 @@ class Variable(
     def data(self, data):
         data = as_compatible_data(data)
         if data.shape != self.shape:
-            raise ValueError("replacement data must match the Variable's shape")
+            raise ValueError(
+                f"replacement data must match the Variable's shape. "
+                f"replacement data has shape {data.shape}; Variable has shape {self.shape}"
+            )
         self._data = data
 
     def load(self, **kwargs):
@@ -1141,7 +1144,7 @@ class Variable(
             Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -1249,7 +1252,7 @@ class Variable(
             left.
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -1697,6 +1700,7 @@ class Variable(
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
+
                 * linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
@@ -1704,6 +1708,7 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -1732,6 +1737,10 @@ class Variable(
         scalar = utils.is_scalar(q)
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
 
+        # TODO: remove once numpy >= 1.15.0 is the minimum requirement
+        if np.count_nonzero(q < 0.0) or np.count_nonzero(q > 1.0):
+            raise ValueError("Quantiles must be in the range [0, 1]")
+
         if dim is None:
             dim = self.dims
 
@@ -1740,6 +1749,8 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
+
+            # TODO: use np.nanquantile once numpy >= 1.15.0 is the minimum requirement
             return np.moveaxis(np.nanpercentile(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
