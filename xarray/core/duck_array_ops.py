@@ -372,43 +372,62 @@ def _datetime_nanmin(array):
 
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
-    """Convert an array containing datetime-like data to an array of floats.
+    """Return an array containing datetime-like data to numerical values.
+
+    Convert the datetime array to a timedelta relative to an offset.
 
     Parameters
     ----------
-    da : np.array
-        Input data
-    offset: Scalar with the same type of array or None
-        If None, subtract minimum values to reduce round off error
-    datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
-        'us', 'ns', 'ps', 'fs', 'as'}
-    dtype: target dtype
+    da : array-like
+      Input data
+    offset: None, datetime or cftime.datetime
+      Datetime offset. If None, this is set by default to the array's minimum
+      value to reduce round off errors.
+    datetime_unit: {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
+      If not None, convert output to a given datetime unit. Note that some
+      conversions are not allowed due to non-linear relationships between units.
+    dtype: dtype
+      Output dtype.
 
     Returns
     -------
     array
+      Numerical representation of datetime object relative to an offset.
+
+    Notes
+    -----
+    Some datetime unit conversions won't work, for example from days to years, even
+    though some calendars would allow for them (e.g. no_leap). This is because there
+    is no `cftime.timedelta` object.
     """
     # TODO: make this function dask-compatible?
+    # Set offset to minimum if not given
     if offset is None:
         if array.dtype.kind in "Mm":
             offset = _datetime_nanmin(array)
         else:
             offset = min(array)
+
+    # Compute timedelta object.
+    # For np.datetime64, this can silently yield garbage due to overflow.
     array = array - offset
 
-    if not hasattr(array, "dtype"):  # scalar is converted to 0d-array
+    # Scalar is converted to 0d-array
+    if not hasattr(array, "dtype"):
         array = np.array(array)
 
+    # Convert timedelta objects to timedelta64[ms] dtype.
     if array.dtype.kind in "O":
-        # possibly convert object array containing datetime.timedelta
-        array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
+        array = array.astype("timedelta64[ms]")
 
+    # Convert to specified timedelta units.
     if datetime_unit:
         array = array / np.timedelta64(1, datetime_unit)
 
-    # convert np.NaT to np.nan
+    # Convert np.NaT to np.nan
     if array.dtype.kind in "mM":
         return np.where(isnull(array), np.nan, array.astype(dtype))
+
     return array.astype(dtype)
 
 
