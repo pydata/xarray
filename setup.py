@@ -107,4 +107,5 @@ setup(
     package_data={
         "xarray": ["py.typed", "tests/data/*", "static/css/*", "static/html/*"]
     },
+    entry_points={"xarray_plotting_backends": ["matplotlib = xarray.plot"]},
 )

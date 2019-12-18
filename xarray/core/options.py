@@ -9,6 +9,7 @@ CMAP_SEQUENTIAL = "cmap_sequential"
 CMAP_DIVERGENT = "cmap_divergent"
 KEEP_ATTRS = "keep_attrs"
 DISPLAY_STYLE = "display_style"
+PLOTTING_BACKEND = "plotting_backend"
 
 
 OPTIONS = {
@@ -21,6 +22,7 @@ OPTIONS = {
     CMAP_DIVERGENT: "RdBu_r",
     KEEP_ATTRS: "default",
     DISPLAY_STYLE: "text",
+    PLOTTING_BACKEND: "matplotlib",
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -39,6 +41,7 @@ _VALIDATORS = {
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
     KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
     DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
+    PLOTTING_BACKEND: lambda value: isinstance(value, str),
 }
 
 
@@ -104,6 +107,10 @@ class set_options:
       Default: ``'default'``.
     - ``display_style``: display style to use in jupyter for xarray objects.
       Default: ``'text'``. Other options are ``'html'``.
+    - ``plotting_backend``: The name of plotting backend to use. Backends can be implemented
+      as third-party libraries implementing the xarray plotting API. They can use other
+      plotting libraries like Bokeh, Holoviews, Hvplot, Altair, etc.
+      Default: ``'matplotlib'``
 
 
     You can use ``set_options`` either as a context manager:

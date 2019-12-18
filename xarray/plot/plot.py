@@ -25,7 +25,7 @@ from .utils import (
     _update_axes,
     _valid_other_type,
     get_axis,
-    import_matplotlib_pyplot,
+    _get_plot_backend,
     label_from_attrs,
 )
 
@@ -651,7 +651,7 @@ def _plot2d(plotfunc):
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
 
-        plt = import_matplotlib_pyplot()
+        plt = _get_plot_backend()
 
         rgb = kwargs.pop("rgb", None)
         if rgb is not None and plotfunc.__name__ != "imshow":
