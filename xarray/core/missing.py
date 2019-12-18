@@ -263,10 +263,10 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
 
     # Special case for non-standard calendar indexes
     # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
-    if isinstance(index, CFTimeIndex):
+    if isinstance(index, (CFTimeIndex, pd.DatetimeIndex)):
         offset = type(index[0])(1970, 1, 1)
         index = Variable(
-            data=datetime_to_numeric(index, offset=offset, datetime_unit="ns"),
+            data=datetime_to_numeric(index, offset=offset, datetime_unit="us"),
             dims=(dim,),
         )
 
@@ -295,6 +295,8 @@ def interp_na(
 ):
     """Interpolate values according to different methods.
     """
+    from xarray.coding.cftimeindex import CFTimeIndex
+
     if dim is None:
         raise NotImplementedError("dim is a required argument")
 
@@ -308,7 +310,7 @@ def interp_na(
 
         if (
             dim in self.indexes
-            and isinstance(self.indexes[dim], pd.DatetimeIndex)
+            and isinstance(self.indexes[dim], (pd.DatetimeIndex, CFTimeIndex))
             and use_coordinate
         ):
             if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
@@ -327,7 +329,7 @@ def interp_na(
             if isinstance(max_gap, pd.Timedelta):
                 max_gap = np.timedelta64(max_gap.value, "ns")
 
-            max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
+            max_gap = np.timedelta64(max_gap, "us").astype(np.float64)
 
         if not use_coordinate:
             if not isinstance(max_gap, (Number, np.number)):

@@ -489,7 +489,7 @@ def test_interpolate_na_nan_block_lengths(y, lengths):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_get_clean_interp_index_calendar(cf_da, calendar):
+def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
     """The index for CFTimeIndex is in units of days. This means that if two series using a 360 and 365 days
     calendar each have a trend of .01C/year, the linear regression coefficients will be different because they
     have different number of days.
@@ -497,7 +497,7 @@ def test_get_clean_interp_index_calendar(cf_da, calendar):
     Another option would be to have an index in units of years, but this would likely create other difficulties.
     """
     i = get_clean_interp_index(cf_da(calendar), dim="time")
-    np.testing.assert_array_equal(i, np.arange(10) * 1e9 * 86400)
+    np.testing.assert_array_equal(i, np.arange(10) * 1e6 * 86400)
 
 
 @requires_cftime
@@ -553,10 +553,7 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 
 @requires_bottleneck
-@pytest.mark.parametrize(
-    "time_range_func",
-    [pd.date_range, pytest.param(xr.cftime_range, marks=pytest.mark.xfail)],
-)
+@pytest.mark.parametrize("time_range_func", [pd.date_range, xr.cftime_range])
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3H", np.timedelta64(3, "h"), pd.to_timedelta("3H")]
