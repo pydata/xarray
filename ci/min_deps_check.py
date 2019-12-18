@@ -22,8 +22,7 @@ IGNORE_DEPS = {
     "pytest-env",
 }
 
-POLICY_MONTHS = {"python": 42, "numpy": 24, "pandas": 12, "scipy": 12,
-                 "setuptools": 12}
+POLICY_MONTHS = {"python": 42, "numpy": 24, "pandas": 12, "scipy": 12}
 POLICY_MONTHS_DEFAULT = 6
 
 has_errors = False
