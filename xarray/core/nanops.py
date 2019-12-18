@@ -147,7 +147,7 @@ def nanmedian(a, axis=None, out=None):
     # Make sure we trigger the dask error when passing all dimensions
     # so that we don't rechunk the entire array to one chunk and
     # possibly blow memory
-    if axis is not None and len(axis) == a.ndim:
+    if axis is not None and len(np.atleast_1d(axis)) == a.ndim:
         axis = None
     return _dask_or_eager_func(
         "nanmedian", dask_module=dask_array_compat, eager_module=nputils
