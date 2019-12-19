@@ -31,6 +31,10 @@ New Features
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties 
+  and support `.dt` accessor for timedelta 
+  via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Bug fixes
 ~~~~~~~~~
