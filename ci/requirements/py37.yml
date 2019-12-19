@@ -17,6 +17,7 @@ dependencies:
   - h5netcdf
   - h5py
   - hdf5
+  - hvplot
   - hypothesis
   - iris
   - lxml    # Optional dep of pydap

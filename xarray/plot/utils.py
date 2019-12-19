@@ -525,13 +525,12 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-    plt = _get_plot_backend()
+    plt = _get_plot_backend(OPTIONS["plotting_backend"])
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
     else:
         cbar_kwargs.setdefault("cax", cbar_ax)
-
     cbar = plt.colorbar(primitive, **cbar_kwargs)
 
     return cbar

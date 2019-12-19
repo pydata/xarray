@@ -29,6 +29,8 @@ from .utils import (
     label_from_attrs,
 )
 
+from ..core.options import OPTIONS
+
 
 def _infer_line_data(darray, x, y, hue):
     error_msg = "must be either None or one of ({:s})".format(
@@ -651,7 +653,7 @@ def _plot2d(plotfunc):
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
 
-        plt = _get_plot_backend()
+        plt = _get_plot_backend(OPTIONS["plotting_backend"])
 
         rgb = kwargs.pop("rgb", None)
         if rgb is not None and plotfunc.__name__ != "imshow":

@@ -12,6 +12,8 @@ from .utils import (
     label_from_attrs,
 )
 
+from ..core.options import OPTIONS
+
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
 _FONTSIZE = "small"
@@ -113,7 +115,7 @@ class FacetGrid:
 
         """
 
-        plt = _get_plot_backend()
+        plt = _get_plot_backend(OPTIONS["plotting_backend"])
 
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
@@ -572,7 +574,7 @@ class FacetGrid:
         self : FacetGrid object
 
         """
-        plt = _get_plot_backend()
+        plt = _get_plot_backend(OPTIONS["plotting_backend"])
 
         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
             if namedict is not None:

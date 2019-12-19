@@ -85,6 +85,8 @@ except ImportError:
     has_seaborn = False
 requires_seaborn = pytest.mark.skipif(not has_seaborn, reason="requires seaborn")
 
+has_hvplot, requires_hvplot = _importorskip("hvplot")
+
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
 
