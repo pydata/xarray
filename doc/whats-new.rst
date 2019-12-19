@@ -53,6 +53,9 @@ Bug fixes
   By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 - Ensure :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` issue the correct error
   when ``q`` is out of bounds (:issue:`3634`) by `Mathias Hauser <https://github.com/mathause>`_.
+- Raise an error when trying to use :py:meth:`Dataset.rename_dims` to
+  rename to an existing name (:issue:`3438`, :pull:`3645`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
