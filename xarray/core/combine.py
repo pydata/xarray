@@ -115,11 +115,10 @@ def _infer_concat_order_from_coords(datasets):
     return combined_ids, concat_dims
 
 
-def _check_shape_tile_ids(combined_tile_ids):
+def _check_dimension_depth_tile_ids(combined_tile_ids):
+    """Check all tuples are the same length
+    # i.e. check that all lists are nested to the same depth"""
     tile_ids = combined_tile_ids.keys()
-
-    # Check all tuples are the same length
-    # i.e. check that all lists are nested to the same depth
     nesting_depths = [len(tile_id) for tile_id in tile_ids]
     if not nesting_depths:
         nesting_depths = [0]
@@ -128,8 +127,13 @@ def _check_shape_tile_ids(combined_tile_ids):
             "The supplied objects do not form a hypercube because"
             " sub-lists do not have consistent depths"
         )
+    # return these just to be reused in _check_shape_tile_ids
+    return tile_ids, nesting_depths
 
-    # Check all lists along one dimension are same length
+
+def _check_shape_tile_ids(combined_tile_ids):
+    """Check all lists along one dimension are same length."""
+    tile_ids, nesting_depths = _check_dimension_depth_tile_ids(combined_tile_ids)
     for dim in range(nesting_depths[0]):
         indices_along_dim = [tile_id[dim] for tile_id in tile_ids]
         occurrences = Counter(indices_along_dim)
@@ -667,7 +671,7 @@ def combine_by_coords(
             list(datasets_with_same_vars)
         )
 
-        _check_shape_tile_ids(combined_ids)
+        _check_dimension_depth_tile_ids(combined_ids)
 
         # Concatenate along all of concat_dims one by one to create single ds
         concatenated = _combine_nd(

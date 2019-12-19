@@ -711,6 +711,18 @@ class TestCombineAuto:
         ):
             combine_by_coords([ds1, ds0])
 
+    def test_combine_by_coords_incomplete_hypercube(self):
+        # Want to check that this will return
+        x1 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [0]})
+        x2 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [1], "x": [0]})
+        x3 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [1]})
+        actual = combine_by_coords([x1, x2, x3])
+        expected = Dataset(
+            {"a": (("y", "x"), [[1, 1], [1, np.nan]])},
+            coords={"y": [0, 1], "x": [0, 1]},
+        )
+        assert_identical(expected, actual)
+
 
 @pytest.mark.filterwarnings(
     "ignore:In xarray version 0.15 `auto_combine` " "will be deprecated"
