@@ -35,6 +35,8 @@ New Features
   and support `.dt` accessor for timedelta 
   via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Support unit aware arrays with pint (:pull:`3611`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
