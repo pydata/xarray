@@ -2791,7 +2791,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dims_dict : dict-like, optional
             Dictionary whose keys are current dimension names and
-            whose values are the desired names.
+            whose values are the desired names. The desired names must
+            not exist already.
         **dims, optional
             Keyword form of ``dims_dict``.
             One of dims_dict or dims must be provided.
@@ -2817,7 +2818,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
             if v in self.dims or v in self:
                 raise ValueError(
-                    f"cannot rename {k} to {v} because {v} already exists. "
+                    f"Cannot rename {k} to {v} because {v} already exists. "
                     "Try using swap_dims instead."
                 )
 
