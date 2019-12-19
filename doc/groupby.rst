@@ -94,7 +94,7 @@ Apply
 ~~~~~
 
 To apply a function to each group, you can use the flexible
-:py:meth:`~xarray.DatasetGroupBy.map` method. The resulting objects are automatically
+:py:meth:`~xarray.core.groupby.DatasetGroupBy.map` method. The resulting objects are automatically
 concatenated back together along the group axis:
 
 .. ipython:: python
@@ -104,8 +104,8 @@ concatenated back together along the group axis:
 
     arr.groupby('letters').map(standardize)
 
-GroupBy objects also have a :py:meth:`~xarray.DatasetGroupBy.reduce` method and
-methods like :py:meth:`~xarray.DatasetGroupBy.mean` as shortcuts for applying an
+GroupBy objects also have a :py:meth:`~xarray.core.groupby.DatasetGroupBy.reduce` method and
+methods like :py:meth:`~xarray.core.groupby.DatasetGroupBy.mean` as shortcuts for applying an
 aggregation function:
 
 .. ipython:: python

@@ -1542,6 +1542,14 @@ class TestVariable(VariableSubclassobjects):
         with raises_regex(ValueError, "dimension 'x'"):
             v.quantile(0.5, dim="x")
 
+    @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
+    def test_quantile_out_of_bounds(self, q):
+        v = Variable(["x", "y"], self.d)
+
+        # escape special characters
+        with raises_regex(ValueError, r"Quantiles must be in the range \[0, 1\]"):
+            v.quantile(q, dim="x")
+
     @requires_dask
     @requires_bottleneck
     def test_rank_dask_raises(self):
