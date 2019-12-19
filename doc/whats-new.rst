@@ -38,6 +38,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
+  hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
+  <https://github.com/bolliger32>`_.
 - Fix :py:meth:`xarray.combine_by_coords` when combining cftime coordinates
   which span long time intervals (:issue:`3535`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
