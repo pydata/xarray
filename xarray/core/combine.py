@@ -659,6 +659,15 @@ def combine_by_coords(
     temperature    (y, x) float64 1.654 10.63 7.015 2.543 ... 12.46 2.22 15.96
     precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
 
+    >>> xr.combine_by_coords([x1, x2, x3])
+    <xarray.Dataset>
+    Dimensions:        (x: 6, y: 4)
+    Coordinates:
+    * x              (x) int64 10 20 30 40 50 60
+    * y              (y) int64 0 1 2 3
+    Data variables:
+    temperature    (y, x) float64 1.654 10.63 7.015 nan ... 12.46 2.22 15.96
+    precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
     """
 
     # Group by data vars
