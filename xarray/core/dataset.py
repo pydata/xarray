@@ -2809,11 +2809,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.rename
         """
         dims_dict = either_dict_or_kwargs(dims_dict, dims, "rename_dims")
-        for k in dims_dict:
+        for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
                     "cannot rename %r because it is not a "
                     "dimension in this dataset" % k
+                )
+            if v in self.dims or v in self:
+                raise ValueError(
+                    f"cannot rename {k} to {v} because {v} already exists. "
+                    "Try using swap_dims instead."
                 )
 
         variables, coord_names, sizes, indexes = self._rename_all(
