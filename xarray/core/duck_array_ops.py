@@ -418,7 +418,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     # Convert timedelta objects to timedelta64[ms] dtype.
     if array.dtype.kind in "O":
-        array = array.astype("timedelta64[ms]")
+        array = array.astype("timedelta64[us]")
 
     # Convert to specified timedelta units.
     if datetime_unit:
