@@ -2412,7 +2412,6 @@ class TestDataArray:
 
         assert_equal_with_units(expected, actual)
 
-    @pytest.mark.xfail(reason="xarray's `np.maximum` strips units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -2483,17 +2482,7 @@ class TestDataArray:
         assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
-        "func",
-        (
-            method("clip", min=3, max=8),
-            pytest.param(
-                method("searchsorted", v=5),
-                marks=pytest.mark.xfail(
-                    reason="searchsorted somehow requires a undocumented `keys` argument"
-                ),
-            ),
-        ),
-        ids=repr,
+        "func", (method("clip", min=3, max=8), method("searchsorted", v=5)), ids=repr
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -2585,12 +2574,7 @@ class TestDataArray:
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                None,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(reason="fillna converts to value's unit"),
-            ),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
@@ -2647,13 +2631,7 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "unit",
         (
-            pytest.param(
-                1,
-                id="no_unit",
-                marks=pytest.mark.xfail(
-                    reason="pint's isin implementation does not work well with mixed args"
-                ),
-            ),
+            pytest.param(1, id="no_unit"),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
             pytest.param(unit_registry.cm, id="compatible_unit"),
@@ -2679,19 +2657,7 @@ class TestDataArray:
         assert_equal_with_units(expected, actual)
 
     @pytest.mark.parametrize(
-        "variant",
-        (
-            pytest.param(
-                "masking",
-                marks=pytest.mark.xfail(reason="array(nan) is not a quantity"),
-            ),
-            "replacing_scalar",
-            "replacing_array",
-            pytest.param(
-                "dropping",
-                marks=pytest.mark.xfail(reason="array(nan) is not a quantity"),
-            ),
-        ),
+        "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -3437,9 +3403,7 @@ class TestDataArray:
             method("transpose", "y", "x", "z"),
             method("stack", a=("x", "y")),
             method("set_index", x="x2"),
-            pytest.param(
-                method("shift", x=2), marks=pytest.mark.xfail(reason="strips units")
-            ),
+            method("shift", x=2),
             method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
@@ -3478,13 +3442,7 @@ class TestDataArray:
                 marks=pytest.mark.xfail(reason="nanquantile not implemented"),
             ),
             method("reduce", func=np.sum, dim="x"),
-            pytest.param(
-                lambda x: x.dot(x),
-                id="method_dot",
-                marks=pytest.mark.xfail(
-                    reason="pint does not implement the dot method"
-                ),
-            ),
+            pytest.param(lambda x: x.dot(x), id="method_dot"),
         ),
         ids=repr,
     )
@@ -3519,10 +3477,7 @@ class TestDataArray:
             method("groupby", "x"),
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
-            pytest.param(
-                method("rolling", y=3),
-                marks=pytest.mark.xfail(reason="rolling strips units"),
-            ),
+            pytest.param(method("rolling", y=3)),
             pytest.param(
                 method("rolling_exp", y=3),
                 marks=pytest.mark.xfail(reason="units not supported by numbagg"),
