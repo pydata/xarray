@@ -712,7 +712,7 @@ class TestCombineAuto:
             combine_by_coords([ds1, ds0])
 
     def test_combine_by_coords_incomplete_hypercube(self):
-        # Want to check that this will return
+        # test that this succeeds with default fill_value
         x1 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [0]})
         x2 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [1], "x": [0]})
         x3 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [1]})
@@ -722,6 +722,10 @@ class TestCombineAuto:
             coords={"y": [0, 1], "x": [0, 1]},
         )
         assert_identical(expected, actual)
+
+        # test that this fails if fill_value is None
+        with pytest.raises(ValueError):
+            combine_by_coords([x1, x2, x3], fill_value=None)
 
 
 @pytest.mark.filterwarnings(

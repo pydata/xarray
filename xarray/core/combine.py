@@ -542,7 +542,8 @@ def combine_by_coords(
     coords : {'minimal', 'different', 'all' or list of str}, optional
         As per the 'data_vars' kwarg, but for coordinate variables.
     fill_value : scalar, optional
-        Value to use for newly missing values
+        Value to use for newly missing values. If None, raises a ValueError if
+        the passed Datasets do not create a complete hypercube.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
@@ -682,7 +683,13 @@ def combine_by_coords(
             list(datasets_with_same_vars)
         )
 
-        _check_dimension_depth_tile_ids(combined_ids)
+        if fill_value is None:
+            # check that datasets form complete hypercube
+            _check_shape_tile_ids(combined_ids)
+        else:
+            # check only that all datasets have same dimension depth for these
+            # vars
+            _check_dimension_depth_tile_ids(combined_ids)
 
         # Concatenate along all of concat_dims one by one to create single ds
         concatenated = _combine_nd(
