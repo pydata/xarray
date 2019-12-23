@@ -2295,7 +2295,8 @@ class TestDataArray:
         expected = attach_units(func(strip_units(data_array)), units)
         actual = func(data_array)
 
-        xr.testing.assert_identical(expected, actual)
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3499,7 +3500,8 @@ class TestDataArray:
         expected = attach_units(func(strip_units(data_array)).mean(), units)
         actual = func(data_array).mean()
 
-        xr.testing.assert_identical(expected, actual)
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_allclose(expected, actual)
 
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
