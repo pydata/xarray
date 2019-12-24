@@ -25,6 +25,9 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- :py:func:`xarray.concat` now preserves attributes from the first Variable.
+  (:issue:`2575`, :issue:`2060`, :issue:`1614`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
