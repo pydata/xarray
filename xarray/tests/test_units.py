@@ -2483,7 +2483,7 @@ class TestDataArray:
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
-        "func", (method("clip", min=3, max=8), method("searchsorted", v=5)), ids=repr
+        "func", (method("clip", min=3, max=8), method("searchsorted", 5)), ids=repr
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -2502,26 +2502,29 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
+        args = list(value * unit for value in func.args)
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
         }
         if error is not None:
             with pytest.raises(error):
-                func(data_array, **kwargs)
+                func(data_array, *args, **kwargs)
 
             return
 
         units = extract_units(data_array)
-        expected_units = extract_units(func(array, **kwargs))
+        expected_units = extract_units(func(array, *args, **kwargs))
+        stripped_args = [strip_units(convert_units(value, units)) for value in args]
         stripped_kwargs = {
             key: strip_units(convert_units(value, units))
             for key, value in kwargs.items()
         }
         expected = attach_units(
-            func(strip_units(data_array), **stripped_kwargs), expected_units
+            func(strip_units(data_array), *stripped_args, **stripped_kwargs),
+            expected_units,
         )
-        actual = func(data_array, **kwargs)
+        actual = func(data_array, *args, **kwargs)
 
         xr.testing.assert_identical(expected, actual)
 
