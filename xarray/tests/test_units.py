@@ -2482,6 +2482,17 @@ class TestDataArray:
 
         xr.testing.assert_identical(expected, actual)
 
+    def test_item(self, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.m
+        data_array = xr.DataArray(data=array)
+
+        func = method("item", 2)
+
+        expected = func(strip_units(data_array)) * unit_registry.m
+        actual = func(data_array)
+
+        assert np.all(expected == actual)
+
     @pytest.mark.parametrize(
         "func", (method("clip", min=3, max=8), method("searchsorted", 5)), ids=repr
     )
@@ -2919,7 +2930,6 @@ class TestDataArray:
             method("reset_coords", names="x2"),
             method("copy"),
             method("astype", np.float32),
-            method("item", 1),
         ),
         ids=repr,
     )
