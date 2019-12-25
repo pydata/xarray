@@ -3557,7 +3557,7 @@ class TestDataArray:
             method("groupby", "x"),
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
-            pytest.param(method("rolling", y=3)),
+            method("rolling", y=3),
             pytest.param(
                 method("rolling_exp", y=3),
                 marks=pytest.mark.xfail(reason="units not supported by numbagg"),
