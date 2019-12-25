@@ -2246,7 +2246,12 @@ class TestDataArray:
             function("argmin"),
             function("max"),
             function("mean"),
-            function("median"),
+            pytest.param(
+                function("median"),
+                marks=pytest.mark.xfail(
+                    reason="median does not work with dataarrays yet"
+                ),
+            ),
             function("min"),
             pytest.param(
                 function("prod"),
