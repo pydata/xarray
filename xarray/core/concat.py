@@ -93,11 +93,13 @@ def concat(
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
 
-    indexers, mode, concat_over : deprecated
-
     Returns
     -------
     concatenated : type of objs
+
+    Notes
+    -----
+    Each concatenated Variable preserves corresponding ``attrs`` from the first element of ``objs``.
 
     See also
     --------
