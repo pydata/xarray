@@ -7,12 +7,13 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 from xarray.core.npcompat import IS_NEP18_ACTIVE
+from .test_variable import VariableSubclassobjects
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
 
-unit_registry = pint.UnitRegistry()
+unit_registry = pint.UnitRegistry(force_ndarray=True)
 Quantity = unit_registry.Quantity
 
 pytestmark = [
@@ -1243,6 +1244,46 @@ def test_dot_dataarray(dtype):
     actual = xr.dot(data_array, other)
 
     assert_equal_with_units(expected, actual)
+
+
+def delete_attrs(*to_delete):
+    def wrapper(cls):
+        for item in to_delete:
+            setattr(cls, item, None)
+
+        return cls
+
+    return wrapper
+
+
+@delete_attrs(
+    "test_getitem_with_mask",
+    "test_getitem_with_mask_nd_indexer",
+    "test_index_0d_string",
+    "test_index_0d_datetime",
+    "test_index_0d_timedelta64",
+    "test_0d_time_data",
+    "test_datetime64_conversion",
+    "test_timedelta64_conversion",
+    "test_pandas_period_index",
+    "test_1d_math",
+    "test_1d_reduce",
+    "test_array_interface",
+    "test___array__",
+    "test_copy_index",
+    "test_concat",
+    "test_concat_number_strings",
+    "test_concat_fixed_len_str",
+    "test_concat_mixed_dtypes",
+    "test_pandas_datetime64_with_tz",
+    "test_multiindex",
+)
+class TestVariable(VariableSubclassobjects):
+    @staticmethod
+    def cls(dims, data, *args, **kwargs):
+        return xr.Variable(
+            dims, unit_registry.Quantity(data, unit_registry.m), *args, **kwargs
+        )
 
 
 class TestDataArray:
