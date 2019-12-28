@@ -3227,39 +3227,16 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) float64 nan 0.0 1.0 2.0 nan nan
         """
-        pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
-
-        variable = self.variable.pad(
+        ds = self._to_temp_dataset().pad(
             pad_width=pad_width,
             mode=mode,
             stat_length=stat_length,
             constant_values=constant_values,
             end_values=end_values,
             reflect_type=reflect_type,
+            **pad_width_kwargs,
         )
-
-        if mode in ("edge", "reflect", "symmetric", "wrap"):
-            coord_pad_mode = mode
-            coord_pad_options = {
-                "stat_length": stat_length,
-                "constant_values": constant_values,
-                "end_values": end_values,
-                "reflect_type": reflect_type,
-            }
-        else:
-            coord_pad_mode = "constant"
-            coord_pad_options = {}
-
-        coords = {}
-        for name, dim in self.coords.items():
-            if name in pad_width:
-                coords[name] = dim.variable.pad(
-                    {name: pad_width[name]}, mode=coord_pad_mode, **coord_pad_options
-                )
-            else:
-                coords[name] = as_variable(dim, name=name)
-
-        return self._replace(variable=variable, coords=coords)
+        return self._from_temp_dataset(ds)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

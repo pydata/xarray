@@ -1149,12 +1149,11 @@ class Variable(
         if isinstance(constant_values, dict):
             constant_values = [
                 (0, 0) if d not in constant_values else constant_values[d]
-                for d, n in zip(self.dims, self.data.shape)
+                for d in self.dims
             ]
         if isinstance(end_values, dict):
             end_values = [
-                (0, 0) if d not in end_values else end_values[d]
-                for d, n in zip(self.dims, self.data.shape)
+                (0, 0) if d not in end_values else end_values[d] for d in self.dims
             ]
 
         # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303

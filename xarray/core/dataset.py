@@ -5475,5 +5475,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return map_blocks(func, self, args, kwargs)
 
+    def pad(
+        self,
+        pad_width: Mapping[Hashable, Tuple[int, int]] = None,
+        mode: str = "constant",
+        stat_length: Union[
+            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        constant_values: Union[
+            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        end_values: Union[
+            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        reflect_type: str = None,
+        **pad_width_kwargs: Any,
+    ) -> "Dataset":
+
+        pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
+
+        if mode in ("edge", "reflect", "symmetric", "wrap"):
+            coord_pad_mode = mode
+            coord_pad_options = {
+                "stat_length": stat_length,
+                "constant_values": constant_values,
+                "end_values": end_values,
+                "reflect_type": reflect_type,
+            }
+        else:
+            coord_pad_mode = "constant"
+            coord_pad_options = {}
+
+        variables = {}
+        for name, var in self.variables.items():
+            var_pad_width = {k: v for k, v in pad_width.items() if k in var.dims}
+            if not var_pad_width:
+                variables[name] = var
+            elif name in self.data_vars:
+                variables[name] = var.pad(
+                    pad_width=var_pad_width,
+                    mode=mode,
+                    stat_length=stat_length,
+                    constant_values=constant_values,
+                    end_values=end_values,
+                    reflect_type=reflect_type,
+                )
+            else:
+                variables[name] = var.pad(
+                    pad_width=var_pad_width, mode=coord_pad_mode, **coord_pad_options,
+                )
+
+        return self._replace_vars_and_dims(variables)
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
