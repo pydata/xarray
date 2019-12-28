@@ -114,6 +114,10 @@ def extract_units(obj):
         }
 
         units = {**vars_units, **coords_units}
+    elif isinstance(obj, xr.Variable):
+        vars_units = {None: array_extract_units(obj.data)}
+
+        units = {**vars_units}
     elif isinstance(obj, Quantity):
         vars_units = {None: array_extract_units(obj)}
 
@@ -149,6 +153,9 @@ def strip_units(obj):
         new_obj = xr.DataArray(
             name=strip_units(obj.name), data=data, coords=coords, dims=obj.dims
         )
+    elif isinstance(obj, xr.Variable):
+        data = array_strip_units(obj.data)
+        new_obj = obj.copy(data=data)
     elif isinstance(obj, unit_registry.Quantity):
         new_obj = obj.magnitude
     elif isinstance(obj, (list, tuple)):
@@ -160,7 +167,7 @@ def strip_units(obj):
 
 
 def attach_units(obj, units):
-    if not isinstance(obj, (xr.DataArray, xr.Dataset)):
+    if not isinstance(obj, (xr.DataArray, xr.Dataset, xr.Variable)):
         return array_attach_units(obj, units.get("data", 1))
 
     if isinstance(obj, xr.Dataset):
@@ -173,7 +180,7 @@ def attach_units(obj, units):
         }
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
-    else:
+    elif isinstance(obj, xr.DataArray):
         # try the array name, "data" and None, then fall back to dimensionless
         data_units = (
             units.get(obj.name, None)
@@ -199,6 +206,16 @@ def attach_units(obj, units):
         new_obj = xr.DataArray(
             name=obj.name, data=data, coords=coords, attrs=attrs, dims=dims
         )
+    else:
+        data_units = (
+            units.get(obj.name, None)
+            or units.get("data", None)
+            or units.get(None, None)
+            or 1
+        )
+
+        data = array_attach_units(obj.data, data_units)
+        new_obj = obj.copy(data=data)
 
     return new_obj
 
