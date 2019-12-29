@@ -1499,7 +1499,13 @@ class TestVariable(VariableSubclassobjects):
             pytest.param(1, id="no_unit"),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(
+                unit_registry.cm,
+                id="compatible_unit",
+                marks=pytest.mark.xfail(
+                    reason="checking for identical units does not work properly, yet"
+                ),
+            ),
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
