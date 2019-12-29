@@ -1474,7 +1474,7 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
     )
-    def test_missing_value_detection(self, func, dtype):
+    def test_missing_value_detection(self, func):
         array = (
             np.array(
                 [
@@ -1483,10 +1483,9 @@ class TestVariable(VariableSubclassobjects):
                     [2.1, np.nan, np.nan, 4.6],
                     [9.9, np.nan, 7.2, 9.1],
                 ]
-            ).astype(dtype)
+            )
             * unit_registry.degK
         )
-
         variable = xr.Variable(("x", "y"), array)
 
         expected = func(strip_units(variable))
