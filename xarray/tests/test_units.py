@@ -1519,9 +1519,16 @@ class TestVariable(VariableSubclassobjects):
     )
     @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
     def test_comparisons(self, func, unit, convert_data, dtype):
-        def is_compatible(first, second):
+        def is_compatible(unit1, unit2):
+            return (
+                isinstance(unit1, unit_registry.Unit)
+                and isinstance(unit2, unit_registry.Unit)
+                and unit1.dimensionality == unit2.dimensionality
+            )
+
+        def compatible_mappings(first, second):
             return {
-                key: unit_registry.Quantity(0, unit1).check(unit2)
+                key: is_compatible(unit1, unit2)
                 for key, (unit1, unit2) in merge_mappings(first, second)
             }
 
@@ -1529,7 +1536,7 @@ class TestVariable(VariableSubclassobjects):
         quantity1 = array * unit_registry.m
         variable = xr.Variable("x", quantity1)
 
-        if convert_data and quantity1.check(unit):
+        if convert_data and is_compatible(unit_registry.m, unit):
             quantity2 = convert_units(array * unit_registry.m, {None: unit})
         else:
             quantity2 = array * unit
@@ -1539,7 +1546,7 @@ class TestVariable(VariableSubclassobjects):
             strip_units(variable),
             strip_units(
                 convert_units(other, extract_units(variable))
-                if quantity1.check(unit)
+                if is_compatible(unit_registry.m, unit)
                 else other
             ),
         )
@@ -1547,7 +1554,9 @@ class TestVariable(VariableSubclassobjects):
             expected &= extract_units(variable) == extract_units(other)
         else:
             expected &= all(
-                is_compatible(extract_units(variable), extract_units(other)).values()
+                compatible_mappings(
+                    extract_units(variable), extract_units(other)
+                ).values()
             )
 
         actual = func(variable, other)
