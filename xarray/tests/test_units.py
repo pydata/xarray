@@ -168,7 +168,8 @@ def strip_units(obj):
 
 def attach_units(obj, units):
     if not isinstance(obj, (xr.DataArray, xr.Dataset, xr.Variable)):
-        return array_attach_units(obj, units.get("data", 1))
+        units = units.get("data", None) or units.get(None, None) or 1
+        return array_attach_units(obj, units)
 
     if isinstance(obj, xr.Dataset):
         data_vars = {
