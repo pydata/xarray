@@ -1491,6 +1491,7 @@ class TestVariable(VariableSubclassobjects):
         expected = func(strip_units(variable))
         actual = func(variable)
 
+        assert extract_units(expected) == extract_units(actual)
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
