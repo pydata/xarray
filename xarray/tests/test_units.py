@@ -296,6 +296,11 @@ def dtype(request):
     return request.param
 
 
+def merge_mappings(*mappings):
+    for key in set(mappings[0]).intersection(*mappings[1:]):
+        yield key, tuple(m[key] for m in mappings)
+
+
 def merge_args(default_args, new_args):
     from itertools import zip_longest
 
@@ -1488,6 +1493,60 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable)
 
         xr.testing.assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "convert_data",
+        (
+            pytest.param(False, id="no_conversion"),
+            pytest.param(True, id="with_conversion"),
+        ),
+    )
+    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
+    def test_comparisons(self, func, unit, convert_data, dtype):
+        def is_compatible(first, second):
+            return {
+                key: unit_registry.Quantity(0, unit1).check(unit2)
+                for key, (unit1, unit2) in merge_mappings(first, second)
+            }
+
+        array = np.linspace(0, 1, 9).astype(dtype)
+        quantity1 = array * unit_registry.m
+        variable = xr.Variable("x", quantity1)
+
+        if convert_data and quantity1.check(unit):
+            quantity2 = convert_units(array * unit_registry.m, {None: unit})
+        else:
+            quantity2 = array * unit
+        other = xr.Variable("x", quantity2)
+
+        expected = func(
+            strip_units(variable),
+            strip_units(
+                convert_units(other, extract_units(variable))
+                if quantity1.check(unit)
+                else other
+            ),
+        )
+        if func.name == "identical":
+            expected &= extract_units(variable) == extract_units(other)
+        else:
+            expected &= all(
+                is_compatible(extract_units(variable), extract_units(other)).values()
+            )
+
+        actual = func(variable, other)
+
+        assert expected == actual
 
 
 class TestDataArray:
