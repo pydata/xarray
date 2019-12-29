@@ -1466,6 +1466,29 @@ class TestVariable(VariableSubclassobjects):
         assert extract_units(expected) == extract_units(actual)
         np.testing.assert_allclose(expected, actual)
 
+    @pytest.mark.parametrize(
+        "func", (method("isnull"), method("notnull"), method("count")), ids=repr
+    )
+    def test_missing_value_detection(self, func, dtype):
+        array = (
+            np.array(
+                [
+                    [1.4, 2.3, np.nan, 7.2],
+                    [np.nan, 9.7, np.nan, np.nan],
+                    [2.1, np.nan, np.nan, 4.6],
+                    [9.9, np.nan, 7.2, 9.1],
+                ]
+            ).astype(dtype)
+            * unit_registry.degK
+        )
+
+        variable = xr.Variable(("x", "y"), array)
+
+        expected = func(strip_units(variable))
+        actual = func(variable)
+
+        xr.testing.assert_identical(expected, actual)
+
 
 class TestDataArray:
     @pytest.mark.filterwarnings("error:::pint[.*]")
