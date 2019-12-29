@@ -5521,7 +5521,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     reflect_type=reflect_type,
                 )
             else:
-                variables[name] = var.pad(
+                variables[name] = var.pad(  # type: ignore
                     pad_width=var_pad_width, mode=coord_pad_mode, **coord_pad_options,
                 )
 

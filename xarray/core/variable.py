@@ -1099,6 +1099,11 @@ class Variable(
             result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
 
+    def _pad_options_dim_to_index(self, pad_option : Mapping[Hashable, Tuple[int, int]], fill_with_shape = False):
+        if fill_with_shape:
+            return [(n, n) if d not in pad_option else pad_option[d] for d, n in zip(self.dims, self.data.shape)]
+        return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
+
     def pad(
         self,
         pad_width: Mapping[Hashable, Tuple[int, int]] = None,
@@ -1142,27 +1147,19 @@ class Variable(
 
         # create pad_options_kwargs, numpy requires only relevant kwargs to be nonempty
         if isinstance(stat_length, dict):
-            stat_length = [
-                (n, n) if d not in stat_length else stat_length[d]
-                for d, n in zip(self.dims, self.data.shape)
-            ]
+            stat_length = self._pad_options_dim_to_index(stat_length, fill_with_shape=True)
         if isinstance(constant_values, dict):
-            constant_values = [
-                (0, 0) if d not in constant_values else constant_values[d]
-                for d in self.dims
-            ]
+            constant_values = self._pad_options_dim_to_index(constant_values)
         if isinstance(end_values, dict):
-            end_values = [
-                (0, 0) if d not in end_values else end_values[d] for d in self.dims
-            ]
+            end_values = self._pad_options_dim_to_index(end_values)
 
         # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
-            stat_length = [(n, n) for n in self.data.shape]
+            stat_length = [(n, n) for n in self.data.shape] # type: ignore
 
-        pads = [(0, 0) if d not in pad_width else pad_width[d] for d in self.dims]
+        pads = self._pad_options_dim_to_index(pad_width)
 
-        # numpy/dask work with optional kwargs
+        # create pad_options_kwargs, numpy/dask requires only relevant kwargs to be nonempty
         pad_option_kwargs = {}
         if stat_length is not None:
             pad_option_kwargs["stat_length"] = stat_length
@@ -1171,7 +1168,7 @@ class Variable(
         if end_values is not None:
             pad_option_kwargs["end_values"] = end_values
         if reflect_type is not None:
-            pad_option_kwargs["reflect_type"] = reflect_type
+            pad_option_kwargs["reflect_type"] = reflect_type # type: ignore
 
         array = duck_array_ops.pad(
             self.data.astype(dtype, copy=False), pads, mode=mode, **pad_option_kwargs
