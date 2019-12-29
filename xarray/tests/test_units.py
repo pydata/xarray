@@ -1619,6 +1619,24 @@ class TestVariable(VariableSubclassobjects):
 
         assert expected == actual
 
+    @pytest.mark.parametrize(
+        "indices",
+        (
+            pytest.param(4, id="single index"),
+            pytest.param([5, 2, 9, 1], id="multiple indices"),
+        ),
+    )
+    def test_isel(self, indices, dtype):
+        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.s
+        variable = xr.Variable("x", array)
+
+        expected = attach_units(
+            strip_units(variable).isel(x=indices), extract_units(variable)
+        )
+        actual = variable.isel(x=indices)
+
+        xr.testing.assert_identical(expected, actual)
+
 
 class TestDataArray:
     @pytest.mark.filterwarnings("error:::pint[.*]")
