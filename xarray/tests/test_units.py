@@ -1495,6 +1495,62 @@ class TestVariable(VariableSubclassobjects):
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(
+                1,
+                DimensionalityError,
+                id="no_unit",
+                marks=pytest.mark.xfail(reason="uses 0 as a replacement"),
+            ),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(
+                unit_registry.cm,
+                None,
+                id="compatible_unit",
+                marks=pytest.mark.xfail(reason="converts to fill value's unit"),
+            ),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_missing_value_fillna(self, unit, error):
+        value = 0
+        array = (
+            np.array(
+                [
+                    [1.4, 2.3, np.nan, 7.2],
+                    [np.nan, 9.7, np.nan, np.nan],
+                    [2.1, np.nan, np.nan, 4.6],
+                    [9.9, np.nan, 7.2, 9.1],
+                ]
+            )
+            * unit_registry.m
+        )
+        variable = xr.Variable(("x", "y"), array)
+
+        fill_value = value * unit
+
+        if error is not None:
+            with pytest.raises(error):
+                print(variable.fillna(value=fill_value))
+
+            return
+
+        expected = attach_units(
+            strip_units(variable).fillna(
+                value=fill_value.to(unit_registry.m).magnitude
+            ),
+            extract_units(variable),
+        )
+        actual = variable.fillna(value=fill_value)
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
         "unit",
         (
             pytest.param(1, id="no_unit"),
