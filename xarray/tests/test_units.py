@@ -207,12 +207,7 @@ def attach_units(obj, units):
             name=obj.name, data=data, coords=coords, attrs=attrs, dims=dims
         )
     else:
-        data_units = (
-            units.get(obj.name, None)
-            or units.get("data", None)
-            or units.get(None, None)
-            or 1
-        )
+        data_units = units.get("data", None) or units.get(None, None) or 1
 
         data = array_attach_units(obj.data, data_units)
         new_obj = obj.copy(data=data)
