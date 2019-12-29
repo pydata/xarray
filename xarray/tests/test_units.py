@@ -295,6 +295,16 @@ def dtype(request):
     return request.param
 
 
+def merge_args(default_args, new_args):
+    from itertools import zip_longest
+
+    fill_value = object()
+    return [
+        second if second is not fill_value else first
+        for first, second in zip_longest(default_args, new_args, fillvalue=fill_value)
+    ]
+
+
 class method:
     def __init__(self, name, *args, **kwargs):
         self.name = name
@@ -305,7 +315,7 @@ class method:
         from collections.abc import Callable
         from functools import partial
 
-        all_args = list(self.args) + list(args)
+        all_args = merge_args(self.args, args)
         all_kwargs = {**self.kwargs, **kwargs}
 
         func = getattr(obj, self.name, None)
@@ -347,7 +357,7 @@ class function:
         self.kwargs = kwargs
 
     def __call__(self, *args, **kwargs):
-        all_args = list(self.args) + list(args)
+        all_args = merge_args(self.args, args)
         all_kwargs = {**self.kwargs, **kwargs}
 
         return self.func(*all_args, **all_kwargs)
