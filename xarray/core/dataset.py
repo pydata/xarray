@@ -1890,7 +1890,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2036,7 +2036,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2171,7 +2171,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        indexers : dict or int, default: 5
+        indexers : dict or int
             A dict with keys matching dimensions and integer values `n`
             or a single integer `n` applied over all dimensions.
             One of indexers or indexers_kwargs must be provided.
@@ -2335,7 +2335,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         fill_value : scalar, optional
             Value to use for newly missing values
         sparse: use sparse-array. By default, False
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2550,7 +2550,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             values.
         kwargs: dictionary, optional
             Additional keyword passed to scipy's interpolator.
-        **coords_kwarg : {dim: coordinate, ...}, optional
+        **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
@@ -4941,7 +4941,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
