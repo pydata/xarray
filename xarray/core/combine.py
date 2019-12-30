@@ -88,7 +88,7 @@ def _infer_concat_order_from_coords(datasets):
                 # with the same value have the same coord values throughout.
                 if any(index.size == 0 for index in indexes):
                     raise ValueError("Cannot handle size zero dimensions")
-                first_items = pd.Index([index.take([0]) for index in indexes])
+                first_items = pd.Index([index[0] for index in indexes])
 
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
@@ -115,11 +115,12 @@ def _infer_concat_order_from_coords(datasets):
     return combined_ids, concat_dims
 
 
-def _check_shape_tile_ids(combined_tile_ids):
+def _check_dimension_depth_tile_ids(combined_tile_ids):
+    """
+    Check all tuples are the same length, i.e. check that all lists are
+    nested to the same depth.
+    """
     tile_ids = combined_tile_ids.keys()
-
-    # Check all tuples are the same length
-    # i.e. check that all lists are nested to the same depth
     nesting_depths = [len(tile_id) for tile_id in tile_ids]
     if not nesting_depths:
         nesting_depths = [0]
@@ -128,8 +129,13 @@ def _check_shape_tile_ids(combined_tile_ids):
             "The supplied objects do not form a hypercube because"
             " sub-lists do not have consistent depths"
         )
+    # return these just to be reused in _check_shape_tile_ids
+    return tile_ids, nesting_depths
 
-    # Check all lists along one dimension are same length
+
+def _check_shape_tile_ids(combined_tile_ids):
+    """Check all lists along one dimension are same length."""
+    tile_ids, nesting_depths = _check_dimension_depth_tile_ids(combined_tile_ids)
     for dim in range(nesting_depths[0]):
         indices_along_dim = [tile_id[dim] for tile_id in tile_ids]
         occurrences = Counter(indices_along_dim)
@@ -536,7 +542,8 @@ def combine_by_coords(
     coords : {'minimal', 'different', 'all' or list of str}, optional
         As per the 'data_vars' kwarg, but for coordinate variables.
     fill_value : scalar, optional
-        Value to use for newly missing values
+        Value to use for newly missing values. If None, raises a ValueError if
+        the passed Datasets do not create a complete hypercube.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
@@ -653,6 +660,15 @@ def combine_by_coords(
     temperature    (y, x) float64 1.654 10.63 7.015 2.543 ... 12.46 2.22 15.96
     precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
 
+    >>> xr.combine_by_coords([x1, x2, x3])
+    <xarray.Dataset>
+    Dimensions:        (x: 6, y: 4)
+    Coordinates:
+    * x              (x) int64 10 20 30 40 50 60
+    * y              (y) int64 0 1 2 3
+    Data variables:
+    temperature    (y, x) float64 1.654 10.63 7.015 nan ... 12.46 2.22 15.96
+    precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
     """
 
     # Group by data vars
@@ -667,7 +683,13 @@ def combine_by_coords(
             list(datasets_with_same_vars)
         )
 
-        _check_shape_tile_ids(combined_ids)
+        if fill_value is None:
+            # check that datasets form complete hypercube
+            _check_shape_tile_ids(combined_ids)
+        else:
+            # check only that all datasets have same dimension depth for these
+            # vars
+            _check_dimension_depth_tile_ids(combined_ids)
 
         # Concatenate along all of concat_dims one by one to create single ds
         concatenated = _combine_nd(
