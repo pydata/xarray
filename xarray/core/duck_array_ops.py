@@ -11,7 +11,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from . import dask_array_ops, dtypes, npcompat, nputils
+from . import dask_array_ops, dask_array_compat, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 
@@ -284,7 +284,7 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(name, coerce_strings=False):
+def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
     from . import nanops
 
     def f(values, axis=None, skipna=None, **kwargs):
@@ -301,7 +301,7 @@ def _create_nan_agg_method(name, coerce_strings=False):
             nanname = "nan" + name
             func = getattr(nanops, nanname)
         else:
-            func = _dask_or_eager_func(name)
+            func = _dask_or_eager_func(name, dask_module=dask_module)
 
         try:
             return func(values, axis=axis, **kwargs)
@@ -337,7 +337,7 @@ std = _create_nan_agg_method("std")
 std.numeric_only = True
 var = _create_nan_agg_method("var")
 var.numeric_only = True
-median = _create_nan_agg_method("median")
+median = _create_nan_agg_method("median", dask_module=dask_array_compat)
 median.numeric_only = True
 prod = _create_nan_agg_method("prod")
 prod.numeric_only = True
