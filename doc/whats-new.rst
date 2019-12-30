@@ -25,6 +25,12 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
+  to a single chunk along all reduction axes. (:issue:`2999`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:func:`xarray.concat` now preserves attributes from the first Variable.
+  (:issue:`2575`, :issue:`2060`, :issue:`1614`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
@@ -38,6 +44,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
+  hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
+  <https://github.com/bolliger32>`_.
 - Fix :py:meth:`xarray.combine_by_coords` when combining cftime coordinates
   which span long time intervals (:issue:`3535`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
