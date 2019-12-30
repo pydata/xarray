@@ -62,6 +62,15 @@ def substring_in_axes(substring, ax):
     return False
 
 
+def substring_not_in_axes(substring, ax):
+    """
+    Return True if a substring is not found anywhere in an axes
+    """
+    alltxt = {t.get_text() for t in ax.findobj(mpl.text.Text)}
+    check = [(substring not in txt) for txt in alltxt]
+    return all(check)
+
+
 def easy_array(shape, start=0, stop=1):
     """
     Make an array with desired shape using np.linspace
@@ -265,6 +274,7 @@ class TestPlot(PlotTestCase):
         )
 
         a.plot.contourf(x="time", y="depth")
+        a.plot.contourf(x="depth", y="time")
 
     def test3d(self):
         self.darray.plot()
@@ -1775,6 +1785,18 @@ class TestFacetGrid4d(PlotTestCase):
         for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
             assert substring_in_axes(label, ax)
 
+        # ensure that row & col labels can be changed
+        g.set_titles("abc={value}")
+        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+            assert substring_in_axes(f"abc={label}", ax)
+            # previous labels were "row=row0" etc.
+            assert substring_not_in_axes("row=", ax)
+
+        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+            assert substring_in_axes(f"abc={label}", ax)
+            # previous labels were "col=row0" etc.
+            assert substring_not_in_axes("col=", ax)
+
 
 @pytest.mark.filterwarnings("ignore:tight_layout cannot")
 class TestFacetedLinePlotsLegend(PlotTestCase):
@@ -2149,3 +2171,31 @@ class TestAxesKwargs:
         da.plot(yticks=np.arange(5))
         expected = np.arange(5)
         assert np.all(plt.gca().get_yticks() == expected)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["pcolormesh", "contourf", "contour"])
+def test_plot_transposed_nondim_coord(plotfunc):
+    x = np.linspace(0, 10, 101)
+    h = np.linspace(3, 7, 101)
+    s = np.linspace(0, 1, 51)
+    z = s[:, np.newaxis] * h[np.newaxis, :]
+    da = xr.DataArray(
+        np.sin(x) * np.cos(z),
+        dims=["s", "x"],
+        coords={"x": x, "s": s, "z": (("s", "x"), z), "zt": (("x", "s"), z.T)},
+    )
+    getattr(da.plot, plotfunc)(x="x", y="zt")
+    getattr(da.plot, plotfunc)(x="zt", y="x")
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["pcolormesh", "imshow"])
+def test_plot_transposes_properly(plotfunc):
+    # test that we aren't mistakenly transposing when the 2 dimensions have equal sizes.
+    da = xr.DataArray([np.sin(2 * np.pi / 10 * np.arange(10))] * 10, dims=("y", "x"))
+    hdl = getattr(da.plot, plotfunc)(x="x", y="y")
+    # get_array doesn't work for contour, contourf. It returns the colormap intervals.
+    # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
+    # to ravel() on the LHS
+    assert np.all(hdl.get_array().ravel() == da.to_masked_array().ravel())

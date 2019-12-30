@@ -28,6 +28,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
+from xarray.core.utils import is_scalar
 
 from . import (
     InaccessibleArray,
@@ -4575,21 +4576,24 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
-    def test_quantile(self):
-
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    def test_quantile(self, q):
         ds = create_test_data(seed=123)
 
-        for q in [0.25, [0.50], [0.25, 0.75]]:
-            for dim in [None, "dim1", ["dim1"]]:
-                ds_quantile = ds.quantile(q, dim=dim)
-                assert "quantile" in ds_quantile
-                for var, dar in ds.data_vars.items():
-                    assert var in ds_quantile
-                    assert_identical(ds_quantile[var], dar.quantile(q, dim=dim))
-            dim = ["dim1", "dim2"]
+        for dim in [None, "dim1", ["dim1"]]:
             ds_quantile = ds.quantile(q, dim=dim)
-            assert "dim3" in ds_quantile.dims
-            assert all(d not in ds_quantile.dims for d in dim)
+            if is_scalar(q):
+                assert "quantile" not in ds_quantile.dims
+            else:
+                assert "quantile" in ds_quantile.dims
+
+            for var, dar in ds.data_vars.items():
+                assert var in ds_quantile
+                assert_identical(ds_quantile[var], dar.quantile(q, dim=dim))
+        dim = ["dim1", "dim2"]
+        ds_quantile = ds.quantile(q, dim=dim)
+        assert "dim3" in ds_quantile.dims
+        assert all(d not in ds_quantile.dims for d in dim)
 
     @requires_bottleneck
     def test_rank(self):
@@ -5493,6 +5497,11 @@ def ds(request):
         )
 
 
+def test_coarsen_absent_dims_error(ds):
+    with raises_regex(ValueError, "not found in Dataset."):
+        ds.coarsen(foo=2)
+
+
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
 def test_coarsen(ds, dask, boundary, side):
@@ -5501,12 +5510,11 @@ def test_coarsen(ds, dask, boundary, side):
 
     actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
     assert_equal(
-        actual["z1"], ds["z1"].coarsen(time=2, x=3, boundary=boundary, side=side).max()
+        actual["z1"], ds["z1"].coarsen(x=3, boundary=boundary, side=side).max()
     )
     # coordinate should be mean by default
     assert_equal(
-        actual["time"],
-        ds["time"].coarsen(time=2, x=3, boundary=boundary, side=side).mean(),
+        actual["time"], ds["time"].coarsen(time=2, boundary=boundary, side=side).mean()
     )
 
 
@@ -5517,8 +5525,8 @@ def test_coarsen_coords(ds, dask):
 
     # check if coord_func works
     actual = ds.coarsen(time=2, x=3, boundary="trim", coord_func={"time": "max"}).max()
-    assert_equal(actual["z1"], ds["z1"].coarsen(time=2, x=3, boundary="trim").max())
-    assert_equal(actual["time"], ds["time"].coarsen(time=2, x=3, boundary="trim").max())
+    assert_equal(actual["z1"], ds["z1"].coarsen(x=3, boundary="trim").max())
+    assert_equal(actual["time"], ds["time"].coarsen(time=2, boundary="trim").max())
 
     # raise if exact
     with pytest.raises(ValueError):

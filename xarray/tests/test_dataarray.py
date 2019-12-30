@@ -15,6 +15,7 @@ from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.indexes import propagate_indexes
+from xarray.core.utils import is_scalar
 from xarray.tests import (
     LooseVersion,
     ReturnItem,
@@ -2330,17 +2331,20 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
-    def test_quantile(self):
-        for q in [0.25, [0.50], [0.25, 0.75]]:
-            for axis, dim in zip(
-                [None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]]
-            ):
-                actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True)
-                expected = np.nanpercentile(
-                    self.dv.values, np.array(q) * 100, axis=axis
-                )
-                np.testing.assert_allclose(actual.values, expected)
-                assert actual.attrs == self.attrs
+    @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
+    @pytest.mark.parametrize(
+        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+    )
+    def test_quantile(self, q, axis, dim):
+        actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True)
+        expected = np.nanpercentile(self.dv.values, np.array(q) * 100, axis=axis)
+        np.testing.assert_allclose(actual.values, expected)
+        if is_scalar(q):
+            assert "quantile" not in actual.dims
+        else:
+            assert "quantile" in actual.dims
+
+        assert actual.attrs == self.attrs
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs

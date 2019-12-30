@@ -66,6 +66,7 @@ from .indexes import (
     propagate_indexes,
     roll_index,
 )
+from .indexing import is_fancy_indexer
 from .merge import (
     dataset_merge_method,
     dataset_update_method,
@@ -78,8 +79,8 @@ from .utils import (
     Default,
     Frozen,
     SortedKeysDict,
-    _default,
     _check_inplace,
+    _default,
     decode_numpy_dict_values,
     either_dict_or_kwargs,
     hashable,
@@ -1886,7 +1887,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -1907,6 +1908,48 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.isel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
+        if any(is_fancy_indexer(idx) for idx in indexers.values()):
+            return self._isel_fancy(indexers, drop=drop)
+
+        # Much faster algorithm for when all indexers are ints, slices, one-dimensional
+        # lists, or zero or one-dimensional np.ndarray's
+        invalid = indexers.keys() - self.dims.keys()
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
+
+        variables = {}
+        dims: Dict[Hashable, Tuple[int, ...]] = {}
+        coord_names = self._coord_names.copy()
+        indexes = self._indexes.copy() if self._indexes is not None else None
+
+        for var_name, var_value in self._variables.items():
+            var_indexers = {k: v for k, v in indexers.items() if k in var_value.dims}
+            if var_indexers:
+                var_value = var_value.isel(var_indexers)
+                if drop and var_value.ndim == 0 and var_name in coord_names:
+                    coord_names.remove(var_name)
+                    if indexes:
+                        indexes.pop(var_name, None)
+                    continue
+                if indexes and var_name in indexes:
+                    if var_value.ndim == 1:
+                        indexes[var_name] = var_value.to_index()
+                    else:
+                        del indexes[var_name]
+            variables[var_name] = var_value
+            dims.update(zip(var_value.dims, var_value.shape))
+
+        return self._construct_direct(
+            variables=variables,
+            coord_names=coord_names,
+            dims=dims,
+            attrs=self._attrs,
+            indexes=indexes,
+            encoding=self._encoding,
+            file_obj=self._file_obj,
+        )
+
+    def _isel_fancy(self, indexers: Mapping[Hashable, Any], *, drop: bool) -> "Dataset":
         # Note: we need to preserve the original indexers variable in order to merge the
         # coords below
         indexers_list = list(self._validate_indexers(indexers))
@@ -1990,7 +2033,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2125,7 +2168,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        indexers : dict or int, default: 5
+        indexers : dict or int
             A dict with keys matching dimensions and integer values `n`
             or a single integer `n` applied over all dimensions.
             One of indexers or indexers_kwargs must be provided.
@@ -2289,7 +2332,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         fill_value : scalar, optional
             Value to use for newly missing values
         sparse: use sparse-array. By default, False
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2504,7 +2547,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             values.
         kwargs: dictionary, optional
             Additional keyword passed to scipy's interpolator.
-        **coords_kwarg : {dim: coordinate, ...}, optional
+        **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
@@ -4895,7 +4938,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -5116,6 +5159,44 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         numpy.nanpercentile, pandas.Series.quantile, DataArray.quantile
+
+        Examples
+        --------
+
+        >>> ds = xr.Dataset(
+        ...     {"a": (("x", "y"), [[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]])},
+        ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
+        ... )
+        >>> ds.quantile(0)  # or ds.quantile(0, dim=...)
+        <xarray.Dataset>
+        Dimensions:   ()
+        Coordinates:
+            quantile  float64 0.0
+        Data variables:
+            a         float64 0.7
+        >>> ds.quantile(0, dim="x")
+        <xarray.Dataset>
+        Dimensions:   (y: 4)
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+            quantile  float64 0.0
+        Data variables:
+            a         (y) float64 0.7 4.2 2.6 1.5
+        >>> ds.quantile([0, 0.5, 1])
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3)
+        Coordinates:
+          * quantile  (quantile) float64 0.0 0.5 1.0
+        Data variables:
+            a         (quantile) float64 0.7 3.4 9.4
+        >>> ds.quantile([0, 0.5, 1], dim="x")
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3, y: 4)
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+          * quantile  (quantile) float64 0.0 0.5 1.0
+        Data variables:
+            a         (quantile, y) float64 0.7 4.2 2.6 1.5 3.6 ... 1.7 6.5 7.3 9.4 1.9
         """
 
         if isinstance(dim, str):
@@ -5166,11 +5247,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         new = self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
         )
-        if "quantile" in new.dims:
-            new.coords["quantile"] = Variable("quantile", q)
-        else:
-            new.coords["quantile"] = q
-        return new
+        return new.assign_coords(quantile=q)
 
     def rank(self, dim, pct=False, keep_attrs=None):
         """Ranks the data.

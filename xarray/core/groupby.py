@@ -597,6 +597,54 @@ class GroupBy(SupportsArithmetic):
         --------
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
+        ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
+        ...     dims=("y", "y"),
+        ... )
+        >>> ds = xr.Dataset({"a": da})
+        >>> da.groupby("x").quantile(0)
+        <xarray.DataArray (x: 2, y: 4)>
+        array([[0.7, 4.2, 0.7, 1.5],
+               [6.5, 7.3, 2.6, 1.9]])
+        Coordinates:
+            quantile  float64 0.0
+          * y         (y) int64 1 1 2 2
+          * x         (x) int64 0 1
+        >>> ds.groupby("y").quantile(0, dim=...)
+        <xarray.Dataset>
+        Dimensions:   (y: 2)
+        Coordinates:
+            quantile  float64 0.0
+          * y         (y) int64 1 2
+        Data variables:
+            a         (y) float64 0.7 0.7
+        >>> da.groupby("x").quantile([0, 0.5, 1])
+        <xarray.DataArray (x: 2, y: 4, quantile: 3)>
+        array([[[0.7 , 1.  , 1.3 ],
+                [4.2 , 6.3 , 8.4 ],
+                [0.7 , 5.05, 9.4 ],
+                [1.5 , 4.2 , 6.9 ]],
+               [[6.5 , 6.5 , 6.5 ],
+                [7.3 , 7.3 , 7.3 ],
+                [2.6 , 2.6 , 2.6 ],
+                [1.9 , 1.9 , 1.9 ]]])
+        Coordinates:
+          * y         (y) int64 1 1 2 2
+          * quantile  (quantile) float64 0.0 0.5 1.0
+          * x         (x) int64 0 1
+        >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3, y: 2)
+        Coordinates:
+          * quantile  (quantile) float64 0.0 0.5 1.0
+          * y         (y) int64 1 2
+        Data variables:
+            a         (y, quantile) float64 0.7 5.35 8.4 0.7 2.25 9.4
         """
         if dim is None:
             dim = self._group_dim
