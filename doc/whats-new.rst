@@ -25,6 +25,9 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
+  to a single chunk along all reduction axes. (:issue:`2999`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:func:`xarray.concat` now preserves attributes from the first Variable.
   (:issue:`2575`, :issue:`2060`, :issue:`1614`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
