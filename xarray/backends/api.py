@@ -830,12 +830,8 @@ def open_mfdataset(
           dimension must have the same size in all objects.
     attrs_file : str, optional
         Path of the file used to read global attributes from.
-        By default global attributes are read from the first file provided.
-        Wildcard matches are sorted by filename. Nested lists are flattened
-        using a dictionary. For Python 3.6 and higher, global attributes are
-        read from the first file of the first list (of the first list etc.).
-        For Python 3.5 or lower, global attributes are read from an
-        arbitrary file.
+        By default global attributes are read from the first file provided,
+        with wildcard matches sorted by filename.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
