@@ -1,4 +1,5 @@
 import pandas as pd
+from collections import OrderedDict
 
 from . import dtypes, utils
 from .alignment import align
@@ -27,7 +28,7 @@ def concat(
         xarray objects to concatenate together. Each object is expected to
         consist of variables and coordinates with matching shapes except for
         along the concatenated dimension.
-    dim : str or DataArray or pandas.Index
+    dim : str, DataArray, Variable, or pandas.Index
         Name of the dimension to concatenate along. This can either be a new
         dimension name, in which case it is added along axis=0, or an existing
         dimension name, in which case the location of the dimension is
@@ -131,6 +132,7 @@ def concat(
             "can only concatenate xarray Dataset and DataArray "
             "objects, got %s" % type(first_obj)
         )
+
     return f(objs, dim, data_vars, coords, compat, positions, fill_value, join)
 
 
@@ -368,44 +370,102 @@ def _dataset_concat(
                 var = var.set_dims(common_dims, common_shape)
             yield var
 
-    # stack up each variable to fill-out the dataset (in order)
-    # n.b. this loop preserves variable order, needed for groupby.
-    for k in datasets[0].variables:
-        if k in concat_over:
+    # Find union of all data variables (preserving order)
+    # assumes all datasets are relatively in the same order
+    # and missing variables are inserted in the correct position
+    # if datasets have variables in drastically different orders
+    # the resulting order will be dependent on the order they are in the list
+    # passed to concat
+    union_of_variables = OrderedDict()
+    union_of_coordinates = OrderedDict()
+    for ds in datasets:
+        var_list = list(ds.variables.keys())
+        # this logic maintains the order of the variable list and runs in
+        # O(n^2) where n is number of variables in the uncommon worst case
+        # where there are no missing variables this will be O(n)
+        for i in range(0, len(var_list)):
+            if var_list[i] not in union_of_variables:
+                # need to determine the correct place
+                # first add the new item which will be at the end
+                union_of_variables[var_list[i]] = None
+                union_of_variables.move_to_end(var_list[i])
+                # move any items after this in the variables list to the end
+                # this will only happen for missing variables
+                for j in range(i + 1, len(var_list)):
+                    if var_list[j] in union_of_variables:
+                        union_of_variables.move_to_end(var_list[j])
+
+        # check that all datasets have the same coordinate set
+        if len(union_of_coordinates) > 0:
+            coord_set_diff = (
+                union_of_coordinates.keys() ^ ds.coords.keys()
+            ) & concat_over
+            if len(coord_set_diff) > 0:
+                raise ValueError(
+                    "Variables %r are coordinates in some datasets but not others."
+                    % coord_set_diff
+                )
+
+        union_of_coordinates = dict(
+            union_of_coordinates.items() | dict.fromkeys(ds.coords).items()
+        )
+
+    # we don't want to fill coordinate variables so remove them
+    for k in union_of_coordinates.keys():
+        union_of_variables.pop(k, None)
+
+    # Cache a filled tmp variable with correct dims for filling missing variables
+    # doing this here allows us to concat with variables missing from any dataset
+    # only will run until it finds one protype for each variable in concat list
+    # we will also only fill defaults for data_vars not coordinates
+
+    # optimization to allow us to break when filling variable
+    def find_fill_variable_from_ds(variable_key, union_of_variables, datasets):
+        for ds in datasets:
+            if union_of_variables[variable_key] is not None:
+                continue
+
+            if variable_key not in ds.variables:
+                continue
+
+            v_fill_value = fill_value
+            if fill_value is dtypes.NA:
+                dtype, v_fill_value = dtypes.maybe_promote(ds[variable_key].dtype)
+            else:
+                dtype = ds[variable_key].dtype
+
+            union_of_variables[variable_key] = full_like(
+                ds[variable_key], fill_value=v_fill_value, dtype=dtype
+            )
+            return
+
+    for v in union_of_variables.keys():
+        find_fill_variable_from_ds(v, union_of_variables, datasets)
+
+    # create the concat list filling in missing variables
+    while len(union_of_variables) > 0 or len(union_of_coordinates) > 0:
+        k = None
+        # get the variables in order
+        if len(union_of_variables) > 0:
+            k = union_of_variables.popitem(last=False)
+        elif len(union_of_coordinates) > 0:
+            k = union_of_coordinates.popitem()
+
+        if k[0] in concat_over:
             variables = []
             for ds in datasets:
-                # if one of the variables doesn't exist find one which does
-                # and use it to create a fill value
-                if k not in ds.variables:
-                    for ds in datasets:
-                        if k in ds.variables:
-                            # found one to use as a fill value, fill with fill_value
-                            if fill_value is dtypes.NA:
-                                dtype, fill_value = dtypes.maybe_promote(
-                                    ds.variables[k].dtype
-                                )
-                            else:
-                                dtype = ds.variables[k].dtype
-
-                            filled = full_like(
-                                ds.variables[k], fill_value=fill_value, dtype=dtype
-                            )
-                            break
-                    variables.append(filled)
+                if k[0] in ds.variables:
+                    variables.append(ds.variables[k[0]])
                 else:
-                    variables.append(ds.variables[k])
+                    # var is missing, fill with cached value
+                    variables.append(k[1])
+
             vars = ensure_common_dims(variables)
             combined = concat_vars(vars, dim, positions)
             assert isinstance(combined, Variable)
-            result_vars[k] = combined
+            result_vars[k[0]] = combined
 
     result = Dataset(result_vars, attrs=result_attrs)
-    absent_coord_names = coord_names - set(result.variables)
-    if absent_coord_names:
-        raise ValueError(
-            "Variables %r are coordinates in some datasets but not others."
-            % absent_coord_names
-        )
     result = result.set_coords(coord_names)
     result.encoding = result_encoding
 

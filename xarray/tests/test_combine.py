@@ -755,7 +755,9 @@ class TestAutoCombineOldAPI:
             auto_combine(objs)
 
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with raises_regex(ValueError, "'y' is not present in all datasets"):
+        with raises_regex(
+            ValueError, ".* are coordinates in some datasets but not others"
+        ):
             auto_combine(objs)
 
     def test_auto_combine_previously_failed(self):
