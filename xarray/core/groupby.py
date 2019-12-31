@@ -10,6 +10,7 @@ from .arithmetic import SupportsArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
+from .indexes import propagate_indexes
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -529,6 +530,7 @@ class GroupBy(SupportsArithmetic):
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
+            obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
         return obj
 
     def fillna(self, value):
@@ -554,6 +556,108 @@ class GroupBy(SupportsArithmetic):
         DataArray.fillna
         """
         out = ops.fillna(self, value)
+        return out
+
+    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+        """Compute the qth quantile over each array in the groups and
+        concatenate them together into a new array.
+
+        Parameters
+        ----------
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1
+            inclusive.
+        dim : `...`, str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+            Defaults to the grouped dimension.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+
+        Returns
+        -------
+        quantiles : Variable
+            If `q` is a single quantile, then the result is a
+            scalar. If multiple percentiles are given, first axis of
+            the result corresponds to the quantile. In either case a
+            quantile dimension is added to the return array. The other
+            dimensions are the dimensions that remain after the
+            reduction of the array.
+
+        See Also
+        --------
+        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        DataArray.quantile
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
+        ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
+        ...     dims=("y", "y"),
+        ... )
+        >>> ds = xr.Dataset({"a": da})
+        >>> da.groupby("x").quantile(0)
+        <xarray.DataArray (x: 2, y: 4)>
+        array([[0.7, 4.2, 0.7, 1.5],
+               [6.5, 7.3, 2.6, 1.9]])
+        Coordinates:
+            quantile  float64 0.0
+          * y         (y) int64 1 1 2 2
+          * x         (x) int64 0 1
+        >>> ds.groupby("y").quantile(0, dim=...)
+        <xarray.Dataset>
+        Dimensions:   (y: 2)
+        Coordinates:
+            quantile  float64 0.0
+          * y         (y) int64 1 2
+        Data variables:
+            a         (y) float64 0.7 0.7
+        >>> da.groupby("x").quantile([0, 0.5, 1])
+        <xarray.DataArray (x: 2, y: 4, quantile: 3)>
+        array([[[0.7 , 1.  , 1.3 ],
+                [4.2 , 6.3 , 8.4 ],
+                [0.7 , 5.05, 9.4 ],
+                [1.5 , 4.2 , 6.9 ]],
+               [[6.5 , 6.5 , 6.5 ],
+                [7.3 , 7.3 , 7.3 ],
+                [2.6 , 2.6 , 2.6 ],
+                [1.9 , 1.9 , 1.9 ]]])
+        Coordinates:
+          * y         (y) int64 1 1 2 2
+          * quantile  (quantile) float64 0.0 0.5 1.0
+          * x         (x) int64 0 1
+        >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
+        <xarray.Dataset>
+        Dimensions:   (quantile: 3, y: 2)
+        Coordinates:
+          * quantile  (quantile) float64 0.0 0.5 1.0
+          * y         (y) int64 1 2
+        Data variables:
+            a         (y, quantile) float64 0.7 5.35 8.4 0.7 2.25 9.4
+        """
+        if dim is None:
+            dim = self._group_dim
+
+        out = self.map(
+            self._obj.__class__.quantile,
+            shortcut=False,
+            q=q,
+            dim=dim,
+            interpolation=interpolation,
+            keep_attrs=keep_attrs,
+        )
+
         return out
 
     def where(self, cond, other=dtypes.NA):
@@ -584,9 +688,7 @@ class GroupBy(SupportsArithmetic):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-        return self.reduce(
-            op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs, allow_lazy=True
-        )
+        return self.reduce(op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs)
 
     def first(self, skipna=None, keep_attrs=None):
         """Return the first element of each group along the group dimension
@@ -607,7 +709,7 @@ class GroupBy(SupportsArithmetic):
         Dataset.swap_dims
         """
         coords_kwargs = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
-        return self.apply(lambda ds: ds.assign_coords(**coords_kwargs))
+        return self.map(lambda ds: ds.assign_coords(**coords_kwargs))
 
 
 def _maybe_reorder(xarray_obj, dim, positions):
@@ -654,8 +756,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order, transpose_coords=self._restore_coord_dims)
 
-    def apply(self, func, shortcut=False, args=(), **kwargs):
-        """Apply a function over each array in the group and concatenate them
+    def map(self, func, shortcut=False, args=(), **kwargs):
+        """Apply a function to each array in the group and concatenate them
         together into a new array.
 
         `func` is called like `func(ar, *args, **kwargs)` for each array `ar`
@@ -676,17 +778,19 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Callable to apply to each array.
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
+
             (1) The action of `func` does not depend on any of the array
                 metadata (attributes or coordinates) but only on the data and
                 dimensions.
             (2) The action of `func` creates arrays with homogeneous metadata,
                 that is, with the same dimensions and attributes.
+
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-        args : tuple, optional
+        ``*args`` : tuple, optional
             Positional arguments passed to `func`.
-        **kwargs
+        ``**kwargs``
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
         Returns
@@ -700,6 +804,21 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             grouped = self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
+
+    def apply(self, func, shortcut=False, args=(), **kwargs):
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        DataArrayGroupBy.map
+        """
+        warnings.warn(
+            "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
     def _combine(self, applied, restore_coord_dims=False, shortcut=False):
         """Recombine the applied objects like the original."""
@@ -716,66 +835,13 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             combined = self._restore_dim_order(combined)
         if coord is not None:
             if shortcut:
-                combined._coords[coord.name] = as_variable(coord)
+                coord_var = as_variable(coord)
+                combined._coords[coord.name] = coord_var
             else:
                 combined.coords[coord.name] = coord
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
-
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
-        """Compute the qth quantile over each array in the groups and
-        concatenate them together into a new array.
-
-        Parameters
-        ----------
-        q : float in range of [0,1] (or sequence of floats)
-            Quantile to compute, which must be between 0 and 1
-            inclusive.
-        dim : `...`, str or sequence of str, optional
-            Dimension(s) over which to apply quantile.
-            Defaults to the grouped dimension.
-        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
-            This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
-
-        Returns
-        -------
-        quantiles : Variable
-            If `q` is a single quantile, then the result
-            is a scalar. If multiple percentiles are given, first axis of
-            the result corresponds to the quantile and a quantile dimension
-            is added to the return array. The other dimensions are the
-            dimensions that remain after the reduction of the array.
-
-        See Also
-        --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
-        DataArray.quantile
-        """
-        if dim is None:
-            dim = self._group_dim
-
-        out = self.apply(
-            self._obj.__class__.quantile,
-            shortcut=False,
-            q=q,
-            dim=dim,
-            interpolation=interpolation,
-            keep_attrs=keep_attrs,
-        )
-
-        if np.asarray(q, dtype=np.float64).ndim == 0:
-            out = out.drop("quantile")
-        return out
 
     def reduce(
         self, func, dim=None, axis=None, keep_attrs=None, shortcut=True, **kwargs
@@ -819,7 +885,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         check_reduce_dims(dim, self.dims)
 
-        return self.apply(reduce_array, shortcut=shortcut)
+        return self.map(reduce_array, shortcut=shortcut)
 
 
 ops.inject_reduce_methods(DataArrayGroupBy)
@@ -827,8 +893,8 @@ ops.inject_binary_ops(DataArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
-    def apply(self, func, args=(), shortcut=None, **kwargs):
-        """Apply a function over each Dataset in the group and concatenate them
+    def map(self, func, args=(), shortcut=None, **kwargs):
+        """Apply a function to each Dataset in the group and concatenate them
         together into a new Dataset.
 
         `func` is called like `func(ds, *args, **kwargs)` for each dataset `ds`
@@ -860,6 +926,22 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         # ignore shortcut if set (for now)
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         return self._combine(applied)
+
+    def apply(self, func, args=(), shortcut=None, **kwargs):
+        """
+        Backward compatible implementation of ``map``
+
+        See Also
+        --------
+        DatasetGroupBy.map
+        """
+
+        warnings.warn(
+            "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
     def _combine(self, applied):
         """Recombine the applied objects like the original."""
@@ -913,7 +995,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         check_reduce_dims(dim, self.dims)
 
-        return self.apply(reduce_dataset)
+        return self.map(reduce_dataset)
 
     def assign(self, **kwargs):
         """Assign data variables by group.
@@ -922,7 +1004,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         --------
         Dataset.assign
         """
-        return self.apply(lambda ds: ds.assign(**kwargs))
+        return self.map(lambda ds: ds.assign(**kwargs))
 
 
 ops.inject_reduce_methods(DatasetGroupBy)

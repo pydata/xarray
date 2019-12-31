@@ -16,7 +16,6 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
 )
 
 import numpy as np
@@ -34,7 +33,7 @@ from . import (
     rolling,
     utils,
 )
-from .accessor_dt import DatetimeAccessor
+from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
     _broadcast_helper,
@@ -49,11 +48,13 @@ from .coordinates import (
     assert_coordinate_consistent,
     remap_label_indexers,
 )
-from .dataset import Dataset, merge_indexes, split_indexes
+from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Indexes, default_indexes
+from .indexes import Indexes, default_indexes, propagate_indexes
+from .indexing import is_fancy_indexer
+from .merge import PANDAS_TYPES, _extract_indexes_from_coords
 from .options import OPTIONS
-from .utils import Default, ReprObject, _default, _check_inplace, either_dict_or_kwargs
+from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
     Variable,
@@ -234,29 +235,16 @@ class DataArray(AbstractArray, DataWithCoords):
 
     Getting items from or doing mathematical operations with a DataArray
     always returns another DataArray.
-
-    Attributes
-    ----------
-    dims : tuple
-        Dimension names associated with this array.
-    values : np.ndarray
-        Access or modify DataArray values as a numpy array.
-    coords : dict-like
-        Dictionary of DataArray objects that label values along each dimension.
-    name : str or None
-        Name of this array.
-    attrs : dict
-        Dictionary for holding arbitrary metadata.
     """
 
-    _accessors: Optional[Dict[str, Any]]
+    _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _name: Optional[Hashable]
     _variable: Variable
 
     __slots__ = (
-        "_accessors",
+        "_cache",
         "_coords",
         "_file_obj",
         "_indexes",
@@ -270,7 +258,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
-    dt = property(DatetimeAccessor)
+    dt = property(CombinedDatetimelikeAccessor)
 
     def __init__(
         self,
@@ -358,7 +346,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 dims = getattr(data, "dims", getattr(coords, "dims", None))
             if name is None:
                 name = getattr(data, "name", None)
-            if attrs is None:
+            if attrs is None and not isinstance(data, PANDAS_TYPES):
                 attrs = getattr(data, "attrs", None)
             if encoding is None:
                 encoding = getattr(data, "encoding", None)
@@ -367,13 +355,15 @@ class DataArray(AbstractArray, DataWithCoords):
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
+            indexes = dict(
+                _extract_indexes_from_coords(coords)
+            )  # needed for to_dataset
 
         # These fully describe a DataArray
         self._variable = variable
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
-        self._accessors = None
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
@@ -386,6 +376,7 @@ class DataArray(AbstractArray, DataWithCoords):
         variable: Variable = None,
         coords=None,
         name: Union[Hashable, None, Default] = _default,
+        indexes=None,
     ) -> "DataArray":
         if variable is None:
             variable = self.variable
@@ -393,13 +384,14 @@ class DataArray(AbstractArray, DataWithCoords):
             coords = self._coords
         if name is _default:
             name = self.name
-        return type(self)(variable, coords, name=name, fastpath=True)
+        return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
 
     def _replace_maybe_drop_dims(
         self, variable: Variable, name: Union[Hashable, None, Default] = _default
     ) -> "DataArray":
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
+            indexes = self._indexes
         elif variable.dims == self.dims:
             # Shape has changed (e.g. from reduce(..., keepdims=True)
             new_sizes = dict(zip(self.dims, variable.shape))
@@ -408,12 +400,19 @@ class DataArray(AbstractArray, DataWithCoords):
                 for k, v in self._coords.items()
                 if v.shape == tuple(new_sizes[d] for d in v.dims)
             }
+            changed_dims = [
+                k for k in variable.dims if variable.sizes[k] != self.sizes[k]
+            ]
+            indexes = propagate_indexes(self._indexes, exclude=changed_dims)
         else:
             allowed_dims = set(variable.dims)
             coords = {
                 k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
             }
-        return self._replace(variable, coords, name)
+            indexes = propagate_indexes(
+                self._indexes, exclude=(set(self.dims) - allowed_dims)
+            )
+        return self._replace(variable, coords, name, indexes=indexes)
 
     def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
         if not len(indexes):
@@ -440,22 +439,25 @@ class DataArray(AbstractArray, DataWithCoords):
     ) -> "DataArray":
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
-        return self._replace(variable, coords, name)
+        indexes = dataset._indexes
+        return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
+        """ splits dataarray along dimension 'dim' """
+
         def subset(dim, label):
             array = self.loc[{dim: label}]
-            if dim in array.coords:
-                del array.coords[dim]
             array.attrs = {}
-            return array
+            return as_variable(array)
 
         variables = {label: subset(dim, label) for label in self.get_index(dim)}
-
-        coords = self.coords.to_dataset()
-        if dim in coords:
-            del coords[dim]
-        return Dataset(variables, coords, self.attrs)
+        variables.update({k: v for k, v in self._coords.items() if k != dim})
+        indexes = propagate_indexes(self._indexes, exclude=dim)
+        coord_names = set(self._coords) - set([dim])
+        dataset = Dataset._construct_direct(
+            variables, coord_names, indexes=indexes, attrs=self.attrs
+        )
+        return dataset
 
     def _to_dataset_whole(
         self, name: Hashable = None, shallow_copy: bool = True
@@ -479,8 +481,10 @@ class DataArray(AbstractArray, DataWithCoords):
         if shallow_copy:
             for k in variables:
                 variables[k] = variables[k].copy(deep=False)
+        indexes = self._indexes
+
         coord_names = set(self._coords)
-        dataset = Dataset._from_vars_and_coord_names(variables, coord_names)
+        dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
         return dataset
 
     def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
@@ -753,7 +757,9 @@ class DataArray(AbstractArray, DataWithCoords):
             return dataset
 
     def __dask_tokenize__(self):
-        return (type(self), self._variable, self._coords, self._name)
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._variable, self._coords, self._name))
 
     def __dask_graph__(self):
         return self._to_temp_dataset().__dask_graph__()
@@ -918,13 +924,14 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
         * x        (x) <U1 'a' 'b' 'c'
 
-        See also
+        See Also
         --------
         pandas.DataFrame.copy
         """
         variable = self.variable.copy(deep=deep, data=data)
         coords = {k: v.copy(deep=deep) for k, v in self._coords.items()}
-        return self._replace(variable, coords)
+        indexes = self._indexes
+        return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
         return self.copy(deep=False)
@@ -1008,8 +1015,27 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.sel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
-        ds = self._to_temp_dataset().isel(drop=drop, indexers=indexers)
-        return self._from_temp_dataset(ds)
+        if any(is_fancy_indexer(idx) for idx in indexers.values()):
+            ds = self._to_temp_dataset()._isel_fancy(indexers, drop=drop)
+            return self._from_temp_dataset(ds)
+
+        # Much faster algorithm for when all indexers are ints, slices, one-dimensional
+        # lists, or zero or one-dimensional np.ndarray's
+
+        variable = self._variable.isel(indexers)
+
+        coords = {}
+        for coord_name, coord_value in self._coords.items():
+            coord_indexers = {
+                k: v for k, v in indexers.items() if k in coord_value.dims
+            }
+            if coord_indexers:
+                coord_value = coord_value.isel(coord_indexers)
+                if drop and coord_value.ndim == 0:
+                    continue
+            coords[coord_name] = coord_value
+
+        return self._replace(variable=variable, coords=coords)
 
     def sel(
         self,
@@ -1089,7 +1115,7 @@ class DataArray(AbstractArray, DataWithCoords):
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by each `n` value
-        along the specified dimension(s). Default `n` = 5
+        along the specified dimension(s).
 
         See Also
         --------
@@ -1263,7 +1289,7 @@ class DataArray(AbstractArray, DataWithCoords):
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
         fill_value : scalar, optional
             Value to use for newly missing values
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -1312,7 +1338,7 @@ class DataArray(AbstractArray, DataWithCoords):
             values.
         kwargs: dictionary
             Additional keyword passed to scipy's interpolator.
-        **coords_kwarg : {dim: coordinate, ...}, optional
+        ``**coords_kwargs`` : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
@@ -1597,10 +1623,10 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
-        _check_inplace(inplace)
-        indexes = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
-        coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
-        return self._replace(coords=coords)
+        ds = self._to_temp_dataset().set_index(
+            indexes, append=append, inplace=inplace, **indexes_kwargs
+        )
+        return self._from_temp_dataset(ds)
 
     def reset_index(
         self,
@@ -1715,7 +1741,7 @@ class DataArray(AbstractArray, DataWithCoords):
                    codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
 
-        See also
+        See Also
         --------
         DataArray.unstack
         """
@@ -1723,7 +1749,10 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def unstack(
-        self, dim: Union[Hashable, Sequence[Hashable], None] = None
+        self,
+        dim: Union[Hashable, Sequence[Hashable], None] = None,
+        fill_value: Any = dtypes.NA,
+        sparse: bool = False,
     ) -> "DataArray":
         """
         Unstack existing dimensions corresponding to MultiIndexes into
@@ -1736,6 +1765,8 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : hashable or sequence of hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
+        fill_value: value to be filled. By default, np.nan
+        sparse: use sparse-array if True
 
         Returns
         -------
@@ -1763,11 +1794,11 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> arr.identical(roundtripped)
         True
 
-        See also
+        See Also
         --------
         DataArray.stack
         """
-        ds = self._to_temp_dataset().unstack(dim)
+        ds = self._to_temp_dataset().unstack(dim, fill_value, sparse)
         return self._from_temp_dataset(ds)
 
     def to_unstacked_dataset(self, dim, level=0):
@@ -1888,41 +1919,77 @@ class DataArray(AbstractArray, DataWithCoords):
     def T(self) -> "DataArray":
         return self.transpose()
 
-    # Drop coords
-    @overload
-    def drop(
-        self, labels: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
+    def drop_vars(
+        self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "DataArray":
-        ...
-
-    # Drop index labels along dimension
-    @overload  # noqa: F811
-    def drop(
-        self, labels: Any, dim: Hashable, *, errors: str = "raise"  # array-like
-    ) -> "DataArray":
-        ...
-
-    def drop(self, labels, dim=None, *, errors="raise"):  # noqa: F811
-        """Drop coordinates or index labels from this DataArray.
+        """Drop variables from this DataArray.
 
         Parameters
         ----------
-        labels : hashable or sequence of hashables
-            Name(s) of coordinates or index labels to drop.
-            If dim is not None, labels can be any array-like.
-        dim : hashable, optional
-            Dimension along which to drop index labels. By default (if
-            ``dim is None``), drops coordinates rather than index labels.
+        names : hashable or iterable of hashables
+            Name(s) of variables to drop.
+        errors: {'raise', 'ignore'}, optional
+            If 'raise' (default), raises a ValueError error if any of the variable
+            passed are not in the dataset. If 'ignore', any given names that are in the
+            DataArray are dropped and no error is raised.
+
+        Returns
+        -------
+        dropped : Dataset
+
+        """
+        ds = self._to_temp_dataset().drop_vars(names, errors=errors)
+        return self._from_temp_dataset(ds)
+
+    def drop(
+        self,
+        labels: Mapping = None,
+        dim: Hashable = None,
+        *,
+        errors: str = "raise",
+        **labels_kwargs,
+    ) -> "DataArray":
+        """Backward compatible method based on `drop_vars` and `drop_sel`
+
+        Using either `drop_vars` or `drop_sel` is encouraged
+
+        See Also
+        --------
+        DataArray.drop_vars
+        DataArray.drop_sel
+        """
+        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
+        return self._from_temp_dataset(ds)
+
+    def drop_sel(
+        self,
+        labels: Mapping[Hashable, Any] = None,
+        *,
+        errors: str = "raise",
+        **labels_kwargs,
+    ) -> "DataArray":
+        """Drop index labels from this DataArray.
+
+        Parameters
+        ----------
+        labels : Mapping[Hashable, Any]
+            Index labels to drop
         errors: {'raise', 'ignore'}, optional
             If 'raise' (default), raises a ValueError error if
-            any of the coordinates or index labels passed are not
-            in the array. If 'ignore', any given labels that are in the
-            array are dropped and no error is raised.
+            any of the index labels passed are not
+            in the dataset. If 'ignore', any given labels that are in the
+            dataset are dropped and no error is raised.
+        **labels_kwargs : {dim: label, ...}, optional
+            The keyword arguments form of ``dim`` and ``labels``
+
         Returns
         -------
         dropped : DataArray
         """
-        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
+        if labels_kwargs or isinstance(labels, dict):
+            labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
+
+        ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
 
     def dropna(
@@ -1978,44 +2045,71 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def interpolate_na(
         self,
-        dim=None,
+        dim: Hashable = None,
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
+        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
         **kwargs: Any,
     ) -> "DataArray":
-        """Interpolate values according to different methods.
+        """Fill in NaNs by interpolating according to different methods.
 
         Parameters
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
-        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
-                  'polynomial', 'barycentric', 'krog', 'pchip',
-                  'spline', 'akima'}, optional
+        method : str, optional
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation (Default). Additional keyword
-              arguments are passed to ``numpy.interp``
-            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
-              'polynomial': are passed to ``scipy.interpolate.interp1d``. If
-              method=='polynomial', the ``order`` keyword argument must also be
+              arguments are passed to :py:func:`numpy.interp`
+            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
+              are passed to :py:func:`scipy.interpolate.interp1d`. If
+              ``method='polynomial'``, the ``order`` keyword argument must also be
               provided.
-            - 'barycentric', 'krog', 'pchip', 'spline', and `akima`: use their
-              respective``scipy.interpolate`` classes.
-        use_coordinate : boolean or str, default True
+            - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
+              respective :py:class:`scipy.interpolate` classes.
+
+        use_coordinate : bool, str, default True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
-            eqaully-spaced along `dim`. If True, the IndexVariable `dim` is
-            used. If use_coordinate is a string, it specifies the name of a
+            eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
+            used. If ``use_coordinate`` is a string, it specifies the name of a
             coordinate variariable to use as the index.
         limit : int, default None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
-            or None for no limit.
+            or None for no limit. This filling is done regardless of the size of
+            the gap in the data. To only interpolate over gaps less than a given length,
+            see ``max_gap``.
+        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, default None.
+            Maximum size of gap, a continuous sequence of NaNs, that will be filled.
+            Use None for no limit. When interpolating along a datetime64 dimension
+            and ``use_coordinate=True``, ``max_gap`` can be one of the following:
+
+            - a string that is valid input for pandas.to_timedelta
+            - a :py:class:`numpy.timedelta64` object
+            - a :py:class:`pandas.Timedelta` object
+
+            Otherwise, ``max_gap`` must be an int or a float. Use of ``max_gap`` with unlabeled
+            dimensions has not been implemented yet. Gap length is defined as the difference
+            between coordinate values at the first data point after a gap and the last value
+            before a gap. For gaps at the beginning (end), gap length is defined as the difference
+            between coordinate values at the first (last) valid data point and the first (last) NaN.
+            For example, consider::
+
+                <xarray.DataArray (x: 9)>
+                array([nan, nan, nan,  1., nan, nan,  4., nan, nan])
+                Coordinates:
+                  * x        (x) int64 0 1 2 3 4 5 6 7 8
+
+            The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
+        kwargs : dict, optional
+            parameters passed verbatim to the underlying interpolation function
 
         Returns
         -------
-        DataArray
+        interpolated: DataArray
+            Filled in DataArray.
 
         See also
         --------
@@ -2030,6 +2124,7 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method,
             limit=limit,
             use_coordinate=use_coordinate,
+            max_gap=max_gap,
             **kwargs,
         )
 
@@ -2506,7 +2601,7 @@ class DataArray(AbstractArray, DataWithCoords):
             coords, indexes = self.coords._merge_raw(other_coords)
             name = self._result_name(other)
 
-            return self._replace(variable, coords, name)
+            return self._replace(variable, coords, name, indexes=indexes)
 
         return func
 
@@ -2645,7 +2740,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -2696,7 +2791,7 @@ class DataArray(AbstractArray, DataWithCoords):
             deprecated and will change to False in a future version.
             Explicitly pass roll_coords to silence the warning.
         **shifts_kwargs : The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -2878,11 +2973,44 @@ class DataArray(AbstractArray, DataWithCoords):
             is a scalar. If multiple percentiles are given, first axis of
             the result corresponds to the quantile and a quantile dimension
             is added to the return array. The other dimensions are the
-             dimensions that remain after the reduction of the array.
+            dimensions that remain after the reduction of the array.
 
         See Also
         --------
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     data=[[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
+        ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
+        ...     dims=("x", "y"),
+        ... )
+        >>> da.quantile(0)  # or da.quantile(0, dim=...)
+        <xarray.DataArray ()>
+        array(0.7)
+        Coordinates:
+            quantile  float64 0.0
+        >>> da.quantile(0, dim="x")
+        <xarray.DataArray (y: 4)>
+        array([0.7, 4.2, 2.6, 1.5])
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+            quantile  float64 0.0
+        >>> da.quantile([0, 0.5, 1])
+        <xarray.DataArray (quantile: 3)>
+        array([0.7, 3.4, 9.4])
+        Coordinates:
+          * quantile  (quantile) float64 0.0 0.5 1.0
+        >>> da.quantile([0, 0.5, 1], dim="x")
+        <xarray.DataArray (quantile: 3, y: 4)>
+        array([[0.7 , 4.2 , 2.6 , 1.5 ],
+               [3.6 , 5.75, 6.  , 1.7 ],
+               [6.5 , 7.3 , 9.4 , 1.9 ]])
+        Coordinates:
+          * y         (y) float64 1.0 1.5 2.0 2.5
+          * quantile  (quantile) float64 0.0 0.5 1.0
         """
 
         ds = self._to_temp_dataset().quantile(
@@ -3003,8 +3131,8 @@ class DataArray(AbstractArray, DataWithCoords):
             Coordinate(s) used for the integration.
         datetime_unit: str, optional
             Can be used to specify the unit if datetime coordinate is used.
-            One of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',
-                    'ps', 'fs', 'as'}
+            One of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps',
+            'fs', 'as'}
 
         Returns
         -------

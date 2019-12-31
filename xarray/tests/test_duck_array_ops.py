@@ -274,23 +274,39 @@ def assert_dask_array(da, dask):
 
 
 @arm_xfail
-@pytest.mark.parametrize("dask", [False, True])
-def test_datetime_reduce(dask):
-    time = np.array(pd.date_range("15/12/1999", periods=11))
-    time[8:11] = np.nan
-    da = DataArray(np.linspace(0, 365, num=11), dims="time", coords={"time": time})
+@pytest.mark.parametrize("dask", [False, True] if has_dask else [False])
+def test_datetime_mean(dask):
+    # Note: only testing numpy, as dask is broken upstream
+    da = DataArray(
+        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8"),
+        dims=["time"],
+    )
+    if dask:
+        # Trigger use case where a chunk is full of NaT
+        da = da.chunk({"time": 3})
 
-    if dask and has_dask:
-        chunks = {"time": 5}
-        da = da.chunk(chunks)
+    expect = DataArray(np.array("2010-01-02", dtype="M8"))
+    expect_nat = DataArray(np.array("NaT", dtype="M8"))
 
-    actual = da["time"].mean()
-    assert not pd.isnull(actual)
-    actual = da["time"].mean(skipna=False)
-    assert pd.isnull(actual)
+    actual = da.mean()
+    if dask:
+        assert actual.chunks is not None
+    assert_equal(actual, expect)
 
-    # test for a 0d array
-    assert da["time"][0].mean() == da["time"][:1].mean()
+    actual = da.mean(skipna=False)
+    if dask:
+        assert actual.chunks is not None
+    assert_equal(actual, expect_nat)
+
+    # tests for 1d array full of NaT
+    assert_equal(da[[1]].mean(), expect_nat)
+    assert_equal(da[[1]].mean(skipna=False), expect_nat)
+
+    # tests for a 0d array
+    assert_equal(da[0].mean(), da[0])
+    assert_equal(da[0].mean(skipna=False), da[0])
+    assert_equal(da[1].mean(), expect_nat)
+    assert_equal(da[1].mean(skipna=False), expect_nat)
 
 
 @requires_cftime
@@ -441,7 +457,8 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
         )
         expected = getattr(da, func)(dim=aggdim, skipna=skipna)
         assert_allclose(
-            actual.drop(list(actual.coords)), expected.drop(list(expected.coords))
+            actual.drop_vars(list(actual.coords)),
+            expected.drop_vars(list(expected.coords)),
         )
 
 

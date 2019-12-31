@@ -269,7 +269,7 @@ def line(
         if None, use the default for the matplotlib function.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
-    *args, **kwargs : optional
+    ``*args``, ``**kwargs`` : optional
         Additional arguments to matplotlib.pyplot.plot
     """
     # Handle facetgrids first
@@ -288,7 +288,7 @@ def line(
         )
 
     # The allargs dict passed to _easy_facetgrid above contains args
-    if args is ():
+    if args == ():
         args = kwargs.pop("args", ())
     else:
         assert "args" not in kwargs
@@ -672,10 +672,22 @@ def _plot2d(plotfunc):
 
         # check if we need to broadcast one dimension
         if xval.ndim < yval.ndim:
-            xval = np.broadcast_to(xval, yval.shape)
+            dims = darray[ylab].dims
+            if xval.shape[0] == yval.shape[0]:
+                xval = np.broadcast_to(xval[:, np.newaxis], yval.shape)
+            else:
+                xval = np.broadcast_to(xval[np.newaxis, :], yval.shape)
 
-        if yval.ndim < xval.ndim:
-            yval = np.broadcast_to(yval, xval.shape)
+        elif yval.ndim < xval.ndim:
+            dims = darray[xlab].dims
+            if yval.shape[0] == xval.shape[0]:
+                yval = np.broadcast_to(yval[:, np.newaxis], xval.shape)
+            else:
+                yval = np.broadcast_to(yval[np.newaxis, :], xval.shape)
+        elif xval.ndim == 2:
+            dims = darray[xlab].dims
+        else:
+            dims = (darray[ylab].dims[0], darray[xlab].dims[0])
 
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
@@ -685,10 +697,9 @@ def _plot2d(plotfunc):
             # we transpose to (y, x, color) to make this work.
             yx_dims = (ylab, xlab)
             dims = yx_dims + tuple(d for d in darray.dims if d not in yx_dims)
-            if dims != darray.dims:
-                darray = darray.transpose(*dims, transpose_coords=True)
-        elif darray[xlab].dims[-1] == darray.dims[0]:
-            darray = darray.transpose(transpose_coords=True)
+
+        if dims != darray.dims:
+            darray = darray.transpose(*dims, transpose_coords=True)
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)

@@ -6,8 +6,10 @@ from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array
+    from . import dask_array_compat
 except ImportError:
     dask_array = None
+    dask_array_compat = None  # type: ignore
 
 
 def _replace_nan(a, val):
@@ -25,7 +27,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     """
     if hasattr(axis, "__len__"):  # if tuple or list
         raise ValueError(
-            "min_count is not available for reduction " "with more than one dimensions."
+            "min_count is not available for reduction with more than one dimensions."
         )
 
     if axis is not None and getattr(result, "ndim", False):
@@ -141,7 +143,15 @@ def nanmean(a, axis=None, dtype=None, out=None):
 
 
 def nanmedian(a, axis=None, out=None):
-    return _dask_or_eager_func("nanmedian", eager_module=nputils)(a, axis=axis)
+    # The dask algorithm works by rechunking to one chunk along axis
+    # Make sure we trigger the dask error when passing all dimensions
+    # so that we don't rechunk the entire array to one chunk and
+    # possibly blow memory
+    if axis is not None and len(np.atleast_1d(axis)) == a.ndim:
+        axis = None
+    return _dask_or_eager_func(
+        "nanmedian", dask_module=dask_array_compat, eager_module=nputils
+    )(a, axis=axis)
 
 
 def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):

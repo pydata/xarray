@@ -45,7 +45,7 @@ Creating a DataArray
 The :py:class:`~xarray.DataArray` constructor takes:
 
 - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
-  :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
+  :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or ``pandas.Panel``)
 - ``coords``: a list or dictionary of coordinates. If a list, it should be a
   list of tuples where the first element is the dimension name and the second
   element is the corresponding coordinate array_like object.
@@ -125,7 +125,7 @@ As a dictionary with coords across multiple dimensions:
 
 If you create a ``DataArray`` by supplying a pandas
 :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or
-:py:class:`~pandas.Panel`, any non-specified arguments in the
+``pandas.Panel``, any non-specified arguments in the
 ``DataArray`` constructor will be filled in from the pandas object:
 
 .. ipython:: python
@@ -301,7 +301,7 @@ names, and its data is aligned to any existing dimensions.
 
 You can also create an dataset from:
 
-- A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
+- A :py:class:`pandas.DataFrame` or ``pandas.Panel`` along its columns and items
   respectively, by passing it into the :py:class:`~xarray.Dataset` directly
 - A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xarray.Dataset.from_dataframe>`,
   which will additionally handle MultiIndexes See :ref:`pandas`
@@ -393,14 +393,14 @@ methods (like pandas) for transforming datasets into new objects.
 
 For removing variables, you can select and drop an explicit list of
 variables by indexing with a list of names or using the
-:py:meth:`~xarray.Dataset.drop` methods to return a new ``Dataset``. These
+:py:meth:`~xarray.Dataset.drop_vars` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
 .. ipython:: python
 
     ds[['temperature']]
     ds[['temperature', 'temperature_double']]
-    ds.drop('temperature')
+    ds.drop_vars('temperature')
 
 To remove a dimension, you can use :py:meth:`~xarray.Dataset.drop_dims` method.
 Any variables using that dimension are dropped:
@@ -485,14 +485,14 @@ in xarray:
   :py:class:`pandas.Index` internally to store their values.
 
 - **non-dimension coordinates** are variables that contain coordinate
-  data, but are not a dimension coordinate. They can  be multidimensional
-  (see :ref:`examples.multidim`), and there is no relationship between the
-  name of a non-dimension coordinate and the name(s) of its dimension(s).
-  Non-dimension coordinates can be useful for indexing or plotting; otherwise,
-  xarray does not make any direct use of the values associated with them.
-  They are not used for alignment or automatic indexing, nor are they required
-  to match when doing arithmetic
-  (see :ref:`coordinates math`).
+  data, but are not a dimension coordinate. They can be multidimensional (see
+  :ref:`/examples/multidimensional-coords.ipynb`), and there is no
+  relationship between the name of a non-dimension coordinate and the
+  name(s) of its dimension(s).  Non-dimension coordinates can be
+  useful for indexing or plotting; otherwise, xarray does not make any
+  direct use of the values associated with them.  They are not used
+  for alignment or automatic indexing, nor are they required to match
+  when doing arithmetic (see :ref:`coordinates math`).
 
 .. note::
 

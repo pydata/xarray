@@ -18,6 +18,8 @@ jobs:
         conda_env: py36
       py37:
         conda_env: py37
+      py38:
+        conda_env: py38
       py37-upstream-dev:
         conda_env: py37
         upstream_dev: true
@@ -108,5 +110,5 @@ jobs:
   - bash: |
       source activate xarray-tests
       cd doc
-      sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
+      sphinx-build -W --keep-going -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs
