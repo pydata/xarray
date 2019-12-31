@@ -3168,31 +3168,31 @@ class DataArray(AbstractArray, DataWithCoords):
                 Pads with the wrap of the vector along the axis.
                 The first values are used to pad the end and the
                 end values are used to pad the beginning.
-        stat_length : sequence or int, optional
+        stat_length : int, tuple or mapping of the form {dim: tuple}
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
-            ((before_1, after_1), ... (before_N, after_N)) unique statistic
-            lengths for each axis.
+            {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)} unique
+            statistic lengths along each dimension.
             ((before, after),) yields same before and after statistic lengths
-            for each axis.
+            for each dimension.
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : sequence or scalar, optional
+        constant_values : scalar, tuple or mapping of the form {dim: tuple}
             Used in 'constant'.  The values to set the padded values for each
             axis.
-            ``((before_1, after_1), ... (before_N, after_N))`` unique pad constants
-            for each axis.
+            ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
+            pad constants along each dimension.
             ``((before, after),)`` yields same before and after constants for each
-            axis.
+            dimension.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
-            all axes.
+            all dimensions.
             Default is 0.
-        end_values : sequence or scalar, optional
+        end_values : scalar, tuple or mapping of the form {dim: tuple}
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
-            ``((before_1, after_1), ... (before_N, after_N))`` unique end values
-            for each axis.
+            ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
+            end values along each dimension.
             ``((before, after),)`` yields same before and after end values for each
             axis.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
@@ -3203,7 +3203,6 @@ class DataArray(AbstractArray, DataWithCoords):
             default with an unaltered reflection around the edge value.  For
             the 'odd' style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
-
         **pad_width_kwargs:
             The keyword arguments form of ``pad_width``.
             One of pad_width or pad_width_kwarg must be provided.
@@ -3221,7 +3220,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
 
         >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0,1,2])])
-        >>> arr.pad(x=(1,2), pad_options={"constant_values" : 0})
+        >>> arr.pad(x=(1,2), constant_values=0)
         <xarray.DataArray (x: 6)>
         array([0, 5, 6, 7, 0, 0])
         Coordinates:

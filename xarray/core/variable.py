@@ -1099,9 +1099,14 @@ class Variable(
             result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
 
-    def _pad_options_dim_to_index(self, pad_option : Mapping[Hashable, Tuple[int, int]], fill_with_shape = False):
+    def _pad_options_dim_to_index(
+        self, pad_option: Mapping[Hashable, Tuple[int, int]], fill_with_shape=False
+    ):
         if fill_with_shape:
-            return [(n, n) if d not in pad_option else pad_option[d] for d, n in zip(self.dims, self.data.shape)]
+            return [
+                (n, n) if d not in pad_option else pad_option[d]
+                for d, n in zip(self.dims, self.data.shape)
+            ]
         return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
 
     def pad(
@@ -1129,6 +1134,20 @@ class Variable(
             Number of values padded along each dimension.
         mode: (str)
             See numpy / Dask docs
+        stat_length : int, tuple or mapping of the form {dim: tuple}
+            Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
+            values at edge of each axis used to calculate the statistic value.
+        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'constant'.  The values to set the padded values for each
+            axis.
+        end_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'linear_ramp'.  The values used for the ending value of the
+            linear_ramp and that will form the edge of the padded array.
+        reflect_type : {'even', 'odd'}, optional
+            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+            default with an unaltered reflection around the edge value.  For
+            the 'odd' style, the extended part of the array is created by
+            subtracting the reflected values from two times the edge value.
         **pad_width_kwarg:
             One of pad_width or pad_width_kwarg must be provided.
 
@@ -1147,7 +1166,9 @@ class Variable(
 
         # create pad_options_kwargs, numpy requires only relevant kwargs to be nonempty
         if isinstance(stat_length, dict):
-            stat_length = self._pad_options_dim_to_index(stat_length, fill_with_shape=True)
+            stat_length = self._pad_options_dim_to_index(
+                stat_length, fill_with_shape=True
+            )
         if isinstance(constant_values, dict):
             constant_values = self._pad_options_dim_to_index(constant_values)
         if isinstance(end_values, dict):
@@ -1155,7 +1176,7 @@ class Variable(
 
         # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
-            stat_length = [(n, n) for n in self.data.shape] # type: ignore
+            stat_length = [(n, n) for n in self.data.shape]  # type: ignore
 
         pads = self._pad_options_dim_to_index(pad_width)
 
@@ -1168,7 +1189,7 @@ class Variable(
         if end_values is not None:
             pad_option_kwargs["end_values"] = end_values
         if reflect_type is not None:
-            pad_option_kwargs["reflect_type"] = reflect_type # type: ignore
+            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore
 
         array = duck_array_ops.pad(
             self.data.astype(dtype, copy=False), pads, mode=mode, **pad_option_kwargs

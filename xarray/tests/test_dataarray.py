@@ -4064,14 +4064,47 @@ class TestDataArray:
                 constant_values=np.nan,
             )
         )
+        assert actual.shape == (7, 4, 5)
+        assert_identical(actual, expected)
+
+    def test_pad_coords(self):
+        ar = DataArray(
+            np.arange(3 * 4 * 5).reshape(3, 4, 5),
+            [("x", np.arange(3)), ("y", np.arange(4)), ("z", np.arange(5))],
+        )
+        actual = ar.pad(x=(1, 3), constant_values=1)
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5),
+                mode="constant",
+                pad_width=((1, 3), (0, 0), (0, 0)),
+                constant_values=1,
+            ),
+            [
+                (
+                    "x",
+                    np.pad(
+                        np.arange(3).astype(np.float32),
+                        mode="constant",
+                        pad_width=(1, 3),
+                        constant_values=np.nan,
+                    ),
+                ),
+                ("y", np.arange(4)),
+                ("z", np.arange(5)),
+            ],
+        )
         assert_identical(actual, expected)
 
     @pytest.mark.parametrize("mode", ("minimum", "maximum", "mean", "median"))
-    @pytest.mark.parametrize("stat_length", (None, 3, (1, 3)))
+    @pytest.mark.parametrize(
+        "stat_length", (None, 3, (1, 3), {"dim_0": (2, 1), "dim_2": (4, 2)})
+    )
     def test_pad_stat_length(self, mode, stat_length):
-
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
         actual = ar.pad(dim_0=(1, 3), dim_2=(2, 2), mode=mode, stat_length=stat_length)
+        if isinstance(stat_length, dict):
+            stat_length = (stat_length["dim_0"], (4, 4), stat_length["dim_2"])
         expected = DataArray(
             np.pad(
                 np.arange(3 * 4 * 5).reshape(3, 4, 5),
@@ -4080,6 +4113,30 @@ class TestDataArray:
                 stat_length=stat_length,
             )
         )
+        assert actual.shape == (7, 4, 9)
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "end_values", (None, 3, (3, 5), {"dim_0": (2, 1), "dim_2": (4, 2)})
+    )
+    def test_pad_linear_ramp(self, end_values):
+        ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
+        actual = ar.pad(
+            dim_0=(1, 3), dim_2=(2, 2), mode="linear_ramp", end_values=end_values
+        )
+        if end_values is None:
+            end_values = 0
+        elif isinstance(end_values, dict):
+            end_values = (end_values["dim_0"], (4, 4), end_values["dim_2"])
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5),
+                pad_width=((1, 3), (0, 0), (2, 2)),
+                mode="linear_ramp",
+                end_values=end_values,
+            )
+        )
+        assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
 
     @pytest.mark.parametrize("mode", ("reflect", "symmetric"))
@@ -4099,6 +4156,8 @@ class TestDataArray:
         if reflect_type is not None:
             np_kwargs["reflect_type"] = reflect_type
         expected = DataArray(np.pad(**np_kwargs))
+
+        assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
 
 
