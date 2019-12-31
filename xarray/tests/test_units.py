@@ -29,6 +29,21 @@ pytestmark = [
 ]
 
 
+def is_compatible(unit1, unit2):
+    return (
+        isinstance(unit1, unit_registry.Unit)
+        and isinstance(unit2, unit_registry.Unit)
+        and unit1.dimensionality == unit2.dimensionality
+    )
+
+
+def compatible_mappings(first, second):
+    return {
+        key: is_compatible(unit1, unit2)
+        for key, (unit1, unit2) in merge_mappings(first, second)
+    }
+
+
 def array_extract_units(obj):
     if isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
         obj = obj.data
@@ -347,12 +362,16 @@ class method:
 
 
 class function:
-    def __init__(self, name_or_function, *args, **kwargs):
+    def __init__(self, name_or_function, *args, function_label=None, **kwargs):
         if callable(name_or_function):
-            self.name = name_or_function.__name__
+            self.name = (
+                function_label
+                if function_label is not None
+                else name_or_function.__name__
+            )
             self.func = name_or_function
         else:
-            self.name = name_or_function
+            self.name = name_or_function if function_label is None else function_label
             self.func = getattr(np, name_or_function)
             if self.func is None:
                 raise AttributeError(
@@ -1575,19 +1594,6 @@ class TestVariable(VariableSubclassobjects):
     )
     @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
     def test_comparisons(self, func, unit, convert_data, dtype):
-        def is_compatible(unit1, unit2):
-            return (
-                isinstance(unit1, unit_registry.Unit)
-                and isinstance(unit2, unit_registry.Unit)
-                and unit1.dimensionality == unit2.dimensionality
-            )
-
-        def compatible_mappings(first, second):
-            return {
-                key: is_compatible(unit1, unit2)
-                for key, (unit1, unit2) in merge_mappings(first, second)
-            }
-
         array = np.linspace(0, 1, 9).astype(dtype)
         quantity1 = array * unit_registry.m
         variable = xr.Variable("x", quantity1)
@@ -1636,6 +1642,64 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.isel(x=indices)
 
         xr.testing.assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            function(lambda x, *_: +x, function_label="unary_plus"),
+            function(lambda x, *_: -x, function_label="unary_minus"),
+            function(lambda x, *_: abs(x), function_label="absolute"),
+            function(lambda x, y: x + y, function_label="sum"),
+            function(lambda x, y: y + x, function_label="commutative_sum"),
+            function(lambda x, y: x * y, function_label="product"),
+            function(lambda x, y: y * x, function_label="commutative_product"),
+        ),
+        ids=repr,
+    )
+    def test_1d_math(self, func, unit, error, dtype):
+        base_unit = unit_registry.m
+        array = np.arange(5).astype(dtype) * base_unit
+        variable = xr.Variable("x", array)
+
+        values = np.ones(5)
+        y = values * unit
+
+        if error is not None and func.name in ("sum", "commutative_sum"):
+            with pytest.raises(error):
+                func(variable, y)
+
+            return
+
+        units = extract_units(func(array, y))
+        if all(compatible_mappings(units, extract_units(y)).values()):
+            converted_y = convert_units(y, units)
+        else:
+            converted_y = y
+
+        if all(compatible_mappings(units, extract_units(variable)).values()):
+            converted_variable = convert_units(variable, units)
+        else:
+            converted_variable = variable
+
+        expected = attach_units(
+            func(strip_units(converted_variable), strip_units(converted_y)), units
+        )
+        actual = func(variable, y)
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_allclose(expected, actual)
 
 
 class TestDataArray:
