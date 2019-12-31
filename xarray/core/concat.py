@@ -429,10 +429,9 @@ def _dataset_concat(
                 continue
 
             v_fill_value = fill_value
-            if fill_value is dtypes.NA:
-                dtype, v_fill_value = dtypes.maybe_promote(ds[variable_key].dtype)
-            else:
-                dtype = ds[variable_key].dtype
+            dtype, v_fill_value = dtypes.get_fill_value_for_variable(
+                ds[variable_key], fill_value
+            )
 
             union_of_variables[variable_key] = full_like(
                 ds[variable_key], fill_value=v_fill_value, dtype=dtype

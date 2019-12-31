@@ -4,6 +4,7 @@ import numpy as np
 
 from . import utils
 
+
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
 
@@ -94,6 +95,37 @@ def get_fill_value(dtype):
     """
     _, fill_value = maybe_promote(dtype)
     return fill_value
+
+
+def get_fill_value_for_variable(variable, fill_value=NA):
+    """Return an appropriate fill value for this variable
+
+    Parameters
+    ----------
+    variables : DataSet or DataArray
+    fill_value : a suggested fill value to evaluate and promote if necessary
+
+    Returns
+    -------
+    dtype : Promoted dtype for fill value.
+    new_fill_value : Missing value corresponding to this dtype.
+    """
+    from .dataset import Dataset
+    from .dataarray import DataArray
+
+    if not (isinstance(variable, DataArray) or isinstance(variable, Dataset)):
+        raise TypeError(
+            "can only get fill value for xarray Dataset and DataArray "
+            "objects, got %s" % type(variable)
+        )
+
+    new_fill_value = fill_value
+    if fill_value is NA:
+        dtype, new_fill_value = maybe_promote(variable.dtype)
+    else:
+        dtype = variable.dtype
+
+    return dtype, new_fill_value
 
 
 def get_pos_infinity(dtype):
