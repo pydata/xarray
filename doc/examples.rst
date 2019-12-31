@@ -11,8 +11,8 @@ Examples
     examples/ROMS_ocean_model
     examples/ERA5-GRIB-example
 
-apply_ufunc
-------------
+Using apply_ufunc
+------------------
 .. toctree::
     :maxdepth: 2
 
