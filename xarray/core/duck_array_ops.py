@@ -11,7 +11,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from . import dask_array_ops, dask_array_compat, dtypes, npcompat, nputils
+from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 

@@ -788,7 +788,7 @@ class VariableSubclassobjects:
     @pytest.mark.parametrize(
         "mode",
         [
-            pytest.param("mean", marks=pytest.mark.xfail),
+            "mean",
             pytest.param("median", marks=pytest.mark.xfail),
             pytest.param("reflect", marks=pytest.mark.xfail),
             "edge",
@@ -2070,7 +2070,7 @@ class TestIndexVariable(VariableSubclassobjects):
     @pytest.mark.parametrize(
         "mode",
         [
-            pytest.param("mean", marks=pytest.mark.xfail),
+            "mean",
             pytest.param("median", marks=pytest.mark.xfail),
             pytest.param("reflect", marks=pytest.mark.xfail),
             "edge",
