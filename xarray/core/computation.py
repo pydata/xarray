@@ -547,6 +547,7 @@ def apply_variable_ufunc(
     output_dtypes=None,
     output_sizes=None,
     keep_attrs=False,
+    vectorize=False,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects.
     """
@@ -579,6 +580,7 @@ def apply_variable_ufunc(
         elif dask == "parallelized":
             input_dims = [broadcast_dims + dims for dims in signature.input_core_dims]
             numpy_func = func
+            meta = np.ndarray if vectorize else None
 
             def func(*arrays):
                 return _apply_blockwise(
@@ -589,6 +591,7 @@ def apply_variable_ufunc(
                     signature,
                     output_dtypes,
                     output_sizes,
+                    meta,
                 )
 
         elif dask == "allowed":
@@ -647,7 +650,14 @@ def apply_variable_ufunc(
 
 
 def _apply_blockwise(
-    func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None
+    func,
+    args,
+    input_dims,
+    output_dims,
+    signature,
+    output_dtypes,
+    output_sizes=None,
+    meta=None,
 ):
     import dask.array
 
@@ -719,6 +729,7 @@ def _apply_blockwise(
         dtype=dtype,
         concatenate=True,
         new_axes=output_sizes,
+        meta=meta,
     )
 
 
@@ -1005,6 +1016,7 @@ def apply_ufunc(
         dask=dask,
         output_dtypes=output_dtypes,
         output_sizes=output_sizes,
+        vectorize=vectorize,
     )
 
     if any(isinstance(a, GroupBy) for a in args):

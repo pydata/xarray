@@ -817,6 +817,24 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
+@requires_dask
+def test_vectorize_dask_new_output_dims():
+    # regression test for GH3574
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    func = lambda x: x[np.newaxis, ...]
+    expected = data_array.expand_dims("z")
+    actual = apply_ufunc(
+        func,
+        data_array.chunk({"x": 1}),
+        output_core_dims=[["z"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[float],
+        output_sizes={"z": 1},
+    ).transpose(*expected.dims)
+    assert_identical(expected, actual)
+
+
 def test_output_wrong_number():
     variable = xr.Variable("x", np.arange(10))
 
