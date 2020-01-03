@@ -89,7 +89,13 @@ from .utils import (
     is_scalar,
     maybe_wrap_array,
 )
-from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+from .variable import (
+    IndexVariable,
+    Variable,
+    as_variable,
+    broadcast_variables,
+    assert_unique_multiindex_level_names,
+)
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -2780,6 +2786,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables, coord_names, dims, indexes = self._rename_all(
             name_dict=name_dict, dims_dict=name_dict
         )
+        assert_unique_multiindex_level_names(variables)
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
     def rename_dims(

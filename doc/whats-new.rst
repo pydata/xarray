@@ -62,6 +62,8 @@ Bug fixes
   By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 - Ensure :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` issue the correct error
   when ``q`` is out of bounds (:issue:`3634`) by `Mathias Hauser <https://github.com/mathause>`_.
+- :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename` now check for conflicts with
+  MultiIndex level names.
 
 Documentation
 ~~~~~~~~~~~~~
