@@ -710,6 +710,6 @@ def test_datetime_to_numeric_cftime():
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.parametrize("delta", [dt.timedelta(days=1), ])
+@pytest.mark.parametrize("delta", [dt.timedelta(days=1),])
 def test_py_datetime_to_float(delta):
     assert py_timedelta_to_float(delta) == 86400 * 1e9
