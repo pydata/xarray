@@ -671,28 +671,16 @@ def test_datetime_to_numeric_datetime64():
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
 
-    # Test overflow. Need to convert to ms first otherwise we get garbage
-    # TODO: make datetime_to_numeric more robust to overflow errors.
-    offset = np.datetime64("0001-01-01")
-    ms = times.astype("datetime64[ms]")
-    result = duck_array_ops.datetime_to_numeric(
-        ms, offset=offset, datetime_unit="D", dtype=int
-    )
-    expected = 730119 + np.arange(0, 35, 7)
-    np.testing.assert_array_equal(result, expected)
-
 
 @requires_cftime
 def test_datetime_to_numeric_cftime():
-    import cftime
-
     times = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
+    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(times, offset=offset, datetime_unit="h")
+    result = duck_array_ops.datetime_to_numeric(times, offset=offset, datetime_unit="h", dtype=int)
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
@@ -701,15 +689,36 @@ def test_datetime_to_numeric_cftime():
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
 
-    # Test potential overflow (outputs are different from timedelta64. Expected ?)
-    offset = cftime.DatetimeGregorian(1, 1, 1)
+
+@requires_cftime
+@pytest.mark.xfail(np.__version__ < "1.17", reason="Limited Numpy support for timedelta conversion.")
+def test_datetime_to_numeric_overflow():
+    import cftime
+    times = pd.date_range("2000", periods=5, freq="7D").values.astype("datetime64[us]")
+    cftimes = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
+
+    offset = np.datetime64("0001-01-01")
+    cfoffset = cftime.DatetimeGregorian(1, 1, 1)
+
     result = duck_array_ops.datetime_to_numeric(
         times, offset=offset, datetime_unit="D", dtype=int
     )
-    expected = 730121 + np.arange(0, 35, 7)
+    cfresult = duck_array_ops.datetime_to_numeric(
+        cftimes, offset=cfoffset, datetime_unit="D", dtype=int
+    )
+
+    expected = 730119 + np.arange(0, 35, 7)
+
+    # Outputs are different. Expected ?
     np.testing.assert_array_equal(result, expected)
+    np.testing.assert_array_equal(cfresult, expected + 2)
 
 
-@pytest.mark.parametrize("delta", [dt.timedelta(days=1),])
-def test_py_datetime_to_float(delta):
-    assert py_timedelta_to_float(delta) == 86400 * 1e9
+def test_py_datetime_to_float():
+    assert py_timedelta_to_float(dt.timedelta(days=1)) == 86400 * 1e9
+
+    if np.__version__ < "1.17":
+        with pytest.raises(OverflowError):
+            py_timedelta_to_float(dt.timedelta(days=1e6))
+    else:
+        assert py_timedelta_to_float(dt.timedelta(days=1e6)) == 86400 * 1e15

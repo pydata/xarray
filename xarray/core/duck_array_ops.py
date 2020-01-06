@@ -417,7 +417,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     if not hasattr(array, "dtype"):
         array = np.array(array)
 
-    # Convert timedelta objects to timedelta64[ms] dtype.
+    # Convert timedelta objects to float by first converting to microseconds.
     if array.dtype.kind in "O":
         return py_timedelta_to_float(array, datetime_unit or "ns").astype(dtype)
 
@@ -440,13 +440,26 @@ def py_timedelta_to_float(array, datetime_unit="ns"):
 
     Notes
     -----
-    This function converts a timedelta object to a float using microsecond resolution
-    timedelta64 dtype, which covers a fairly wide span of years at a resolution that
-    is reasonable for most applications.
+    With Numpy >= 1.7, it's possible to convert directly from `datetime.timedelta`
+    to `numpy.timedelta64` at the microsecond (us) resolution. This covers a fairly
+    large span of years.
 
+    With earlier Numpy versions, the conversion only works at the nanosecond resolution,
+    which restricts the span that can be covered.
     """
-    array = np.asarray(array).astype("timedelta64[us]").astype(np.float64)
-    conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
+    if np.__version__ < '1.17':
+        array = np.asarray(array)
+        array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
+        if array.dtype.kind in "O":
+            raise OverflowError("Could not convert timedelta to float.")
+        else:
+            array = array.astype(np.float64)  # [ns]
+        res = "ns"
+    else:
+        array = np.asarray(array).astype("timedelta64[us]").astype(np.float64)  # [us]
+        res = "us"
+
+    conversion_factor = np.timedelta64(1, res) / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 
 
