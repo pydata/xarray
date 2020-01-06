@@ -680,7 +680,9 @@ def test_datetime_to_numeric_cftime():
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(times, offset=offset, datetime_unit="h", dtype=int)
+    result = duck_array_ops.datetime_to_numeric(
+        times, offset=offset, datetime_unit="h", dtype=int
+    )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
@@ -691,9 +693,12 @@ def test_datetime_to_numeric_cftime():
 
 
 @requires_cftime
-@pytest.mark.xfail(np.__version__ < "1.17", reason="Limited Numpy support for timedelta conversion.")
+@pytest.mark.xfail(
+    np.__version__ < "1.17", reason="Limited Numpy support for timedelta conversion."
+)
 def test_datetime_to_numeric_overflow():
     import cftime
+
     times = pd.date_range("2000", periods=5, freq="7D").values.astype("datetime64[us]")
     cftimes = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
 

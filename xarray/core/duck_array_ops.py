@@ -447,7 +447,7 @@ def py_timedelta_to_float(array, datetime_unit="ns"):
     With earlier Numpy versions, the conversion only works at the nanosecond resolution,
     which restricts the span that can be covered.
     """
-    if np.__version__ < '1.17':
+    if np.__version__ < "1.17":
         array = np.asarray(array)
         array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
         if array.dtype.kind in "O":
