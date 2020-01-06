@@ -497,7 +497,7 @@ def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
     Another option would be to have an index in units of years, but this would likely create other difficulties.
     """
     i = get_clean_interp_index(cf_da(calendar), dim="time")
-    np.testing.assert_array_equal(i, np.arange(10) * 1e6 * 86400)
+    np.testing.assert_array_equal(i, np.arange(10) * 1e9 * 86400)
 
 
 @requires_cftime

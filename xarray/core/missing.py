@@ -9,7 +9,7 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
-from .duck_array_ops import dask_array_type, datetime_to_numeric
+from .duck_array_ops import dask_array_type, datetime_to_numeric, py_timedelta_to_float
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -266,7 +266,7 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
     if isinstance(index, (CFTimeIndex, pd.DatetimeIndex)):
         offset = type(index[0])(1970, 1, 1)
         index = Variable(
-            data=datetime_to_numeric(index, offset=offset, datetime_unit="us"),
+            data=datetime_to_numeric(index, offset=offset, datetime_unit="ns"),
             dims=(dim,),
         )
 
@@ -329,7 +329,8 @@ def interp_na(
             if isinstance(max_gap, pd.Timedelta):
                 max_gap = np.timedelta64(max_gap.value, "ns")
 
-            max_gap = np.timedelta64(max_gap, "us").astype(np.float64)
+            # Convert to float
+            max_gap = py_timedelta_to_float(max_gap)
 
         if not use_coordinate:
             if not isinstance(max_gap, (Number, np.number)):

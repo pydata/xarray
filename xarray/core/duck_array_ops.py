@@ -410,6 +410,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     # Compute timedelta object.
     # For np.datetime64, this can silently yield garbage due to overflow.
+    # One option is to enforce 1970-01-01 as the universal offset.
     array = array - offset
 
     # Scalar is converted to 0d-array
@@ -418,22 +419,35 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     # Convert timedelta objects to timedelta64[ms] dtype.
     if array.dtype.kind in "O":
-        array = array.astype("timedelta64[us]")
-
-    # Convert to specified timedelta units.
-    if datetime_unit:
-        array = array / np.timedelta64(1, datetime_unit)
+        return py_timedelta_to_float(array, datetime_unit or "ns").astype(dtype)
 
     # Convert np.NaT to np.nan
-    if array.dtype.kind in "mM":
-        return np.where(isnull(array), np.nan, array.astype(dtype))
+    elif array.dtype.kind in "mM":
 
-    return array.astype(dtype)
+        # Convert to specified timedelta units.
+        if datetime_unit:
+            array = array / np.timedelta64(1, datetime_unit)
+        return np.where(isnull(array), np.nan, array.astype(dtype))
 
 
 def _to_pytimedelta(array, unit="us"):
     index = pd.TimedeltaIndex(array.ravel(), unit=unit)
     return index.to_pytimedelta().reshape(array.shape)
+
+
+def py_timedelta_to_float(array, datetime_unit="ns"):
+    """Convert a timedelta object to a float, possibly at a loss of resolution.
+
+    Notes
+    -----
+    This function converts a timedelta object to a float using microsecond resolution
+    timedelta64 dtype, which covers a fairly wide span of years at a resolution that
+    is reasonable for most applications.
+
+    """
+    array = np.asarray(array).astype("timedelta64[us]").astype(np.float64)
+    conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
+    return conversion_factor * array
 
 
 def mean(array, axis=None, skipna=None, **kwargs):

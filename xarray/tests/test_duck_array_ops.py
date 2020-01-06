@@ -1,6 +1,7 @@
 import warnings
 from textwrap import dedent
 
+import datetime as dt
 import numpy as np
 import pandas as pd
 import pytest
@@ -19,6 +20,7 @@ from xarray.core.duck_array_ops import (
     rolling_window,
     stack,
     where,
+    py_timedelta_to_float,
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
@@ -706,3 +708,9 @@ def test_datetime_to_numeric_cftime():
     )
     expected = 730121 + np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize("delta", [dt.timedelta(days=1), ])
+def test_py_datetime_to_float(delta):
+    assert py_timedelta_to_float(delta) == 86400 * 1e9
+
