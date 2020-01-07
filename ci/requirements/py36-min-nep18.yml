@@ -10,7 +10,7 @@ dependencies:
   - distributed=2.4
   - numpy=1.17
   - pandas=0.24
-  - pint=0.9  # Actually not enough as it doesn't implement __array_function__yet!
+  - pint=0.10
   - pytest
   - pytest-cov
   - pytest-env
