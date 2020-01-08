@@ -1530,6 +1530,11 @@ class TestDataArray:
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
 
+        array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
+        expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
+        actual = array.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+
     def test_expand_dims_error(self):
         array = DataArray(
             np.random.randn(3, 4),
