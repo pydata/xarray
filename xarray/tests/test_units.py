@@ -1626,6 +1626,38 @@ class TestVariable(VariableSubclassobjects):
         assert expected == actual
 
     @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    def test_broadcast_equals(self, unit, dtype):
+        base_unit = unit_registry.m
+        left_array = np.ones(shape=(2, 2), dtype=dtype) * base_unit
+        value = (
+            (1 * base_unit).to(unit).magnitude if is_compatible(unit, base_unit) else 1
+        )
+        right_array = np.full(shape=(2,), fill_value=value, dtype=dtype) * unit
+
+        left = xr.Variable(("x", "y"), left_array)
+        right = xr.Variable("x", right_array)
+
+        units = {
+            **extract_units(left),
+            **({} if is_compatible(unit, base_unit) else {None: None}),
+        }
+        expected = strip_units(left).broadcast_equals(
+            strip_units(convert_units(right, units))
+        ) & is_compatible(unit, base_unit)
+        actual = left.broadcast_equals(right)
+
+        assert expected == actual
+
+    @pytest.mark.parametrize(
         "indices",
         (
             pytest.param(4, id="single index"),
