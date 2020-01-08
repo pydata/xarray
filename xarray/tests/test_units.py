@@ -1844,6 +1844,40 @@ class TestVariable(VariableSubclassobjects):
         assert extract_units(expected) == extract_units(actual)
         xr.testing.assert_identical(expected, actual)
 
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_searchsorted(self, unit, error, dtype):
+        base_unit = unit_registry.m
+        array = np.linspace(0, 5, 10).astype(dtype) * base_unit
+        variable = xr.Variable("x", array)
+
+        value = 0 * unit
+
+        if error is not None:
+            with pytest.raises(error):
+                variable.searchsorted(value)
+
+            return
+
+        expected = strip_units(variable).searchsorted(
+            strip_units(convert_units(value, {None: base_unit}))
+        )
+
+        actual = variable.searchsorted(value)
+
+        assert extract_units(expected) == extract_units(actual)
+        np.testing.assert_allclose(expected, actual)
+
 
 class TestDataArray:
     @pytest.mark.filterwarnings("error:::pint[.*]")
