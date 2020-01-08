@@ -2011,6 +2011,51 @@ class TestVariable(VariableSubclassobjects):
 
         assert expected == actual
 
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(
+                1,
+                DimensionalityError,
+                id="no_unit",
+                marks=pytest.mark.xfail(
+                    reason="is not treated the same as dimensionless"
+                ),
+            ),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_pad_with_fill_value(self, unit, error, dtype):
+        array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable(("x", "y"), array)
+
+        fill_value = np.array(-100) * unit
+
+        func = method("pad_with_fill_value", x=(2, 3), y=(1, 4))
+        if error is not None:
+            with pytest.raises(error):
+                func(variable, fill_value=fill_value)
+
+            return
+
+        units = extract_units(variable)
+        expected = attach_units(
+            func(
+                strip_units(variable),
+                fill_value=strip_units(convert_units(fill_value, units)),
+            ),
+            units,
+        )
+        actual = func(variable, fill_value=fill_value)
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_identical(expected, actual)
+
 
 class TestDataArray:
     @pytest.mark.filterwarnings("error:::pint[.*]")
