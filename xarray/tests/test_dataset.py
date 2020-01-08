@@ -1392,6 +1392,14 @@ class TestDataset:
                 )
             )
 
+    def test_sel_categorical(self):
+        ind = pd.Series(["foo", "bar"], dtype="category")
+        df = pd.DataFrame({"ind": ind, "values": [1, 2]})
+        ds = df.set_index("ind").to_xarray()
+        actual = ds.sel(ind="bar")
+        expected = ds.isel(ind=1)
+        assert_identical(expected, actual)
+
     def test_sel_drop(self):
         data = Dataset({"foo": ("x", [1, 2, 3])}, {"x": [0, 1, 2]})
         expected = Dataset({"foo": 1})
