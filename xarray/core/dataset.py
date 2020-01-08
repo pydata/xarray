@@ -2799,7 +2799,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dims_dict : dict-like, optional
             Dictionary whose keys are current dimension names and
             whose values are the desired names. The desired names must
-            not exist already.
+            not be the name of an existing dimension or Variable in the Dataset.
         **dims, optional
             Keyword form of ``dims_dict``.
             One of dims_dict or dims must be provided.
