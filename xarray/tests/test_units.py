@@ -1823,12 +1823,16 @@ class TestVariable(VariableSubclassobjects):
             ),
             method("roll", {"x": 2}),
             pytest.param(
+                method("rolling_window", "x", 3, "window"),
+                marks=pytest.mark.xfail(reason="converts to ndarray"),
+            ),
+            method("round", 2),
+            pytest.param(
                 method("shift", {"x": -2}),
                 marks=pytest.mark.xfail(
                     reason="trying to concatenate ndarray to quantity"
                 ),
             ),
-            method("round", 2),
         ),
         ids=repr,
     )
