@@ -2030,7 +2030,7 @@ class TestVariable(VariableSubclassobjects):
         array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
         variable = xr.Variable(("x", "y"), array)
 
-        fill_value = np.array(-100) * unit
+        fill_value = -100 * unit
 
         func = method("pad_with_fill_value", x=(2, 3), y=(1, 4))
         if error is not None:
