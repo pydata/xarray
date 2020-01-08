@@ -1318,11 +1318,11 @@ def delete_attrs(*to_delete):
     "test_array_interface",
     "test___array__",
     "test_copy_index",
-    "test_concat",
     "test_concat_number_strings",
     "test_concat_fixed_len_str",
     "test_concat_mixed_dtypes",
     "test_pandas_datetime64_with_tz",
+    "test_pandas_data",
     "test_multiindex",
 )
 class TestVariable(VariableSubclassobjects):
@@ -1907,6 +1907,44 @@ class TestVariable(VariableSubclassobjects):
         assert extract_units(expected) == extract_units(actual)
         xr.testing.assert_identical(expected, actual)
 
+    @pytest.mark.xfail(reason="ignores units")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_concat(self, unit, error, dtype):
+        array1 = (
+            np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
+        )
+        array2 = np.linspace(5, 10, 10 * 2).reshape(10, 2).astype(dtype) * unit
+
+        variable = xr.Variable(("x", "y"), array1)
+        other = xr.Variable(("y", "z"), array2)
+
+        if error is not None:
+            with pytest.raises(error):
+                variable.concat(other)
+
+            return
+
+        units = extract_units(variable)
+        expected = attach_units(
+            strip_units(variable).concat(strip_units(convert_units(other, units))),
+            units,
+        )
+        actual = variable.concat(other)
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_identical(expected, actual)
+
     def test_set_dims(self, dtype):
         array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
         variable = xr.Variable(("x", "y"), array)
@@ -1919,6 +1957,58 @@ class TestVariable(VariableSubclassobjects):
 
         assert extract_units(expected) == extract_units(actual)
         xr.testing.assert_identical(expected, actual)
+
+    def test_copy(self, dtype):
+        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+        other = np.arange(10).astype(dtype) * unit_registry.s
+
+        variable = xr.Variable("x", array)
+        expected = attach_units(
+            strip_units(variable).copy(data=strip_units(other)), extract_units(other)
+        )
+        actual = variable.copy(data=other)
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    def test_no_conflicts(self, unit, dtype):
+        base_unit = unit_registry.m
+        array1 = (
+            np.array(
+                [
+                    [6.3, 0.3, 0.45],
+                    [np.nan, 0.3, 0.3],
+                    [3.7, np.nan, 0.2],
+                    [9.43, 0.3, 0.7],
+                ]
+            )
+            * base_unit
+        )
+        array2 = np.array([np.nan, 0.3, np.nan]) * unit
+
+        variable = xr.Variable(("x", "y"), array1)
+        other = xr.Variable("y", array2)
+
+        expected = strip_units(variable).no_conflicts(
+            strip_units(
+                convert_units(
+                    other, {None: base_unit if is_compatible(base_unit, unit) else None}
+                )
+            )
+        ) & is_compatible(base_unit, unit)
+        actual = variable.no_conflicts(other)
+
+        assert expected == actual
 
 
 class TestDataArray:
