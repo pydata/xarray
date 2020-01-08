@@ -1826,6 +1826,7 @@ class TestVariable(VariableSubclassobjects):
                 method("rolling_window", "x", 3, "window"),
                 marks=pytest.mark.xfail(reason="converts to ndarray"),
             ),
+            method("reduce", np.std, "x"),
             method("round", 2),
             pytest.param(
                 method("shift", {"x": -2}),
