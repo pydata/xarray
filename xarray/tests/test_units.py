@@ -1789,6 +1789,29 @@ class TestVariable(VariableSubclassobjects):
         assert extract_units(expected) == extract_units(actual)
         xr.testing.assert_identical(expected, actual)
 
+    def test_squeeze(self, dtype):
+        shape = (2, 1, 3, 1, 1, 2)
+        names = list("abcdef")
+        array = np.ones(shape=shape) * unit_registry.m
+        variable = xr.Variable(names, array)
+
+        expected = attach_units(
+            strip_units(variable).squeeze(), extract_units(variable)
+        )
+        actual = variable.squeeze()
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_identical(expected, actual)
+
+        for dim in names:
+            expected = attach_units(
+                strip_units(variable).squeeze(), extract_units(variable)
+            )
+            actual = variable.squeeze()
+
+            assert extract_units(expected) == extract_units(actual)
+            xr.testing.assert_identical(expected, actual)
+
 
 class TestDataArray:
     @pytest.mark.filterwarnings("error:::pint[.*]")
