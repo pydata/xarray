@@ -1812,6 +1812,38 @@ class TestVariable(VariableSubclassobjects):
             assert extract_units(expected) == extract_units(actual)
             xr.testing.assert_identical(expected, actual)
 
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("coarsen", windows={"x": 2}, func=np.mean),
+            method("quantile", q=[0.25, 0.75]),
+            pytest.param(
+                method("rank", dim="x"),
+                marks=pytest.mark.xfail(reason="rank not implemented for non-ndarray"),
+            ),
+            method("roll", {"x": 2}),
+            pytest.param(
+                method("shift", {"x": -2}),
+                marks=pytest.mark.xfail(
+                    reason="trying to concatenate ndarray to quantity"
+                ),
+            ),
+            method("round", 2),
+        ),
+        ids=repr,
+    )
+    def test_computation(self, func, dtype):
+        base_unit = unit_registry.m
+        array = np.linspace(0, 5, 10).astype(dtype) * base_unit
+        variable = xr.Variable("x", array)
+
+        expected = attach_units(func(strip_units(variable)), extract_units(variable))
+
+        actual = func(variable)
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_identical(expected, actual)
+
 
 class TestDataArray:
     @pytest.mark.filterwarnings("error:::pint[.*]")
