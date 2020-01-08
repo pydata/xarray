@@ -37,6 +37,9 @@ New Features
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
+  now allow swapping to dimension names that don't exist yet. (:pull:`3636`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties 
   and support `.dt` accessor for timedelta 
   via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
