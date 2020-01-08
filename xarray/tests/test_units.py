@@ -1883,6 +1883,30 @@ class TestVariable(VariableSubclassobjects):
         assert extract_units(expected) == extract_units(actual)
         np.testing.assert_allclose(expected, actual)
 
+    def test_stack(self, dtype):
+        array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable(("x", "y"), array)
+
+        expected = attach_units(
+            strip_units(variable).stack(z=("x", "y")), extract_units(variable)
+        )
+        actual = variable.stack(z=("x", "y"))
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_identical(expected, actual)
+
+    def test_unstack(self, dtype):
+        array = np.linspace(0, 5, 3 * 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable("z", array)
+
+        expected = attach_units(
+            strip_units(variable).unstack(z={"x": 3, "y": 10}), extract_units(variable)
+        )
+        actual = variable.unstack(z={"x": 3, "y": 10})
+
+        assert extract_units(expected) == extract_units(actual)
+        xr.testing.assert_identical(expected, actual)
+
 
 class TestDataArray:
     @pytest.mark.filterwarnings("error:::pint[.*]")
