@@ -65,6 +65,8 @@ Bug fixes
 - Raise an error when trying to use :py:meth:`Dataset.rename_dims` to
   rename to an existing name (:issue:`3438`, :pull:`3645`)
   By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename` now check for conflicts with
+  MultiIndex level names.
 
 Documentation
 ~~~~~~~~~~~~~

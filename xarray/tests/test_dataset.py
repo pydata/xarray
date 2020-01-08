@@ -2464,6 +2464,14 @@ class TestDataset:
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
 
+    def test_rename_multiindex(self):
+        mindex = pd.MultiIndex.from_tuples(
+            [([1, 2]), ([3, 4])], names=["level0", "level1"]
+        )
+        data = Dataset({}, {"x": mindex})
+        with raises_regex(ValueError, "conflicting MultiIndex"):
+            data.rename({"x": "level0"})
+
     @requires_cftime
     def test_rename_does_not_change_CFTimeIndex_type(self):
         # make sure CFTimeIndex is not converted to DatetimeIndex #3522
