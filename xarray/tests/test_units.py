@@ -1335,12 +1335,8 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                method("all"), marks=pytest.mark.xfail(reason="not implemented by pint")
-            ),
-            pytest.param(
-                method("any"), marks=pytest.mark.xfail(reason="not implemented by pint")
-            ),
+            method("all"),
+            method("any"),
             method("argmax"),
             method("argmin"),
             method("argsort"),
