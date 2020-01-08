@@ -1815,7 +1815,7 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize(
         "func",
         (
-            method("coarsen", windows={"x": 2}, func=np.mean),
+            method("coarsen", windows={"y": 2}, func=np.mean),
             method("quantile", q=[0.25, 0.75]),
             pytest.param(
                 method("rank", dim="x"),
@@ -1833,13 +1833,14 @@ class TestVariable(VariableSubclassobjects):
                     reason="trying to concatenate ndarray to quantity"
                 ),
             ),
+            method("transpose", "y", "x"),
         ),
         ids=repr,
     )
     def test_computation(self, func, dtype):
         base_unit = unit_registry.m
-        array = np.linspace(0, 5, 10).astype(dtype) * base_unit
-        variable = xr.Variable("x", array)
+        array = np.linspace(0, 5, 5 * 10).reshape(5, 10).astype(dtype) * base_unit
+        variable = xr.Variable(("x", "y"), array)
 
         expected = attach_units(func(strip_units(variable)), extract_units(variable))
 
