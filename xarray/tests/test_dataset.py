@@ -2444,6 +2444,9 @@ class TestDataset:
         with pytest.raises(ValueError):
             original.rename_dims(dims_dict_bad)
 
+        with pytest.raises(ValueError):
+            original.rename_dims({"x": "z"})
+
     def test_rename_vars(self):
         original = Dataset({"x": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42})
         expected = Dataset(
