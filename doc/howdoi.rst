@@ -12,7 +12,7 @@ How do I ...
    * - How do I...
      - Solution
    * - add a DataArray to my dataset as a new variable
-     - ``my_dataset[varname] = my_dataArray`` or :py:meth:`Dataset.assign`
+     - ``my_dataset[varname] = my_dataArray`` or :py:meth:`Dataset.assign`[#assign_dict]_
    * - add variables from other datasets to my dataset
      - :py:meth:`Dataset.merge`
    * - add a new dimension and/or coordinate
@@ -59,3 +59,7 @@ How do I ...
      - ``obj.dt.ceil``, ``obj.dt.floor``, ``obj.dt.round``. See :ref:`dt_accessor` for more.
    * - make a mask that is ``True`` where an object contains any of the values in a array
      - :py:meth:`Dataset.isin`, :py:meth:`DataArray.isin`
+
+.. rubric:: Footnotes
+
+.. [#assign_dict] See also :ref:`_dictionary_like_methods`:.
