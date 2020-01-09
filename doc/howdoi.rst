@@ -12,7 +12,7 @@ How do I ...
    * - How do I...
      - Solution
    * - add a DataArray to my dataset as a new variable
-     - ``my_dataset[varname] = my_dataArray``
+     - ``my_dataset[varname] = my_dataArray`` or :py:meth:`Dataset.assign`
    * - add variables from other datasets to my dataset
      - :py:meth:`Dataset.merge`
    * - add a new dimension and/or coordinate
