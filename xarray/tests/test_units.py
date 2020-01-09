@@ -391,6 +391,7 @@ class function:
         return f"function_{self.name}"
 
 
+@pytest.mark.xfail(reason="test bug: apply_ufunc should not be called that way")
 def test_apply_ufunc_dataarray(dtype):
     func = function(
         xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
@@ -406,6 +407,7 @@ def test_apply_ufunc_dataarray(dtype):
     assert_equal_with_units(expected, actual)
 
 
+@pytest.mark.xfail(reason="test bug: apply_ufunc should not be called that way")
 def test_apply_ufunc_dataset(dtype):
     func = function(
         xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
@@ -4347,6 +4349,7 @@ class TestDataset:
 
         assert_equal_with_units(expected, actual)
 
+    @pytest.mark.xfail(reason="does not work with quantities yet")
     def test_to_stacked_array(self, dtype):
         labels = np.arange(5).astype(dtype) * unit_registry.s
         arrays = {name: np.linspace(0, 1, 10) * unit_registry.m for name in labels}
