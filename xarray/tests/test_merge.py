@@ -3,6 +3,7 @@ import pytest
 
 import xarray as xr
 from xarray.core import dtypes, merge
+from xarray.testing import assert_identical
 
 from . import raises_regex
 from .test_dataset import create_test_data
@@ -258,4 +259,4 @@ class TestMergeMethod:
         ds = xr.Dataset({"a": 0})
         da = xr.DataArray(data=1, name="b")
 
-        assert ds.merge(da).identical(xr.merge([ds, da]))
+        assert_identical(ds.merge(da), xr.merge([ds, da]))
