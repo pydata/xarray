@@ -547,7 +547,7 @@ def apply_variable_ufunc(
     output_dtypes=None,
     output_sizes=None,
     keep_attrs=False,
-    vectorize=False,
+    meta=None,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects.
     """
@@ -580,7 +580,6 @@ def apply_variable_ufunc(
         elif dask == "parallelized":
             input_dims = [broadcast_dims + dims for dims in signature.input_core_dims]
             numpy_func = func
-            meta = np.ndarray if vectorize else None
 
             def func(*arrays):
                 return _apply_blockwise(
@@ -771,6 +770,7 @@ def apply_ufunc(
     dask: str = "forbidden",
     output_dtypes: Sequence = None,
     output_sizes: Mapping[Any, int] = None,
+    meta: Any = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -867,6 +867,9 @@ def apply_ufunc(
         Optional mapping from dimension names to sizes for outputs. Only used
         if dask='parallelized' and new dimensions (not found on inputs) appear
         on outputs.
+    meta : optional
+        Size-0 object representing the type of array wrapped by dask array. Passed on to
+        ``dask.array.map_blocks``.
 
     Returns
     -------
@@ -1000,6 +1003,11 @@ def apply_ufunc(
         func = functools.partial(func, **kwargs)
 
     if vectorize:
+        if meta is None:
+            # set meta=np.ndarray by default for numpy vectorized functions
+            # work around dask bug computing meta with vectorized functions: GH5642
+            meta = np.ndarray
+
         if signature.all_core_dims:
             func = np.vectorize(
                 func, otypes=output_dtypes, signature=signature.to_gufunc_string()
@@ -1016,7 +1024,7 @@ def apply_ufunc(
         dask=dask,
         output_dtypes=output_dtypes,
         output_sizes=output_sizes,
-        vectorize=vectorize,
+        meta=meta,
     )
 
     if any(isinstance(a, GroupBy) for a in args):
@@ -1031,6 +1039,7 @@ def apply_ufunc(
             dataset_fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
             dask=dask,
+            meta=meta,
         )
         return apply_groupby_func(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
