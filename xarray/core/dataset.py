@@ -2798,7 +2798,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dims_dict : dict-like, optional
             Dictionary whose keys are current dimension names and
-            whose values are the desired names.
+            whose values are the desired names. The desired names must
+            not be the name of an existing dimension or Variable in the Dataset.
         **dims, optional
             Keyword form of ``dims_dict``.
             One of dims_dict or dims must be provided.
@@ -2816,11 +2817,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.rename
         """
         dims_dict = either_dict_or_kwargs(dims_dict, dims, "rename_dims")
-        for k in dims_dict:
+        for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
                     "cannot rename %r because it is not a "
                     "dimension in this dataset" % k
+                )
+            if v in self.dims or v in self:
+                raise ValueError(
+                    f"Cannot rename {k} to {v} because {v} already exists. "
+                    "Try using swap_dims instead."
                 )
 
         variables, coord_names, sizes, indexes = self._rename_all(
@@ -2875,8 +2881,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
-            are new names. Each value must already be a variable in the
-            dataset.
+            are new names.
 
         Returns
         -------
@@ -2905,6 +2910,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             a        (y) int64 5 7
             b        (y) float64 0.1 2.4
+        >>> ds.swap_dims({"x": "z"})
+        <xarray.Dataset>
+        Dimensions:  (z: 2)
+        Coordinates:
+            x        (z) <U1 'a' 'b'
+            y        (z) int64 0 1
+        Dimensions without coordinates: z
+        Data variables:
+            a        (z) int64 5 7
+            b        (z) float64 0.1 2.4
 
         See Also
         --------
@@ -2921,7 +2936,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     "cannot swap from dimension %r because it is "
                     "not an existing dimension" % k
                 )
-            if self.variables[v].dims != (k,):
+            if v in self.variables and self.variables[v].dims != (k,):
                 raise ValueError(
                     "replacement dimension %r is not a 1D "
                     "variable along the old dimension %r" % (v, k)
@@ -2930,7 +2945,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         result_dims = {dims_dict.get(dim, dim) for dim in self.dims}
 
         coord_names = self._coord_names.copy()
-        coord_names.update(dims_dict.values())
+        coord_names.update({dim for dim in dims_dict.values() if dim in self.variables})
 
         variables: Dict[Hashable, Variable] = {}
         indexes: Dict[Hashable, pd.Index] = {}
