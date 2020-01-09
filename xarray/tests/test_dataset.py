@@ -3844,6 +3844,20 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_from_dataframe_categorical(self):
+        cat = pd.CategoricalDtype(categories=["foo", "bar", "baz"])
+        i1 = pd.Series(["foo", "bar"], dtype=cat)
+        i2 = pd.Series(["bar", "bar"], dtype=cat)
+
+        df = pd.DataFrame({"i1": i1, "i2": i2, "values": [1, 2]})
+        ds = df.set_index("i1").to_xarray()
+        assert len(ds["i1"]) == 2
+
+        ds = df.set_index(["i1", "i2"]).to_xarray()
+        print(ds)
+        assert len(ds["i1"]) == 2
+        assert len(ds["i2"]) == 1
+
     @requires_sparse
     def test_from_dataframe_sparse(self):
         import sparse
