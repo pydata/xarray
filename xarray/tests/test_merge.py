@@ -253,3 +253,9 @@ class TestMergeMethod:
         with pytest.raises(xr.MergeError):
             ds3 = xr.Dataset({"a": ("y", [2, 3]), "y": [1, 2]})
             ds1.merge(ds3, compat="no_conflicts")
+
+    def test_merge_dataarray(self):
+        ds = xr.Dataset({'a': 0})
+        da = xr.DataArray(data=1, name='b')
+
+        assert ds.merge(da).identical(xr.merge([ds, da]))
