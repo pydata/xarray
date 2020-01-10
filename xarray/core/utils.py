@@ -547,7 +547,12 @@ class ReprObject:
         return False
 
     def __hash__(self) -> int:
-        return hash((ReprObject, self._value))
+        return hash((type(self), self._value))
+
+    def __dask_tokenize__(self):
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._value))
 
 
 @contextlib.contextmanager
