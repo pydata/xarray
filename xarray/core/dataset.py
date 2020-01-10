@@ -4152,7 +4152,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Returns
         -------
-        DataArray
+        Dataset
         """
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
