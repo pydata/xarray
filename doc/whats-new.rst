@@ -89,6 +89,8 @@ Documentation
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Added example for :py:func:`~xarray.map_blocks`. (:pull:`3667`)
+  By `Riley X. Brady <https://github.com/bradyrx>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
