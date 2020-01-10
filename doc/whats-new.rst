@@ -47,6 +47,7 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+
 - Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
   hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
   <https://github.com/bolliger32>`_.
@@ -91,6 +92,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Make sure dask names change when rechunking by different chunk sizes. Conversely, make sure they
+  stay the same when rechunking by the same chunk size. (:issue:`3350`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - 2x to 5x speed boost (on small arrays) for :py:meth:`Dataset.isel`,
   :py:meth:`DataArray.isel`, and :py:meth:`DataArray.__getitem__` when indexing by int,
   slice, list of int, scalar ndarray, or 1-dimensional ndarray.
