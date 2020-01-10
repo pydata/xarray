@@ -353,6 +353,8 @@ setting) variables and attributes:
 This is particularly useful in an exploratory context, because you can
 tab-complete these variable names with tools like IPython.
 
+.. _dictionary_like_methods:
+
 Dictionary like methods
 ~~~~~~~~~~~~~~~~~~~~~~~
 
