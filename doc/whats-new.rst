@@ -25,24 +25,53 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
+  to a single chunk along all reduction axes. (:issue:`2999`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:func:`xarray.concat` now preserves attributes from the first Variable.
+  (:issue:`2575`, :issue:`2060`, :issue:`1614`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
-  and :py:class:`DataArrayCoarsen` objects. (:pull:`3500`)
+- Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
+  and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 - :py:meth:`Dataset.rolling` and :py:meth:`DataArray.rolling` now have a stride option
   By `Matthias Meyer <https://github.com/niowniow>`_.
+- :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
+  now allow swapping to dimension names that don't exist yet. (:pull:`3636`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties 
+  and support `.dt` accessor for timedelta 
+  via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Bug fixes
 ~~~~~~~~~
+- Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
+  hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
+  <https://github.com/bolliger32>`_.
 - Fix :py:meth:`xarray.combine_by_coords` when combining cftime coordinates
   which span long time intervals (:issue:`3535`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`~xarray.plot.FacetGrid.set_titles` can now replace existing row titles of a
+  :py:class:`~xarray.plot.FacetGrid` plot. In addition :py:class:`~xarray.plot.FacetGrid` gained
+  two new attributes: :py:attr:`~xarray.plot.FacetGrid.col_labels` and
+  :py:attr:`~xarray.plot.FacetGrid.row_labels` contain matplotlib Text handles for both column and
+  row labels. These can be used to manually change the labels.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving ``map_blocks`` (:pull:`3598`)
   By `Tom Augspurger <https://github.com/TomAugspurger>`_.
+- Ensure :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` issue the correct error
+  when ``q`` is out of bounds (:issue:`3634`) by `Mathias Hauser <https://github.com/mathause>`_.
+- Raise an error when trying to use :py:meth:`Dataset.rename_dims` to
+  rename to an existing name (:issue:`3438`, :pull:`3645`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename` now check for conflicts with
+  MultiIndex level names.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -68,7 +97,7 @@ Internal Changes
   :py:meth:`DataArray.isel`, and :py:meth:`DataArray.__getitem__` when indexing by int,
   slice, list of int, scalar ndarray, or 1-dimensional ndarray.
   (:pull:`3533`) by `Guido Imperiale <https://github.com/crusaderky>`_.
-- Removed internal method ``Dataset._from_vars_and_coord_names``, 
+- Removed internal method ``Dataset._from_vars_and_coord_names``,
   which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
@@ -95,8 +124,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Added the ``sparse`` option to :py:meth:`~xarray.DataArray.unstack`, 
-  :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`, 
+- Added the ``sparse`` option to :py:meth:`~xarray.DataArray.unstack`,
+  :py:meth:`~xarray.Dataset.unstack`, :py:meth:`~xarray.DataArray.reindex`,
   :py:meth:`~xarray.Dataset.reindex` (:issue:`3518`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added the ``fill_value`` option to :py:meth:`DataArray.unstack` and
@@ -106,13 +135,13 @@ New Features
   :py:meth:`~xarray.Dataset.interpolate_na`. This controls the maximum size of the data
   gap that will be filled by interpolation. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added :py:meth:`Dataset.drop_sel` & :py:meth:`DataArray.drop_sel` for dropping labels.
-  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for 
+  :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` have been added for
   dropping variables (including coordinates). The existing :py:meth:`Dataset.drop` &
   :py:meth:`DataArray.drop` methods remain as a backward compatible
   option for dropping either labels or variables, but using the more specific methods is encouraged.
   (:pull:`3475`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Added :py:meth:`Dataset.map` & :py:meth:`GroupBy.map` & :py:meth:`Resample.map` for 
+- Added :py:meth:`Dataset.map` & ``GroupBy.map`` & ``Resample.map`` for
   mapping / applying a function over each item in the collection, reflecting the widely used
   and least surprising name for this operation.
   The existing ``apply`` methods remain for backward compatibility, though using the ``map``
@@ -131,7 +160,7 @@ New Features
 - :py:func:`xarray.dot`, and :py:meth:`DataArray.dot` now support the
   ``dims=...`` option to sum over the union of dimensions of all input arrays
   (:issue:`3423`) by `Mathias Hauser <https://github.com/mathause>`_.
-- Added new :py:meth:`Dataset._repr_html_` and :py:meth:`DataArray._repr_html_` to improve
+- Added new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` to improve
   representation of objects in Jupyter. By default this feature is turned off
   for now. Enable it with ``xarray.set_options(display_style="html")``.
   (:pull:`3425`) by `Benoit Bovy <https://github.com/benbovy>`_ and
@@ -140,22 +169,26 @@ New Features
   <https://docs.dask.org/en/latest/custom-collections.html#deterministic-hashing>`_
   for xarray objects. Note that xarray objects with a dask.array backend already used
   deterministic hashing in previous releases; this change implements it when whole
-  xarray objects are embedded in a dask graph, e.g. when :py:meth:`DataArray.map` is
+  xarray objects are embedded in a dask graph, e.g. when :py:meth:`DataArray.map_blocks` is
   invoked. (:issue:`3378`, :pull:`3446`, :pull:`3515`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and
   `Guido Imperiale <https://github.com/crusaderky>`_.
-- Add the documented-but-missing :py:meth:`DatasetGroupBy.quantile`.
+- Add the documented-but-missing :py:meth:`~core.groupby.DatasetGroupBy.quantile`.
+- xarray now respects the ``DataArray.encoding["coordinates"]`` attribute when writing to disk.
+  See :ref:`io.coordinates` for more. (:issue:`3351`, :pull:`3487`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add the documented-but-missing :py:meth:`~core.groupby.DatasetGroupBy.quantile`.
   (:issue:`3525`, :pull:`3527`). By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
-- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when 
+- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when
   calling :py:meth:`Dataset.rename`, :py:meth:`Dataset.rename_dims` and :py:meth:`Dataset.rename_vars`.
   By `Mathias Hauser <https://github.com/mathause>`_. (:issue:`3522`).
 - Fix a bug in :py:meth:`DataArray.set_index` in case that an existing dimension becomes a level
   variable of MultiIndex. (:pull:`3520`). By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Harmonize ``_FillValue``, ``missing_value`` during encoding and decoding steps. (:pull:`3502`)
-  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fix regression introduced in v0.14.0 that would cause a crash if dask is installed
   but cloudpickle isn't (:issue:`3401`) by `Rhys Doyle <https://github.com/rdoyle45>`_
 - Fix grouping over variables with NaNs. (:issue:`2383`, :pull:`3406`).
@@ -170,7 +203,7 @@ Bug fixes
 - Rolling reduction operations no longer compute dask arrays by default. (:issue:`3161`).
   In addition, the ``allow_lazy`` kwarg to ``reduce`` is deprecated.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix :py:meth:`GroupBy.reduce` when reducing over multiple dimensions.
+- Fix ``GroupBy.reduce`` when reducing over multiple dimensions.
   (:issue:`3402`). By `Deepak Cherian <https://github.com/dcherian>`_
 - Allow appending datetime and bool data variables to zarr stores.
   (:issue:`3480`). By `Akihiro Matsukawa <https://github.com/amatsukawa>`_.
@@ -220,7 +253,7 @@ Internal Changes
 - Enable type checking on default sentinel values (:pull:`3472`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
-- Add :py:meth:`Variable._replace` for simpler replacing of a subset of attributes (:pull:`3472`)
+- Add ``Variable._replace`` for simpler replacing of a subset of attributes (:pull:`3472`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.14.0:
@@ -276,7 +309,7 @@ New functions/methods
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:class:`~xarray.core.GroupBy` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
+- ``core.groupby.GroupBy`` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
 
   - Added a repr (:pull:`3344`). Example::
 
@@ -311,7 +344,7 @@ Bug fixes
 - Fix error in concatenating unlabeled dimensions (:pull:`3362`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Warn if the ``dim`` kwarg is passed to rolling operations. This is redundant since a dimension is
-  specified when the :py:class:`DatasetRolling` or :py:class:`DataArrayRolling` object is created.
+  specified when the :py:class:`~core.rolling.DatasetRolling` or :py:class:`~core.rolling.DataArrayRolling` object is created.
   (:pull:`3362`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
@@ -384,7 +417,7 @@ Breaking changes
 - Reindexing with variables of a different dimension now raise an error (previously deprecated)
 - ``xarray.broadcast_array`` is removed (previously deprecated in favor of
   :py:func:`~xarray.broadcast`)
-- :py:meth:`Variable.expand_dims` is removed (previously deprecated in favor of
+- ``Variable.expand_dims`` is removed (previously deprecated in favor of
   :py:meth:`Variable.set_dims`)
 
 New functions/methods
@@ -469,8 +502,7 @@ Enhancements
 
 - ``xarray.Dataset.drop`` now supports keyword arguments; dropping index
   labels by using both ``dim`` and ``labels`` or using a
-  :py:class:`~xarray.core.coordinates.DataArrayCoordinates` object are
-  deprecated (:issue:`2910`).
+  :py:class:`~core.coordinates.DataArrayCoordinates` object are deprecated (:issue:`2910`).
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
 - Added examples of :py:meth:`Dataset.set_index` and
@@ -618,7 +650,7 @@ New functions/methods
   By `Alan Brammer <https://github.com/abrammer>`_ and
   `Ryan May <https://github.com/dopplershift>`_.
 
-- :py:meth:`~xarray.core.GroupBy.quantile` is now a method of ``GroupBy``
+- ``GroupBy.quantile`` is now a method of ``GroupBy``
   objects  (:issue:`3018`).
   By `David Huard <https://github.com/huard>`_.
 
@@ -1160,7 +1192,7 @@ Announcements of note:
   for more details.
 - We have a new :doc:`roadmap` that outlines our future development plans.
 
-- `Dataset.apply` now properly documents the way `func` is called.
+- ``Dataset.apply`` now properly documents the way `func` is called.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
 
 Enhancements
@@ -1592,7 +1624,7 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
-- Added :py:func:`~xarray.dot`, equivalent to :py:func:`np.einsum`.
+- Added :py:func:`~xarray.dot`, equivalent to :py:func:`numpy.einsum`.
   Also, :py:func:`~xarray.DataArray.dot` now supports ``dims`` option,
   which specifies the dimensions to sum over.
   (:issue:`1951`)
@@ -1777,7 +1809,7 @@ Bug fixes
   coordinates of target, destination and keys. If there are any conflict among
   these coordinates, ``IndexError`` will be raised.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- Properly point :py:meth:`DataArray.__dask_scheduler__` to
+- Properly point ``DataArray.__dask_scheduler__`` to
   ``dask.threaded.get``.  By `Matthew Rocklin <https://github.com/mrocklin>`_.
 - Bug fixes in :py:meth:`DataArray.plot.imshow`: all-NaN arrays and arrays
   with size one in some dimension can now be plotted, which is good for
@@ -1989,7 +2021,7 @@ Enhancements
 
 - Support for :py:class:`pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
-  :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
+  ``xarray.to_netcdf``, and :py:func:`~xarray.save_mfdataset`
   (:issue:`799`):
 
   .. ipython::
@@ -2397,7 +2429,7 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
-- New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
+- New aggregation on rolling objects :py:meth:`~core.rolling.DataArrayRolling.count`
   which providing a rolling count of valid values (:issue:`1138`).
 
 Bug fixes

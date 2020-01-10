@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from .coding import strings, times, variables
-from .coding.variables import SerializationWarning
+from .coding.variables import SerializationWarning, pop_to
 from .core import duck_array_ops, indexing
 from .core.common import contains_cftime_datetimes
 from .core.pycompat import dask_array_type
@@ -660,34 +660,46 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 and set(target_dims) <= set(v.dims)
             ):
                 variable_coordinates[k].add(coord_name)
-                global_coordinates.discard(coord_name)
 
     variables = {k: v.copy(deep=False) for k, v in variables.items()}
 
-    # These coordinates are saved according to CF conventions
-    for var_name, coord_names in variable_coordinates.items():
-        attrs = variables[var_name].attrs
-        if "coordinates" in attrs:
+    # keep track of variable names written to file under the "coordinates" attributes
+    written_coords = set()
+    for name, var in variables.items():
+        encoding = var.encoding
+        attrs = var.attrs
+        if "coordinates" in attrs and "coordinates" in encoding:
             raise ValueError(
-                "cannot serialize coordinates because variable "
-                "%s already has an attribute 'coordinates'" % var_name
+                f"'coordinates' found in both attrs and encoding for variable {name!r}."
             )
-        attrs["coordinates"] = " ".join(map(str, coord_names))
+
+        # this will copy coordinates from encoding to attrs if "coordinates" in attrs
+        # after the next line, "coordinates" is never in encoding
+        # we get support for attrs["coordinates"] for free.
+        coords_str = pop_to(encoding, attrs, "coordinates")
+        if not coords_str and variable_coordinates[name]:
+            attrs["coordinates"] = " ".join(map(str, variable_coordinates[name]))
+        if "coordinates" in attrs:
+            written_coords.update(attrs["coordinates"].split())
 
     # These coordinates are not associated with any particular variables, so we
     # save them under a global 'coordinates' attribute so xarray can roundtrip
     # the dataset faithfully. Because this serialization goes beyond CF
     # conventions, only do it if necessary.
     # Reference discussion:
-    # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/057771.html
+    # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/007571.html
+    global_coordinates.difference_update(written_coords)
     if global_coordinates:
         attributes = dict(attributes)
         if "coordinates" in attributes:
-            raise ValueError(
-                "cannot serialize coordinates because the global "
-                "attribute 'coordinates' already exists"
+            warnings.warn(
+                f"cannot serialize global coordinates {global_coordinates!r} because the global "
+                f"attribute 'coordinates' already exists. This may prevent faithful roundtripping"
+                f"of xarray datasets",
+                SerializationWarning,
             )
-        attributes["coordinates"] = " ".join(map(str, global_coordinates))
+        else:
+            attributes["coordinates"] = " ".join(map(str, global_coordinates))
 
     return variables, attributes
 

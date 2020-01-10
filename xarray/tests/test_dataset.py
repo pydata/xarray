@@ -2444,6 +2444,9 @@ class TestDataset:
         with pytest.raises(ValueError):
             original.rename_dims(dims_dict_bad)
 
+        with pytest.raises(ValueError):
+            original.rename_dims({"x": "z"})
+
     def test_rename_vars(self):
         original = Dataset({"x": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42})
         expected = Dataset(
@@ -2460,6 +2463,14 @@ class TestDataset:
         names_dict_bad = {"x_bad": "x_new"}
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
+
+    def test_rename_multiindex(self):
+        mindex = pd.MultiIndex.from_tuples(
+            [([1, 2]), ([3, 4])], names=["level0", "level1"]
+        )
+        data = Dataset({}, {"x": mindex})
+        with raises_regex(ValueError, "conflicting MultiIndex"):
+            data.rename({"x": "level0"})
 
     @requires_cftime
     def test_rename_does_not_change_CFTimeIndex_type(self):
@@ -2524,6 +2535,12 @@ class TestDataset:
             original.swap_dims({"y": "x"})
         with raises_regex(ValueError, "replacement dimension"):
             original.swap_dims({"x": "z"})
+
+        expected = Dataset(
+            {"y": ("u", list("abc")), "z": 42}, coords={"x": ("u", [1, 2, 3])}
+        )
+        actual = original.swap_dims({"x": "u"})
+        assert_identical(expected, actual)
 
     def test_expand_dims_error(self):
         original = Dataset(

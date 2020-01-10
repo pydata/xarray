@@ -33,7 +33,7 @@ from . import (
     rolling,
     utils,
 )
-from .accessor_dt import DatetimeAccessor
+from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
     _broadcast_helper,
@@ -258,7 +258,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
-    dt = property(DatetimeAccessor)
+    dt = property(CombinedDatetimelikeAccessor)
 
     def __init__(
         self,
@@ -1115,7 +1115,7 @@ class DataArray(AbstractArray, DataWithCoords):
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by each `n` value
-        along the specified dimension(s). Default `n` = 5
+        along the specified dimension(s).
 
         See Also
         --------
@@ -1289,7 +1289,7 @@ class DataArray(AbstractArray, DataWithCoords):
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
         fill_value : scalar, optional
             Value to use for newly missing values
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -1338,7 +1338,7 @@ class DataArray(AbstractArray, DataWithCoords):
             values.
         kwargs: dictionary
             Additional keyword passed to scipy's interpolator.
-        ``**coords_kwarg`` : {dim: coordinate, ...}, optional
+        ``**coords_kwargs`` : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
@@ -1480,8 +1480,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
-            are new names. Each value must already be a coordinate on this
-            array.
+            are new names.
 
         Returns
         -------
@@ -1504,6 +1503,13 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
             x        (y) <U1 'a' 'b'
           * y        (y) int64 0 1
+        >>> arr.swap_dims({"x": "z"})
+        <xarray.DataArray (z: 2)>
+        array([0, 1])
+        Coordinates:
+            x        (z) <U1 'a' 'b'
+            y        (z) int64 0 1
+        Dimensions without coordinates: z
 
         See Also
         --------
@@ -2740,7 +2746,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -2791,7 +2797,7 @@ class DataArray(AbstractArray, DataWithCoords):
             deprecated and will change to False in a future version.
             Explicitly pass roll_coords to silence the warning.
         **shifts_kwargs : The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------

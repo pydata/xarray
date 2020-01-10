@@ -432,7 +432,7 @@ class VariableSubclassobjects:
         assert_identical(
             Variable(["b", "a"], np.array([x, y])), Variable.concat((v, w), "b")
         )
-        with raises_regex(ValueError, "inconsistent dimensions"):
+        with raises_regex(ValueError, "Variable has dimensions"):
             Variable.concat([v, Variable(["c"], y)], "b")
         # test indexers
         actual = Variable.concat(
@@ -451,16 +451,12 @@ class VariableSubclassobjects:
             Variable.concat([v[:, 0], v[:, 1:]], "x")
 
     def test_concat_attrs(self):
-        # different or conflicting attributes should be removed
+        # always keep attrs from first variable
         v = self.cls("a", np.arange(5), {"foo": "bar"})
         w = self.cls("a", np.ones(5))
         expected = self.cls(
             "a", np.concatenate([np.arange(5), np.ones(5)])
         ).to_base_variable()
-        assert_identical(expected, Variable.concat([v, w], "a"))
-        w.attrs["foo"] = 2
-        assert_identical(expected, Variable.concat([v, w], "a"))
-        w.attrs["foo"] = "bar"
         expected.attrs["foo"] = "bar"
         assert_identical(expected, Variable.concat([v, w], "a"))
 
@@ -1541,6 +1537,14 @@ class TestVariable(VariableSubclassobjects):
 
         with raises_regex(ValueError, "dimension 'x'"):
             v.quantile(0.5, dim="x")
+
+    @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
+    def test_quantile_out_of_bounds(self, q):
+        v = Variable(["x", "y"], self.d)
+
+        # escape special characters
+        with raises_regex(ValueError, r"Quantiles must be in the range \[0, 1\]"):
+            v.quantile(q, dim="x")
 
     @requires_dask
     @requires_bottleneck
