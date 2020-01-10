@@ -62,4 +62,4 @@ How do I ...
 
 .. rubric:: Footnotes
 
-.. [#assign_dict] See also :ref:`_dictionary_like_methods`:.
+.. [#assign_dict] See also :ref:`dictionary_like_methods`:.
