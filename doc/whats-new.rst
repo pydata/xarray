@@ -70,6 +70,8 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename` now check for conflicts with
   MultiIndex level names.
+- Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
+  simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
 
 Documentation
 ~~~~~~~~~~~~~
