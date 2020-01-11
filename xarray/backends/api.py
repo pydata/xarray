@@ -969,6 +969,8 @@ def open_mfdataset(
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
+        if isinstance(attrs_file, Path):
+            attrs_file = str(attrs_file)
         combined.attrs = datasets[paths.index(attrs_file)].attrs
     else:
         combined.attrs = datasets[0].attrs
