@@ -3886,7 +3886,6 @@ class TestDataset:
         assert len(ds["i1"]) == 3
 
         ds = df.set_index(["i1", "i2"]).to_xarray()
-        print(ds)
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
 
