@@ -12,6 +12,7 @@ from .variable import Variable
 def remove_unused(index):
     """ Remove unused levels if CategoricalIndex """
     if isinstance(index, pd.MultiIndex):
+        index = index.remove_unused_levels()
         # if it contains CategoricalIndex, we need to remove unused categories
         # manually. See https://github.com/pandas-dev/pandas/issues/30846
         if any(isinstance(lev, pd.CategoricalIndex) for lev in index.levels):

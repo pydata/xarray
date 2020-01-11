@@ -41,7 +41,6 @@ from . import (
     formatting,
     formatting_html,
     groupby,
-    indexes,
     ops,
     resample,
     rolling,
@@ -65,6 +64,7 @@ from .indexes import (
     default_indexes,
     isel_variable_and_index,
     propagate_indexes,
+    remove_unused,
     roll_index,
 )
 from .indexing import is_fancy_indexer
@@ -3407,7 +3407,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _unstack_once(self, dim: Hashable, fill_value, sparse) -> "Dataset":
         index = self.get_index(dim)
-        index = index.remove_unused_levels()
+        index = remove_unused(index)
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
 
         # take a shortcut in case the MultiIndex was not modified.
@@ -4547,7 +4547,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx = indexes.remove_unused(dataframe.index)
+        idx = remove_unused(dataframe.index)
         dataframe = dataframe.set_index(idx)
         obj = cls()
 
