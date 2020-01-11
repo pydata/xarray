@@ -176,6 +176,8 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
             if isinstance(index, pd.MultiIndex):
                 indexer, new_index = index.get_loc_level(label.item(), level=0)
             elif isinstance(index, pd.CategoricalIndex):
+                if method is not None:
+                    raise ValueError("method is not valid with categorical index.")
                 if tolerance is not None:
                     raise ValueError("tolerance is not valid with categorical index.")
                 indexer = index.get_loc(label.item())

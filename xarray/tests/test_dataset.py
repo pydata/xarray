@@ -1400,6 +1400,15 @@ class TestDataset:
         expected = ds.isel(ind=1)
         assert_identical(expected, actual)
 
+    def test_sel_categorical_error(self):
+        ind = pd.Series(["foo", "bar"], dtype="category")
+        df = pd.DataFrame({"ind": ind, "values": [1, 2]})
+        ds = df.set_index("ind").to_xarray()
+        with pytest.raises(ValueError):
+            ds.sel(ind="bar", method="nearest")
+        with pytest.raises(ValueError):
+            ds.sel(ind="bar", tolerance="nearest")
+
     def test_categorical_index(self):
         cat = pd.CategoricalIndex(
             ["foo", "bar", "foo"],
