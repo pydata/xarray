@@ -297,7 +297,12 @@ def line(
     xplt, yplt, hueplt, xlabel, ylabel, hue_label = _infer_line_data(darray, x, y, hue)
 
     # Remove pd.Intervals if contained in xplt.values.
-    if _valid_other_type(xplt.values, [pd.Interval]):
+    if any(
+        [
+            _valid_other_type(xplt.values, [pd.Interval]),
+            _valid_other_type(yplt.values, [pd.Interval]),
+        ]
+    ):
         # Is it a step plot? (see matplotlib.Axes.step)
         if kwargs.get("linestyle", "").startswith("steps-"):
             xplt_val, yplt_val = _interval_to_double_bound_points(
@@ -313,8 +318,14 @@ def line(
             if kwargs["linestyle"] == "":
                 del kwargs["linestyle"]
         else:
-            xplt_val = _interval_to_mid_points(xplt.values)
-            yplt_val = yplt.values
+            if _valid_other_type(xplt.values, [pd.Interval]):
+                xplt_val = _interval_to_mid_points(xplt.values)
+            else:
+                xplt_val = xplt.values
+            if _valid_other_type(yplt.values, [pd.Interval]):
+                yplt_val = _interval_to_mid_points(yplt.values)
+            else:
+                yplt_val = yplt.values
             xlabel += "_center"
     else:
         xplt_val = xplt.values
