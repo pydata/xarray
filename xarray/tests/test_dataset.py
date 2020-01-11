@@ -1403,22 +1403,23 @@ class TestDataset:
     def test_categorical_index(self):
         cat = pd.CategoricalIndex(
             ["foo", "bar", "foo"],
-            categories=["foo", "bar", "baz",
-                        "qux", "quux", "corge"])
-        ds = xr.Dataset({'var': ('cat', np.arange(3))},
-                        coords={'cat': ('cat', cat), 
-                                'c': ('cat', [0, 1, 1])})
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
+        )
+        ds = xr.Dataset(
+            {"var": ("cat", np.arange(3))},
+            coords={"cat": ("cat", cat), "c": ("cat", [0, 1, 1])},
+        )
         # test slice
-        actual = ds.sel(cat='foo')
+        actual = ds.sel(cat="foo")
         expected = ds.isel(cat=[0, 2])
         assert_identical(expected, actual)
         # make sure the conversion to the array works
-        actual = ds.sel(cat='foo')['cat'].values
-        assert (actual == ['foo', 'foo']).all()
+        actual = ds.sel(cat="foo")["cat"].values
+        assert (actual == ["foo", "foo"]).all()
 
-        ds = ds.set_index(index=['cat', 'c'])
-        actual = ds.unstack('index')
-        assert actual['var'].shape == (2, 2)
+        ds = ds.set_index(index=["cat", "c"])
+        actual = ds.unstack("index")
+        assert actual["var"].shape == (2, 2)
 
     def test_sel_drop(self):
         data = Dataset({"foo": ("x", [1, 2, 3])}, {"x": [0, 1, 2]})
@@ -3866,8 +3867,8 @@ class TestDataset:
 
     def test_from_dataframe_categorical(self):
         cat = pd.CategoricalDtype(
-            categories=["foo", "bar", "baz",
-                        "qux", "quux", "corge"])
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"]
+        )
         i1 = pd.Series(["foo", "bar", "foo"], dtype=cat)
         i2 = pd.Series(["bar", "bar", "baz"], dtype=cat)
 
