@@ -718,6 +718,7 @@ def open_mfdataset(
     autoclose=None,
     parallel=False,
     join="outer",
+    attrs_file=None,
     **kwargs,
 ):
     """Open multiple files as a single dataset.
@@ -729,8 +730,8 @@ def open_mfdataset(
     ``combine_by_coords`` and ``combine_nested``. By default the old (now deprecated)
     ``auto_combine`` will be used, please specify either ``combine='by_coords'`` or
     ``combine='nested'`` in future. Requires dask to be installed. See documentation for
-    details on dask [1]_. Attributes from the first dataset file are used for the
-    combined dataset.
+    details on dask [1]_. Global attributes from the ``attrs_file`` are used
+    for the combined dataset.
 
     Parameters
     ----------
@@ -827,6 +828,10 @@ def open_mfdataset(
         - 'override': if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+    attrs_file : str or pathlib.Path, optional
+        Path of the file used to read global attributes from.
+        By default global attributes are read from the first file provided,
+        with wildcard matches sorted by filename.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -961,7 +966,15 @@ def open_mfdataset(
         raise
 
     combined._file_obj = _MultiFileCloser(file_objs)
-    combined.attrs = datasets[0].attrs
+
+    # read global attributes from the attrs_file or from the first dataset
+    if attrs_file is not None:
+        if isinstance(attrs_file, Path):
+            attrs_file = str(attrs_file)
+        combined.attrs = datasets[paths.index(attrs_file)].attrs
+    else:
+        combined.attrs = datasets[0].attrs
+
     return combined
 
 

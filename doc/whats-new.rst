@@ -37,6 +37,9 @@ New Features
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Add `attrs_file` option in :py:func:`~xarray.open_mfdataset` to choose the
+  source file for global attributes in a multi-file dataset (:issue:`2382`,
+  :pull:`3498`) by `Julien Seguinot <https://github.com/juseg>_`.
 - :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
   now allow swapping to dimension names that don't exist yet. (:pull:`3636`)
   By `Justus Magin <https://github.com/keewis>`_.
