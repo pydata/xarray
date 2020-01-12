@@ -74,6 +74,8 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename` now check for conflicts with
   MultiIndex level names.
+- :py:meth:`Dataset.merge` no longer fails when passed a `DataArray` instead of a `Dataset` object.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
