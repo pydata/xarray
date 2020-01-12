@@ -3607,6 +3607,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If any variables conflict (see ``compat``).
         """
         _check_inplace(inplace)
+        other = other.to_dataset() if isinstance(other, xr.DataArray) else other
         merge_result = dataset_merge_method(
             self,
             other,
