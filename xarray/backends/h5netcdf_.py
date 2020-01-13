@@ -5,7 +5,7 @@ import numpy as np
 from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri
-from .common import WritableCFDataStore
+from .common import WritableCFDataStore, find_root_and_group
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
@@ -86,8 +86,13 @@ class H5NetCDFStore(WritableCFDataStore):
 
         if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
             if group is None:
-                root, group = manager._root, manager.name
+                root, group = find_root_and_group(manager)
             else:
+                if not type(manager) is h5netcdf.File:
+                    raise ValueError(
+                        "must supply a h5netcdf.File if the group "
+                        "argument is provided"
+                    )
                 root = manager
             manager = DummyFileManager(root)
 
@@ -95,7 +100,9 @@ class H5NetCDFStore(WritableCFDataStore):
         self._group = group
         self._mode = mode
         self.format = None
-        self._filename = self.ds._root.filename
+        # todo: utilizing find_root_and_group seems a bit clunky
+        #  making filename available on h5netcdf.Group seems better
+        self._filename = find_root_and_group(self.ds)[0].filename
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
