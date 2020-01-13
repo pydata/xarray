@@ -2368,7 +2368,7 @@ class DataArray(AbstractArray, DataWithCoords):
         naming conventions.
 
         Converts all variables and attributes to native Python objects.
-        Useful for coverting to json. To avoid datetime incompatibility
+        Useful for converting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
         Parameters
