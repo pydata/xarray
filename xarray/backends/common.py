@@ -34,7 +34,7 @@ def find_root_and_group(ds):
     """Find the root and group name of a netCDF4/h5netcdf dataset."""
     hierarchy = ()
     while ds.parent is not None:
-        hierarchy = (ds.name.split('/')[-1],) + hierarchy
+        hierarchy = (ds.name.split("/")[-1],) + hierarchy
         ds = ds.parent
     group = "/" + "/".join(hierarchy)
     return ds, group
