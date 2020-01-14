@@ -514,7 +514,6 @@ def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     np.testing.assert_array_equal(gi, si)
 
 
-@pytest.mark.xfail
 def test_get_clean_interp_index_overflow():
     da = xr.DataArray(
         [0, 1, 2],
@@ -542,7 +541,7 @@ def test_interpolate_na_max_gap_errors(da_time):
         da_time.interpolate_na("t", max_gap=(1,))
 
     da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
-    with raises_regex(TypeError, "Underlying index is"):
+    with raises_regex(TypeError, "Expected array of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
     with raises_regex(TypeError, "Expected integer or floating point"):

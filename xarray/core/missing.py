@@ -2,6 +2,7 @@ import warnings
 from functools import partial
 from numbers import Number
 from typing import Any, Callable, Dict, Hashable, Sequence, Union
+import datetime as dt
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
-from .duck_array_ops import dask_array_type, datetime_to_numeric, py_timedelta_to_float
+from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -265,6 +266,8 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
     # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
     if isinstance(index, (CFTimeIndex, pd.DatetimeIndex)):
         offset = type(index[0])(1970, 1, 1)
+        if isinstance(index, CFTimeIndex):
+            index = index.values
         index = Variable(
             data=datetime_to_numeric(index, offset=offset, datetime_unit="ns"),
             dims=(dim,),
@@ -290,7 +293,7 @@ def interp_na(
     use_coordinate: Union[bool, str] = True,
     method: str = "linear",
     limit: int = None,
-    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
+    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
     **kwargs,
 ):
     """Interpolate values according to different methods.
@@ -313,24 +316,8 @@ def interp_na(
             and isinstance(self.indexes[dim], (pd.DatetimeIndex, CFTimeIndex))
             and use_coordinate
         ):
-            if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
-                raise TypeError(
-                    f"Underlying index is DatetimeIndex. Expected max_gap of type str, pandas.Timedelta or numpy.timedelta64 but received {max_type}"
-                )
-
-            if isinstance(max_gap, str):
-                try:
-                    max_gap = pd.to_timedelta(max_gap)
-                except ValueError:
-                    raise ValueError(
-                        f"Could not convert {max_gap!r} to timedelta64 using pandas.to_timedelta"
-                    )
-
-            if isinstance(max_gap, pd.Timedelta):
-                max_gap = np.timedelta64(max_gap.value, "ns")
-
             # Convert to float
-            max_gap = py_timedelta_to_float(max_gap)
+            max_gap = timedelta_to_numeric(max_gap)
 
         if not use_coordinate:
             if not isinstance(max_gap, (Number, np.number)):

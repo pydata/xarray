@@ -700,10 +700,12 @@ def test_datetime_to_numeric_overflow():
     import cftime
 
     times = pd.date_range("2000", periods=5, freq="7D").values.astype("datetime64[us]")
-    cftimes = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
+    cftimes = cftime_range(
+        "2000", periods=5, freq="7D", calendar="proleptic_gregorian"
+    ).values
 
     offset = np.datetime64("0001-01-01")
-    cfoffset = cftime.DatetimeGregorian(1, 1, 1)
+    cfoffset = cftime.DatetimeProlepticGregorian(1, 1, 1)
 
     result = duck_array_ops.datetime_to_numeric(
         times, offset=offset, datetime_unit="D", dtype=int
@@ -714,16 +716,20 @@ def test_datetime_to_numeric_overflow():
 
     expected = 730119 + np.arange(0, 35, 7)
 
-    # Outputs are different. Expected ?
     np.testing.assert_array_equal(result, expected)
-    np.testing.assert_array_equal(cfresult, expected + 2)
+    np.testing.assert_array_equal(cfresult, expected)
 
 
 def test_py_datetime_to_float():
-    assert py_timedelta_to_float(dt.timedelta(days=1)) == 86400 * 1e9
+    assert py_timedelta_to_float(dt.timedelta(days=1), "ns") == 86400 * 1e9
 
     if np.__version__ < "1.17":
         with pytest.raises(OverflowError):
-            py_timedelta_to_float(dt.timedelta(days=1e6))
+            py_timedelta_to_float(dt.timedelta(days=1e6), "ns")
     else:
-        assert py_timedelta_to_float(dt.timedelta(days=1e6)) == 86400 * 1e15
+        assert py_timedelta_to_float(dt.timedelta(days=1e6), "ps") == 86400 * 1e18
+        assert py_timedelta_to_float(dt.timedelta(days=1e6), "ns") == 86400 * 1e15
+        assert py_timedelta_to_float(dt.timedelta(days=1e6), "us") == 86400 * 1e12
+        assert py_timedelta_to_float(dt.timedelta(days=1e6), "ms") == 86400 * 1e9
+        assert py_timedelta_to_float(dt.timedelta(days=1e6), "s") == 86400 * 1e6
+        assert py_timedelta_to_float(dt.timedelta(days=1e6), "D") == 1e6

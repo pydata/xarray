@@ -666,7 +666,7 @@ def test_datetime_interp_noerror():
 
 @pytest.mark.xfail(
     np.__version__ < "1.17",
-    reason="Numpy support for conversion from timedelta objects to " "timedelta64.",
+    reason="Numpy support for conversion from timedelta objects to timedelta64.",
 )
 @requires_cftime
 def test_3641():

@@ -7,6 +7,7 @@ import contextlib
 import inspect
 import warnings
 from functools import partial
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -372,7 +373,7 @@ def _datetime_nanmin(array):
 
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
-    """Return an array containing datetime-like data to numerical values.
+    """Convert an array containing datetime-like data to numerical values.
 
     Convert the datetime array to a timedelta relative to an offset.
 
@@ -430,24 +431,68 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         return np.where(isnull(array), np.nan, array.astype(dtype))
 
 
+def timedelta_to_numeric(array, datetime_unit="ns", dtype=float):
+    """Convert an array containing timedelta-like data to numerical values.
+    """
+    import datetime as dt
+
+    if isinstance(array, dt.timedelta):
+        out = py_timedelta_to_float(array, datetime_unit)
+    elif isinstance(array, np.timedelta64):
+        out = np_timedelta64_to_float(array, datetime_unit)
+    elif isinstance(array, pd.Timedelta):
+        out = pd_timedelta_to_float(array, datetime_unit)
+    elif isinstance(array, pd.TimedeltaIndex):
+        out = pd_timedeltaindex_to_float(array, datetime_unit)
+    elif isinstance(array, str):
+        try:
+            a = pd.to_timedelta(array)
+        except ValueError:
+            raise ValueError(
+                f"Could not convert {array!r} to timedelta64 using pandas.to_timedelta"
+            )
+        return py_timedelta_to_float(a, datetime_unit)
+    else:
+        raise TypeError(
+            f"Expected array of type str, pandas.Timedelta, pandas.TimedeltaIndex, "
+            f"datetime.timedelta or numpy.timedelta64, but received {type(array).__name__}"
+        )
+    return out.astype(dtype)
+
+
 def _to_pytimedelta(array, unit="us"):
     index = pd.TimedeltaIndex(array.ravel(), unit=unit)
     return index.to_pytimedelta().reshape(array.shape)
 
 
-def py_timedelta_to_float(array, datetime_unit="ns"):
+def np_timedelta64_to_float(array, datetime_unit):
+    array = array.astype("timedelta64[us]")
+    conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
+    return conversion_factor * array
+
+
+def pd_timedelta_to_float(array, datetime_units):
+    array = np.timedelta64(array.value, "ns").astype(np.float64)
+    return np_timedelta64_to_float(array, datetime_units)
+
+
+def pd_timedeltaindex_to_float(array, datetime_units):
+    return np_timedelta64_to_float(array.values, datetime_units)
+
+
+def py_timedelta_to_float(array, datetime_unit):
     """Convert a timedelta object to a float, possibly at a loss of resolution.
 
     Notes
     -----
-    With Numpy >= 1.7, it's possible to convert directly from `datetime.timedelta`
+    With Numpy >= 1.17, it's possible to convert directly from `datetime.timedelta`
     to `numpy.timedelta64` at the microsecond (us) resolution. This covers a fairly
     large span of years.
 
     With earlier Numpy versions, the conversion only works at the nanosecond resolution,
     which restricts the span that can be covered.
     """
-    if np.__version__ < "1.17":
+    if LooseVersion(np.__version__) < LooseVersion("1.17"):
         array = np.asarray(array)
         array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
         if array.dtype.kind in "O":
