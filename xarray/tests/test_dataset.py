@@ -1424,11 +1424,23 @@ class TestDataset:
         assert_identical(expected, actual)
         # make sure the conversion to the array works
         actual = ds.sel(cat="foo")["cat"].values
-        assert (actual == ["foo", "foo"]).all()
+        assert (actual == np.array(["foo", "foo"])).all()
 
         ds = ds.set_index(index=["cat", "c"])
         actual = ds.unstack("index")
         assert actual["var"].shape == (2, 2)
+
+    def test_categorical_reindex(self):
+        cat = pd.CategoricalIndex(
+            ["foo", "bar", "baz"],
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
+        )
+        ds = xr.Dataset(
+            {"var": ("cat", np.arange(3))},
+            coords={"cat": ("cat", cat), "c": ("cat", [0, 1, 2])},
+        )
+        actual = ds.reindex(cat=["foo"])["cat"].values
+        assert (actual == np.array(["foo"])).all()
 
     def test_sel_drop(self):
         data = Dataset({"foo": ("x", [1, 2, 3])}, {"x": [0, 1, 2]})
