@@ -34,7 +34,7 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Weighted array reductions  are now supported via the new :py:meth:`DataArray.weighted`
+- Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
   and :py:meth:`Dataset.weighted` methods. By `Mathias Hauser <https://github.com/mathause>`_
   (:issue:`422`).
 - Added the :py:meth:`count` reduction method to both :py:class:`DatasetCoarsen`
