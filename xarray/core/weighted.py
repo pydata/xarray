@@ -7,26 +7,26 @@ if TYPE_CHECKING:
     from .dataarray import DataArray, Dataset
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
-    Reduce this {cls}'s data by a weighted `{fcn}` along some dimension(s).
+    Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
 
     Parameters
     ----------
     dim : str or sequence of str, optional
-        Dimension(s) over which to apply the weighted `{fcn}`.
+        Dimension(s) over which to apply the weighted ``{fcn}``.
     skipna : bool, optional
         If True, skip missing values (as marked by NaN). By default, only
         skips missing values for float dtypes; other dtypes either do not
         have a sentinel missing value (int) or skipna=True has not been
         implemented (object, datetime64 or timedelta64).
     keep_attrs : bool, optional
-        If True, the attributes (`attrs`) will be copied from the original
+        If True, the attributes (``attrs``) will be copied from the original
         object to the new one.  If False (default), the new object will be
         returned without attributes.
 
     Returns
     -------
     reduced : {cls}
-        New {cls} object with weighted `{fcn}` applied to its data and
+        New {cls} object with weighted ``{fcn}`` applied to its data and
         the indicated dimension(s) removed.
     """
 
@@ -38,7 +38,7 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     dim : str or sequence of str, optional
         Dimension(s) over which to sum the weights.
     keep_attrs : bool, optional
-        If True, the attributes (`attrs`) will be copied from the original
+        If True, the attributes (``attrs``) will be copied from the original
         object to the new one.  If False (default), the new object will be
         returned without attributes.
 
@@ -52,8 +52,8 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
 class Weighted:
     """A object that implements weighted operations.
 
-    You should create a Weighted object by using the `DataArray.weighted` or
-    `Dataset.weighted` methods.
+    You should create a Weighted object by using the ``DataArray.weighted`` or
+    ``Dataset.weighted`` methods.
 
     See Also
     --------
@@ -87,18 +87,21 @@ class Weighted:
         Note
         ----
         ``weights`` must be a ``DataArray`` and cannot contain missing values.
-        Missing values can be replaced by `weights.fillna(0)`.
+        Missing values can be replaced by ``weights.fillna(0)``.
         """
 
         from .dataarray import DataArray
 
-        assert isinstance(weights, DataArray), "'weights' must be a DataArray"
-
-        self.obj = obj
+        if not isinstance(weights, DataArray):
+            raise ValueError("`weights` must be a DataArray")
 
         if weights.isnull().any():
-            raise ValueError("`weights` cannot contain missing values.")
+            raise ValueError(
+                "`weights` cannot contain missing values. "
+                "Missing values can be replaced by `weights.fillna(0)`."
+            )
 
+        self.obj = obj
         self.weights = weights
 
     def _sum_of_weights(
@@ -128,7 +131,7 @@ class Weighted:
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
     ) -> "DataArray":
-        """Reduce a DataArray by a by a weighted `sum` along some dimension(s)."""
+        """Reduce a DataArray by a by a weighted ``sum`` along some dimension(s)."""
 
         # need to infer dims as we use `dot`
         if dim is None:
@@ -147,7 +150,7 @@ class Weighted:
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
     ) -> "DataArray":
-        """Reduce a DataArray by a weighted `mean` along some dimension(s)."""
+        """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
 
         # get weighted sum
         weighted_sum = self._weighted_sum(da, dim=dim, skipna=skipna)
@@ -160,8 +163,7 @@ class Weighted:
 
     def _implementation(self, func, dim, **kwargs):
 
-        msg = "Use `Dataset.weighted` or `DataArray.weighted`"
-        raise NotImplementedError(msg)
+        raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
 
     def sum_of_weights(
         self,
