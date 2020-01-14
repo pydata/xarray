@@ -85,7 +85,6 @@ from .utils import (
     either_dict_or_kwargs,
     hashable,
     is_dict_like,
-    is_list_like,
     is_scalar,
     maybe_wrap_array,
 )
@@ -3690,7 +3689,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 raise ValueError("cannot specify dim and dict-like arguments.")
             labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
-        if dim is None and (is_list_like(labels) or is_scalar(labels)):
+        if dim is None and (is_scalar(labels) or isinstance(labels, Iterable)):
             warnings.warn(
                 "dropping variables using `drop` will be deprecated; using drop_vars is encouraged.",
                 PendingDeprecationWarning,
