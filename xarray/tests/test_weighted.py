@@ -207,6 +207,23 @@ def test_weighted_operations_3D(dim, operator, add_nans, skipna, as_dataset):
     assert_allclose(expected, result)
 
 
+@pytest.mark.xfail(reason="GH: 3694")
+@pytest.mark.parametrize("operator", ("sum_of_weights", "sum", "mean"))
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_operations_nonequal_coords(operator, as_dataset):
+
+    weights = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[0, 1, 2, 3]))
+    data = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[1, 2, 3, 4]))
+
+    if as_dataset:
+        data = data.to_dataset(name="data")
+
+    expected = expected_weighted(data, weights, dim="a", skipna=None, operator=operator)
+    result = getattr(data.weighted(weights), operator)(dim="a")
+
+    assert_allclose(expected, result)
+
+
 @pytest.mark.parametrize("dim", ("dim_0", None))
 @pytest.mark.parametrize("shape_data", ((4,), (4, 4), (4, 4, 4)))
 @pytest.mark.parametrize("shape_weights", ((4,), (4, 4), (4, 4, 4)))
