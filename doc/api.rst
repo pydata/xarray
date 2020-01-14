@@ -31,6 +31,8 @@ Top-level functions
    ones_like
    dot
    map_blocks
+   show_versions
+   set_options
 
 Dataset
 =======
@@ -74,7 +76,9 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
+   Dataset.get
    Dataset.items
+   Dataset.keys
    Dataset.values
 
 Dataset contents
@@ -539,6 +543,15 @@ DataArray methods
    DataArray.unify_chunks
    DataArray.map_blocks
 
+Coordinates objects
+===================
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DataArrayCoordinates
+   core.coordinates.DatasetCoordinates
+
 GroupBy objects
 ===============
 
@@ -565,6 +578,16 @@ Rolling objects
    core.rolling.DatasetRolling.construct
    core.rolling.DatasetRolling.reduce
    core.rolling_exp.RollingExp
+
+Coarsen objects
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.rolling.DataArrayCoarsen
+   core.rolling.DatasetCoarsen
+
 
 Resample objects
 ================
@@ -595,6 +618,7 @@ Accessors
    :toctree: generated/
 
    core.accessor_dt.DatetimeAccessor
+   core.accessor_dt.TimedeltaAccessor
    core.accessor_str.StringAccessor
 
 Custom Indexes
@@ -628,6 +652,33 @@ Plotting
    plot.line
    plot.pcolormesh
    plot.FacetGrid
+
+Faceting
+--------
+.. autosummary::
+   :toctree: generated/
+
+   plot.FacetGrid
+   plot.FacetGrid.add_colorbar
+   plot.FacetGrid.add_legend
+   plot.FacetGrid.map
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.map_dataarray_line
+   plot.FacetGrid.map_dataset
+   plot.FacetGrid.set_axis_labels
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_xlabels
+   plot.FacetGrid.set_ylabels
+
+Tutorial
+========
+
+.. autosummary::
+   :toctree: generated/
+
+   tutorial.open_dataset
+   tutorial.load_dataset
 
 Testing
 =======
@@ -665,7 +716,7 @@ Advanced API
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create
-arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
+arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
 .. autosummary::
    :toctree: generated/
@@ -680,6 +731,9 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
 
 Deprecated / Pending Deprecation
 ================================
+
+.. autosummary::
+   :toctree: generated/
 
    Dataset.drop
    DataArray.drop

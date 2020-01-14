@@ -16,7 +16,6 @@ from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.indexes import propagate_indexes
 from xarray.core.utils import is_scalar
-
 from xarray.tests import (
     LooseVersion,
     ReturnItem,
@@ -753,12 +752,19 @@ class TestDataArray:
 
         blocked = unblocked.chunk()
         assert blocked.chunks == ((3,), (4,))
+        first_dask_name = blocked.data.name
 
         blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
         assert blocked.chunks == ((2, 1), (2, 2))
+        assert blocked.data.name != first_dask_name
 
         blocked = unblocked.chunk(chunks=(3, 3))
         assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
+
+        # name doesn't change when rechunking by same amount
+        # this fails if ReprObject doesn't have __dask_tokenize__ defined
+        assert unblocked.chunk(2).data.name == unblocked.chunk(2).data.name
 
         assert blocked.load().chunks is None
 
@@ -1528,6 +1534,11 @@ class TestDataArray:
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {"y": ("x", list("abc"))}, "x")
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
+        actual = array.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+
+        array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
+        expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
 

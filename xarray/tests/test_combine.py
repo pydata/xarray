@@ -22,7 +22,7 @@ from xarray.core.combine import (
     _new_tile_id,
 )
 
-from . import assert_equal, assert_identical, raises_regex
+from . import assert_equal, assert_identical, raises_regex, requires_cftime
 from .test_dataset import create_test_data
 
 
@@ -711,6 +711,22 @@ class TestCombineAuto:
         ):
             combine_by_coords([ds1, ds0])
 
+    def test_combine_by_coords_incomplete_hypercube(self):
+        # test that this succeeds with default fill_value
+        x1 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [0]})
+        x2 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [1], "x": [0]})
+        x3 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [1]})
+        actual = combine_by_coords([x1, x2, x3])
+        expected = Dataset(
+            {"a": (("y", "x"), [[1, 1], [1, np.nan]])},
+            coords={"y": [0, 1], "x": [0, 1]},
+        )
+        assert_identical(expected, actual)
+
+        # test that this fails if fill_value is None
+        with pytest.raises(ValueError):
+            combine_by_coords([x1, x2, x3], fill_value=None)
+
 
 @pytest.mark.filterwarnings(
     "ignore:In xarray version 0.15 `auto_combine` " "will be deprecated"
@@ -877,3 +893,25 @@ class TestAutoCombineDeprecation:
         objs = [Dataset({"foo": ("x", [0])}), Dataset({"foo": ("x", [1])})]
         with pytest.warns(FutureWarning, match="supplied do not have global"):
             auto_combine(objs)
+
+
+@requires_cftime
+def test_combine_by_coords_distant_cftime_dates():
+    # Regression test for https://github.com/pydata/xarray/issues/3535
+    import cftime
+
+    time_1 = [cftime.DatetimeGregorian(4500, 12, 31)]
+    time_2 = [cftime.DatetimeGregorian(4600, 12, 31)]
+    time_3 = [cftime.DatetimeGregorian(5100, 12, 31)]
+
+    da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
+    da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
+    da_3 = DataArray([2], dims=["time"], coords=[time_3], name="a").to_dataset()
+
+    result = combine_by_coords([da_1, da_2, da_3])
+
+    expected_time = np.concatenate([time_1, time_2, time_3])
+    expected = DataArray(
+        [0, 1, 2], dims=["time"], coords=[expected_time], name="a"
+    ).to_dataset()
+    assert_identical(result, expected)
