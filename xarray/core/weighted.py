@@ -116,7 +116,9 @@ class Weighted:
         if dim is None:
             dim = ...
 
-        # use `dot` to avoid creating large DataArrays (if da and weights do not share all dims)
+        # `dot` does not broadcast arrays, so this avoids creating a large
+        # DataArray (if `weights` has additional dimensions)
+        # TODO: maybe add fasttrack (`(mask * weights).sum(dims=dim, skipna=skipna)`)
         sum_of_weights = dot(mask, self.weights, dims=dim)
 
         # find all weights that are valid (not 0)
@@ -141,7 +143,9 @@ class Weighted:
         if skipna or (skipna is None and da.dtype.kind in "cfO"):
             da = da.fillna(0.0)
 
-        # use `dot` to avoid creating large DataArrays
+        # `dot` does not broadcast arrays, so this avoids creating a large
+        # DataArray (if `weights` has additional dimensions)
+        # TODO: maybe add fasttrack (`(da * weights).sum(dims=dim, skipna=skipna)`)
         return dot(da, self.weights, dims=dim)
 
     def _weighted_mean(
