@@ -453,6 +453,49 @@ def _interval_to_double_bound_points(xarray, yarray):
     return xarray, yarray
 
 
+def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
+    """
+    Helper function to replace the values of x and/or y coordinate arrays
+    containing pd.Interval with their mid-points or - for step plots - double
+    points which double the length.
+    """
+
+    # Is it a step plot? (see matplotlib.Axes.step)
+    if kwargs.get("linestyle", "").startswith("steps-"):
+
+        # Convert intervals to double points
+        if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
+            raise TypeError("Can't step plot intervals against intervals.")
+        if _valid_other_type(xval, [pd.Interval]):
+            xval, yval = _interval_to_double_bound_points(xval, yval)
+        if _valid_other_type(yval, [pd.Interval]):
+            yval, xval = _interval_to_double_bound_points(yval, xval)
+
+        # Remove steps-* to be sure that matplotlib is not confused
+        kwargs["linestyle"] = (
+            kwargs["linestyle"]
+            .replace("steps-pre", "")
+            .replace("steps-post", "")
+            .replace("steps-mid", "")
+        )
+        if kwargs["linestyle"] == "":
+            del kwargs["linestyle"]
+
+    # Is it another kind of plot?
+    else:
+
+        # Convert intervals to mid points and adjust labels
+        if _valid_other_type(xval, [pd.Interval]):
+            xval = _interval_to_mid_points(xval)
+            xlabel += "_center"
+        if _valid_other_type(yval, [pd.Interval]):
+            yval = _interval_to_mid_points(yval)
+            ylabel += "_center"
+
+    # return converted arguments
+    return xval, yval, xlabel, ylabel, kwargs
+
+
 def _resolve_intervals_2dplot(val, func_name):
     """
     Helper function to replace the values of a coordinate array containing

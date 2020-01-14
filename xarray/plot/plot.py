@@ -17,13 +17,11 @@ from .utils import (
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
-    _interval_to_double_bound_points,
-    _interval_to_mid_points,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
+    _resolve_intervals_1dplot,
     _resolve_intervals_2dplot,
     _update_axes,
-    _valid_other_type,
     get_axis,
     import_matplotlib_pyplot,
     label_from_attrs,
@@ -296,40 +294,10 @@ def line(
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, hue_label = _infer_line_data(darray, x, y, hue)
 
-    # Remove pd.Intervals if contained in xplt.values.
-    if any(
-        [
-            _valid_other_type(xplt.values, [pd.Interval]),
-            _valid_other_type(yplt.values, [pd.Interval]),
-        ]
-    ):
-        # Is it a step plot? (see matplotlib.Axes.step)
-        if kwargs.get("linestyle", "").startswith("steps-"):
-            xplt_val, yplt_val = _interval_to_double_bound_points(
-                xplt.values, yplt.values
-            )
-            # Remove steps-* to be sure that matplotlib is not confused
-            kwargs["linestyle"] = (
-                kwargs["linestyle"]
-                .replace("steps-pre", "")
-                .replace("steps-post", "")
-                .replace("steps-mid", "")
-            )
-            if kwargs["linestyle"] == "":
-                del kwargs["linestyle"]
-        else:
-            if _valid_other_type(xplt.values, [pd.Interval]):
-                xplt_val = _interval_to_mid_points(xplt.values)
-            else:
-                xplt_val = xplt.values
-            if _valid_other_type(yplt.values, [pd.Interval]):
-                yplt_val = _interval_to_mid_points(yplt.values)
-            else:
-                yplt_val = yplt.values
-            xlabel += "_center"
-    else:
-        xplt_val = xplt.values
-        yplt_val = yplt.values
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, xlabel, ylabel, kwargs = _resolve_intervals_1dplot(
+        xplt.values, yplt.values, xlabel, ylabel, kwargs
+    )
 
     _ensure_plottable(xplt_val, yplt_val)
 
