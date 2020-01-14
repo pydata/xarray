@@ -6,68 +6,26 @@ from xarray import DataArray, Dataset
 from xarray.tests import assert_allclose, assert_equal, raises_regex
 
 
-@pytest.mark.parametrize("size", (1, 5, 100))
-def test_weighted__sum_of_weights_1D(size):
+@pytest.mark.parametrize("data", (DataArray([1, 2]), Dataset(dict(data=[1, 2]))))
+def test_weighted_non_DataArray_weights(data):
 
-    data = np.zeros(size)
-    # make sure weights is not 0
-    weights = np.arange(1, size + 1)
-
-    da = DataArray(data)
-    weights = DataArray(weights)
-
-    expected = weights.sum()
-
-    result = da.weighted(weights).sum_of_weights()
-
-    assert_equal(expected, result)
+    with raises_regex(ValueError, "`weights` must be a DataArray"):
+        data.weighted([1, 2])
 
 
-@pytest.mark.parametrize("shape", ((2, 2), (2, 5), (10, 10)))
-@pytest.mark.parametrize("dim", (None, "dim_0", "dim_1", ("dim_0", "dim_1")))
-def test_weighted__sum_of_weights_2D(shape, dim):
-
-    np.random.seed(0)
-
-    data = np.zeros(shape)
-    # make sure all weights are positive to avoid summing to 0
-    weights = np.abs(np.random.randn(*shape))
-
-    da = DataArray(data)
-    weights = DataArray(weights)
-
-    weighted = da.weighted(weights)
-
-    expected = weights.sum(dim=dim)
-    result = weighted.sum_of_weights(dim=dim)
-
-    assert_allclose(expected, result)
-
-
-def test_weigted_non_DataArray_weights():
-
-    da = DataArray([1, 2])
-    with raises_regex(AssertionError, "'weights' must be a DataArray"):
-        da.weighted([1, 2])
-
-    ds = Dataset(dict(data=[1, 2]))
-    with raises_regex(AssertionError, "'weights' must be a DataArray"):
-        ds.weighted([1, 2])
-
-
+@pytest.mark.parametrize("data", (DataArray([1, 2]), Dataset(dict(data=[1, 2]))))
 @pytest.mark.parametrize("weights", ([np.nan, 2], [np.nan, np.nan]))
-def test_weighted_weights_nan_raises(weights):
-    # make sure NaNs in weights raise
+def test_weighted_weights_nan_raises(data, weights):
 
     with pytest.raises(ValueError, match="`weights` cannot contain missing values."):
-        DataArray([1, 2]).weighted(DataArray(weights))
+        data.weighted(DataArray(weights))
 
 
 @pytest.mark.parametrize(
     ("weights", "expected"),
-    (([1, 2], 3), ([0, 2], 2), ([0, 0], np.nan), ([-1, 1], np.nan)),
+    (([1, 2], 3), ([2, 0], 2), ([0, 0], np.nan), ([-1, 1], np.nan)),
 )
-def test_weigted_sum_of_weights_no_nan(weights, expected):
+def test_weighted_sum_of_weights_no_nan(weights, expected):
 
     da = DataArray([1, 2])
     weights = DataArray(weights)
@@ -80,9 +38,9 @@ def test_weigted_sum_of_weights_no_nan(weights, expected):
 
 @pytest.mark.parametrize(
     ("weights", "expected"),
-    (([1, 2], 2), ([0, 2], 2), ([0, 0], np.nan), ([-1, 1], 1), ([2, 0], np.nan)),
+    (([1, 2], 2), ([2, 0], np.nan), ([0, 0], np.nan), ([-1, 1], 1)),
 )
-def test_weigted_sum_of_weights_nan(weights, expected):
+def test_weighted_sum_of_weights_nan(weights, expected):
 
     da = DataArray([np.nan, 2])
     weights = DataArray(weights)
@@ -93,14 +51,14 @@ def test_weigted_sum_of_weights_nan(weights, expected):
     assert_equal(expected, result)
 
 
-@pytest.mark.parametrize("da", ([1, 2], [1, np.nan], [np.nan, np.nan]))
-@pytest.mark.parametrize("factor", [0, 1, 2, 3.14])
+@pytest.mark.parametrize("da", ([1.0, 2], [1, np.nan], [np.nan, np.nan]))
+@pytest.mark.parametrize("factor", [0, 1, 3.14])
 @pytest.mark.parametrize("skipna", (True, False))
 def test_weighted_sum_equal_weights(da, factor, skipna):
     # if all weights are 'f'; weighted sum is f times the ordinary sum
 
     da = DataArray(da)
-    weights = xr.zeros_like(da) + factor
+    weights = xr.full_like(da, factor)
 
     expected = da.sum(skipna=skipna) * factor
     result = da.weighted(weights).sum(skipna=skipna)
@@ -140,16 +98,16 @@ def test_weighted_sum_nan(weights, expected, skipna):
 
 
 @pytest.mark.filterwarnings("ignore:Mean of empty slice")
-@pytest.mark.parametrize("da", ([1, 2], [1, np.nan], [np.nan, np.nan]))
+@pytest.mark.parametrize("da", ([1.0, 2], [1, np.nan], [np.nan, np.nan]))
 @pytest.mark.parametrize("skipna", (True, False))
 @pytest.mark.parametrize("factor", [1, 2, 3.14])
-def test_weigted_mean_equal_weights(da, skipna, factor):
+def test_weighted_mean_equal_weights(da, skipna, factor):
     # if all weights are equal (!= 0), should yield the same result as mean
 
     da = DataArray(da)
 
     # all weights as 1.
-    weights = xr.zeros_like(da) + factor
+    weights = xr.full_like(da, factor)
 
     expected = da.mean(skipna=skipna)
     result = da.weighted(weights).mean(skipna=skipna)
@@ -177,7 +135,7 @@ def test_weighted_mean_no_nan(weights, expected):
     (([4, 6], 2.0), ([0, 1], 2.0), ([0, 2], 2.0), ([0, 0], np.nan)),
 )
 @pytest.mark.parametrize("skipna", (True, False))
-def test_weigted_mean_nan(weights, expected, skipna):
+def test_weighted_mean_nan(weights, expected, skipna):
 
     da = DataArray([np.nan, 2])
     weights = DataArray(weights)
@@ -193,7 +151,7 @@ def test_weigted_mean_nan(weights, expected, skipna):
 
 
 def expected_weighted(da, weights, dim, skipna, operation):
-    """ operations implemented via `*` and `sum`; da.Weighted uses `dot`
+    """ operations implemented via ``*`` and ``sum``; da.Weighted uses ``dot``
     """
 
     weighted_sum = (da * weights).sum(dim=dim, skipna=skipna)
@@ -316,9 +274,10 @@ def test_weighted_operations_keep_attr(operator, as_dataset, keep_attrs):
 def test_weighted_operations_keep_attr_da_in_ds(operator):
     # GH #3595
 
-    weights = DataArray(np.random.randn(2, 2), attrs=dict(attr="weights"))
-    data = DataArray(np.random.randn(4, 4, 4), attrs=dict(attr="data"))
+    weights = DataArray(np.random.randn(2, 2))
+    data = DataArray(np.random.randn(2, 2), attrs=dict(attr="data"))
+    data = data.to_dataset(name="a")
 
     result = getattr(data.weighted(weights), operator)(keep_attrs=True)
 
-    assert data.data.attrs == result.attrs
+    assert data.a.attrs == result.a.attrs
