@@ -76,6 +76,9 @@ Bug fixes
   MultiIndex level names.
 - :py:meth:`Dataset.merge` no longer fails when passed a `DataArray` instead of a `Dataset` object.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix a regression in :py:meth:`Dataset.drop`: allow passing any
+  iterable to drop when dropping variables (:issue:`3552`, :pull:`3693`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
