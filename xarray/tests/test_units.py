@@ -1552,7 +1552,7 @@ class TestVariable(VariableSubclassobjects):
 
         if error is not None:
             with pytest.raises(error):
-                print(variable.fillna(value=fill_value))
+                variable.fillna(value=fill_value)
 
             return
 
