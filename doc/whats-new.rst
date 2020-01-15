@@ -100,6 +100,9 @@ Documentation
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Add new :py:func:`apply_ufunc` example notebook demonstrating vectorization of a 1D
+  function using dask and numba.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added example for :py:func:`~xarray.map_blocks`. (:pull:`3667`)
   By `Riley X. Brady <https://github.com/bradyrx>`_.
 
