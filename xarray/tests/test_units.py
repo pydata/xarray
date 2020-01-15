@@ -333,6 +333,11 @@ def merge_args(default_args, new_args):
 
 
 class method:
+    """ wrapper class to help with passing methods via parametrize
+
+    This is works a bit similar to using `partial(Class.method, arg, kwarg)`
+    """
+
     def __init__(self, name, *args, **kwargs):
         self.name = name
         self.args = args
@@ -351,7 +356,7 @@ class method:
             if not isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
                 numpy_func = getattr(np, self.name)
                 func = partial(numpy_func, obj)
-                # remove typical xr args like "dim"
+                # remove typical xarray args like "dim"
                 exclude_kwargs = ("dim", "dims")
                 all_kwargs = {
                     key: value
@@ -368,6 +373,11 @@ class method:
 
 
 class function:
+    """ wrapper class for numpy functions
+
+    Same as method, but the name is used for referencing numpy functions
+    """
+
     def __init__(self, name_or_function, *args, function_label=None, **kwargs):
         if callable(name_or_function):
             self.name = (
