@@ -32,16 +32,15 @@ pytestmark = [
 
 
 def is_compatible(unit1, unit2):
-    def _valid_type(unit1):
-        return isinstance(unit1, (int, unit_registry.Unit, Quantity))
+    def dimensionality(obj):
+        if isinstance(obj, (unit_registry.Quantity, unit_registry.Unit)):
+            unit_like = obj
+        else:
+            unit_like = unit_registry.dimensionless
 
-    if not _valid_type(unit1) or not _valid_type(unit2):
-        raise ValueError("can only pass int, Unit or Quantity instances")
+        return unit_like.dimensionality
 
-    unit1 = unit_registry.dimensionless if isinstance(unit1, int) else unit1
-    unit2 = unit_registry.dimensionless if isinstance(unit2, int) else unit2
-
-    return unit1.dimensionality == unit2.dimensionality
+    return dimensionality(unit1) == dimensionality(unit2)
 
 
 def compatible_mappings(first, second):
