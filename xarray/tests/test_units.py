@@ -1,3 +1,4 @@
+import functools
 import operator
 import warnings
 
@@ -422,9 +423,8 @@ class function:
         return f"function_{self.name}"
 
 
-@pytest.mark.xfail(reason="test bug: apply_ufunc should not be called that way")
 def test_apply_ufunc_dataarray(dtype):
-    func = function(
+    func = functools.partial(
         xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
     )
 
@@ -438,9 +438,8 @@ def test_apply_ufunc_dataarray(dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="test bug: apply_ufunc should not be called that way")
 def test_apply_ufunc_dataset(dtype):
-    func = function(
+    func = functools.partial(
         xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
     )
 
