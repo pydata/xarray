@@ -14,6 +14,7 @@ dependencies:
   - jupyter_client
   - nbsphinx
   - netcdf4
+  - numba
   - numpy
   - numpydoc
   - pandas<0.25  # Hack around https://github.com/pydata/xarray/issues/3369
