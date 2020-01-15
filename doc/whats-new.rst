@@ -55,7 +55,6 @@ Bug fixes
 - Applying a user-defined function that adds new dimensions using :py:func:`apply_ufunc`
   and ``vectorize=True`` now works with ``dask > 2.0``. (:issue:`3574`, :pr:`3660`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
   hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
   <https://github.com/bolliger32>`_.
