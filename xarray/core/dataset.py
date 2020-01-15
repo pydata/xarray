@@ -85,7 +85,6 @@ from .utils import (
     either_dict_or_kwargs,
     hashable,
     is_dict_like,
-    is_list_like,
     is_scalar,
     maybe_wrap_array,
 )
@@ -1754,7 +1753,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if not chunks:
                 chunks = None
             if var.ndim > 0:
-                token2 = tokenize(name, token if token else var._data)
+                # when rechunking by different amounts, make sure dask names change
+                # by provinding chunks as an input to tokenize.
+                # subtle bugs result otherwise. see GH3350
+                token2 = tokenize(name, token if token else var._data, chunks)
                 name2 = f"{name_prefix}{name}-{token2}"
                 return var.chunk(chunks, name=name2, lock=lock)
             else:
@@ -3547,7 +3549,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def merge(
         self,
-        other: "CoercibleMapping",
+        other: Union["CoercibleMapping", "DataArray"],
         inplace: bool = None,
         overwrite_vars: Union[Hashable, Iterable[Hashable]] = frozenset(),
         compat: str = "no_conflicts",
@@ -3604,6 +3606,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If any variables conflict (see ``compat``).
         """
         _check_inplace(inplace)
+        other = other.to_dataset() if isinstance(other, xr.DataArray) else other
         merge_result = dataset_merge_method(
             self,
             other,
@@ -3686,7 +3689,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 raise ValueError("cannot specify dim and dict-like arguments.")
             labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
-        if dim is None and (is_list_like(labels) or is_scalar(labels)):
+        if dim is None and (is_scalar(labels) or isinstance(labels, Iterable)):
             warnings.warn(
                 "dropping variables using `drop` will be deprecated; using drop_vars is encouraged.",
                 PendingDeprecationWarning,
@@ -4149,7 +4152,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Returns
         -------
-        DataArray
+        Dataset
         """
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
@@ -4663,7 +4666,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         conventions.
 
         Converts all variables and attributes to native Python objects
-        Useful for coverting to json. To avoid datetime incompatibility
+        Useful for converting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
         Parameters
