@@ -69,6 +69,9 @@ Bug fixes
   By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 - Ensure :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` issue the correct error
   when ``q`` is out of bounds (:issue:`3634`) by `Mathias Hauser <https://github.com/mathause>`_.
+- Fix regression in xarray 0.14.1 that prevented encoding times with certain
+  ``dtype``, ``_FillValue``, and ``missing_value`` encodings (:issue:`3624`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_
 - Raise an error when trying to use :py:meth:`Dataset.rename_dims` to
   rename to an existing name (:issue:`3438`, :pull:`3645`)
   By `Justus Magin <https://github.com/keewis>`_.
