@@ -278,6 +278,10 @@ def convert_units(obj, to):
     return new_obj
 
 
+def assert_units_equal(a, b):
+    assert extract_units(a) == extract_units(b)
+
+
 def assert_equal_with_units(a, b):
     # works like xr.testing.assert_equal, but also explicitly checks units
     # so, it is more like assert_identical
@@ -1384,6 +1388,7 @@ class TestVariable(VariableSubclassobjects):
         expected = attach_units(func(strip_units(variable)), units)
         actual = func(variable)
 
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1441,7 +1446,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = func(variable, *args, **kwargs)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1501,7 +1506,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = func(variable, *args, **kwargs)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         np.testing.assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1524,7 +1529,7 @@ class TestVariable(VariableSubclassobjects):
         expected = func(strip_units(variable))
         actual = func(variable)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1580,7 +1585,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = variable.fillna(value=fill_value)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1687,6 +1692,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = variable.isel(x=indices)
 
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1744,7 +1750,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = func(variable, y)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1800,7 +1806,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = func(variable, cond, other)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     def test_squeeze(self, dtype):
@@ -1814,7 +1820,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = variable.squeeze()
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
         for dim in names:
@@ -1823,7 +1829,7 @@ class TestVariable(VariableSubclassobjects):
             )
             actual = variable.squeeze()
 
-            assert extract_units(expected) == extract_units(actual)
+            assert_units_equal(expected, actual)
             xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1861,7 +1867,7 @@ class TestVariable(VariableSubclassobjects):
 
         actual = func(variable)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
@@ -1895,7 +1901,7 @@ class TestVariable(VariableSubclassobjects):
 
         actual = variable.searchsorted(value)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         np.testing.assert_allclose(expected, actual)
 
     def test_stack(self, dtype):
@@ -1907,7 +1913,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = variable.stack(z=("x", "y"))
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     def test_unstack(self, dtype):
@@ -1919,7 +1925,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = variable.unstack(z={"x": 3, "y": 10})
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="ignores units")
@@ -1957,7 +1963,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = variable.concat(other)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     def test_set_dims(self, dtype):
@@ -1970,7 +1976,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = variable.set_dims(dims)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     def test_copy(self, dtype):
@@ -1983,7 +1989,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = variable.copy(data=other)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
@@ -2067,7 +2073,7 @@ class TestVariable(VariableSubclassobjects):
         )
         actual = func(variable, fill_value=fill_value)
 
-        assert extract_units(expected) == extract_units(actual)
+        assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
 
