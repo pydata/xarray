@@ -21,7 +21,7 @@ v0.15.0 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Bumped minimum ``dask`` version to 2.2.
 
 New Features
 ~~~~~~~~~~~~
@@ -37,6 +37,8 @@ New Features
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Add ``meta`` kwarg to :py:func:`~xarray.apply_ufunc`; this is passed on to
+  :py:meth:`dask.array.map_blocks`. (:pr:`3660`) By `Deepak Cherian <https://github.com/dcherian>`_.
 - Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties 
   and support `.dt` accessor for timedelta 
   via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
@@ -44,8 +46,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Make applying a user-defined function that adds new dimensions using
-  :py:func:`apply_ufunc` with ``vectorize=True`` work with ``dask > 2.0``.
+- Applying a user-defined function that adds new dimensions using :py:func:`apply_ufunc`
+  and ``vectorize=True`` now works with ``dask > 2.0``. (:issue:`3574`, :pr:`3660`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
   hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
