@@ -1823,11 +1823,12 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
-        for dim in names:
+        names = tuple(name for name, size in zip(names, shape) if shape == 1)
+        for name in names:
             expected = attach_units(
-                strip_units(variable).squeeze(), extract_units(variable)
+                strip_units(variable).squeeze(dim=name), extract_units(variable)
             )
-            actual = variable.squeeze()
+            actual = variable.squeeze(dim=name)
 
             assert_units_equal(expected, actual)
             xr.testing.assert_identical(expected, actual)
