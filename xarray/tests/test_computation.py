@@ -1080,8 +1080,8 @@ def test_dot_align_coords(use_dask):
             xr.dot(da_a, da_b)
 
     # NOTE: dot always uses `join="inner"` because `(a * b).sum()` yields the same for all
-    # join types (except "exact")
-    with xr.set_options(arithmetic_join="right"):
+    # join method (except "exact")
+    with xr.set_options(arithmetic_join="left"):
         actual = xr.dot(da_a, da_b)
         expected = (da_a * da_b).sum(["a", "b"])
         xr.testing.assert_allclose(expected, actual)
