@@ -74,53 +74,17 @@ def array_strip_units(array):
         return array
 
 
-def array_attach_units(data, unit, convert_from=None):
-    try:
-        unit, convert_from = unit
-    except TypeError:
-        pass
-
+def array_attach_units(data, unit):
     if isinstance(data, Quantity):
-        if not convert_from:
-            raise ValueError(
-                "cannot attach unit {unit} to quantity ({data.units})".format(
-                    unit=unit, data=data
-                )
-            )
-        elif isinstance(convert_from, unit_registry.Unit):
-            data = data.magnitude
-        elif convert_from is True:  # intentionally accept exactly true
-            if data.check(unit):
-                convert_from = data.units
-                data = data.magnitude
-            else:
-                raise ValueError(
-                    "cannot convert quantity ({data.units}) to {unit}".format(
-                        unit=unit, data=data
-                    )
-                )
-        else:
-            raise ValueError(
-                "cannot convert from invalid unit {convert_from}".format(
-                    convert_from=convert_from
-                )
-            )
+        raise ValueError(f"cannot attach unit {unit} to quantity {data}")
 
-    # to make sure we also encounter the case of "equal if converted"
-    if convert_from is not None:
-        quantity = (data * convert_from).to(
-            unit
-            if isinstance(unit, unit_registry.Unit)
-            else unit_registry.dimensionless
-        )
-    else:
-        try:
-            quantity = data * unit
-        except np.core._exceptions.UFuncTypeError:
-            if unit != 1:
-                raise
+    try:
+        quantity = data * unit
+    except np.core._exceptions.UFuncTypeError:
+        if isinstance(unit, unit_registry.Unit):
+            raise
 
-            quantity = data
+        quantity = data
 
     return quantity
 
