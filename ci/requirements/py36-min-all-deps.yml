@@ -29,7 +29,7 @@ dependencies:
   - nc-time-axis=1.2
   - netcdf4=1.4
   - numba=0.44
-  - numpy=1.14
+  - numpy=1.15
   - pandas=0.24
   # - pint  # See py36-min-nep18.yml
   - pip
