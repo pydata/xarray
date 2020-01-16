@@ -45,8 +45,8 @@ New Features
 - :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
   now allow swapping to dimension names that don't exist yet. (:pull:`3636`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties
-  and support `.dt` accessor for timedelta
+- Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties 
+  and support `.dt` accessor for timedelta 
   via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
