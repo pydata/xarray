@@ -1043,6 +1043,60 @@ def test_dot(use_dask):
     pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
+@pytest.mark.parametrize("use_dask", [True, False])
+def test_dot_align_coords(use_dask):
+    # GH 3694
+
+    if use_dask:
+        if not has_dask:
+            pytest.skip("test for dask.")
+
+    a = np.arange(30 * 4).reshape(30, 4)
+    b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
+
+    # use partially overlapping coords
+    coords_a = {"a": np.arange(30), "b": np.arange(4)}
+    coords_b = {"a": np.arange(5, 35), "b": np.arange(1, 5)}
+
+    da_a = xr.DataArray(a, dims=["a", "b"], coords=coords_a)
+    da_b = xr.DataArray(b, dims=["a", "b", "c"], coords=coords_b)
+
+    if use_dask:
+        da_a = da_a.chunk({"a": 3})
+        da_b = da_b.chunk({"a": 3})
+
+    # join="inner" is the default
+    actual = xr.dot(da_a, da_b)
+    # `dot` sums over the common dimensions of the arguments
+    expected = (da_a * da_b).sum(["a", "b"])
+    xr.testing.assert_allclose(expected, actual)
+
+    actual = xr.dot(da_a, da_b, dims=...)
+    expected = (da_a * da_b).sum()
+    xr.testing.assert_allclose(expected, actual)
+
+    with xr.set_options(arithmetic_join="exact"):
+        with raises_regex(ValueError, "indexes along dimension"):
+            xr.dot(da_a, da_b)
+
+    # NOTE: dot always uses `join="inner"` because `(a * b).sum()` yields the same for all
+    # join types (except "exact")
+    with xr.set_options(arithmetic_join="right"):
+        actual = xr.dot(da_a, da_b)
+        expected = (da_a * da_b).sum(["a", "b"])
+        xr.testing.assert_allclose(expected, actual)
+
+    with xr.set_options(arithmetic_join="right"):
+        actual = xr.dot(da_a, da_b)
+        expected = (da_a * da_b).sum(["a", "b"])
+        xr.testing.assert_allclose(expected, actual)
+
+    with xr.set_options(arithmetic_join="outer"):
+        actual = xr.dot(da_a, da_b)
+        expected = (da_a * da_b).sum(["a", "b"])
+        xr.testing.assert_allclose(expected, actual)
+
+
 def test_where():
     cond = xr.DataArray([True, False], dims="x")
     actual = xr.where(cond, 1, 0)
