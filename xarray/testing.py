@@ -10,6 +10,13 @@ from xarray.core.dataset import Dataset
 from xarray.core.indexes import default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
+__all__ = (
+    "assert_allclose",
+    "assert_chunks_equal",
+    "assert_equal",
+    "assert_identical",
+)
+
 
 def _decode_string_data(data):
     if data.dtype.kind == "S":

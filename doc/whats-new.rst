@@ -87,6 +87,8 @@ Bug fixes
 - Fix a regression in :py:meth:`Dataset.drop`: allow passing any
   iterable when dropping variables (:issue:`3552`, :pull:`3693`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Fixed errors emitted by ``mypy --strict`` in modules that import xarray.
+  (:issue:`3695`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Documentation
 ~~~~~~~~~~~~~
