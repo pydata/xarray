@@ -92,8 +92,8 @@ from .variable import (
     IndexVariable,
     Variable,
     as_variable,
-    assert_unique_multiindex_level_names,
     broadcast_variables,
+    assert_unique_multiindex_level_names,
 )
 
 if TYPE_CHECKING:

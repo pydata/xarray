@@ -1,19 +1,19 @@
 """
 Property-based tests for roundtripping between xarray and pandas objects.
 """
+import pytest
+
+pytest.importorskip("hypothesis")
+
 from functools import partial
+import hypothesis.extra.numpy as npst
+import hypothesis.extra.pandas as pdst
+import hypothesis.strategies as st
+from hypothesis import given
 
 import numpy as np
 import pandas as pd
-import pytest
-
 import xarray as xr
-
-pytest.importorskip("hypothesis")
-import hypothesis.extra.numpy as npst  # isort:skip
-import hypothesis.extra.pandas as pdst  # isort:skip
-import hypothesis.strategies as st  # isort:skip
-from hypothesis import given  # isort:skip
 
 numeric_dtypes = st.one_of(
     npst.unsigned_integer_dtypes(), npst.integer_dtypes(), npst.floating_dtypes()
