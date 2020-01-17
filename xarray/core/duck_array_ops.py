@@ -494,7 +494,9 @@ def py_timedelta_to_float(array, datetime_unit):
     """
     if LooseVersion(np.__version__) < LooseVersion("1.17"):
         array = np.asarray(array)
-        array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+        array = (
+            np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+        )
     else:
         array = np.asarray(array).astype("timedelta64[us]").astype(np.float64)  # [us]
 
