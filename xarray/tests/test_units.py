@@ -1543,12 +1543,7 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(
-                1,
-                DimensionalityError,
-                id="no_unit",
-                marks=pytest.mark.xfail(reason="uses 0 as a replacement"),
-            ),
+            pytest.param(1, DimensionalityError, id="no_unit"),
             pytest.param(
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
@@ -1558,7 +1553,7 @@ class TestVariable(VariableSubclassobjects):
         ),
     )
     def test_missing_value_fillna(self, unit, error):
-        value = 0
+        value = 10
         array = (
             np.array(
                 [
