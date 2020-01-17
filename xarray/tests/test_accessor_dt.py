@@ -11,8 +11,7 @@ from . import (
     requires_cftime,
     requires_dask,
 )
-
-from .test_dask import raise_if_dask_computes, assert_chunks_equal
+from .test_dask import assert_chunks_equal, raise_if_dask_computes
 
 
 class TestDatetimeAccessor:

@@ -25,7 +25,7 @@ root = pathlib.Path(__file__).absolute().parent.parent
 os.environ["PYTHONPATH"] = str(root)
 sys.path.insert(0, str(root))
 
-import xarray
+import xarray  # isort:skip
 
 allowed_failures = set()
 
