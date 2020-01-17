@@ -255,6 +255,7 @@ def convert_units(obj, to):
 
 
 def assert_units_equal(a, b):
+    __tracebackhide__ = True
     assert extract_units(a) == extract_units(b)
 
 
