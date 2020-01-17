@@ -897,11 +897,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dims is not None:
                 self._dims = dims
             if attrs is not _default:
-                self._attrs = attrs  # type: ignore # FIXME need mypy 0.750
+                self._attrs = attrs
             if indexes is not _default:
-                self._indexes = indexes  # type: ignore # FIXME need mypy 0.750
+                self._indexes = indexes
             if encoding is not _default:
-                self._encoding = encoding  # type: ignore # FIXME need mypy 0.750
+                self._encoding = encoding
             obj = self
         else:
             if variables is None:
