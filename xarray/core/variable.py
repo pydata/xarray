@@ -742,7 +742,11 @@ class Variable(
 
             data = as_indexable(self._data)[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
-            data = duck_array_ops.where(mask, fill_value, data)
+            if isinstance(mask, bool):
+                mask = not mask
+            else:
+                mask = ~mask
+            data = duck_array_ops.where(mask, data, fill_value)
         else:
             # array cannot be indexed along dimensions of size 0, so just
             # build the mask directly instead.

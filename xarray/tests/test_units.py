@@ -1756,14 +1756,7 @@ class TestVariable(VariableSubclassobjects):
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                None,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(
-                    reason="getitem_with_mask converts to the unit of other"
-                ),
-            ),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
