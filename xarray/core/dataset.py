@@ -85,11 +85,16 @@ from .utils import (
     either_dict_or_kwargs,
     hashable,
     is_dict_like,
-    is_list_like,
     is_scalar,
     maybe_wrap_array,
 )
-from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+from .variable import (
+    IndexVariable,
+    Variable,
+    as_variable,
+    assert_unique_multiindex_level_names,
+    broadcast_variables,
+)
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -458,7 +463,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         data_vars: Mapping[Hashable, Any] = None,
         coords: Mapping[Hashable, Any] = None,
         attrs: Mapping[Hashable, Any] = None,
-        compat=None,
     ):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
@@ -508,18 +512,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         attrs : dict-like, optional
             Global attributes to save on this dataset.
-        compat : deprecated
         """
-        if compat is not None:
-            warnings.warn(
-                "The `compat` argument to Dataset is deprecated and will be "
-                "removed in 0.15."
-                "Instead, use `merge` to control how variables are combined",
-                FutureWarning,
-                stacklevel=2,
-            )
-        else:
-            compat = "broadcast_equals"
 
         # TODO(shoyer): expose indexes as a public argument in __init__
 
@@ -539,7 +532,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coords = coords.variables
 
         variables, coord_names, dims, indexes = merge_data_and_coords(
-            data_vars, coords, compat=compat
+            data_vars, coords, compat="broadcast_equals"
         )
 
         self._attrs = dict(attrs) if attrs is not None else None
@@ -904,11 +897,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dims is not None:
                 self._dims = dims
             if attrs is not _default:
-                self._attrs = attrs  # type: ignore # FIXME need mypy 0.750
+                self._attrs = attrs
             if indexes is not _default:
-                self._indexes = indexes  # type: ignore # FIXME need mypy 0.750
+                self._indexes = indexes
             if encoding is not _default:
-                self._encoding = encoding  # type: ignore # FIXME need mypy 0.750
+                self._encoding = encoding
             obj = self
         else:
             if variables is None:
@@ -1748,7 +1741,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if not chunks:
                 chunks = None
             if var.ndim > 0:
-                token2 = tokenize(name, token if token else var._data)
+                # when rechunking by different amounts, make sure dask names change
+                # by provinding chunks as an input to tokenize.
+                # subtle bugs result otherwise. see GH3350
+                token2 = tokenize(name, token if token else var._data, chunks)
                 name2 = f"{name_prefix}{name}-{token2}"
                 return var.chunk(chunks, name=name2, lock=lock)
             else:
@@ -2780,6 +2776,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables, coord_names, dims, indexes = self._rename_all(
             name_dict=name_dict, dims_dict=name_dict
         )
+        assert_unique_multiindex_level_names(variables)
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
     def rename_dims(
@@ -2791,7 +2788,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dims_dict : dict-like, optional
             Dictionary whose keys are current dimension names and
-            whose values are the desired names.
+            whose values are the desired names. The desired names must
+            not be the name of an existing dimension or Variable in the Dataset.
         **dims, optional
             Keyword form of ``dims_dict``.
             One of dims_dict or dims must be provided.
@@ -2809,11 +2807,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.rename
         """
         dims_dict = either_dict_or_kwargs(dims_dict, dims, "rename_dims")
-        for k in dims_dict:
+        for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
                     "cannot rename %r because it is not a "
                     "dimension in this dataset" % k
+                )
+            if v in self.dims or v in self:
+                raise ValueError(
+                    f"Cannot rename {k} to {v} because {v} already exists. "
+                    "Try using swap_dims instead."
                 )
 
         variables, coord_names, sizes, indexes = self._rename_all(
@@ -2868,8 +2871,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
-            are new names. Each value must already be a variable in the
-            dataset.
+            are new names.
 
         Returns
         -------
@@ -2898,6 +2900,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             a        (y) int64 5 7
             b        (y) float64 0.1 2.4
+        >>> ds.swap_dims({"x": "z"})
+        <xarray.Dataset>
+        Dimensions:  (z: 2)
+        Coordinates:
+            x        (z) <U1 'a' 'b'
+            y        (z) int64 0 1
+        Dimensions without coordinates: z
+        Data variables:
+            a        (z) int64 5 7
+            b        (z) float64 0.1 2.4
 
         See Also
         --------
@@ -2914,7 +2926,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     "cannot swap from dimension %r because it is "
                     "not an existing dimension" % k
                 )
-            if self.variables[v].dims != (k,):
+            if v in self.variables and self.variables[v].dims != (k,):
                 raise ValueError(
                     "replacement dimension %r is not a 1D "
                     "variable along the old dimension %r" % (v, k)
@@ -2923,7 +2935,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         result_dims = {dims_dict.get(dim, dim) for dim in self.dims}
 
         coord_names = self._coord_names.copy()
-        coord_names.update(dims_dict.values())
+        coord_names.update({dim for dim in dims_dict.values() if dim in self.variables})
 
         variables: Dict[Hashable, Variable] = {}
         indexes: Dict[Hashable, pd.Index] = {}
@@ -3525,7 +3537,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def merge(
         self,
-        other: "CoercibleMapping",
+        other: Union["CoercibleMapping", "DataArray"],
         inplace: bool = None,
         overwrite_vars: Union[Hashable, Iterable[Hashable]] = frozenset(),
         compat: str = "no_conflicts",
@@ -3582,6 +3594,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If any variables conflict (see ``compat``).
         """
         _check_inplace(inplace)
+        other = other.to_dataset() if isinstance(other, xr.DataArray) else other
         merge_result = dataset_merge_method(
             self,
             other,
@@ -3664,7 +3677,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 raise ValueError("cannot specify dim and dict-like arguments.")
             labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
-        if dim is None and (is_list_like(labels) or is_scalar(labels)):
+        if dim is None and (is_scalar(labels) or isinstance(labels, Iterable)):
             warnings.warn(
                 "dropping variables using `drop` will be deprecated; using drop_vars is encouraged.",
                 PendingDeprecationWarning,
@@ -4127,7 +4140,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Returns
         -------
-        DataArray
+        Dataset
         """
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
@@ -4641,7 +4654,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         conventions.
 
         Converts all variables and attributes to native Python objects
-        Useful for coverting to json. To avoid datetime incompatibility
+        Useful for converting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
         Parameters

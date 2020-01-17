@@ -22,18 +22,43 @@ v0.15.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Remove ``compat`` and ``encoding`` kwargs from ``DataArray``, which
+  have been deprecated since 0.12. (:pull:`3650`). 
+  Instead, specify the encoding when writing to disk or set 
+  the ``encoding`` attribute directly.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
+  to a single chunk along all reduction axes. (:issue:`2999`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:func:`xarray.concat` now preserves attributes from the first Variable.
+  (:issue:`2575`, :issue:`2060`, :issue:`1614`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Add `attrs_file` option in :py:func:`~xarray.open_mfdataset` to choose the
+  source file for global attributes in a multi-file dataset (:issue:`2382`,
+  :pull:`3498`) by `Julien Seguinot <https://github.com/juseg>_`.
+- :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
+  now allow swapping to dimension names that don't exist yet. (:pull:`3636`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties 
+  and support `.dt` accessor for timedelta 
+  via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
+  hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
+  <https://github.com/bolliger32>`_.
 - Fix :py:meth:`xarray.combine_by_coords` when combining cftime coordinates
   which span long time intervals (:issue:`3535`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
@@ -49,6 +74,21 @@ Bug fixes
   By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 - Ensure :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` issue the correct error
   when ``q`` is out of bounds (:issue:`3634`) by `Mathias Hauser <https://github.com/mathause>`_.
+- Fix regression in xarray 0.14.1 that prevented encoding times with certain
+  ``dtype``, ``_FillValue``, and ``missing_value`` encodings (:issue:`3624`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_
+- Raise an error when trying to use :py:meth:`Dataset.rename_dims` to
+  rename to an existing name (:issue:`3438`, :pull:`3645`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename` now check for conflicts with
+  MultiIndex level names.
+- :py:meth:`Dataset.merge` no longer fails when passed a `DataArray` instead of a `Dataset` object.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix a regression in :py:meth:`Dataset.drop`: allow passing any
+  iterable when dropping variables (:issue:`3552`, :pull:`3693`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Fixed errors emitted by ``mypy --strict`` in modules that import xarray.
+  (:issue:`3695`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -67,9 +107,17 @@ Documentation
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Add new :py:func:`apply_ufunc` example notebook demonstrating vectorization of a 1D
+  function using dask and numba.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added example for :py:func:`~xarray.map_blocks`. (:pull:`3667`)
+  By `Riley X. Brady <https://github.com/bradyrx>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Make sure dask names change when rechunking by different chunk sizes. Conversely, make sure they
+  stay the same when rechunking by the same chunk size. (:issue:`3350`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - 2x to 5x speed boost (on small arrays) for :py:meth:`Dataset.isel`,
   :py:meth:`DataArray.isel`, and :py:meth:`DataArray.__getitem__` when indexing by int,
   slice, list of int, scalar ndarray, or 1-dimensional ndarray.
