@@ -1,4 +1,5 @@
 import operator
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,13 @@ DimensionalityError = pint.errors.DimensionalityError
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray=True)
 Quantity = unit_registry.Quantity
+
+
+# silence pint's BehaviorChangeWarning
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    Quantity([])
+
 
 pytestmark = [
     pytest.mark.skipif(
