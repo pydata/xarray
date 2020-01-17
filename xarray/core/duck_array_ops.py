@@ -261,7 +261,7 @@ def where_method(data, cond, other=dtypes.NA):
 
 
 def fillna(data, other):
-    return where(isnull(data), other, data)
+    return where(notnull(data), data, other)
 
 
 def concatenate(arrays, axis=0):
