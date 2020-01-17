@@ -22,6 +22,11 @@ v0.15.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Remove ``compat`` and ``encoding`` kwargs from ``DataArray``, which
+  have been deprecated since 0.12. (:pull:`3650`). 
+  Instead, specify the encoding when writing to disk or set 
+  the ``encoding`` attribute directly.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 New Features
 ~~~~~~~~~~~~
