@@ -494,17 +494,11 @@ def py_timedelta_to_float(array, datetime_unit):
     """
     if LooseVersion(np.__version__) < LooseVersion("1.17"):
         array = np.asarray(array)
-        array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
-        if array.dtype.kind in "O":
-            raise OverflowError("Could not convert timedelta to float.")
-        else:
-            array = array.astype(np.float64)  # [ns]
-        res = "ns"
+        array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
     else:
         array = np.asarray(array).astype("timedelta64[us]").astype(np.float64)  # [us]
-        res = "us"
 
-    conversion_factor = np.timedelta64(1, res) / np.timedelta64(1, datetime_unit)
+    conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 
 

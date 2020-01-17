@@ -720,16 +720,11 @@ def test_datetime_to_numeric_overflow():
     np.testing.assert_array_equal(cfresult, expected)
 
 
-def test_py_datetime_to_float():
+def test_py_timedelta_to_float():
     assert py_timedelta_to_float(dt.timedelta(days=1), "ns") == 86400 * 1e9
-
-    if np.__version__ < "1.17":
-        with pytest.raises(OverflowError):
-            py_timedelta_to_float(dt.timedelta(days=1e6), "ns")
-    else:
-        assert py_timedelta_to_float(dt.timedelta(days=1e6), "ps") == 86400 * 1e18
-        assert py_timedelta_to_float(dt.timedelta(days=1e6), "ns") == 86400 * 1e15
-        assert py_timedelta_to_float(dt.timedelta(days=1e6), "us") == 86400 * 1e12
-        assert py_timedelta_to_float(dt.timedelta(days=1e6), "ms") == 86400 * 1e9
-        assert py_timedelta_to_float(dt.timedelta(days=1e6), "s") == 86400 * 1e6
-        assert py_timedelta_to_float(dt.timedelta(days=1e6), "D") == 1e6
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ps") == 86400 * 1e18
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ns") == 86400 * 1e15
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "us") == 86400 * 1e12
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ms") == 86400 * 1e9
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "s") == 86400 * 1e6
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "D") == 1e6
