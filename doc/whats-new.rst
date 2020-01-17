@@ -88,7 +88,7 @@ Bug fixes
   iterable when dropping variables (:issue:`3552`, :pull:`3693`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Fixed errors emitted by ``mypy --strict`` in modules that import xarray.
-  (:issue:`3695) by `Guido Imperiale <https://github.com/crusaderky>`_.
+  (:issue:`3695`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Documentation
 ~~~~~~~~~~~~~
