@@ -21,7 +21,7 @@ dependencies:
   - iris
   - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy=0.730  # Must match .pre-commit-config.yaml
+  - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
