@@ -177,9 +177,9 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
                 indexer, new_index = index.get_loc_level(label.item(), level=0)
             elif isinstance(index, pd.CategoricalIndex):
                 if method is not None:
-                    raise ValueError("method is not valid with categorical index.")
+                    raise ValueError("'method' is not a valid kwarg when indexing using a CategoricalIndex.")                
                 if tolerance is not None:
-                    raise ValueError("tolerance is not valid with categorical index.")
+                    raise ValueError("'tolerance' is not a valid kwarg when indexing using a CategoricalIndex.")                
                 indexer = index.get_loc(label.item())
             else:
                 indexer = index.get_loc(

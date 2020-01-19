@@ -9,8 +9,10 @@ from .utils import is_scalar
 from .variable import Variable
 
 
-def remove_unused(index):
-    """ Remove unused levels if CategoricalIndex """
+def remove_unused_levels_categories(index):
+    """ 
+    Remove unused levels from MultiIndex and unused categories from CategoricalIndex 
+    """
     if isinstance(index, pd.MultiIndex):
         index = index.remove_unused_levels()
         # if it contains CategoricalIndex, we need to remove unused categories
@@ -22,7 +24,7 @@ def remove_unused(index):
                     level = level[index.codes[i]].remove_unused_categories()
                 levels.append(level)
             index = pd.MultiIndex.from_arrays(levels, names=index.names)
-    if isinstance(index, pd.CategoricalIndex):
+    elif isinstance(index, pd.CategoricalIndex):
         index = index.remove_unused_categories()
     return index
 

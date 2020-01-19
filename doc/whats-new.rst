@@ -25,7 +25,7 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Now :py:func:`sel` works dataarray / dataset with pd.CategoricalIndex. (:issue:`3669`)
+- :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` now support :py:class:`pandas.CategoricalIndex`. (:issue:`3669`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
   to a single chunk along all reduction axes. (:issue:`2999`).
