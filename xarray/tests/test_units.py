@@ -1944,16 +1944,19 @@ class TestVariable(VariableSubclassobjects):
 
         if error is not None:
             with pytest.raises(error):
-                variable.concat(other)
+                xr.Variable.concat([variable, other], dim="y")
 
             return
 
         units = extract_units(variable)
         expected = attach_units(
-            strip_units(variable).concat(strip_units(convert_units(other, units))),
+            xr.Variable.concat(
+                [strip_units(variable), strip_units(convert_units(other, units))],
+                dim="y",
+            ),
             units,
         )
-        actual = variable.concat(other)
+        actual = xr.Variable.concat([variable, other], dim="y")
 
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
