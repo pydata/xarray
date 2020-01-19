@@ -1915,7 +1915,6 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="ignores units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -1930,12 +1929,12 @@ class TestVariable(VariableSubclassobjects):
     )
     def test_concat(self, unit, error, dtype):
         array1 = (
-            np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
+            np.linspace(0, 5, 9 * 10).reshape(3, 6, 5).astype(dtype) * unit_registry.m
         )
-        array2 = np.linspace(5, 10, 10 * 2).reshape(10, 2).astype(dtype) * unit
+        array2 = np.linspace(5, 10, 10 * 3).reshape(3, 2, 5).astype(dtype) * unit
 
-        variable = xr.Variable(("x", "y"), array1)
-        other = xr.Variable(("y", "z"), array2)
+        variable = xr.Variable(("x", "y", "z"), array1)
+        other = xr.Variable(("x", "y", "z"), array2)
 
         if error is not None:
             with pytest.raises(error):
