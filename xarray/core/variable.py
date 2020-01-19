@@ -1103,24 +1103,16 @@ class Variable(
         else:
             dtype = self.dtype
 
-        shape = list(self.shape)
-        shape[axis] = min(abs(count), shape[axis])
+        width = min(abs(count), self.shape[axis])
+        dim_pad = (width, 0) if count >= 0 else (0, width)
+        pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        if isinstance(trimmed_data, dask_array_type):
-            chunks = list(trimmed_data.chunks)
-            chunks[axis] = (shape[axis],)
-            full = functools.partial(da.full, chunks=chunks)
-        else:
-            full = np.full
-
-        filler = full(shape, fill_value, dtype=dtype)
-
-        if count > 0:
-            arrays = [filler, trimmed_data]
-        else:
-            arrays = [trimmed_data, filler]
-
-        data = duck_array_ops.concatenate(arrays, axis)
+        data = np.pad(
+            trimmed_data.astype(dtype),
+            pads,
+            mode="constant",
+            constant_values=fill_value,
+        )
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes

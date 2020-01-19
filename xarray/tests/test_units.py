@@ -1840,12 +1840,7 @@ class TestVariable(VariableSubclassobjects):
             ),
             method("reduce", np.std, "x"),
             method("round", 2),
-            pytest.param(
-                method("shift", {"x": -2}),
-                marks=pytest.mark.xfail(
-                    reason="trying to concatenate ndarray to quantity"
-                ),
-            ),
+            method("shift", {"x": -2}),
             method("transpose", "y", "x"),
         ),
         ids=repr,
