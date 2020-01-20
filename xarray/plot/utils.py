@@ -472,14 +472,7 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
             yval, xval = _interval_to_double_bound_points(yval, xval)
 
         # Remove steps-* to be sure that matplotlib is not confused
-        kwargs["linestyle"] = (
-            kwargs["linestyle"]
-            .replace("steps-pre", "")
-            .replace("steps-post", "")
-            .replace("steps-mid", "")
-        )
-        if kwargs["linestyle"] == "":
-            del kwargs["linestyle"]
+        del kwargs["linestyle"]
 
     # Is it another kind of plot?
     else:
