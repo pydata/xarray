@@ -53,7 +53,7 @@ New Features
   via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Define 1970-01-01 as the default offset for the interpolation index for both
-  normal and CF-time indexes, use microseconds in the conversion from timedelta
+  normal and CF-time indexes in :py:meth:`DataArray.interpolate_na`, use microseconds in the conversion from timedelta
   objects to floats to avoid overflow errors. (:issue:`3641`, :pull:`3631`)
   By David Huard `<https://github.com/huard>`_.
 
