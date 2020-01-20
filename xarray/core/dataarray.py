@@ -2042,7 +2042,9 @@ class DataArray(AbstractArray, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
-        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
+        max_gap: Union[
+            int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta
+        ] = None,
         **kwargs: Any,
     ) -> "DataArray":
         """Fill in NaNs by interpolating according to different methods.

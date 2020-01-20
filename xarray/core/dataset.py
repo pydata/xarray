@@ -3995,7 +3995,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, Hashable] = True,
-        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
+        max_gap: Union[
+            int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta
+        ] = None,
         **kwargs: Any,
     ) -> "Dataset":
         """Fill in NaNs by interpolating according to different methods.
