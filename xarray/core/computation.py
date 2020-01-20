@@ -870,7 +870,7 @@ def apply_ufunc(
         on outputs.
     meta : optional
         Size-0 object representing the type of array wrapped by dask array. Passed on to
-        ``dask.array.map_blocks``.
+        ``dask.array.blockwise``.
 
     Returns
     -------
