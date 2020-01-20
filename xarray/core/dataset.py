@@ -92,8 +92,8 @@ from .variable import (
     IndexVariable,
     Variable,
     as_variable,
-    broadcast_variables,
     assert_unique_multiindex_level_names,
+    broadcast_variables,
 )
 
 if TYPE_CHECKING:
@@ -463,7 +463,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         data_vars: Mapping[Hashable, Any] = None,
         coords: Mapping[Hashable, Any] = None,
         attrs: Mapping[Hashable, Any] = None,
-        compat=None,
     ):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
@@ -513,18 +512,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         attrs : dict-like, optional
             Global attributes to save on this dataset.
-        compat : deprecated
         """
-        if compat is not None:
-            warnings.warn(
-                "The `compat` argument to Dataset is deprecated and will be "
-                "removed in 0.15."
-                "Instead, use `merge` to control how variables are combined",
-                FutureWarning,
-                stacklevel=2,
-            )
-        else:
-            compat = "broadcast_equals"
 
         # TODO(shoyer): expose indexes as a public argument in __init__
 
@@ -544,7 +532,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coords = coords.variables
 
         variables, coord_names, dims, indexes = merge_data_and_coords(
-            data_vars, coords, compat=compat
+            data_vars, coords, compat="broadcast_equals"
         )
 
         self._attrs = dict(attrs) if attrs is not None else None
@@ -909,11 +897,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dims is not None:
                 self._dims = dims
             if attrs is not _default:
-                self._attrs = attrs  # type: ignore # FIXME need mypy 0.750
+                self._attrs = attrs
             if indexes is not _default:
-                self._indexes = indexes  # type: ignore # FIXME need mypy 0.750
+                self._indexes = indexes
             if encoding is not _default:
-                self._encoding = encoding  # type: ignore # FIXME need mypy 0.750
+                self._encoding = encoding
             obj = self
         else:
             if variables is None:

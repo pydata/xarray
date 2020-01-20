@@ -21,12 +21,23 @@ v0.15.0 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Remove ``compat`` and ``encoding`` kwargs from ``DataArray``, which
+  have been deprecated since 0.12. (:pull:`3650`). 
+  Instead, specify the encoding when writing to disk or set 
+  the ``encoding`` attribute directly.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:func:`xarray.dot`, :py:meth:`DataArray.dot`, and the ``@`` operator now
   use ``align="inner"`` (except when ``xarray.set_options(arithmetic_join="exact")``;
   :issue:`3694`) by `Mathias Hauser <https://github.com/mathause>`_.
 
+
 New Features
 ~~~~~~~~~~~~
+- Support using an existing, opened h5netcdf ``File`` with
+  :py:class:`~xarray.backends.H5NetCDFStore`. This permits creating an
+  :py:class:`~xarray.Dataset` from a h5netcdf ``File`` that has been opened
+  using other means (:issue:`3618`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
   to a single chunk along all reduction axes. (:issue:`2999`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
@@ -84,6 +95,8 @@ Bug fixes
 - Fix a regression in :py:meth:`Dataset.drop`: allow passing any
   iterable when dropping variables (:issue:`3552`, :pull:`3693`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Fixed errors emitted by ``mypy --strict`` in modules that import xarray.
+  (:issue:`3695`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Documentation
 ~~~~~~~~~~~~~
