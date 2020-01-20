@@ -7,7 +7,6 @@ import contextlib
 import inspect
 import warnings
 from functools import partial
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -510,9 +509,7 @@ def py_timedelta_to_float(array, datetime_unit):
     """Convert a timedelta object to a float, possibly at a loss of resolution.
     """
     array = np.asarray(array)
-    array = (
-        np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
-    )
+    array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 
