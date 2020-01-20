@@ -18,7 +18,7 @@ from typing import (
     cast,
 )
 
-import datetime as dt
+import datetime
 import numpy as np
 import pandas as pd
 
@@ -2043,7 +2043,7 @@ class DataArray(AbstractArray, DataWithCoords):
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
         max_gap: Union[
-            int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta
+            int, float, str, pd.Timedelta, np.timedelta64, datetime.timedelta
         ] = None,
         **kwargs: Any,
     ) -> "DataArray":
