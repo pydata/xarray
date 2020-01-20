@@ -1107,7 +1107,12 @@ class Variable(
         dim_pad = (width, 0) if count >= 0 else (0, width)
         pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        data = np.pad(
+        if isinstance(trimmed_data, dask_array_type):
+            pad_func = da.pad
+        else:
+            pad_func = np.pad
+
+        data = pad_func(
             trimmed_data.astype(dtype),
             pads,
             mode="constant",
