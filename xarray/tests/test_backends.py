@@ -1723,6 +1723,7 @@ class ZarrBase(CFEncodedBase):
                 with xr.decode_cf(store):
                     pass
 
+    @pytest.mark.xfail(reason="fails for old dask versions.")
     def test_write_persistence_modes(self):
         original = create_test_data()
 
