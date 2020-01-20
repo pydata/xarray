@@ -1723,7 +1723,7 @@ class ZarrBase(CFEncodedBase):
                 with xr.decode_cf(store):
                     pass
 
-    @pytest.mark.xfail(reason="fails for old dask versions.")
+    @pytest.mark.xfail(reason="fails for dask <2.4.0. dask GH5334")
     def test_write_persistence_modes(self):
         original = create_test_data()
 
@@ -1788,7 +1788,7 @@ class ZarrBase(CFEncodedBase):
     def test_dataset_caching(self):
         super().test_dataset_caching()
 
-    @pytest.mark.xfail(reason="fails for old dask versions.")
+    @pytest.mark.xfail(reason="fails for dask <2.4.0. dask GH5334")
     def test_append_write(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
@@ -1865,7 +1865,7 @@ class ZarrBase(CFEncodedBase):
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
-    @pytest.mark.xfail(reason="fails for old dask versions.")
+    @pytest.mark.xfail(reason="fails for dask <2.4.0. dask GH5334")
     def test_append_with_new_variable(self):
 
         ds, ds_to_append, ds_with_new_var = create_append_test_data()
