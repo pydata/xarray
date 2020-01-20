@@ -26,6 +26,7 @@ import numpy as np
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import merge_coordinates_without_align
+from .options import OPTIONS
 from .pycompat import dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
@@ -304,7 +305,7 @@ def _as_variables_or_variable(arg):
 def _unpack_dict_tuples(
     result_vars: Mapping[Hashable, Tuple[Variable, ...]], num_outputs: int
 ) -> Tuple[Dict[Hashable, Variable], ...]:
-    out = tuple({} for _ in range(num_outputs))  # type: ignore
+    out: Tuple[Dict[Hashable, Variable], ...] = tuple({} for _ in range(num_outputs))
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
@@ -1196,6 +1197,11 @@ def dot(*arrays, dims=None, **kwargs):
     subscripts = ",".join(subscripts_list)
     subscripts += "->..." + "".join([dim_map[d] for d in output_core_dims[0]])
 
+    join = OPTIONS["arithmetic_join"]
+    # using "inner" emulates `(a * b).sum()` for all joins (except "exact")
+    if join != "exact":
+        join = "inner"
+
     # subscripts should be passed to np.einsum as arg, not as kwargs. We need
     # to construct a partial function for apply_ufunc to work.
     func = functools.partial(duck_array_ops.einsum, subscripts, **kwargs)
@@ -1204,6 +1210,7 @@ def dot(*arrays, dims=None, **kwargs):
         *arrays,
         input_core_dims=input_core_dims,
         output_core_dims=output_core_dims,
+        join=join,
         dask="allowed",
     )
     return result.transpose(*[d for d in all_dims if d in result.dims])

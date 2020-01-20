@@ -2185,7 +2185,7 @@ class TestH5NetCDFData(NetCDF4Base):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            yield backends.H5NetCDFStore(tmp_file, "w")
+            yield backends.H5NetCDFStore.open(tmp_file, "w")
 
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
@@ -2347,6 +2347,27 @@ class TestH5NetCDFData(NetCDF4Base):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             assert actual.x.encoding["compression"] == "lzf"
             assert actual.x.encoding["compression_opts"] is None
+
+    def test_already_open_dataset_group(self):
+        import h5netcdf
+
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                group = nc.createGroup("g")
+                v = group.createVariable("x", "int")
+                v[...] = 42
+
+            h5 = h5netcdf.File(tmp_file, mode="r")
+            store = backends.H5NetCDFStore(h5["g"])
+            with open_dataset(store) as ds:
+                expected = Dataset({"x": ((), 42)})
+                assert_identical(expected, ds)
+
+            h5 = h5netcdf.File(tmp_file, mode="r")
+            store = backends.H5NetCDFStore(h5, group="g")
+            with open_dataset(store) as ds:
+                expected = Dataset({"x": ((), 42)})
+                assert_identical(expected, ds)
 
 
 @requires_h5netcdf

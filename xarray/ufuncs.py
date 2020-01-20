@@ -132,14 +132,68 @@ def _create_op(name):
     return func
 
 
-__all__ = """logaddexp logaddexp2 conj exp log log2 log10 log1p expm1 sqrt
-             square sin cos tan arcsin arccos arctan arctan2 hypot sinh cosh
-             tanh arcsinh arccosh arctanh deg2rad rad2deg logical_and
-             logical_or logical_xor logical_not maximum minimum fmax fmin
-             isreal iscomplex isfinite isinf isnan signbit copysign nextafter
-             ldexp fmod floor ceil trunc degrees radians rint fix angle real
-             imag fabs sign frexp fmod
-             """.split()
+__all__ = (  # noqa: F822
+    "angle",
+    "arccos",
+    "arccosh",
+    "arcsin",
+    "arcsinh",
+    "arctan",
+    "arctan2",
+    "arctanh",
+    "ceil",
+    "conj",
+    "copysign",
+    "cos",
+    "cosh",
+    "deg2rad",
+    "degrees",
+    "exp",
+    "expm1",
+    "fabs",
+    "fix",
+    "floor",
+    "fmax",
+    "fmin",
+    "fmod",
+    "fmod",
+    "frexp",
+    "hypot",
+    "imag",
+    "iscomplex",
+    "isfinite",
+    "isinf",
+    "isnan",
+    "isreal",
+    "ldexp",
+    "log",
+    "log10",
+    "log1p",
+    "log2",
+    "logaddexp",
+    "logaddexp2",
+    "logical_and",
+    "logical_not",
+    "logical_or",
+    "logical_xor",
+    "maximum",
+    "minimum",
+    "nextafter",
+    "rad2deg",
+    "radians",
+    "real",
+    "rint",
+    "sign",
+    "signbit",
+    "sin",
+    "sinh",
+    "sqrt",
+    "square",
+    "tan",
+    "tanh",
+    "trunc",
+)
+
 
 for name in __all__:
     globals()[name] = _create_op(name)
