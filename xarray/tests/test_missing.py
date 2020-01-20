@@ -514,7 +514,7 @@ def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     np.testing.assert_array_equal(gi, si)
 
 
-def test_get_clean_interp_index_overflow():
+def test_get_clean_interp_index_potential_overflow():
     da = xr.DataArray(
         [0, 1, 2],
         dims=("time",),

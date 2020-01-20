@@ -693,10 +693,7 @@ def test_datetime_to_numeric_cftime():
 
 
 @requires_cftime
-@pytest.mark.xfail(
-    np.__version__ < "1.17", reason="Limited Numpy support for timedelta conversion."
-)
-def test_datetime_to_numeric_overflow():
+def test_datetime_to_numeric_potential_overflow():
     import cftime
 
     times = pd.date_range("2000", periods=5, freq="7D").values.astype("datetime64[us]")

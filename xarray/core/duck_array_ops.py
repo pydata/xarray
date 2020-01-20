@@ -433,6 +433,17 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
 def timedelta_to_numeric(array, datetime_unit="ns", dtype=float):
     """Convert an array containing timedelta-like data to numerical values.
+
+    Parameters
+    ----------
+    array : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, pandas.TimedeltaIndex, str
+      Time delta representation.
+    datetime_unit : {Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
+      The time units of the output values. Note that some conversions are not allowed due to
+      non-linear relationships between units.
+    dtype : type
+      The output data type.
+
     """
     import datetime as dt
 
@@ -466,40 +477,42 @@ def _to_pytimedelta(array, unit="us"):
 
 
 def np_timedelta64_to_float(array, datetime_unit):
+    """Convert numpy.timedelta64 to float.
+
+    Notes
+    -----
+    The array is first converted to microseconds, which is less likely to
+    cause overflow errors.
+    """
     array = array.astype("timedelta64[us]")
     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 
 
 def pd_timedelta_to_float(array, datetime_units):
+    """Convert pandas.Timedelta to float.
+
+    Notes
+    -----
+    Built on the assumption that pandas timedelta values are in nanoseconds,
+    which is also the numpy default resolution.
+    """
     array = np.timedelta64(array.value, "ns").astype(np.float64)
     return np_timedelta64_to_float(array, datetime_units)
 
 
 def pd_timedeltaindex_to_float(array, datetime_units):
+    """Convert pandas.TimedeltaIndex to float."""
     return np_timedelta64_to_float(array.values, datetime_units)
 
 
 def py_timedelta_to_float(array, datetime_unit):
     """Convert a timedelta object to a float, possibly at a loss of resolution.
-
-    Notes
-    -----
-    With Numpy >= 1.17, it's possible to convert directly from `datetime.timedelta`
-    to `numpy.timedelta64` at the microsecond (us) resolution. This covers a fairly
-    large span of years.
-
-    With earlier Numpy versions, the conversion only works at the nanosecond resolution,
-    which restricts the span that can be covered.
     """
-    if LooseVersion(np.__version__) < LooseVersion("1.17"):
-        array = np.asarray(array)
-        array = (
-            np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
-        )
-    else:
-        array = np.asarray(array).astype("timedelta64[us]").astype(np.float64)  # [us]
-
+    array = np.asarray(array)
+    array = (
+        np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+    )
     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 

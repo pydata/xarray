@@ -664,10 +664,6 @@ def test_datetime_interp_noerror():
     a.interp(x=xi, time=xi.time)  # should not raise an error
 
 
-@pytest.mark.xfail(
-    np.__version__ < "1.17",
-    reason="Numpy support for conversion from timedelta objects to timedelta64.",
-)
 @requires_cftime
 def test_3641():
     times = xr.cftime_range("0001", periods=3, freq="500Y")
