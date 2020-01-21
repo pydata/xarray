@@ -79,10 +79,6 @@ class TestDataArray:
         )
         assert expected == repr(self.mda)
 
-    @pytest.mark.skipif(
-        LooseVersion(np.__version__) < "1.15",
-        reason="old versions of numpy have different printing behavior",
-    )
     def test_repr_multiindex_long(self):
         mindex_long = pd.MultiIndex.from_product(
             [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]],

@@ -547,10 +547,6 @@ def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
 
 def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     assert robust or vmin is not None or vmax is not None
-    # TODO: remove when min numpy version is bumped to 1.13
-    # There's a cyclic dependency via DataArray, so we can't import from
-    # xarray.ufuncs in global scope.
-    from xarray.ufuncs import maximum, minimum
 
     # Calculate vmin and vmax automatically for `robust=True`
     if robust:
@@ -579,9 +575,7 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     # After scaling, downcast to 32-bit float.  This substantially reduces
     # memory usage after we hand `darray` off to matplotlib.
     darray = ((darray.astype("f8") - vmin) / (vmax - vmin)).astype("f4")
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "xarray.ufuncs", PendingDeprecationWarning)
-        return minimum(maximum(darray, 0), 1)
+    return np.minimum(np.maximum(darray, 0), 1)
 
 
 def _update_axes(

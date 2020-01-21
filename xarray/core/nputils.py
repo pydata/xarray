@@ -14,12 +14,7 @@ except ImportError:
 
 
 def _validate_axis(data, axis):
-    ndim = data.ndim
-    if not -ndim <= axis < ndim:
-        raise IndexError(f"axis {axis!r} out of bounds [-{ndim}, {ndim})")
-    if axis < 0:
-        axis += ndim
-    return axis
+    return np.core.multiarray.normalize_axis_index(axis, data.ndim)
 
 
 def _select_along_axis(values, idx, axis):
