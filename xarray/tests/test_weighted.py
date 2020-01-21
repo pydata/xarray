@@ -174,11 +174,11 @@ def expected_weighted(da, weights, dim, skipna, operation):
 
 
 @pytest.mark.parametrize("dim", ("a", "b", "c", ("a", "b"), ("a", "b", "c"), None))
-@pytest.mark.parametrize("operator", ("sum_of_weights", "sum", "mean"))
+@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
 @pytest.mark.parametrize("add_nans", (True, False))
 @pytest.mark.parametrize("skipna", (None, True, False))
 @pytest.mark.parametrize("as_dataset", (True, False))
-def test_weighted_operations_3D(dim, operator, add_nans, skipna, as_dataset):
+def test_weighted_operations_3D(dim, operation, add_nans, skipna, as_dataset):
 
     dims = ("a", "b", "c")
     coords = dict(a=[0, 1, 2, 3], b=[0, 1, 2, 3], c=[0, 1, 2, 3])
@@ -197,20 +197,19 @@ def test_weighted_operations_3D(dim, operator, add_nans, skipna, as_dataset):
     if as_dataset:
         data = data.to_dataset(name="data")
 
-    if operator == "sum_of_weights":
-        result = getattr(data.weighted(weights), operator)(dim)
+    if operation == "sum_of_weights":
+        result = getattr(data.weighted(weights), operation)(dim)
     else:
-        result = getattr(data.weighted(weights), operator)(dim, skipna=skipna)
+        result = getattr(data.weighted(weights), operation)(dim, skipna=skipna)
 
-    expected = expected_weighted(data, weights, dim, skipna, operator)
+    expected = expected_weighted(data, weights, dim, skipna, operation)
 
     assert_allclose(expected, result)
 
 
-@pytest.mark.xfail(reason="GH: 3694")
-@pytest.mark.parametrize("operator", ("sum_of_weights", "sum", "mean"))
+@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
 @pytest.mark.parametrize("as_dataset", (True, False))
-def test_weighted_operations_nonequal_coords(operator, as_dataset):
+def test_weighted_operations_nonequal_coords(operation, as_dataset):
 
     weights = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[0, 1, 2, 3]))
     data = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[1, 2, 3, 4]))
@@ -218,8 +217,10 @@ def test_weighted_operations_nonequal_coords(operator, as_dataset):
     if as_dataset:
         data = data.to_dataset(name="data")
 
-    expected = expected_weighted(data, weights, dim="a", skipna=None, operator=operator)
-    result = getattr(data.weighted(weights), operator)(dim="a")
+    expected = expected_weighted(
+        data, weights, dim="a", skipna=None, operation=operation
+    )
+    result = getattr(data.weighted(weights), operation)(dim="a")
 
     assert_allclose(expected, result)
 
@@ -227,12 +228,12 @@ def test_weighted_operations_nonequal_coords(operator, as_dataset):
 @pytest.mark.parametrize("dim", ("dim_0", None))
 @pytest.mark.parametrize("shape_data", ((4,), (4, 4), (4, 4, 4)))
 @pytest.mark.parametrize("shape_weights", ((4,), (4, 4), (4, 4, 4)))
-@pytest.mark.parametrize("operator", ("sum_of_weights", "sum", "mean"))
+@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
 @pytest.mark.parametrize("add_nans", (True, False))
 @pytest.mark.parametrize("skipna", (None, True, False))
 @pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_operations_different_shapes(
-    dim, shape_data, shape_weights, operator, add_nans, skipna, as_dataset
+    dim, shape_data, shape_weights, operation, add_nans, skipna, as_dataset
 ):
 
     weights = DataArray(np.random.randn(*shape_weights))
@@ -249,20 +250,20 @@ def test_weighted_operations_different_shapes(
     if as_dataset:
         data = data.to_dataset(name="data")
 
-    if operator == "sum_of_weights":
-        result = getattr(data.weighted(weights), operator)(dim)
+    if operation == "sum_of_weights":
+        result = getattr(data.weighted(weights), operation)(dim)
     else:
-        result = getattr(data.weighted(weights), operator)(dim, skipna=skipna)
+        result = getattr(data.weighted(weights), operation)(dim, skipna=skipna)
 
-    expected = expected_weighted(data, weights, dim, skipna, operator)
+    expected = expected_weighted(data, weights, dim, skipna, operation)
 
     assert_allclose(expected, result)
 
 
-@pytest.mark.parametrize("operator", ("sum_of_weights", "sum", "mean"))
+@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("keep_attrs", (True, False, None))
-def test_weighted_operations_keep_attr(operator, as_dataset, keep_attrs):
+def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
 
     weights = DataArray(np.random.randn(2, 2), attrs=dict(attr="weights"))
     data = DataArray(np.random.randn(2, 2))
@@ -272,29 +273,29 @@ def test_weighted_operations_keep_attr(operator, as_dataset, keep_attrs):
 
     data.attrs = dict(attr="weights")
 
-    result = getattr(data.weighted(weights), operator)(keep_attrs=True)
+    result = getattr(data.weighted(weights), operation)(keep_attrs=True)
 
-    if operator == "sum_of_weights":
+    if operation == "sum_of_weights":
         assert weights.attrs == result.attrs
     else:
         assert data.attrs == result.attrs
 
-    result = getattr(data.weighted(weights), operator)(keep_attrs=None)
+    result = getattr(data.weighted(weights), operation)(keep_attrs=None)
     assert not result.attrs
 
-    result = getattr(data.weighted(weights), operator)(keep_attrs=False)
+    result = getattr(data.weighted(weights), operation)(keep_attrs=False)
     assert not result.attrs
 
 
 @pytest.mark.xfail(reason="xr.Dataset.map does not copy attrs of DataArrays GH: 3595")
-@pytest.mark.parametrize("operator", ("sum", "mean"))
-def test_weighted_operations_keep_attr_da_in_ds(operator):
+@pytest.mark.parametrize("operation", ("sum", "mean"))
+def test_weighted_operations_keep_attr_da_in_ds(operation):
     # GH #3595
 
     weights = DataArray(np.random.randn(2, 2))
     data = DataArray(np.random.randn(2, 2), attrs=dict(attr="data"))
     data = data.to_dataset(name="a")
 
-    result = getattr(data.weighted(weights), operator)(keep_attrs=True)
+    result = getattr(data.weighted(weights), operation)(keep_attrs=True)
 
     assert data.a.attrs == result.a.attrs
