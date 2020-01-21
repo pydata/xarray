@@ -179,7 +179,7 @@ def _rolling_window(a, window, axis=-1):
     This function is taken from https://github.com/numpy/numpy/pull/31
     but slightly modified to accept axis option.
     """
-    axis = _validate_axis(a, axis)
+    axis = normalize_axis_index(axis, a.ndim)
     a = np.swapaxes(a, axis, -1)
 
     if window < 1:
