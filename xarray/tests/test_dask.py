@@ -1392,7 +1392,7 @@ def test_lazy_array_equiv_merge(compat):
         xr.merge([da1, da2 / 2], compat=compat)
 
 
-@pytest.mark.filterwarnings("ignore::FutureWarning")
+@pytest.mark.filterwarnings("ignore::FutureWarning")  # transpose_coords
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 @pytest.mark.parametrize(
     "transform",
@@ -1434,8 +1434,10 @@ def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
         assert_equal(map_ds.update({"a": map_ds.a}), map_ds)
 
         # fails because of index error
-        # assert_equal(map_ds.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}),
-        #             map_ds)
+        # assert_equal(
+        #     map_ds.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}), map_ds
+        # )
+
         assert_equal(
             map_ds.rename_vars({"cxy": "cnew"}).rename_vars({"cnew": "cxy"}), map_ds
         )
@@ -1443,8 +1445,3 @@ def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
         assert_equal(map_da._from_temp_dataset(map_da._to_temp_dataset()), map_da)
         assert_equal(map_da.astype(map_da.dtype), map_da)
         assert_equal(map_da.transpose("y", "x", transpose_coords=False).cxy, map_da.cxy)
-
-
-# TODO: transpose_coords for dataset
-# getitem with mask
-# __getitem__
