@@ -1,5 +1,4 @@
 """ isort:skip_file """
-# flake8: noqa
 
 from ._version import get_versions
 
@@ -42,3 +41,55 @@ from . import ufuncs
 from . import testing
 
 from .core.common import ALL_DIMS
+
+# A hardcoded __all__ variable is necessary to appease
+# `mypy --strict` running in projects that import xarray.
+__all__ = (
+    # Sub-packages
+    "ufuncs",
+    "testing",
+    "tutorial",
+    # Top-level functions
+    "align",
+    "apply_ufunc",
+    "as_variable",
+    "auto_combine",
+    "broadcast",
+    "cftime_range",
+    "combine_by_coords",
+    "combine_nested",
+    "concat",
+    "decode_cf",
+    "dot",
+    "full_like",
+    "load_dataarray",
+    "load_dataset",
+    "map_blocks",
+    "merge",
+    "ones_like",
+    "open_dataarray",
+    "open_dataset",
+    "open_mfdataset",
+    "open_rasterio",
+    "open_zarr",
+    "register_dataarray_accessor",
+    "register_dataset_accessor",
+    "save_mfdataset",
+    "set_options",
+    "show_versions",
+    "where",
+    "zeros_like",
+    # Classes
+    "CFTimeIndex",
+    "Coordinate",
+    "DataArray",
+    "Dataset",
+    "IndexVariable",
+    "Variable",
+    # Exceptions
+    "MergeError",
+    "SerializationWarning",
+    # Constants
+    "__version__",
+    "ALL_DIMS",
+)
