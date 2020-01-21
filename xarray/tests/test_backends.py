@@ -2182,7 +2182,7 @@ class TestH5NetCDFData(NetCDF4Base):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            yield backends.H5NetCDFStore(tmp_file, "w")
+            yield backends.H5NetCDFStore.open(tmp_file, "w")
 
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
@@ -2344,6 +2344,27 @@ class TestH5NetCDFData(NetCDF4Base):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             assert actual.x.encoding["compression"] == "lzf"
             assert actual.x.encoding["compression_opts"] is None
+
+    def test_already_open_dataset_group(self):
+        import h5netcdf
+
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                group = nc.createGroup("g")
+                v = group.createVariable("x", "int")
+                v[...] = 42
+
+            h5 = h5netcdf.File(tmp_file, mode="r")
+            store = backends.H5NetCDFStore(h5["g"])
+            with open_dataset(store) as ds:
+                expected = Dataset({"x": ((), 42)})
+                assert_identical(expected, ds)
+
+            h5 = h5netcdf.File(tmp_file, mode="r")
+            store = backends.H5NetCDFStore(h5, group="g")
+            with open_dataset(store) as ds:
+                expected = Dataset({"x": ((), 42)})
+                assert_identical(expected, ds)
 
 
 @requires_h5netcdf
@@ -2831,6 +2852,42 @@ class TestDask(DatasetIOBase):
                     # attributes from ds2 are not retained, e.g.,
                     with raises_regex(AttributeError, "no attribute"):
                         actual.test2
+
+    def test_open_mfdataset_attrs_file(self):
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        with create_tmp_files(2) as (tmp1, tmp2):
+            ds1 = original.isel(x=slice(5))
+            ds2 = original.isel(x=slice(5, 10))
+            ds1.attrs["test1"] = "foo"
+            ds2.attrs["test2"] = "bar"
+            ds1.to_netcdf(tmp1)
+            ds2.to_netcdf(tmp2)
+            with open_mfdataset(
+                [tmp1, tmp2], concat_dim="x", combine="nested", attrs_file=tmp2
+            ) as actual:
+                # attributes are inherited from the master file
+                assert actual.attrs["test2"] == ds2.attrs["test2"]
+                # attributes from ds1 are not retained, e.g.,
+                assert "test1" not in actual.attrs
+
+    def test_open_mfdataset_attrs_file_path(self):
+        original = Dataset({"foo": ("x", np.random.randn(10))})
+        with create_tmp_files(2) as (tmp1, tmp2):
+            tmp1 = Path(tmp1)
+            tmp2 = Path(tmp2)
+            ds1 = original.isel(x=slice(5))
+            ds2 = original.isel(x=slice(5, 10))
+            ds1.attrs["test1"] = "foo"
+            ds2.attrs["test2"] = "bar"
+            ds1.to_netcdf(tmp1)
+            ds2.to_netcdf(tmp2)
+            with open_mfdataset(
+                [tmp1, tmp2], concat_dim="x", combine="nested", attrs_file=tmp2
+            ) as actual:
+                # attributes are inherited from the master file
+                assert actual.attrs["test2"] == ds2.attrs["test2"]
+                # attributes from ds1 are not retained, e.g.,
+                assert "test1" not in actual.attrs
 
     def test_open_mfdataset_auto_combine(self):
         original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})

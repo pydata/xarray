@@ -752,12 +752,19 @@ class TestDataArray:
 
         blocked = unblocked.chunk()
         assert blocked.chunks == ((3,), (4,))
+        first_dask_name = blocked.data.name
 
         blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
         assert blocked.chunks == ((2, 1), (2, 2))
+        assert blocked.data.name != first_dask_name
 
         blocked = unblocked.chunk(chunks=(3, 3))
         assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
+
+        # name doesn't change when rechunking by same amount
+        # this fails if ReprObject doesn't have __dask_tokenize__ defined
+        assert unblocked.chunk(2).data.name == unblocked.chunk(2).data.name
 
         assert blocked.load().chunks is None
 
@@ -1527,6 +1534,11 @@ class TestDataArray:
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {"y": ("x", list("abc"))}, "x")
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
+        actual = array.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+
+        array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
+        expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
 
@@ -3961,6 +3973,43 @@ class TestDataArray:
         with pytest.raises(TypeError):
             da.dot(dm.values)
 
+    def test_dot_align_coords(self):
+        # GH 3694
+
+        x = np.linspace(-3, 3, 6)
+        y = np.linspace(-3, 3, 5)
+        z_a = range(4)
+        da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
+        da = DataArray(da_vals, coords=[x, y, z_a], dims=["x", "y", "z"])
+
+        z_m = range(2, 6)
+        dm_vals = range(4)
+        dm = DataArray(dm_vals, coords=[z_m], dims=["z"])
+
+        with xr.set_options(arithmetic_join="exact"):
+            with raises_regex(ValueError, "indexes along dimension"):
+                da.dot(dm)
+
+        da_aligned, dm_aligned = xr.align(da, dm, join="inner")
+
+        # nd dot 1d
+        actual = da.dot(dm)
+        expected_vals = np.tensordot(da_aligned.values, dm_aligned.values, [2, 0])
+        expected = DataArray(expected_vals, coords=[x, da_aligned.y], dims=["x", "y"])
+        assert_equal(expected, actual)
+
+        # multiple shared dims
+        dm_vals = np.arange(20 * 5 * 4).reshape((20, 5, 4))
+        j = np.linspace(-3, 3, 20)
+        dm = DataArray(dm_vals, coords=[j, y, z_m], dims=["j", "y", "z"])
+        da_aligned, dm_aligned = xr.align(da, dm, join="inner")
+        actual = da.dot(dm)
+        expected_vals = np.tensordot(
+            da_aligned.values, dm_aligned.values, axes=([1, 2], [1, 2])
+        )
+        expected = DataArray(expected_vals, coords=[x, j], dims=["x", "j"])
+        assert_equal(expected, actual)
+
     def test_matmul(self):
 
         # copied from above (could make a fixture)
@@ -3973,6 +4022,24 @@ class TestDataArray:
         result = da @ da
         expected = da.dot(da)
         assert_identical(result, expected)
+
+    def test_matmul_align_coords(self):
+        # GH 3694
+
+        x_a = np.arange(6)
+        x_b = np.arange(2, 8)
+        da_vals = np.arange(6)
+        da_a = DataArray(da_vals, coords=[x_a], dims=["x"])
+        da_b = DataArray(da_vals, coords=[x_b], dims=["x"])
+
+        # only test arithmetic_join="inner" (=default)
+        result = da_a @ da_b
+        expected = da_a.dot(da_b)
+        assert_identical(result, expected)
+
+        with xr.set_options(arithmetic_join="exact"):
+            with raises_regex(ValueError, "indexes along dimension"):
+                da_a @ da_b
 
     def test_binary_op_propagate_indexes(self):
         # regression test for GH2227

@@ -1083,7 +1083,7 @@ def test_map_blocks(obj):
         actual = xr.map_blocks(func, obj)
     expected = func(obj)
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1092,7 +1092,7 @@ def test_map_blocks_convert_args_to_list(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(operator.add, obj, [10])
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1107,7 +1107,7 @@ def test_map_blocks_add_attrs(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(add_attrs, obj)
 
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 def test_map_blocks_change_name(map_da):
@@ -1120,7 +1120,7 @@ def test_map_blocks_change_name(map_da):
     with raise_if_dask_computes():
         actual = xr.map_blocks(change_name, map_da)
 
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1129,7 +1129,7 @@ def test_map_blocks_kwargs(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(xr.full_like, obj, kwargs=dict(fill_value=np.nan))
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 def test_map_blocks_to_array(map_ds):
@@ -1137,7 +1137,7 @@ def test_map_blocks_to_array(map_ds):
         actual = xr.map_blocks(lambda x: x.to_array(), map_ds)
 
     # to_array does not preserve name, so cannot use assert_identical
-    assert_equal(actual.compute(), map_ds.to_array().compute())
+    assert_equal(actual, map_ds.to_array())
 
 
 @pytest.mark.parametrize(
@@ -1156,7 +1156,7 @@ def test_map_blocks_da_transformations(func, map_da):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, map_da)
 
-    assert_identical(actual.compute(), func(map_da).compute())
+    assert_identical(actual, func(map_da))
 
 
 @pytest.mark.parametrize(
@@ -1175,7 +1175,7 @@ def test_map_blocks_ds_transformations(func, map_ds):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, map_ds)
 
-    assert_identical(actual.compute(), func(map_ds).compute())
+    assert_identical(actual, func(map_ds))
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1188,7 +1188,7 @@ def test_map_blocks_object_method(obj):
         expected = xr.map_blocks(func, obj)
         actual = obj.map_blocks(func)
 
-    assert_identical(expected.compute(), actual.compute())
+    assert_identical(expected, actual)
 
 
 def test_map_blocks_hlg_layers():
