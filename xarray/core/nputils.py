@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from np.core.multiarray import normalize_axis_index
+from numpy.core.multiarray import normalize_axis_index
 
 try:
     import bottleneck as bn
