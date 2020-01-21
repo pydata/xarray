@@ -3,6 +3,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from np.core.multiarray import normalize_axis_index
+
 try:
     import bottleneck as bn
 
@@ -13,10 +15,6 @@ except ImportError:
     _USE_BOTTLENECK = False
 
 
-def _validate_axis(data, axis):
-    return np.core.multiarray.normalize_axis_index(axis, data.ndim)
-
-
 def _select_along_axis(values, idx, axis):
     other_ind = np.ix_(*[np.arange(s) for s in idx.shape])
     sl = other_ind[:axis] + (idx,) + other_ind[axis:]
@@ -24,13 +22,13 @@ def _select_along_axis(values, idx, axis):
 
 
 def nanfirst(values, axis):
-    axis = _validate_axis(values, axis)
+    axis = normalize_axis_index(axis, values.ndim)
     idx_first = np.argmax(~pd.isnull(values), axis=axis)
     return _select_along_axis(values, idx_first, axis)
 
 
 def nanlast(values, axis):
-    axis = _validate_axis(values, axis)
+    axis = normalize_axis_index(axis, values.ndim)
     rev = (slice(None),) * axis + (slice(None, None, -1),)
     idx_last = -1 - np.argmax(~pd.isnull(values)[rev], axis=axis)
     return _select_along_axis(values, idx_last, axis)

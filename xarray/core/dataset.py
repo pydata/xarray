@@ -4466,8 +4466,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
-            codes = idx.codes
-            coords = np.stack([np.asarray(code) for code in codes], axis=0)
+            coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_lexsorted
         else:
             coords = np.arange(idx.size).reshape(1, -1)
