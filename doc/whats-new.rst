@@ -21,6 +21,15 @@ v0.15.0 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Bumped minimum tested versions for dependencies:
+  - numpy 1.15
+  - pandas 0.25
+  - scipy 1.3
+  - bottleneck 1.3
+  - h5py 2.10
+  - rasterio 1.1
+  - pseudonetcdf
+
 - Remove ``compat`` and ``encoding`` kwargs from ``DataArray``, which
   have been deprecated since 0.12. (:pull:`3650`). 
   Instead, specify the encoding when writing to disk or set 
