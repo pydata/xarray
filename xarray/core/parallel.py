@@ -13,8 +13,8 @@ import operator
 from typing import (
     Any,
     Callable,
-    Dict,
     DefaultDict,
+    Dict,
     Hashable,
     Mapping,
     Sequence,
