@@ -8,6 +8,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 from xarray.core.npcompat import IS_NEP18_ACTIVE
+
 from .test_variable import VariableSubclassobjects
 
 pint = pytest.importorskip("pint")

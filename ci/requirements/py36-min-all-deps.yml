@@ -15,8 +15,8 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.0
   - coveralls
-  - dask=1.2
-  - distributed=1.27
+  - dask=2.2
+  - distributed=2.2
   - flake8
   - h5netcdf=0.7
   - h5py=2.9  # Policy allows for 2.10, but it's a conflict-fest
@@ -25,7 +25,7 @@ dependencies:
   - iris=2.2
   - lxml=4.4  # Optional dep of pydap
   - matplotlib=3.1
-  - mypy=0.730  # Must match .pre-commit-config.yaml
+  - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2
   - netcdf4=1.4
   - numba=0.44
