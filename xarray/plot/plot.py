@@ -346,7 +346,7 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
         - 'mid': Steps occur half-way between the *x* positions.
-        Note that this parameter is ignored if the x coordinate consists of
+        Note that this parameter is ignored if one coordinate consists of
         :py:func:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
