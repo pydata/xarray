@@ -37,7 +37,7 @@ from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
-from xarray.tests import mock
+from xarray.tests import LooseVersion, mock
 
 from . import (
     arm_xfail,
@@ -76,9 +76,14 @@ except ImportError:
     pass
 
 try:
+    import dask
     import dask.array as da
+
+    dask_version = dask.__version__
 except ImportError:
-    pass
+    # needed for xfailed tests when dask < 2.4.0
+    # remove when min dask > 2.4.0
+    dask_version = "10.0"
 
 ON_WINDOWS = sys.platform == "win32"
 
@@ -1723,6 +1728,7 @@ class ZarrBase(CFEncodedBase):
                 with xr.decode_cf(store):
                     pass
 
+    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_write_persistence_modes(self):
         original = create_test_data()
 
@@ -1787,6 +1793,7 @@ class ZarrBase(CFEncodedBase):
     def test_dataset_caching(self):
         super().test_dataset_caching()
 
+    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_write(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
@@ -1863,6 +1870,7 @@ class ZarrBase(CFEncodedBase):
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
+    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_with_new_variable(self):
 
         ds, ds_to_append, ds_with_new_var = create_append_test_data()

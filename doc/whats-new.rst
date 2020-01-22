@@ -30,6 +30,7 @@ Breaking changes
   - rasterio 1.1
   - pseudonetcdf
 
+- Bumped minimum ``dask`` version to 2.2.
 - Remove ``compat`` and ``encoding`` kwargs from ``DataArray``, which
   have been deprecated since 0.12. (:pull:`3650`). 
   Instead, specify the encoding when writing to disk or set 
@@ -59,6 +60,8 @@ New Features
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Add ``meta`` kwarg to :py:func:`~xarray.apply_ufunc`; this is passed on to
+  :py:meth:`dask.array.blockwise`. (:pull:`3660`) By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add `attrs_file` option in :py:func:`~xarray.open_mfdataset` to choose the
   source file for global attributes in a multi-file dataset (:issue:`2382`,
   :pull:`3498`) by `Julien Seguinot <https://github.com/juseg>_`.
@@ -72,7 +75,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-
+- Applying a user-defined function that adds new dimensions using :py:func:`apply_ufunc`
+  and ``vectorize=True`` now works with ``dask > 2.0``. (:issue:`3574`, :pull:`3660`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
   hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
   <https://github.com/bolliger32>`_.
