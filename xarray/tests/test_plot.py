@@ -268,47 +268,31 @@ class TestPlot(PlotTestCase):
         a.plot.contourf(x="time", y="depth")
         a.plot.contourf(x="depth", y="time")
 
-    def test_contourf_cmap_set_bad(self):
+    def test_contourf_cmap_set(self):
         sz = (4, 4)
         a = DataArray(easy_array(sz), dims=["z", "time"])
 
         cmap = copy(mpl.cm.viridis)
-        cmap.set_bad("w")
 
+        cmap.set_bad("w")
         # check we actually changed the set_bad color
         assert cmap._rgba_bad != mpl.cm.viridis._rgba_bad
+
+        cmap.set_under("w")
+        # check we actually changed the set_under color
+        assert cmap._rgba_under != mpl.cm.viridis._rgba_under
+
+        cmap.set_over("w")
+        # check we actually changed the set_over color
+        assert cmap._rgba_over != mpl.cm.viridis._rgba_over
 
         pl = a.plot.contourf(cmap=copy(cmap))
 
         # check the set_bad color has been kept
         assert pl.cmap._rgba_bad == cmap._rgba_bad
 
-    def test_contourf_cmap_set_under(self):
-        sz = (4, 4)
-        a = DataArray(easy_array(sz), dims=["z", "time"])
-
-        cmap = copy(mpl.cm.viridis)
-        cmap.set_under("w")
-
-        # check we actually changed the set_under color
-        assert cmap._rgba_under != mpl.cm.viridis._rgba_under
-
-        pl = a.plot.contourf(cmap=copy(cmap))
-
         # check the set_under color has been kept
         assert pl.cmap._rgba_under == cmap._rgba_under
-
-    def test_contourf_cmap_set_over(self):
-        sz = (4, 4)
-        a = DataArray(easy_array(sz), dims=["z", "time"])
-
-        cmap = copy(mpl.cm.viridis)
-        cmap.set_over("w")
-
-        # check we actually changed the set_over color
-        assert cmap._rgba_over != mpl.cm.viridis._rgba_over
-
-        pl = a.plot.contourf(cmap=copy(cmap))
 
         # check the set_over color has been kept
         assert pl.cmap._rgba_over == cmap._rgba_over
