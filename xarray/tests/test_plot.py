@@ -426,8 +426,24 @@ class TestPlot(PlotTestCase):
             d.plot(x="x", y="y", col="columns", ax=plt.gca())
 
     def test_coord_with_interval(self):
+        """Test line plot with intervals."""
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).plot()
+
+    def test_coord_with_interval_x(self):
+        """Test line plot with intervals explicitly on x axis."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot(x="dim_0_bins")
+
+    def test_coord_with_interval_y(self):
+        """Test line plot with intervals explicitly on y axis."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot(y="dim_0_bins")
+
+    def test_coord_with_interval_xy(self):
+        """Test line plot with intervals on both x and y axes."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).dim_0_bins.plot()
 
 
 class TestPlot1D(PlotTestCase):
@@ -511,8 +527,21 @@ class TestPlotStep(PlotTestCase):
         self.darray[0, 0].plot.step()
 
     def test_coord_with_interval_step(self):
+        """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).plot.step()
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+
+    def test_coord_with_interval_step_x(self):
+        """Test step plot with intervals explicitly on x axis."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(x="dim_0_bins")
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+
+    def test_coord_with_interval_step_y(self):
+        """Test step plot with intervals explicitly on y axis."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(y="dim_0_bins")
         assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
 
