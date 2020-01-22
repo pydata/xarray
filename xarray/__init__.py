@@ -1,9 +1,12 @@
 """ isort:skip_file """
 
-from ._version import get_versions
+import pkg_resources
 
-__version__ = get_versions()["version"]
-del get_versions
+try:
+    __version__ = pkg_resources.get_distribution("xarray").version
+except Exception:
+    # Local copy, not installed with setuptools
+    __version__ = "unknown"
 
 from .core.alignment import align, broadcast
 from .core.common import full_like, zeros_like, ones_like
