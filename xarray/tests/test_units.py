@@ -1,3 +1,4 @@
+from distutils.version import LooseVersion
 import operator
 import warnings
 
@@ -2029,7 +2030,8 @@ class TestVariable(VariableSubclassobjects):
                 DimensionalityError,
                 id="no_unit",
                 marks=pytest.mark.xfail(
-                    reason="is not treated the same as dimensionless"
+                    LooseVersion(pint.__version__) < LooseVersion("0.10.2"),
+                    reason="bug in pint's implementation of np.pad",
                 ),
             ),
             pytest.param(
