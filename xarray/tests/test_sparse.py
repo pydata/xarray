@@ -873,3 +873,16 @@ def test_dask_token():
     t5 = dask.base.tokenize(ac + 1)
     assert t4 != t5
     assert isinstance(ac.data._meta, sparse.COO)
+
+
+@requires_dask
+def test_apply_ufunc_meta_to_blockwise():
+    da = xr.DataArray(np.zeros((2, 3)), dims=["x", "y"]).chunk({"x": 2, "y": 1})
+    sparse_meta = sparse.COO.from_numpy(np.zeros((0, 0)))
+
+    # if dask computed meta, it would be np.ndarray
+    expected = xr.apply_ufunc(
+        lambda x: x, da, dask="parallelized", output_dtypes=[da.dtype], meta=sparse_meta
+    ).data._meta
+
+    assert_sparse_equal(expected, sparse_meta)
