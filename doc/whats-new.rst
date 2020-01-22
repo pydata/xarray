@@ -133,6 +133,9 @@ Internal Changes
 - Removed internal method ``Dataset._from_vars_and_coord_names``,
   which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- Replaced versioneer with setuptools-scm. Removed pytest-runner from setup.py, as per
+  deprecation notice on the pytest-runner project.
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 
 v0.14.1 (19 Nov 2019)

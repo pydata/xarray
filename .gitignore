@@ -65,7 +65,6 @@ dask-worker-space/
 # xarray specific
 doc/_build
 doc/generated
-xarray/version.py
 xarray/tests/data/*.grib.*.idx
 
 # Sync tools
