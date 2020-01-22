@@ -102,6 +102,9 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Fixed errors emitted by ``mypy --strict`` in modules that import xarray.
   (:issue:`3695`) by `Guido Imperiale <https://github.com/crusaderky>`_.
+- Fix plotting of binned coordinates on the y axis in :py:meth:`DataArray.plot`
+  (line) and :py:meth:`DataArray.plot.step` plots (:issue:`#3571`,
+  :pull:`3685`) by `Julien Seguinot <https://github.com/juseg>_`.
 
 Documentation
 ~~~~~~~~~~~~~
