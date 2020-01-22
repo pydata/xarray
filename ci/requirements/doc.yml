@@ -17,7 +17,7 @@ dependencies:
   - numba
   - numpy
   - numpydoc
-  - pandas<0.25  # Hack around https://github.com/pydata/xarray/issues/3369
+  - pandas
   - rasterio
   - seaborn
   - sphinx
