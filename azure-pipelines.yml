@@ -84,6 +84,18 @@ jobs:
       mypy .
     displayName: mypy type checks
 
+- job: isort
+  variables:
+    conda_env: py37
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - template: ci/azure/install.yml
+  - bash: |
+      source activate xarray-tests
+      isort -rc --check .
+    displayName: isort formatting checks
+
 - job: MinimumVersionsPolicy
   pool:
     vmImage: 'ubuntu-16.04'
