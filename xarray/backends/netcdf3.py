@@ -2,7 +2,8 @@ import unicodedata
 
 import numpy as np
 
-from .. import Variable, coding
+from .. import coding
+from ..core.variable import Variable
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string

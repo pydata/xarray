@@ -3,8 +3,8 @@ import warnings
 
 import numpy as np
 
-from .. import DataArray
 from ..core import indexing
+from ..core.dataarray import DataArray
 from ..core.utils import is_scalar
 from .common import BackendArray
 from .file_manager import CachingFileManager

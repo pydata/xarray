@@ -2,9 +2,9 @@ import functools
 
 import numpy as np
 
-from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri
+from ..core.variable import Variable
 from .common import WritableCFDataStore, find_root_and_group
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock

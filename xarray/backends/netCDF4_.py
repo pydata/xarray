@@ -4,10 +4,11 @@ from contextlib import suppress
 
 import numpy as np
 
-from .. import Variable, coding
+from .. import coding
 from ..coding.variables import pop_to
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri
+from ..core.variable import Variable
 from .common import (
     BackendArray,
     WritableCFDataStore,

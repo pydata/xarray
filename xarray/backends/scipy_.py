@@ -2,9 +2,9 @@ from io import BytesIO
 
 import numpy as np
 
-from .. import Variable
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict
+from ..core.variable import Variable
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock

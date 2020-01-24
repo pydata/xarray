@@ -1,9 +1,9 @@
 import numpy as np
 
-from .. import Variable
 from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import Frozen, FrozenDict, is_dict_like
+from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, robust_getitem
 
 
