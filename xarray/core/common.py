@@ -3,8 +3,8 @@ from contextlib import suppress
 from html import escape
 from textwrap import dedent
 from typing import (
-    Callable,
     Any,
+    Callable,
     Dict,
     Hashable,
     Iterable,
