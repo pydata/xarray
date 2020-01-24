@@ -28,6 +28,7 @@ from .util.print_versions import show_versions
 
 try:
     import pkg_resources
+
     __version__ = pkg_resources.get_distribution("xarray").version
 except Exception:
     # Local copy, not installed with setuptools, or setuptools is not available.
