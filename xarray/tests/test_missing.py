@@ -16,6 +16,7 @@ from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
     assert_array_equal,
     assert_equal,
+    assert_allclose,
     raises_regex,
     requires_bottleneck,
     requires_dask,
@@ -565,7 +566,7 @@ def test_interpolate_na_max_gap_time_specifier(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )
     actual = transform(da_time).interpolate_na("t", max_gap=max_gap)
-    assert_equal(actual, expected)
+    assert_allclose(actual, expected)
 
 
 @requires_bottleneck
