@@ -2969,7 +2969,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
 
         Examples
         --------

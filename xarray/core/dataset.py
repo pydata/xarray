@@ -4466,12 +4466,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
-            try:
-                codes = idx.codes
-            except AttributeError:
-                # deprecated since pandas 0.24
-                codes = idx.labels
-            coords = np.stack([np.asarray(code) for code in codes], axis=0)
+            coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_lexsorted
         else:
             coords = np.arange(idx.size).reshape(1, -1)
@@ -5171,7 +5166,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, DataArray.quantile
+        numpy.nanquantile, pandas.Series.quantile, DataArray.quantile
 
         Examples
         --------

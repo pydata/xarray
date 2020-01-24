@@ -595,7 +595,7 @@ class GroupBy(SupportsArithmetic):
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
 
         Examples
