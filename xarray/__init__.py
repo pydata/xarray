@@ -1,13 +1,3 @@
-""" isort:skip_file """
-
-import pkg_resources
-
-try:
-    __version__ = pkg_resources.get_distribution("xarray").version
-except Exception:
-    # Local copy, not installed with setuptools
-    __version__ = "unknown"
-
 from .core.alignment import align, broadcast
 from .core.common import full_like, zeros_like, ones_like
 from .core.concat import concat
@@ -44,6 +34,13 @@ from . import ufuncs
 from . import testing
 
 from .core.common import ALL_DIMS
+
+try:
+    import pkg_resources
+    __version__ = pkg_resources.get_distribution("xarray").version
+except Exception:
+    # Local copy, not installed with setuptools, or setuptools is not available
+    __version__ = "unknown"
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.
