@@ -40,6 +40,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` now support :py:class:`pandas.CategoricalIndex`. (:issue:`3669`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Support using an existing, opened h5netcdf ``File`` with
   :py:class:`~xarray.backends.H5NetCDFStore`. This permits creating an
   :py:class:`~xarray.Dataset` from a h5netcdf ``File`` that has been opened
