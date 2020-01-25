@@ -483,7 +483,7 @@ def np_timedelta64_to_float(array, datetime_unit):
     The array is first converted to microseconds, which is less likely to
     cause overflow errors.
     """
-    array = array.astype("timedelta64[us]")
+    array = array.astype("timedelta64[ns]").astype(np.float64)
     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 
