@@ -496,7 +496,7 @@ def pd_timedelta_to_float(array, datetime_units):
     Built on the assumption that pandas timedelta values are in nanoseconds,
     which is also the numpy default resolution.
     """
-    array = np.timedelta64(array.value, "ns").astype(np.float64)
+    array = array.to_timedelta64()
     return np_timedelta64_to_float(array, datetime_units)
 
 
