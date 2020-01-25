@@ -733,7 +733,6 @@ def test_py_timedelta_to_float():
         dt.timedelta(days=1),
         np.timedelta64(1, "D"),
         pd.Timedelta(1, "D"),
-        pd.TimedeltaIndex([1, ], "D"),
         "1 day",
     ],
 )
@@ -741,7 +740,4 @@ def test_timedelta_to_numeric(td):
     # Scalar input
     out = timedelta_to_numeric(td, "ns")
     np.testing.assert_allclose(out, 86400 * 1e9)
-    if isinstance(td, pd.TimedeltaIndex):
-        assert isinstance(out[0], float)
-    else:
-        assert isinstance(out, float)
+    assert isinstance(out, float)

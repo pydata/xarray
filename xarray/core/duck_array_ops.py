@@ -435,7 +435,7 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
 
     Parameters
     ----------
-    value : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, pandas.TimedeltaIndex, str
+    value : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, str
       Time delta representation.
     datetime_unit : {Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
       The time units of the output values. Note that some conversions are not allowed due to
@@ -452,8 +452,6 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
         out = np_timedelta64_to_float(value, datetime_unit)
     elif isinstance(value, pd.Timedelta):
         out = pd_timedelta_to_float(value, datetime_unit)
-    elif isinstance(value, pd.TimedeltaIndex):
-        out = pd_timedeltaindex_to_float(value, datetime_unit)
     elif isinstance(value, str):
         try:
             a = pd.to_timedelta(value)
@@ -464,8 +462,8 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
         return py_timedelta_to_float(a, datetime_unit)
     else:
         raise TypeError(
-            f"Expected value of type str, pandas.Timedelta, pandas.TimedeltaIndex, "
-            f"datetime.timedelta or numpy.timedelta64, but received {type(value).__name__}"
+            f"Expected value of type str, pandas.Timedelta, datetime.timedelta "
+            f"or numpy.timedelta64, but received {type(value).__name__}"
         )
     return out.astype(dtype)
 
