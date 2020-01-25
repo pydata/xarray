@@ -267,8 +267,6 @@ class DataArray(AbstractArray, DataWithCoords):
         dims: Union[Hashable, Sequence[Hashable], None] = None,
         name: Hashable = None,
         attrs: Mapping = None,
-        # deprecated parameters
-        encoding=None,
         # internal parameters
         indexes: Dict[Hashable, pd.Index] = None,
         fastpath: bool = False,
@@ -313,20 +311,10 @@ class DataArray(AbstractArray, DataWithCoords):
             Attributes to assign to the new instance. By default, an empty
             attribute dictionary is initialized.
         """
-        if encoding is not None:
-            warnings.warn(
-                "The `encoding` argument to `DataArray` is deprecated, and . "
-                "will be removed in 0.15. "
-                "Instead, specify the encoding when writing to disk or "
-                "set the `encoding` attribute directly.",
-                FutureWarning,
-                stacklevel=2,
-            )
         if fastpath:
             variable = data
             assert dims is None
             assert attrs is None
-            assert encoding is None
         else:
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
@@ -348,13 +336,11 @@ class DataArray(AbstractArray, DataWithCoords):
                 name = getattr(data, "name", None)
             if attrs is None and not isinstance(data, PANDAS_TYPES):
                 attrs = getattr(data, "attrs", None)
-            if encoding is None:
-                encoding = getattr(data, "encoding", None)
 
             data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
-            variable = Variable(dims, data, attrs, encoding, fastpath=True)
+            variable = Variable(dims, data, attrs, fastpath=True)
             indexes = dict(
                 _extract_indexes_from_coords(coords)
             )  # needed for to_dataset
@@ -1480,8 +1466,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
-            are new names. Each value must already be a coordinate on this
-            array.
+            are new names.
 
         Returns
         -------
@@ -1504,6 +1489,13 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
             x        (y) <U1 'a' 'b'
           * y        (y) int64 0 1
+        >>> arr.swap_dims({"x": "z"})
+        <xarray.DataArray (z: 2)>
+        array([0, 1])
+        Coordinates:
+            x        (z) <U1 'a' 'b'
+            y        (z) int64 0 1
+        Dimensions without coordinates: z
 
         See Also
         --------
@@ -2362,7 +2354,7 @@ class DataArray(AbstractArray, DataWithCoords):
         naming conventions.
 
         Converts all variables and attributes to native Python objects.
-        Useful for coverting to json. To avoid datetime incompatibility
+        Useful for converting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
         Parameters
@@ -2977,7 +2969,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
 
         Examples
         --------
