@@ -25,6 +25,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:meth:`DataArray.pad` and :py:meth:`Dataset.pad`. (:issue:`2605`).
+  By `Mark Boer <https://github.com/mark-boer>`_.
 - Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
   to a single chunk along all reduction axes. (:issue:`2999`).
   By `Deepak Cherian <https://github.com/dcherian>`_.

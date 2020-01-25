@@ -792,7 +792,7 @@ class VariableSubclassobjects:
             pytest.param("median", marks=pytest.mark.xfail),
             pytest.param("reflect", marks=pytest.mark.xfail),
             "edge",
-            "linear_ramp",
+            pytest.param("linear_ramp", marks=pytest.mark.xfail),
             "maximum",
             "minimum",
             "symmetric",
