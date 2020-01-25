@@ -64,6 +64,7 @@ from .indexes import (
     default_indexes,
     isel_variable_and_index,
     propagate_indexes,
+    remove_unused_levels_categories,
     roll_index,
 )
 from .indexing import is_fancy_indexer
@@ -3411,7 +3412,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _unstack_once(self, dim: Hashable, fill_value, sparse) -> "Dataset":
         index = self.get_index(dim)
-        index = index.remove_unused_levels()
+        index = remove_unused_levels_categories(index)
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
 
         # take a shortcut in case the MultiIndex was not modified.
@@ -4460,7 +4461,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._to_dataframe(self.dims)
 
     def _set_sparse_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple, shape: Tuple[int, ...]
+        self, dataframe: pd.DataFrame, dims: tuple
     ) -> None:
         from sparse import COO
 
@@ -4468,9 +4469,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_lexsorted
+            shape = tuple(lev.size for lev in idx.levels)
         else:
             coords = np.arange(idx.size).reshape(1, -1)
             is_sorted = True
+            shape = (idx.size,)
 
         for name, series in dataframe.items():
             # Cast to a NumPy array first, in case the Series is a pandas
@@ -4495,14 +4498,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self[name] = (dims, data)
 
     def _set_numpy_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple, shape: Tuple[int, ...]
+        self, dataframe: pd.DataFrame, dims: tuple
     ) -> None:
         idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             # expand the DataFrame to include the product of all levels
             full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
             dataframe = dataframe.reindex(full_idx)
-
+            shape = tuple(lev.size for lev in idx.levels)
+        else:
+            shape = (idx.size,)
         for name, series in dataframe.items():
             data = np.asarray(series).reshape(shape)
             self[name] = (dims, data)
@@ -4543,7 +4548,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx = dataframe.index
+        idx = remove_unused_levels_categories(dataframe.index)
+        dataframe = dataframe.set_index(idx)
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
@@ -4553,17 +4559,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
             for dim, lev in zip(dims, idx.levels):
                 obj[dim] = (dim, lev)
-            shape = tuple(lev.size for lev in idx.levels)
         else:
             index_name = idx.name if idx.name is not None else "index"
             dims = (index_name,)
             obj[index_name] = (dims, idx)
-            shape = (idx.size,)
 
         if sparse:
-            obj._set_sparse_data_from_dataframe(dataframe, dims, shape)
+            obj._set_sparse_data_from_dataframe(dataframe, dims)
         else:
-            obj._set_numpy_data_from_dataframe(dataframe, dims, shape)
+            obj._set_numpy_data_from_dataframe(dataframe, dims)
         return obj
 
     def to_dask_dataframe(self, dim_order=None, set_index=False):
