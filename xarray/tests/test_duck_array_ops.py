@@ -21,6 +21,7 @@ from xarray.core.duck_array_ops import (
     stack,
     where,
     py_timedelta_to_float,
+    timedelta_to_numeric
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
@@ -725,3 +726,22 @@ def test_py_timedelta_to_float():
     assert py_timedelta_to_float(dt.timedelta(days=1e6), "ms") == 86400 * 1e9
     assert py_timedelta_to_float(dt.timedelta(days=1e6), "s") == 86400 * 1e6
     assert py_timedelta_to_float(dt.timedelta(days=1e6), "D") == 1e6
+
+@pytest.mark.parametrize(
+    "td",
+    [
+        dt.timedelta(days=1),
+        np.timedelta64(1, "D"),
+        pd.Timedelta(1, "D"),
+        pd.TimedeltaIndex([1, ], "D"),
+        "1 day",
+    ],
+)
+def test_timedelta_to_numeric(td):
+    # Scalar input
+    out = timedelta_to_numeric(td, "ns")
+    np.testing.assert_allclose(out, 86400 * 1e9)
+    if isinstance(td, pd.TimedeltaIndex):
+        assert isinstance(out[0], float)
+    else:
+        assert isinstance(out, float)

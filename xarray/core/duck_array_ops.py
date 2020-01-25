@@ -430,12 +430,12 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         return np.where(isnull(array), np.nan, array.astype(dtype))
 
 
-def timedelta_to_numeric(array, datetime_unit="ns", dtype=float):
-    """Convert an array containing timedelta-like data to numerical values.
+def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
+    """Convert a timedelta-like object to numerical values.
 
     Parameters
     ----------
-    array : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, pandas.TimedeltaIndex, str
+    value : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, pandas.TimedeltaIndex, str
       Time delta representation.
     datetime_unit : {Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
       The time units of the output values. Note that some conversions are not allowed due to
@@ -446,26 +446,26 @@ def timedelta_to_numeric(array, datetime_unit="ns", dtype=float):
     """
     import datetime as dt
 
-    if isinstance(array, dt.timedelta):
-        out = py_timedelta_to_float(array, datetime_unit)
-    elif isinstance(array, np.timedelta64):
-        out = np_timedelta64_to_float(array, datetime_unit)
-    elif isinstance(array, pd.Timedelta):
-        out = pd_timedelta_to_float(array, datetime_unit)
-    elif isinstance(array, pd.TimedeltaIndex):
-        out = pd_timedeltaindex_to_float(array, datetime_unit)
-    elif isinstance(array, str):
+    if isinstance(value, dt.timedelta):
+        out = py_timedelta_to_float(value, datetime_unit)
+    elif isinstance(value, np.timedelta64):
+        out = np_timedelta64_to_float(value, datetime_unit)
+    elif isinstance(value, pd.Timedelta):
+        out = pd_timedelta_to_float(value, datetime_unit)
+    elif isinstance(value, pd.TimedeltaIndex):
+        out = pd_timedeltaindex_to_float(value, datetime_unit)
+    elif isinstance(value, str):
         try:
-            a = pd.to_timedelta(array)
+            a = pd.to_timedelta(value)
         except ValueError:
             raise ValueError(
-                f"Could not convert {array!r} to timedelta64 using pandas.to_timedelta"
+                f"Could not convert {value!r} to timedelta64 using pandas.to_timedelta"
             )
         return py_timedelta_to_float(a, datetime_unit)
     else:
         raise TypeError(
-            f"Expected array of type str, pandas.Timedelta, pandas.TimedeltaIndex, "
-            f"datetime.timedelta or numpy.timedelta64, but received {type(array).__name__}"
+            f"Expected value of type str, pandas.Timedelta, pandas.TimedeltaIndex, "
+            f"datetime.timedelta or numpy.timedelta64, but received {type(value).__name__}"
         )
     return out.astype(dtype)
 
@@ -484,7 +484,7 @@ def np_timedelta64_to_float(array, datetime_unit):
     cause overflow errors.
     """
     array = array.astype("timedelta64[ns]").astype(np.float64)
-    conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
+    conversion_factor = np.timedelta64(1, "ns") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 
 

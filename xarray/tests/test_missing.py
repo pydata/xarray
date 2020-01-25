@@ -542,7 +542,7 @@ def test_interpolate_na_max_gap_errors(da_time):
         da_time.interpolate_na("t", max_gap=(1,))
 
     da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
-    with raises_regex(TypeError, "Expected array of type str"):
+    with raises_regex(TypeError, "Expected value of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
     with raises_regex(TypeError, "Expected integer or floating point"):
