@@ -10,8 +10,8 @@ from .variable import Variable
 
 
 def remove_unused_levels_categories(index):
-    """ 
-    Remove unused levels from MultiIndex and unused categories from CategoricalIndex 
+    """
+    Remove unused levels from MultiIndex and unused categories from CategoricalIndex
     """
     if isinstance(index, pd.MultiIndex):
         index = index.remove_unused_levels()
