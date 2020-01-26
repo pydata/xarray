@@ -2,6 +2,7 @@ import warnings
 from functools import partial
 from numbers import Number
 from typing import Any, Callable, Dict, Hashable, Sequence, Union
+import datetime as dt
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
-from .duck_array_ops import dask_array_type
+from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -207,52 +208,81 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
 
 
 def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] = True):
-    """get index to use for x values in interpolation.
+    """Return index to use for x values in interpolation or curve fitting.
 
-    If use_coordinate is True, the coordinate that shares the name of the
-    dimension along which interpolation is being performed will be used as the
-    x values.
+    Parameters
+    ----------
+    arr : DataArray
+      Array to interpolate or fit to a curve.
+    dim : str
+      Name of dimension along which to fit.
+    use_coordinate : str or bool
+      If use_coordinate is True, the coordinate that shares the name of the
+      dimension along which interpolation is being performed will be used as the
+      x values. If False, the x values are set as an equally spaced sequence.
 
-    If use_coordinate is False, the x values are set as an equally spaced
-    sequence.
+    Returns
+    -------
+    Variable
+      Numerical values for the x-coordinates.
+
+    Notes
+    -----
+    If indexing is along the time dimension, datetime coordinates are converted
+    to time deltas with respect to 1970-01-01.
     """
-    if use_coordinate:
-        if use_coordinate is True:
-            index = arr.get_index(dim)
-        else:
-            index = arr.coords[use_coordinate]
-            if index.ndim != 1:
-                raise ValueError(
-                    f"Coordinates used for interpolation must be 1D, "
-                    f"{use_coordinate} is {index.ndim}D."
-                )
-            index = index.to_index()
 
-        # TODO: index.name is None for multiindexes
-        # set name for nice error messages below
-        if isinstance(index, pd.MultiIndex):
-            index.name = dim
+    # Question: If use_coordinate is a string, what role does `dim` play?
+    from xarray.coding.cftimeindex import CFTimeIndex
 
-        if not index.is_monotonic:
-            raise ValueError(f"Index {index.name!r} must be monotonically increasing")
-
-        if not index.is_unique:
-            raise ValueError(f"Index {index.name!r} has duplicate values")
-
-        # raise if index cannot be cast to a float (e.g. MultiIndex)
-        try:
-            index = index.values.astype(np.float64)
-        except (TypeError, ValueError):
-            # pandas raises a TypeError
-            # xarray/numpy raise a ValueError
-            raise TypeError(
-                f"Index {index.name!r} must be castable to float64 to support "
-                f"interpolation, got {type(index).__name__}."
-            )
-
-    else:
+    if use_coordinate is False:
         axis = arr.get_axis_num(dim)
-        index = np.arange(arr.shape[axis], dtype=np.float64)
+        return np.arange(arr.shape[axis], dtype=np.float64)
+
+    if use_coordinate is True:
+        index = arr.get_index(dim)
+
+    else:  # string
+        index = arr.coords[use_coordinate]
+        if index.ndim != 1:
+            raise ValueError(
+                f"Coordinates used for interpolation must be 1D, "
+                f"{use_coordinate} is {index.ndim}D."
+            )
+        index = index.to_index()
+
+    # TODO: index.name is None for multiindexes
+    # set name for nice error messages below
+    if isinstance(index, pd.MultiIndex):
+        index.name = dim
+
+    if not index.is_monotonic:
+        raise ValueError(f"Index {index.name!r} must be monotonically increasing")
+
+    if not index.is_unique:
+        raise ValueError(f"Index {index.name!r} has duplicate values")
+
+    # Special case for non-standard calendar indexes
+    # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
+    if isinstance(index, (CFTimeIndex, pd.DatetimeIndex)):
+        offset = type(index[0])(1970, 1, 1)
+        if isinstance(index, CFTimeIndex):
+            index = index.values
+        index = Variable(
+            data=datetime_to_numeric(index, offset=offset, datetime_unit="ns"),
+            dims=(dim,),
+        )
+
+    # raise if index cannot be cast to a float (e.g. MultiIndex)
+    try:
+        index = index.values.astype(np.float64)
+    except (TypeError, ValueError):
+        # pandas raises a TypeError
+        # xarray/numpy raise a ValueError
+        raise TypeError(
+            f"Index {index.name!r} must be castable to float64 to support "
+            f"interpolation, got {type(index).__name__}."
+        )
 
     return index
 
@@ -263,11 +293,13 @@ def interp_na(
     use_coordinate: Union[bool, str] = True,
     method: str = "linear",
     limit: int = None,
-    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
+    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
     **kwargs,
 ):
     """Interpolate values according to different methods.
     """
+    from xarray.coding.cftimeindex import CFTimeIndex
+
     if dim is None:
         raise NotImplementedError("dim is a required argument")
 
@@ -281,26 +313,11 @@ def interp_na(
 
         if (
             dim in self.indexes
-            and isinstance(self.indexes[dim], pd.DatetimeIndex)
+            and isinstance(self.indexes[dim], (pd.DatetimeIndex, CFTimeIndex))
             and use_coordinate
         ):
-            if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
-                raise TypeError(
-                    f"Underlying index is DatetimeIndex. Expected max_gap of type str, pandas.Timedelta or numpy.timedelta64 but received {max_type}"
-                )
-
-            if isinstance(max_gap, str):
-                try:
-                    max_gap = pd.to_timedelta(max_gap)
-                except ValueError:
-                    raise ValueError(
-                        f"Could not convert {max_gap!r} to timedelta64 using pandas.to_timedelta"
-                    )
-
-            if isinstance(max_gap, pd.Timedelta):
-                max_gap = np.timedelta64(max_gap.value, "ns")
-
-            max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
+            # Convert to float
+            max_gap = timedelta_to_numeric(max_gap)
 
         if not use_coordinate:
             if not isinstance(max_gap, (Number, np.number)):
