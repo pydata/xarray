@@ -71,11 +71,13 @@ New Features
   and support ``.dt`` accessor for timedeltas
   via :py:class:`~core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-- Support ``CFTimeIndex`` in :py:meth:`DataArray.interpolate_na`, define 1970-01-01
-  as the default offset for the interpolation index for both ``DatetimeIndex`` and
-  ``CFTimeIndex``, use microseconds in the conversion from timedelta objects
-  to floats to avoid overflow errors (:issue:`3641`, :pull:`3631`).
-  By `David Huard <https://github.com/huard>`_.
+- Improvements to interpolating along time axes. By `David Huard <https://github.com/huard>`_.
+
+  - Support :py:class:`CFTimeIndex` in :py:meth:`DataArray.interpolate_na`
+  - define 1970-01-01 as the default offset for the interpolation index for both
+    :py:class:`pandas.DatetimeIndex` and :py:class:`CFTimeIndex`,
+  - use microseconds in the conversion from timedelta objects to floats to avoid
+    overflow errors (:issue:`3641`, :pull:`3631`).
 
 Bug fixes
 ~~~~~~~~~
