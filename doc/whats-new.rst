@@ -29,8 +29,8 @@ Breaking changes
   - scipy 1.3
 
 - Remove ``compat`` and ``encoding`` kwargs from ``DataArray``, which
-  have been deprecated since 0.12. (:pull:`3650`). 
-  Instead, specify the encoding when writing to disk or set 
+  have been deprecated since 0.12. (:pull:`3650`).
+  Instead, specify the encoding when writing to disk or set
   the ``encoding`` attribute directly.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:func:`xarray.dot`, :py:meth:`DataArray.dot`, and the ``@`` operator now
@@ -67,10 +67,15 @@ New Features
 - :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
   now allow swapping to dimension names that don't exist yet. (:pull:`3636`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties 
-  and support `.dt` accessor for timedelta 
+- Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties
+  and support `.dt` accessor for timedelta
   via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Support CFTimeIndex in :py:meth:`DataArray.interpolate_na`, define 1970-01-01
+  as the default offset for the interpolation index for both DatetimeIndex and
+  CFTimeIndex, use microseconds in the conversion from timedelta objects
+  to floats to avoid overflow errors (:issue:`3641`, :pull:`3631`).
+  By David Huard `<https://github.com/huard>`_.
 
 Bug fixes
 ~~~~~~~~~
