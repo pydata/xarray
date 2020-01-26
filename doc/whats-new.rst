@@ -47,7 +47,7 @@ New Features
   :py:class:`~xarray.Dataset` from a h5netcdf ``File`` that has been opened
   using other means (:issue:`3618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
- - Implement ``median`` and ``nanmedian`` for dask arrays. This works by rechunking
+- Implement ``median`` and ``nanmedian`` for dask arrays. This works by rechunking
   to a single chunk along all reduction axes. (:issue:`2999`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:func:`~xarray.concat` now preserves attributes from the first Variable.
@@ -59,8 +59,9 @@ New Features
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
-- Add ``meta`` kwarg to :py:func:`~xarray.apply_ufunc`; this is passed on to
-   :py:func:`dask.array.blockwise`. (:pull:`3660`) By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add ``meta`` kwarg to :py:func:`~xarray.apply_ufunc`;
+  this is passed on to :py:func:`dask.array.blockwise`. (:pull:`3660`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add ``attrs_file`` option in :py:func:`~xarray.open_mfdataset` to choose the
   source file for global attributes in a multi-file dataset (:issue:`2382`,
   :pull:`3498`). By `Julien Seguinot <https://github.com/juseg>`_.
@@ -93,7 +94,7 @@ Bug fixes
   <https://github.com/spencerkclark>`_.
 - Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- :py:meth:`~xarray.plot.FacetGrid.set_titles` can now replace existing row titles of a
+- :py:meth:`plot.FacetGrid.set_titles` can now replace existing row titles of a
   :py:class:`~xarray.plot.FacetGrid` plot. In addition :py:class:`~xarray.plot.FacetGrid` gained
   two new attributes: :py:attr:`~xarray.plot.FacetGrid.col_labels` and
   :py:attr:`~xarray.plot.FacetGrid.row_labels` contain :py:class:`matplotlib.text.Text` handles for both column and
@@ -124,23 +125,21 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- Switch doc examples to use nbsphinx and replace sphinx_gallery with
-  notebook.
-  (:pull:`3105`, :pull:`3106`, :pull:`3121`)
+- Switch doc examples to use `nbsphinx <https://nbsphinx.readthedocs.io>`_ and replace
+  ``sphinx_gallery`` scripts with Jupyter notebooks. (:pull:`3105`, :pull:`3106`, :pull:`3121`)
   By `Ryan Abernathey <https://github.com/rabernat>`_
-- Added example notebook demonstrating use of xarray with Regional Ocean
-  Modeling System (ROMS) ocean hydrodynamic model output.
-  (:pull:`3116`).
+- Added :doc:`example notebook <examples/ROMS_ocean_model>` demonstrating use of xarray with
+  Regional Ocean Modeling System (ROMS) ocean hydrodynamic model output: (:pull:`3116`).
   By `Robert Hetland <https://github.com/hetland>`_
-- Added example notebook demonstrating the visualization of ERA5 GRIB
-  data. (:pull:`3199`)
+- Added :doc:`example notebook <examples/ERA5-GRIB-example>` demonstrating the visualization of
+  ERA5 GRIB data. (:pull:`3199`)
   By `Zach Bruick <https://github.com/zbruick>`_ and
   `Stephan Siemen <https://github.com/StephanSiemen>`_
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Add new :py:func:`apply_ufunc` example notebook demonstrating vectorization of a 1D
-  function using dask and numba.
+- Add new :doc:`example notebook <examples/apply_ufunc_vectorize_1d>` example notebook demonstrating
+  vectorization of a 1D function using :py:func:`apply_ufunc` , dask and numba.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added example for :py:func:`~xarray.map_blocks`. (:pull:`3667`)
   By `Riley X. Brady <https://github.com/bradyrx>`_.
