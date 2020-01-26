@@ -22,6 +22,7 @@ v0.15.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Bumped minimum tested versions for dependencies:
+
   - numpy 1.15
   - pandas 0.25
   - dask 2.2
@@ -30,13 +31,12 @@ Breaking changes
 
 - Remove ``compat`` and ``encoding`` kwargs from ``DataArray``, which
   have been deprecated since 0.12. (:pull:`3650`).
-  Instead, specify the encoding when writing to disk or set
-  the ``encoding`` attribute directly.
+  Instead, specify the ``encoding`` kwarg when writing to disk or set
+  the :py:attr:`DataArray.encoding` attribute directly.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:func:`xarray.dot`, :py:meth:`DataArray.dot`, and the ``@`` operator now
   use ``align="inner"`` (except when ``xarray.set_options(arithmetic_join="exact")``;
   :issue:`3694`) by `Mathias Hauser <https://github.com/mathause>`_.
-
 
 New Features
 ~~~~~~~~~~~~
@@ -50,7 +50,7 @@ New Features
 - Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
   to a single chunk along all reduction axes. (:issue:`2999`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- :py:func:`xarray.concat` now preserves attributes from the first Variable.
+- :py:func:`~xarray.concat` now preserves attributes from the first Variable.
   (:issue:`2575`, :issue:`2060`, :issue:`1614`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
@@ -61,31 +61,31 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Add ``meta`` kwarg to :py:func:`~xarray.apply_ufunc`; this is passed on to
   :py:meth:`dask.array.blockwise`. (:pull:`3660`) By `Deepak Cherian <https://github.com/dcherian>`_.
-- Add `attrs_file` option in :py:func:`~xarray.open_mfdataset` to choose the
+- Add ``attrs_file`` option in :py:func:`~xarray.open_mfdataset` to choose the
   source file for global attributes in a multi-file dataset (:issue:`2382`,
-  :pull:`3498`) by `Julien Seguinot <https://github.com/juseg>_`.
+  :pull:`3498`). By `Julien Seguinot <https://github.com/juseg>`_.
 - :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
   now allow swapping to dimension names that don't exist yet. (:pull:`3636`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Extend :py:class:`core.accessor_dt.DatetimeAccessor` properties
-  and support `.dt` accessor for timedelta
-  via :py:class:`core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
+- Extend :py:class:`~core.accessor_dt.DatetimeAccessor` properties
+  and support ``.dt`` accessor for timedeltas
+  via :py:class:`~core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-- Support CFTimeIndex in :py:meth:`DataArray.interpolate_na`, define 1970-01-01
-  as the default offset for the interpolation index for both DatetimeIndex and
-  CFTimeIndex, use microseconds in the conversion from timedelta objects
+- Support ``CFTimeIndex`` in :py:meth:`DataArray.interpolate_na`, define 1970-01-01
+  as the default offset for the interpolation index for both ``DatetimeIndex`` and
+  ``CFTimeIndex``, use microseconds in the conversion from timedelta objects
   to floats to avoid overflow errors (:issue:`3641`, :pull:`3631`).
-  By David Huard `<https://github.com/huard>`_.
+  By `David Huard <https://github.com/huard>`_.
 
 Bug fixes
 ~~~~~~~~~
 - Applying a user-defined function that adds new dimensions using :py:func:`apply_ufunc`
   and ``vectorize=True`` now works with ``dask > 2.0``. (:issue:`3574`, :pull:`3660`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix :py:meth:`xarray.combine_by_coords` to allow for combining incomplete
+- Fix :py:meth:`~xarray.combine_by_coords` to allow for combining incomplete
   hypercubes of Datasets (:issue:`3648`).  By `Ian Bolliger
   <https://github.com/bolliger32>`_.
-- Fix :py:meth:`xarray.combine_by_coords` when combining cftime coordinates
+- Fix :py:func:`~xarray.combine_by_coords` when combining cftime coordinates
   which span long time intervals (:issue:`3535`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - Fix plotting with transposed 2D non-dimensional coordinates. (:issue:`3138`, :pull:`3441`)
@@ -93,7 +93,7 @@ Bug fixes
 - :py:meth:`~xarray.plot.FacetGrid.set_titles` can now replace existing row titles of a
   :py:class:`~xarray.plot.FacetGrid` plot. In addition :py:class:`~xarray.plot.FacetGrid` gained
   two new attributes: :py:attr:`~xarray.plot.FacetGrid.col_labels` and
-  :py:attr:`~xarray.plot.FacetGrid.row_labels` contain matplotlib Text handles for both column and
+  :py:attr:`~xarray.plot.FacetGrid.row_labels` contain :py:class:`matplotlib.text.Text` handles for both column and
   row labels. These can be used to manually change the labels.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving ``map_blocks`` (:pull:`3598`)
@@ -108,16 +108,16 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename` now check for conflicts with
   MultiIndex level names.
-- :py:meth:`Dataset.merge` no longer fails when passed a `DataArray` instead of a `Dataset` object.
+- :py:meth:`Dataset.merge` no longer fails when passed a :py:class:`DataArray` instead of a :py:class:`Dataset`.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fix a regression in :py:meth:`Dataset.drop`: allow passing any
   iterable when dropping variables (:issue:`3552`, :pull:`3693`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Fixed errors emitted by ``mypy --strict`` in modules that import xarray.
   (:issue:`3695`) by `Guido Imperiale <https://github.com/crusaderky>`_.
-- Fix plotting of binned coordinates on the y axis in :py:meth:`DataArray.plot`
-  (line) and :py:meth:`DataArray.plot.step` plots (:issue:`#3571`,
-  :pull:`3685`) by `Julien Seguinot <https://github.com/juseg>_`.
+- Allow plotting of binned coordinates on the y axis in :py:meth:`DataArray.plot.line`
+  and :py:meth:`DataArray.plot.step` plots (:issue:`3571`,
+  :pull:`3685`) by `Julien Seguinot <https://github.com/juseg>`_.
 
 Documentation
 ~~~~~~~~~~~~~
