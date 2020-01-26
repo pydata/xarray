@@ -2061,10 +2061,10 @@ class TestVariable(VariableSubclassobjects):
 
         fill_value = -100 * unit
 
-        func = method("pad_with_fill_value", x=(2, 3), y=(1, 4))
+        func = method("pad", mode="constant", x=(2, 3), y=(1, 4))
         if error is not None:
             with pytest.raises(error):
-                func(variable, fill_value=fill_value)
+                func(variable, constant_values=fill_value)
 
             return
 
@@ -2072,11 +2072,11 @@ class TestVariable(VariableSubclassobjects):
         expected = attach_units(
             func(
                 strip_units(variable),
-                fill_value=strip_units(convert_units(fill_value, units)),
+                constant_values=strip_units(convert_units(fill_value, units)),
             ),
             units,
         )
-        actual = func(variable, fill_value=fill_value)
+        actual = func(variable, constant_values=fill_value)
 
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)

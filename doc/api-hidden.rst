@@ -379,7 +379,6 @@
    Variable.min
    Variable.no_conflicts
    Variable.notnull
-   Variable.pad_with_fill_value
    Variable.prod
    Variable.quantile
    Variable.rank
@@ -453,7 +452,6 @@
    IndexVariable.min
    IndexVariable.no_conflicts
    IndexVariable.notnull
-   IndexVariable.pad_with_fill_value
    IndexVariable.prod
    IndexVariable.quantile
    IndexVariable.rank
