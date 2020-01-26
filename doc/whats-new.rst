@@ -71,13 +71,14 @@ New Features
   and support ``.dt`` accessor for timedeltas
   via :py:class:`~core.accessor_dt.TimedeltaAccessor` (:pull:`3612`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-- Improvements to interpolating along time axes. By `David Huard <https://github.com/huard>`_.
+- Improvements to interpolating along time axes (:issue:`3641`, :pull:`3631`).
+  By `David Huard <https://github.com/huard>`_.
 
   - Support :py:class:`CFTimeIndex` in :py:meth:`DataArray.interpolate_na`
   - define 1970-01-01 as the default offset for the interpolation index for both
     :py:class:`pandas.DatetimeIndex` and :py:class:`CFTimeIndex`,
   - use microseconds in the conversion from timedelta objects to floats to avoid
-    overflow errors (:issue:`3641`, :pull:`3631`).
+    overflow errors.
 
 Bug fixes
 ~~~~~~~~~
@@ -98,7 +99,7 @@ Bug fixes
   :py:attr:`~xarray.plot.FacetGrid.row_labels` contain :py:class:`matplotlib.text.Text` handles for both column and
   row labels. These can be used to manually change the labels.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving :py:meth:`map_blocks` (:pull:`3598`).
+- Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving :py:func:`map_blocks` (:pull:`3598`).
   By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 - Ensure :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` issue the correct error
   when ``q`` is out of bounds (:issue:`3634`) by `Mathias Hauser <https://github.com/mathause>`_.
