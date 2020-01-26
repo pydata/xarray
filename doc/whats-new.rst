@@ -98,7 +98,7 @@ Bug fixes
   :py:attr:`~xarray.plot.FacetGrid.row_labels` contain :py:class:`matplotlib.text.Text` handles for both column and
   row labels. These can be used to manually change the labels.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving ``map_blocks`` (:pull:`3598`)
+- Fix issue with Dask-backed datasets raising a ``KeyError`` on some computations involving :py:meth:`map_blocks` (:pull:`3598`).
   By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 - Ensure :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` issue the correct error
   when ``q`` is out of bounds (:issue:`3634`) by `Mathias Hauser <https://github.com/mathause>`_.
