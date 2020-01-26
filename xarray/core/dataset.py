@@ -5713,7 +5713,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
             Number of values padded along each dimension.
         mode : str (taken from numpy docs)
-            One of the following string values or a user supplied function.
+            One of the following string values.
+
             'constant' (default)
                 Pads with a constant value.
             'edge'
@@ -5790,7 +5791,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See also
         --------
-        DataArray.shift, DataArray.roll, numpy.pad, dask.array.pad
+        Dataset.shift, Dataset.roll, numpy.pad, dask.array.pad
 
         Examples
         --------
