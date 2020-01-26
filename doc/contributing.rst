@@ -231,9 +231,9 @@ About the *xarray* documentation
 --------------------------------
 
 The documentation is written in **reStructuredText**, which is almost like writing
-in plain English, and built using `Sphinx <http://sphinx.pocoo.org/>`__. The
+in plain English, and built using `Sphinx <http://sphinx-doc.org/>`__. The
 Sphinx Documentation has an excellent `introduction to reST
-<http://sphinx.pocoo.org/rest.html>`__. Review the Sphinx docs to perform more
+<http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`__. Review the Sphinx docs to perform more
 complex changes to the documentation as well.
 
 Some other important things to know about the docs:
