@@ -23,7 +23,7 @@ from xarray.core.duck_array_ops import (
     py_timedelta_to_float,
     np_timedelta64_to_float,
     pd_timedelta_to_float,
-    timedelta_to_numeric
+    timedelta_to_numeric,
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
@@ -730,7 +730,10 @@ def test_py_timedelta_to_float():
     assert py_timedelta_to_float(dt.timedelta(days=1e6), "D") == 1e6
 
 
-@pytest.mark.parametrize("td, expected", ([np.timedelta64(1, "D"), 86400*1E9], [np.timedelta64(1, "ns"), 1.]))
+@pytest.mark.parametrize(
+    "td, expected",
+    ([np.timedelta64(1, "D"), 86400 * 1e9], [np.timedelta64(1, "ns"), 1.0]),
+)
 def test_np_timedelta64_to_float(td, expected):
     out = np_timedelta64_to_float(td, datetime_unit="ns")
     np.testing.assert_allclose(out, expected)
@@ -740,7 +743,9 @@ def test_np_timedelta64_to_float(td, expected):
     np.testing.assert_allclose(out, expected)
 
 
-@pytest.mark.parametrize("td, expected", ([pd.Timedelta(1, "D"), 86400*1E9], [pd.Timedelta(1, "ns"), 1.]))
+@pytest.mark.parametrize(
+    "td, expected", ([pd.Timedelta(1, "D"), 86400 * 1e9], [pd.Timedelta(1, "ns"), 1.0])
+)
 def test_pd_timedelta_to_float(td, expected):
     out = pd_timedelta_to_float(td, datetime_unit="ns")
     np.testing.assert_allclose(out, expected)
@@ -749,12 +754,7 @@ def test_pd_timedelta_to_float(td, expected):
 
 @pytest.mark.parametrize(
     "td",
-    [
-        dt.timedelta(days=1),
-        np.timedelta64(1, "D"),
-        pd.Timedelta(1, "D"),
-        "1 day",
-    ],
+    [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day",],
 )
 def test_timedelta_to_numeric(td):
     # Scalar input
