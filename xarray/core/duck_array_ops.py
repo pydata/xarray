@@ -486,7 +486,7 @@ def np_timedelta64_to_float(array, datetime_unit):
     return conversion_factor * array
 
 
-def pd_timedelta_to_float(array, datetime_units):
+def pd_timedelta_to_float(value, datetime_unit):
     """Convert pandas.Timedelta to float.
 
     Notes
@@ -494,13 +494,8 @@ def pd_timedelta_to_float(array, datetime_units):
     Built on the assumption that pandas timedelta values are in nanoseconds,
     which is also the numpy default resolution.
     """
-    array = array.to_timedelta64()
-    return np_timedelta64_to_float(array, datetime_units)
-
-
-def pd_timedeltaindex_to_float(array, datetime_units):
-    """Convert pandas.TimedeltaIndex to float."""
-    return np_timedelta64_to_float(array.values, datetime_units)
+    value = value.to_timedelta64()
+    return np_timedelta64_to_float(value, datetime_unit)
 
 
 def py_timedelta_to_float(array, datetime_unit):
