@@ -47,7 +47,7 @@ New Features
   :py:class:`~xarray.Dataset` from a h5netcdf ``File`` that has been opened
   using other means (:issue:`3618`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Implement :py:func:`median` and :py:func:`nanmedian` for dask arrays. This works by rechunking
+ - Implement ``median`` and ``nanmedian`` for dask arrays. This works by rechunking
   to a single chunk along all reduction axes. (:issue:`2999`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:func:`~xarray.concat` now preserves attributes from the first Variable.
