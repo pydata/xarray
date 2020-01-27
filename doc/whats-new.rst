@@ -19,6 +19,13 @@ What's New
 v0.15.0 (unreleased)
 --------------------
 
+This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
+and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
+
+This release also features many API improvements such as a new
+:py:class:`~core.accessor_dt.TimedeltaAccessor` and support for :py:class:`CFTimeIndex` in
+:py:meth:`~DataArray.interpolate_na`); as well as many bug fixes.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Bumped minimum tested versions for dependencies:
