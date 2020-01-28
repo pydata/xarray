@@ -1,4 +1,5 @@
 import copy
+import datetime
 import functools
 import sys
 import warnings
@@ -27,7 +28,6 @@ from typing import (
     cast,
 )
 
-import datetime
 import numpy as np
 import pandas as pd
 
