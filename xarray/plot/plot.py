@@ -339,6 +339,7 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
     ----------
     where : {'pre', 'post', 'mid'}, optional, default 'pre'
         Define where the steps should be placed:
+
         - 'pre': The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
@@ -346,12 +347,13 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
         - 'mid': Steps occur half-way between the *x* positions.
+
         Note that this parameter is ignored if one coordinate consists of
         :py:func:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
 
-    *args, **kwargs : optional
+    ``*args``, ``**kwargs`` : optional
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:

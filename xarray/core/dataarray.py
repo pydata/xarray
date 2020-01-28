@@ -1,3 +1,4 @@
+import datetime
 import functools
 import warnings
 from numbers import Number
@@ -18,7 +19,6 @@ from typing import (
     cast,
 )
 
-import datetime
 import numpy as np
 import pandas as pd
 
