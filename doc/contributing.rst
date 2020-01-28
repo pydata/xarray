@@ -345,33 +345,31 @@ as possible to avoid mass breakages.
 Code Formatting
 ~~~~~~~~~~~~~~~
 
-Xarray uses `Black <https://black.readthedocs.io/en/stable/>`_ and
-`Flake8 <http://flake8.pycqa.org/en/latest/>`_ to ensure a consistent code
-format throughout the project. ``black`` and ``flake8`` can be installed with
+xarray uses several tools to ensure a consistent code format throughout the project:
+
+- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized code formatting
+- `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
+- `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
+  See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
+- `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
+  <https://docs.python.org/3/library/typing.html>`_
+
 ``pip``::
 
-   pip install black flake8
+   pip install black flake8 isort mypy
 
 and then run from the root of the Xarray repository::
 
-   black .
+   isort -rc .
+   black -t py36 .
    flake8
+   mypy .
 
 to auto-format your code. Additionally, many editors have plugins that will
 apply ``black`` as you edit files.
 
-Other recommended but optional tools for checking code quality (not currently
-enforced in CI):
-
-- `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
-  make it easier to catch bugs. Please run ``mypy xarray`` if you annotate any
-  code with `type hints <https://docs.python.org/3/library/typing.html>`_.
-- `isort <https://github.com/timothycrosley/isort>`_ will highlight
-  incorrectly sorted imports. ``isort -y`` will automatically fix them. See
-  also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
-
 Optionally, you may wish to setup `pre-commit hooks <https://pre-commit.com/>`_
-to automatically run ``black`` and ``flake8`` when you make a git commit. This
+to automatically run all the above tools every time you make a git commit. This
 can be done by installing ``pre-commit``::
 
    pip install pre-commit
@@ -380,8 +378,7 @@ and then running::
 
    pre-commit install
 
-from the root of the Xarray repository. Now ``black`` and ``flake8`` will be run
-each time you commit changes. You can skip these checks with
+from the root of the xarray repository. You can skip the pre-commit checks with
 ``git commit --no-verify``.
 
 .. note::

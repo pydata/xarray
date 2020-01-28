@@ -166,6 +166,8 @@ Internal Changes
 - Replaced versioneer with setuptools-scm. Moved contents of setup.py to setup.cfg.
   Removed pytest-runner from setup.py, as per deprecation notice on the pytest-runner
   project. (:pull:`3714`) by `Guido Imperiale <https://github.com/crusaderky>`_
+- Use of isort is now enforced by CI.
+  (:pull:`3721`) by `Guido Imperiale <https://github.com/crusaderky>`_
 
 
 v0.14.1 (19 Nov 2019)

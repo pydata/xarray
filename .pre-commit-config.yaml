@@ -1,6 +1,11 @@
 # https://pre-commit.com/
-# https://github.com/python/black#version-control-integration
 repos:
+  # isort should run before black as black sometimes tweaks the isort output
+  - repo: https://github.com/timothycrosley/isort
+    rev: 4.3.21-2
+    hooks:
+      - id: isort
+  # https://github.com/python/black#version-control-integration
   - repo: https://github.com/python/black
     rev: stable
     hooks:
@@ -14,7 +19,7 @@ repos:
     rev: v0.761  # Must match ci/requirements/*.yml
     hooks:
       - id: mypy
-  # run these occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
+  # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
   # - repo: https://github.com/asottile/pyupgrade
   #   rev: v1.22.1
   #   hooks:
@@ -23,7 +28,3 @@ repos:
   #         - "--py3-only"
   #         # remove on f-strings in Py3.7
   #         - "--keep-percent-format"
-  # - repo: https://github.com/timothycrosley/isort
-  #   rev: 4.3.21-2
-  #   hooks:
-  #     - id: isort
