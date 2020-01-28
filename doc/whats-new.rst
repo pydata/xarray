@@ -40,7 +40,7 @@ Breaking changes
   have been deprecated since 0.12. (:pull:`3650`).
   Instead, specify the ``encoding`` kwarg when writing to disk or set
   the :py:attr:`DataArray.encoding` attribute directly.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - :py:func:`xarray.dot`, :py:meth:`DataArray.dot`, and the ``@`` operator now
   use ``align="inner"`` (except when ``xarray.set_options(arithmetic_join="exact")``;
   :issue:`3694`) by `Mathias Hauser <https://github.com/mathause>`_.
@@ -134,14 +134,14 @@ Documentation
 ~~~~~~~~~~~~~
 - Switch doc examples to use `nbsphinx <https://nbsphinx.readthedocs.io>`_ and replace
   ``sphinx_gallery`` scripts with Jupyter notebooks. (:pull:`3105`, :pull:`3106`, :pull:`3121`)
-  By `Ryan Abernathey <https://github.com/rabernat>`_
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Added :doc:`example notebook <examples/ROMS_ocean_model>` demonstrating use of xarray with
-  Regional Ocean Modeling System (ROMS) ocean hydrodynamic model output: (:pull:`3116`).
-  By `Robert Hetland <https://github.com/hetland>`_
+  Regional Ocean Modeling System (ROMS) ocean hydrodynamic model output. (:pull:`3116`)
+  By `Robert Hetland <https://github.com/hetland>`_.
 - Added :doc:`example notebook <examples/ERA5-GRIB-example>` demonstrating the visualization of
   ERA5 GRIB data. (:pull:`3199`)
   By `Zach Bruick <https://github.com/zbruick>`_ and
-  `Stephan Siemen <https://github.com/StephanSiemen>`_
+  `Stephan Siemen <https://github.com/StephanSiemen>`_.
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
@@ -162,10 +162,10 @@ Internal Changes
   (:pull:`3533`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 - Removed internal method ``Dataset._from_vars_and_coord_names``,
   which was dominated by ``Dataset._construct_direct``. (:pull:`3565`)
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Replaced versioneer with setuptools-scm. Moved contents of setup.py to setup.cfg.
   Removed pytest-runner from setup.py, as per deprecation notice on the pytest-runner
-  project. (:pull:`3714`) by `Guido Imperiale <https://github.com/crusaderky>`_
+  project. (:pull:`3714`) by `Guido Imperiale <https://github.com/crusaderky>`_.
 - Use of isort is now enforced by CI.
   (:pull:`3721`) by `Guido Imperiale <https://github.com/crusaderky>`_
 
