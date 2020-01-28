@@ -1,7 +1,7 @@
+import datetime as dt
 import warnings
 from textwrap import dedent
 
-import datetime as dt
 import numpy as np
 import pandas as pd
 import pytest
@@ -17,13 +17,13 @@ from xarray.core.duck_array_ops import (
     gradient,
     last,
     mean,
-    rolling_window,
-    stack,
-    where,
-    py_timedelta_to_float,
     np_timedelta64_to_float,
     pd_timedelta_to_float,
+    py_timedelta_to_float,
+    rolling_window,
+    stack,
     timedelta_to_numeric,
+    where,
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
@@ -753,7 +753,7 @@ def test_pd_timedelta_to_float(td, expected):
 
 
 @pytest.mark.parametrize(
-    "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"],
+    "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"]
 )
 def test_timedelta_to_numeric(td):
     # Scalar input
