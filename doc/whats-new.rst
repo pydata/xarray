@@ -1758,7 +1758,7 @@ Documentation
 
 - Added a new guide on :ref:`contributing` (:issue:`640`)
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Added apply_ufunc example to :ref:`toy weather data` (:issue:`1844`).
+- Added apply_ufunc example to :doc:`examples/weather-data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
   :doc:`faq` (:issue:`1726`).
@@ -3666,7 +3666,7 @@ Enhancements
   ``fillna`` works on both ``Dataset`` and ``DataArray`` objects, and uses
   index based alignment and broadcasting like standard binary operations. It
   also can be applied by group, as illustrated in
-  :ref:`fill with climatology`.
+  :doc:`Fill missing values with climatology <examples/weather-data>`.
 - New ``xray.Dataset.assign`` and ``xray.Dataset.assign_coords``
   methods patterned off the new :py:meth:`DataFrame.assign <pandas.DataFrame.assign>`
   method in pandas:
