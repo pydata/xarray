@@ -250,10 +250,12 @@ class ZarrStore(AbstractWritableDataStore):
         group=None,
         consolidated=False,
         consolidate_on_close=False,
+        chunk_store=None,
     ):
         import zarr
 
-        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group,
+                           chunk_store=chunk_store)
         if consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
@@ -468,6 +470,7 @@ def open_zarr(
     drop_variables=None,
     consolidated=False,
     overwrite_encoded_chunks=False,
+    chunk_store=None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -527,6 +530,8 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+    chunk_store : MutableMapping, optional
+        A separate Zarr store only for chunk data.
 
     Returns
     -------
@@ -595,6 +600,7 @@ def open_zarr(
         synchronizer=synchronizer,
         group=group,
         consolidated=consolidated,
+        chunk_store=chunk_store
     )
     ds = maybe_decode_store(zarr_store)
 
