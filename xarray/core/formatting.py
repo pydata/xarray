@@ -500,6 +500,13 @@ def diff_dim_summary(a, b):
 
 
 def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_width=None):
+    def is_array_like(value):
+        return (
+            hasattr(value, "ndim")
+            and hasattr(value, "shape")
+            and hasattr(value, "dtype")
+        )
+
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
@@ -522,10 +529,10 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
             is_variable = True
         except AttributeError:
             # compare attribute value
-            compatible = a_mapping[k] == b_mapping[k]
-            # allow comparing with numpy.arrays
-            if hasattr(compatible, "ndim") and hasattr(compatible, "shape"):
-                compatible = all(compatible)
+            if is_array_like(a_mapping[k]) or is_array_like(b_mapping[k]):
+                compatible = array_equiv(a_mapping[k], b_mapping[k])
+            else:
+                compatible = a_mapping[k] == b_mapping[k]
 
             is_variable = False
 
