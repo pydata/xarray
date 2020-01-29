@@ -2,7 +2,7 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - python=3.7
+  - python=3.8
   - black
   - boto3
   - bottleneck
@@ -26,7 +26,7 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy<1.18  # FIXME https://github.com/pydata/xarray/issues/3409
+  - numpy
   - pandas
   - pint
   - pip

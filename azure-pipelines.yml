@@ -35,8 +35,8 @@ jobs:
 - job: MacOSX
   strategy:
     matrix:
-      py36:
-        conda_env: py36
+      py38:
+        conda_env: py38
   pool:
     vmImage: 'macOS-10.13'
   steps:
@@ -45,8 +45,8 @@ jobs:
 - job: Windows
   strategy:
     matrix:
-      py37:
-        conda_env: py37-windows
+      py38:
+        conda_env: py38-windows
   pool:
     vmImage: 'vs2017-win2016'
   steps:
