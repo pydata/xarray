@@ -381,21 +381,6 @@ and then running::
 from the root of the xarray repository. You can skip the pre-commit checks with
 ``git commit --no-verify``.
 
-.. note::
-
-  If you were working on a branch *prior* to the code being reformatted with black,
-  you will likely face some merge conflicts. These steps can eliminate many of those
-  conflicts. Because they have had limited testing, please reach out to the core devs
-  on your pull request if you face any issues, and we'll help with the merge:
-
-  - Merge the commit on master prior to the ``black`` commit into your branch
-    ``git merge f172c673``. If you have conflicts here, resolve and commit.
-  - Apply ``black .`` to your branch and commit ``git commit -am "black"``
-  - Apply a patch of other changes we made on that commit: ``curl https://gist.githubusercontent.com/max-sixty/3cceb8472ed4ea806353999ca43aed52/raw/03cbee4e386156bddb61acaa250c0bfc726f596d/xarray%2520black%2520diff | git apply -``
-  - Commit (``git commit -am "black2"``)
-  - Merge master at the ``black`` commit, resolving in favor of 'our' changes:
-    ``git merge d089df38 -X ours``. You shouldn't have any merge conflicts
-  - Merge current master ``git merge master``; resolve and commit any conflicts
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
