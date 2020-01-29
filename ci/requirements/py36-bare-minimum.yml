@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python=3.6
   - coveralls
+  - pip
   - pytest
   - pytest-cov
   - pytest-env
