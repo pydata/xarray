@@ -3,6 +3,7 @@ from textwrap import dedent
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import xarray as xr
 from xarray.core import formatting
@@ -274,6 +275,44 @@ class TestFormatting:
             assert actual == expected
         except AssertionError:
             assert actual == expected.replace(", dtype=int64", "")
+
+    @pytest.mark.filterwarnings("error")
+    def test_diff_attrs_repr_with_array(self):
+        attrs_a = {"attr": np.array([0, 1])}
+
+        attrs_b = {"attr": 1}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: 1
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
+
+        attrs_b = {"attr": np.array([-3, 5])}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: [-3  5]
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
+
+        # should not raise a warning
+        attrs_b = {"attr": np.array([0, 1, 2])}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: [0 1 2]
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
 
     def test_diff_dataset_repr(self):
         ds_a = xr.Dataset(
