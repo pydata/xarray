@@ -6,6 +6,7 @@ steps:
 - template: add-conda-to-path.yml
 
 - bash: |
+    conda update -y conda
     conda env create -n xarray-tests --file ${{ parameters.env_file }}
   displayName: Install conda dependencies
 
