@@ -523,6 +523,10 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
         except AttributeError:
             # compare attribute value
             compatible = a_mapping[k] == b_mapping[k]
+            # allow comparing with numpy.arrays
+            if hasattr(compatible, "ndim") and hasattr(compatible, "shape"):
+                compatible = all(compatible)
+
             is_variable = False
 
         if not compatible:
