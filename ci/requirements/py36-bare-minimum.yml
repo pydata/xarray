@@ -4,8 +4,9 @@ channels:
 dependencies:
   - python=3.6
   - coveralls
+  - pip
   - pytest
   - pytest-cov
   - pytest-env
-  - numpy=1.14
-  - pandas=0.24
+  - numpy=1.15
+  - pandas=0.25

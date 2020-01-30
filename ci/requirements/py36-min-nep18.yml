@@ -9,8 +9,9 @@ dependencies:
   - dask=2.4
   - distributed=2.4
   - numpy=1.17
-  - pandas=0.24
+  - pandas=0.25
   - pint=0.9  # Actually not enough as it doesn't implement __array_function__yet!
+  - pip
   - pytest
   - pytest-cov
   - pytest-env

@@ -15,6 +15,7 @@ IGNORE_DEPS = {
     "coveralls",
     "flake8",
     "hypothesis",
+    "isort",
     "mypy",
     "pip",
     "pytest",
