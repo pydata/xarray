@@ -4,3 +4,4 @@
 
 numpy >= 1.15
 pandas >= 0.25
+setuptools
