@@ -14,18 +14,33 @@ from xarray.core.missing import (
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
+    assert_allclose,
     assert_array_equal,
     assert_equal,
     raises_regex,
     requires_bottleneck,
+    requires_cftime,
     requires_dask,
     requires_scipy,
 )
+from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
 
 
 @pytest.fixture
 def da():
     return xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+
+
+@pytest.fixture
+def cf_da():
+    def _cf_da(calendar, freq="1D"):
+        times = xr.cftime_range(
+            start="1970-01-01", freq=freq, periods=10, calendar=calendar
+        )
+        values = np.arange(10)
+        return xr.DataArray(values, dims=("time",), coords={"time": times})
+
+    return _cf_da
 
 
 @pytest.fixture
@@ -472,6 +487,42 @@ def test_interpolate_na_nan_block_lengths(y, lengths):
     assert_equal(actual, expected)
 
 
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
+    """The index for CFTimeIndex is in units of days. This means that if two series using a 360 and 365 days
+    calendar each have a trend of .01C/year, the linear regression coefficients will be different because they
+    have different number of days.
+
+    Another option would be to have an index in units of years, but this would likely create other difficulties.
+    """
+    i = get_clean_interp_index(cf_da(calendar), dim="time")
+    np.testing.assert_array_equal(i, np.arange(10) * 1e9 * 86400)
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
+)
+def test_get_clean_interp_index_dt(cf_da, calendar, freq):
+    """In the gregorian case, the index should be proportional to normal datetimes."""
+    g = cf_da(calendar, freq=freq)
+    g["stime"] = xr.Variable(data=g.time.to_index().to_datetimeindex(), dims=("time",))
+
+    gi = get_clean_interp_index(g, "time")
+    si = get_clean_interp_index(g, "time", use_coordinate="stime")
+    np.testing.assert_array_equal(gi, si)
+
+
+def test_get_clean_interp_index_potential_overflow():
+    da = xr.DataArray(
+        [0, 1, 2],
+        dims=("time",),
+        coords={"time": xr.cftime_range("0000-01-01", periods=3, calendar="360_day")},
+    )
+    get_clean_interp_index(da, "time")
+
+
 @pytest.fixture
 def da_time():
     return xr.DataArray(
@@ -490,7 +541,7 @@ def test_interpolate_na_max_gap_errors(da_time):
         da_time.interpolate_na("t", max_gap=(1,))
 
     da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
-    with raises_regex(TypeError, "Underlying index is"):
+    with raises_regex(TypeError, "Expected value of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
     with raises_regex(TypeError, "Expected integer or floating point"):
@@ -501,10 +552,7 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 
 @requires_bottleneck
-@pytest.mark.parametrize(
-    "time_range_func",
-    [pd.date_range, pytest.param(xr.cftime_range, marks=pytest.mark.xfail)],
-)
+@pytest.mark.parametrize("time_range_func", [pd.date_range, xr.cftime_range])
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3H", np.timedelta64(3, "h"), pd.to_timedelta("3H")]
@@ -517,7 +565,7 @@ def test_interpolate_na_max_gap_time_specifier(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )
     actual = transform(da_time).interpolate_na("t", max_gap=max_gap)
-    assert_equal(actual, expected)
+    assert_allclose(actual, expected)
 
 
 @requires_bottleneck

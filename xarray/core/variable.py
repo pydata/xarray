@@ -1625,8 +1625,9 @@ class Variable(
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
-                    raise ValueError("inconsistent dimensions")
-                utils.remove_incompatible_items(attrs, var.attrs)
+                    raise ValueError(
+                        f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var.dims)}"
+                    )
 
         return cls(dims, data, attrs, encoding)
 
@@ -1696,6 +1697,7 @@ class Variable(
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
+
                 * linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
@@ -1703,6 +1705,7 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -1719,7 +1722,7 @@ class Variable(
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
 
@@ -1739,7 +1742,7 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return np.moveaxis(np.nanpercentile(npa, **kwargs), 0, -1)
+            return np.moveaxis(np.nanquantile(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
         result = apply_ufunc(
@@ -1751,7 +1754,7 @@ class Variable(
             output_dtypes=[np.float64],
             output_sizes={"quantile": len(q)},
             dask="parallelized",
-            kwargs={"q": q * 100, "axis": axis, "interpolation": interpolation},
+            kwargs={"q": q, "axis": axis, "interpolation": interpolation},
         )
 
         # for backward compatibility
