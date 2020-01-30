@@ -13,11 +13,32 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.15.1:
+
+
+v0.15.1 (unreleased)
+---------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+New Features
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+Documentation
+~~~~~~~~~~~~~
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.0.15.0:
 
 
-v0.15.0 (unreleased)
---------------------
+v0.15.0 (30 Jan 2020)
+---------------------
 
 This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
 and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
@@ -129,6 +150,8 @@ Bug fixes
 - Allow plotting of binned coordinates on the y axis in :py:meth:`plot.line`
   and :py:meth:`plot.step` plots (:issue:`3571`,
   :pull:`3685`) by `Julien Seguinot <https://github.com/juseg>`_.
+- setuptools is now marked as a dependency of xarray
+  (:pull:`3628`) by `Richard Höchenberger <https://github.com/hoechenberger>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -169,6 +192,8 @@ Internal Changes
 - Use of isort is now enforced by CI.
   (:pull:`3721`) by `Guido Imperiale <https://github.com/crusaderky>`_
 
+
+.. _whats-new.0.14.1:
 
 v0.14.1 (19 Nov 2019)
 ---------------------
