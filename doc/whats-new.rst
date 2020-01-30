@@ -129,6 +129,8 @@ Bug fixes
 - Allow plotting of binned coordinates on the y axis in :py:meth:`plot.line`
   and :py:meth:`plot.step` plots (:issue:`3571`,
   :pull:`3685`) by `Julien Seguinot <https://github.com/juseg>`_.
+- setuptools is now marked as a dependency of xarray
+  (:pull:`3628`) by `Richard Höchenberger <https://github.com/hoechenberger>`_.
 
 Documentation
 ~~~~~~~~~~~~~
