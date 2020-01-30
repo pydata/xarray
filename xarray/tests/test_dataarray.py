@@ -4193,7 +4193,7 @@ def test_polyval():
     )
     coeffs = da.polyfit("x", 2)
     da_pv = xr.core.dataarray.polyval(da.x, coeffs)
-    assert_allclose(da, da_pv)
+    assert_allclose(da, da_pv.T)
 
 
 @pytest.fixture(params=[1])
