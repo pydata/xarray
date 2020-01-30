@@ -11,12 +11,10 @@ import functools
 import numpy as np
 import pandas as pd
 
-from ..core.options import OPTIONS
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
     _ensure_plottable,
-    _get_plot_backend,
     _infer_interval_breaks,
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
@@ -25,6 +23,7 @@ from .utils import (
     _resolve_intervals_2dplot,
     _update_axes,
     get_axis,
+    import_matplotlib_pyplot,
     label_from_attrs,
 )
 
@@ -633,7 +632,7 @@ def _plot2d(plotfunc):
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
 
-        plt = _get_plot_backend(OPTIONS["plotting_backend"])
+        plt = import_matplotlib_pyplot()
 
         rgb = kwargs.pop("rgb", None)
         if rgb is not None and plotfunc.__name__ != "imshow":

@@ -52,6 +52,14 @@ def register_pandas_datetime_converter_if_needed():
         _registered = True
 
 
+def import_matplotlib_pyplot():
+    """Import pyplot as register appropriate converters."""
+    register_pandas_datetime_converter_if_needed()
+    import matplotlib.pyplot as plt
+
+    return plt
+
+
 def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
@@ -561,7 +569,7 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-    plt = _get_plot_backend(OPTIONS["plotting_backend"])
+    plt = import_matplotlib_pyplot()
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
@@ -832,8 +840,7 @@ def _get_plot_backend(backend=None):
 
     if backend == "matplotlib":
         try:
-            register_pandas_datetime_converter_if_needed()
-            import matplotlib.pyplot as module
+            import xarray.plot as module
         except ImportError:
             raise ImportError(
                 "matplotlib is required for plotting when the "

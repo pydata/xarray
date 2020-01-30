@@ -59,9 +59,16 @@ def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
     )
 
 
+def _set_plotting_backend(backend):
+    from ..plot.utils import _get_plot_backend
+
+    return _get_plot_backend(backend)
+
+
 _SETTERS = {
     FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
     ENABLE_CFTIMEINDEX: _warn_on_setting_enable_cftimeindex,
+    PLOTTING_BACKEND: _set_plotting_backend,
 }
 
 

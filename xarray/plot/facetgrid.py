@@ -8,11 +8,9 @@ from ..core.formatting import format_item
 from .utils import (
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
-    _get_plot_backend,
+    import_matplotlib_pyplot,
     label_from_attrs,
 )
-
-from ..core.options import OPTIONS
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -115,7 +113,7 @@ class FacetGrid:
 
         """
 
-        plt = _get_plot_backend(OPTIONS["plotting_backend"])
+        plt = import_matplotlib_pyplot()
 
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
@@ -574,7 +572,7 @@ class FacetGrid:
         self : FacetGrid object
 
         """
-        plt = _get_plot_backend(OPTIONS["plotting_backend"])
+        plt = import_matplotlib_pyplot()
 
         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
             if namedict is not None:
