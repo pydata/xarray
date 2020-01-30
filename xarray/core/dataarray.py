@@ -31,6 +31,7 @@ from . import (
     indexing,
     ops,
     pdcompat,
+    pycompat,
     resample,
     rolling,
     utils,
@@ -3244,8 +3245,14 @@ class DataArray(AbstractArray, DataWithCoords):
         w: Union[Hashable, Any] = None,
         full: bool = False,
         cov: bool = False,
-        skipna: bool = False,
+        skipna: bool = None,
     ):
+        if skipna is None:
+            if isinstance(self.data, pycompat.dask_array_type):
+                skipna = True
+            else:
+                skipna = np.any(self.isnull())
+
         x = get_clean_interp_index(self, dim)
         order = int(deg) + 1
         lhs = np.vander(x, order, increasing=True)
@@ -3325,9 +3332,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 fac = residuals / (x.shape[0] - order)
             covariance = (
                 DataArray(
-                    Vbase,
-                    dims=("cov_i", "cov_j"),
-                    name=name + "_polyfit_covariance",
+                    Vbase, dims=("cov_i", "cov_j"), name=name + "_polyfit_covariance",
                 )
                 * fac
             )
