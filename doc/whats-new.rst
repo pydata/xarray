@@ -16,8 +16,8 @@ What's New
 .. _whats-new.0.15.0:
 
 
-v0.15.0 (unreleased)
---------------------
+v0.15.0 (30 Jan 2020)
+---------------------
 
 This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
 and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
@@ -169,6 +169,8 @@ Internal Changes
 - Use of isort is now enforced by CI.
   (:pull:`3721`) by `Guido Imperiale <https://github.com/crusaderky>`_
 
+
+.. _whats-new.0.14.1:
 
 v0.14.1 (19 Nov 2019)
 ---------------------
