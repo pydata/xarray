@@ -7,7 +7,7 @@ conda:
     environment: ci/requirements/doc.yml
 
 python:
-    version: 3.7
+    version: 3.8
     install: []
 
 formats: []
