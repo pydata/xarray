@@ -221,6 +221,24 @@ def _create_bottleneck_method(name, npmodule=np):
     return f
 
 
+def _nanpolyfit_1d(arr, x, rcond=None):
+    out = np.full((x.shape[1] + 1,), np.nan)
+    mask = np.isnan(arr)
+    if not np.all(mask):
+        out[:-1], out[-1], _, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
+    return out
+
+
+def least_squares(lhs, rhs, rcond=None, skipna=False):
+    coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs.data, rcond=rcond)
+    if skipna:
+        nan_cols = np.nonzero(np.isnan(coeffs[0, :]))[0]
+        out = np.apply_along_axis(_nanpolyfit_1d, 0, rhs.data[:, nan_cols], lhs, rcond=rcond)
+        coeffs[:, nan_cols] = out[:-1, :]
+        residuals[nan_cols] = out[-1, :]
+    return coeffs, residuals
+
+
 nanmin = _create_bottleneck_method("nanmin")
 nanmax = _create_bottleneck_method("nanmax")
 nanmean = _create_bottleneck_method("nanmean")

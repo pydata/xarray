@@ -26,6 +26,7 @@ from ..plot.plot import _PlotMethods
 from . import (
     computation,
     dtypes,
+    duck_array_ops,
     groupby,
     indexing,
     ops,
@@ -54,6 +55,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, _extract_indexes_from_coords
+from .missing import get_clean_interp_index
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
@@ -3234,9 +3236,104 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return map_blocks(func, self, args, kwargs)
 
+    def polyfit(
+        self,
+        dim : Hashable,
+        deg : int,
+        rcond : float = None,
+        w : Union[Hashable, Any] = None,
+        full : bool = False,
+        cov : bool = False,
+        skipna : bool = False
+    ):
+        x = get_clean_interp_index(self, dim)
+        order = int(deg) + 1
+        lhs = np.vander(x, order, increasing=True)
+
+        dims_to_stack = [dimname for dimname in self.dims if dimname != dim]
+        stacked_dim = utils.get_temp_dimname(dims_to_stack, 'stacked')
+        rhs = self.transpose(dim, *dims_to_stack).stack({stacked_dim: dims_to_stack})
+
+        if rcond is None:
+            rcond = x.shape[0] * np.core.finfo(x.dtype).eps
+
+        # Weights:
+        if w is not None:
+            if isinstance(w, Hashable):
+                w = self[w]
+            w = np.asarray(w)
+            if w.ndim != 1:
+                raise TypeError("Expected a 1-d array for weights.")
+            if w.shape[0] != lhs.shape[0]:
+                raise TypeError("Expected w and {} to have the same length".format(dim))
+            lhs *= w[:, np.newaxis]
+            rhs *= w[:, np.newaxis]
+
+        # Scaling
+        scale = np.sqrt((lhs * lhs).sum(axis=0))
+        lhs /= scale
+
+        coeffs, residuals = duck_array_ops.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
+
+        degree_dim = utils.get_temp_dimname(dims_to_stack, 'degree')
+        coeffs = DataArray(coeffs / scale[:, np.newaxis], dims=(degree_dim, stacked_dim),
+                           coords={degree_dim: np.arange(order),
+                                   stacked_dim: rhs[stacked_dim]},
+                           name=(self.name or '') + '_polyfit_coefficients'
+                           ).unstack(stacked_dim)
+
+        rank = np.linalg.matrix_rank(lhs)
+        if rank != order and not full:
+            warnings.warn("Polyfit may be poorly conditioned", np.RankWarning, stacklevel=4)
+
+        if full or (cov is True):
+            residuals = DataArray(residuals, dims=(stacked_dim), coords={stacked_dim: rhs[stacked_dim]},
+                                  name=(self.name or '') + '_polyfit_residuals'
+                                  ).unstack(stacked_dim)
+        if full:
+            sing = np.linalg.svd(lhs, compute_uv=False)
+            sing = DataArray(sing, dims=(degree_dim,), coords={degree_dim: np.arange(order)},
+                             name=(self.name or '') + '_polyfit_singular_values')
+            return coeffs, residuals, rank, sing, rcond
+        if cov:
+            Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
+            Vbase /= np.outer(scale, scale)
+            if cov == 'unscaled':
+                fac = 1
+            else:
+                if x.shape[0] <= order:
+                    raise ValueError("The number of data points must exceed order to scale the covariance matrix.")
+                fac = residuals / (x.shape[0] - order)
+            covariance = DataArray(Vbase, dims=('cov_i', 'cov_j'), name=(self.name or '') + '_polyfit_covariance') * fac
+            return coeffs, covariance
+        return coeffs
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
+
+
+def polyval(
+    coord : Union["DataArray", Any],
+    coefficients : Union["DataArray", Any],
+    degree_dim : Union[str, int] = 'degree'
+) -> "DataArray" :
+    if not isinstance(coord, DataArray):
+        coord = DataArray(coord, dims=('x',), name='x')
+    x = get_clean_interp_index(coord, coord.name)
+
+    if isinstance(degree_dim, str):
+        deg_coord = coefficients[degree_dim]
+    else:  # Axis number
+        if isinstance(coefficients, DataArray):
+            deg_coord = coefficients[coefficients.dims[degree_dim]]
+        else:
+            deg_coord = np.arange(coefficients.shape[degree_dim])
+
+    lhs = DataArray(np.vander(x, int(deg_coord.max()) + 1, increasing=True),
+                    dims=(coord.name, degree_dim),
+                    coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)})
+    return (lhs * coefficients).sum(degree_dim)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs

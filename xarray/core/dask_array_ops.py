@@ -95,3 +95,15 @@ def rolling_window(a, axis, window, center, fill_value):
     # crop boundary.
     index = (slice(None),) * axis + (slice(drop_size, drop_size + orig_shape[axis]),)
     return out[index]
+
+
+def least_squares(lhs, rhs, rcond=None, skipna=False):
+    import dask.array as da
+    lhs_da = da.from_array(lhs, chunks=(rhs.chunks[0], lhs.shape[1]))
+    if skipna:
+        results = da.apply_along_axis(nputils._nanpolyfit_1d, 0, rhs.data, lhs_da.data, dtype=float, shape=(lhs.shape[1] + 1,), rcond=rcond)
+        coeffs = results[:-1, ...]
+        residuals = results[-1, ...]
+    else:
+        coeffs, residuals, _, _ = da.linalg.lstsq(lhs_da.data, rhs.data)
+    return coeffs, residuals
