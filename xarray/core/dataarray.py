@@ -3238,20 +3238,20 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def polyfit(
         self,
-        dim : Hashable,
-        deg : int,
-        rcond : float = None,
-        w : Union[Hashable, Any] = None,
-        full : bool = False,
-        cov : bool = False,
-        skipna : bool = False
+        dim: Hashable,
+        deg: int,
+        rcond: float = None,
+        w: Union[Hashable, Any] = None,
+        full: bool = False,
+        cov: bool = False,
+        skipna: bool = False,
     ):
         x = get_clean_interp_index(self, dim)
         order = int(deg) + 1
         lhs = np.vander(x, order, increasing=True)
 
         dims_to_stack = [dimname for dimname in self.dims if dimname != dim]
-        stacked_dim = utils.get_temp_dimname(dims_to_stack, 'stacked')
+        stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
         rhs = self.transpose(dim, *dims_to_stack).stack({stacked_dim: dims_to_stack})
 
         if rcond is None:
@@ -3273,38 +3273,64 @@ class DataArray(AbstractArray, DataWithCoords):
         scale = np.sqrt((lhs * lhs).sum(axis=0))
         lhs /= scale
 
-        coeffs, residuals = duck_array_ops.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
+        coeffs, residuals = duck_array_ops.least_squares(
+            lhs, rhs, rcond=rcond, skipna=skipna
+        )
 
-        degree_dim = utils.get_temp_dimname(dims_to_stack, 'degree')
-        coeffs = DataArray(coeffs / scale[:, np.newaxis], dims=(degree_dim, stacked_dim),
-                           coords={degree_dim: np.arange(order),
-                                   stacked_dim: rhs[stacked_dim]},
-                           name=(self.name or '') + '_polyfit_coefficients'
-                           ).unstack(stacked_dim)
+        if self.name:
+            name = "{}_".format(self.name)
+        else:
+            name = ""
+
+        degree_dim = utils.get_temp_dimname(dims_to_stack, "degree")
+        coeffs = DataArray(
+            coeffs / scale[:, np.newaxis],
+            dims=(degree_dim, stacked_dim),
+            coords={degree_dim: np.arange(order), stacked_dim: rhs[stacked_dim]},
+            name=name + "_polyfit_coefficients",
+        ).unstack(stacked_dim)
 
         rank = np.linalg.matrix_rank(lhs)
         if rank != order and not full:
-            warnings.warn("Polyfit may be poorly conditioned", np.RankWarning, stacklevel=4)
+            warnings.warn(
+                "Polyfit may be poorly conditioned", np.RankWarning, stacklevel=4
+            )
 
         if full or (cov is True):
-            residuals = DataArray(residuals, dims=(stacked_dim), coords={stacked_dim: rhs[stacked_dim]},
-                                  name=(self.name or '') + '_polyfit_residuals'
-                                  ).unstack(stacked_dim)
+            residuals = DataArray(
+                residuals,
+                dims=(stacked_dim),
+                coords={stacked_dim: rhs[stacked_dim]},
+                name=name + "_polyfit_residuals",
+            ).unstack(stacked_dim)
         if full:
             sing = np.linalg.svd(lhs, compute_uv=False)
-            sing = DataArray(sing, dims=(degree_dim,), coords={degree_dim: np.arange(order)},
-                             name=(self.name or '') + '_polyfit_singular_values')
+            sing = DataArray(
+                sing,
+                dims=(degree_dim,),
+                coords={degree_dim: np.arange(order)},
+                name=name + "_polyfit_singular_values",
+            )
             return coeffs, residuals, rank, sing, rcond
         if cov:
             Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
             Vbase /= np.outer(scale, scale)
-            if cov == 'unscaled':
+            if cov == "unscaled":
                 fac = 1
             else:
                 if x.shape[0] <= order:
-                    raise ValueError("The number of data points must exceed order to scale the covariance matrix.")
+                    raise ValueError(
+                        "The number of data points must exceed order to scale the covariance matrix."
+                    )
                 fac = residuals / (x.shape[0] - order)
-            covariance = DataArray(Vbase, dims=('cov_i', 'cov_j'), name=(self.name or '') + '_polyfit_covariance') * fac
+            covariance = (
+                DataArray(
+                    Vbase,
+                    dims=("cov_i", "cov_j"),
+                    name=name + "_polyfit_covariance",
+                )
+                * fac
+            )
             return coeffs, covariance
         return coeffs
 
@@ -3314,12 +3340,12 @@ class DataArray(AbstractArray, DataWithCoords):
 
 
 def polyval(
-    coord : Union["DataArray", Any],
-    coefficients : Union["DataArray", Any],
-    degree_dim : Union[str, int] = 'degree'
-) -> "DataArray" :
+    coord: Union["DataArray", Any],
+    coefficients: Union["DataArray", Any],
+    degree_dim: Union[str, int] = "degree",
+) -> "DataArray":
     if not isinstance(coord, DataArray):
-        coord = DataArray(coord, dims=('x',), name='x')
+        coord = DataArray(coord, dims=("x",), name="x")
     x = get_clean_interp_index(coord, coord.name)
 
     if isinstance(degree_dim, str):
@@ -3330,9 +3356,11 @@ def polyval(
         else:
             deg_coord = np.arange(coefficients.shape[degree_dim])
 
-    lhs = DataArray(np.vander(x, int(deg_coord.max()) + 1, increasing=True),
-                    dims=(coord.name, degree_dim),
-                    coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)})
+    lhs = DataArray(
+        np.vander(x, int(deg_coord.max()) + 1, increasing=True),
+        dims=(coord.name, degree_dim),
+        coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)},
+    )
     return (lhs * coefficients).sum(degree_dim)
 
 
