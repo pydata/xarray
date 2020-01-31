@@ -4155,45 +4155,28 @@ class TestDataArray:
     def test_polyfit(self):
         x = np.arange(10)
         da = DataArray(
-            np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
+            np.stack((1.0 + 1.0 * x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
             dims=("d", "x"),
             coords={"x": x, "d": [0, 1]},
         )
         coeffs = da.polyfit("x", 2)
         expected = DataArray(
-            [[1, 1, 2], [1, 2, 3]],
+            [[2, 1, 1], [3, 2, 1]],
             dims=("d", "degree"),
-            coords={"degree": [0, 1, 2], "d": [0, 1]},
+            coords={"degree": [2, 1, 0], "d": [0, 1]},
         ).T
         assert_allclose(coeffs, expected)
 
         # With NaN
         da[0, 1] = np.nan
-        coeffs = da.polyfit("x", 2)
-        expected_na = DataArray(
-            [[np.nan, np.nan, np.nan], [1, 2, 3]],
-            dims=("d", "degree"),
-            coords={"degree": [0, 1, 2], "d": [0, 1]},
-        ).T
-        assert_allclose(coeffs, expected_na)
+        coeffs = da.polyfit("x", 2, skipna=True)
+        assert_allclose(coeffs, expected)
 
         # Skipna + Full output
         coeffs, resids, rank, sing, rcond = da.polyfit("x", 2, skipna=True, full=True)
         assert_allclose(coeffs, expected)
         assert rank == np.linalg.matrix_rank(np.vander(x, 3))
         np.testing.assert_almost_equal(resids, [0, 0])
-
-
-def test_polyval():
-    x = np.arange(10)
-    da = DataArray(
-        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
-        dims=("d", "x"),
-        coords={"x": x, "d": [0, 1]},
-    )
-    coeffs = da.polyfit("x", 2)
-    da_pv = xr.core.dataarray.polyval(da.x, coeffs)
-    assert_allclose(da, da_pv.T)
 
 
 @pytest.fixture(params=[1])

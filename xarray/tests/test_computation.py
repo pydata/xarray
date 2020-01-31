@@ -1120,3 +1120,15 @@ def test_where():
     actual = xr.where(cond, 1, 0)
     expected = xr.DataArray([1, 0], dims="x")
     assert_identical(expected, actual)
+
+
+def test_polyval():
+    x = np.arange(10)
+    da = xr.DataArray(
+        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
+        dims=("d", "x"),
+        coords={"x": x, "d": [0, 1]},
+    )
+    coeffs = da.polyfit("x", 2)
+    da_pv = xr.polyval(da.x, coeffs)
+    xr.testing.assert_allclose(da, da_pv.T)

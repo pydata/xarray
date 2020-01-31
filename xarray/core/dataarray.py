@@ -3241,12 +3241,28 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         dim: Hashable,
         deg: int,
+        skipna: bool = None,
         rcond: float = None,
         w: Union[Hashable, Any] = None,
         full: bool = False,
         cov: bool = False,
-        skipna: bool = None,
     ):
+        """Least squares polynomial fit.
+
+        This replicates the behaviour of `numpy.polyfit` but differs by skipping
+        invalid values when `skipna = True`.
+
+        Parameters
+        ----------
+        dim : hashable
+            Coordinate along which to fit the polynomials.
+        skipna : bool, optional
+            If True, removes all invalid values before fitting each 1D slices of the array
+            Defaults is True if data is stored in as dask.array or if there is any
+            invalid values, False otherwise.
+
+        Documentation of `numpy.polyfit` follows:
+        """
         if skipna is None:
             if isinstance(self.data, pycompat.dask_array_type):
                 skipna = True
@@ -3255,7 +3271,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         x = get_clean_interp_index(self, dim)
         order = int(deg) + 1
-        lhs = np.vander(x, order, increasing=True)
+        lhs = np.vander(x, order)
 
         dims_to_stack = [dimname for dimname in self.dims if dimname != dim]
         stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
@@ -3293,7 +3309,7 @@ class DataArray(AbstractArray, DataWithCoords):
         coeffs = DataArray(
             coeffs / scale[:, np.newaxis],
             dims=(degree_dim, stacked_dim),
-            coords={degree_dim: np.arange(order), stacked_dim: rhs[stacked_dim]},
+            coords={degree_dim: np.arange(order)[::-1], stacked_dim: rhs[stacked_dim]},
             name=name + "_polyfit_coefficients",
         ).unstack(stacked_dim)
 
@@ -3315,7 +3331,7 @@ class DataArray(AbstractArray, DataWithCoords):
             sing = DataArray(
                 sing,
                 dims=(degree_dim,),
-                coords={degree_dim: np.arange(order)},
+                coords={degree_dim: np.arange(order)[::-1]},
                 name=name + "_polyfit_singular_values",
             )
             return coeffs, residuals, rank, sing, rcond
@@ -3344,29 +3360,7 @@ class DataArray(AbstractArray, DataWithCoords):
     str = property(StringAccessor)
 
 
-def polyval(
-    coord: Union["DataArray", Any],
-    coefficients: Union["DataArray", Any],
-    degree_dim: Union[str, int] = "degree",
-) -> "DataArray":
-    if not isinstance(coord, DataArray):
-        coord = DataArray(coord, dims=("x",), name="x")
-    x = get_clean_interp_index(coord, coord.name)
-
-    if isinstance(degree_dim, str):
-        deg_coord = coefficients[degree_dim]
-    else:  # Axis number
-        if isinstance(coefficients, DataArray):
-            deg_coord = coefficients[coefficients.dims[degree_dim]]
-        else:
-            deg_coord = np.arange(coefficients.shape[degree_dim])
-
-    lhs = DataArray(
-        np.vander(x, int(deg_coord.max()) + 1, increasing=True),
-        dims=(coord.name, degree_dim),
-        coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)},
-    )
-    return (lhs * coefficients).sum(degree_dim)
+DataArray.polyfit.__doc__ += np.polyfit.__doc__
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
