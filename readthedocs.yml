@@ -6,8 +6,4 @@ build:
 conda:
     environment: ci/requirements/doc.yml
 
-python:
-    version: 3.7
-    install: []
-
 formats: []
