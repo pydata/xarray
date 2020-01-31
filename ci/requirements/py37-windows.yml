@@ -26,7 +26,7 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy<1.18  # FIXME https://github.com/pydata/xarray/issues/3409
+  - numpy
   - pandas
   - pint
   - pip
