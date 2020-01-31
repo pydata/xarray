@@ -3356,7 +3356,8 @@ class DataArray(AbstractArray, DataWithCoords):
             return coeffs, covariance
         return coeffs
 
-    polyfit.__doc__ += np.polyfit.__doc__
+    if polyfit.__doc__ is not None:
+        polyfit.__doc__ += np.polyfit.__doc__
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
