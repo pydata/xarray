@@ -231,7 +231,7 @@ def _nanpolyfit_1d(arr, x, rcond=None):
 def least_squares(lhs, rhs, rcond=None, skipna=False):
     if skipna:
         nan_cols = np.any(np.isnan(rhs.data), axis=0)
-        out = np.empty((lhs.shape + 1, rhs.data.shape[1]))
+        out = np.empty((lhs.shape[1] + 1, rhs.data.shape[1]))
         out[:, nan_cols] = np.apply_along_axis(
             _nanpolyfit_1d, 0, rhs.data[:, nan_cols], lhs
         )
