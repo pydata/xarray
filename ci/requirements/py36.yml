@@ -20,7 +20,7 @@ dependencies:
   - hypothesis
   - iris
   - isort
-  - lxml    # optional dep of pydap
+  - lxml    # Optional dep of pydap
   - matplotlib
   - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis
