@@ -1,3 +1,4 @@
+import datetime
 import functools
 import warnings
 from numbers import Number
@@ -18,7 +19,6 @@ from typing import (
     cast,
 )
 
-import datetime
 import numpy as np
 import pandas as pd
 
@@ -3247,7 +3247,8 @@ class DataArray(AbstractArray, DataWithCoords):
         full: bool = False,
         cov: bool = False,
     ):
-        """Least squares polynomial fit.
+        """
+        Least squares polynomial fit.
 
         This replicates the behaviour of `numpy.polyfit` but differs by skipping
         invalid values when `skipna = True`.
@@ -3355,12 +3356,11 @@ class DataArray(AbstractArray, DataWithCoords):
             return coeffs, covariance
         return coeffs
 
+    polyfit.__doc__ += np.polyfit.__doc__
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
-
-
-DataArray.polyfit.__doc__ += np.polyfit.__doc__
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
