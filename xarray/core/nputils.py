@@ -229,14 +229,19 @@ def _nanpolyfit_1d(arr, x, rcond=None):
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
-    coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs.data, rcond=rcond)
     if skipna:
-        nan_cols = np.nonzero(np.isnan(coeffs[0, :]))[0]
-        out = np.apply_along_axis(
-            _nanpolyfit_1d, 0, rhs.data[:, nan_cols], lhs, rcond=rcond
+        nan_cols = np.any(np.isnan(rhs.data), axis=0)
+        out = np.empty((lhs.shape + 1, rhs.data.shape[1]))
+        out[:, nan_cols] = np.apply_along_axis(
+            _nanpolyfit_1d, 0, rhs.data[:, nan_cols], lhs
         )
-        coeffs[:, nan_cols] = out[:-1, :]
-        residuals[nan_cols] = out[-1, :]
+        out[:-1, ~nan_cols], out[-1, ~nan_cols], _, _ = np.linalg.lstsq(
+            lhs, rhs.data[:, ~nan_cols], rcond=rcond
+        )
+        coeffs = out[:-1, :]
+        residuals = out[-1, :]
+    else:
+        coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs.data, rcond=rcond)
     return coeffs, residuals
 
 
