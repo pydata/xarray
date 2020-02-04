@@ -29,7 +29,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
-  (:issue:`3748`). By `Joseph K Aicher <https://github.com/jaicher>`_.
+  (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
+  <https://github.com/jaicher>`_.
 
 Documentation
 ~~~~~~~~~~~~~
