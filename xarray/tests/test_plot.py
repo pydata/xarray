@@ -277,11 +277,11 @@ class TestPlot(PlotTestCase):
         # check we actually changed the set_bad color
         assert cmap._rgba_bad != mpl.cm.viridis._rgba_bad
 
-        cmap.set_under("w")
+        cmap.set_under("r")
         # check we actually changed the set_under color
         assert cmap._rgba_under != mpl.cm.viridis._rgba_under
 
-        cmap.set_over("w")
+        cmap.set_over("g")
         # check we actually changed the set_over color
         assert cmap._rgba_over != mpl.cm.viridis._rgba_over
 
