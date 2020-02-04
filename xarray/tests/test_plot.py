@@ -273,6 +273,22 @@ class TestPlot(PlotTestCase):
 
         cmap = deepcopy(mpl.cm.viridis)
 
+        pl = a.plot.contourf(cmap=deepcopy(cmap))
+
+        # check the set_bad color
+        assert pl.cmap._rgba_bad == cmap._rgba_bad
+
+        # check the set_under color
+        assert pl.cmap._rgba_under == cmap._rgba_under
+
+        # check the set_over color
+        assert pl.cmap._rgba_over == cmap._rgba_over
+
+    def test_contourf_cmap_set_with_bad_under_over(self):
+        a = DataArray(easy_array((4, 4)), dims=["z", "time"])
+
+        cmap = deepcopy(mpl.cm.viridis)
+
         cmap.set_bad("w")
         # check we actually changed the set_bad color
         assert cmap._rgba_bad != mpl.cm.viridis._rgba_bad
