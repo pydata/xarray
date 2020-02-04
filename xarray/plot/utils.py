@@ -98,11 +98,22 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     # copy the old cmap name, for easier testing
     new_cmap.name = getattr(cmap, "name", cmap)
 
-    # copy colors to use for bad, under, and over values in case they have been set to
-    # non-default values
-    new_cmap._rgba_bad = getattr(cmap, "_rgba_bad", new_cmap._rgba_bad)
-    new_cmap._rgba_under = getattr(cmap, "_rgba_under", new_cmap._rgba_under)
-    new_cmap._rgba_over = getattr(cmap, "_rgba_over", new_cmap._rgba_over)
+    # copy colors to use for bad, under, and over values in case they have been
+    # set to non-default values
+    try:
+        # matplotlib<3.2 only uses bad color for masked values
+        bad = cmap(np.ma.masked_invalid([np.nan]))[0]
+    except TypeError:
+        # cmap was a str or list rather than a color-map object, so there are
+        # no bad, under or over values to check or copy
+        pass
+    else:
+        under = cmap(-np.inf)
+        over = cmap(np.inf)
+
+        new_cmap.set_bad(bad)
+        new_cmap.set_under(under)
+        new_cmap.set_over(over)
 
     return new_cmap, cnorm
 
