@@ -4778,3 +4778,14 @@ def test_weakref():
     a = DataArray(1)
     r = ref(a)
     assert r() is a
+
+
+def test_swap_dims_index_name():
+    """ Test that swap dims names indexes correctly. Github issue #3748
+    """
+    x = xr.DataArray([1], {"idx": [2], "y": ("idx", [3])}, ["idx"], name="x")
+    x_swap = x.swap_dims({"idx": "y"})
+    np.testing.assert_equal(x["y"].values, x_swap["y"].values)
+    np.testing.assert_equal(x["idx"].values, x_swap["idx"].values)
+    for dim_name, index in x_swap.indexes.items():
+        assert dim_name == index.name
