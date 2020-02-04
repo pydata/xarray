@@ -1,6 +1,6 @@
 import inspect
 from datetime import datetime
-from copy import copy
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -271,7 +271,7 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
-        cmap = copy(mpl.cm.viridis)
+        cmap = deepcopy(mpl.cm.viridis)
 
         cmap.set_bad("w")
         # check we actually changed the set_bad color
@@ -285,7 +285,7 @@ class TestPlot(PlotTestCase):
         # check we actually changed the set_over color
         assert cmap._rgba_over != mpl.cm.viridis._rgba_over
 
-        pl = a.plot.contourf(cmap=copy(cmap))
+        pl = a.plot.contourf(cmap=deepcopy(cmap))
 
         # check the set_bad color has been kept
         assert pl.cmap._rgba_bad == cmap._rgba_bad
