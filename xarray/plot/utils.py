@@ -112,8 +112,15 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
         over = cmap(np.inf)
 
         new_cmap.set_bad(bad)
-        new_cmap.set_under(under)
-        new_cmap.set_over(over)
+
+        # Only update under and over if they were explicitly changed by the user
+        # (i.e. are different from the lowest or highest values in cmap). Otherwise
+        # leave unchanged so new_cmap uses its default values (its own lowest and
+        # highest values).
+        if under != cmap(0):
+            new_cmap.set_under(under)
+        if over != cmap(cmap.N - 1):
+            new_cmap.set_over(over)
 
     return new_cmap, cnorm
 
