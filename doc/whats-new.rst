@@ -34,6 +34,10 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Removed the internal ``import_seaborn`` function which handled the deprecation of
+  the ``seaborn.apionly`` entry point (:issue:`3747`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
 .. _whats-new.0.15.0:
 
 
