@@ -269,8 +269,7 @@ class TestPlot(PlotTestCase):
         a.plot.contourf(x="depth", y="time")
 
     def test_contourf_cmap_set(self):
-        sz = (4, 4)
-        a = DataArray(easy_array(sz), dims=["z", "time"])
+        a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
         cmap = copy(mpl.cm.viridis)
 
