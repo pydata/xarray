@@ -1,6 +1,6 @@
-from distutils.version import LooseVersion
 import operator
 import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
