@@ -12,7 +12,7 @@ using the visualization `built in to pandas itself`__ or provided by the pandas
 aware libraries such as `Seaborn`__.
 
 __ http://pandas.pydata.org/pandas-docs/stable/visualization.html
-__ http://stanford.edu/~mwaskom/software/seaborn/
+__ http://seaborn.pydata.org/
 
 .. ipython:: python
     :suppress:

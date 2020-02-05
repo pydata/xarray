@@ -21,26 +21,6 @@ except ImportError:
 ROBUST_PERCENTILE = 2.0
 
 
-def import_seaborn():
-    """import seaborn and handle deprecation of apionly module"""
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        try:
-            import seaborn.apionly as sns
-
-            if (
-                w
-                and issubclass(w[-1].category, UserWarning)
-                and ("seaborn.apionly module" in str(w[-1].message))
-            ):
-                raise ImportError
-        except ImportError:
-            import seaborn as sns
-        finally:
-            warnings.resetwarnings()
-    return sns
-
-
 _registered = False
 
 
@@ -119,7 +99,7 @@ def _color_palette(cmap, n_colors):
         except ValueError:
             # ValueError happens when mpl doesn't like a colormap, try seaborn
             try:
-                from seaborn.apionly import color_palette
+                from seaborn import color_palette
 
                 pal = color_palette(cmap, n_colors=n_colors)
             except (ValueError, ImportError):
