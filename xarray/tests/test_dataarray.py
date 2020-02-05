@@ -1536,11 +1536,30 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
 
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
+
+        # multiindex case
+        idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
+        array = DataArray(np.random.randn(3), {"y": ("x", idx)}, "x")
+        expected = DataArray(array.values, {"y": idx}, "y")
+        actual = array.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
 
     def test_expand_dims_error(self):
         array = DataArray(
@@ -4778,14 +4797,3 @@ def test_weakref():
     a = DataArray(1)
     r = ref(a)
     assert r() is a
-
-
-def test_swap_dims_index_name():
-    """ Test that swap dims names indexes correctly. Github issue #3748
-    """
-    x = xr.DataArray([1], {"idx": [2], "y": ("idx", [3])}, ["idx"], name="x")
-    x_swap = x.swap_dims({"idx": "y"})
-    np.testing.assert_equal(x["y"].values, x_swap["y"].values)
-    np.testing.assert_equal(x["idx"].values, x_swap["idx"].values)
-    for dim_name, index in x_swap.indexes.items():
-        assert dim_name == index.name
