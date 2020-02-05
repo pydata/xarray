@@ -14,7 +14,6 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
-    import_seaborn,
     label_from_attrs,
 )
 
@@ -2116,22 +2115,6 @@ class TestNcAxisNotInstalled(PlotTestCase):
     def test_ncaxis_notinstalled_line_plot(self):
         with raises_regex(ImportError, "optional `nc-time-axis`"):
             self.darray.plot.line()
-
-
-@requires_seaborn
-def test_import_seaborn_no_warning():
-    # GH1633
-    with pytest.warns(None) as record:
-        import_seaborn()
-    assert len(record) == 0
-
-
-@requires_matplotlib
-def test_plot_seaborn_no_import_warning():
-    # GH1633
-    with pytest.warns(None) as record:
-        _color_palette("Blues", 4)
-    assert len(record) == 0
 
 
 test_da_list = [
