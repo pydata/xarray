@@ -1723,7 +1723,7 @@ class Variable(
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
 
@@ -1735,10 +1735,6 @@ class Variable(
         scalar = utils.is_scalar(q)
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
 
-        # TODO: remove once numpy >= 1.15.0 is the minimum requirement
-        if np.count_nonzero(q < 0.0) or np.count_nonzero(q > 1.0):
-            raise ValueError("Quantiles must be in the range [0, 1]")
-
         if dim is None:
             dim = self.dims
 
@@ -1747,9 +1743,7 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-
-            # TODO: use np.nanquantile once numpy >= 1.15.0 is the minimum requirement
-            return np.moveaxis(np.nanpercentile(npa, **kwargs), 0, -1)
+            return np.moveaxis(np.nanquantile(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
         result = apply_ufunc(
@@ -1761,7 +1755,7 @@ class Variable(
             output_dtypes=[np.float64],
             output_sizes={"quantile": len(q)},
             dask="parallelized",
-            kwargs={"q": q * 100, "axis": axis, "interpolation": interpolation},
+            kwargs={"q": q, "axis": axis, "interpolation": interpolation},
         )
 
         # for backward compatibility

@@ -583,7 +583,6 @@
    CFTimeIndex.factorize
    CFTimeIndex.fillna
    CFTimeIndex.format
-   CFTimeIndex.get_duplicates
    CFTimeIndex.get_indexer
    CFTimeIndex.get_indexer_for
    CFTimeIndex.get_indexer_non_unique
@@ -591,7 +590,6 @@
    CFTimeIndex.get_loc
    CFTimeIndex.get_slice_bound
    CFTimeIndex.get_value
-   CFTimeIndex.get_values
    CFTimeIndex.groupby
    CFTimeIndex.holds_integer
    CFTimeIndex.identical
@@ -603,7 +601,6 @@
    CFTimeIndex.is_floating
    CFTimeIndex.is_integer
    CFTimeIndex.is_interval
-   CFTimeIndex.is_lexsorted_for_tuple
    CFTimeIndex.is_mixed
    CFTimeIndex.is_numeric
    CFTimeIndex.is_object
@@ -635,7 +632,6 @@
    CFTimeIndex.sort_values
    CFTimeIndex.sortlevel
    CFTimeIndex.strftime
-   CFTimeIndex.summary
    CFTimeIndex.symmetric_difference
    CFTimeIndex.take
    CFTimeIndex.to_datetimeindex
@@ -656,16 +652,12 @@
    CFTimeIndex.T
    CFTimeIndex.array
    CFTimeIndex.asi8
-   CFTimeIndex.base
-   CFTimeIndex.data
    CFTimeIndex.date_type
    CFTimeIndex.day
    CFTimeIndex.dayofweek
    CFTimeIndex.dayofyear
    CFTimeIndex.dtype
-   CFTimeIndex.dtype_str
    CFTimeIndex.empty
-   CFTimeIndex.flags
    CFTimeIndex.has_duplicates
    CFTimeIndex.hasnans
    CFTimeIndex.hour
@@ -675,7 +667,6 @@
    CFTimeIndex.is_monotonic_increasing
    CFTimeIndex.is_monotonic_decreasing
    CFTimeIndex.is_unique
-   CFTimeIndex.itemsize
    CFTimeIndex.microsecond
    CFTimeIndex.minute
    CFTimeIndex.month
@@ -687,7 +678,6 @@
    CFTimeIndex.second
    CFTimeIndex.shape
    CFTimeIndex.size
-   CFTimeIndex.strides
    CFTimeIndex.values
    CFTimeIndex.year
 

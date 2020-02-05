@@ -430,7 +430,14 @@ class CFTimeIndex(pd.Index):
         import cftime
 
         if isinstance(other, (CFTimeIndex, cftime.datetime)):
-            return pd.TimedeltaIndex(np.array(self) - np.array(other))
+            try:
+                return pd.TimedeltaIndex(np.array(self) - np.array(other))
+            except OverflowError:
+                raise ValueError(
+                    "The time difference exceeds the range of values "
+                    "that can be expressed at the nanosecond resolution."
+                )
+
         elif isinstance(other, pd.TimedeltaIndex):
             return CFTimeIndex(np.array(self) - other.to_pytimedelta())
         else:

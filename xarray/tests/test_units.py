@@ -1830,7 +1830,10 @@ class TestVariable(VariableSubclassobjects):
         "func",
         (
             method("coarsen", windows={"y": 2}, func=np.mean),
-            method("quantile", q=[0.25, 0.75]),
+            pytest.param(
+                method("quantile", q=[0.25, 0.75]),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
             pytest.param(
                 method("rank", dim="x"),
                 marks=pytest.mark.xfail(reason="rank not implemented for non-ndarray"),
@@ -3391,7 +3394,10 @@ class TestDataArray:
             method("diff", dim="x"),
             method("differentiate", coord="x"),
             method("integrate", dim="x"),
-            method("quantile", q=[0.25, 0.75]),
+            pytest.param(
+                method("quantile", q=[0.25, 0.75]),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
             method("reduce", func=np.sum, dim="x"),
             pytest.param(
                 lambda x: x.dot(x),
@@ -3481,7 +3487,10 @@ class TestDataArray:
             method("assign_coords", z=(["x"], np.arange(5) * unit_registry.s)),
             method("first"),
             method("last"),
-            method("quantile", q=np.array([0.25, 0.5, 0.75]), dim="x"),
+            pytest.param(
+                method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
         ),
         ids=repr,
     )
@@ -4919,7 +4928,10 @@ class TestDataset:
             method("diff", dim="x"),
             method("differentiate", coord="x"),
             method("integrate", coord="x"),
-            method("quantile", q=[0.25, 0.75]),
+            pytest.param(
+                method("quantile", q=[0.25, 0.75]),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
             method("reduce", func=np.sum, dim="x"),
             method("map", np.fabs),
         ),
@@ -5029,7 +5041,10 @@ class TestDataset:
             method("assign_coords", v=("x", np.arange(10) * unit_registry.s)),
             method("first"),
             method("last"),
-            method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
+            pytest.param(
+                method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
         ),
         ids=repr,
     )
