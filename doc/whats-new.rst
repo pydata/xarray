@@ -24,6 +24,9 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
+  v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Bug fixes
 ~~~~~~~~~
