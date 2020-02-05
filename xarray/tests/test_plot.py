@@ -271,8 +271,9 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
-        cmap = deepcopy(mpl.cm.viridis)
+        cmap = mpl.cm.viridis
 
+        # deepcopy to ensure cmap is not changed by contourf()
         pl = a.plot.contourf(cmap=deepcopy(cmap))
 
         # check the set_bad color
@@ -287,6 +288,9 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set_with_bad_under_over(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
+        # Make a copy here because we want a local cmap that we will modify.
+        # Use deepcopy because matplotlib Colormap objects have tuple members
+        # and we want to ensure we do not change the original.
         cmap = deepcopy(mpl.cm.viridis)
 
         cmap.set_bad("w")
@@ -301,6 +305,7 @@ class TestPlot(PlotTestCase):
         # check we actually changed the set_over color
         assert cmap._rgba_over != mpl.cm.viridis._rgba_over
 
+        # deepcopy to ensure cmap is not changed by contourf()
         pl = a.plot.contourf(cmap=deepcopy(cmap))
 
         # check the set_bad color has been kept
