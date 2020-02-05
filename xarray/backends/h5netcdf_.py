@@ -1,4 +1,5 @@
 import functools
+from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -117,6 +118,7 @@ class H5NetCDFStore(WritableCFDataStore):
         lock=None,
         autoclose=False,
         invalid_netcdf=None,
+        phony_dims=None,
     ):
         import h5netcdf
 
@@ -124,6 +126,14 @@ class H5NetCDFStore(WritableCFDataStore):
             raise ValueError("invalid format for h5netcdf backend")
 
         kwargs = {"invalid_netcdf": invalid_netcdf}
+        if phony_dims is not None:
+            if LooseVersion(h5netcdf.__version__) >= LooseVersion("0.8.0"):
+                kwargs["phony_dims"] = phony_dims
+            else:
+                raise (
+                    "h5netcdf backend keyword argument 'phony_dims' needs "
+                    "h5netcdf >= 0.8.0."
+                )
 
         if lock is None:
             if mode == "r":
