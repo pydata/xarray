@@ -2025,6 +2025,43 @@ class TestVariable(VariableSubclassobjects):
 
         assert expected == actual
 
+    def test_pad(self, dtype):
+        data = np.arange(4 * 3 * 2).reshape(4, 3, 2).astype(dtype) * unit_registry.m
+        v = xr.Variable(["x", "y", "z"], data)
+
+        xr_args = [{"x": (2, 1)}, {"y": (0, 3)}, {"x": (3, 1), "z": (2, 0)}]
+        np_args = [
+            ((2, 1), (0, 0), (0, 0)),
+            ((0, 0), (0, 3), (0, 0)),
+            ((3, 1), (0, 0), (2, 0)),
+        ]
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            actual = v.pad_with_fill_value(**xr_arg)
+            expected = xr.Variable(
+                v.dims,
+                np.pad(
+                    v.data.astype(float),
+                    np_arg,
+                    mode="constant",
+                    constant_values=np.nan,
+                ),
+            )
+            xr.testing.assert_identical(expected, actual)
+            assert_units_equal(expected, actual)
+            assert isinstance(actual._data, type(v._data))
+
+        # for the boolean array, we pad False
+        data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)
+        v = xr.Variable(["x", "y", "z"], data)
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            actual = v.pad_with_fill_value(fill_value=data.flat[0], **xr_arg)
+            expected = xr.Variable(
+                v.dims,
+                np.pad(v.data, np_arg, mode="constant", constant_values=v.data.flat[0]),
+            )
+            xr.testing.assert_identical(actual, expected)
+            assert_units_equal(expected, actual)
+
     @pytest.mark.parametrize(
         "unit,error",
         (
