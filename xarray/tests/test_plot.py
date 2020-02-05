@@ -284,13 +284,16 @@ class TestPlot(PlotTestCase):
         pl = a.plot.contourf(cmap=deepcopy(cmap), vmin=0.1, vmax=0.9)
 
         # check the set_bad color
-        assert pl.cmap._rgba_bad == cmap._rgba_bad
+        assert np.all(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
+            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        )
 
         # check the set_under color
-        assert pl.cmap._rgba_under == cmap._rgba_under
+        assert pl.cmap(-np.inf) == cmap(-np.inf)
 
         # check the set_over color
-        assert pl.cmap._rgba_over == cmap._rgba_over
+        assert pl.cmap(np.inf) == cmap(np.inf)
 
     def test_contourf_cmap_set_with_bad_under_over(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
@@ -302,27 +305,33 @@ class TestPlot(PlotTestCase):
 
         cmap.set_bad("w")
         # check we actually changed the set_bad color
-        assert cmap._rgba_bad != mpl.cm.viridis._rgba_bad
+        assert np.all(
+            cmap(np.ma.masked_invalid([np.nan]))[0]
+            != mpl.cm.viridis(np.ma.masked_invalid([np.nan]))[0]
+        )
 
         cmap.set_under("r")
         # check we actually changed the set_under color
-        assert cmap._rgba_under != mpl.cm.viridis._rgba_under
+        assert cmap(-np.inf) != mpl.cm.viridis(-np.inf)
 
         cmap.set_over("g")
         # check we actually changed the set_over color
-        assert cmap._rgba_over != mpl.cm.viridis._rgba_over
+        assert cmap(np.inf) != mpl.cm.viridis(-np.inf)
 
         # deepcopy to ensure cmap is not changed by contourf()
         pl = a.plot.contourf(cmap=deepcopy(cmap))
 
         # check the set_bad color has been kept
-        assert pl.cmap._rgba_bad == cmap._rgba_bad
+        assert np.all(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
+            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        )
 
         # check the set_under color has been kept
-        assert pl.cmap._rgba_under == cmap._rgba_under
+        assert pl.cmap(-np.inf) == cmap(-np.inf)
 
         # check the set_over color has been kept
-        assert pl.cmap._rgba_over == cmap._rgba_over
+        assert pl.cmap(np.inf) == cmap(np.inf)
 
     def test3d(self):
         self.darray.plot()
