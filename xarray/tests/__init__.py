@@ -16,7 +16,6 @@ from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
-from xarray.plot.utils import import_seaborn
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -71,6 +70,7 @@ has_zarr, requires_zarr = _importorskip("zarr")
 has_iris, requires_iris = _importorskip("iris")
 has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
+has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
 
 # some special cases
@@ -78,12 +78,6 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
-try:
-    import_seaborn()
-    has_seaborn = True
-except ImportError:
-    has_seaborn = False
-requires_seaborn = pytest.mark.skipif(not has_seaborn, reason="requires seaborn")
 
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
