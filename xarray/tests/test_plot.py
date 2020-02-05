@@ -274,7 +274,14 @@ class TestPlot(PlotTestCase):
         cmap = mpl.cm.viridis
 
         # deepcopy to ensure cmap is not changed by contourf()
-        pl = a.plot.contourf(cmap=deepcopy(cmap))
+        # Set vmin and vmax so that _build_discrete_colormap is called with
+        # extend='both'. extend is passed to
+        # mpl.colors.from_levels_and_colors(), which returns a result with
+        # sensible under and over values if extend='both', but not if
+        # extend='neither' (but if extend='neither' the under and over values
+        # would not be used because the data would all be within the plotted
+        # range)
+        pl = a.plot.contourf(cmap=deepcopy(cmap), vmin=0.1, vmax=0.9)
 
         # check the set_bad color
         assert pl.cmap._rgba_bad == cmap._rgba_bad
