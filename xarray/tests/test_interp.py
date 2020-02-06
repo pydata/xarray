@@ -243,6 +243,28 @@ def test_interpolate_nd(case):
     actual = da.interp(y=ydest, x=xdest, method="linear")
     assert_allclose(actual.transpose("y", "z"), expected)
 
+@pytest.mark.xfail
+def test_interpolate_nd_nd():
+    """Interpolate nd array with an nd indexer sharing coordinates."""
+    # Create original array
+    a = [0, 2]
+    x = [0, 1, 2]
+    da = xr.DataArray(np.arange(2 * 3).reshape(2, 3),
+                      dims=('a', 'x'),
+                      coords={'a': a, 'x': x})
+
+    # Create indexer into `a` with dimensions (y, x)
+    y = [11, 12]
+    c = {'x': [0, ], 'y': y}
+    ia = xr.DataArray([[1], [2]], dims=('y', 'x'), coords=c)
+
+    # This fails for now
+    out = da.interp(a=ia)
+    # But should be equivalent to
+    # da.sel(x=0).interp(a=is.sel(x=0))
+    expected = xr.DataArray([[1.5], [3]], dims=('y', 'x'), coords=c)
+    assert_allclose(out, expected)
+
 
 @pytest.mark.parametrize("method", ["linear"])
 @pytest.mark.parametrize("case", [0, 1])
