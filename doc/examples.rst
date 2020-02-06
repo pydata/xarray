@@ -10,6 +10,7 @@ Examples
     examples/visualization_gallery
     examples/ROMS_ocean_model
     examples/ERA5-GRIB-example
+    Managing raster data with rioxarray <https://corteva.github.io/rioxarray/stable/examples/examples.html>
 
 Using apply_ufunc
 ------------------
