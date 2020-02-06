@@ -130,7 +130,7 @@ class H5NetCDFStore(WritableCFDataStore):
             if LooseVersion(h5netcdf.__version__) >= LooseVersion("0.8.0"):
                 kwargs["phony_dims"] = phony_dims
             else:
-                raise (
+                raise ValueError(
                     "h5netcdf backend keyword argument 'phony_dims' needs "
                     "h5netcdf >= 0.8.0."
                 )
