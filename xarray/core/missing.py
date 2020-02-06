@@ -616,6 +616,9 @@ def interp(var, indexes_coords, method, **kwargs):
     # target dimensions
     dims = list(indexes_coords)
     x, new_x = zip(*[indexes_coords[d] for d in dims])
+
+    # Shared dimensions between var and indexes coords
+    sdims = list(set(var.dims).intersection(*[set(nx.dims) for nx in new_x]))
     destination = broadcast_variables(*new_x)
 
     # transpose to make the interpolated axis to the last position
