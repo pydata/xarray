@@ -742,6 +742,8 @@ class Variable(
 
             data = as_indexable(self._data)[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
+            # we need to invert the mask in order to pass data first. This helps
+            # pint to choose the correct unit
             data = duck_array_ops.where(np.logical_not(mask), data, fill_value)
         else:
             # array cannot be indexed along dimensions of size 0, so just

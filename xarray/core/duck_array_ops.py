@@ -262,6 +262,8 @@ def where_method(data, cond, other=dtypes.NA):
 
 
 def fillna(data, other):
+    # we need to pass data first so pint has a chance of returning the
+    # correct unit
     return where(notnull(data), data, other)
 
 
