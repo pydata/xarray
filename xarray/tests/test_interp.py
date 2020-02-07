@@ -5,8 +5,8 @@ import pytest
 import xarray as xr
 from xarray.tests import assert_allclose, assert_equal, requires_cftime, requires_scipy
 
-from . import has_dask, has_scipy
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
+from . import has_dask, has_scipy
 from .test_dataset import create_test_data
 
 try:

@@ -33,6 +33,8 @@ import pandas as pd
 
 import xarray as xr
 
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
+from ..plot.dataset_plot import _Dataset_PlotMethods
 from . import (
     alignment,
     dtypes,
@@ -45,8 +47,6 @@ from . import (
     rolling,
     utils,
 )
-from ..coding.cftimeindex import _parse_array_of_cftime_strings
-from ..plot.dataset_plot import _Dataset_PlotMethods
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .common import (
     DataWithCoords,
