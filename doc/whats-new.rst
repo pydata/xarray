@@ -27,6 +27,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
+  indexed variable (:issue:`3252`).
+  By `David Huard <https://github.com/huard>`_.
 
 Documentation
 ~~~~~~~~~~~~~
