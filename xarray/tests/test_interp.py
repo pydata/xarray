@@ -244,6 +244,7 @@ def test_interpolate_nd(case):
     assert_allclose(actual.transpose("y", "z"), expected)
 
 
+@requires_scipy
 def test_interpolate_nd_nd():
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array
