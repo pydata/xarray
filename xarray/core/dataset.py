@@ -2571,6 +2571,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
         indexers = dict(self._validate_interp_indexers(coords))
 
+        if coords:
+            # This avoids broadcasting over coordinates that are both in
+            # the original array AND in the indexing array. It essentially
+            # forces interpolation along the shared coordinates.
+            sdims = (
+                set(self.dims)
+                .intersection(*[set(nx.dims) for nx in indexers.values()])
+                .difference(coords.keys())
+            )
+            indexers.update({d: self.variables[d] for d in sdims})
+
         obj = self if assume_sorted else self.sortby([k for k in coords])
 
         def maybe_variable(obj, k):
