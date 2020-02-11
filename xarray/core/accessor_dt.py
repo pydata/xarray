@@ -78,20 +78,27 @@ def _get_date_field(values, name, dtype):
         return access_method(values, name)
 
 
-def _round_series(values, name, freq):
-    """Coerce an array of datetime-like values to a pandas Series and
-    apply requested rounding
+def _round_through_series_or_index(values, name, freq):
+    """Coerce an array of datetime-like values to a pandas Series or xarray
+    CFTimeIndex and apply requested rounding
     """
-    values_as_series = pd.Series(values.ravel())
-    method = getattr(values_as_series.dt, name)
+    from ..coding.cftimeindex import CFTimeIndex
+
+    if is_np_datetime_like(values.dtype):
+        values_as_series = pd.Series(values.ravel())
+        method = getattr(values_as_series.dt, name)
+    else:
+        values_as_cftimeindex = CFTimeIndex(values.ravel())
+        method = getattr(values_as_cftimeindex, name)
+
     field_values = method(freq=freq).values
 
     return field_values.reshape(values.shape)
 
 
 def _round_field(values, name, freq):
-    """Indirectly access pandas rounding functions by wrapping data
-    as a Series and calling through `.dt` attribute.
+    """Indirectly access rounding functions by wrapping data
+    as a Series or CFTimeIndex
 
     Parameters
     ----------
@@ -110,9 +117,9 @@ def _round_field(values, name, freq):
     if isinstance(values, dask_array_type):
         from dask.array import map_blocks
 
-        return map_blocks(_round_series, values, name, freq=freq, dtype=np.datetime64)
+        return map_blocks(_round_through_series_or_index, values, name, freq=freq, dtype=np.datetime64)
     else:
-        return _round_series(values, name, freq)
+        return _round_through_series_or_index(values, name, freq)
 
 
 def _strftime_through_cftimeindex(values, date_format):

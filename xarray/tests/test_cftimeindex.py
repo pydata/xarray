@@ -891,3 +891,43 @@ def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")
     mindex = pd.MultiIndex.from_arrays([index])
     assert mindex.get_loc("2001-01") == slice(0, 30)
+
+
+@requires_cftime
+@pytest.mark.parametrize('freq', ['3663S', '33T', '2H'])
+def test_floor(freq):
+    expected = pd.date_range('2000-01-02T01:03:51', periods=10, freq='1777S')
+    expected = expected.floor(freq)
+    result = xr.cftime_range('2000-01-02T01:03:51', periods=10, freq='1777S')
+    result = result.floor(freq).to_datetimeindex()
+    assert result.equals(expected)
+
+
+@requires_cftime
+@pytest.mark.parametrize('freq', ['3663S', '33T', '2H'])
+def test_ceil(freq):
+    expected = pd.date_range('2000-01-02T01:03:51', periods=10, freq='1777S')
+    expected = expected.ceil(freq)
+    result = xr.cftime_range('2000-01-02T01:03:51', periods=10, freq='1777S')
+    result = result.ceil(freq).to_datetimeindex()
+    assert result.equals(expected)
+
+
+@requires_cftime
+@pytest.mark.parametrize('freq', ['3663S', '33T', '2H'])
+def test_round(freq):
+    expected = pd.date_range('2000-01-02T01:03:51', periods=10, freq='1777S')
+    expected = expected.round(freq)
+    result = xr.cftime_range('2000-01-02T01:03:51', periods=10, freq='1777S')
+    result = result.round(freq).to_datetimeindex()
+    assert result.equals(expected)
+
+
+@requires_cftime
+@pytest.mark.parametrize('freq', ['H', '3H', '7H'])
+def test_round2(freq):
+    expected = pd.date_range('2000-01-02T01:03:51', periods=21, freq='59T')
+    expected = expected.round(freq)
+    result = xr.cftime_range('2000-01-02T01:03:51', periods=21, freq='59T')
+    result = result.round(freq).to_datetimeindex()
+    assert result.equals(expected)
