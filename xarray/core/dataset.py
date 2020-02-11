@@ -75,6 +75,7 @@ from .merge import (
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
+from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import (
@@ -5689,6 +5690,155 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs)
+
+    def polyfit(
+        self,
+        dim: Hashable,
+        deg: int,
+        skipna: bool = None,
+        rcond: float = None,
+        w: Union[Hashable, Any] = None,
+        full: bool = False,
+        cov: bool = False,
+    ):
+        """
+        Least squares polynomial fit.
+
+        This replicates the behaviour of `numpy.polyfit` but differs by skipping
+        invalid values when `skipna = True`.
+
+        Parameters
+        ----------
+        dim : hashable
+            Coordinate along which to fit the polynomials.
+        skipna : bool, optional
+            If True, removes all invalid values before fitting each 1D slices of the array
+            Default is True if data is stored in as dask.array or if there is any
+            invalid values, False otherwise.
+
+        See documentation of `numpy.polyfit`.
+
+        Returns
+        -------
+        A single dataset with the coefficients of the best fit for each variable in this dataset.
+        The residuals, singular values and rank are included if `full` is True.
+        The covariance matrices are included if `full` is False and `cov` is True.
+        """
+        variables = {}
+        skipna_da = skipna
+
+        x = get_clean_interp_index(self, dim)
+        xname = "{}_".format(self[dim].name)
+        order = int(deg) + 1
+        lhs = np.vander(x, order)
+
+        if rcond is None:
+            rcond = x.shape[0] * np.core.finfo(x.dtype).eps
+
+        # Weights:
+        if w is not None:
+            if isinstance(w, Hashable):
+                w = self.coords[w]
+            w = np.asarray(w)
+            if w.ndim != 1:
+                raise TypeError("Expected a 1-d array for weights.")
+            if w.shape[0] != lhs.shape[0]:
+                raise TypeError("Expected w and {} to have the same length".format(dim))
+            lhs *= w[:, np.newaxis]
+
+        # Scaling
+        scale = np.sqrt((lhs * lhs).sum(axis=0))
+        lhs /= scale
+
+        degree_dim = utils.get_temp_dimname(self.dims, "degree")
+
+        rank = np.linalg.matrix_rank(lhs)
+        if rank != order and not full:
+            warnings.warn(
+                "Polyfit may be poorly conditioned", np.RankWarning, stacklevel=4
+            )
+
+        if full:
+            rank = xr.DataArray(rank, name=xname + "matrix_rank")
+            variables[rank.name] = rank
+            sing = np.linalg.svd(lhs, compute_uv=False)
+            sing = xr.DataArray(
+                sing,
+                dims=(degree_dim,),
+                coords={degree_dim: np.arange(order)[::-1]},
+                name=xname + "singular_values",
+            )
+            variables[sing.name] = sing
+
+        for name, da in self.data_vars.items():
+            if dim not in da.coords:
+                continue
+
+            if skipna is None:
+                if isinstance(da.data, dask_array_type):
+                    skipna_da = True
+                else:
+                    skipna_da = np.any(da.isnull())
+
+            dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
+            stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
+            rhs = da.transpose(dim, *dims_to_stack).stack({stacked_dim: dims_to_stack})
+
+            if w is not None:
+                rhs *= w[:, np.newaxis]
+
+            coeffs, residuals = duck_array_ops.least_squares(
+                lhs, rhs, rcond=rcond, skipna=skipna_da
+            )
+
+            if isinstance(name, str):
+                name = "{}_".format(name)
+            else:
+                # Thus a ReprObject => polyfit was called on a DataArray
+                name = ""
+
+            coeffs = xr.DataArray(
+                coeffs / scale[:, np.newaxis],
+                dims=(degree_dim, stacked_dim),
+                coords={
+                    degree_dim: np.arange(order)[::-1],
+                    stacked_dim: rhs[stacked_dim],
+                },
+                name=name + "polyfit_coefficients",
+            ).unstack(stacked_dim)
+            variables[coeffs.name] = coeffs
+
+            if full or (cov is True):
+                residuals = xr.DataArray(
+                    residuals,
+                    dims=(stacked_dim),
+                    coords={stacked_dim: rhs[stacked_dim]},
+                    name=name + "polyfit_residuals",
+                ).unstack(stacked_dim)
+                variables[residuals.name] = residuals
+
+            if cov:
+                Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
+                Vbase /= np.outer(scale, scale)
+                if cov == "unscaled":
+                    fac = 1
+                else:
+                    if x.shape[0] <= order:
+                        raise ValueError(
+                            "The number of data points must exceed order to scale the covariance matrix."
+                        )
+                    fac = residuals / (x.shape[0] - order)
+                covariance = (
+                    xr.DataArray(
+                        Vbase,
+                        dims=("cov_i", "cov_j"),
+                        name=name + "polyfit_covariance",
+                    )
+                    * fac
+                )
+                variables[covariance.name] = covariance
+
+        return Dataset(data_vars=variables, attrs=self.attrs.copy())
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

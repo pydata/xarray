@@ -26,12 +26,10 @@ from ..plot.plot import _PlotMethods
 from . import (
     computation,
     dtypes,
-    duck_array_ops,
     groupby,
     indexing,
     ops,
     pdcompat,
-    pycompat,
     resample,
     rolling,
     utils,
@@ -56,7 +54,6 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, _extract_indexes_from_coords
-from .missing import get_clean_interp_index
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
@@ -3262,102 +3259,17 @@ class DataArray(AbstractArray, DataWithCoords):
             Defaults is True if data is stored in as dask.array or if there is any
             invalid values, False otherwise.
 
-        Documentation of `numpy.polyfit` follows:
+        See documentation of `numpy.polyfit`.
+
+        Returns
+        -------
+        A single dataset with the coefficients of the best fit for this DataArray.
+        The residuals, singular values and rank are included if `full` is True.
+        The covariance matrix is included if `full` is False and `cov` is True.
         """
-        if skipna is None:
-            if isinstance(self.data, pycompat.dask_array_type):
-                skipna = True
-            else:
-                skipna = np.any(self.isnull())
-
-        x = get_clean_interp_index(self, dim)
-        order = int(deg) + 1
-        lhs = np.vander(x, order)
-
-        dims_to_stack = [dimname for dimname in self.dims if dimname != dim]
-        stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
-        rhs = self.transpose(dim, *dims_to_stack).stack({stacked_dim: dims_to_stack})
-
-        if rcond is None:
-            rcond = x.shape[0] * np.core.finfo(x.dtype).eps
-
-        # Weights:
-        if w is not None:
-            if isinstance(w, Hashable):
-                w = self[w]
-            w = np.asarray(w)
-            if w.ndim != 1:
-                raise TypeError("Expected a 1-d array for weights.")
-            if w.shape[0] != lhs.shape[0]:
-                raise TypeError("Expected w and {} to have the same length".format(dim))
-            lhs *= w[:, np.newaxis]
-            rhs *= w[:, np.newaxis]
-
-        # Scaling
-        scale = np.sqrt((lhs * lhs).sum(axis=0))
-        lhs /= scale
-
-        coeffs, residuals = duck_array_ops.least_squares(
-            lhs, rhs, rcond=rcond, skipna=skipna
+        return self._to_temp_dataset().polyfit(
+            dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
         )
-
-        if self.name:
-            name = "{}_".format(self.name)
-        else:
-            name = ""
-
-        degree_dim = utils.get_temp_dimname(dims_to_stack, "degree")
-        coeffs = DataArray(
-            coeffs / scale[:, np.newaxis],
-            dims=(degree_dim, stacked_dim),
-            coords={degree_dim: np.arange(order)[::-1], stacked_dim: rhs[stacked_dim]},
-            name=name + "_polyfit_coefficients",
-        ).unstack(stacked_dim)
-
-        rank = np.linalg.matrix_rank(lhs)
-        if rank != order and not full:
-            warnings.warn(
-                "Polyfit may be poorly conditioned", np.RankWarning, stacklevel=4
-            )
-
-        if full or (cov is True):
-            residuals = DataArray(
-                residuals,
-                dims=(stacked_dim),
-                coords={stacked_dim: rhs[stacked_dim]},
-                name=name + "_polyfit_residuals",
-            ).unstack(stacked_dim)
-        if full:
-            sing = np.linalg.svd(lhs, compute_uv=False)
-            sing = DataArray(
-                sing,
-                dims=(degree_dim,),
-                coords={degree_dim: np.arange(order)[::-1]},
-                name=name + "_polyfit_singular_values",
-            )
-            return coeffs, residuals, rank, sing, rcond
-        if cov:
-            Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
-            Vbase /= np.outer(scale, scale)
-            if cov == "unscaled":
-                fac = 1
-            else:
-                if x.shape[0] <= order:
-                    raise ValueError(
-                        "The number of data points must exceed order to scale the covariance matrix."
-                    )
-                fac = residuals / (x.shape[0] - order)
-            covariance = (
-                DataArray(
-                    Vbase, dims=("cov_i", "cov_j"), name=name + "_polyfit_covariance",
-                )
-                * fac
-            )
-            return coeffs, covariance
-        return coeffs
-
-    if polyfit.__doc__ is not None:
-        polyfit.__doc__ += np.polyfit.__doc__
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

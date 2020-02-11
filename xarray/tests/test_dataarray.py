@@ -4159,24 +4159,24 @@ class TestDataArray:
             dims=("d", "x"),
             coords={"x": x, "d": [0, 1]},
         )
-        coeffs = da.polyfit("x", 2)
+        out = da.polyfit("x", 2)
         expected = DataArray(
             [[2, 1, 1], [3, 2, 1]],
             dims=("d", "degree"),
             coords={"degree": [2, 1, 0], "d": [0, 1]},
         ).T
-        assert_allclose(coeffs, expected)
+        assert_allclose(out.polyfit_coefficients, expected)
 
         # With NaN
         da[0, 1] = np.nan
-        coeffs = da.polyfit("x", 2, skipna=True)
-        assert_allclose(coeffs, expected)
+        out = da.polyfit("x", 2, skipna=True)
+        assert_allclose(out.polyfit_coefficients, expected)
 
         # Skipna + Full output
-        coeffs, resids, rank, sing, rcond = da.polyfit("x", 2, skipna=True, full=True)
-        assert_allclose(coeffs, expected)
-        assert rank == np.linalg.matrix_rank(np.vander(x, 3))
-        np.testing.assert_almost_equal(resids, [0, 0])
+        out = da.polyfit("x", 2, skipna=True, full=True)
+        assert_allclose(out.polyfit_coefficients, expected)
+        assert out.x_matrix_rank == np.linalg.matrix_rank(np.vander(x, 3))
+        np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
 
 
 @pytest.fixture(params=[1])

@@ -1130,5 +1130,5 @@ def test_polyval():
         coords={"x": x, "d": [0, 1]},
     )
     coeffs = da.polyfit("x", 2)
-    da_pv = xr.polyval(da.x, coeffs)
+    da_pv = xr.polyval(da.x, coeffs.polyfit_coefficients)
     xr.testing.assert_allclose(da, da_pv.T)
