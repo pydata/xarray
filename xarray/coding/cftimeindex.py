@@ -49,6 +49,7 @@ import pandas as pd
 
 from xarray.core.utils import is_scalar
 
+from ..core.common import _contains_cftime_datetimes
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
@@ -429,7 +430,11 @@ class CFTimeIndex(pd.Index):
     def __sub__(self, other):
         import cftime
 
-        if isinstance(other, (CFTimeIndex, cftime.datetime)):
+        if _contains_datetime_timedeltas(other):
+            return CFTimeIndex(np.array(self) - other)
+        elif isinstance(other, pd.TimedeltaIndex):
+            return CFTimeIndex(np.array(self) - other.to_pytimedelta())
+        elif isinstance(other, cftime.datetime) or _contains_cftime_datetimes(other):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
             except OverflowError:
@@ -437,11 +442,8 @@ class CFTimeIndex(pd.Index):
                     "The time difference exceeds the range of values "
                     "that can be expressed at the nanosecond resolution."
                 )
-
-        elif isinstance(other, pd.TimedeltaIndex):
-            return CFTimeIndex(np.array(self) - other.to_pytimedelta())
         else:
-            return CFTimeIndex(np.array(self) - other)
+            return NotImplemented
 
     def __rsub__(self, other):
         return pd.TimedeltaIndex(other - np.array(self))
@@ -554,3 +556,9 @@ def _parse_array_of_cftime_strings(strings, date_type):
     return np.array(
         [_parse_iso8601_without_reso(date_type, s) for s in strings.ravel()]
     ).reshape(strings.shape)
+
+
+def _contains_datetime_timedeltas(array):
+    """Check if an input array contains datetime.timedelta objects."""
+    array = np.atleast_1d(array)
+    return isinstance(array[0], timedelta)

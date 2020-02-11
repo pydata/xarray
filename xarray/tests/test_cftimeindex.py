@@ -725,7 +725,7 @@ def test_timedeltaindex_add_cftimeindex(calendar):
 
 
 @requires_cftime
-def test_cftimeindex_sub(index):
+def test_cftimeindex_sub_timedelta(index):
     date_type = index.date_type
     expected_dates = [
         date_type(1, 1, 2),
@@ -736,6 +736,28 @@ def test_cftimeindex_sub(index):
     expected = CFTimeIndex(expected_dates)
     result = index + timedelta(days=2)
     result = result - timedelta(days=1)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    "other",
+    [np.array(4 * [timedelta(days=1)]),
+     np.array(timedelta(days=1))],
+    ids=["1d-array", "scalar-array"]
+)
+def test_cftimeindex_sub_timedelta_array(index, other):
+    date_type = index.date_type
+    expected_dates = [
+        date_type(1, 1, 2),
+        date_type(1, 2, 2),
+        date_type(2, 1, 2),
+        date_type(2, 2, 2),
+    ]
+    expected = CFTimeIndex(expected_dates)
+    result = index + timedelta(days=2)
+    result = result - other
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
 
@@ -780,6 +802,17 @@ def test_cftimeindex_sub_timedeltaindex(calendar):
     expected = a.shift(-2, "D")
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_sub_index_of_cftime_datetimes(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    b = pd.Index(a.values)
+    expected = a - a
+    result = a - b
+    assert result.equals(expected)
+    assert isinstance(result, pd.TimedeltaIndex)
 
 
 @requires_cftime
