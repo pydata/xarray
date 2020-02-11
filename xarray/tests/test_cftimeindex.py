@@ -815,6 +815,14 @@ def test_cftimeindex_sub_index_of_cftime_datetimes(calendar):
 
 
 @requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_sub_not_implemented(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    with pytest.raises(TypeError, match="unsupported operand"):
+        a - 1
+
+
+@requires_cftime
 def test_cftimeindex_rsub(index):
     with pytest.raises(TypeError):
         timedelta(days=1) - index

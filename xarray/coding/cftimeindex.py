@@ -428,13 +428,11 @@ class CFTimeIndex(pd.Index):
         return CFTimeIndex(other + np.array(self))
 
     def __sub__(self, other):
-        import cftime
-
         if _contains_datetime_timedeltas(other):
             return CFTimeIndex(np.array(self) - other)
         elif isinstance(other, pd.TimedeltaIndex):
             return CFTimeIndex(np.array(self) - other.to_pytimedelta())
-        elif isinstance(other, cftime.datetime) or _contains_cftime_datetimes(other):
+        elif _contains_cftime_datetimes(np.array(other)):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
             except OverflowError:
