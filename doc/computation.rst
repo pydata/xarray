@@ -317,6 +317,32 @@ trapezoidal rule using their coordinates,
     and integration along multidimensional coordinate are not supported.
 
 
+.. _compute.polyfit:
+
+Fitting polynomials
+===================
+
+Xarray objects provide an interface for performing linear or polynomial regressions
+using the least-squares method. :py:meth:`~xarray.DataArray.polyfit` computes the
+best fitting coefficients along a given dimension and for a given order,
+
+.. ipython:: python
+
+    x = np.arange(10)
+    a = xr.DataArray(3 + 4 * x, dims=['x'], coords={'x': x})
+    out = a.polyfit('x', 1, full=True)
+    out
+
+The method outputs a dataset containing the coefficients (and more if `full = True`).
+The inverse operation is done with :py:meth:`~xarray.polyval`,
+
+.. ipython::python
+
+    xr.polyval(x, out.polyfit_coefficients)
+
+.. note::
+    These methods replicate the behaviour of :py:func:`numpy.polyfit` and :py:func:`numpy.polyval`.
+
 .. _compute.broadcasting:
 
 Broadcasting by dimension name

@@ -5781,8 +5781,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     skipna_da = np.any(da.isnull())
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
-            stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
-            rhs = da.transpose(dim, *dims_to_stack).stack({stacked_dim: dims_to_stack})
+            stacked_coords = {}
+            if dims_to_stack:
+                stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
+                rhs = da.transpose(dim, *dims_to_stack).stack(
+                    {stacked_dim: dims_to_stack}
+                )
+                stacked_coords = {stacked_dim: rhs[stacked_dim]}
+                scale_da = scale[:, np.newaxis]
+            else:
+                rhs = da
+                scale_da = scale
 
             if w is not None:
                 rhs *= w[:, np.newaxis]
@@ -5798,23 +5807,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 name = ""
 
             coeffs = xr.DataArray(
-                coeffs / scale[:, np.newaxis],
-                dims=(degree_dim, stacked_dim),
-                coords={
-                    degree_dim: np.arange(order)[::-1],
-                    stacked_dim: rhs[stacked_dim],
-                },
+                coeffs / scale_da,
+                dims=[degree_dim] + list(stacked_coords.keys()),
+                coords={degree_dim: np.arange(order)[::-1], **stacked_coords},
                 name=name + "polyfit_coefficients",
-            ).unstack(stacked_dim)
+            )
+            if dims_to_stack:
+                coeffs = coeffs.unstack(stacked_dim)
             variables[coeffs.name] = coeffs
 
             if full or (cov is True):
                 residuals = xr.DataArray(
-                    residuals,
-                    dims=(stacked_dim),
-                    coords={stacked_dim: rhs[stacked_dim]},
+                    residuals if dims_to_stack else residuals.squeeze(),
+                    dims=list(stacked_coords.keys()),
+                    coords=stacked_coords,
                     name=name + "polyfit_residuals",
-                ).unstack(stacked_dim)
+                )
+                if dims_to_stack:
+                    residuals = residuals.unstack(stacked_dim)
                 variables[residuals.name] = residuals
 
             if cov:

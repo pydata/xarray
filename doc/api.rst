@@ -30,6 +30,7 @@ Top-level functions
    zeros_like
    ones_like
    dot
+   polyval
    map_blocks
    show_versions
    set_options
@@ -171,6 +172,7 @@ Computation
    Dataset.quantile
    Dataset.differentiate
    Dataset.integrate
+   Dataset.polyfit
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -349,6 +351,7 @@ Computation
    DataArray.quantile
    DataArray.differentiate
    DataArray.integrate
+   DataArray.polyfit
    DataArray.str
 
 **Aggregation**:

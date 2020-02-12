@@ -40,6 +40,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` now support :py:class:`pandas.CategoricalIndex`. (:issue:`3669`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Support using an existing, opened h5netcdf ``File`` with
