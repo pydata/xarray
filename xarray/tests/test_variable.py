@@ -789,10 +789,15 @@ class VariableSubclassobjects:
         "mode",
         [
             "mean",
-            pytest.param("median", marks=pytest.mark.xfail),
-            pytest.param("reflect", marks=pytest.mark.xfail),
+            pytest.param(
+                "median",
+                marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
+            ),
+            pytest.param(
+                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
+            ),
             "edge",
-            pytest.param("linear_ramp", marks=pytest.mark.xfail),
+            "linear_ramp",
             "maximum",
             "minimum",
             "symmetric",
@@ -803,8 +808,10 @@ class VariableSubclassobjects:
         "xr_arg, np_arg",
         [
             [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
+            [{"x": 1}, ((1, 1), (0, 0), (0, 0))],
             [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
             [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
+            [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
         ],
     )
     def test_pad(self, mode, xr_arg, np_arg):
@@ -2066,13 +2073,14 @@ class TestIndexVariable(VariableSubclassobjects):
     def test_getitem_uint(self):
         super().test_getitem_fancy()
 
+    # TODO would be nice if it was not necessary to repeat all the parameters
     @pytest.mark.xfail
     @pytest.mark.parametrize(
         "mode",
         [
             "mean",
-            pytest.param("median", marks=pytest.mark.xfail),
-            pytest.param("reflect", marks=pytest.mark.xfail),
+            "median",
+            "reflect",
             "edge",
             "linear_ramp",
             "maximum",

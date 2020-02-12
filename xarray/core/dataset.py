@@ -5688,7 +5688,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def pad(
         self,
-        pad_width: Mapping[Hashable, Tuple[int, int]] = None,
+        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
         stat_length: Union[
             None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
@@ -5712,6 +5712,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
             Number of values padded along each dimension.
+            {dim: pad} is a shortcut for pad_before = pad_after = pad
         mode : str (taken from numpy docs)
             One of the following string values.
 

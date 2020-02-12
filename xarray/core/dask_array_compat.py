@@ -1,5 +1,6 @@
 from distutils.version import LooseVersion
 from typing import Iterable
+import warnings
 
 import numpy as np
 
@@ -9,8 +10,6 @@ try:
 except ImportError:
     dask_version = "0.0.0"
     da = None
-
-from . import dtypes
 
 if LooseVersion(dask_version) >= LooseVersion("2.0.0"):
     meta_from_array = da.utils.meta_from_array
@@ -100,7 +99,10 @@ else:
 
 
 def _validate_pad_output_shape(input_shape, pad_width, output_shape):
-    """ Dask.array.pad with mode='reflect' does not always return the correct output_shape. """
+    """ Validates the output shape of dask.array.pad, raising a RuntimeError if they do not match.
+    In the current versions of dask (2.2/2.4), dask.array.pad with mode='reflect' sometimes returns
+    an invalid shape.
+    """
     isint = lambda i: isinstance(i, int)
 
     if isint(pad_width):
@@ -114,78 +116,31 @@ def _validate_pad_output_shape(input_shape, pad_width, output_shape):
     ):
         pad_width = np.sum(pad_width, axis=1)
     else:
-        return  # should be impossible
+        # unreachable: dask.array.pad should already have thrown an error
+        raise ValueError("Invalid value for `pad_width`")
 
     if not np.array_equal(np.array(input_shape) + pad_width, output_shape):
         raise RuntimeError(
             "There seems to be something wrong with the shape of the output of dask.array.pad, "
             "try upgrading Dask, use a different pad mode e.g. mode='constant' or first convert "
             "your DataArray/Dataset to one backed by a numpy array by calling the `compute()` method."
+            "See: https://github.com/dask/dask/issues/5303"
         )
 
 
-if LooseVersion(dask_version) >= LooseVersion("0.18.1"):
-
-    def pad(array, pad_width, mode="constant", **kwargs):
-        padded = da.pad(array, pad_width, mode=mode, **kwargs)
-        # workaround for inconsistency between numpy and dask: https://github.com/dask/dask/issues/5303
-        if mode == "mean" and issubclass(array.dtype.type, np.integer):
-            return da.round(padded).astype(array.dtype)
-        _validate_pad_output_shape(array.shape, pad_width, padded.shape)
-        return padded
-
-
-else:
-
-    def pad(array, pad_width, mode="constant", **kwargs):
-        """
-        Return a new dask.DataArray wit padding. This functions implements a
-        constant padding for versions of Dask that do not implement this yet.
-
-        Parameters
-        ----------
-        array: Array to pad
-
-        pad_width: List of the form [(before, after)]
-            Number of values padded to the edges of axis.
-        """
-        if mode != "constant":
-            raise NotImplementedError(
-                "Pad is not yet implemented for your current version of Dask. "
-                "Please update your version of Dask or use the "
-                "mode=`constant`, that is added by xarray."
-            )
-
-        try:
-            fill_value = kwargs["constant_values"]
-            dtype = array.dtype
-        except KeyError:
-            dtype, fill_value = dtypes.maybe_promote(array.dtype)
-
-        for axis, pad in enumerate(pad_width):
-            before_shape = list(array.shape)
-            before_shape[axis] = pad[0]
-            before_chunks = list(array.chunks)
-            before_chunks[axis] = (pad[0],)
-            after_shape = list(array.shape)
-            after_shape[axis] = pad[1]
-            after_chunks = list(array.chunks)
-            after_chunks[axis] = (pad[1],)
-
-            arrays = []
-            if pad[0] > 0:
-                arrays.append(
-                    da.full(before_shape, fill_value, dtype=dtype, chunks=before_chunks)
-                )
-            arrays.append(array)
-            if pad[1] > 0:
-                arrays.append(
-                    da.full(after_shape, fill_value, dtype=dtype, chunks=after_chunks)
-                )
-            if len(arrays) > 1:
-                array = da.concatenate(arrays, axis=axis)
-
-        return array
+def pad(array, pad_width, mode="constant", **kwargs):
+    padded = da.pad(array, pad_width, mode=mode, **kwargs)
+    # workaround for inconsistency between numpy and dask: https://github.com/dask/dask/issues/5303
+    if mode == "mean" and issubclass(array.dtype.type, np.integer):
+        warnings.warn(
+            '`dask.array.pad(mode="mean")` converts integers to floats. xarray converts '
+            "these floats back to integers, to keep the interface consistent. There is a chance that "
+            "this introduces rounding errors. If you wish to keep the values as floats, first change "
+            "the type to a float before calling `pad`."
+        )
+        return da.round(padded).astype(array.dtype)
+    _validate_pad_output_shape(array.shape, pad_width, padded.shape)
+    return padded
 
 
 if LooseVersion(dask_version) >= LooseVersion("2.8.1"):

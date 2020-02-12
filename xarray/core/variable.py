@@ -5,6 +5,7 @@ import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
+import numbers
 from typing import Any, Dict, Hashable, Mapping, Tuple, TypeVar, Union
 
 import numpy as np
@@ -1154,7 +1155,9 @@ class Variable(
         return result
 
     def _pad_options_dim_to_index(
-        self, pad_option: Mapping[Hashable, Tuple[int, int]], fill_with_shape=False
+        self,
+        pad_option: Mapping[Hashable, Union[int, Tuple[int, int]]],
+        fill_with_shape=False,
     ):
         if fill_with_shape:
             return [
@@ -1165,7 +1168,7 @@ class Variable(
 
     def pad(
         self,
-        pad_width: Mapping[Hashable, Tuple[int, int]] = None,
+        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
         stat_length: Union[
             None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
@@ -1186,6 +1189,7 @@ class Variable(
         ----------
         pad_width: Mapping with the form of {dim: (pad_before, pad_after)}
             Number of values padded along each dimension.
+            {dim: pad} is a shortcut for pad_before = pad_after = pad
         mode: (str)
             See numpy / Dask docs
         stat_length : int, tuple or mapping of the form {dim: tuple}
@@ -1232,7 +1236,11 @@ class Variable(
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
             stat_length = [(n, n) for n in self.data.shape]  # type: ignore
 
-        pads = self._pad_options_dim_to_index(pad_width)
+        # change integer values to a tuple of two of those values and change pad_width to index
+        for k, v in pad_width.items():
+            if isinstance(v, numbers.Number):
+                pad_width[k] = (v, v)
+        pad_width_by_index = self._pad_options_dim_to_index(pad_width)
 
         # create pad_options_kwargs, numpy/dask requires only relevant kwargs to be nonempty
         pad_option_kwargs = {}
@@ -1246,7 +1254,10 @@ class Variable(
             pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore
 
         array = duck_array_ops.pad(
-            self.data.astype(dtype, copy=False), pads, mode=mode, **pad_option_kwargs
+            self.data.astype(dtype, copy=False),
+            pad_width_by_index,
+            mode=mode,
+            **pad_option_kwargs,
         )
 
         return type(self)(self.dims, array)
