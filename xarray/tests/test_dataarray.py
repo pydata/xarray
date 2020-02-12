@@ -23,6 +23,7 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    has_dask,
     raises_regex,
     requires_bottleneck,
     requires_dask,
@@ -4155,6 +4156,8 @@ class TestDataArray:
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("use_datetime", [True, False])
     def test_polyfit(self, use_dask, use_datetime):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
         xcoord = xr.DataArray(
             pd.date_range("1970-01-01", freq="D", periods=10), dims=("x",), name="x"
         )
