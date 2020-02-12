@@ -1,11 +1,11 @@
 import copy
 import functools
 import itertools
+import numbers
 import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-import numbers
 from typing import Any, Dict, Hashable, Mapping, Tuple, TypeVar, Union
 
 import numpy as np

@@ -797,7 +797,12 @@ class VariableSubclassobjects:
                 "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
             ),
             "edge",
-            "linear_ramp",
+            pytest.param(
+                "linear_ramp",
+                marks=pytest.mark.xfail(
+                    reason="pint bug: https://github.com/hgrecco/pint/issues/1026"
+                ),
+            ),
             "maximum",
             "minimum",
             "symmetric",

@@ -1,6 +1,6 @@
+import warnings
 from distutils.version import LooseVersion
 from typing import Iterable
-import warnings
 
 import numpy as np
 
