@@ -4152,30 +4152,51 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
-    def test_polyfit(self):
-        x = np.arange(10)
-        da = DataArray(
-            np.stack((1.0 + 1.0 * x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
-            dims=("d", "x"),
-            coords={"x": x, "d": [0, 1]},
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("use_datetime", [True, False])
+    def test_polyfit(self, use_dask, use_datetime):
+        xcoord = xr.DataArray(
+            pd.date_range("1970-01-01", freq="D", periods=10), dims=("x",), name="x"
         )
+        x = xr.core.missing.get_clean_interp_index(xcoord, "x")
+        if not use_datetime:
+            xcoord = x
+
+        da_raw = DataArray(
+            np.stack(
+                (10 + 1e-15 * x + 2e-28 * x ** 2, 30 + 2e-14 * x + 1e-29 * x ** 2)
+            ),
+            dims=("d", "x"),
+            coords={"x": xcoord, "d": [0, 1]},
+        )
+
+        if use_dask:
+            da = da_raw.chunk({"d": 1})
+        else:
+            da = da_raw
+
         out = da.polyfit("x", 2)
         expected = DataArray(
-            [[2, 1, 1], [3, 2, 1]],
+            [[2e-28, 1e-15, 10], [1e-29, 2e-14, 30]],
             dims=("d", "degree"),
             coords={"degree": [2, 1, 0], "d": [0, 1]},
         ).T
-        assert_allclose(out.polyfit_coefficients, expected)
+        assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
 
         # With NaN
-        da[0, 1] = np.nan
-        out = da.polyfit("x", 2, skipna=True)
-        assert_allclose(out.polyfit_coefficients, expected)
+        da_raw[0, 1] = np.nan
+        if use_dask:
+            da = da_raw.chunk({"d": 1})
+        else:
+            da = da_raw
+        out = da.polyfit("x", 2, skipna=True, cov=True)
+        assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
+        assert "polyfit_covariance" in out
 
         # Skipna + Full output
         out = da.polyfit("x", 2, skipna=True, full=True)
-        assert_allclose(out.polyfit_coefficients, expected)
-        assert out.x_matrix_rank == np.linalg.matrix_rank(np.vander(x, 3))
+        assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
+        assert out.x_matrix_rank == 3
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
 
 

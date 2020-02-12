@@ -5438,6 +5438,19 @@ class TestDataset:
             ds.data_vars[item]  # should not raise
         assert sorted(actual) == sorted(expected)
 
+    def test_polyfit_output(self):
+        ds = create_test_data(seed=1)
+
+        out = ds.polyfit("dim2", 2, full=False)
+        assert "var1_polyfit_coefficients" in out
+
+        out = ds.polyfit("dim1", 2, full=True)
+        assert "var1_polyfit_coefficients" in out
+        assert "dim1_matrix_rank" in out
+
+        out = ds.polyfit("time", 2)
+        assert len(out.data_vars) == 0
+
 
 # Py.test tests
 

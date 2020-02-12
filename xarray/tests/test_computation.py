@@ -1122,13 +1122,34 @@ def test_where():
     assert_identical(expected, actual)
 
 
-def test_polyval():
-    x = np.arange(10)
+@pytest.mark.parametrize("use_dask", [True, False])
+@pytest.mark.parametrize("use_datetime", [True, False])
+@pytest.mark.parametrize("provide_coord", [True, False])
+def test_polyval(use_dask, use_datetime, provide_coord):
+    if use_datetime:
+        xcoord = xr.DataArray(
+            pd.date_range("2000-01-01", freq="D", periods=10), dims=("x",), name="x"
+        )
+        x = xr.core.missing.get_clean_interp_index(xcoord, "x")
+    else:
+        xcoord = x = np.arange(10)
+
     da = xr.DataArray(
         np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
         dims=("d", "x"),
-        coords={"x": x, "d": [0, 1]},
+        coords={"x": xcoord, "d": [0, 1]},
     )
-    coeffs = da.polyfit("x", 2)
-    da_pv = xr.polyval(da.x, coeffs.polyfit_coefficients)
+    coeffs = xr.DataArray(
+        [[2, 1, 1], [3, 2, 1]],
+        dims=("d", "degree"),
+        coords={"d": [0, 1], "degree": [2, 1, 0]},
+    )
+    if use_dask:
+        coeffs = coeffs.chunk({"d": 2})
+    if provide_coord:
+        da_pv = xr.polyval(da.x, coeffs)
+    else:
+        da_pv = xr.polyval(da.x, coeffs.values, degree_dim=1)
+        da_pv = da_pv.rename(dim_0="d")
+        da_pv["d"] = [0, 1]
     xr.testing.assert_allclose(da, da_pv.T)

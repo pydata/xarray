@@ -5771,7 +5771,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables[sing.name] = sing
 
         for name, da in self.data_vars.items():
-            if dim not in da.coords:
+            if dim not in da.dims:
                 continue
 
             if skipna is None:
@@ -5788,7 +5788,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 rhs *= w[:, np.newaxis]
 
             coeffs, residuals = duck_array_ops.least_squares(
-                lhs, rhs, rcond=rcond, skipna=skipna_da
+                lhs, rhs.data, rcond=rcond, skipna=skipna_da
             )
 
             if isinstance(name, str):
@@ -5828,15 +5828,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
                     fac = residuals / (x.shape[0] - order)
-                covariance = (
-                    xr.DataArray(
-                        Vbase,
-                        dims=("cov_i", "cov_j"),
-                        name=name + "polyfit_covariance",
-                    )
-                    * fac
-                )
-                variables[covariance.name] = covariance
+                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j"),) * fac
+                variables[name + "polyfit_covariance"] = covariance
 
         return Dataset(data_vars=variables, attrs=self.attrs.copy())
 

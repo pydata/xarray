@@ -230,18 +230,26 @@ def _nanpolyfit_1d(arr, x, rcond=None):
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
     if skipna:
-        nan_cols = np.any(np.isnan(rhs.data), axis=0)
-        out = np.empty((lhs.shape[1] + 1, rhs.data.shape[1]))
-        out[:, nan_cols] = np.apply_along_axis(
-            _nanpolyfit_1d, 0, rhs.data[:, nan_cols], lhs
-        )
-        out[:-1, ~nan_cols], out[-1, ~nan_cols], _, _ = np.linalg.lstsq(
-            lhs, rhs.data[:, ~nan_cols], rcond=rcond
-        )
+        added_dim = rhs.ndim == 1
+        if added_dim:
+            rhs = rhs.reshape(rhs.shape[0], 1)
+        nan_cols = np.any(np.isnan(rhs), axis=0)
+        out = np.empty((lhs.shape[1] + 1, rhs.shape[1]))
+        if np.any(nan_cols):
+            out[:, nan_cols] = np.apply_along_axis(
+                _nanpolyfit_1d, 0, rhs[:, nan_cols], lhs
+            )
+        if np.any(~nan_cols):
+            out[:-1, ~nan_cols], out[-1, ~nan_cols], _, _ = np.linalg.lstsq(
+                lhs, rhs[:, ~nan_cols], rcond=rcond
+            )
         coeffs = out[:-1, :]
         residuals = out[-1, :]
+        if added_dim:
+            coeffs = coeffs.reshape(coeffs.shape[0])
+            residuals = residuals.reshape(residuals.shape[0])
     else:
-        coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs.data, rcond=rcond)
+        coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs, rcond=rcond)
     return coeffs, residuals
 
 
