@@ -510,7 +510,7 @@ def _ensure_plottable(*args):
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64, np.bool8]
     other_types = [datetime]
     try:
         import cftime
