@@ -1126,6 +1126,8 @@ def test_where():
 @pytest.mark.parametrize("use_datetime", [True, False])
 @pytest.mark.parametrize("provide_coord", [True, False])
 def test_polyval(use_dask, use_datetime, provide_coord):
+    if use_dask and not has_dask:
+        pytest.skip("requires dask")
     if use_datetime:
         xcoord = xr.DataArray(
             pd.date_range("2000-01-01", freq="D", periods=10), dims=("x",), name="x"
