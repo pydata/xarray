@@ -1124,10 +1124,10 @@ def test_where():
 
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("use_datetime", [True, False])
-@pytest.mark.parametrize("provide_coord", [True, False])
-def test_polyval(use_dask, use_datetime, provide_coord):
+def test_polyval(use_dask, use_datetime):
     if use_dask and not has_dask:
         pytest.skip("requires dask")
+
     if use_datetime:
         xcoord = xr.DataArray(
             pd.date_range("2000-01-01", freq="D", periods=10), dims=("x",), name="x"
@@ -1148,10 +1148,7 @@ def test_polyval(use_dask, use_datetime, provide_coord):
     )
     if use_dask:
         coeffs = coeffs.chunk({"d": 2})
-    if provide_coord:
-        da_pv = xr.polyval(da.x, coeffs)
-    else:
-        da_pv = xr.polyval(da.x, coeffs.values, degree_dim=1)
-        da_pv = da_pv.rename(dim_0="d")
-        da_pv["d"] = [0, 1]
+
+    da_pv = xr.polyval(da.x, coeffs)
+
     xr.testing.assert_allclose(da, da_pv.T)

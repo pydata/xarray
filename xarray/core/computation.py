@@ -1306,12 +1306,12 @@ def polyval(coord, coeffs, degree_dim="degree"):
 
     Parameters
     ----------
-    coord : DataArray or array-like
+    coord : DataArray
         The 1D coordinate along which to evaluate the polynomial.
-    coeffs : DataArray or array-like
+    coeffs : DataArray
         Coefficients of the polynomials.
-    degree_dim : str or int, optional
-        Name of dimension or axis number along which the degree increases in `coeffs`.
+    degree_dim : str, optional
+        Name of the polynomial degree dimension in `coeffs`.
 
     See also
     --------
@@ -1321,23 +1321,9 @@ def polyval(coord, coeffs, degree_dim="degree"):
     from .dataarray import DataArray
     from .missing import get_clean_interp_index
 
-    if not isinstance(coord, DataArray):
-        coord = DataArray(coord, dims=("x",), name="x")
     x = get_clean_interp_index(coord, coord.name)
 
-    if isinstance(degree_dim, str):
-        deg_coord = coeffs[degree_dim]
-    else:  # Axis number
-        degree_axis = degree_dim
-        if isinstance(coeffs, DataArray):
-            degree_dim = coeffs.dims[degree_axis]
-            deg_coord = coeffs[degree_dim]
-        else:
-            degree_dim = "degree"
-            deg_coord = np.arange(coeffs.shape[degree_axis])[::-1]
-            coeffs = DataArray(coeffs)
-            coeffs.coords[coeffs.dims[degree_axis]] = deg_coord
-            coeffs = coeffs.rename({coeffs.dims[degree_axis]: degree_dim})
+    deg_coord = coeffs[degree_dim]
 
     lhs = DataArray(
         np.vander(x, int(deg_coord.max()) + 1),

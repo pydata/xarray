@@ -330,7 +330,7 @@ best fitting coefficients along a given dimension and for a given order,
 
     x = np.arange(10)
     a = xr.DataArray(3 + 4 * x, dims=['x'], coords={'x': x})
-    out = a.polyfit('x', 1, full=True)
+    out = a.polyfit(dim='x', deg=1, full=True)
     out
 
 The method outputs a dataset containing the coefficients (and more if `full = True`).
@@ -338,7 +338,7 @@ The inverse operation is done with :py:meth:`~xarray.polyval`,
 
 .. ipython::python
 
-    xr.polyval(x, out.polyfit_coefficients)
+    xr.polyval(coord=x, coeffs=out.polyfit_coefficients)
 
 .. note::
     These methods replicate the behaviour of :py:func:`numpy.polyfit` and :py:func:`numpy.polyval`.
