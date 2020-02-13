@@ -204,8 +204,8 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                             break
                         elif len(variables) != len(datasets) and opt == "different":
                             raise ValueError(
-                                f"{k} not present in all datasets and coords='different'. "
-                                f"Either add {k} to datasets where it is missing or "
+                                f"{k!r} not present in all datasets and coords='different'. "
+                                f"Either add {k!r} to datasets where it is missing or "
                                 "specify coords='minimal'."
                             )
 

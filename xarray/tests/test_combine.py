@@ -366,8 +366,9 @@ class TestNestedCombine:
         assert_identical(expected, actual)
 
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with pytest.raises(KeyError):
-            combine_nested(objs, concat_dim="x")
+        actual = combine_nested(objs, concat_dim="x")
+        expected = Dataset({"x": [0, 0], "y": [0]})
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "join, expected",
