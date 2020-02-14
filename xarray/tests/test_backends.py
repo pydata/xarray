@@ -809,40 +809,29 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_grid_mapping_and_bounds_are_coordinates(self):
         original = Dataset(
-            dict(variable=(('latitude', 'longitude'),
-                           [[0, 1], [2, 3]])),
+            dict(variable=(("latitude", "longitude"), [[0, 1], [2, 3]])),
             dict(
-                latitude=('latitude',
-                          [0, 1],
-                          {'units': 'degrees_north'}),
-                longitude=('longitude',
-                           [0, 1],
-                           {'units': 'degrees_east'}),
-                latlon=((), -1, {'grid_mapping_name': 'latitude_longitude'}),
-                latitude_bnds=(('latitude', 'bnds2'),
-                               [[0, 1], [1, 2]]),
-                longitude_bnds=(('longitude', 'bnds2'),
-                                [[0, 1], [1, 2]])
-            )
+                latitude=("latitude", [0, 1], {"units": "degrees_north"}),
+                longitude=("longitude", [0, 1], {"units": "degrees_east"}),
+                latlon=((), -1, {"grid_mapping_name": "latitude_longitude"}),
+                latitude_bnds=(("latitude", "bnds2"), [[0, 1], [1, 2]]),
+                longitude_bnds=(("longitude", "bnds2"), [[0, 1], [1, 2]]),
+            ),
         )
-        original['variable'].encoding['grid_mapping'] = 'latlon'
-        original.coords['latitude'].encoding.update(
-            dict(grid_mapping='latlon',
-                 bounds='latitude_bnds')
+        original["variable"].encoding["grid_mapping"] = "latlon"
+        original.coords["latitude"].encoding.update(
+            dict(grid_mapping="latlon", bounds="latitude_bnds")
         )
-        original.coords['longitude'].encoding.update(
-            dict(grid_mapping='latlon',
-                 bounds='longitude_bnds')
+        original.coords["longitude"].encoding.update(
+            dict(grid_mapping="latlon", bounds="longitude_bnds")
         )
         with create_tmp_file() as tmp_file:
             original.to_netcdf(tmp_file)
             with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert (ds.coords['latitude'].attrs['bounds']
-                        == 'latitude_bnds')
-                assert (ds.coords['longitude'].attrs['bounds']
-                        == 'longitude_bnds')
-                assert 'latlon' not in ds['variable'].attrs['coordinates']
-                assert 'coordinates' not in ds.attrs
+                assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
+                assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
+                assert "latlon" not in ds["variable"].attrs["coordinates"]
+                assert "coordinates" not in ds.attrs
 
         with self.roundtrip(original) as actual:
             assert_identical(actual, original)

@@ -255,10 +255,10 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var, name=name)
 
-    if 'grid_mapping' in var.encoding:
-        var.attrs['grid_mapping'] = var.encoding.pop('grid_mapping')
-    if 'bounds' in var.encoding:
-        var.attrs['bounds'] = var.encoding.pop('bounds')
+    if "grid_mapping" in var.encoding:
+        var.attrs["grid_mapping"] = var.encoding.pop("grid_mapping")
+    if "bounds" in var.encoding:
+        var.attrs["bounds"] = var.encoding.pop("bounds")
     return var
 
 
@@ -507,20 +507,20 @@ def decode_cf_variables(
                     new_vars[k].encoding["coordinates"] = coord_str
                     del var_attrs["coordinates"]
                     coord_names.update(var_coord_names)
-            if 'bounds' in var_attrs:
-                bounds_str = var_attrs['bounds']
+            if "bounds" in var_attrs:
+                bounds_str = var_attrs["bounds"]
                 var_bounds_names = [bounds_str]
                 if all(k in variables for k in var_bounds_names):
-                    new_vars[k].encoding['bounds'] = bounds_str
+                    new_vars[k].encoding["bounds"] = bounds_str
                     coord_names.update(var_bounds_names)
-                del var_attrs['bounds']
-            if 'grid_mapping' in var_attrs:
-                proj_str = var_attrs['grid_mapping']
+                del var_attrs["bounds"]
+            if "grid_mapping" in var_attrs:
+                proj_str = var_attrs["grid_mapping"]
                 var_proj_names = proj_str.split()
                 if all(k in variables for k in var_proj_names):
-                    new_vars[k].encoding['grid_mapping'] = proj_str
+                    new_vars[k].encoding["grid_mapping"] = proj_str
                     coord_names.update(var_proj_names)
-                del var_attrs['grid_mapping']
+                del var_attrs["grid_mapping"]
 
     if decode_coords and "coordinates" in attributes:
         attributes = dict(attributes)
@@ -682,8 +682,10 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
 
             encoding_val = v.encoding.get
-            if ((encoding_val('bounds') == coord_name
-                 or encoding_val('grid_mapping') == coord_name)):
+            if (
+                encoding_val("bounds") == coord_name
+                or encoding_val("grid_mapping") == coord_name
+            ):
                 not_technically_coordinates.add(coord_name)
                 global_coordinates.discard(coord_name)
 
@@ -705,7 +707,8 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         coords_str = pop_to(encoding, attrs, "coordinates")
         if not coords_str and variable_coordinates[name]:
             attrs["coordinates"] = " ".join(
-                str(coord_name) for coord_name in variable_coordinates[name]
+                str(coord_name)
+                for coord_name in variable_coordinates[name]
                 if coord_name not in not_technically_coordinates
             )
         if "coordinates" in attrs:
