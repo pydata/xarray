@@ -682,8 +682,8 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
 
             encoding_val = v.encoding.get
-            if ((encoding_val('bounds') == coord_name or
-                 encoding_val('grid_mapping') == coord_name)):
+            if ((encoding_val('bounds') == coord_name
+                 or encoding_val('grid_mapping') == coord_name)):
                 not_technically_coordinates.add(coord_name)
                 global_coordinates.discard(coord_name)
 

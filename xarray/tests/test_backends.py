@@ -837,10 +837,10 @@ class CFEncodedBase(DatasetIOBase):
         with create_tmp_file() as tmp_file:
             original.to_netcdf(tmp_file)
             with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert (ds.coords['latitude'].attrs['bounds'] ==
-                        'latitude_bnds')
-                assert (ds.coords['longitude'].attrs['bounds'] ==
-                        'longitude_bnds')
+                assert (ds.coords['latitude'].attrs['bounds']
+                        == 'latitude_bnds')
+                assert (ds.coords['longitude'].attrs['bounds']
+                        == 'longitude_bnds')
                 assert 'latlon' not in ds['variable'].attrs['coordinates']
                 assert 'coordinates' not in ds.attrs
 
