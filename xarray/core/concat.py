@@ -201,6 +201,8 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                                 variables.append(ds.variables[k])
 
                         if len(variables) == 1:
+                            # coords="different" doesn't make sense when only one object
+                            # contains a particular variable.
                             break
                         elif len(variables) != len(datasets) and opt == "different":
                             raise ValueError(
