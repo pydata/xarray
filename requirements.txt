@@ -1,0 +1,7 @@
+# This file is redundant with setup.cfg;
+# it exists to let GitHub build the repository dependency graph
+# https://help.github.com/en/github/visualizing-repository-data-with-graphs/listing-the-packages-that-a-repository-depends-on
+
+numpy >= 1.15
+pandas >= 0.25
+setuptools >= 41.2

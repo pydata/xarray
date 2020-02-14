@@ -15,6 +15,7 @@ doc/savefig
 # Packages
 *.egg
 *.egg-info
+.eggs
 dist
 build
 eggs
@@ -32,9 +33,11 @@ pip-log.txt
 
 # Unit test / coverage reports
 .coverage
+.coverage.*
 .tox
 nosetests.xml
 .cache
+.dmypy.json
 .mypy_cache
 .ropeproject/
 .tags*
@@ -63,7 +66,7 @@ dask-worker-space/
 # xarray specific
 doc/_build
 doc/generated
-xarray/version.py
+xarray/tests/data/*.grib.*.idx
 
 # Sync tools
 Icon*

@@ -1,42 +1,35 @@
-import warnings
-from collections import OrderedDict
-from distutils.version import LooseVersion
 from io import BytesIO
 
 import numpy as np
 
-from .. import Variable
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenDict
+from ..core.variable import Variable
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
-from .netcdf3 import (
-    encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
+from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
 
 
 def _decode_string(s):
     if isinstance(s, bytes):
-        return s.decode('utf-8', 'replace')
+        return s.decode("utf-8", "replace")
     return s
 
 
 def _decode_attrs(d):
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
-    return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
-                       for (k, v) in d.items())
+    return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
 
 
 class ScipyArrayWrapper(BackendArray):
-
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
         array = self.get_variable().data
         self.shape = array.shape
-        self.dtype = np.dtype(array.dtype.kind +
-                              str(array.dtype.itemsize))
+        self.dtype = np.dtype(array.dtype.kind + str(array.dtype.itemsize))
 
     def get_variable(self, needs_lock=True):
         ds = self.datastore._manager.acquire(needs_lock)
@@ -68,28 +61,29 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
     import gzip
 
     # if the string ends with .gz, then gunzip and open as netcdf file
-    if isinstance(filename, str) and filename.endswith('.gz'):
+    if isinstance(filename, str) and filename.endswith(".gz"):
         try:
-            return scipy.io.netcdf_file(gzip.open(filename), mode=mode,
-                                        mmap=mmap, version=version)
+            return scipy.io.netcdf_file(
+                gzip.open(filename), mode=mode, mmap=mmap, version=version
+            )
         except TypeError as e:
             # TODO: gzipped loading only works with NetCDF3 files.
-            if 'is not a valid NetCDF 3 file' in e.message:
-                raise ValueError('gzipped file loading only supports '
-                                 'NetCDF 3 files.')
+            if "is not a valid NetCDF 3 file" in e.message:
+                raise ValueError(
+                    "gzipped file loading only supports " "NetCDF 3 files."
+                )
             else:
                 raise
 
-    if isinstance(filename, bytes) and filename.startswith(b'CDF'):
+    if isinstance(filename, bytes) and filename.startswith(b"CDF"):
         # it's a NetCDF3 bytestring
         filename = BytesIO(filename)
 
     try:
-        return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap,
-                                    version=version)
+        return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap, version=version)
     except TypeError as e:  # netcdf3 message is obscure in this case
         errmsg = e.args[0]
-        if 'is not a valid NetCDF 3 file' in errmsg:
+        if "is not a valid NetCDF 3 file" in errmsg:
             msg = """
             If this is a NetCDF4 file, you may need to install the
             netcdf4 library, e.g.,
@@ -111,44 +105,38 @@ class ScipyDataStore(WritableCFDataStore):
     It only supports the NetCDF3 file-format.
     """
 
-    def __init__(self, filename_or_obj, mode='r', format=None, group=None,
-                 mmap=None, lock=None):
-        import scipy
-        import scipy.io
-
-        if (mode != 'r' and
-                scipy.__version__ < LooseVersion('0.13')):  # pragma: no cover
-            warnings.warn('scipy %s detected; '
-                          'the minimal recommended version is 0.13. '
-                          'Older version of this library do not reliably '
-                          'read and write files.'
-                          % scipy.__version__, ImportWarning)
-
+    def __init__(
+        self, filename_or_obj, mode="r", format=None, group=None, mmap=None, lock=None
+    ):
         if group is not None:
-            raise ValueError('cannot save to a group with the '
-                             'scipy.io.netcdf backend')
+            raise ValueError(
+                "cannot save to a group with the " "scipy.io.netcdf backend"
+            )
 
-        if format is None or format == 'NETCDF3_64BIT':
+        if format is None or format == "NETCDF3_64BIT":
             version = 2
-        elif format == 'NETCDF3_CLASSIC':
+        elif format == "NETCDF3_CLASSIC":
             version = 1
         else:
-            raise ValueError('invalid format for scipy.io.netcdf backend: %r'
-                             % format)
+            raise ValueError("invalid format for scipy.io.netcdf backend: %r" % format)
 
-        if (lock is None and mode != 'r' and
-                isinstance(filename_or_obj, str)):
+        if lock is None and mode != "r" and isinstance(filename_or_obj, str):
             lock = get_write_lock(filename_or_obj)
 
         self.lock = ensure_lock(lock)
 
         if isinstance(filename_or_obj, str):
             manager = CachingFileManager(
-                _open_scipy_netcdf, filename_or_obj, mode=mode, lock=lock,
-                kwargs=dict(mmap=mmap, version=version))
+                _open_scipy_netcdf,
+                filename_or_obj,
+                mode=mode,
+                lock=lock,
+                kwargs=dict(mmap=mmap, version=version),
+            )
         else:
             scipy_dataset = _open_scipy_netcdf(
-                filename_or_obj, mode=mode, mmap=mmap, version=version)
+                filename_or_obj, mode=mode, mmap=mmap, version=version
+            )
             manager = DummyFileManager(scipy_dataset)
 
         self._manager = manager
@@ -158,12 +146,16 @@ class ScipyDataStore(WritableCFDataStore):
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        return Variable(var.dimensions, ScipyArrayWrapper(name, self),
-                        _decode_attrs(var._attributes))
+        return Variable(
+            var.dimensions,
+            ScipyArrayWrapper(name, self),
+            _decode_attrs(var._attributes),
+        )
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in self.ds.variables.items())
+        return FrozenDict(
+            (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
+        )
 
     def get_attrs(self):
         return Frozen(_decode_attrs(self.ds._attributes))
@@ -173,14 +165,16 @@ class ScipyDataStore(WritableCFDataStore):
 
     def get_encoding(self):
         encoding = {}
-        encoding['unlimited_dims'] = {
-            k for k, v in self.ds.dimensions.items() if v is None}
+        encoding["unlimited_dims"] = {
+            k for k, v in self.ds.dimensions.items() if v is None
+        }
         return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         if name in self.ds.dimensions:
-            raise ValueError('%s does not support modifying dimensions'
-                             % type(self).__name__)
+            raise ValueError(
+                "%s does not support modifying dimensions" % type(self).__name__
+            )
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, dim_length)
 
@@ -197,12 +191,15 @@ class ScipyDataStore(WritableCFDataStore):
         variable = encode_nc3_variable(variable)
         return variable
 
-    def prepare_variable(self, name, variable, check_encoding=False,
-                         unlimited_dims=None):
+    def prepare_variable(
+        self, name, variable, check_encoding=False, unlimited_dims=None
+    ):
         if check_encoding and variable.encoding:
-            if variable.encoding != {'_FillValue': None}:
-                raise ValueError('unexpected encoding for scipy backend: %r'
-                                 % list(variable.encoding))
+            if variable.encoding != {"_FillValue": None}:
+                raise ValueError(
+                    "unexpected encoding for scipy backend: %r"
+                    % list(variable.encoding)
+                )
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we

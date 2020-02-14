@@ -1,8 +1,8 @@
 import numpy as np
 
-from .. import Variable
 from ..core import indexing
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenDict
+from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
 from .locks import SerializableLock, ensure_lock
 
@@ -21,7 +21,8 @@ class CfGribArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem)
+            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
+        )
 
     def _getitem(self, key):
         with self.datastore.lock:
@@ -32,8 +33,10 @@ class CfGribDataStore(AbstractDataStore):
     """
     Implements the ``xr.AbstractDataStore`` read-only API for a GRIB file.
     """
+
     def __init__(self, filename, lock=None, **backend_kwargs):
         import cfgrib
+
         if lock is None:
             lock = ECCODES_LOCK
         self.lock = ensure_lock(lock)
@@ -47,13 +50,14 @@ class CfGribDataStore(AbstractDataStore):
             data = indexing.LazilyOuterIndexedArray(wrapped_array)
 
         encoding = self.ds.encoding.copy()
-        encoding['original_shape'] = var.data.shape
+        encoding["original_shape"] = var.data.shape
 
         return Variable(var.dimensions, data, var.attributes, encoding)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in self.ds.variables.items())
+        return FrozenDict(
+            (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
+        )
 
     def get_attrs(self):
         return Frozen(self.ds.attributes)
@@ -63,7 +67,5 @@ class CfGribDataStore(AbstractDataStore):
 
     def get_encoding(self):
         dims = self.get_dimensions()
-        encoding = {
-            'unlimited_dims': {k for k, v in dims.items() if v is None},
-        }
+        encoding = {"unlimited_dims": {k for k, v in dims.items() if v is None}}
         return encoding

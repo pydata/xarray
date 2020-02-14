@@ -1,3 +1,4 @@
+.. currentmodule:: xarray
 .. _plotting:
 
 Plotting
@@ -10,9 +11,10 @@ Labeled data enables expressive computations. These same
 labels can also be used to easily create informative plots.
 
 xarray's plotting capabilities are centered around
-:py:class:`xarray.DataArray` objects.
-To plot :py:class:`xarray.Dataset` objects
+:py:class:`DataArray` objects.
+To plot :py:class:`Dataset` objects
 simply access the relevant DataArrays, ie ``dset['var1']``.
+Dataset specific plotting routines are also available (see :ref:`plot-dataset`).
 Here we focus mostly on arrays 2d or larger. If your data fits
 nicely into a pandas DataFrame then you're better off using one of the more
 developed tools there.
@@ -83,13 +85,17 @@ For these examples we'll use the North American air temperature dataset.
    Until :issue:`1614` is solved, you might need to copy over the metadata in ``attrs`` to get informative figure labels (as was done above).
 
 
+DataArrays
+----------
+
 One Dimension
--------------
+~~~~~~~~~~~~~
 
-Simple Example
-~~~~~~~~~~~~~~
+================
+ Simple Example
+================
 
-The simplest way to make a plot is to call the :py:func:`xarray.DataArray.plot()` method.
+The simplest way to make a plot is to call the :py:func:`DataArray.plot()` method.
 
 .. ipython:: python
 
@@ -104,8 +110,9 @@ xarray uses the coordinate name along with  metadata ``attrs.long_name``, ``attr
 
     air1d.attrs
 
-Additional Arguments
-~~~~~~~~~~~~~~~~~~~~~
+======================
+ Additional Arguments
+======================
 
 Additional arguments are passed directly to the matplotlib function which
 does the work.
@@ -133,8 +140,9 @@ Keyword arguments work the same way, and are more explicit.
     @savefig plotting_example_sin3.png width=4in
     air1d[:200].plot.line(color='purple', marker='o')
 
-Adding to Existing Axis
-~~~~~~~~~~~~~~~~~~~~~~~
+=========================
+ Adding to Existing Axis
+=========================
 
 To add the plot to an existing axis pass in the axis as a keyword argument
 ``ax``. This works for all xarray plotting methods.
@@ -159,8 +167,9 @@ On the right is a histogram created by :py:func:`xarray.plot.hist`.
 
 .. _plotting.figsize:
 
-Controlling the figure size
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=============================
+ Controlling the figure size
+=============================
 
 You can pass a ``figsize`` argument to all xarray's plotting methods to
 control the figure size. For convenience, xarray's plotting methods also
@@ -199,8 +208,9 @@ entire figure (as for matplotlib's ``figsize`` argument).
 
 .. _plotting.multiplelines:
 
-Multiple lines showing variation along a dimension
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+====================================================
+ Multiple lines showing variation along a dimension
+====================================================
 
 It is possible to make line plots of two-dimensional data by calling :py:func:`xarray.plot.line`
 with appropriate arguments. Consider the 3D variable ``air`` defined above. We can use line
@@ -218,11 +228,12 @@ It is required to explicitly specify either
 
 Thus, we could have made the previous plot by specifying ``hue='lat'`` instead of ``x='time'``.
 If required, the automatic legend can be turned off using ``add_legend=False``. Alternatively,
-``hue`` can be passed directly to :py:func:`xarray.plot` as `air.isel(lon=10, lat=[19,21,22]).plot(hue='lat')`.
+``hue`` can be passed directly to :py:func:`xarray.plot.line` as `air.isel(lon=10, lat=[19,21,22]).plot.line(hue='lat')`.
 
 
-Dimension along y-axis
-~~~~~~~~~~~~~~~~~~~~~~
+========================
+ Dimension along y-axis
+========================
 
 It is also possible to make line plots such that the data are on the x-axis and a dimension is on the y-axis. This can be done by specifying the appropriate ``y`` keyword argument.
 
@@ -231,20 +242,22 @@ It is also possible to make line plots such that the data are on the x-axis and 
     @savefig plotting_example_xy_kwarg.png
     air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
 
-Step plots
-~~~~~~~~~~
+============
+ Step plots
+============
 
 As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
 made using 1D data.
 
 .. ipython:: python
+    :okwarning:
 
     @savefig plotting_example_step.png width=4in
     air1d[:20].plot.step(where='mid')
 
 The argument ``where`` defines where the steps should be placed, options are
 ``'pre'`` (default), ``'post'``, and ``'mid'``. This is particularly handy
-when plotting data grouped with :py:func:`xarray.Dataset.groupby_bins`.
+when plotting data grouped with :py:meth:`Dataset.groupby_bins`.
 
 .. ipython:: python
 
@@ -263,7 +276,7 @@ is ignored.
 
 
 Other axes kwargs
------------------
+~~~~~~~~~~~~~~~~~
 
 
 The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
@@ -277,12 +290,13 @@ In addition, one can use ``xscale, yscale`` to set axes scaling; ``xticks, ytick
 
 
 Two Dimensions
---------------
-
-Simple Example
 ~~~~~~~~~~~~~~
 
-The default method :py:meth:`xarray.DataArray.plot` calls :py:func:`xarray.plot.pcolormesh` by default when the data is two-dimensional.
+================
+ Simple Example
+================
+
+The default method :py:meth:`DataArray.plot` calls :py:func:`xarray.plot.pcolormesh` by default when the data is two-dimensional.
 
 .. ipython:: python
 
@@ -307,8 +321,9 @@ and ``xincrease``.
     If speed is important to you and you are plotting a regular mesh, consider
     using ``imshow``.
 
-Missing Values
-~~~~~~~~~~~~~~
+================
+ Missing Values
+================
 
 xarray plots data with :ref:`missing_values`.
 
@@ -321,8 +336,9 @@ xarray plots data with :ref:`missing_values`.
     @savefig plotting_missing_values.png width=4in
     bad_air2d.plot()
 
-Nonuniform Coordinates
-~~~~~~~~~~~~~~~~~~~~~~
+========================
+ Nonuniform Coordinates
+========================
 
 It's not necessary for the coordinates to be evenly spaced. Both
 :py:func:`xarray.plot.pcolormesh` (default) and :py:func:`xarray.plot.contourf` can
@@ -337,8 +353,9 @@ produce plots with nonuniform coordinates.
     @savefig plotting_nonuniform_coords.png width=4in
     b.plot()
 
-Calling Matplotlib
-~~~~~~~~~~~~~~~~~~
+====================
+ Calling Matplotlib
+====================
 
 Since this is a thin wrapper around matplotlib, all the functionality of
 matplotlib is available.
@@ -370,8 +387,9 @@ matplotlib is available.
         @savefig plotting_2d_call_matplotlib2.png width=4in
         plt.draw()
 
-Colormaps
-~~~~~~~~~
+===========
+ Colormaps
+===========
 
 xarray borrows logic from Seaborn to infer what kind of color map to use. For
 example, consider the original data in Kelvins rather than Celsius:
@@ -386,8 +404,9 @@ Kelvins do not have 0, so the default color map was used.
 
 .. _robust-plotting:
 
-Robust
-~~~~~~
+========
+ Robust
+========
 
 Outliers often have an extreme effect on the output of the plot.
 Here we add two bad data points. This affects the color scale,
@@ -417,8 +436,9 @@ Observe that the ranges of the color bar have changed. The arrows on the
 color bar indicate
 that the colors include data points outside the bounds.
 
-Discrete Colormaps
-~~~~~~~~~~~~~~~~~~
+====================
+ Discrete Colormaps
+====================
 
 It is often useful, when visualizing 2d data, to use a discrete colormap,
 rather than the default continuous colormaps that matplotlib uses. The
@@ -462,12 +482,13 @@ since levels are chosen automatically).
 .. _plotting.faceting:
 
 Faceting
---------
+~~~~~~~~
 
 Faceting here refers to splitting an array along one or two dimensions and
 plotting each group.
 xarray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays? That's where facets become helpful.
+The general approach to plotting here is called “small multiples”, where the same kind of plot is repeated multiple times, and the specific use of small multiples to display the same relationship conditioned on one ore more other variables is often called a “trellis plot”.
 
 Consider the temperature data set. There are 4 observations per day for two
 years which makes for 2920 values along the time dimension.
@@ -488,8 +509,9 @@ So let's use a slice to pick 6 times throughout the first year.
     t = air.isel(time=slice(0, 365 * 4, 250))
     t.coords
 
-Simple Example
-~~~~~~~~~~~~~~
+================
+ Simple Example
+================
 
 The easiest way to create faceted plots is to pass in ``row`` or ``col``
 arguments to the xarray plotting methods/functions. This returns a
@@ -507,8 +529,9 @@ Faceting also works for line plots.
     @savefig plot_facet_dataarray_line.png
     g_simple_line = t.isel(lat=slice(0,None,4)).plot(x='lon', hue='lat', col='time', col_wrap=3)
 
-4 dimensional
-~~~~~~~~~~~~~
+===============
+ 4 dimensional
+===============
 
 For 4 dimensional arrays we can use the rows and columns of the grids.
 Here we create a 4 dimensional array by taking the original data and adding
@@ -525,8 +548,9 @@ one were much hotter.
     @savefig plot_facet_4d.png
     t4d.plot(x='lon', y='lat', col='time', row='fourth_dim')
 
-Other features
-~~~~~~~~~~~~~~
+================
+ Other features
+================
 
 Faceted plotting supports other arguments common to xarray 2d plots.
 
@@ -546,11 +570,13 @@ Faceted plotting supports other arguments common to xarray 2d plots.
                                     robust=True, cmap='viridis',
 				    cbar_kwargs={'label': 'this has outliers'})
 
-FacetGrid Objects
-~~~~~~~~~~~~~~~~~
+===================
+ FacetGrid Objects
+===================
 
-:py:class:`xarray.plot.FacetGrid` is used to control the behavior of the
-multiple plots.
+The object returned, ``g`` in the above examples, is a :py:class:`~xarray.plot.FacetGrid` object
+that links a :py:class:`DataArray` to a matplotlib figure with a particular structure.
+This object can be used to control the behavior of the multiple plots.
 It borrows an API and code from `Seaborn's FacetGrid
 <http://seaborn.pydata.org/tutorial/axis_grids.html>`_.
 The structure is contained within the ``axes`` and ``name_dicts``
@@ -586,8 +612,72 @@ they have been plotted.
     @savefig plot_facet_iterator.png
     plt.draw()
 
+
+:py:class:`~xarray.plot.FacetGrid` objects have methods that let you customize the automatically generated
+axis labels, axis ticks and plot titles. See :py:meth:`~xarray.plot.FacetGrid.set_titles`,
+:py:meth:`~xarray.plot.FacetGrid.set_xlabels`, :py:meth:`~xarray.plot.FacetGrid.set_ylabels` and
+:py:meth:`~xarray.plot.FacetGrid.set_ticks` for more information.
+Plotting functions can be applied to each subset of the data by calling :py:meth:`~xarray.plot.FacetGrid.map_dataarray` or to each subplot by calling :py:meth:`~xarray.plot.FacetGrid.map`.
+
 TODO: add an example of using the ``map`` method to plot dataset variables
 (e.g., with ``plt.quiver``).
+
+.. _plot-dataset:
+
+Datasets
+--------
+
+``xarray`` has limited support for plotting Dataset variables against each other.
+Consider this dataset
+
+.. ipython:: python
+
+   ds = xr.tutorial.scatter_example_dataset()
+   ds
+
+
+Suppose we want to scatter ``A`` against ``B``
+
+.. ipython:: python
+
+    @savefig ds_simple_scatter.png
+    ds.plot.scatter(x='A', y='B')
+
+The ``hue`` kwarg lets you vary the color by variable value
+
+.. ipython:: python
+
+    @savefig ds_hue_scatter.png
+    ds.plot.scatter(x='A', y='B', hue='w')
+
+When ``hue`` is specified, a colorbar is added for numeric ``hue`` DataArrays by
+default and a legend is added for non-numeric ``hue`` DataArrays (as above).
+You can force a legend instead of a colorbar by setting ``hue_style='discrete'``.
+Additionally, the boolean kwarg ``add_guide`` can be used to prevent the display of a legend or colorbar (as appropriate).
+
+.. ipython:: python
+
+    ds.w.values = [1, 2, 3, 5]
+    @savefig ds_discrete_legend_hue_scatter.png
+    ds.plot.scatter(x='A', y='B', hue='w', hue_style='discrete')
+
+The ``markersize`` kwarg lets you vary the point's size by variable value. You can additionally pass ``size_norm`` to control how the variable's values are mapped to point sizes.
+
+.. ipython:: python
+
+    @savefig ds_hue_size_scatter.png
+    ds.plot.scatter(x='A', y='B', hue='z', hue_style='discrete', markersize='z')
+
+Faceting is also possible
+
+.. ipython:: python
+
+    @savefig ds_facet_scatter.png
+    ds.plot.scatter(x='A', y='B', col='x', row='z', hue='w', hue_style='discrete')
+
+
+For more advanced scatter plots, we recommend converting the relevant data variables to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
+
 
 .. _plot-maps:
 
@@ -702,7 +792,7 @@ coordinates.
 Multidimensional coordinates
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-See also: :ref:`examples.multidim`.
+See also: :ref:`/examples/multidimensional-coords.ipynb`.
 
 You can plot irregular grids defined by multidimensional coordinates with
 xarray, but you'll have to tell the plot function to use these coordinates

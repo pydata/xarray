@@ -101,6 +101,8 @@ You can also select a particular time by indexing with a
 
 For more details, read the pandas documentation.
 
+.. _dt_accessor:
+
 Datetime components
 -------------------
 
@@ -151,6 +153,15 @@ __ http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 .. ipython:: python
 
     ds['time'].dt.floor('D')
+
+The ``.dt`` accessor can also be used to generate formatted datetime strings
+for arrays utilising the same formatting as the standard `datetime.strftime`_.
+
+.. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+
+.. ipython:: python
+
+    ds['time'].dt.strftime('%a, %b %d %H:%M')
 
 .. _resampling:
 
@@ -211,4 +222,4 @@ Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
 
 For more examples of using grouped operations on a time dimension, see
-:ref:`toy weather data`.
+:doc:`examples/weather-data`.

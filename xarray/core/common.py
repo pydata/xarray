@@ -1,91 +1,121 @@
-from collections import OrderedDict
+import warnings
 from contextlib import suppress
+from html import escape
 from textwrap import dedent
-from typing import (Any, Callable, Hashable, Iterable, Iterator, List, Mapping,
-                    MutableMapping, Optional, Tuple, TypeVar, Union)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Hashable,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
 
-from . import dtypes, duck_array_ops, formatting, ops
+from . import dtypes, duck_array_ops, formatting, formatting_html, ops
 from .arithmetic import SupportsArithmetic
-from .options import _get_keep_attrs
+from .npcompat import DTypeLike
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
-from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
-
+from .rolling_exp import RollingExp
+from .utils import Frozen, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
-ALL_DIMS = ReprObject('<all-dims>')
+ALL_DIMS = ...
 
 
-T = TypeVar('T')
+C = TypeVar("C")
+T = TypeVar("T")
 
 
 class ImplementsArrayReduce:
+    __slots__ = ()
+
     @classmethod
-    def _reduce_method(cls, func: Callable, include_skipna: bool,
-                       numeric_only: bool):
+    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
         if include_skipna:
-            def wrapped_func(self, dim=None, axis=None, skipna=None,
-                             **kwargs):
-                return self.reduce(func, dim, axis,
-                                   skipna=skipna, allow_lazy=True, **kwargs)
+
+            def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
+                return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
+
         else:
-            def wrapped_func(self, dim=None, axis=None,  # type: ignore
-                             **kwargs):
-                return self.reduce(func, dim, axis,
-                                   allow_lazy=True, **kwargs)
+
+            def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore
+                return self.reduce(func, dim, axis, **kwargs)
+
         return wrapped_func
 
-    _reduce_extra_args_docstring = dedent("""\
+    _reduce_extra_args_docstring = dedent(
+        """\
         dim : str or sequence of str, optional
             Dimension(s) over which to apply `{name}`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `{name}`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over axes.""")
+            `{name}` is calculated over axes."""
+    )
 
-    _cum_extra_args_docstring = dedent("""\
+    _cum_extra_args_docstring = dedent(
+        """\
         dim : str or sequence of str, optional
             Dimension over which to apply `{name}`.
         axis : int or sequence of int, optional
             Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied.""")
+            and 'axis' arguments can be supplied."""
+    )
 
 
 class ImplementsDatasetReduce:
+    __slots__ = ()
+
     @classmethod
-    def _reduce_method(cls, func: Callable, include_skipna: bool,
-                       numeric_only: bool):
+    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
         if include_skipna:
-            def wrapped_func(self, dim=None, skipna=None,
-                             **kwargs):
-                return self.reduce(func, dim, skipna=skipna,
-                                   numeric_only=numeric_only, allow_lazy=True,
-                                   **kwargs)
+
+            def wrapped_func(self, dim=None, skipna=None, **kwargs):
+                return self.reduce(
+                    func, dim, skipna=skipna, numeric_only=numeric_only, **kwargs
+                )
+
         else:
+
             def wrapped_func(self, dim=None, **kwargs):  # type: ignore
-                return self.reduce(func, dim,
-                                   numeric_only=numeric_only, allow_lazy=True,
-                                   **kwargs)
+                return self.reduce(func, dim, numeric_only=numeric_only, **kwargs)
+
         return wrapped_func
 
-    _reduce_extra_args_docstring = \
-        """dim : str or sequence of str, optional
+    _reduce_extra_args_docstring = dedent(
+        """
+        dim : str or sequence of str, optional
             Dimension(s) over which to apply `{name}`.  By default `{name}` is
-            applied over all dimensions."""
+            applied over all dimensions.
+        """
+    ).strip()
 
-    _cum_extra_args_docstring = \
-        """dim : str or sequence of str, optional
+    _cum_extra_args_docstring = dedent(
+        """
+        dim : str or sequence of str, optional
             Dimension over which to apply `{name}`.
         axis : int or sequence of int, optional
             Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied."""
+            and 'axis' arguments can be supplied.
+        """
+    ).strip()
 
 
 class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable.
     """
+
+    __slots__ = ()
+
     def __bool__(self: Any) -> bool:
         return bool(self.values)
 
@@ -98,12 +128,16 @@ class AbstractArray(ImplementsArrayReduce):
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: Union[str, np.dtype, None] = None
-                  ) -> np.ndarray:
+    def __array__(self: Any, dtype: DTypeLike = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
         return formatting.array_repr(self)
+
+    def _repr_html_(self):
+        if OPTIONS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
+        return formatting_html.array_repr(self)
 
     def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
@@ -111,11 +145,12 @@ class AbstractArray(ImplementsArrayReduce):
 
     def __iter__(self: Any) -> Iterator[Any]:
         if self.ndim == 0:
-            raise TypeError('iteration over a 0-d array')
+            raise TypeError("iteration over a 0-d array")
         return self._iter()
 
-    def get_axis_num(self, dim: Union[Hashable, Iterable[Hashable]]
-                     ) -> Union[int, Tuple[int, ...]]:
+    def get_axis_num(
+        self, dim: Union[Hashable, Iterable[Hashable]]
+    ) -> Union[int, Tuple[int, ...]]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -137,8 +172,7 @@ class AbstractArray(ImplementsArrayReduce):
         try:
             return self.dims.index(dim)
         except ValueError:
-            raise ValueError("%r not found in array dimensions %r" %
-                             (dim, self.dims))
+            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
     def sizes(self: Any) -> Mapping[Hashable, int]:
@@ -150,78 +184,130 @@ class AbstractArray(ImplementsArrayReduce):
         --------
         Dataset.sizes
         """
-        return Frozen(OrderedDict(zip(self.dims, self.shape)))
+        return Frozen(dict(zip(self.dims, self.shape)))
 
 
 class AttrAccessMixin:
     """Mixin class that allows getting keys with attribute access
     """
-    _initialized = False
+
+    __slots__ = ()
+
+    def __init_subclass__(cls):
+        """Verify that all subclasses explicitly define ``__slots__``. If they don't,
+        raise error in the core xarray module and a FutureWarning in third-party
+        extensions.
+        """
+        if not hasattr(object.__new__(cls), "__dict__"):
+            pass
+        elif cls.__module__.startswith("xarray."):
+            raise AttributeError("%s must explicitly define __slots__" % cls.__name__)
+        else:
+            cls.__setattr__ = cls._setattr_dict
+            warnings.warn(
+                "xarray subclass %s should explicitly define __slots__" % cls.__name__,
+                FutureWarning,
+                stacklevel=2,
+            )
 
     @property
-    def _attr_sources(self):
-        """List of places to look-up items for attribute-style access"""
+    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
+        """List of places to look-up items for attribute-style access
+        """
         return []
 
     @property
-    def _item_sources(self):
-        """List of places to look-up items for key-autocompletion """
+    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
+        """List of places to look-up items for key-autocompletion
+        """
         return []
 
     def __getattr__(self, name: str) -> Any:
-        if name != '__setstate__':
+        if name not in {"__dict__", "__setstate__"}:
             # this avoids an infinite loop when pickle looks for the
             # __setstate__ attribute before the xarray object is initialized
             for source in self._attr_sources:
                 with suppress(KeyError):
                     return source[name]
-        raise AttributeError("%r object has no attribute %r" %
-                             (type(self).__name__, name))
+        raise AttributeError(
+            "{!r} object has no attribute {!r}".format(type(self).__name__, name)
+        )
+
+    # This complicated two-method design boosts overall performance of simple operations
+    # - particularly DataArray methods that perform a _to_temp_dataset() round-trip - by
+    # a whopping 8% compared to a single method that checks hasattr(self, "__dict__") at
+    # runtime before every single assignment. All of this is just temporary until the
+    # FutureWarning can be changed into a hard crash.
+    def _setattr_dict(self, name: str, value: Any) -> None:
+        """Deprecated third party subclass (see ``__init_subclass__`` above)
+        """
+        object.__setattr__(self, name, value)
+        if name in self.__dict__:
+            # Custom, non-slotted attr, or improperly assigned variable?
+            warnings.warn(
+                "Setting attribute %r on a %r object. Explicitly define __slots__ "
+                "to suppress this warning for legitimate custom attributes and "
+                "raise an error when attempting variables assignments."
+                % (name, type(self).__name__),
+                FutureWarning,
+                stacklevel=2,
+            )
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if self._initialized:
-            try:
-                # Allow setting instance variables if they already exist
-                # (e.g., _attrs). We use __getattribute__ instead of hasattr
-                # to avoid key lookups with attribute-style access.
-                self.__getattribute__(name)
-            except AttributeError:
-                raise AttributeError(
-                    "cannot set attribute %r on a %r object. Use __setitem__ "
-                    "style assignment (e.g., `ds['name'] = ...`) instead to "
-                    "assign variables." % (name, type(self).__name__))
-        object.__setattr__(self, name, value)
+        """Objects with ``__slots__`` raise AttributeError if you try setting an
+        undeclared attribute. This is desirable, but the error message could use some
+        improvement.
+        """
+        try:
+            object.__setattr__(self, name, value)
+        except AttributeError as e:
+            # Don't accidentally shadow custom AttributeErrors, e.g.
+            # DataArray.dims.setter
+            if str(e) != "{!r} object has no attribute {!r}".format(
+                type(self).__name__, name
+            ):
+                raise
+            raise AttributeError(
+                "cannot set attribute %r on a %r object. Use __setitem__ style"
+                "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
+                % (name, type(self).__name__)
+            ) from e
 
     def __dir__(self) -> List[str]:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [item
-                       for sublist in self._attr_sources
-                       for item in sublist
-                       if isinstance(item, str)]
+        extra_attrs = [
+            item
+            for sublist in self._attr_sources
+            for item in sublist
+            if isinstance(item, str)
+        ]
         return sorted(set(dir(type(self)) + extra_attrs))
 
     def _ipython_key_completions_(self) -> List[str]:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
-        """  # noqa
-        item_lists = [item
-                      for sublist in self._item_sources
-                      for item in sublist
-                      if isinstance(item, str)]
+        """
+        item_lists = [
+            item
+            for sublist in self._item_sources
+            for item in sublist
+            if isinstance(item, str)
+        ]
         return list(set(item_lists))
 
 
-def get_squeeze_dims(xarray_obj,
-                     dim: Union[Hashable, Iterable[Hashable], None] = None,
-                     axis: Union[int, Iterable[int], None] = None
-                     ) -> List[Hashable]:
+def get_squeeze_dims(
+    xarray_obj,
+    dim: Union[Hashable, Iterable[Hashable], None] = None,
+    axis: Union[int, Iterable[int], None] = None,
+) -> List[Hashable]:
     """Get a list of dimensions to squeeze out.
     """
     if dim is not None and axis is not None:
-        raise ValueError('cannot use both parameters `axis` and `dim`')
+        raise ValueError("cannot use both parameters `axis` and `dim`")
     if dim is None and axis is None:
         return [d for d, s in xarray_obj.sizes.items() if s == 1]
 
@@ -235,23 +321,31 @@ def get_squeeze_dims(xarray_obj,
             axis = [axis]
         axis = list(axis)
         if any(not isinstance(a, int) for a in axis):
-            raise TypeError(
-                'parameter `axis` must be int or iterable of int.')
+            raise TypeError("parameter `axis` must be int or iterable of int.")
         alldims = list(xarray_obj.sizes.keys())
         dim = [alldims[a] for a in axis]
 
     if any(xarray_obj.sizes[k] > 1 for k in dim):
-        raise ValueError('cannot select a dimension to squeeze out '
-                         'which has length greater than one')
+        raise ValueError(
+            "cannot select a dimension to squeeze out "
+            "which has length greater than one"
+        )
     return dim
 
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    def squeeze(self, dim: Union[Hashable, Iterable[Hashable], None] = None,
-                drop: bool = False,
-                axis: Union[int, Iterable[int], None] = None):
+    __slots__ = ()
+
+    _rolling_exp_cls = RollingExp
+
+    def squeeze(
+        self,
+        dim: Union[Hashable, Iterable[Hashable], None] = None,
+        drop: bool = False,
+        axis: Union[int, Iterable[int], None] = None,
+    ):
         """Return a new object with squeezed data.
 
         Parameters
@@ -291,17 +385,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             # need to ensure dtype=int64 in case range is empty on Python 2
             return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
-    def _calc_assign_results(self, kwargs: Mapping[str, T]
-                             ) -> MutableMapping[str, T]:
-        results = SortedKeysDict()  # type: SortedKeysDict[str, T]
-        for k, v in kwargs.items():
-            if callable(v):
-                results[k] = v(self)
-            else:
-                results[k] = v
-        return results
+    def _calc_assign_results(
+        self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
+    ) -> Dict[Hashable, T]:
+        return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
-    def assign_coords(self, **kwargs):
+    def assign_coords(self, coords=None, **coords_kwargs):
         """Assign new coordinates to this object.
 
         Returns a new object with all the original data in addition to the new
@@ -309,11 +398,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        kwargs : keyword, value pairs
-            keywords are the variables names. If the values are callable, they
-            are computed on this object and assigned to new coordinate
-            variables. If the values are not callable, (e.g. a DataArray,
-            scalar, or array), they are simply assigned.
+        coords : dict, optional
+            A dict with keys which are variables names. If the values are
+            callable, they are computed on this object and assigned to new
+            coordinate variables. If the values are not callable,
+            (e.g. a ``DataArray``, scalar, or array), they are simply assigned.
+
+        **coords_kwargs : keyword, value pairs, optional
+            The keyword arguments form of ``coords``.
+            One of ``coords`` or ``coords_kwargs`` must be provided.
 
         Returns
         -------
@@ -323,7 +416,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Examples
         --------
-
         Convert longitude coordinates from 0-359 to -180-179:
 
         >>> da = xr.DataArray(np.random.rand(4),
@@ -340,10 +432,18 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * lon      (lon) int64 -2 -1 0 1
 
+        The function also accepts dictionary arguments:
+
+        >>> da.assign_coords({'lon': (((da.lon + 180) % 360) - 180)})
+        <xarray.DataArray (lon: 4)>
+        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        Coordinates:
+          * lon      (lon) int64 -2 -1 0 1
+
         Notes
         -----
-        Since ``kwargs`` is a dictionary, the order of your arguments may not
-        be preserved, and so the order of the new variables is not well
+        Since ``coords_kwargs`` is a dictionary, the order of your arguments may
+        not be preserved, and so the order of the new variables is not well
         defined. Assigning multiple variables within the same ``assign_coords``
         is possible, but you cannot reference other variables created within
         the same ``assign_coords`` call.
@@ -353,15 +453,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Dataset.assign
         Dataset.swap_dims
         """
+        coords_kwargs = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
-        results = self._calc_assign_results(kwargs)
+        results = self._calc_assign_results(coords_kwargs)
         data.coords.update(results)
         return data
 
     def assign_attrs(self, *args, **kwargs):
         """Assign new attrs to this object.
 
-        Returns a new object equivalent to self.attrs.update(*args, **kwargs).
+        Returns a new object equivalent to ``self.attrs.update(*args, **kwargs)``.
 
         Parameters
         ----------
@@ -381,10 +482,14 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         out.attrs.update(*args, **kwargs)
         return out
 
-    def pipe(self, func: Union[Callable[..., T], Tuple[Callable[..., T], str]],
-             *args, **kwargs) -> T:
+    def pipe(
+        self,
+        func: Union[Callable[..., T], Tuple[Callable[..., T], str]],
+        *args,
+        **kwargs,
+    ) -> T:
         """
-        Apply func(self, *args, **kwargs)
+        Apply ``func(self, *args, **kwargs)``
 
         This method replicates the pandas method of the same name.
 
@@ -427,6 +532,72 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...    .pipe((f, 'arg2'), arg1=a, arg3=c)
         ...  )
 
+        Examples
+        --------
+
+        >>> import numpy as np
+        >>> import xarray as xr
+        >>> x = xr.Dataset(
+        ...     {
+        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
+        ...     },
+        ...     coords={"lat": [10, 20], "lon": [150, 160]},
+        ... )
+        >>> x
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lat            (lat) int64 10 20
+        * lon            (lon) int64 150 160
+        Data variables:
+            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
+            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+
+        >>> def adder(data, arg):
+        ...     return data + arg
+        ...
+        >>> def div(data, arg):
+        ...     return data / arg
+        ...
+        >>> def sub_mult(data, sub_arg, mult_arg):
+        ...     return (data * mult_arg) - sub_arg
+        ...
+        >>> x.pipe(adder, 2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
+            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+
+        >>> x.pipe(adder, arg=2)
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
+            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+
+        >>> (
+        ... x
+        ... .pipe(adder, arg=2)
+        ... .pipe(div, arg=2)
+        ... .pipe(sub_mult, sub_arg=2, mult_arg=2)
+        ... )
+        <xarray.Dataset>
+        Dimensions:        (lat: 2, lon: 2)
+        Coordinates:
+        * lon            (lon) int64 150 160
+        * lat            (lat) int64 10 20
+        Data variables:
+            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
+            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+
         See Also
         --------
         pandas.DataFrame.pipe
@@ -434,15 +605,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if isinstance(func, tuple):
             func, target = func
             if target in kwargs:
-                raise ValueError('%s is both the pipe target and a keyword '
-                                 'argument' % target)
+                raise ValueError(
+                    "%s is both the pipe target and a keyword " "argument" % target
+                )
             kwargs[target] = self
             return func(*args, **kwargs)
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze: bool = True,
-                restore_coord_dims: Optional[bool] = None):
+    def groupby(self, group, squeeze: bool = True, restore_coord_dims: bool = None):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -488,14 +659,22 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
-        """  # noqa
-        return self._groupby_cls(self, group, squeeze=squeeze,
-                                 restore_coord_dims=restore_coord_dims)
+        """
+        return self._groupby_cls(
+            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+        )
 
-    def groupby_bins(self, group, bins, right: bool = True, labels=None,
-                     precision: int = 3, include_lowest: bool = False,
-                     squeeze: bool = True,
-                     restore_coord_dims: Optional[bool] = None):
+    def groupby_bins(
+        self,
+        group,
+        bins,
+        right: bool = True,
+        labels=None,
+        precision: int = 3,
+        include_lowest: bool = False,
+        squeeze: bool = True,
+        restore_coord_dims: bool = None,
+    ):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -543,17 +722,28 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         References
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
-        """  # noqa
-        return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
-                                 restore_coord_dims=restore_coord_dims,
-                                 cut_kwargs={'right': right, 'labels': labels,
-                                             'precision': precision,
-                                             'include_lowest':
-                                                 include_lowest})
+        """
+        return self._groupby_cls(
+            self,
+            group,
+            squeeze=squeeze,
+            bins=bins,
+            restore_coord_dims=restore_coord_dims,
+            cut_kwargs={
+                "right": right,
+                "labels": labels,
+                "precision": precision,
+                "include_lowest": include_lowest,
+            },
+        )
 
-    def rolling(self, dim: Optional[Mapping[Hashable, int]] = None,
-                min_periods: Optional[int] = None, center: bool = False,
-                **dim_kwargs: int):
+    def rolling(
+        self,
+        dim: Mapping[Hashable, int] = None,
+        min_periods: int = None,
+        center: bool = False,
+        **window_kwargs: int,
+    ):
         """
         Rolling window object.
 
@@ -568,9 +758,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **dim_kwargs : optional
+        **window_kwargs : optional
             The keyword arguments form of ``dim``.
-            One of dim or dim_kwargs must be provided.
+            One of dim or window_kwargs must be provided.
 
         Returns
         -------
@@ -608,16 +798,58 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
-        """  # noqa
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
-        return self._rolling_cls(self, dim, min_periods=min_periods,
-                                 center=center)
+        """
+        dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
+        return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
 
-    def coarsen(self, dim: Optional[Mapping[Hashable, int]] = None,
-                boundary: str = 'exact',
-                side: Union[str, Mapping[Hashable, str]] = 'left',
-                coord_func: str = 'mean',
-                **dim_kwargs: int):
+    def rolling_exp(
+        self,
+        window: Mapping[Hashable, int] = None,
+        window_type: str = "span",
+        **window_kwargs,
+    ):
+        """
+        Exponentially-weighted moving window.
+        Similar to EWM in pandas
+
+        Requires the optional Numbagg dependency.
+
+        Parameters
+        ----------
+        window : A single mapping from a dimension name to window value,
+                 optional
+
+            dim : str
+                Name of the dimension to create the rolling exponential window
+                along (e.g., `time`).
+            window : int
+                Size of the moving window. The type of this is specified in
+                `window_type`
+        window_type : str, one of ['span', 'com', 'halflife', 'alpha'],
+                      default 'span'
+            The format of the previously supplied window. Each is a simple
+            numerical transformation of the others. Described in detail:
+            https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+        **window_kwargs : optional
+            The keyword arguments form of ``window``.
+            One of window or window_kwargs must be provided.
+
+        See Also
+        --------
+        core.rolling_exp.RollingExp
+        """
+        window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
+
+        return self._rolling_exp_cls(self, window, window_type)
+
+    def coarsen(
+        self,
+        dim: Mapping[Hashable, int] = None,
+        boundary: str = "exact",
+        side: Union[str, Mapping[Hashable, str]] = "left",
+        coord_func: str = "mean",
+        **window_kwargs: int,
+    ):
         """
         Coarsen object.
 
@@ -625,6 +857,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dim: dict, optional
             Mapping from the dimension name to the window size.
+
             dim : str
                 Name of the dimension to create the rolling iterator
                 along (e.g., `time`).
@@ -635,7 +868,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func: function (name) that is applied to the coordintes,
+        coord_func : function (name) that is applied to the coordintes,
             or a mapping from coordinate name to function (name).
 
         Returns
@@ -671,26 +904,35 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(
-            self, dim, boundary=boundary, side=side,
-            coord_func=coord_func)
+            self, dim, boundary=boundary, side=side, coord_func=coord_func
+        )
 
-    def resample(self, indexer: Optional[Mapping[Hashable, str]] = None,
-                 skipna=None, closed: Optional[str] = None,
-                 label: Optional[str] = None,
-                 base: int = 0, keep_attrs: Optional[bool] = None,
-                 loffset=None, restore_coord_dims: Optional[bool] = None,
-                 **indexer_kwargs: str):
+    def resample(
+        self,
+        indexer: Mapping[Hashable, str] = None,
+        skipna=None,
+        closed: str = None,
+        label: str = None,
+        base: int = 0,
+        keep_attrs: bool = None,
+        loffset=None,
+        restore_coord_dims: bool = None,
+        **indexer_kwargs: str,
+    ):
         """Returns a Resample object for performing resampling operations.
 
-        Handles both downsampling and upsampling. If any intervals contain no
-        values from the original object, they will be given the value ``NaN``.
+        Handles both downsampling and upsampling. The resampled
+        dimension must be a datetime-like coordinate. If any intervals
+        contain no values from the original object, they will be given
+        the value ``NaN``.
 
         Parameters
         ----------
         indexer : {dim: freq}, optional
-            Mapping from the dimension name to resample frequency.
+            Mapping from the dimension name to resample frequency [1]_. The
+            dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
@@ -748,17 +990,23 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
 
         Limit scope of upsampling method
+
         >>> da.resample(time='1D').nearest(tolerance='1D')
         <xarray.DataArray (time: 337)>
         array([ 0.,  0., nan, ..., nan, 11., 11.])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
 
+        See Also
+        --------
+        pandas.Series.resample
+        pandas.DataFrame.resample
+
         References
         ----------
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
-        """  # noqa
+        """
         # TODO support non-string indexer after removing the old API.
 
         from .dataarray import DataArray
@@ -769,19 +1017,20 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         # note: the second argument (now 'skipna') use to be 'dim'
-        if ((skipna is not None and not isinstance(skipna, bool))
-                or ('how' in indexer_kwargs and 'how' not in self.dims)
-                or ('dim' in indexer_kwargs and 'dim' not in self.dims)):
+        if (
+            (skipna is not None and not isinstance(skipna, bool))
+            or ("how" in indexer_kwargs and "how" not in self.dims)
+            or ("dim" in indexer_kwargs and "dim" not in self.dims)
+        ):
             raise TypeError(
-                'resample() no longer supports the `how` or '
-                '`dim` arguments. Instead call methods on resample '
-                "objects, e.g., data.resample(time='1D').mean()")
-
-        indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
-        if len(indexer) != 1:
-            raise ValueError(
-                "Resampling only supported along single dimensions."
+                "resample() no longer supports the `how` or "
+                "`dim` arguments. Instead call methods on resample "
+                "objects, e.g., data.resample(time='1D').mean()"
             )
+
+        indexer = either_dict_or_kwargs(indexer, indexer_kwargs, "resample")
+        if len(indexer) != 1:
+            raise ValueError("Resampling only supported along single dimensions.")
         dim, freq = next(iter(indexer.items()))
 
         dim_name = dim
@@ -789,19 +1038,23 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
             from .resample_cftime import CFTimeGrouper
+
             grouper = CFTimeGrouper(freq, closed, label, base, loffset)
         else:
-            # TODO: to_offset() call required for pandas==0.19.2
-            grouper = pd.Grouper(freq=freq, closed=closed, label=label,
-                                 base=base,
-                                 loffset=pd.tseries.frequencies.to_offset(
-                                     loffset))
-        group = DataArray(dim_coord, coords=dim_coord.coords,
-                          dims=dim_coord.dims, name=RESAMPLE_DIM)
-        resampler = self._resample_cls(self, group=group, dim=dim_name,
-                                       grouper=grouper,
-                                       resample_dim=RESAMPLE_DIM,
-                                       restore_coord_dims=restore_coord_dims)
+            grouper = pd.Grouper(
+                freq=freq, closed=closed, label=label, base=base, loffset=loffset
+            )
+        group = DataArray(
+            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
+        )
+        resampler = self._resample_cls(
+            self,
+            group=group,
+            dim=dim_name,
+            grouper=grouper,
+            resample_dim=RESAMPLE_DIM,
+            restore_coord_dims=restore_coord_dims,
+        )
 
         return resampler
 
@@ -825,7 +1078,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Same type as caller.
+        Same xarray type as caller, with dtype float64.
 
         Examples
         --------
@@ -867,18 +1120,20 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         if drop:
             if other is not dtypes.NA:
-                raise ValueError('cannot set `other` if drop=True')
+                raise ValueError("cannot set `other` if drop=True")
 
             if not isinstance(cond, (Dataset, DataArray)):
-                raise TypeError("cond argument is %r but must be a %r or %r" %
-                                (cond, Dataset, DataArray))
+                raise TypeError(
+                    "cond argument is %r but must be a %r or %r"
+                    % (cond, Dataset, DataArray)
+                )
 
             # align so we can use integer indexing
             self, cond = align(self, cond)
 
             # get cond with the minimal size needed for the Dataset
             if isinstance(cond, Dataset):
-                clipcond = cond.to_array().any('variable')
+                clipcond = cond.to_array().any("variable")
             else:
                 clipcond = cond
 
@@ -933,8 +1188,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         if isinstance(test_elements, Dataset):
             raise TypeError(
-                'isin() argument must be convertible to an array: {}'
-                .format(test_elements))
+                "isin() argument must be convertible to an array: {}".format(
+                    test_elements
+                )
+            )
         elif isinstance(test_elements, (Variable, DataArray)):
             # need to explicitly pull out data to support dask arrays as the
             # second argument
@@ -944,7 +1201,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             duck_array_ops.isin,
             self,
             kwargs=dict(test_elements=test_elements),
-            dask='allowed',
+            dask="allowed",
         )
 
     def __enter__(self: T) -> T:
@@ -953,8 +1210,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
+    def __getitem__(self, value):
+        # implementations of this class should implement this method
+        raise NotImplementedError()
 
-def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
+
+def full_like(other, fill_value, dtype: DTypeLike = None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -973,62 +1234,223 @@ def full_like(other, fill_value, dtype: Union[str, np.dtype, None] = None):
         filled with fill_value. Coords will be copied from other.
         If other is based on dask, the new one will be as well, and will be
         split in the same chunks.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 1)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[1, 1, 1],
+           [1, 1, 1]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 0.5)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 0, 0],
+           [0, 0, 0]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, 0.5, dtype=np.double)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0.5, 0.5, 0.5],
+           [0.5, 0.5, 0.5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.full_like(x, np.nan, dtype=np.double)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[nan, nan, nan],
+           [nan, nan, nan]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    zeros_like
+    ones_like
+
     """
     from .dataarray import DataArray
     from .dataset import Dataset
     from .variable import Variable
 
     if isinstance(other, Dataset):
-        data_vars = OrderedDict(
-            (k, _full_like_variable(v, fill_value, dtype))
-            for k, v in other.data_vars.items())
+        data_vars = {
+            k: _full_like_variable(v, fill_value, dtype)
+            for k, v in other.data_vars.items()
+        }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
     elif isinstance(other, DataArray):
         return DataArray(
             _full_like_variable(other.variable, fill_value, dtype),
-            dims=other.dims, coords=other.coords, attrs=other.attrs,
-            name=other.name)
+            dims=other.dims,
+            coords=other.coords,
+            attrs=other.attrs,
+            name=other.name,
+        )
     elif isinstance(other, Variable):
         return _full_like_variable(other, fill_value, dtype)
     else:
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
-def _full_like_variable(other, fill_value,
-                        dtype: Union[str, np.dtype, None] = None):
+def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
     """Inner function of full_like, where other must be a variable
     """
     from .variable import Variable
 
     if isinstance(other.data, dask_array_type):
         import dask.array
+
         if dtype is None:
             dtype = other.dtype
-        data = dask.array.full(other.shape, fill_value, dtype=dtype,
-                               chunks=other.data.chunks)
+        data = dask.array.full(
+            other.shape, fill_value, dtype=dtype, chunks=other.data.chunks
+        )
     else:
         data = np.full_like(other, fill_value, dtype=dtype)
 
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype: Union[str, np.dtype, None] = None):
-    """Shorthand for full_like(other, 0, dtype)
+def zeros_like(other, dtype: DTypeLike = None):
+    """Return a new object of zeros with the same shape and
+    type as a given dataarray or dataset.
+
+    Parameters
+    ----------
+    other : DataArray, Dataset, or Variable
+        The reference object. The output will have the same dimensions and coordinates as this object.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
+
+    Returns
+    -------
+    out : same as object
+        New object of zeros with the same shape and type as other.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.zeros_like(x)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 0, 0],
+           [0, 0, 0]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> xr.zeros_like(x, dtype=np.float)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    ones_like
+    full_like
+
     """
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype: Union[str, np.dtype, None] = None):
-    """Shorthand for full_like(other, 1, dtype)
+def ones_like(other, dtype: DTypeLike = None):
+    """Return a new object of ones with the same shape and
+    type as a given dataarray or dataset.
+
+    Parameters
+    ----------
+    other : DataArray, Dataset, or Variable
+        The reference object. The output will have the same dimensions and coordinates as this object.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
+
+    Returns
+    -------
+    out : same as object
+        New object of ones with the same shape and type as other.
+
+    Examples
+    --------
+
+    >>> import numpy as np
+    >>> import xarray as xr
+    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
+    ...                  dims=['lat', 'lon'],
+    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    >>> >>> xr.ones_like(x)
+    <xarray.DataArray (lat: 2, lon: 3)>
+    array([[1, 1, 1],
+           [1, 1, 1]])
+    Coordinates:
+    * lat      (lat) int64 1 2
+    * lon      (lon) int64 0 1 2
+
+    See also
+    --------
+
+    zeros_like
+    full_like
+
     """
     return full_like(other, 1, dtype)
 
 
-def is_np_datetime_like(dtype: Union[str, np.dtype]) -> bool:
+def is_np_datetime_like(dtype: DTypeLike) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types
     """
-    return (np.issubdtype(dtype, np.datetime64) or
-            np.issubdtype(dtype, np.timedelta64))
+    return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
+
+
+def is_np_timedelta_like(dtype: DTypeLike) -> bool:
+    """Check whether dtype is of the timedelta64 dtype.
+    """
+    return np.issubdtype(dtype, np.timedelta64)
 
 
 def _contains_cftime_datetimes(array) -> bool:
@@ -1039,7 +1461,7 @@ def _contains_cftime_datetimes(array) -> bool:
     except ImportError:
         return False
     else:
-        if array.dtype == np.dtype('O') and array.size > 0:
+        if array.dtype == np.dtype("O") and array.size > 0:
             sample = array.ravel()[0]
             if isinstance(sample, dask_array_type):
                 sample = sample.compute()

@@ -132,7 +132,7 @@ use them explicitly to slice data. There are two ways to do this:
 
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
-Python :py:func:`slice` objects or 1-dimensional arrays.
+Python :py:class:`slice` objects or 1-dimensional arrays.
 
 .. note::
 
@@ -209,19 +209,22 @@ simultaneously, returning a new dataset:
 
 .. ipython:: python
 
-    da = xr.DataArray(np.random.rand(4, 3),
-                      [('time', pd.date_range('2000-01-01', periods=4)),
-                       ('space', ['IA', 'IL', 'IN'])])
-    ds = da.to_dataset(name='foo')
+    da = xr.DataArray(
+        np.random.rand(4, 3),
+        [
+            ("time", pd.date_range("2000-01-01", periods=4)),
+            ("space", ["IA", "IL", "IN"]),
+        ],
+    )
+    ds = da.to_dataset(name="foo")
     ds.isel(space=[0], time=[0])
-    ds.sel(time='2000-01-01')
+    ds.sel(time="2000-01-01")
 
 Positional indexing on a dataset is not supported because the ordering of
 dimensions in a dataset is somewhat ambiguous (it can vary between different
 arrays). However, you can do normal indexing with dimension names:
 
 .. ipython:: python
-
 
     ds[dict(space=[0], time=[0])]
     ds.loc[dict(time='2000-01-01')]
@@ -232,14 +235,14 @@ Using indexing to *assign* values to a subset of dataset (e.g.,
 Dropping labels and dimensions
 ------------------------------
 
-The :py:meth:`~xarray.Dataset.drop` method returns a new object with the listed
+The :py:meth:`~xarray.Dataset.drop_sel` method returns a new object with the listed
 index labels along a dimension dropped:
 
 .. ipython:: python
 
-    ds.drop(['IN', 'IL'], dim='space')
+    ds.drop_sel(space=['IN', 'IL'])
 
-``drop`` is both a ``Dataset`` and ``DataArray`` method.
+``drop_sel`` is both a ``Dataset`` and ``DataArray`` method.
 
 Use :py:meth:`~xarray.Dataset.drop_dims` to drop a full dimension from a Dataset.
 Any variables with these dimensions are also dropped:
@@ -247,7 +250,6 @@ Any variables with these dimensions are also dropped:
 .. ipython:: python
 
     ds.drop_dims('time')
-
 
 .. _masking with where:
 
@@ -326,8 +328,12 @@ MATLAB, or after using the :py:func:`numpy.ix_` helper:
 
 .. ipython:: python
 
-    da = xr.DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
-                      coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+
+    da = xr.DataArray(
+        np.arange(12).reshape((3, 4)),
+        dims=["x", "y"],
+        coords={"x": [0, 1, 2], "y": ["a", "b", "c", "d"]},
+    )
     da
     da[[0, 1], [1, 1]]
 
@@ -394,14 +400,6 @@ These methods may also be applied to ``Dataset`` objects
 
 .. note::
 
-  Vectorized indexing is a new feature in v0.10.
-  In older versions of xarray, dimensions of indexers are ignored.
-  Dedicated methods for some advanced indexing use cases,
-  ``isel_points`` and ``sel_points`` are now deprecated.
-  See :ref:`more_advanced_indexing` for their alternative.
-
-.. note::
-
   If an indexer is a :py:meth:`~xarray.DataArray`, its coordinates should not
   conflict with the selected subpart of the target array (except for the
   explicitly indexed dimensions with ``.loc``/``.sel``).
@@ -418,43 +416,56 @@ can use indexing with ``.loc`` :
 
 .. ipython:: python
 
-    ds = xr.tutorial.open_dataset('air_temperature')
+    ds = xr.tutorial.open_dataset("air_temperature")
 
-    #add an empty 2D dataarray
-    ds['empty']= xr.full_like(ds.air.mean('time'),fill_value=0)
+    # add an empty 2D dataarray
+    ds["empty"] = xr.full_like(ds.air.mean("time"), fill_value=0)
 
-    #modify one grid point using loc()
-    ds['empty'].loc[dict(lon=260, lat=30)] = 100
+    # modify one grid point using loc()
+    ds["empty"].loc[dict(lon=260, lat=30)] = 100
 
-    #modify a 2D region using loc()
-    lc = ds.coords['lon']
-    la = ds.coords['lat']
-    ds['empty'].loc[dict(lon=lc[(lc>220)&(lc<260)], lat=la[(la>20)&(la<60)])] = 100
+    # modify a 2D region using loc()
+    lc = ds.coords["lon"]
+    la = ds.coords["lat"]
+    ds["empty"].loc[
+        dict(lon=lc[(lc > 220) & (lc < 260)], lat=la[(la > 20) & (la < 60)])
+    ] = 100
 
 or :py:meth:`~xarray.where`:
 
 .. ipython:: python
 
-    #modify one grid point using xr.where()
-    ds['empty'] = xr.where((ds.coords['lat']==20)&(ds.coords['lon']==260), 100, ds['empty'])
+    # modify one grid point using xr.where()
+    ds["empty"] = xr.where(
+        (ds.coords["lat"] == 20) & (ds.coords["lon"] == 260), 100, ds["empty"]
+    )
 
-    #or modify a 2D region using xr.where()
-    mask = (ds.coords['lat']>20)&(ds.coords['lat']<60)&(ds.coords['lon']>220)&(ds.coords['lon']<260)
-    ds['empty'] = xr.where(mask, 100, ds['empty'])
+    # or modify a 2D region using xr.where()
+    mask = (
+        (ds.coords["lat"] > 20)
+        & (ds.coords["lat"] < 60)
+        & (ds.coords["lon"] > 220)
+        & (ds.coords["lon"] < 260)
+    )
+    ds["empty"] = xr.where(mask, 100, ds["empty"])
+
 
 
 Vectorized indexing can also be used to assign values to xarray object.
 
 .. ipython:: python
 
-    da = xr.DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
-                      coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+    da = xr.DataArray(
+        np.arange(12).reshape((3, 4)),
+        dims=["x", "y"],
+        coords={"x": [0, 1, 2], "y": ["a", "b", "c", "d"]},
+    )
     da
     da[0] = -1  # assignment with broadcasting
     da
 
-    ind_x = xr.DataArray([0, 1], dims=['x'])
-    ind_y = xr.DataArray([0, 1], dims=['y'])
+    ind_x = xr.DataArray([0, 1], dims=["x"])
+    ind_y = xr.DataArray([0, 1], dims=["y"])
     da[ind_x, ind_y] = -2  # assign -2 to (ix, iy) = (0, 0) and (1, 1)
     da
 
@@ -516,10 +527,10 @@ flexible indexing. The following is an example of the pointwise indexing:
 
 .. ipython:: python
 
-    da = xr.DataArray(np.arange(56).reshape((7, 8)), dims=['x', 'y'])
+    da = xr.DataArray(np.arange(56).reshape((7, 8)), dims=["x", "y"])
     da
-    da.isel(x=xr.DataArray([0, 1, 6], dims='z'),
-            y=xr.DataArray([0, 1, 0], dims='z'))
+    da.isel(x=xr.DataArray([0, 1, 6], dims="z"), y=xr.DataArray([0, 1, 0], dims="z"))
+
 
 where three elements at ``(ix, iy) = ((0, 0), (1, 1), (6, 0))`` are selected
 and mapped along a new dimension ``z``.
@@ -529,23 +540,27 @@ you can supply a :py:class:`~xarray.DataArray` with a coordinate,
 
 .. ipython:: python
 
-    da.isel(x=xr.DataArray([0, 1, 6], dims='z',
-                           coords={'z': ['a', 'b', 'c']}),
-            y=xr.DataArray([0, 1, 0], dims='z'))
-
+    da.isel(
+        x=xr.DataArray([0, 1, 6], dims="z", coords={"z": ["a", "b", "c"]}),
+        y=xr.DataArray([0, 1, 0], dims="z"),
+    )
+    
 Analogously, label-based pointwise-indexing is also possible by the ``.sel``
 method:
 
 .. ipython:: python
 
-    da = xr.DataArray(np.random.rand(4, 3),
-                      [('time', pd.date_range('2000-01-01', periods=4)),
-                       ('space', ['IA', 'IL', 'IN'])])
-    times = xr.DataArray(pd.to_datetime(['2000-01-03', '2000-01-02', '2000-01-01']),
-                         dims='new_time')
-    da.sel(space=xr.DataArray(['IA', 'IL', 'IN'], dims=['new_time']),
-           time=times)
-
+    da = xr.DataArray(
+        np.random.rand(4, 3),
+        [
+            ("time", pd.date_range("2000-01-01", periods=4)),
+            ("space", ["IA", "IL", "IN"]),
+        ],
+    )
+    times = xr.DataArray(
+        pd.to_datetime(["2000-01-03", "2000-01-02", "2000-01-01"]), dims="new_time"
+    )
+    da.sel(space=xr.DataArray(["IA", "IL", "IN"], dims=["new_time"]), time=times)
 
 .. _align and reindex:
 
@@ -643,12 +658,16 @@ through the :py:attr:`~xarray.DataArray.indexes` attribute.
 
 .. ipython:: python
 
-    da = xr.DataArray(np.random.rand(4, 3),
-                      [('time', pd.date_range('2000-01-01', periods=4)),
-                       ('space', ['IA', 'IL', 'IN'])])
+    da = xr.DataArray(
+        np.random.rand(4, 3),
+        [
+            ("time", pd.date_range("2000-01-01", periods=4)),
+            ("space", ["IA", "IL", "IN"]),
+        ],
+    )
     da
     da.indexes
-    da.indexes['time']
+    da.indexes["time"]
 
 Use :py:meth:`~xarray.DataArray.get_index` to get an index for a dimension,
 falling back to a default :py:class:`pandas.RangeIndex` if it has no coordinate
@@ -702,32 +721,31 @@ pandas:
 
 .. ipython:: python
 
-  midx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
-                                    names=('one', 'two'))
-  mda = xr.DataArray(np.random.rand(6, 3),
-                     [('x', midx), ('y', range(3))])
-  mda
-  mda.sel(x=(list('ab'), [0]))
+
+    midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
+    mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
+    mda
+    mda.sel(x=(list("ab"), [0]))
 
 You can also select multiple elements by providing a list of labels or tuples or
 a slice of tuples:
 
 .. ipython:: python
 
-  mda.sel(x=[('a', 0), ('b', 1)])
+    mda.sel(x=[('a', 0), ('b', 1)])
 
 Additionally, xarray supports dictionaries:
 
 .. ipython:: python
 
-  mda.sel(x={'one': 'a', 'two': 0})
+    mda.sel(x={'one': 'a', 'two': 0})
 
 For convenience, ``sel`` also accepts multi-index levels directly
 as keyword arguments:
 
 .. ipython:: python
 
-  mda.sel(one='a', two=0)
+    mda.sel(one='a', two=0)
 
 Note that using ``sel`` it is not possible to mix a dimension
 indexer with level indexers for that dimension
@@ -739,7 +757,7 @@ multi-index is reduced to a single index.
 
 .. ipython:: python
 
-  mda.loc[{'one': 'a'}, ...]
+    mda.loc[{'one': 'a'}, ...]
 
 Unlike pandas, xarray does not guess whether you provide index levels or
 dimensions when using ``loc`` in some ambiguous cases. For example, for

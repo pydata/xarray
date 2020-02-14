@@ -1,0 +1,46 @@
+parameters:
+  env_file: ci/requirements/$CONDA_ENV.yml
+
+steps:
+
+- template: add-conda-to-path.yml
+
+- bash: |
+    conda update -y conda
+    conda env create -n xarray-tests --file ${{ parameters.env_file }}
+  displayName: Install conda dependencies
+
+- bash: |
+    source activate xarray-tests
+    python -m pip install \
+        -f https://7933911d6844c6c53a7d-47bd50c35cd79bd838daf386af554a83.ssl.cf2.rackcdn.com \
+        --no-deps \
+        --pre \
+        --upgrade \
+        matplotlib \
+        numpy \
+        pandas \
+        scipy
+    python -m pip install \
+        --no-deps \
+        --upgrade \
+        git+https://github.com/dask/dask \
+        git+https://github.com/dask/distributed \
+        git+https://github.com/zarr-developers/zarr \
+        git+https://github.com/Unidata/cftime \
+        git+https://github.com/mapbox/rasterio \
+        git+https://github.com/pydata/bottleneck
+  condition: eq(variables['UPSTREAM_DEV'], 'true')
+  displayName: Install upstream dev dependencies
+
+- bash: |
+    source activate xarray-tests
+    python -m pip install --no-deps -e .
+  displayName: Install xarray
+
+- bash: |
+    source activate xarray-tests
+    conda info -a
+    conda list
+    python xarray/util/print_versions.py
+  displayName: Version info

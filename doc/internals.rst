@@ -106,6 +106,13 @@ reasons:
    functionality that clearly identifies it as separate from built-in xarray
    methods.
 
+.. note::
+
+   Accessors are created once per DataArray and Dataset instance. New
+   instances, like those created from arithmetic operations or when accessing
+   a DataArray from a Dataset (ex. ``ds[var_name]``), will have new
+   accessors created.
+
 Back in an interactive IPython session, we can use these properties:
 
 .. ipython:: python

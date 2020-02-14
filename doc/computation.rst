@@ -45,6 +45,12 @@ Use :py:func:`~xarray.where` to conditionally switch between values:
 
     xr.where(arr > 0, 'positive', 'negative')
 
+Use `@` to perform matrix multiplication:
+
+.. ipython:: python
+
+    arr @ arr
+
 Data arrays also implement many :py:class:`numpy.ndarray` methods:
 
 .. ipython:: python
@@ -89,6 +95,9 @@ for filling missing values via 1D interpolation.
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
 of which values to use as the index in the interpolation.
+xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
+data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
+for more.
 
 Aggregation
 ===========
@@ -143,24 +152,41 @@ name of the dimension as a key (e.g. ``y``) and the window size as the value
 
     arr.rolling(y=3)
 
-The label position and minimum number of periods in the rolling window are
-controlled by the ``center`` and ``min_periods`` arguments:
-
-.. ipython:: python
-
-    arr.rolling(y=3, min_periods=2, center=True)
-
-Aggregation and summary methods can be applied directly to the ``Rolling`` object:
+Aggregation and summary methods can be applied directly to the ``Rolling``
+object:
 
 .. ipython:: python
 
     r = arr.rolling(y=3)
-    r.mean()
     r.reduce(np.std)
+    r.mean()
 
-Note that rolling window aggregations are faster when bottleneck_ is installed.
+Aggregation results are assigned the coordinate at the end of each window by
+default, but can be centered by passing ``center=True`` when constructing the
+``Rolling`` object:
 
-.. _bottleneck: https://github.com/kwgoodman/bottleneck/
+.. ipython:: python
+
+    r = arr.rolling(y=3, center=True)
+    r.mean()
+
+As can be seen above, aggregations of windows which overlap the border of the
+array produce ``nan``\s.  Setting ``min_periods`` in the call to ``rolling``
+changes the minimum number of observations within the window required to have
+a value when aggregating:
+
+.. ipython:: python
+
+    r = arr.rolling(y=3, min_periods=2)
+    r.mean()
+    r = arr.rolling(y=3, center=True, min_periods=2)
+    r.mean()
+
+.. tip::
+
+   Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects.
+
+.. _bottleneck: https://github.com/pydata/bottleneck/
 
 We can also manually iterate through ``Rolling`` objects:
 
@@ -168,6 +194,22 @@ We can also manually iterate through ``Rolling`` objects:
 
    for label, arr_window in r:
       # arr_window is a view of x
+
+.. _comput.rolling_exp:
+
+While ``rolling`` provides a simple moving average, ``DataArray`` also supports
+an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
+This is similiar to pandas' ``ewm`` method. numbagg_ is required.
+
+.. _numbagg: https://github.com/shoyer/numbagg
+
+.. code:: python
+
+    arr.rolling_exp(y=3).mean()
+
+The ``rolling_exp`` method takes a ``window_type`` kwarg, which can be ``'alpha'``,
+``'com'`` (for ``center-of-mass``), ``'span'``, and ``'halflife'``. The default is
+``span``.
 
 Finally, the rolling object has a ``construct`` method which returns a
 view of the original ``DataArray`` with the windowed dimension in
@@ -283,8 +325,8 @@ Broadcasting by dimension name
 ``DataArray`` objects are automatically align themselves ("broadcasting" in
 the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
-operations to work, as commonly done in numpy with :py:func:`np.reshape` or
-:py:const:`np.newaxis`.
+operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or
+:py:data:`numpy.newaxis`.
 
 This is best illustrated by a few examples. Consider two one-dimensional
 arrays with different sizes aligned along different dimensions:
@@ -423,13 +465,13 @@ Datasets support most of the same methods found on data arrays:
     abs(ds)
 
 Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
-alternatively you can use :py:meth:`~xarray.Dataset.apply` to apply a function
+alternatively you can use :py:meth:`~xarray.Dataset.map` to map a function
 to each variable in a dataset:
 
 .. ipython:: python
 
     np.sin(ds)
-    ds.apply(np.sin)
+    ds.map(np.sin)
 
 Datasets also use looping over variables for *broadcasting* in binary
 arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:
@@ -524,7 +566,7 @@ to set ``axis=-1``. As an example, here is how we would wrap
 
 Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
 nicely with tools for building vectorized functions, like
-:func:`numpy.broadcast_arrays` and :func:`numpy.vectorize`. For high performance
+:py:func:`numpy.broadcast_arrays` and :py:class:`numpy.vectorize`. For high performance
 needs, consider using Numba's :doc:`vectorize and guvectorize <numba:user/vectorize>`.
 
 In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize

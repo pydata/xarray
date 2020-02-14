@@ -151,11 +151,13 @@ We'll now kick off a two-step process:
 .. code-block:: none
 
    # Create and activate the build environment
-   conda env create -f ci/requirements-py36.yml
-   conda activate test_env
+   # This is for Linux and MacOS. On Windows, use py37-windows.yml instead.
+   conda env create -f ci/requirements/py37.yml
+
+   conda activate xarray-tests
 
    # or with older versions of Anaconda:
-   source activate test_env
+   source activate xarray-tests
 
    # Build and install xarray
    pip install -e .
@@ -229,9 +231,9 @@ About the *xarray* documentation
 --------------------------------
 
 The documentation is written in **reStructuredText**, which is almost like writing
-in plain English, and built using `Sphinx <http://sphinx.pocoo.org/>`__. The
+in plain English, and built using `Sphinx <http://sphinx-doc.org/>`__. The
 Sphinx Documentation has an excellent `introduction to reST
-<http://sphinx.pocoo.org/rest.html>`__. Review the Sphinx docs to perform more
+<http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`__. Review the Sphinx docs to perform more
 complex changes to the documentation as well.
 
 Some other important things to know about the docs:
@@ -286,12 +288,12 @@ How to build the *xarray* documentation
 Requirements
 ~~~~~~~~~~~~
 Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
-to build the docs you need to use the environment file ``doc/environment.yml``.
+to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
 
 .. code-block:: none
 
     # Create and activate the docs environment
-    conda env create -f doc/environment.yml
+    conda env create -f ci/requirements/doc.yml
     conda activate xarray-docs
 
     # or with older versions of Anaconda:
@@ -340,37 +342,45 @@ do not make sudden changes to the code that could have the potential to break
 a lot of user code as a result, that is, we need it to be as *backwards compatible*
 as possible to avoid mass breakages.
 
-Python (PEP8)
-~~~~~~~~~~~~~
+Code Formatting
+~~~~~~~~~~~~~~~
 
-*xarray* uses the `PEP8 <http://www.python.org/dev/peps/pep-0008/>`_ standard.
-There are several tools to ensure you abide by this standard. Here are *some* of
-the more common ``PEP8`` issues:
+xarray uses several tools to ensure a consistent code format throughout the project:
 
-  - we restrict line-length to 79 characters to promote readability
-  - passing arguments should have spaces after commas, e.g. ``foo(arg1, arg2, kw1='bar')``
+- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized code formatting
+- `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
+- `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
+  See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
+- `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
+  <https://docs.python.org/3/library/typing.html>`_
 
-:ref:`Continuous Integration <contributing.ci>` will run
-the `pycodestyle <http://pypi.python.org/pypi/pycodestyle>`_ tool
-and report any stylistic errors in your code. Therefore, it is helpful before
-submitting code to run the check yourself::
+``pip``::
 
-   pycodestyle xarray
+   pip install black flake8 isort mypy
 
-Other recommended but optional tools for checking code quality (not currently
-enforced in CI):
+and then run from the root of the Xarray repository::
 
-- `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
-  make it easier to catch bugs. Please run ``mypy xarray`` if you annotate any
-  code with `type hints <https://docs.python.org/3/library/typing.html>`_.
-- `flake8 <http://pypi.python.org/pypi/flake8>`_ includes a few more automated
-  checks than those enforced by pycodestyle.
-- `isort <https://github.com/timothycrosley/isort>`_ will highlight
-  incorrectly sorted imports. ``isort -y`` will automatically fix them. See
-  also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
+   isort -rc .
+   black -t py36 .
+   flake8
+   mypy .
 
-Note that your code editor probably supports extensions that can show results
-of these checks inline as you type.
+to auto-format your code. Additionally, many editors have plugins that will
+apply ``black`` as you edit files.
+
+Optionally, you may wish to setup `pre-commit hooks <https://pre-commit.com/>`_
+to automatically run all the above tools every time you make a git commit. This
+can be done by installing ``pre-commit``::
+
+   pip install pre-commit
+
+and then running::
+
+   pre-commit install
+
+from the root of the xarray repository. You can skip the pre-commit checks with
+``git commit --no-verify``.
+
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -385,13 +395,13 @@ method signatures and add deprecation warnings where needed.
 Testing With Continuous Integration
 -----------------------------------
 
-The *xarray* test suite will run automatically on `Travis-CI <https://travis-ci.org/>`__,
-and `Appveyor <https://www.appveyor.com/>`__, continuous integration services, once
-your pull request is submitted. However, if you wish to run the test suite on a
-branch prior to submitting the pull request, then the continuous integration
-services need to be hooked to your GitHub repository. Instructions are here
-for `Travis-CI <http://about.travis-ci.org/docs/user/getting-started/>`__, and
-`Appveyor <https://www.appveyor.com/docs/>`__.
+The *xarray* test suite runs automatically the
+`Azure Pipelines <https://azure.microsoft.com/en-us/services/devops/pipelines//>`__,
+continuous integration service, once your pull request is submitted. However,
+if you wish to run the test suite on a branch prior to submitting the pull
+request, then Azure Pipelines
+`needs to be configured <https://docs.microsoft.com/en-us/azure/devops/pipelines/>`_
+for your GitHub repository.
 
 A pull-request will be considered for merging when you have an all 'green' build. If any
 tests are failing, then you will get a red 'X', where you can click through to see the
@@ -401,10 +411,9 @@ individual failed tests. This is an example of a green build.
 
 .. note::
 
-   Each time you push to your PR branch, a new run of the tests will be triggered on the CI.
-   Appveyor will auto-cancel any non-currently-running tests for that same pull-request.
-   You can also enable the auto-cancel feature for `Travis-CI here
-   <https://docs.travis-ci.com/user/customizing-the-build/#Building-only-the-latest-commit>`__.
+   Each time you push to your PR branch, a new run of the tests will be
+   triggered on the CI. If they haven't already finished, tests for any older
+   commits on the same branch will be automatically cancelled.
 
 .. _contributing.tdd:
 
@@ -444,7 +453,7 @@ equivalent. The easiest way to verify that your code is correct is to
 explicitly construct the result you expect, then compare the actual result to
 the expected correct result::
 
-    def test_constructor_from_0d(self):
+    def test_constructor_from_0d():
         expected = Dataset({None: ([], 0)})[None]
         actual = DataArray(0)
         assert_identical(expected, actual)
@@ -483,8 +492,7 @@ features that we like to use.
 - to set a mark on a parameter, ``pytest.param(..., marks=...)`` syntax should be used
 - ``fixture``, code for object construction, on a per-test basis
 - using bare ``assert`` for scalars and truth-testing
-- ``tm.assert_series_equal`` (and its counter part ``tm.assert_frame_equal``), for xarray
-  object comparisons.
+- ``assert_equal`` and ``assert_identical`` from the ``xarray.testing`` module for xarray object comparisons.
 - the typical pattern of constructing an ``expected`` and comparing versus the ``result``
 
 We would name this file ``test_cool_feature.py`` and put in an appropriate place in the
@@ -672,7 +680,7 @@ environment by::
 
 or, to use a specific Python interpreter,::
 
-    asv run -e -E existing:python3.5
+    asv run -e -E existing:python3.6
 
 This will display stderr from the benchmarks, and use your local
 ``python`` that comes from your ``$PATH``.
@@ -718,18 +726,6 @@ Doing 'git status' again should give something like::
     #
     #       modified:   /relative/path/to/file-you-added.py
     #
-
-Finally, commit your changes to your local repository with an explanatory message.
-*Xarray* uses a convention for commit message prefixes and layout.  Here are
-some common prefixes along with general guidelines for when to use them:
-
-    * ``ENH``: Enhancement, new functionality
-    * ``BUG``: Bug fix
-    * ``DOC``: Additions/updates to documentation
-    * ``TST``: Additions/updates to tests
-    * ``BLD``: Updates to the build process/scripts
-    * ``PERF``: Performance improvement
-    * ``CLN``: Code cleanup
 
 The following defines how a commit message should be structured:
 
@@ -830,3 +826,22 @@ branch has not actually been merged.
 The branch will still exist on GitHub, so to delete it there do::
 
     git push origin --delete shiny-new-feature
+
+
+PR checklist
+------------
+
+- **Properly comment and document your code.** See `"Documenting your code" <https://xarray.pydata.org/en/stable/contributing.html#documenting-your-code>`_.
+- **Test that the documentation builds correctly** by typing ``make html`` in the ``doc`` directory. This is not strictly necessary, but this may be easier than waiting for CI to catch a mistake. See `"Contributing to the documentation" <https://xarray.pydata.org/en/stable/contributing.html#contributing-to-the-documentation>`_.
+- **Test your code**.
+
+    - Write new tests if needed. See `"Test-driven development/code writing" <https://xarray.pydata.org/en/stable/contributing.html#test-driven-development-code-writing>`_.
+    - Test the code using `Pytest <http://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
+
+- **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://xarray.pydata.org/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
+
+    - Run ``black .`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
+    - Run ``flake8`` in the root directory. If this fails, it will log an error message.
+
+- **Push your code and** `create a PR on GitHub <https://help.github.com/en/articles/creating-a-pull-request>`_.
+- **Use a helpful title for your pull request** by summarizing the main contributions rather than using the latest commit message. If this addresses an `issue <https://github.com/pydata/xarray/issues>`_, please `reference it <https://help.github.com/en/articles/autolinked-references-and-urls>`_.

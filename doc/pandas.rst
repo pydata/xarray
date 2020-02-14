@@ -1,3 +1,4 @@
+.. currentmodule:: xarray
 .. _pandas:
 
 ===================
@@ -11,7 +12,7 @@ using the visualization `built in to pandas itself`__ or provided by the pandas
 aware libraries such as `Seaborn`__.
 
 __ http://pandas.pydata.org/pandas-docs/stable/visualization.html
-__ http://stanford.edu/~mwaskom/software/seaborn/
+__ http://seaborn.pydata.org/
 
 .. ipython:: python
     :suppress:
@@ -32,9 +33,9 @@ Tabular data is easiest to work with when it meets the criteria for
 
 __ http://www.jstatsoft.org/v59/i10/
 
-In this "tidy data" format, we can represent any :py:class:`~xarray.Dataset` and
-:py:class:`~xarray.DataArray` in terms of :py:class:`pandas.DataFrame` and
-:py:class:`pandas.Series`, respectively (and vice-versa). The representation
+In this "tidy data" format, we can represent any :py:class:`Dataset` and
+:py:class:`DataArray` in terms of :py:class:`~pandas.DataFrame` and
+:py:class:`~pandas.Series`, respectively (and vice-versa). The representation
 works by flattening non-coordinates to 1D, and turning the tensor product of
 coordinate indexes into a :py:class:`pandas.MultiIndex`.
 
@@ -42,7 +43,7 @@ Dataset and DataFrame
 ---------------------
 
 To convert any dataset to a ``DataFrame`` in tidy form, use the
-:py:meth:`Dataset.to_dataframe() <xarray.Dataset.to_dataframe>` method:
+:py:meth:`Dataset.to_dataframe()` method:
 
 .. ipython:: python
 
@@ -61,12 +62,11 @@ use ``DataFrame`` methods like :py:meth:`~pandas.DataFrame.reset_index`,
 :py:meth:`~pandas.DataFrame.stack` and :py:meth:`~pandas.DataFrame.unstack`.
 
 For datasets containing dask arrays where the data should be lazily loaded, see the
-:py:meth:`Dataset.to_dask_dataframe() <xarray.Dataset.to_dask_dataframe>` method.
+:py:meth:`Dataset.to_dask_dataframe()` method.
 
 To create a ``Dataset`` from a ``DataFrame``, use the
-:py:meth:`~xarray.Dataset.from_dataframe` class method or the equivalent
-:py:meth:`pandas.DataFrame.to_xarray <DataFrame.to_xarray>` method (pandas
-v0.18 or later):
+:py:meth:`Dataset.from_dataframe` class method or the equivalent
+:py:meth:`pandas.DataFrame.to_xarray` method:
 
 .. ipython:: python
 
@@ -84,7 +84,7 @@ DataArray and Series
 --------------------
 
 ``DataArray`` objects have a complementary representation in terms of a
-:py:class:`pandas.Series`. Using a Series preserves the ``Dataset`` to
+:py:class:`~pandas.Series`. Using a Series preserves the ``Dataset`` to
 ``DataArray`` relationship, because ``DataFrames`` are dict-like containers
 of ``Series``. The methods are very similar to those for working with
 DataFrames:
@@ -110,10 +110,10 @@ Multi-dimensional data
 Tidy data is great, but it sometimes you want to preserve dimensions instead of
 automatically stacking them into a ``MultiIndex``.
 
-:py:meth:`DataArray.to_pandas() <xarray.DataArray.to_pandas>` is a shortcut that
+:py:meth:`DataArray.to_pandas()` is a shortcut that
 lets you convert a DataArray directly into a pandas object with the same
 dimensionality (i.e., a 1D array is converted to a :py:class:`~pandas.Series`,
-2D to :py:class:`~pandas.DataFrame` and 3D to :py:class:`~pandas.Panel`):
+2D to :py:class:`~pandas.DataFrame` and 3D to ``pandas.Panel``):
 
 .. ipython:: python
 
@@ -123,7 +123,7 @@ dimensionality (i.e., a 1D array is converted to a :py:class:`~pandas.Series`,
     df
 
 To perform the inverse operation of converting any pandas objects into a data
-array with the same shape, simply use the :py:class:`~xarray.DataArray`
+array with the same shape, simply use the :py:class:`DataArray`
 constructor:
 
 .. ipython:: python
@@ -144,17 +144,18 @@ preserve all use of multi-indexes:
 
 However, you will need to set dimension names explicitly, either with the
 ``dims`` argument on in the ``DataArray`` constructor or by calling
-:py:class:`~xarray.Dataset.rename` on the new object.
+:py:class:`~Dataset.rename` on the new object.
 
 .. _panel transition:
 
 Transitioning from pandas.Panel to xarray
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:py:class:`~pandas.Panel`, pandas' data structure for 3D arrays, has always
+``Panel``, pandas' data structure for 3D arrays, has always
 been a second class data structure compared to the Series and DataFrame. To
 allow pandas developers to focus more on its core functionality built around
-the DataFrame, pandas plans to eventually deprecate Panel.
+the DataFrame, pandas has deprecated ``Panel``. It will be removed in pandas
+0.25.
 
 xarray has most of ``Panel``'s features, a more explicit API (particularly around
 indexing), and the ability to scale to >3 dimensions with the same interface.
@@ -172,28 +173,41 @@ So you can represent a Panel, in two ways:
 Let's take a look:
 
 .. ipython:: python
-    :okwarning:
 
-    panel = pd.Panel(np.random.rand(2, 3, 4), items=list('ab'), major_axis=list('mno'),
-                     minor_axis=pd.date_range(start='2000', periods=4, name='date'))
-    panel
+    data = np.random.RandomState(0).rand(2, 3, 4)
+    items = list('ab')
+    major_axis = list('mno')
+    minor_axis = pd.date_range(start='2000', periods=4, name='date')
 
-As a DataArray:
+With old versions of pandas (prior to 0.25), this could stored in a ``Panel``:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: pd.Panel(data, items, major_axis, minor_axis)
+    Out[1]:
+    <class 'pandas.core.panel.Panel'>
+    Dimensions: 2 (items) x 3 (major_axis) x 4 (minor_axis)
+    Items axis: a to b
+    Major_axis axis: m to o
+    Minor_axis axis: 2000-01-01 00:00:00 to 2000-01-04 00:00:00
+
+To put this data in a ``DataArray``, write:
 
 .. ipython:: python
 
-    # or equivalently, with Panel.to_xarray()
-    xr.DataArray(panel)
+    array = xr.DataArray(data, [items, major_axis, minor_axis])
+    array
 
 As you can see, there are three dimensions (each is also a coordinate). Two of
-the axes of the panel were unnamed, so have been assigned ``dim_0`` and
-``dim_1`` respectively, while the third retains its name ``date``.
+the axes of were unnamed, so have been assigned ``dim_0`` and ``dim_1``
+respectively, while the third retains its name ``date``.
 
-As a Dataset:
+You can also easily convert this data into ``Dataset``:
 
 .. ipython:: python
 
-    xr.Dataset(panel)
+    array.to_dataset(dim='dim_0')
 
 Here, there are two data variables, each representing a DataFrame on panel's
 ``items`` axis, and labelled as such. Each variable is a 2D array of the

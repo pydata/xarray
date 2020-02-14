@@ -18,12 +18,14 @@ Reordering dimensions
 ---------------------
 
 To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
-on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`:
+on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An 
+ellipsis (`...`) can be use to represent all other dimensions:
 
 .. ipython:: python
 
     ds = xr.Dataset({'foo': (('x', 'y', 'z'), [[[42]]]), 'bar': (('y', 'z'), [[24]])})
     ds.transpose('y', 'z', 'x')
+    ds.transpose(..., 'x')  # equivalent
     ds.transpose()  # reverses all dimensions
 
 Expand and squeeze dimensions
@@ -132,6 +134,51 @@ pandas, it does not automatically drop missing values. Compare:
 
 We departed from pandas's behavior here because predictable shapes for new
 array dimensions is necessary for :ref:`dask`.
+
+.. _reshape.stacking_different:
+
+Stacking different variables together
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These stacking and unstacking operations are particularly useful for reshaping
+xarray objects for use in machine learning packages, such as `scikit-learn
+<http://scikit-learn.org/stable/>`_, that usually require two-dimensional numpy
+arrays as inputs. For datasets with only one variable, we only need ``stack``
+and ``unstack``, but combining multiple variables in a
+:py:class:`xarray.Dataset` is more complicated. If the variables in the dataset
+have matching numbers of dimensions, we can call
+:py:meth:`~xarray.Dataset.to_array` and then stack along the the new coordinate.
+But :py:meth:`~xarray.Dataset.to_array` will broadcast the dataarrays together,
+which will effectively tile the lower dimensional variable along the missing
+dimensions. The method :py:meth:`xarray.Dataset.to_stacked_array` allows
+combining variables of differing dimensions without this wasteful copying while
+:py:meth:`xarray.DataArray.to_unstacked_dataset` reverses this operation.
+Just as with :py:meth:`xarray.Dataset.stack` the stacked coordinate is
+represented by a :py:class:`pandas.MultiIndex` object. These methods are used
+like this:
+
+.. ipython:: python
+
+        data = xr.Dataset(
+            data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
+                      'b': ('x', [6, 7])},
+            coords={'y': ['u', 'v', 'w']}
+        )
+        stacked = data.to_stacked_array("z", sample_dims=['x'])
+        stacked
+        unstacked = stacked.to_unstacked_dataset("z")
+        unstacked
+
+In this example, ``stacked`` is a two dimensional array that we can easily pass to a scikit-learn or another generic
+numerical method.
+
+.. note::
+
+    Unlike with ``stack``,  in ``to_stacked_array``, the user specifies the dimensions they **do not** want stacked.
+    For a machine learning task, these unstacked dimensions can be interpreted as the dimensions over which samples are
+    drawn, whereas the stacked coordinates are the features. Naturally, all variables should possess these sampling
+    dimensions.
+
 
 .. _reshape.set_index:
 
