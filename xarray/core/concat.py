@@ -457,26 +457,6 @@ def _dataset_concat(
     return result
 
 
-def _find_ordering_inplace(l, union):
-    # this logic maintains the order of the variable list and runs in
-    # O(n^2) where n is number of variables in the uncommon worst case
-    # where there are no missing variables this will be O(n)
-    # could potentially be refactored to a more generic function to determine
-    # a consistent ordering of variables if proper consideration were
-    # given both to the runtime as well as to the user scenarios
-    for i in range(0, len(l)):
-        if l[i] not in union:
-            # need to determine the correct place
-            # first add the new item which will be at the end
-            union[l[i]] = None
-            union.move_to_end(l[i])
-            # move any items after this in the variables list to the end
-            # this will only happen for missing variables
-            for j in range(i + 1, len(l)):
-                if l[j] in union:
-                    union.move_to_end(l[j])
-
-
 def _dataarray_concat(
     arrays,
     dim,

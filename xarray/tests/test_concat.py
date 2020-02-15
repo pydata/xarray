@@ -291,6 +291,7 @@ def test_multiple_missing_variables():
     assert_equal(result, ds_result)
 
 
+@pytest.mark.xfail(strict=True)
 def test_concat_multiple_datasets_missing_vars_and_new_dim():
     vars_to_drop = [
         "temperature",
@@ -329,6 +330,7 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim():
                         (result_vars[vars_to_drop[i]], np.full([1, 4], np.nan)), axis=1,
                     )
     # TODO: this test still has two unexpected errors:
+
     # 1: concat throws a mergeerror expecting the temperature values to be the same, this doesn't seem to be correct in this case
     #   as we are concating on new dims
     # 2: if the values are the same for a variable (working around #1) then it will likely not correct add the new dim to the first variable
@@ -354,7 +356,6 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim():
     # )
 
     # result = concat(datasets, dim="day")
-
     # r1 = list(result.data_vars.keys())
     # r2 = list(ds_result.data_vars.keys())
     # assert r1 == r2  # check the variables orders are the same
