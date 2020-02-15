@@ -265,21 +265,21 @@ def _parse_datasets(datasets):
 
     dims = set()
     all_coord_names = set()
-    data_vars = set()  # list of data_vars
+    data_vars = {}  # list of data_vars, using dict internally to maintain order
     dim_coords = {}  # maps dim name to variable
     dims_sizes = {}  # shared dimension sizes to expand variables
 
     for ds in datasets:
         dims_sizes.update(ds.dims)
         all_coord_names.update(ds.coords)
-        data_vars.update(ds.data_vars)
+        data_vars.update(dict.fromkeys(ds.data_vars))
 
         for dim in set(ds.dims) - dims:
             if dim not in dim_coords:
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
-    return dim_coords, dims_sizes, all_coord_names, data_vars
+    return dim_coords, dims_sizes, all_coord_names, list(data_vars.keys())
 
 
 def _dataset_concat(
@@ -308,7 +308,7 @@ def _dataset_concat(
     dim_names = set(dim_coords)
     unlabeled_dims = dim_names - coord_names
 
-    both_data_and_coords = coord_names & data_names
+    both_data_and_coords = coord_names & set(data_names)
     if both_data_and_coords:
         raise ValueError(
             "%r is a coordinate in some datasets but not others." % both_data_and_coords
@@ -327,7 +327,7 @@ def _dataset_concat(
     )
 
     # determine which variables to merge, and then merge them according to compat
-    variables_to_merge = (coord_names | data_names) - concat_over - dim_names
+    variables_to_merge = (coord_names | set(data_names)) - concat_over - dim_names
 
     result_vars = {}
     if variables_to_merge:
@@ -376,27 +376,11 @@ def _dataset_concat(
     # if datasets have variables in drastically different orders
     # the resulting order will be dependent on the order they are in the list
     # passed to concat
-    union_of_variables = OrderedDict()
-    union_of_coordinates = OrderedDict()
-    for ds in datasets:
-        var_list = list(ds.variables.keys())
+    data_var_order = list(datasets[0].data_vars)
+    data_var_order += [e for e in data_names if e not in data_var_order]
 
-        _find_ordering_inplace(var_list, union_of_variables)
-
-        # check that all datasets have the same coordinate set
-        if len(union_of_coordinates) > 0:
-            coord_set_diff = (
-                union_of_coordinates.keys() ^ ds.coords.keys()
-            ) & concat_over
-            if len(coord_set_diff) > 0:
-                raise ValueError(
-                    "Variables %r are coordinates in some datasets but not others."
-                    % coord_set_diff
-                )
-
-        union_of_coordinates = OrderedDict(
-            union_of_coordinates.items() | OrderedDict.fromkeys(ds.coords).items()
-        )
+    union_of_variables = OrderedDict.fromkeys(data_var_order)
+    union_of_coordinates = OrderedDict.fromkeys(coord_names)
 
     # we don't want to fill coordinate variables so remove them
     for k in union_of_coordinates.keys():
@@ -422,7 +406,7 @@ def _dataset_concat(
             )
 
             union_of_variables[variable_key] = full_like(
-                ds[variable_key], fill_value=v_fill_value, dtype=dtype
+                ds.variables[variable_key], fill_value=v_fill_value, dtype=dtype
             )
             return
 
@@ -430,12 +414,14 @@ def _dataset_concat(
         find_fill_variable_from_ds(v, union_of_variables, datasets)
 
     # create the concat list filling in missing variables
+    filling_coordinates = False
     while len(union_of_variables) > 0 or len(union_of_coordinates) > 0:
         k = None
         # get the variables in order
         if len(union_of_variables) > 0:
             k = union_of_variables.popitem(last=False)
         elif len(union_of_coordinates) > 0:
+            filling_coordinates = True
             k = union_of_coordinates.popitem()
 
         if k[0] in concat_over:
@@ -444,6 +430,12 @@ def _dataset_concat(
                 if k[0] in ds.variables:
                     variables.append(ds.variables[k[0]])
                 else:
+                    if filling_coordinates:
+                        # in this case the coordinate is missing from a dataset
+                        raise ValueError(
+                            "Variables %r are coordinates in some datasets but not others."
+                            % k[0]
+                        )
                     # var is missing, fill with cached value
                     variables.append(k[1])
 
