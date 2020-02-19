@@ -2540,6 +2540,7 @@ def test_open_mfdataset_manyfiles(
 
 
 @requires_netCDF4
+@requires_dask
 def test_open_mfdataset_list_attr():
     """
     Case when an attribute of type list differs across the multiple files
