@@ -72,7 +72,7 @@ isclose = _dask_or_eager_func("isclose")
 
 
 if hasattr(np, "isnat") and (
-    dask_array is None or hasattr(dask_array_type, "__array_ufunc__")
+    dask_array_type == () or hasattr(dask_array_type[0], "__array_ufunc__")
 ):
     # np.isnat is available since NumPy 1.13, so __array_ufunc__ is always
     # supported.
