@@ -1333,6 +1333,7 @@ def delete_attrs(*to_delete):
     "test_index_0d_datetime",
     "test_index_0d_timedelta64",
     "test_0d_time_data",
+    "test_index_0d_not_a_time",
     "test_datetime64_conversion",
     "test_timedelta64_conversion",
     "test_pandas_period_index",
@@ -1354,6 +1355,15 @@ class TestVariable(VariableSubclassobjects):
         return xr.Variable(
             dims, unit_registry.Quantity(data, unit_registry.m), *args, **kwargs
         )
+
+    def example_1d_objects(self):
+        for data in [
+            range(3),
+            0.5 * np.arange(3),
+            0.5 * np.arange(3, dtype=np.float32),
+            np.array(["a", "b", "c"], dtype=object),
+        ]:
+            yield (self.cls("x", data), data)
 
     @pytest.mark.parametrize(
         "func",
