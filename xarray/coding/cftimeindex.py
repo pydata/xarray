@@ -327,6 +327,29 @@ class CFTimeIndex(pd.Index):
             raise KeyError(key)
         return loc
 
+    def _get_nearest_indexer(self, target, limit, tolerance):
+        """Adapted from pandas.Index._get_nearest_indexer"""
+        left_indexer = self.get_indexer(target, "pad", limit=limit)
+        right_indexer = self.get_indexer(target, "backfill", limit=limit)
+        left_distances = abs(self.values[left_indexer] - target.values)
+        right_distances = abs(self.values[right_indexer] - target.values)
+
+        if self.is_monotonic_increasing:
+            condition = (left_distances < right_distances) | (right_indexer == -1)
+        else:
+            condition = (left_distances <= right_distances) | (right_indexer == -1)
+        indexer = np.where(condition, left_indexer, right_indexer)
+
+        if tolerance is not None:
+            indexer = self._filter_indexer_tolerance(target, indexer, tolerance)
+        return indexer
+
+    def _filter_indexer_tolerance(self, target, indexer, tolerance):
+        """Copied from pandas.Index._get_filter_tolerance"""
+        distance = abs(self.values[indexer] - target)
+        indexer = np.where(distance <= tolerance, indexer, -1)
+        return indexer
+
     def get_loc(self, key, method=None, tolerance=None):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
         if isinstance(key, str):
@@ -444,7 +467,11 @@ class CFTimeIndex(pd.Index):
             return NotImplemented
 
     def __rsub__(self, other):
-        return pd.TimedeltaIndex(other - np.array(self))
+        try:
+            return pd.TimedeltaIndex(other - np.array(self))
+        except OverflowError:
+            # TODO: add a warning here
+            return pd.Index(np.array(other) - np.array(self), dtype="O")
 
     def to_datetimeindex(self, unsafe=False):
         """If possible, convert this index to a pandas.DatetimeIndex.

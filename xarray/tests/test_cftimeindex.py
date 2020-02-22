@@ -451,6 +451,13 @@ def test_sel_date_scalar(da, date_type, index):
 
 
 @requires_cftime
+def test_sel_date_distant_date(da, date_type, index):
+    expected = xr.DataArray(4).assign_coords(time=index[3])
+    result = da.sel(time=date_type(2000, 1, 1), method="nearest")
+    assert_identical(result, expected)
+
+
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
     [{"method": "nearest"}, {"method": "nearest", "tolerance": timedelta(days=70)}],
@@ -591,6 +598,9 @@ def range_args(date_type):
     ]
 
 
+@pytest.mark.xfail(
+    reason="https://github.com/pydata/xarray/issues/3751#issuecomment-587438020"
+)
 @requires_cftime
 def test_indexing_in_series_getitem(series, index, scalar_args, range_args):
     for arg in scalar_args:
