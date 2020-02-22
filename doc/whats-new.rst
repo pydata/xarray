@@ -40,6 +40,12 @@ Internal Changes
 - Changed test_open_mfdataset_list_attr to only run with dask installed
   (:issue:`3777`, :pull:`3780`).
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
+- Preserved the ability to index with ``method="nearest"`` with a
+  :py:class:`CFTimeIndex` with pandas versions greater than 1.0.1
+  (:issue:`3751`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Greater flexibility and improved test coverage of subtracting various types
+  of objects from a :py:class:`CFTimeIndex`. By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.15.0:
 
