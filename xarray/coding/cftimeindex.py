@@ -470,8 +470,10 @@ class CFTimeIndex(pd.Index):
         try:
             return pd.TimedeltaIndex(other - np.array(self))
         except OverflowError:
-            # TODO: add a warning here
-            return pd.Index(np.array(other) - np.array(self), dtype="O")
+            raise ValueError(
+                "The time difference exceeds the range of values "
+                "that can be expressed at the nanosecond resolution."
+            )
 
     def to_datetimeindex(self, unsafe=False):
         """If possible, convert this index to a pandas.DatetimeIndex.

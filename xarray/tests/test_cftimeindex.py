@@ -804,6 +804,14 @@ def test_cftime_datetime_sub_cftimeindex(calendar):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_distant_cftime_datetime_sub_cftimeindex(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    with pytest.raises(ValueError, match="difference exceeds"):
+        a.date_type(1, 1, 1) - a
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_sub_timedeltaindex(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
