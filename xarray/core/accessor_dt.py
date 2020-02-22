@@ -117,7 +117,9 @@ def _round_field(values, name, freq):
     if isinstance(values, dask_array_type):
         from dask.array import map_blocks
 
-        return map_blocks(_round_through_series_or_index, values, name, freq=freq, dtype=np.datetime64)
+        return map_blocks(
+            _round_through_series_or_index, values, name, freq=freq, dtype=np.datetime64
+        )
     else:
         return _round_through_series_or_index(values, name, freq)
 
