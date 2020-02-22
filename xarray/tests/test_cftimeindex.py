@@ -904,6 +904,14 @@ def test_rounding_methods_against_datetimeindex(freq, method):
     assert result.equals(expected)
 
 
+@requires_cftime
+@pytest.mark.parametrize("method", ["floor", "ceil", "round"])
+def test_rounding_methods_invalid_freq(method):
+    index = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    with pytest.raises(ValueError, match="fixed"):
+        getattr(index, method)("MS")
+
+
 @pytest.fixture
 def rounding_index(date_type):
     return xr.CFTimeIndex(
