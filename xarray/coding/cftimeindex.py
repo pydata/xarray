@@ -530,25 +530,24 @@ class CFTimeIndex(pd.Index):
 
     @property
     def asi8(self):
-        """Convert to integers with units of microseconds since 1970-01-01"""
+        """Convert to integers with units of microseconds since 1970-01-01."""
         from ..core.resample_cftime import exact_cftime_datetime_difference
 
         epoch = self.date_type(1970, 1, 1)
         return np.array(
             [
-                _total_microseconds(exact_cftime_datetime_difference(epoch, date)) for date
-                in self.values
+                _total_microseconds(exact_cftime_datetime_difference(epoch, date))
+                for date in self.values
             ]
         )
 
-    def _round(self, freq, method):
+    def _round_via_method(self, freq, method):
+        """Round dates using a specified method."""
         from .cftime_offsets import CFTIME_TICKS, to_offset
 
         offset = to_offset(freq)
         if not isinstance(offset, CFTIME_TICKS):
-            raise ValueError(
-                f"{offset} is a non-fixed frequency"
-            )
+            raise ValueError(f"{offset} is a non-fixed frequency")
 
         unit = _total_microseconds(offset.as_timedelta())
         values = self.asi8
@@ -556,16 +555,55 @@ class CFTimeIndex(pd.Index):
         return _cftimeindex_from_i8(rounded, self.date_type, self.name)
 
     def floor(self, freq):
-        """Round dates down to fixed frequency"""
-        return self._round(freq, _floor_int)
+        """Round dates down to fixed frequency.
+
+        Parameters
+        ----------
+        freq : str or CFTimeOffset
+            The frequency level to round the index to.  Must be a fixed
+            frequency like 'S' (second) not 'ME' (month end).  See `frequency
+            aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
+            for a list of possible values.
+
+        Returns
+        -------
+        CFTimeIndex
+        """
+        return self._round_via_method(freq, _floor_int)
 
     def ceil(self, freq):
-        """Round dates up to fixed frequency"""
-        return self._round(freq, _ceil_int)
+        """Round dates up to fixed frequency.
+
+        Parameters
+        ----------
+        freq : str or CFTimeOffset
+            The frequency level to round the index to.  Must be a fixed
+            frequency like 'S' (second) not 'ME' (month end).  See `frequency
+            aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
+            for a list of possible values.
+
+        Returns
+        -------
+        CFTimeIndex
+        """
+        return self._round_via_method(freq, _ceil_int)
 
     def round(self, freq):
-        """Round dates to a fixed frequency"""
-        return self._round(freq, _round_to_nearest_half_even)
+        """Round dates to a fixed frequency.
+
+        Parameters
+        ----------
+        freq : str or CFTimeOffset
+            The frequency level to round the index to.  Must be a fixed
+            frequency like 'S' (second) not 'ME' (month end).  See `frequency
+            aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
+            for a list of possible values.
+
+        Returns
+        -------
+        CFTimeIndex
+        """
+        return self._round_via_method(freq, _round_to_nearest_half_even)
 
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
@@ -596,30 +634,58 @@ def _parse_array_of_cftime_strings(strings, date_type):
 
 
 def _cftimeindex_from_i8(values, date_type, name):
+    """Construct a CFTimeIndex from an array of integers
+
+    Parameters
+    ----------
+    values : np.array
+        Integers representing microseconds since 1970-01-01.
+    date_type : cftime.datetime
+        Type of date for the index.
+    name : str
+        Name of the index.
+
+    Returns
+    -------
+    CFTimeIndex
+    """
     epoch = date_type(1970, 1, 1)
     dates = np.array([epoch + timedelta(microseconds=int(value)) for value in values])
     return CFTimeIndex(dates, name=name)
 
 
 def _total_microseconds(delta):
+    """Compute the total number of microseconds of a datetime.timedelta.
+
+    Parameters
+    ----------
+    delta : datetime.timedelta
+        Input timedelta.
+
+    Returns
+    -------
+    int
+    """
     return int(delta.total_seconds() * 1e6)
 
 
 def _floor_int(values, unit):
+    """Adapted from pandas."""
     return values - np.remainder(values, unit)
 
 
 def _ceil_int(values, unit):
+    """Adapted from pandas."""
     return values + np.remainder(-values, unit)
 
 
 def _round_to_nearest_half_even(values, unit):
+    """Adapted from pandas."""
     if unit % 2:
         return _ceil_int(values - unit // 2, unit)
     quotient, remainder = np.divmod(values, unit)
     mask = np.logical_or(
-        remainder > (unit // 2),
-        np.logical_and(remainder == (unit // 2), quotient % 2)
+        remainder > (unit // 2), np.logical_and(remainder == (unit // 2), quotient % 2)
     )
     quotient[mask] += 1
     return quotient * unit

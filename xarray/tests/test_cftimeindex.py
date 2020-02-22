@@ -894,40 +894,61 @@ def test_multiindex():
 
 
 @requires_cftime
-@pytest.mark.parametrize('freq', ['3663S', '33T', '2H'])
-def test_floor(freq):
-    expected = pd.date_range('2000-01-02T01:03:51', periods=10, freq='1777S')
-    expected = expected.floor(freq)
-    result = xr.cftime_range('2000-01-02T01:03:51', periods=10, freq='1777S')
-    result = result.floor(freq).to_datetimeindex()
+@pytest.mark.parametrize("freq", ["3663S", "33T", "2H"])
+@pytest.mark.parametrize("method", ["floor", "ceil", "round"])
+def test_rounding_methods_against_datetimeindex(freq, method):
+    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    expected = getattr(expected, method)(freq)
+    result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    result = getattr(result, method)(freq).to_datetimeindex()
+    assert result.equals(expected)
+
+
+@pytest.fixture
+def rounding_index(date_type):
+    return xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 1, 59, 59, 999512),
+            date_type(1, 1, 1, 3, 0, 1, 500001),
+            date_type(1, 1, 1, 7, 0, 6, 499999),
+        ]
+    )
+
+
+@requires_cftime
+def test_ceil(rounding_index, date_type):
+    result = rounding_index.ceil("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 2, 0, 0, 0),
+            date_type(1, 1, 1, 3, 0, 2, 0),
+            date_type(1, 1, 1, 7, 0, 7, 0),
+        ]
+    )
     assert result.equals(expected)
 
 
 @requires_cftime
-@pytest.mark.parametrize('freq', ['3663S', '33T', '2H'])
-def test_ceil(freq):
-    expected = pd.date_range('2000-01-02T01:03:51', periods=10, freq='1777S')
-    expected = expected.ceil(freq)
-    result = xr.cftime_range('2000-01-02T01:03:51', periods=10, freq='1777S')
-    result = result.ceil(freq).to_datetimeindex()
+def test_floor(rounding_index, date_type):
+    result = rounding_index.floor("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 1, 59, 59, 0),
+            date_type(1, 1, 1, 3, 0, 1, 0),
+            date_type(1, 1, 1, 7, 0, 6, 0),
+        ]
+    )
     assert result.equals(expected)
 
 
 @requires_cftime
-@pytest.mark.parametrize('freq', ['3663S', '33T', '2H'])
-def test_round(freq):
-    expected = pd.date_range('2000-01-02T01:03:51', periods=10, freq='1777S')
-    expected = expected.round(freq)
-    result = xr.cftime_range('2000-01-02T01:03:51', periods=10, freq='1777S')
-    result = result.round(freq).to_datetimeindex()
-    assert result.equals(expected)
-
-
-@requires_cftime
-@pytest.mark.parametrize('freq', ['H', '3H', '7H'])
-def test_round2(freq):
-    expected = pd.date_range('2000-01-02T01:03:51', periods=21, freq='59T')
-    expected = expected.round(freq)
-    result = xr.cftime_range('2000-01-02T01:03:51', periods=21, freq='59T')
-    result = result.round(freq).to_datetimeindex()
+def test_round(rounding_index, date_type):
+    result = rounding_index.round("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 2, 0, 0, 0),
+            date_type(1, 1, 1, 3, 0, 2, 0),
+            date_type(1, 1, 1, 7, 0, 6, 0),
+        ]
+    )
     assert result.equals(expected)
