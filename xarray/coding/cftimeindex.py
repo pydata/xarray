@@ -634,7 +634,7 @@ def _parse_array_of_cftime_strings(strings, date_type):
 
 
 def _cftimeindex_from_i8(values, date_type, name):
-    """Construct a CFTimeIndex from an array of integers
+    """Construct a CFTimeIndex from an array of integers.
 
     Parameters
     ----------
@@ -670,17 +670,17 @@ def _total_microseconds(delta):
 
 
 def _floor_int(values, unit):
-    """Adapted from pandas."""
+    """Copied from pandas."""
     return values - np.remainder(values, unit)
 
 
 def _ceil_int(values, unit):
-    """Adapted from pandas."""
+    """Copied from pandas."""
     return values + np.remainder(-values, unit)
 
 
 def _round_to_nearest_half_even(values, unit):
-    """Adapted from pandas."""
+    """Copied from pandas."""
     if unit % 2:
         return _ceil_int(values - unit // 2, unit)
     quotient, remainder = np.divmod(values, unit)
