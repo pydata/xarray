@@ -37,6 +37,9 @@ Internal Changes
 - Removed the internal ``import_seaborn`` function which handled the deprecation of
   the ``seaborn.apionly`` entry point (:issue:`3747`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Changed test_open_mfdataset_list_attr to only run with dask installed
+  (:issue:`3777`, :pull:`3780`).
+  By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
 
 .. _whats-new.0.15.0:
 
