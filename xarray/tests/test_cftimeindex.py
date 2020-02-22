@@ -460,7 +460,11 @@ def test_sel_date_distant_date(da, date_type, index):
 @requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
-    [{"method": "nearest"}, {"method": "nearest", "tolerance": timedelta(days=70)}],
+    [
+        {"method": "nearest"},
+        {"method": "nearest", "tolerance": timedelta(days=70)},
+        {"method": "nearest", "tolerance": timedelta(days=1800000)},
+    ],
 )
 def test_sel_date_scalar_nearest(da, date_type, index, sel_kwargs):
     expected = xr.DataArray(2).assign_coords(time=index[1])

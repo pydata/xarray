@@ -345,8 +345,11 @@ class CFTimeIndex(pd.Index):
         return indexer
 
     def _filter_indexer_tolerance(self, target, indexer, tolerance):
-        """Copied from pandas.Index._filter_indexer_tolerance"""
-        distance = abs(self.values[indexer] - target)
+        """Adapted from pandas.Index._filter_indexer_tolerance"""
+        if isinstance(target, pd.Index):
+            distance = abs(self.values[indexer] - target.values)
+        else:
+            distance = abs(self.values[indexer] - target)
         indexer = np.where(distance <= tolerance, indexer, -1)
         return indexer
 
