@@ -28,7 +28,7 @@ New Features
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
-  By `Spencer Clark <https://github.com/spencerkclark>>`_ 
+  By `Spencer Clark <https://github.com/spencerkclark>`_ 
 
 Bug fixes
 ~~~~~~~~~
