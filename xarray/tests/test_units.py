@@ -1594,13 +1594,7 @@ class TestVariable(VariableSubclassobjects):
             pytest.param(1, id="no_unit"),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(
-                    reason="checking for identical units does not work properly, yet"
-                ),
-            ),
+            pytest.param(unit_registry.cm, id="compatible_unit",),
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
@@ -1611,7 +1605,17 @@ class TestVariable(VariableSubclassobjects):
             pytest.param(True, id="with_conversion"),
         ),
     )
-    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("equals"),
+            pytest.param(
+                method("identical"),
+                marks=pytest.mark.skip(reason="behaviour of identical is unclear"),
+            ),
+        ),
+        ids=repr,
+    )
     def test_comparisons(self, func, unit, convert_data, dtype):
         array = np.linspace(0, 1, 9).astype(dtype)
         quantity1 = array * unit_registry.m
