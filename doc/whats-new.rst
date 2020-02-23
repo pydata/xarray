@@ -38,6 +38,10 @@ Bug fixes
   checking. (:issue:`3779`, :pull:`3787`)
   By `Justus Magin <https://github.com/keewis>`_.
 
+- :py:func:`concat` can now handle coordinate variables only present in one of
+  the objects to be concatenated when ``coords="different"``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
