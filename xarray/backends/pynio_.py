@@ -1,8 +1,8 @@
 import numpy as np
 
-from .. import Variable
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict
+from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock

@@ -662,3 +662,10 @@ def test_datetime_interp_noerror():
         coords={"time": pd.date_range("01-01-2001", periods=50, freq="H")},
     )
     a.interp(x=xi, time=xi.time)  # should not raise an error
+
+
+@requires_cftime
+def test_3641():
+    times = xr.cftime_range("0001", periods=3, freq="500Y")
+    da = xr.DataArray(range(3), dims=["time"], coords=[times])
+    da.interp(time=["0002-05-01"])

@@ -11,7 +11,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from . import dask_array_ops, dask_array_compat, dtypes, npcompat, nputils
+from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 
@@ -37,7 +37,7 @@ def _dask_or_eager_func(
                 dispatch_args = args[0]
             else:
                 dispatch_args = args[array_args]
-            if any(isinstance(a, dask_array.Array) for a in dispatch_args):
+            if any(isinstance(a, dask_array_type) for a in dispatch_args):
                 try:
                     wrapped = getattr(dask_module, name)
                 except AttributeError as e:
@@ -121,6 +121,7 @@ _where = _dask_or_eager_func("where", array_args=slice(3))
 isin = _dask_or_eager_func("isin", array_args=slice(2))
 take = _dask_or_eager_func("take")
 broadcast_to = _dask_or_eager_func("broadcast_to")
+pad = _dask_or_eager_func("pad")
 
 _concatenate = _dask_or_eager_func("concatenate", list_of_args=True)
 _stack = _dask_or_eager_func("stack", list_of_args=True)
@@ -189,8 +190,8 @@ def lazy_array_equiv(arr1, arr2):
         return False
     if (
         dask_array
-        and isinstance(arr1, dask_array.Array)
-        and isinstance(arr2, dask_array.Array)
+        and isinstance(arr1, dask_array_type)
+        and isinstance(arr2, dask_array_type)
     ):
         # GH3068
         if arr1.name == arr2.name:
@@ -261,7 +262,10 @@ def where_method(data, cond, other=dtypes.NA):
 
 
 def fillna(data, other):
-    return where(isnull(data), other, data)
+    # we need to pass data first so pint has a chance of returning the
+    # correct unit
+    # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
+    return where(notnull(data), data, other)
 
 
 def concatenate(arrays, axis=0):
@@ -372,49 +376,139 @@ def _datetime_nanmin(array):
 
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
-    """Convert an array containing datetime-like data to an array of floats.
+    """Convert an array containing datetime-like data to numerical values.
+
+    Convert the datetime array to a timedelta relative to an offset.
 
     Parameters
     ----------
-    da : np.array
-        Input data
-    offset: Scalar with the same type of array or None
-        If None, subtract minimum values to reduce round off error
-    datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
-        'us', 'ns', 'ps', 'fs', 'as'}
-    dtype: target dtype
+    da : array-like
+      Input data
+    offset: None, datetime or cftime.datetime
+      Datetime offset. If None, this is set by default to the array's minimum
+      value to reduce round off errors.
+    datetime_unit: {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
+      If not None, convert output to a given datetime unit. Note that some
+      conversions are not allowed due to non-linear relationships between units.
+    dtype: dtype
+      Output dtype.
 
     Returns
     -------
     array
+      Numerical representation of datetime object relative to an offset.
+
+    Notes
+    -----
+    Some datetime unit conversions won't work, for example from days to years, even
+    though some calendars would allow for them (e.g. no_leap). This is because there
+    is no `cftime.timedelta` object.
     """
     # TODO: make this function dask-compatible?
+    # Set offset to minimum if not given
     if offset is None:
         if array.dtype.kind in "Mm":
             offset = _datetime_nanmin(array)
         else:
             offset = min(array)
+
+    # Compute timedelta object.
+    # For np.datetime64, this can silently yield garbage due to overflow.
+    # One option is to enforce 1970-01-01 as the universal offset.
     array = array - offset
 
-    if not hasattr(array, "dtype"):  # scalar is converted to 0d-array
+    # Scalar is converted to 0d-array
+    if not hasattr(array, "dtype"):
         array = np.array(array)
 
+    # Convert timedelta objects to float by first converting to microseconds.
     if array.dtype.kind in "O":
-        # possibly convert object array containing datetime.timedelta
-        array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
+        return py_timedelta_to_float(array, datetime_unit or "ns").astype(dtype)
 
-    if datetime_unit:
-        array = array / np.timedelta64(1, datetime_unit)
+    # Convert np.NaT to np.nan
+    elif array.dtype.kind in "mM":
 
-    # convert np.NaT to np.nan
-    if array.dtype.kind in "mM":
+        # Convert to specified timedelta units.
+        if datetime_unit:
+            array = array / np.timedelta64(1, datetime_unit)
         return np.where(isnull(array), np.nan, array.astype(dtype))
-    return array.astype(dtype)
+
+
+def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
+    """Convert a timedelta-like object to numerical values.
+
+    Parameters
+    ----------
+    value : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, str
+      Time delta representation.
+    datetime_unit : {Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
+      The time units of the output values. Note that some conversions are not allowed due to
+      non-linear relationships between units.
+    dtype : type
+      The output data type.
+
+    """
+    import datetime as dt
+
+    if isinstance(value, dt.timedelta):
+        out = py_timedelta_to_float(value, datetime_unit)
+    elif isinstance(value, np.timedelta64):
+        out = np_timedelta64_to_float(value, datetime_unit)
+    elif isinstance(value, pd.Timedelta):
+        out = pd_timedelta_to_float(value, datetime_unit)
+    elif isinstance(value, str):
+        try:
+            a = pd.to_timedelta(value)
+        except ValueError:
+            raise ValueError(
+                f"Could not convert {value!r} to timedelta64 using pandas.to_timedelta"
+            )
+        return py_timedelta_to_float(a, datetime_unit)
+    else:
+        raise TypeError(
+            f"Expected value of type str, pandas.Timedelta, datetime.timedelta "
+            f"or numpy.timedelta64, but received {type(value).__name__}"
+        )
+    return out.astype(dtype)
 
 
 def _to_pytimedelta(array, unit="us"):
     index = pd.TimedeltaIndex(array.ravel(), unit=unit)
     return index.to_pytimedelta().reshape(array.shape)
+
+
+def np_timedelta64_to_float(array, datetime_unit):
+    """Convert numpy.timedelta64 to float.
+
+    Notes
+    -----
+    The array is first converted to microseconds, which is less likely to
+    cause overflow errors.
+    """
+    array = array.astype("timedelta64[ns]").astype(np.float64)
+    conversion_factor = np.timedelta64(1, "ns") / np.timedelta64(1, datetime_unit)
+    return conversion_factor * array
+
+
+def pd_timedelta_to_float(value, datetime_unit):
+    """Convert pandas.Timedelta to float.
+
+    Notes
+    -----
+    Built on the assumption that pandas timedelta values are in nanoseconds,
+    which is also the numpy default resolution.
+    """
+    value = value.to_timedelta64()
+    return np_timedelta64_to_float(value, datetime_unit)
+
+
+def py_timedelta_to_float(array, datetime_unit):
+    """Convert a timedelta object to a float, possibly at a loss of resolution.
+    """
+    array = np.asarray(array)
+    array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+    conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
+    return conversion_factor * array
 
 
 def mean(array, axis=None, skipna=None, **kwargs):

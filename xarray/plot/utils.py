@@ -21,26 +21,6 @@ except ImportError:
 ROBUST_PERCENTILE = 2.0
 
 
-def import_seaborn():
-    """import seaborn and handle deprecation of apionly module"""
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        try:
-            import seaborn.apionly as sns
-
-            if (
-                w
-                and issubclass(w[-1].category, UserWarning)
-                and ("seaborn.apionly module" in str(w[-1].message))
-            ):
-                raise ImportError
-        except ImportError:
-            import seaborn as sns
-        finally:
-            warnings.resetwarnings()
-    return sns
-
-
 _registered = False
 
 
@@ -119,7 +99,7 @@ def _color_palette(cmap, n_colors):
         except ValueError:
             # ValueError happens when mpl doesn't like a colormap, try seaborn
             try:
-                from seaborn.apionly import color_palette
+                from seaborn import color_palette
 
                 pal = color_palette(cmap, n_colors=n_colors)
             except (ValueError, ImportError):
@@ -453,6 +433,42 @@ def _interval_to_double_bound_points(xarray, yarray):
     return xarray, yarray
 
 
+def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
+    """
+    Helper function to replace the values of x and/or y coordinate arrays
+    containing pd.Interval with their mid-points or - for step plots - double
+    points which double the length.
+    """
+
+    # Is it a step plot? (see matplotlib.Axes.step)
+    if kwargs.get("linestyle", "").startswith("steps-"):
+
+        # Convert intervals to double points
+        if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
+            raise TypeError("Can't step plot intervals against intervals.")
+        if _valid_other_type(xval, [pd.Interval]):
+            xval, yval = _interval_to_double_bound_points(xval, yval)
+        if _valid_other_type(yval, [pd.Interval]):
+            yval, xval = _interval_to_double_bound_points(yval, xval)
+
+        # Remove steps-* to be sure that matplotlib is not confused
+        del kwargs["linestyle"]
+
+    # Is it another kind of plot?
+    else:
+
+        # Convert intervals to mid points and adjust labels
+        if _valid_other_type(xval, [pd.Interval]):
+            xval = _interval_to_mid_points(xval)
+            xlabel += "_center"
+        if _valid_other_type(yval, [pd.Interval]):
+            yval = _interval_to_mid_points(yval)
+            ylabel += "_center"
+
+    # return converted arguments
+    return xval, yval, xlabel, ylabel, kwargs
+
+
 def _resolve_intervals_2dplot(val, func_name):
     """
     Helper function to replace the values of a coordinate array containing
@@ -547,10 +563,6 @@ def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
 
 def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     assert robust or vmin is not None or vmax is not None
-    # TODO: remove when min numpy version is bumped to 1.13
-    # There's a cyclic dependency via DataArray, so we can't import from
-    # xarray.ufuncs in global scope.
-    from xarray.ufuncs import maximum, minimum
 
     # Calculate vmin and vmax automatically for `robust=True`
     if robust:
@@ -579,9 +591,7 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     # After scaling, downcast to 32-bit float.  This substantially reduces
     # memory usage after we hand `darray` off to matplotlib.
     darray = ((darray.astype("f8") - vmin) / (vmax - vmin)).astype("f4")
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "xarray.ufuncs", PendingDeprecationWarning)
-        return minimum(maximum(darray, 0), 1)
+    return np.minimum(np.maximum(darray, 0), 1)
 
 
 def _update_axes(

@@ -130,6 +130,7 @@ will return a ``dask.delayed`` object that can be computed later.
 A dataset can also be converted to a Dask DataFrame using :py:meth:`~xarray.Dataset.to_dask_dataframe`.
 
 .. ipython:: python
+    :okwarning:
 
     df = ds.to_dask_dataframe()
     df

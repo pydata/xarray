@@ -1,6 +1,6 @@
 import functools
 import operator
-import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -10,20 +10,18 @@ import xarray as xr
 from xarray.core import formatting
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.testing import assert_allclose, assert_identical
+
 from .test_variable import VariableSubclassobjects
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
+
 
 # make sure scalars are converted to 0d arrays so quantities can
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray=True)
 Quantity = unit_registry.Quantity
 
-# silence pint's BehaviorChangeWarning
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    Quantity([])
 
 pytestmark = [
     pytest.mark.skipif(
@@ -1589,27 +1587,17 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(
-                1,
-                DimensionalityError,
-                id="no_unit",
-                marks=pytest.mark.xfail(reason="uses 0 as a replacement"),
-            ),
+            pytest.param(1, DimensionalityError, id="no_unit"),
             pytest.param(
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                None,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(reason="converts to fill value's unit"),
-            ),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     def test_missing_value_fillna(self, unit, error):
-        value = 0
+        value = 10
         array = (
             np.array(
                 [
@@ -1648,13 +1636,7 @@ class TestVariable(VariableSubclassobjects):
             pytest.param(1, id="no_unit"),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(
-                    reason="checking for identical units does not work properly, yet"
-                ),
-            ),
+            pytest.param(unit_registry.cm, id="compatible_unit",),
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
@@ -1665,7 +1647,17 @@ class TestVariable(VariableSubclassobjects):
             pytest.param(True, id="with_conversion"),
         ),
     )
-    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("equals"),
+            pytest.param(
+                method("identical"),
+                marks=pytest.mark.skip(reason="behaviour of identical is unclear"),
+            ),
+        ),
+        ids=repr,
+    )
     def test_comparisons(self, func, unit, convert_data, dtype):
         array = np.linspace(0, 1, 9).astype(dtype)
         quantity1 = array * unit_registry.m
@@ -1815,14 +1807,7 @@ class TestVariable(VariableSubclassobjects):
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                None,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(
-                    reason="getitem_with_mask converts to the unit of other"
-                ),
-            ),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
@@ -1891,7 +1876,10 @@ class TestVariable(VariableSubclassobjects):
         "func",
         (
             method("coarsen", windows={"y": 2}, func=np.mean),
-            method("quantile", q=[0.25, 0.75]),
+            pytest.param(
+                method("quantile", q=[0.25, 0.75]),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
             pytest.param(
                 method("rank", dim="x"),
                 marks=pytest.mark.xfail(reason="rank not implemented for non-ndarray"),
@@ -1903,12 +1891,7 @@ class TestVariable(VariableSubclassobjects):
             ),
             method("reduce", np.std, "x"),
             method("round", 2),
-            pytest.param(
-                method("shift", {"x": -2}),
-                marks=pytest.mark.xfail(
-                    reason="trying to concatenate ndarray to quantity"
-                ),
-            ),
+            method("shift", {"x": -2}),
             method("transpose", "y", "x"),
         ),
         ids=repr,
@@ -1983,7 +1966,6 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="ignores units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -1998,25 +1980,28 @@ class TestVariable(VariableSubclassobjects):
     )
     def test_concat(self, unit, error, dtype):
         array1 = (
-            np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
+            np.linspace(0, 5, 9 * 10).reshape(3, 6, 5).astype(dtype) * unit_registry.m
         )
-        array2 = np.linspace(5, 10, 10 * 2).reshape(10, 2).astype(dtype) * unit
+        array2 = np.linspace(5, 10, 10 * 3).reshape(3, 2, 5).astype(dtype) * unit
 
-        variable = xr.Variable(("x", "y"), array1)
-        other = xr.Variable(("y", "z"), array2)
+        variable = xr.Variable(("x", "y", "z"), array1)
+        other = xr.Variable(("x", "y", "z"), array2)
 
         if error is not None:
             with pytest.raises(error):
-                variable.concat(other)
+                xr.Variable.concat([variable, other], dim="y")
 
             return
 
         units = extract_units(variable)
         expected = attach_units(
-            strip_units(variable).concat(strip_units(convert_units(other, units))),
+            xr.Variable.concat(
+                [strip_units(variable), strip_units(convert_units(other, units))],
+                dim="y",
+            ),
             units,
         )
-        actual = variable.concat(other)
+        actual = xr.Variable.concat([variable, other], dim="y")
 
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
@@ -2086,6 +2071,43 @@ class TestVariable(VariableSubclassobjects):
 
         assert expected == actual
 
+    def test_pad(self, dtype):
+        data = np.arange(4 * 3 * 2).reshape(4, 3, 2).astype(dtype) * unit_registry.m
+        v = xr.Variable(["x", "y", "z"], data)
+
+        xr_args = [{"x": (2, 1)}, {"y": (0, 3)}, {"x": (3, 1), "z": (2, 0)}]
+        np_args = [
+            ((2, 1), (0, 0), (0, 0)),
+            ((0, 0), (0, 3), (0, 0)),
+            ((3, 1), (0, 0), (2, 0)),
+        ]
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            actual = v.pad_with_fill_value(**xr_arg)
+            expected = xr.Variable(
+                v.dims,
+                np.pad(
+                    v.data.astype(float),
+                    np_arg,
+                    mode="constant",
+                    constant_values=np.nan,
+                ),
+            )
+            xr.testing.assert_identical(expected, actual)
+            assert_units_equal(expected, actual)
+            assert isinstance(actual._data, type(v._data))
+
+        # for the boolean array, we pad False
+        data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)
+        v = xr.Variable(["x", "y", "z"], data)
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            actual = v.pad_with_fill_value(fill_value=data.flat[0], **xr_arg)
+            expected = xr.Variable(
+                v.dims,
+                np.pad(v.data, np_arg, mode="constant", constant_values=v.data.flat[0]),
+            )
+            xr.testing.assert_identical(actual, expected)
+            assert_units_equal(expected, actual)
+
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -2094,7 +2116,8 @@ class TestVariable(VariableSubclassobjects):
                 DimensionalityError,
                 id="no_unit",
                 marks=pytest.mark.xfail(
-                    reason="is not treated the same as dimensionless"
+                    LooseVersion(pint.__version__) < LooseVersion("0.10.2"),
+                    reason="bug in pint's implementation of np.pad",
                 ),
             ),
             pytest.param(
@@ -3454,7 +3477,10 @@ class TestDataArray:
             method("diff", dim="x"),
             method("differentiate", coord="x"),
             method("integrate", dim="x"),
-            method("quantile", q=[0.25, 0.75]),
+            pytest.param(
+                method("quantile", q=[0.25, 0.75]),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
             method("reduce", func=np.sum, dim="x"),
             pytest.param(
                 lambda x: x.dot(x),
@@ -3544,7 +3570,10 @@ class TestDataArray:
             method("assign_coords", z=(["x"], np.arange(5) * unit_registry.s)),
             method("first"),
             method("last"),
-            method("quantile", q=np.array([0.25, 0.5, 0.75]), dim="x"),
+            pytest.param(
+                method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
         ),
         ids=repr,
     )
@@ -4982,7 +5011,10 @@ class TestDataset:
             method("diff", dim="x"),
             method("differentiate", coord="x"),
             method("integrate", coord="x"),
-            method("quantile", q=[0.25, 0.75]),
+            pytest.param(
+                method("quantile", q=[0.25, 0.75]),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
             method("reduce", func=np.sum, dim="x"),
             method("map", np.fabs),
         ),
@@ -5092,7 +5124,10 @@ class TestDataset:
             method("assign_coords", v=("x", np.arange(10) * unit_registry.s)),
             method("first"),
             method("last"),
-            method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
+            pytest.param(
+                method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
+                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+            ),
         ),
         ids=repr,
     )

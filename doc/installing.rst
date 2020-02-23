@@ -7,8 +7,9 @@ Required dependencies
 ---------------------
 
 - Python (3.6 or later)
-- `numpy <http://www.numpy.org/>`__ (1.14 or later)
-- `pandas <http://pandas.pydata.org/>`__ (0.24 or later)
+- setuptools
+- `numpy <http://www.numpy.org/>`__ (1.15 or later)
+- `pandas <http://pandas.pydata.org/>`__ (0.25 or later)
 
 Optional dependencies
 ---------------------
@@ -58,7 +59,7 @@ For plotting
 
 - `matplotlib <http://matplotlib.org/>`__: required for :ref:`plotting`
 - `cartopy <http://scitools.org.uk/cartopy/>`__: recommended for :ref:`plot-maps`
-- `seaborn <https://stanford.edu/~mwaskom/software/seaborn/>`__: for better
+- `seaborn <http://seaborn.pydata.org/>`__: for better
   color palettes
 - `nc-time-axis <https://github.com/SciTools/nc-time-axis>`__: for plotting
   cftime.datetime objects

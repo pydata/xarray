@@ -18,13 +18,16 @@ from typing import (
 
 import numpy as np
 
-from .. import DataArray, Dataset, auto_combine, backends, coding, conventions
+from .. import backends, coding, conventions
 from ..core import indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
+    auto_combine,
     combine_by_coords,
 )
+from ..core.dataarray import DataArray
+from ..core.dataset import Dataset
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
@@ -503,7 +506,7 @@ def open_dataset(
         elif engine == "pydap":
             store = backends.PydapDataStore.open(filename_or_obj, **backend_kwargs)
         elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore(
+            store = backends.H5NetCDFStore.open(
                 filename_or_obj, group=group, lock=lock, **backend_kwargs
             )
         elif engine == "pynio":
@@ -527,7 +530,7 @@ def open_dataset(
         if engine == "scipy":
             store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
         elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore(
+            store = backends.H5NetCDFStore.open(
                 filename_or_obj, group=group, lock=lock, **backend_kwargs
             )
 
@@ -981,7 +984,7 @@ def open_mfdataset(
 WRITEABLE_STORES: Dict[str, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
-    "h5netcdf": backends.H5NetCDFStore,
+    "h5netcdf": backends.H5NetCDFStore.open,
 }
 
 
