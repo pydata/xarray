@@ -121,6 +121,7 @@ _where = _dask_or_eager_func("where", array_args=slice(3))
 isin = _dask_or_eager_func("isin", array_args=slice(2))
 take = _dask_or_eager_func("take")
 broadcast_to = _dask_or_eager_func("broadcast_to")
+pad = _dask_or_eager_func("pad")
 
 _concatenate = _dask_or_eager_func("concatenate", list_of_args=True)
 _stack = _dask_or_eager_func("stack", list_of_args=True)
@@ -261,7 +262,10 @@ def where_method(data, cond, other=dtypes.NA):
 
 
 def fillna(data, other):
-    return where(isnull(data), other, data)
+    # we need to pass data first so pint has a chance of returning the
+    # correct unit
+    # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
+    return where(notnull(data), data, other)
 
 
 def concatenate(arrays, axis=0):
