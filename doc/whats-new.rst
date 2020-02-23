@@ -24,6 +24,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- implement pint support. (:issue:`3594`, :pull:`3706`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
