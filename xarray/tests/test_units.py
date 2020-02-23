@@ -1,5 +1,4 @@
 import operator
-import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -20,12 +19,6 @@ DimensionalityError = pint.errors.DimensionalityError
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray=True)
 Quantity = unit_registry.Quantity
-
-
-# silence pint's BehaviorChangeWarning
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    Quantity([])
 
 
 pytestmark = [
