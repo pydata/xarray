@@ -59,7 +59,7 @@ For plotting
 
 - `matplotlib <http://matplotlib.org/>`__: required for :ref:`plotting`
 - `cartopy <http://scitools.org.uk/cartopy/>`__: recommended for :ref:`plot-maps`
-- `seaborn <https://stanford.edu/~mwaskom/software/seaborn/>`__: for better
+- `seaborn <http://seaborn.pydata.org/>`__: for better
   color palettes
 - `nc-time-axis <https://github.com/SciTools/nc-time-axis>`__: for plotting
   cftime.datetime objects
