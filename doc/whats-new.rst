@@ -29,6 +29,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Use ``dask_array_type`` instead of ``dask_array.Array`` for type
+  checking. (:issue:`3779`, :pull:`3787`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~

@@ -37,7 +37,7 @@ def _dask_or_eager_func(
                 dispatch_args = args[0]
             else:
                 dispatch_args = args[array_args]
-            if any(isinstance(a, dask_array.Array) for a in dispatch_args):
+            if any(isinstance(a, dask_array_type) for a in dispatch_args):
                 try:
                     wrapped = getattr(dask_module, name)
                 except AttributeError as e:
@@ -190,8 +190,8 @@ def lazy_array_equiv(arr1, arr2):
         return False
     if (
         dask_array
-        and isinstance(arr1, dask_array.Array)
-        and isinstance(arr2, dask_array.Array)
+        and isinstance(arr1, dask_array_type)
+        and isinstance(arr2, dask_array_type)
     ):
         # GH3068
         if arr1.name == arr2.name:
