@@ -25,12 +25,26 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
+  v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- implement pint support. (:issue:`3594`, :pull:`3706`)
+  By `Justus Magin <https://github.com/keewis>`_.
+
+
 Bug fixes
 ~~~~~~~~~
+
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
   (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
   <https://github.com/jaicher>`_.
+- Use ``dask_array_type`` instead of ``dask_array.Array`` for type
+  checking. (:issue:`3779`, :pull:`3787`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:func:`concat` can now handle coordinate variables only present in one of
+  the objects to be concatenated when ``coords="different"``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -41,6 +55,9 @@ Internal Changes
 - Removed the internal ``import_seaborn`` function which handled the deprecation of
   the ``seaborn.apionly`` entry point (:issue:`3747`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Changed test_open_mfdataset_list_attr to only run with dask installed
+  (:issue:`3777`, :pull:`3780`).
+  By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
 
 .. _whats-new.0.15.0:
 
