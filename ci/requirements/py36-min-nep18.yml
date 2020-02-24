@@ -8,6 +8,7 @@ dependencies:
   - coveralls
   - dask=2.4
   - distributed=2.4
+  - msgpack=0.6  # remove once distributed is bumped. distributed GH3491
   - numpy=1.17
   - pandas=0.25
   - pint=0.9  # Actually not enough as it doesn't implement __array_function__yet!
