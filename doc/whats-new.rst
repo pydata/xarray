@@ -41,6 +41,9 @@ Bug fixes
 - :py:func:`concat` can now handle coordinate variables only present in one of
   the objects to be concatenated when ``coords="different"``.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- xarray now respects the over, under and bad colors if set on a provided colormap.
+  (:issue:`3590`, :pull:`3601`)
+  By `John Motani <https://github.com/johnomotani>`_.
 
 Documentation
 ~~~~~~~~~~~~~
