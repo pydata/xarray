@@ -71,14 +71,7 @@ around = _dask_or_eager_func("around")
 isclose = _dask_or_eager_func("isclose")
 
 
-if hasattr(np, "isnat") and (
-    dask_array_type == () or hasattr(dask_array_type[0], "__array_ufunc__")
-):
-    # np.isnat is available since NumPy 1.13, so __array_ufunc__ is always
-    # supported.
-    isnat = np.isnat
-else:
-    isnat = _dask_or_eager_func("isnull", eager_module=pd)
+isnat = _dask_or_eager_func("isnat")
 isnan = _dask_or_eager_func("isnan")
 zeros_like = _dask_or_eager_func("zeros_like")
 
