@@ -1,4 +1,5 @@
 import inspect
+from copy import deepcopy
 from datetime import datetime
 
 import numpy as np
@@ -274,6 +275,71 @@ class TestPlot(PlotTestCase):
 
         a.plot.contourf(x="time", y="depth")
         a.plot.contourf(x="depth", y="time")
+
+    def test_contourf_cmap_set(self):
+        a = DataArray(easy_array((4, 4)), dims=["z", "time"])
+
+        cmap = mpl.cm.viridis
+
+        # deepcopy to ensure cmap is not changed by contourf()
+        # Set vmin and vmax so that _build_discrete_colormap is called with
+        # extend='both'. extend is passed to
+        # mpl.colors.from_levels_and_colors(), which returns a result with
+        # sensible under and over values if extend='both', but not if
+        # extend='neither' (but if extend='neither' the under and over values
+        # would not be used because the data would all be within the plotted
+        # range)
+        pl = a.plot.contourf(cmap=deepcopy(cmap), vmin=0.1, vmax=0.9)
+
+        # check the set_bad color
+        assert np.all(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
+            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        # check the set_under color
+        assert pl.cmap(-np.inf) == cmap(-np.inf)
+
+        # check the set_over color
+        assert pl.cmap(np.inf) == cmap(np.inf)
+
+    def test_contourf_cmap_set_with_bad_under_over(self):
+        a = DataArray(easy_array((4, 4)), dims=["z", "time"])
+
+        # Make a copy here because we want a local cmap that we will modify.
+        # Use deepcopy because matplotlib Colormap objects have tuple members
+        # and we want to ensure we do not change the original.
+        cmap = deepcopy(mpl.cm.viridis)
+
+        cmap.set_bad("w")
+        # check we actually changed the set_bad color
+        assert np.all(
+            cmap(np.ma.masked_invalid([np.nan]))[0]
+            != mpl.cm.viridis(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        cmap.set_under("r")
+        # check we actually changed the set_under color
+        assert cmap(-np.inf) != mpl.cm.viridis(-np.inf)
+
+        cmap.set_over("g")
+        # check we actually changed the set_over color
+        assert cmap(np.inf) != mpl.cm.viridis(-np.inf)
+
+        # deepcopy to ensure cmap is not changed by contourf()
+        pl = a.plot.contourf(cmap=deepcopy(cmap))
+
+        # check the set_bad color has been kept
+        assert np.all(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
+            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        # check the set_under color has been kept
+        assert pl.cmap(-np.inf) == cmap(-np.inf)
+
+        # check the set_over color has been kept
+        assert pl.cmap(np.inf) == cmap(np.inf)
 
     def test3d(self):
         self.darray.plot()
