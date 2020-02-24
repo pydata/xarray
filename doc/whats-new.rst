@@ -43,7 +43,7 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - xarray now respects the over, under and bad colors if set on a provided colormap.
   (:issue:`3590`, :pull:`3601`)
-  By `John Motani <https://github.com/johnomotani>`_.
+  By `johnomotani <https://github.com/johnomotani>`_.
 
 Documentation
 ~~~~~~~~~~~~~
