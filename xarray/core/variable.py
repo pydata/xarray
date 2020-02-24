@@ -1057,7 +1057,9 @@ class Variable(
 
         invalid = indexers.keys() - set(self.dims)
         if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+            raise ValueError(
+                f"dimensions {invalid} do not exist. Expected one or more of {self.dims}"
+            )
 
         key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
         return self[key]
