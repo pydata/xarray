@@ -768,6 +768,7 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
     :verbatim:
 
     In [1]: import rioxarray
+
     In [2]: rds = rioxarray.open_rasterio('RGB.byte.tif')
 
     In [3]: rds
