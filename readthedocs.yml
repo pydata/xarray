@@ -1,8 +1,13 @@
+version: 2
+
 build:
     image: latest
+
 conda:
-    file: ci/requirements/doc.yml
+    environment: ci/requirements/doc.yml
+
 python:
-    version: 3.7
-    setup_py_install: false
+    version: 3.8
+    install: []
+
 formats: []

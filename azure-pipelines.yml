@@ -20,11 +20,11 @@ jobs:
         conda_env: py37
       py38:
         conda_env: py38
-      py37-upstream-dev:
-        conda_env: py37
+      py38-upstream-dev:
+        conda_env: py38
         upstream_dev: true
-      py36-flaky:
-        conda_env: py36
+      py38-flaky:
+        conda_env: py38
         pytest_extra_flags: --run-flaky --run-network-tests
         allow_failure: true
   pool:
@@ -35,8 +35,8 @@ jobs:
 - job: MacOSX
   strategy:
     matrix:
-      py36:
-        conda_env: py36
+      py38:
+        conda_env: py38
   pool:
     vmImage: 'macOS-10.13'
   steps:
@@ -74,7 +74,7 @@ jobs:
 
 - job: TypeChecking
   variables:
-    conda_env: py37
+    conda_env: py38
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
@@ -83,6 +83,18 @@ jobs:
       source activate xarray-tests
       mypy .
     displayName: mypy type checks
+
+- job: isort
+  variables:
+    conda_env: py38
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - template: ci/azure/install.yml
+  - bash: |
+      source activate xarray-tests
+      isort -rc --check .
+    displayName: isort formatting checks
 
 - job: MinimumVersionsPolicy
   pool:
@@ -110,5 +122,5 @@ jobs:
   - bash: |
       source activate xarray-tests
       cd doc
-      sphinx-build -n -j auto -b html -d _build/doctrees . _build/html
+      sphinx-build -W --keep-going -j auto -b html -d _build/doctrees . _build/html
     displayName: Build HTML docs

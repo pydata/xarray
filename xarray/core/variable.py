@@ -346,7 +346,10 @@ class Variable(
     def data(self, data):
         data = as_compatible_data(data)
         if data.shape != self.shape:
-            raise ValueError("replacement data must match the Variable's shape")
+            raise ValueError(
+                f"replacement data must match the Variable's shape. "
+                f"replacement data has shape {data.shape}; Variable has shape {self.shape}"
+            )
         self._data = data
 
     def load(self, **kwargs):
@@ -739,7 +742,10 @@ class Variable(
 
             data = as_indexable(self._data)[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
-            data = duck_array_ops.where(mask, fill_value, data)
+            # we need to invert the mask in order to pass data first. This helps
+            # pint to choose the correct unit
+            # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
+            data = duck_array_ops.where(np.logical_not(mask), data, fill_value)
         else:
             # array cannot be indexed along dimensions of size 0, so just
             # build the mask directly instead.
@@ -1051,7 +1057,9 @@ class Variable(
 
         invalid = indexers.keys() - set(self.dims)
         if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+            raise ValueError(
+                f"dimensions {invalid} do not exist. Expected one or more of {self.dims}"
+            )
 
         key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
         return self[key]
@@ -1096,24 +1104,16 @@ class Variable(
         else:
             dtype = self.dtype
 
-        shape = list(self.shape)
-        shape[axis] = min(abs(count), shape[axis])
+        width = min(abs(count), self.shape[axis])
+        dim_pad = (width, 0) if count >= 0 else (0, width)
+        pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        if isinstance(trimmed_data, dask_array_type):
-            chunks = list(trimmed_data.chunks)
-            chunks[axis] = (shape[axis],)
-            full = functools.partial(da.full, chunks=chunks)
-        else:
-            full = np.full
-
-        filler = full(shape, fill_value, dtype=dtype)
-
-        if count > 0:
-            arrays = [filler, trimmed_data]
-        else:
-            arrays = [trimmed_data, filler]
-
-        data = duck_array_ops.concatenate(arrays, axis)
+        data = duck_array_ops.pad(
+            trimmed_data.astype(dtype),
+            pads,
+            mode="constant",
+            constant_values=fill_value,
+        )
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
@@ -1137,7 +1137,7 @@ class Variable(
             Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -1245,7 +1245,7 @@ class Variable(
             left.
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -1622,8 +1622,9 @@ class Variable(
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
-                    raise ValueError("inconsistent dimensions")
-                utils.remove_incompatible_items(attrs, var.attrs)
+                    raise ValueError(
+                        f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var.dims)}"
+                    )
 
         return cls(dims, data, attrs, encoding)
 
@@ -1693,6 +1694,7 @@ class Variable(
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
+
                 * linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
@@ -1700,6 +1702,7 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -1716,7 +1719,7 @@ class Variable(
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
 
@@ -1736,7 +1739,7 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return np.moveaxis(np.nanpercentile(npa, **kwargs), 0, -1)
+            return np.moveaxis(np.nanquantile(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
         result = apply_ufunc(
@@ -1748,7 +1751,7 @@ class Variable(
             output_dtypes=[np.float64],
             output_sizes={"quantile": len(q)},
             dask="parallelized",
-            kwargs={"q": q * 100, "axis": axis, "interpolation": interpolation},
+            kwargs={"q": q, "axis": axis, "interpolation": interpolation},
         )
 
         # for backward compatibility

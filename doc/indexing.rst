@@ -132,7 +132,7 @@ use them explicitly to slice data. There are two ways to do this:
 
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
-Python :py:func:`slice` objects or 1-dimensional arrays.
+Python :py:class:`slice` objects or 1-dimensional arrays.
 
 .. note::
 

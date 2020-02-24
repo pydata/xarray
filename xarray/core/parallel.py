@@ -7,11 +7,13 @@ try:
 except ImportError:
     pass
 
+import collections
 import itertools
 import operator
 from typing import (
     Any,
     Callable,
+    DefaultDict,
     Dict,
     Hashable,
     Mapping,
@@ -152,6 +154,48 @@ def map_blocks(
     --------
     dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
     xarray.DataArray.map_blocks
+
+    Examples
+    --------
+
+    Calculate an anomaly from climatology using ``.groupby()``. Using
+    ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
+    its indices, and its methods like ``.groupby()``.
+
+    >>> def calculate_anomaly(da, groupby_type='time.month'):
+    ...     # Necessary workaround to xarray's check with zero dimensions
+    ...     # https://github.com/pydata/xarray/issues/3575
+    ...     if sum(da.shape) == 0:
+    ...         return da
+    ...     gb = da.groupby(groupby_type)
+    ...     clim = gb.mean(dim='time')
+    ...     return gb - clim
+    >>> time = xr.cftime_range('1990-01', '1992-01', freq='M')
+    >>> np.random.seed(123)
+    >>> array = xr.DataArray(np.random.rand(len(time)),
+    ...                      dims="time", coords=[time]).chunk()
+    >>> xr.map_blocks(calculate_anomaly, array).compute()
+    <xarray.DataArray (time: 24)>
+    array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
+            0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
+           -0.19063865,  0.0590131 , -0.12894847, -0.11323072,  0.0855964 ,
+            0.09334032, -0.26848862, -0.12382735, -0.22460641, -0.07650108,
+            0.07673453,  0.22865714,  0.19063865, -0.0590131 ])
+    Coordinates:
+      * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+
+    Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
+    to the function being applied in ``xr.map_blocks()``:
+
+    >>> xr.map_blocks(calculate_anomaly, array, kwargs={'groupby_type': 'time.year'})
+    <xarray.DataArray (time: 24)>
+    array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,
+           -0.11974531,  0.43791243,  0.14197797, -0.06191987, -0.15073425,
+           -0.19967375,  0.18619794, -0.05100474, -0.42989909, -0.09153273,
+            0.24841842, -0.30708526, -0.31412523,  0.04197439,  0.0422506 ,
+            0.14482397,  0.35985481,  0.23487834,  0.12144652])
+    Coordinates:
+        * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
     """
 
     def _wrapper(func, obj, to_array, args, kwargs):
@@ -221,7 +265,12 @@ def map_blocks(
     indexes = {dim: dataset.indexes[dim] for dim in preserved_indexes}
     indexes.update({k: template.indexes[k] for k in new_indexes})
 
+    # We're building a new HighLevelGraph hlg. We'll have one new layer
+    # for each variable in the dataset, which is the result of the
+    # func applied to the values.
+
     graph: Dict[Any, Any] = {}
+    new_layers: DefaultDict[str, Dict[Any, Any]] = collections.defaultdict(dict)
     gname = "{}-{}".format(
         dask.utils.funcname(func), dask.base.tokenize(dataset, args, kwargs)
     )
@@ -310,9 +359,20 @@ def map_blocks(
                     # unchunked dimensions in the input have one chunk in the result
                     key += (0,)
 
-            graph[key] = (operator.getitem, from_wrapper, name)
+            # We're adding multiple new layers to the graph:
+            # The first new layer is the result of the computation on
+            # the array.
+            # Then we add one layer per variable, which extracts the
+            # result for that variable, and depends on just the first new
+            # layer.
+            new_layers[gname_l][key] = (operator.getitem, from_wrapper, name)
 
-    graph = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
+    hlg = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
+
+    for gname_l, layer in new_layers.items():
+        # This adds in the getitems for each variable in the dataset.
+        hlg.dependencies[gname_l] = {gname}
+        hlg.layers[gname_l] = layer
 
     result = Dataset(coords=indexes, attrs=template.attrs)
     for name, gname_l in var_key_map.items():
@@ -325,7 +385,7 @@ def map_blocks(
                 var_chunks.append((len(indexes[dim]),))
 
         data = dask.array.Array(
-            graph, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
+            hlg, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
         )
         result[name] = (dims, data, template[name].attrs)
 

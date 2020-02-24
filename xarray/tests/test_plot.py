@@ -15,7 +15,6 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
-    import_seaborn,
     label_from_attrs,
 )
 
@@ -61,6 +60,15 @@ def substring_in_axes(substring, ax):
         if substring in txt:
             return True
     return False
+
+
+def substring_not_in_axes(substring, ax):
+    """
+    Return True if a substring is not found anywhere in an axes
+    """
+    alltxt = {t.get_text() for t in ax.findobj(mpl.text.Text)}
+    check = [(substring not in txt) for txt in alltxt]
+    return all(check)
 
 
 def easy_array(shape, start=0, stop=1):
@@ -483,8 +491,24 @@ class TestPlot(PlotTestCase):
             d.plot(x="x", y="y", col="columns", ax=plt.gca())
 
     def test_coord_with_interval(self):
+        """Test line plot with intervals."""
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).plot()
+
+    def test_coord_with_interval_x(self):
+        """Test line plot with intervals explicitly on x axis."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot(x="dim_0_bins")
+
+    def test_coord_with_interval_y(self):
+        """Test line plot with intervals explicitly on y axis."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot(y="dim_0_bins")
+
+    def test_coord_with_interval_xy(self):
+        """Test line plot with intervals on both x and y axes."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).dim_0_bins.plot()
 
 
 class TestPlot1D(PlotTestCase):
@@ -568,8 +592,21 @@ class TestPlotStep(PlotTestCase):
         self.darray[0, 0].plot.step()
 
     def test_coord_with_interval_step(self):
+        """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).plot.step()
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+
+    def test_coord_with_interval_step_x(self):
+        """Test step plot with intervals explicitly on x axis."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(x="dim_0_bins")
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+
+    def test_coord_with_interval_step_y(self):
+        """Test step plot with intervals explicitly on y axis."""
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(y="dim_0_bins")
         assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
 
@@ -1842,6 +1879,18 @@ class TestFacetGrid4d(PlotTestCase):
         for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
             assert substring_in_axes(label, ax)
 
+        # ensure that row & col labels can be changed
+        g.set_titles("abc={value}")
+        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+            assert substring_in_axes(f"abc={label}", ax)
+            # previous labels were "row=row0" etc.
+            assert substring_not_in_axes("row=", ax)
+
+        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+            assert substring_in_axes(f"abc={label}", ax)
+            # previous labels were "col=row0" etc.
+            assert substring_not_in_axes("col=", ax)
+
 
 @pytest.mark.filterwarnings("ignore:tight_layout cannot")
 class TestFacetedLinePlotsLegend(PlotTestCase):
@@ -2132,22 +2181,6 @@ class TestNcAxisNotInstalled(PlotTestCase):
     def test_ncaxis_notinstalled_line_plot(self):
         with raises_regex(ImportError, "optional `nc-time-axis`"):
             self.darray.plot.line()
-
-
-@requires_seaborn
-def test_import_seaborn_no_warning():
-    # GH1633
-    with pytest.warns(None) as record:
-        import_seaborn()
-    assert len(record) == 0
-
-
-@requires_matplotlib
-def test_plot_seaborn_no_import_warning():
-    # GH1633
-    with pytest.warns(None) as record:
-        _color_palette("Blues", 4)
-    assert len(record) == 0
 
 
 test_da_list = [

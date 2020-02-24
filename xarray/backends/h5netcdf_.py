@@ -1,12 +1,13 @@
 import functools
+from distutils.version import LooseVersion
 
 import numpy as np
 
-from .. import Variable
 from ..core import indexing
-from ..core.utils import FrozenDict
-from .common import WritableCFDataStore
-from .file_manager import CachingFileManager
+from ..core.utils import FrozenDict, is_remote_uri
+from ..core.variable import Variable
+from .common import WritableCFDataStore, find_root_and_group
+from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
     BaseNetCDF4Array,
@@ -69,8 +70,47 @@ class H5NetCDFStore(WritableCFDataStore):
     """Store for reading and writing data via h5netcdf
     """
 
-    def __init__(
-        self,
+    __slots__ = (
+        "autoclose",
+        "format",
+        "is_remote",
+        "lock",
+        "_filename",
+        "_group",
+        "_manager",
+        "_mode",
+    )
+
+    def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
+
+        import h5netcdf
+
+        if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
+            if group is None:
+                root, group = find_root_and_group(manager)
+            else:
+                if not type(manager) is h5netcdf.File:
+                    raise ValueError(
+                        "must supply a h5netcdf.File if the group "
+                        "argument is provided"
+                    )
+                root = manager
+            manager = DummyFileManager(root)
+
+        self._manager = manager
+        self._group = group
+        self._mode = mode
+        self.format = None
+        # todo: utilizing find_root_and_group seems a bit clunky
+        #  making filename available on h5netcdf.Group seems better
+        self._filename = find_root_and_group(self.ds)[0].filename
+        self.is_remote = is_remote_uri(self._filename)
+        self.lock = ensure_lock(lock)
+        self.autoclose = autoclose
+
+    @classmethod
+    def open(
+        cls,
         filename,
         mode="r",
         format=None,
@@ -78,6 +118,7 @@ class H5NetCDFStore(WritableCFDataStore):
         lock=None,
         autoclose=False,
         invalid_netcdf=None,
+        phony_dims=None,
     ):
         import h5netcdf
 
@@ -85,10 +126,14 @@ class H5NetCDFStore(WritableCFDataStore):
             raise ValueError("invalid format for h5netcdf backend")
 
         kwargs = {"invalid_netcdf": invalid_netcdf}
-
-        self._manager = CachingFileManager(
-            h5netcdf.File, filename, mode=mode, kwargs=kwargs
-        )
+        if phony_dims is not None:
+            if LooseVersion(h5netcdf.__version__) >= LooseVersion("0.8.0"):
+                kwargs["phony_dims"] = phony_dims
+            else:
+                raise ValueError(
+                    "h5netcdf backend keyword argument 'phony_dims' needs "
+                    "h5netcdf >= 0.8.0."
+                )
 
         if lock is None:
             if mode == "r":
@@ -96,12 +141,8 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        self._group = group
-        self.format = format
-        self._filename = filename
-        self._mode = mode
-        self.lock = ensure_lock(lock)
-        self.autoclose = autoclose
+        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:

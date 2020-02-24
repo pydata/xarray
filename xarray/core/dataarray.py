@@ -1,3 +1,4 @@
+import datetime
 import functools
 import warnings
 from numbers import Number
@@ -33,7 +34,7 @@ from . import (
     rolling,
     utils,
 )
-from .accessor_dt import DatetimeAccessor
+from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
     _broadcast_helper,
@@ -235,19 +236,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
     Getting items from or doing mathematical operations with a DataArray
     always returns another DataArray.
-
-    Attributes
-    ----------
-    dims : tuple
-        Dimension names associated with this array.
-    values : numpy.ndarray
-        Access or modify DataArray values as a numpy array.
-    coords : dict-like
-        Dictionary of DataArray objects that label values along each dimension.
-    name : str or None
-        Name of this array.
-    attrs : dict
-        Dictionary for holding arbitrary metadata.
     """
 
     _cache: Dict[str, Any]
@@ -271,7 +259,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
-    dt = property(DatetimeAccessor)
+    dt = property(CombinedDatetimelikeAccessor)
 
     def __init__(
         self,
@@ -280,8 +268,6 @@ class DataArray(AbstractArray, DataWithCoords):
         dims: Union[Hashable, Sequence[Hashable], None] = None,
         name: Hashable = None,
         attrs: Mapping = None,
-        # deprecated parameters
-        encoding=None,
         # internal parameters
         indexes: Dict[Hashable, pd.Index] = None,
         fastpath: bool = False,
@@ -326,20 +312,10 @@ class DataArray(AbstractArray, DataWithCoords):
             Attributes to assign to the new instance. By default, an empty
             attribute dictionary is initialized.
         """
-        if encoding is not None:
-            warnings.warn(
-                "The `encoding` argument to `DataArray` is deprecated, and . "
-                "will be removed in 0.15. "
-                "Instead, specify the encoding when writing to disk or "
-                "set the `encoding` attribute directly.",
-                FutureWarning,
-                stacklevel=2,
-            )
         if fastpath:
             variable = data
             assert dims is None
             assert attrs is None
-            assert encoding is None
         else:
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
@@ -361,13 +337,11 @@ class DataArray(AbstractArray, DataWithCoords):
                 name = getattr(data, "name", None)
             if attrs is None and not isinstance(data, PANDAS_TYPES):
                 attrs = getattr(data, "attrs", None)
-            if encoding is None:
-                encoding = getattr(data, "encoding", None)
 
             data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
-            variable = Variable(dims, data, attrs, encoding, fastpath=True)
+            variable = Variable(dims, data, attrs, fastpath=True)
             indexes = dict(
                 _extract_indexes_from_coords(coords)
             )  # needed for to_dataset
@@ -1128,7 +1102,7 @@ class DataArray(AbstractArray, DataWithCoords):
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by each `n` value
-        along the specified dimension(s). Default `n` = 5
+        along the specified dimension(s).
 
         See Also
         --------
@@ -1302,7 +1276,7 @@ class DataArray(AbstractArray, DataWithCoords):
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
         fill_value : scalar, optional
             Value to use for newly missing values
-        **indexers_kwarg : {dim: indexer, ...}, optional
+        **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -1351,7 +1325,7 @@ class DataArray(AbstractArray, DataWithCoords):
             values.
         kwargs: dictionary
             Additional keyword passed to scipy's interpolator.
-        ``**coords_kwarg`` : {dim: coordinate, ...}, optional
+        ``**coords_kwargs`` : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
@@ -1493,8 +1467,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
-            are new names. Each value must already be a coordinate on this
-            array.
+            are new names.
 
         Returns
         -------
@@ -1517,6 +1490,13 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
             x        (y) <U1 'a' 'b'
           * y        (y) int64 0 1
+        >>> arr.swap_dims({"x": "z"})
+        <xarray.DataArray (z: 2)>
+        array([0, 1])
+        Coordinates:
+            x        (z) <U1 'a' 'b'
+            y        (z) int64 0 1
+        Dimensions without coordinates: z
 
         See Also
         --------
@@ -2062,7 +2042,9 @@ class DataArray(AbstractArray, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
-        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
+        max_gap: Union[
+            int, float, str, pd.Timedelta, np.timedelta64, datetime.timedelta
+        ] = None,
         **kwargs: Any,
     ) -> "DataArray":
         """Fill in NaNs by interpolating according to different methods.
@@ -2094,7 +2076,7 @@ class DataArray(AbstractArray, DataWithCoords):
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, default None.
+        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default None.
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
             and ``use_coordinate=True``, ``max_gap`` can be one of the following:
@@ -2102,6 +2084,7 @@ class DataArray(AbstractArray, DataWithCoords):
             - a string that is valid input for pandas.to_timedelta
             - a :py:class:`numpy.timedelta64` object
             - a :py:class:`pandas.Timedelta` object
+            - a :py:class:`datetime.timedelta` object
 
             Otherwise, ``max_gap`` must be an int or a float. Use of ``max_gap`` with unlabeled
             dimensions has not been implemented yet. Gap length is defined as the difference
@@ -2375,7 +2358,7 @@ class DataArray(AbstractArray, DataWithCoords):
         naming conventions.
 
         Converts all variables and attributes to native Python objects.
-        Useful for coverting to json. To avoid datetime incompatibility
+        Useful for converting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
         Parameters
@@ -2753,7 +2736,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -2804,7 +2787,7 @@ class DataArray(AbstractArray, DataWithCoords):
             deprecated and will change to False in a future version.
             Explicitly pass roll_coords to silence the warning.
         **shifts_kwargs : The keyword arguments form of ``shifts``.
-            One of shifts or shifts_kwarg must be provided.
+            One of shifts or shifts_kwargs must be provided.
 
         Returns
         -------
@@ -2990,7 +2973,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
 
         Examples
         --------
@@ -3000,8 +2983,6 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
         ...     dims=("x", "y"),
         ... )
-
-        Single quantile
         >>> da.quantile(0)  # or da.quantile(0, dim=...)
         <xarray.DataArray ()>
         array(0.7)
@@ -3013,8 +2994,6 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * y         (y) float64 1.0 1.5 2.0 2.5
             quantile  float64 0.0
-
-        Multiple quantiles
         >>> da.quantile([0, 0.5, 1])
         <xarray.DataArray (quantile: 3)>
         array([0.7, 3.4, 9.4])
