@@ -71,7 +71,7 @@ around = _dask_or_eager_func("around")
 isclose = _dask_or_eager_func("isclose")
 
 
-isnat = _dask_or_eager_func("isnat")
+isnat = np.isnat
 isnan = _dask_or_eager_func("isnan")
 zeros_like = _dask_or_eager_func("zeros_like")
 
