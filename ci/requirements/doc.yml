@@ -6,6 +6,7 @@ dependencies:
   - python=3.8
   - pip
   - cartopy
+  - cf-units
   - pip:
     - bottleneck
     - cfgrib
