@@ -742,7 +742,10 @@ class Variable(
 
             data = as_indexable(self._data)[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
-            data = duck_array_ops.where(mask, fill_value, data)
+            # we need to invert the mask in order to pass data first. This helps
+            # pint to choose the correct unit
+            # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
+            data = duck_array_ops.where(np.logical_not(mask), data, fill_value)
         else:
             # array cannot be indexed along dimensions of size 0, so just
             # build the mask directly instead.
@@ -1054,7 +1057,9 @@ class Variable(
 
         invalid = indexers.keys() - set(self.dims)
         if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+            raise ValueError(
+                f"dimensions {invalid} do not exist. Expected one or more of {self.dims}"
+            )
 
         key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
         return self[key]
@@ -1099,24 +1104,16 @@ class Variable(
         else:
             dtype = self.dtype
 
-        shape = list(self.shape)
-        shape[axis] = min(abs(count), shape[axis])
+        width = min(abs(count), self.shape[axis])
+        dim_pad = (width, 0) if count >= 0 else (0, width)
+        pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        if isinstance(trimmed_data, dask_array_type):
-            chunks = list(trimmed_data.chunks)
-            chunks[axis] = (shape[axis],)
-            full = functools.partial(da.full, chunks=chunks)
-        else:
-            full = np.full
-
-        filler = full(shape, fill_value, dtype=dtype)
-
-        if count > 0:
-            arrays = [filler, trimmed_data]
-        else:
-            arrays = [trimmed_data, filler]
-
-        data = duck_array_ops.concatenate(arrays, axis)
+        data = duck_array_ops.pad(
+            trimmed_data.astype(dtype),
+            pads,
+            mode="constant",
+            constant_values=fill_value,
+        )
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
@@ -1722,7 +1719,7 @@ class Variable(
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
 
@@ -1734,10 +1731,6 @@ class Variable(
         scalar = utils.is_scalar(q)
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
 
-        # TODO: remove once numpy >= 1.15.0 is the minimum requirement
-        if np.count_nonzero(q < 0.0) or np.count_nonzero(q > 1.0):
-            raise ValueError("Quantiles must be in the range [0, 1]")
-
         if dim is None:
             dim = self.dims
 
@@ -1746,9 +1739,7 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-
-            # TODO: use np.nanquantile once numpy >= 1.15.0 is the minimum requirement
-            return np.moveaxis(np.nanpercentile(npa, **kwargs), 0, -1)
+            return np.moveaxis(np.nanquantile(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
         result = apply_ufunc(
@@ -1760,7 +1751,7 @@ class Variable(
             output_dtypes=[np.float64],
             output_sizes={"quantile": len(q)},
             dask="parallelized",
-            kwargs={"q": q * 100, "axis": axis, "interpolation": interpolation},
+            kwargs={"q": q, "axis": axis, "interpolation": interpolation},
         )
 
         # for backward compatibility

@@ -936,19 +936,35 @@ class TestDataset:
         expected_chunks = {"dim1": (8,), "dim2": (9,), "dim3": (10,)}
         assert reblocked.chunks == expected_chunks
 
+        def get_dask_names(ds):
+            return {k: v.data.name for k, v in ds.items()}
+
+        orig_dask_names = get_dask_names(reblocked)
+
         reblocked = data.chunk({"time": 5, "dim1": 5, "dim2": 5, "dim3": 5})
         # time is not a dim in any of the data_vars, so it
         # doesn't get chunked
         expected_chunks = {"dim1": (5, 3), "dim2": (5, 4), "dim3": (5, 5)}
         assert reblocked.chunks == expected_chunks
 
+        # make sure dask names change when rechunking by different amounts
+        # regression test for GH3350
+        new_dask_names = get_dask_names(reblocked)
+        for k, v in new_dask_names.items():
+            assert v != orig_dask_names[k]
+
         reblocked = data.chunk(expected_chunks)
         assert reblocked.chunks == expected_chunks
 
         # reblock on already blocked data
+        orig_dask_names = get_dask_names(reblocked)
         reblocked = reblocked.chunk(expected_chunks)
+        new_dask_names = get_dask_names(reblocked)
         assert reblocked.chunks == expected_chunks
         assert_identical(reblocked, data)
+        # recuhnking with same chunk sizes should not change names
+        for k, v in new_dask_names.items():
+            assert v == orig_dask_names[k]
 
         with raises_regex(ValueError, "some chunks"):
             data.chunk({"foo": 10})
@@ -1391,6 +1407,56 @@ class TestDataset:
                     [np.array(midx[:2]), np.array(midx[-2:])], dims=["a", "b"]
                 )
             )
+
+    def test_sel_categorical(self):
+        ind = pd.Series(["foo", "bar"], dtype="category")
+        df = pd.DataFrame({"ind": ind, "values": [1, 2]})
+        ds = df.set_index("ind").to_xarray()
+        actual = ds.sel(ind="bar")
+        expected = ds.isel(ind=1)
+        assert_identical(expected, actual)
+
+    def test_sel_categorical_error(self):
+        ind = pd.Series(["foo", "bar"], dtype="category")
+        df = pd.DataFrame({"ind": ind, "values": [1, 2]})
+        ds = df.set_index("ind").to_xarray()
+        with pytest.raises(ValueError):
+            ds.sel(ind="bar", method="nearest")
+        with pytest.raises(ValueError):
+            ds.sel(ind="bar", tolerance="nearest")
+
+    def test_categorical_index(self):
+        cat = pd.CategoricalIndex(
+            ["foo", "bar", "foo"],
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
+        )
+        ds = xr.Dataset(
+            {"var": ("cat", np.arange(3))},
+            coords={"cat": ("cat", cat), "c": ("cat", [0, 1, 1])},
+        )
+        # test slice
+        actual = ds.sel(cat="foo")
+        expected = ds.isel(cat=[0, 2])
+        assert_identical(expected, actual)
+        # make sure the conversion to the array works
+        actual = ds.sel(cat="foo")["cat"].values
+        assert (actual == np.array(["foo", "foo"])).all()
+
+        ds = ds.set_index(index=["cat", "c"])
+        actual = ds.unstack("index")
+        assert actual["var"].shape == (2, 2)
+
+    def test_categorical_reindex(self):
+        cat = pd.CategoricalIndex(
+            ["foo", "bar", "baz"],
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
+        )
+        ds = xr.Dataset(
+            {"var": ("cat", np.arange(3))},
+            coords={"cat": ("cat", cat), "c": ("cat", [0, 1, 2])},
+        )
+        actual = ds.reindex(cat=["foo"])["cat"].values
+        assert (actual == np.array(["foo"])).all()
 
     def test_sel_drop(self):
         data = Dataset({"foo": ("x", [1, 2, 3])}, {"x": [0, 1, 2]})
@@ -2151,6 +2217,10 @@ class TestDataset:
             actual = data.drop(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
+        with pytest.warns(PendingDeprecationWarning):
+            actual = data.drop({"time", "not_found_here"}, errors="ignore")
+        assert_identical(expected, actual)
+
     def test_drop_index_labels(self):
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
@@ -2526,7 +2596,7 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        assert actual.indexes["y"].equals(pd.Index(list("abc")))
+        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
 
         roundtripped = actual.swap_dims({"y": "x"})
         assert_identical(original.set_coords("y"), roundtripped)
@@ -2541,6 +2611,16 @@ class TestDataset:
         )
         actual = original.swap_dims({"x": "u"})
         assert_identical(expected, actual)
+
+        # handle multiindex case
+        idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
+        original = Dataset({"x": [1, 2, 3], "y": ("x", idx), "z": 42})
+        expected = Dataset({"z": 42}, {"x": ("y", [1, 2, 3]), "y": idx})
+        actual = original.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+        assert isinstance(actual.variables["y"], IndexVariable)
+        assert isinstance(actual.variables["x"], Variable)
+        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
 
     def test_expand_dims_error(self):
         original = Dataset(
@@ -3844,6 +3924,21 @@ class TestDataset:
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=["x", "y"])
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
+
+    def test_from_dataframe_categorical(self):
+        cat = pd.CategoricalDtype(
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"]
+        )
+        i1 = pd.Series(["foo", "bar", "foo"], dtype=cat)
+        i2 = pd.Series(["bar", "bar", "baz"], dtype=cat)
+
+        df = pd.DataFrame({"i1": i1, "i2": i2, "values": [1, 2, 3]})
+        ds = df.set_index("i1").to_xarray()
+        assert len(ds["i1"]) == 3
+
+        ds = df.set_index(["i1", "i2"]).to_xarray()
+        assert len(ds["i1"]) == 2
+        assert len(ds["i2"]) == 2
 
     @requires_sparse
     def test_from_dataframe_sparse(self):

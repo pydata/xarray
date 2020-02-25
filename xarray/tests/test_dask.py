@@ -1083,7 +1083,7 @@ def test_map_blocks(obj):
         actual = xr.map_blocks(func, obj)
     expected = func(obj)
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1092,7 +1092,7 @@ def test_map_blocks_convert_args_to_list(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(operator.add, obj, [10])
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1107,7 +1107,7 @@ def test_map_blocks_add_attrs(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(add_attrs, obj)
 
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 def test_map_blocks_change_name(map_da):
@@ -1120,7 +1120,7 @@ def test_map_blocks_change_name(map_da):
     with raise_if_dask_computes():
         actual = xr.map_blocks(change_name, map_da)
 
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1129,7 +1129,7 @@ def test_map_blocks_kwargs(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(xr.full_like, obj, kwargs=dict(fill_value=np.nan))
     assert_chunks_equal(expected.chunk(), actual)
-    xr.testing.assert_identical(actual.compute(), expected.compute())
+    assert_identical(actual, expected)
 
 
 def test_map_blocks_to_array(map_ds):
@@ -1137,7 +1137,7 @@ def test_map_blocks_to_array(map_ds):
         actual = xr.map_blocks(lambda x: x.to_array(), map_ds)
 
     # to_array does not preserve name, so cannot use assert_identical
-    assert_equal(actual.compute(), map_ds.to_array().compute())
+    assert_equal(actual, map_ds.to_array())
 
 
 @pytest.mark.parametrize(
@@ -1156,7 +1156,7 @@ def test_map_blocks_da_transformations(func, map_da):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, map_da)
 
-    assert_identical(actual.compute(), func(map_da).compute())
+    assert_identical(actual, func(map_da))
 
 
 @pytest.mark.parametrize(
@@ -1175,7 +1175,7 @@ def test_map_blocks_ds_transformations(func, map_ds):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, map_ds)
 
-    assert_identical(actual.compute(), func(map_ds).compute())
+    assert_identical(actual, func(map_ds))
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1188,7 +1188,7 @@ def test_map_blocks_object_method(obj):
         expected = xr.map_blocks(func, obj)
         actual = obj.map_blocks(func)
 
-    assert_identical(expected.compute(), actual.compute())
+    assert_identical(expected, actual)
 
 
 def test_map_blocks_hlg_layers():
@@ -1390,3 +1390,58 @@ def test_lazy_array_equiv_merge(compat):
             xr.merge([da1, da3], compat=compat)
     with raise_if_dask_computes(max_computes=2):
         xr.merge([da1, da2 / 2], compat=compat)
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")  # transpose_coords
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+@pytest.mark.parametrize(
+    "transform",
+    [
+        lambda a: a.assign_attrs(new_attr="anew"),
+        lambda a: a.assign_coords(cxy=a.cxy),
+        lambda a: a.copy(),
+        lambda a: a.isel(x=np.arange(a.sizes["x"])),
+        lambda a: a.isel(x=slice(None)),
+        lambda a: a.loc[dict(x=slice(None))],
+        lambda a: a.loc[dict(x=np.arange(a.sizes["x"]))],
+        lambda a: a.loc[dict(x=a.x)],
+        lambda a: a.sel(x=a.x),
+        lambda a: a.sel(x=a.x.values),
+        lambda a: a.transpose(...),
+        lambda a: a.squeeze(),  # no dimensions to squeeze
+        lambda a: a.sortby("x"),  # "x" is already sorted
+        lambda a: a.reindex(x=a.x),
+        lambda a: a.reindex_like(a),
+        lambda a: a.rename({"cxy": "cnew"}).rename({"cnew": "cxy"}),
+        lambda a: a.pipe(lambda x: x),
+        lambda a: xr.align(a, xr.zeros_like(a))[0],
+        # assign
+        # swap_dims
+        # set_index / reset_index
+    ],
+)
+def test_transforms_pass_lazy_array_equiv(obj, transform):
+    with raise_if_dask_computes():
+        assert_equal(obj, transform(obj))
+
+
+def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
+    with raise_if_dask_computes():
+        assert_equal(map_ds.cxy.broadcast_like(map_ds.cxy), map_ds.cxy)
+        assert_equal(xr.broadcast(map_ds.cxy, map_ds.cxy)[0], map_ds.cxy)
+        assert_equal(map_ds.map(lambda x: x), map_ds)
+        assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
+        assert_equal(map_ds.update({"a": map_ds.a}), map_ds)
+
+        # fails because of index error
+        # assert_equal(
+        #     map_ds.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}), map_ds
+        # )
+
+        assert_equal(
+            map_ds.rename_vars({"cxy": "cnew"}).rename_vars({"cnew": "cxy"}), map_ds
+        )
+
+        assert_equal(map_da._from_temp_dataset(map_da._to_temp_dataset()), map_da)
+        assert_equal(map_da.astype(map_da.dtype), map_da)
+        assert_equal(map_da.transpose("y", "x", transpose_coords=False).cxy, map_da.cxy)
