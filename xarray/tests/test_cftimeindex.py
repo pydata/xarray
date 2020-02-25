@@ -960,3 +960,22 @@ def test_round(rounding_index, date_type):
         ]
     )
     assert result.equals(expected)
+
+
+@requires_cftime
+def test_asi8(date_type):
+    index = xr.CFTimeIndex([date_type(1970, 1, 1), date_type(1970, 1, 2)])
+    result = index.asi8
+    expected = 1000000 * 86400 * np.array([0, 1])
+    np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime
+def test_asi8_distant_date():
+    """Test that asi8 conversion is truly exact."""
+    import cftime
+    date_type = cftime.DatetimeProlepticGregorian
+    index = xr.CFTimeIndex([date_type(10731, 4, 22, 3, 25, 45, 123456)])
+    result = index.asi8
+    expected = np.array([1000000 * 86400 * 400 * 8000 + 12345 * 1000000 + 123456])
+    np.testing.assert_array_equal(result, expected)

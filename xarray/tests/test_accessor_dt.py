@@ -465,7 +465,11 @@ def test_cftime_floor_accessor(cftime_rounding_dataarray, cftime_date_type, use_
 
     if use_dask:
         chunks = {"dim_0": 1}
-        result = cftime_rounding_dataarray.chunk(chunks).dt.floor(freq)
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.floor(freq)
         expected = expected.chunk(chunks)
         assert isinstance(result.data, da.Array)
         assert result.chunks == expected.chunks
@@ -492,7 +496,11 @@ def test_cftime_ceil_accessor(cftime_rounding_dataarray, cftime_date_type, use_d
 
     if use_dask:
         chunks = {"dim_0": 1}
-        result = cftime_rounding_dataarray.chunk(chunks).dt.ceil(freq)
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.ceil(freq)
         expected = expected.chunk(chunks)
         assert isinstance(result.data, da.Array)
         assert result.chunks == expected.chunks
@@ -519,7 +527,11 @@ def test_cftime_round_accessor(cftime_rounding_dataarray, cftime_date_type, use_
 
     if use_dask:
         chunks = {"dim_0": 1}
-        result = cftime_rounding_dataarray.chunk(chunks).dt.round(freq)
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.round(freq)
         expected = expected.chunk(chunks)
         assert isinstance(result.data, da.Array)
         assert result.chunks == expected.chunks

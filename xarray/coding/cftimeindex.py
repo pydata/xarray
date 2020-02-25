@@ -666,7 +666,7 @@ def _total_microseconds(delta):
     -------
     int
     """
-    return int(delta.total_seconds() * 1e6)
+    return delta / timedelta(microseconds=1)
 
 
 def _floor_int(values, unit):
