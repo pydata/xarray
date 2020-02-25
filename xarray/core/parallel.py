@@ -107,6 +107,7 @@ def map_blocks(
     obj: Union[DataArray, Dataset],
     args: Sequence[Any] = (),
     kwargs: Mapping[str, Any] = None,
+    template: T_DSorDA = None,
 ) -> T_DSorDA:
     """Apply a function to each chunk of a DataArray or Dataset. This function is
     experimental and its signature may change.
@@ -204,13 +205,14 @@ def map_blocks(
 
         result = func(obj, *args, **kwargs)
 
-        for name, index in result.indexes.items():
-            if name in obj.indexes:
-                if len(index) != len(obj.indexes[name]):
-                    raise ValueError(
-                        "Length of the %r dimension has changed. This is not allowed."
-                        % name
-                    )
+        # Make this check using the template so that we can raise nice error messages
+        # for name, index in result.indexes.items():
+        #     if name in obj.indexes:
+        #         if len(index) != len(obj.indexes[name]):
+        #             raise ValueError(
+        #                 "Length of the %r dimension has changed. This is not allowed."
+        #                 % name
+        #             )
 
         return make_dict(result)
 
@@ -245,8 +247,24 @@ def map_blocks(
         input_is_array = False
 
     input_chunks = dataset.chunks
+    dataset_indexes = set(dataset.indexes)
+    if template is None:
+        # infer template by providing zero-shaped arrays
+        template = infer_template(func, obj, *args, **kwargs)
+        template_indexes = set(template.indexes)
+        preserved_indexes = template_indexes & dataset_indexes
+        new_indexes = template_indexes - dataset_indexes
+        indexes = {dim: dataset.indexes[dim] for dim in preserved_indexes}
+        indexes.update({k: template.indexes[k] for k in new_indexes})
+        output_chunks = input_chunks
 
-    template: Union[DataArray, Dataset] = infer_template(func, obj, *args, **kwargs)
+    else:
+        # template xarray object has been provided with proper sizes and chunk shapes
+        template_indexes = set(template.indexes)
+        indexes = {dim: dataset.indexes[dim] for dim in dataset_indexes}
+        indexes.update({k: template.indexes[k] for k in template_indexes})
+        output_chunks = template.chunks
+
     if isinstance(template, DataArray):
         result_is_array = True
         template_name = template.name
@@ -257,13 +275,6 @@ def map_blocks(
         raise TypeError(
             f"func output must be DataArray or Dataset; got {type(template)}"
         )
-
-    template_indexes = set(template.indexes)
-    dataset_indexes = set(dataset.indexes)
-    preserved_indexes = template_indexes & dataset_indexes
-    new_indexes = template_indexes - dataset_indexes
-    indexes = {dim: dataset.indexes[dim] for dim in preserved_indexes}
-    indexes.update({k: template.indexes[k] for k in new_indexes})
 
     # We're building a new HighLevelGraph hlg. We'll have one new layer
     # for each variable in the dataset, which is the result of the
@@ -379,8 +390,8 @@ def map_blocks(
         dims = template[name].dims
         var_chunks = []
         for dim in dims:
-            if dim in input_chunks:
-                var_chunks.append(input_chunks[dim])
+            if dim in output_chunks:
+                var_chunks.append(output_chunks[dim])
             elif dim in indexes:
                 var_chunks.append((len(indexes[dim]),))
 
