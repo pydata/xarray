@@ -4,23 +4,25 @@ channels:
   - conda-forge
 dependencies:
   - python=3.8
-  - bottleneck
+  - pip
   - cartopy
-  - cfgrib
-  - h5netcdf
-  - ipykernel
-  - ipython
-  - iris
-  - jupyter_client
-  - nbsphinx
-  - netcdf4
-  - numba
-  - numpy
-  - numpydoc
-  - pandas
-  - rasterio
-  - seaborn
-  - setuptools
-  - sphinx
-  - sphinx_rtd_theme
-  - zarr
+  - pip:
+    - bottleneck
+    - cfgrib
+    - h5netcdf
+    - ipykernel
+    - ipython
+    - scitools-iris
+    - jupyter_client
+    - nbsphinx
+    - netcdf4
+    - numba
+    - numpy
+    - numpydoc
+    - pandas
+    - rasterio
+    - seaborn
+    - setuptools
+    - sphinx
+    - sphinx_rtd_theme
+    - zarr
