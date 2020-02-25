@@ -4,7 +4,7 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Callable, Sequence, Tuple, Union
+from typing import Any, Callable, Iterable, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -1314,6 +1314,24 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
+
+        if not isinstance(key, VectorizedIndexer):
+            # if possible, short-circuit when keys are effectively slice(None)
+            # This preserves dask name and passes lazy array equivalence checks
+            # (see duck_array_ops.lazy_array_equiv)
+            rewritten_indexer = False
+            new_indexer = []
+            for idim, k in enumerate(key.tuple):
+                if isinstance(k, Iterable) and duck_array_ops.array_equiv(
+                    k, np.arange(self.array.shape[idim])
+                ):
+                    new_indexer.append(slice(None))
+                    rewritten_indexer = True
+                else:
+                    new_indexer.append(k)
+            if rewritten_indexer:
+                key = type(key)(tuple(new_indexer))
+
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, VectorizedIndexer):
