@@ -199,20 +199,21 @@ def map_blocks(
         * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
     """
 
-    def _wrapper(func, obj, to_array, args, kwargs):
+    def _wrapper(func, obj, to_array, args, kwargs, expected_shapes):
+        check_shapes = dict(obj.dims)
+        check_shapes.update(expected_shapes)
+
         if to_array:
             obj = dataset_to_dataarray(obj)
 
         result = func(obj, *args, **kwargs)
 
-        # Make this check using the template so that we can raise nice error messages
-        # for name, index in result.indexes.items():
-        #     if name in obj.indexes:
-        #         if len(index) != len(obj.indexes[name]):
-        #             raise ValueError(
-        #                 "Length of the %r dimension has changed. This is not allowed."
-        #                 % name
-        #             )
+        for name, index in result.indexes.items():
+            if name in check_shapes:
+                if len(index) != check_shapes[name]:
+                    raise ValueError(
+                        f"Received dimension {name} of length {len(index)}. Expected length {expected_shapes[name]}."
+                    )
 
         return make_dict(result)
 
@@ -344,6 +345,11 @@ def map_blocks(
             else:
                 data_vars.append([name, chunk_variable_task])
 
+        # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
+        # even if length of dimension is changed by the applied function
+        # expected_shapes is used to raise nice error messages in _wrapper
+        expected_shapes = {k: output_chunks[k][v] for k, v in input_chunk_index.items()}
+
         from_wrapper = (gname,) + v
         graph[from_wrapper] = (
             _wrapper,
@@ -352,6 +358,7 @@ def map_blocks(
             input_is_array,
             args,
             kwargs,
+            expected_shapes,
         )
 
         # mapping from variable name to dask graph key
