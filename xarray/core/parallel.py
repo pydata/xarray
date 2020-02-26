@@ -297,7 +297,7 @@ def map_blocks(
 
     # iterate over all possible chunk combinations
     for v in itertools.product(*ichunk.values()):
-        chunk_index_dict = dict(zip(dataset.dims, v))
+        input_chunk_index = dict(zip(dataset.dims, v))
 
         # this will become [[name1, variable1],
         #                   [name2, variable2],
@@ -312,7 +312,7 @@ def map_blocks(
                 # recursively index into dask_keys nested list to get chunk
                 chunk = variable.__dask_keys__()
                 for dim in variable.dims:
-                    chunk = chunk[chunk_index_dict[dim]]
+                    chunk = chunk[input_chunk_index[dim]]
 
                 chunk_variable_task = (f"{gname}-{chunk[0]}",) + v
                 graph[chunk_variable_task] = (
@@ -324,8 +324,8 @@ def map_blocks(
                 # index into variable appropriately
                 subsetter = {}
                 for dim in variable.dims:
-                    if dim in chunk_index_dict:
-                        which_chunk = chunk_index_dict[dim]
+                    if dim in input_chunk_index:
+                        which_chunk = input_chunk_index[dim]
                         subsetter[dim] = slice(
                             chunk_index_bounds[dim][which_chunk],
                             chunk_index_bounds[dim][which_chunk + 1],
@@ -372,8 +372,8 @@ def map_blocks(
 
             key: Tuple[Any, ...] = (gname_l,)
             for dim in variable.dims:
-                if dim in chunk_index_dict:
-                    key += (chunk_index_dict[dim],)
+                if dim in input_chunk_index:
+                    key += (input_chunk_index[dim],)
                 else:
                     # unchunked dimensions in the input have one chunk in the result
                     key += (0,)
