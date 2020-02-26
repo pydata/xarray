@@ -5654,6 +5654,29 @@ def test_coarsen_coords_cftime():
     np.testing.assert_array_equal(actual.time, expected_times)
 
 
+def test_coarsen_keep_attrs(self):
+    _attrs = {"units": "test", "long_name": "testing"}
+    
+    var1 = np.linspace(10, 15, 100)
+    var2 = np.linspace(5, 10, 100)
+    coords = np.linspace(1, 10, 100)
+    
+    ds = Dataset(
+        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
+        coords={"coord": coords},
+    )
+    ds.attrs["units"] = "test"
+    ds.attrs["long_name"] = "testing"
+    
+    # Test dropped attrs
+    dat = ds.coarsen(coord=5).mean()
+    assert dat.attrs == {}
+    
+    # Test kept attrs
+    dat = ds.coarsen(coord=5, keep_attrs=True).mean()
+    assert dat.attrs == _attrs
+
+
 def test_rolling_properties(ds):
     # catching invalid args
     with pytest.raises(ValueError, match="exactly one dim/window should"):
