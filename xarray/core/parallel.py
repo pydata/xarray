@@ -401,6 +401,9 @@ def map_blocks(
                 var_chunks.append(output_chunks[dim])
             elif dim in indexes:
                 var_chunks.append((len(indexes[dim]),))
+            elif dim in template.dims:
+                # new unindexed dimension
+                var_chunks.append((template.sizes[dim],))
 
         data = dask.array.Array(
             hlg, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
