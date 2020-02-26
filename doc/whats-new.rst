@@ -35,6 +35,8 @@ New Features
   often means a user is attempting to pass multiple dimensions to group over
   and should instead pass a list.
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`map_blocks` can now apply functions that add new unindexed dimensions.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 Bug fixes
 ~~~~~~~~~
