@@ -34,13 +34,20 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
+  index with name reflecting the previous dimension name instead of the new one
+  (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
+  <https://github.com/jaicher>`_.
 - Use ``dask_array_type`` instead of ``dask_array.Array`` for type
   checking. (:issue:`3779`, :pull:`3787`)
   By `Justus Magin <https://github.com/keewis>`_.
-
 - :py:func:`concat` can now handle coordinate variables only present in one of
   the objects to be concatenated when ``coords="different"``.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- xarray now respects the over, under and bad colors if set on a provided colormap.
+  (:issue:`3590`, :pull:`3601`)
+  By `johnomotani <https://github.com/johnomotani>`_.
 
 Documentation
 ~~~~~~~~~~~~~
