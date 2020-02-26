@@ -210,6 +210,12 @@ def map_blocks(
 
         result = func(obj, *args, **kwargs)
 
+        missing_dimensions = set(expected_shapes) - set(result.sizes)
+        if missing_dimensions:
+            raise ValueError(
+                f"Dimensions {missing_dimensions} missing on returned object."
+            )
+
         for name, index in result.indexes.items():
             if name in check_shapes:
                 if len(index) != check_shapes[name]:
