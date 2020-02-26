@@ -122,6 +122,8 @@ def map_blocks(
 
         This function must return either a single DataArray or a single Dataset.
 
+        This function cannot add a new chunked dimension.
+
     obj: DataArray, Dataset
         Passed to the function as its first argument, one dask chunk at a time.
     args: Sequence
@@ -135,8 +137,7 @@ def map_blocks(
         the function will be first run on mocked-up data, that looks like 'obj' but
         has sizes 0, to determine properties of the returned object such as dtype,
         variable names, new dimensions and new indexes (if any).
-        'template' must be provided if the function changes the size of existing dimensions,
-        or adds new chunked dimensions.
+        'template' must be provided if the function changes the size of existing dimensions.
 
     Returns
     -------
@@ -374,6 +375,10 @@ def map_blocks(
             for dim in variable.dims:
                 if dim in input_chunk_index:
                     key += (input_chunk_index[dim],)
+                elif dim in output_chunks:
+                    raise ValueError(
+                        f"Function is attempting to add a new chunked dimension {dim}. This is not allowed."
+                    )
                 else:
                     # unchunked dimensions in the input have one chunk in the result
                     key += (0,)
