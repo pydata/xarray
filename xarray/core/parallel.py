@@ -120,14 +120,8 @@ def map_blocks(
         corresponding to one chunk along each chunked dimension. ``func`` will be
         executed as ``func(obj_subset, *args, **kwargs)``.
 
-        The function will be first run on mocked-up data, that looks like 'obj' but
-        has sizes 0, to determine properties of the returned object such as dtype,
-        variable names, new dimensions and new indexes (if any).
-
         This function must return either a single DataArray or a single Dataset.
 
-        This function cannot change size of existing dimensions, or add new chunked
-        dimensions.
     obj: DataArray, Dataset
         Passed to the function as its first argument, one dask chunk at a time.
     args: Sequence
@@ -136,6 +130,13 @@ def map_blocks(
     kwargs: Mapping
         Passed verbatim to func after unpacking. xarray objects, if any, will not be
         split by chunks. Passing dask collections is not allowed.
+    template: (optional) DataArray, Dataset
+        xarray object representing the final result after compute is called. If not provided,
+        the function will be first run on mocked-up data, that looks like 'obj' but
+        has sizes 0, to determine properties of the returned object such as dtype,
+        variable names, new dimensions and new indexes (if any).
+        'template' must be provided if the function changes the size of existing dimensions,
+        or adds new chunked dimensions.
 
     Returns
     -------
