@@ -7,9 +7,13 @@ dependencies:
   - pip
   - cartopy
   - cf-units
+  - eccodes
+  - hdf5
   - pip:
     - bottleneck
     - cfgrib
+    - dask
+    - fsspec
     - h5netcdf
     - ipykernel
     - ipython
@@ -26,4 +30,5 @@ dependencies:
     - setuptools
     - sphinx
     - sphinx_rtd_theme
+    - toolz
     - zarr
