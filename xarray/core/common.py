@@ -848,6 +848,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         boundary: str = "exact",
         side: Union[str, Mapping[Hashable, str]] = "left",
         coord_func: str = "mean",
+        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -870,6 +871,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
         coord_func : function (name) that is applied to the coordintes,
             or a mapping from coordinate name to function (name).
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -904,6 +909,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(
             self, dim, boundary=boundary, side=side, coord_func=coord_func
