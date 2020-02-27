@@ -5654,7 +5654,7 @@ def test_coarsen_coords_cftime():
     np.testing.assert_array_equal(actual.time, expected_times)
 
 
-def test_coarsen_keep_attrs(self):
+def test_coarsen_keep_attrs():
     _attrs = {"units": "test", "long_name": "testing"}
 
     var1 = np.linspace(10, 15, 100)
