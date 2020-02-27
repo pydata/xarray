@@ -8,8 +8,7 @@ and less error-prone developer experience.
 What labels enable
 ------------------
 
-Multi-dimensional (a.k.a. N-dimensional, ND) arrays (sometimes called
-"tensors") are an essential part of computational science.
+Multi-dimensional (a.k.a. N-dimensional, ND) arrays are an essential part of computational science.
 They are encountered in a wide range of fields, including physics, astronomy,
 geoscience, bioinformatics, engineering, finance, and deep learning.
 In Python, NumPy_ provides the fundamental data structure and API for
