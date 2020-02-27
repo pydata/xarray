@@ -742,6 +742,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
         center: bool = False,
+        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -758,6 +759,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -799,8 +804,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
+        return self._rolling_cls(self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs)
 
     def rolling_exp(
         self,
@@ -914,7 +922,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(
-            self, dim, boundary=boundary, side=side, coord_func=coord_func
+            self, dim, boundary=boundary, side=side, coord_func=coord_func, keep_attrs=keep_attrs
         )
 
     def resample(
