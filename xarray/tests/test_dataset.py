@@ -5673,7 +5673,7 @@ def test_coarsen_keep_attrs():
     assert dat.attrs == {}
 
     # Test kept attrs
-    dat = ds.coarsen(coord=5, keep_attrs=True).mean()
+    dat = ds.coarsen(coord=5).mean(keep_attrs=True)
     assert dat.attrs == _attrs
 
 
