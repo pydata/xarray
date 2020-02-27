@@ -1966,24 +1966,8 @@ class TestZarrDirectoryStore(ZarrBase):
             yield tmp
 
 
-class ScipyWriteBase(CFEncodedBase, NetCDF3Only):
-    def test_append_write(self):
-        import scipy
-
-        if scipy.__version__ == "1.0.1":
-            pytest.xfail("https://github.com/scipy/scipy/issues/8625")
-        super().test_append_write()
-
-    def test_append_overwrite_values(self):
-        import scipy
-
-        if scipy.__version__ == "1.0.1":
-            pytest.xfail("https://github.com/scipy/scipy/issues/8625")
-        super().test_append_overwrite_values()
-
-
 @requires_scipy
-class TestScipyInMemoryData(ScipyWriteBase):
+class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
     engine = "scipy"
 
     @contextlib.contextmanager
@@ -2004,7 +1988,7 @@ class TestScipyInMemoryData(ScipyWriteBase):
 
 
 @requires_scipy
-class TestScipyFileObject(ScipyWriteBase):
+class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
     engine = "scipy"
 
     @contextlib.contextmanager
@@ -2037,7 +2021,7 @@ class TestScipyFileObject(ScipyWriteBase):
 
 
 @requires_scipy
-class TestScipyFilePath(ScipyWriteBase):
+class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
     engine = "scipy"
 
     @contextlib.contextmanager
@@ -3304,7 +3288,7 @@ class TestPydapOnline(TestPydap):
 
 @requires_scipy
 @requires_pynio
-class TestPyNio(ScipyWriteBase):
+class TestPyNio(CFEncodedBase, NetCDF3Only):
     def test_write_store(self):
         # pynio is read-only for now
         pass
