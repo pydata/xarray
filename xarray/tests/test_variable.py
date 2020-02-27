@@ -9,7 +9,7 @@ import pytest
 import pytz
 
 from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
-from xarray.core import dtypes, indexing, duck_array_ops
+from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer,
@@ -1879,7 +1879,6 @@ class TestVariable(VariableSubclassobjects):
         expected = self.cls(("x", "y"), [[10, 18], [42, 35]])
         assert_equal(actual, expected)
 
-
     # perhaps @pytest.mark.parametrize("operation", [f for f in duck_array_ops])
     def test_coarsen_keep_attrs(self, operation="mean"):
         _attrs = {"units": "test", "long_name": "testing"}
@@ -1890,14 +1889,16 @@ class TestVariable(VariableSubclassobjects):
 
         # Test dropped attrs
         with set_options(keep_attrs=False):
-            new = coord.coarsen(windows={"coord": 1}, func=test_func, 
-                                boundary="exact", side="left")
+            new = coord.coarsen(
+                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+            )
         assert new.attrs == {}
 
         # Test kept attrs
         with set_options(keep_attrs=True):
-            new = coord.coarsen(windows={"coord": 1}, func=test_func, 
-                                boundary="exact", side="left")
+            new = coord.coarsen(
+                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+            )
         assert new.attrs == _attrs
 
 

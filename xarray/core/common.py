@@ -869,7 +869,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func : function (name) that is applied to the coordintes,
+        coord_func : function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
