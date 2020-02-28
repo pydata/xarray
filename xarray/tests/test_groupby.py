@@ -107,6 +107,50 @@ def test_groupby_input_mutation():
     assert_identical(array, array_copy)  # should not modify inputs
 
 
+def test_da_groupby_map_shrink_groups():
+    array = xr.DataArray([1, 2, 3, 4, 5, 6], [("x", [1, 1, 1, 2, 2, 2])])
+    expected = array.isel(x=[0, 1, 3, 4])
+    actual = array.groupby("x").map(lambda f: f.isel(x=[0, 1]))
+    assert_identical(expected, actual)
+
+
+def test_ds_groupby_map_shrink_groups():
+    dataset = xr.Dataset({"foo": ("x", [1, 2, 3, 4, 5, 6])}, {"x": [1, 1, 1, 2, 2, 2]})
+    expected = dataset.isel(x=[0, 1, 3, 4])
+    actual = dataset.groupby("x").map(lambda f: f.isel(x=[0, 1]))
+    assert_identical(expected, actual)
+
+
+def test_da_groupby_map_change_group_size():
+    array = xr.DataArray([1, 2, 3], [("x", [1, 2, 2])])
+
+    def func(group):
+        if group.sizes["x"] == 1:
+            result = group.isel(x=[0, 0])
+        else:
+            result = group.isel(x=[0])
+        return result
+
+    expected = array.isel(x=[0, 0, 1])
+    actual = array.groupby("x").map(func)
+    assert_identical(expected, actual)
+
+
+def test_ds_groupby_map_change_group_size():
+    dataset = xr.Dataset({"foo": ("x", [1, 2, 3])}, {"x": [1, 2, 2]})
+
+    def func(group):
+        if group.sizes["x"] == 1:
+            result = group.isel(x=[0, 0])
+        else:
+            result = group.isel(x=[0])
+        return result
+
+    expected = dataset.isel(x=[0, 0, 1])
+    actual = dataset.groupby("x").map(func)
+    assert_identical(expected, actual)
+
+
 def test_da_groupby_map_func_args():
     def func(arg1, arg2, arg3=0):
         return arg1 + arg2 + arg3
