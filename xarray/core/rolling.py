@@ -563,6 +563,7 @@ class Coarsen:
         self.windows = windows
         self.side = side
         self.boundary = boundary
+        self.keep_attrs = keep_attrs
 
         absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
         if absent_dims:
@@ -608,7 +609,7 @@ class DataArrayCoarsen(Coarsen):
             from .dataarray import DataArray
 
             reduced = self.obj.variable.coarsen(
-                self.windows, func, self.boundary, self.side, **kwargs
+                self.windows, func, self.boundary, self.side, self.keep_attrs, **kwargs
             )
             coords = {}
             for c, v in self.obj.coords.items():
@@ -648,6 +649,11 @@ class DatasetCoarsen(Coarsen):
         def wrapped_func(self, **kwargs):
             from .dataset import Dataset
 
+            if self.keep_attrs == True:
+                _attrs = self.obj.attrs
+            else:
+                attrs = {}
+
             reduced = {}
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
@@ -666,7 +672,7 @@ class DatasetCoarsen(Coarsen):
                     )
                 else:
                     coords[c] = v.variable
-            return Dataset(reduced, coords=coords)
+            return Dataset(reduced, coords=coords, attrs=attrs)
 
         return wrapped_func
 
