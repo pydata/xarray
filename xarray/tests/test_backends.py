@@ -1539,6 +1539,15 @@ class ZarrBase(CFEncodedBase):
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
+    def test_with_chunkstore(self):
+        save_kwargs = {}
+        expected = create_test_data()
+        with self.create_zarr_target() as store_target:
+            self.save(expected, store_target, **save_kwargs)
+            open_kwargs = {'chunk_store': store_target}
+            with self.open(store_target, **open_kwargs) as ds:
+                assert_equal(ds, expected)
+
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
@@ -1554,6 +1563,7 @@ class ZarrBase(CFEncodedBase):
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
                 # chunk size should be the same as original
+
                 assert v.chunks == original[k].chunks
 
     @pytest.mark.filterwarnings("ignore:Specified Dask chunks")
