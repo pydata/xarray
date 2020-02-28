@@ -450,6 +450,7 @@ def test_sel_date_scalar(da, date_type, index):
     assert_identical(result, expected)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
@@ -501,7 +502,12 @@ def test_sel_date_scalar_backfill(da, date_type, index, sel_kwargs):
     [
         {"method": "pad", "tolerance": timedelta(days=20)},
         {"method": "backfill", "tolerance": timedelta(days=20)},
-        {"method": "nearest", "tolerance": timedelta(days=20)},
+        pytest.param(
+            {"method": "nearest", "tolerance": timedelta(days=20)},
+            marks=pytest.mark.xfail(
+                reason="https://github.com/pydata/xarray/issues/3751"
+            ),
+        ),
     ],
 )
 def test_sel_date_scalar_tolerance_raises(da, date_type, sel_kwargs):
@@ -509,6 +515,7 @@ def test_sel_date_scalar_tolerance_raises(da, date_type, sel_kwargs):
         da.sel(time=date_type(1, 5, 1), **sel_kwargs)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
@@ -556,7 +563,12 @@ def test_sel_date_list_backfill(da, date_type, index, sel_kwargs):
     [
         {"method": "pad", "tolerance": timedelta(days=20)},
         {"method": "backfill", "tolerance": timedelta(days=20)},
-        {"method": "nearest", "tolerance": timedelta(days=20)},
+        pytest.param(
+            {"method": "nearest", "tolerance": timedelta(days=20)},
+            marks=pytest.mark.xfail(
+                reason="https://github.com/pydata/xarray/issues/3751"
+            ),
+        ),
     ],
 )
 def test_sel_date_list_tolerance_raises(da, date_type, sel_kwargs):
@@ -591,6 +603,7 @@ def range_args(date_type):
     ]
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 def test_indexing_in_series_getitem(series, index, scalar_args, range_args):
     for arg in scalar_args:
