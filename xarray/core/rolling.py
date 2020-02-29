@@ -446,7 +446,8 @@ class DatasetRolling(Rolling):
                 reduced[key] = func(self.rollings[key], **kwargs)
             else:
                 reduced[key] = self.obj[key]
-        return Dataset(reduced, coords=self.obj.coords)
+        attrs = self.obj.attrs if self.keep_attrs else {}            
+        return Dataset(reduced, coords=self.obj.coords, attrs=attrs)
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some
