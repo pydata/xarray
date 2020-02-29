@@ -609,7 +609,7 @@ class DataArrayCoarsen(Coarsen):
             from .dataarray import DataArray
 
             reduced = self.obj.variable.coarsen(
-                self.windows, func, self.boundary, self.side, self.keep_attrs, **kwargs
+                self.windows, func, self.boundary, self.side, **kwargs
             )
             coords = {}
             for c, v in self.obj.coords.items():
@@ -650,7 +650,7 @@ class DatasetCoarsen(Coarsen):
             from .dataset import Dataset
 
             if self.keep_attrs:
-                _attrs = self.obj.attrs
+                attrs = self.obj.attrs
             else:
                 attrs = {}
 

@@ -1949,6 +1949,11 @@ class Variable(
             else:
                 shape.append(variable.shape[i])
 
+        keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+        variable.attrs = variable._attrs if keep_attrs else {}
+
         return variable.data.reshape(shape), tuple(axes)
 
     @property
