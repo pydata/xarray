@@ -808,7 +808,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return self._rolling_cls(self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs)
+        return self._rolling_cls(
+            self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs
+        )
 
     def rolling_exp(
         self,
@@ -922,7 +924,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(
-            self, dim, boundary=boundary, side=side, coord_func=coord_func, keep_attrs=keep_attrs
+            self,
+            dim,
+            boundary=boundary,
+            side=side,
+            coord_func=coord_func,
+            keep_attrs=keep_attrs,
         )
 
     def resample(

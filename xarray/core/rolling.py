@@ -192,7 +192,9 @@ class DataArrayRolling(Rolling):
         """
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
-        super().__init__(obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs)
+        super().__init__(
+            obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
+        )
 
         self.window_labels = self.obj[self.dim]
 
@@ -435,7 +437,9 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
             if self.dim in da.dims:
-                self.rollings[key] = DataArrayRolling(da, windows, min_periods, center, keep_attrs)
+                self.rollings[key] = DataArrayRolling(
+                    da, windows, min_periods, center, keep_attrs
+                )
 
     def _dataset_implementation(self, func, **kwargs):
         from .dataset import Dataset
@@ -446,7 +450,7 @@ class DatasetRolling(Rolling):
                 reduced[key] = func(self.rollings[key], **kwargs)
             else:
                 reduced[key] = self.obj[key]
-        attrs = self.obj.attrs if self.keep_attrs else {}            
+        attrs = self.obj.attrs if self.keep_attrs else {}
         return Dataset(reduced, coords=self.obj.coords, attrs=attrs)
 
     def reduce(self, func, **kwargs):
@@ -532,7 +536,15 @@ class Coarsen:
     DataArray.coarsen
     """
 
-    __slots__ = ("obj", "boundary", "coord_func", "windows", "side", "trim_excess", "keep_attrs")
+    __slots__ = (
+        "obj",
+        "boundary",
+        "coord_func",
+        "windows",
+        "side",
+        "trim_excess",
+        "keep_attrs",
+    )
     _attributes = ("windows", "side", "trim_excess")
 
     def __init__(self, obj, windows, boundary, side, coord_func, keep_attrs):

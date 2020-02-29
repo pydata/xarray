@@ -1887,16 +1887,17 @@ class TestVariable(VariableSubclassobjects):
 
         # Test dropped attrs
         with set_options(keep_attrs=False):
-            new = (Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs)
-                   .coarsen(windows={"coord": 1}, func=test_func, boundary="exact", side="left"))
+            new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
+                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+            )
         assert new.attrs == {}
 
         # Test kept attrs
         with set_options(keep_attrs=True):
-            new = (Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs)
-                   .coarsen(windows={"coord": 1}, func=test_func, boundary="exact", side="left"))
+            new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
+                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+            )
         assert new.attrs == _attrs
-
 
 
 @requires_dask

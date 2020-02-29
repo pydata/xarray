@@ -5674,7 +5674,7 @@ def test_coarsen_keep_attrs():
     ds = Dataset(
         data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
         coords={"coord": coords},
-        attrs=_attrs
+        attrs=_attrs,
     )
 
     # Test dropped attrs
@@ -5701,20 +5701,22 @@ def test_rolling_keep_attrs():
     ds = Dataset(
         data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
         coords={"coord": coords},
-        attrs=_attrs
+        attrs=_attrs,
     )
 
     # Test dropped attrs
-    dat = ds.rolling(dim={'coord':5}, min_periods=None, center=False).mean()
+    dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
     assert dat.attrs == {}
 
     # Test kept attrs using dataset keyword
-    dat = ds.rolling(dim={'coord':5}, min_periods=None, center=False, keep_attrs=True).mean()
+    dat = ds.rolling(
+        dim={"coord": 5}, min_periods=None, center=False, keep_attrs=True
+    ).mean()
     assert dat.attrs == _attrs
 
     # Test kept attrs using global option
     with set_options(keep_attrs=True):
-            dat = ds.rolling(dim={'coord':5}, min_periods=None, center=False).mean()
+        dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
     assert dat.attrs == _attrs
 
 
