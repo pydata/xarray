@@ -649,7 +649,7 @@ class DatasetCoarsen(Coarsen):
         def wrapped_func(self, **kwargs):
             from .dataset import Dataset
 
-            if self.keep_attrs == True:
+            if self.keep_attrs:
                 _attrs = self.obj.attrs
             else:
                 attrs = {}

@@ -5664,9 +5664,8 @@ def test_coarsen_keep_attrs():
     ds = Dataset(
         data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
         coords={"coord": coords},
+        attrs={'units':'test', 'long_name':'testing'}
     )
-    ds.attrs["units"] = "test"
-    ds.attrs["long_name"] = "testing"
 
     # Test dropped attrs
     dat = ds.coarsen(coord=5).mean()
