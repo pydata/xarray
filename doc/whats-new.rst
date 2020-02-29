@@ -62,6 +62,8 @@ Internal Changes
 - Removed the internal ``import_seaborn`` function which handled the deprecation of
   the ``seaborn.apionly`` entry point (:issue:`3747`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Don't test pint integration in combination with datetime objects. (:issue:`3778`, :pull:`3788`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Changed test_open_mfdataset_list_attr to only run with dask installed
   (:issue:`3777`, :pull:`3780`).
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
