@@ -1883,23 +1883,20 @@ class TestVariable(VariableSubclassobjects):
     def test_coarsen_keep_attrs(self, operation="mean"):
         _attrs = {"units": "test", "long_name": "testing"}
 
-        coord = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs)
-
         test_func = getattr(duck_array_ops, operation, None)
 
         # Test dropped attrs
         with set_options(keep_attrs=False):
-            new = coord.coarsen(
-                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
-            )
+            new = (Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs)
+                   .coarsen(windows={"coord": 1}, func=test_func, boundary="exact", side="left"))
         assert new.attrs == {}
 
         # Test kept attrs
         with set_options(keep_attrs=True):
-            new = coord.coarsen(
-                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
-            )
+            new = (Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs)
+                   .coarsen(windows={"coord": 1}, func=test_func, boundary="exact", side="left"))
         assert new.attrs == _attrs
+
 
 
 @requires_dask

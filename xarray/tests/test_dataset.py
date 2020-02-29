@@ -5671,8 +5671,17 @@ def test_coarsen_keep_attrs():
     dat = ds.coarsen(coord=5).mean()
     assert dat.attrs == {}
 
-    # Test kept attrs
-    dat = ds.coarsen(coord=5).mean(keep_attrs=True)
+    # Test kept attrs using dataset keyword
+    dat = ds.coarsen(coord=5, keep_attrs=True).mean()
+    assert dat.attrs == _attrs
+
+    # # Test kept attrs using wrapper function keyword
+    # dat = ds.coarsen(coord=5).mean(keep_attrs=True)
+    # assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with set_options(keep_attrs=True):
+        dat = ds.coarsen(coord=5).mean()
     assert dat.attrs == _attrs
 
 
