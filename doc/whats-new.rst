@@ -30,7 +30,11 @@ New Features
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - implement pint support. (:issue:`3594`, :pull:`3706`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
+  `TypeError` on multiple string arguments. Receiving multiple string arguments
+  often means a user is attempting to pass multiple dimensions to group over
+  and should instead pass a list.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Bug fixes
 ~~~~~~~~~
