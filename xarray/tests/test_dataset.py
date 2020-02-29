@@ -5664,7 +5664,7 @@ def test_coarsen_keep_attrs():
     ds = Dataset(
         data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
         coords={"coord": coords},
-        attrs={'units':'test', 'long_name':'testing'}
+        attrs=_attrs
     )
 
     # Test dropped attrs
@@ -5675,13 +5675,36 @@ def test_coarsen_keep_attrs():
     dat = ds.coarsen(coord=5, keep_attrs=True).mean()
     assert dat.attrs == _attrs
 
-    # # Test kept attrs using wrapper function keyword
-    # dat = ds.coarsen(coord=5).mean(keep_attrs=True)
-    # assert dat.attrs == _attrs
-
     # Test kept attrs using global option
     with set_options(keep_attrs=True):
         dat = ds.coarsen(coord=5).mean()
+    assert dat.attrs == _attrs
+
+
+def test_rolling_keep_attrs():
+    _attrs = {"units": "test", "long_name": "testing"}
+
+    var1 = np.linspace(10, 15, 100)
+    var2 = np.linspace(5, 10, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = Dataset(
+        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
+        coords={"coord": coords},
+        attrs=_attrs
+    )
+
+    # Test dropped attrs
+    dat = ds.rolling(dim={'coord':5}, min_periods=None, center=False).mean()
+    assert dat.attrs == {}
+
+    # Test kept attrs using dataset keyword
+    dat = ds.rolling(dim={'coord':5}, min_periods=None, center=False, keep_attrs=True).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with set_options(keep_attrs=True):
+            dat = ds.rolling(dim={'coord':5}, min_periods=None, center=False).mean()
     assert dat.attrs == _attrs
 
 
