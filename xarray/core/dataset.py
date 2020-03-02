@@ -2959,7 +2959,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if k in self.indexes:
                     indexes[k] = self.indexes[k]
                 else:
-                    indexes[k] = var.to_index()
+                    new_index = var.to_index()
+                    if new_index.nlevels == 1:
+                        # make sure index name matches dimension name
+                        new_index = new_index.rename(k)
+                    indexes[k] = new_index
             else:
                 var = v.to_base_variable()
             var.dims = dims

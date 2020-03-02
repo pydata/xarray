@@ -586,6 +586,7 @@ def test_datetime_single_string():
     assert_allclose(actual.drop_vars("time"), expected)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 @requires_scipy
 def test_cftime():
@@ -612,6 +613,7 @@ def test_cftime_type_error():
         da.interp(time=times_new)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 @requires_scipy
 def test_cftime_list_of_strings():
@@ -633,6 +635,7 @@ def test_cftime_list_of_strings():
     assert_allclose(actual, expected)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 @requires_scipy
 def test_cftime_single_string():
@@ -694,6 +697,7 @@ def test_datetime_interp_noerror():
     a.interp(x=xi, time=xi.time)  # should not raise an error
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 def test_3641():
     times = xr.cftime_range("0001", periods=3, freq="500Y")
