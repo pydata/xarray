@@ -1067,9 +1067,6 @@ def test_map_blocks_error(map_da, map_ds):
         xr.map_blocks(bad_func, ds_copy)
 
     with raises_regex(TypeError, "Cannot pass dask collections"):
-        xr.map_blocks(bad_func, map_da, args=[map_da.chunk()])
-
-    with raises_regex(TypeError, "Cannot pass dask collections"):
         xr.map_blocks(bad_func, map_da, kwargs=dict(a=map_da.chunk()))
 
 
