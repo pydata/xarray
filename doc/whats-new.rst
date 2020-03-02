@@ -61,6 +61,11 @@ Bug fixes
 - xarray now respects the over, under and bad colors if set on a provided colormap.
   (:issue:`3590`, :pull:`3601`)
   By `johnomotani <https://github.com/johnomotani>`_.
+- :py:func:`coarsen` now respects ``xr.set_options(keep_attrs=True)``
+  to preserve attributes. :py:meth:`Dataset.coarsen` accepts a keyword
+  argument ``keep_attrs`` to change this setting. (:issue:`3376`,
+  :pull:`3801`) By `Andrew Thomas <https://github.com/amcnicho>`_.
+  
 - Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
   simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
 
