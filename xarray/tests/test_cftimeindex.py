@@ -904,3 +904,92 @@ def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")
     mindex = pd.MultiIndex.from_arrays([index])
     assert mindex.get_loc("2001-01") == slice(0, 30)
+
+
+@requires_cftime
+@pytest.mark.parametrize("freq", ["3663S", "33T", "2H"])
+@pytest.mark.parametrize("method", ["floor", "ceil", "round"])
+def test_rounding_methods_against_datetimeindex(freq, method):
+    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    expected = getattr(expected, method)(freq)
+    result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    result = getattr(result, method)(freq).to_datetimeindex()
+    assert result.equals(expected)
+
+
+@requires_cftime
+@pytest.mark.parametrize("method", ["floor", "ceil", "round"])
+def test_rounding_methods_invalid_freq(method):
+    index = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    with pytest.raises(ValueError, match="fixed"):
+        getattr(index, method)("MS")
+
+
+@pytest.fixture
+def rounding_index(date_type):
+    return xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 1, 59, 59, 999512),
+            date_type(1, 1, 1, 3, 0, 1, 500001),
+            date_type(1, 1, 1, 7, 0, 6, 499999),
+        ]
+    )
+
+
+@requires_cftime
+def test_ceil(rounding_index, date_type):
+    result = rounding_index.ceil("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 2, 0, 0, 0),
+            date_type(1, 1, 1, 3, 0, 2, 0),
+            date_type(1, 1, 1, 7, 0, 7, 0),
+        ]
+    )
+    assert result.equals(expected)
+
+
+@requires_cftime
+def test_floor(rounding_index, date_type):
+    result = rounding_index.floor("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 1, 59, 59, 0),
+            date_type(1, 1, 1, 3, 0, 1, 0),
+            date_type(1, 1, 1, 7, 0, 6, 0),
+        ]
+    )
+    assert result.equals(expected)
+
+
+@requires_cftime
+def test_round(rounding_index, date_type):
+    result = rounding_index.round("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 2, 0, 0, 0),
+            date_type(1, 1, 1, 3, 0, 2, 0),
+            date_type(1, 1, 1, 7, 0, 6, 0),
+        ]
+    )
+    assert result.equals(expected)
+
+
+@requires_cftime
+def test_asi8(date_type):
+    index = xr.CFTimeIndex([date_type(1970, 1, 1), date_type(1970, 1, 2)])
+    result = index.asi8
+    expected = 1000000 * 86400 * np.array([0, 1])
+    np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime
+def test_asi8_distant_date():
+    """Test that asi8 conversion is truly exact."""
+    import cftime
+
+    date_type = cftime.DatetimeProlepticGregorian
+    index = xr.CFTimeIndex([date_type(10731, 4, 22, 3, 25, 45, 123456)])
+    result = index.asi8
+    expected = np.array([1000000 * 86400 * 400 * 8000 + 12345 * 1000000 + 123456])
+    np.testing.assert_array_equal(result, expected)
