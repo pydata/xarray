@@ -25,6 +25,10 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
+  ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
+  :py:class:`~core.accessor_dt.DatetimeAccessor`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_ 
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
