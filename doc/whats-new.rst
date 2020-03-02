@@ -42,6 +42,7 @@ New Features
 - The new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` (introduced
   in 0.14.1) is now on by default. To disable, use
   ``xarray.set_options(display_style="text")``.
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 
 Bug fixes
