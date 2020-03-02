@@ -660,6 +660,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
         """
+        # While we don't generally check the type of every arg, passing
+        # multiple dimensions as multiple arguments is common enough, and the
+        # consequences hidden enough (strings evaluate as true) to warrant
+        # checking here.
+        # A future version could make squeeze kwarg only, but would face
+        # backward-compat issues.
+        if not isinstance(squeeze, bool):
+            raise TypeError(
+                f"`squeeze` must be True or False, but {squeeze} was supplied"
+            )
+
         return self._groupby_cls(
             self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
         )

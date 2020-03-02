@@ -25,12 +25,20 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
+  ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
+  :py:class:`~core.accessor_dt.DatetimeAccessor`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_ 
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - implement pint support. (:issue:`3594`, :pull:`3706`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
+  `TypeError` on multiple string arguments. Receiving multiple string arguments
+  often means a user is attempting to pass multiple dimensions to group over
+  and should instead pass a list.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -53,6 +61,8 @@ Bug fixes
   argument ``keep_attrs`` to change this setting. (:issue:`3376`,
   :pull:`3801`) By `Andrew Thomas <https://github.com/amcnicho>`_.
   
+- Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
+  simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
 
 Documentation
 ~~~~~~~~~~~~~
