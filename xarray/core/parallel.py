@@ -272,7 +272,10 @@ def map_blocks(
         template_indexes = set(template.indexes)
         indexes = {dim: dataset.indexes[dim] for dim in dataset_indexes}
         indexes.update({k: template.indexes[k] for k in template_indexes})
-        output_chunks = template.chunks
+        if isinstance(template, DataArray):
+            output_chunks = dict(zip(template.dims, template.chunks))
+        else:
+            output_chunks = template.chunks
 
     if isinstance(template, DataArray):
         result_is_array = True
