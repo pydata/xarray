@@ -304,8 +304,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Name(s) of the data dimension(s). Must be either a hashable (only
             for 1D data) or a sequence of hashables with length equal to the
             number of dimensions. If this argument is omitted, dimension names
-            are taken from ``coords`` (if possible) and otherwise default to
-            ``['dim_0', ... 'dim_n']``.
+            default to ``['dim_0', ... 'dim_n']``.
         name : str or None, optional
             Name of this array.
         attrs : dict_like or None, optional
