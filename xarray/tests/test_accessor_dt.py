@@ -7,6 +7,7 @@ import xarray as xr
 from . import (
     assert_array_equal,
     assert_equal,
+    assert_identical,
     raises_regex,
     requires_cftime,
     requires_dask,
@@ -435,3 +436,106 @@ def test_seasons(cftime_date_type):
     seasons = xr.DataArray(seasons)
 
     assert_array_equal(seasons.values, dates.dt.season.values)
+
+
+@pytest.fixture
+def cftime_rounding_dataarray(cftime_date_type):
+    return xr.DataArray(
+        [
+            [cftime_date_type(1, 1, 1, 1), cftime_date_type(1, 1, 1, 15)],
+            [cftime_date_type(1, 1, 1, 23), cftime_date_type(1, 1, 2, 1)],
+        ]
+    )
+
+
+@requires_cftime
+@requires_dask
+@pytest.mark.parametrize("use_dask", [False, True])
+def test_cftime_floor_accessor(cftime_rounding_dataarray, cftime_date_type, use_dask):
+    import dask.array as da
+
+    freq = "D"
+    expected = xr.DataArray(
+        [
+            [cftime_date_type(1, 1, 1, 0), cftime_date_type(1, 1, 1, 0)],
+            [cftime_date_type(1, 1, 1, 0), cftime_date_type(1, 1, 2, 0)],
+        ],
+        name="floor",
+    )
+
+    if use_dask:
+        chunks = {"dim_0": 1}
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.floor(freq)
+        expected = expected.chunk(chunks)
+        assert isinstance(result.data, da.Array)
+        assert result.chunks == expected.chunks
+    else:
+        result = cftime_rounding_dataarray.dt.floor(freq)
+
+    assert_identical(result, expected)
+
+
+@requires_cftime
+@requires_dask
+@pytest.mark.parametrize("use_dask", [False, True])
+def test_cftime_ceil_accessor(cftime_rounding_dataarray, cftime_date_type, use_dask):
+    import dask.array as da
+
+    freq = "D"
+    expected = xr.DataArray(
+        [
+            [cftime_date_type(1, 1, 2, 0), cftime_date_type(1, 1, 2, 0)],
+            [cftime_date_type(1, 1, 2, 0), cftime_date_type(1, 1, 3, 0)],
+        ],
+        name="ceil",
+    )
+
+    if use_dask:
+        chunks = {"dim_0": 1}
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.ceil(freq)
+        expected = expected.chunk(chunks)
+        assert isinstance(result.data, da.Array)
+        assert result.chunks == expected.chunks
+    else:
+        result = cftime_rounding_dataarray.dt.ceil(freq)
+
+    assert_identical(result, expected)
+
+
+@requires_cftime
+@requires_dask
+@pytest.mark.parametrize("use_dask", [False, True])
+def test_cftime_round_accessor(cftime_rounding_dataarray, cftime_date_type, use_dask):
+    import dask.array as da
+
+    freq = "D"
+    expected = xr.DataArray(
+        [
+            [cftime_date_type(1, 1, 1, 0), cftime_date_type(1, 1, 2, 0)],
+            [cftime_date_type(1, 1, 2, 0), cftime_date_type(1, 1, 2, 0)],
+        ],
+        name="round",
+    )
+
+    if use_dask:
+        chunks = {"dim_0": 1}
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.round(freq)
+        expected = expected.chunk(chunks)
+        assert isinstance(result.data, da.Array)
+        assert result.chunks == expected.chunks
+    else:
+        result = cftime_rounding_dataarray.dt.round(freq)
+
+    assert_identical(result, expected)

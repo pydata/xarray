@@ -3,7 +3,7 @@ channels:
   # Don't change to pkgs/main, as it causes random timeouts in readthedocs
   - conda-forge
 dependencies:
-  - python=3.7
+  - python=3.8
   - bottleneck
   - cartopy
   - cfgrib>=0.9
@@ -21,6 +21,7 @@ dependencies:
   - pandas>=1.0
   - rasterio>=1.1
   - seaborn
+  - setuptools
   - sphinx>=2.3
   - sphinx_rtd_theme>=0.4
   - zarr>=2.4
