@@ -107,7 +107,7 @@ def map_blocks(
     obj: Union[DataArray, Dataset],
     args: Sequence[Any] = (),
     kwargs: Mapping[str, Any] = None,
-    template: T_DSorDA = None,
+    template: Union[DataArray, Dataset] = None,
 ) -> T_DSorDA:
     """Apply a function to each chunk of a DataArray or Dataset. This function is
     experimental and its signature may change.
@@ -273,7 +273,7 @@ def map_blocks(
         indexes = {dim: dataset.indexes[dim] for dim in dataset_indexes}
         indexes.update({k: template.indexes[k] for k in template_indexes})
         if isinstance(template, DataArray):
-            output_chunks = dict(zip(template.dims, template.chunks))
+            output_chunks = dict(zip(template.dims, template.chunks))  # type: ignore
         else:
             output_chunks = template.chunks
 
