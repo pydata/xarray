@@ -61,6 +61,9 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Fix documentation of :py:class:`DataArray` removing the deprecated mention
+  that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
