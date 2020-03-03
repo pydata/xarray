@@ -13,6 +13,80 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.15.1:
+
+
+v0.15.1 (unreleased)
+---------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+New Features
+~~~~~~~~~~~~
+
+- Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
+  ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
+  :py:class:`~core.accessor_dt.DatetimeAccessor`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_ 
+- Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
+  v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- implement pint support. (:issue:`3594`, :pull:`3706`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
+  `TypeError` on multiple string arguments. Receiving multiple string arguments
+  often means a user is attempting to pass multiple dimensions to group over
+  and should instead pass a list.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- The new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` (introduced
+  in 0.14.1) is now on by default. To disable, use
+  ``xarray.set_options(display_style="text")``.
+  By `Julia Signell <https://github.com/jsignell>`_.
+
+
+Bug fixes
+~~~~~~~~~
+
+- Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
+  index with name reflecting the previous dimension name instead of the new one
+  (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
+  <https://github.com/jaicher>`_.
+- Use ``dask_array_type`` instead of ``dask_array.Array`` for type
+  checking. (:issue:`3779`, :pull:`3787`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:func:`concat` can now handle coordinate variables only present in one of
+  the objects to be concatenated when ``coords="different"``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- xarray now respects the over, under and bad colors if set on a provided colormap.
+  (:issue:`3590`, :pull:`3601`)
+  By `johnomotani <https://github.com/johnomotani>`_.
+- :py:func:`coarsen` now respects ``xr.set_options(keep_attrs=True)``
+  to preserve attributes. :py:meth:`Dataset.coarsen` accepts a keyword
+  argument ``keep_attrs`` to change this setting. (:issue:`3376`,
+  :pull:`3801`) By `Andrew Thomas <https://github.com/amcnicho>`_.
+  
+- Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
+  simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
+
+Documentation
+~~~~~~~~~~~~~
+- Fix documentation of :py:class:`DataArray` removing the deprecated mention
+  that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Removed the internal ``import_seaborn`` function which handled the deprecation of
+  the ``seaborn.apionly`` entry point (:issue:`3747`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Don't test pint integration in combination with datetime objects. (:issue:`3778`, :pull:`3788`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Changed test_open_mfdataset_list_attr to only run with dask installed
+  (:issue:`3777`, :pull:`3780`).
+  By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
+
 .. _whats-new.0.15.0:
 
 
@@ -129,6 +203,8 @@ Bug fixes
 - Allow plotting of binned coordinates on the y axis in :py:meth:`plot.line`
   and :py:meth:`plot.step` plots (:issue:`3571`,
   :pull:`3685`) by `Julien Seguinot <https://github.com/juseg>`_.
+- setuptools is now marked as a dependency of xarray
+  (:pull:`3628`) by `Richard Höchenberger <https://github.com/hoechenberger>`_.
 
 Documentation
 ~~~~~~~~~~~~~

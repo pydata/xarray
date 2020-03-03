@@ -7,6 +7,7 @@ import numpy as np
 from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import inject_reduce_methods
+from .options import _get_keep_attrs
 from .pycompat import dask_array_type
 
 try:
@@ -42,10 +43,10 @@ class Rolling:
     DataArray.rolling
     """
 
-    __slots__ = ("obj", "window", "min_periods", "center", "dim")
-    _attributes = ("window", "min_periods", "center", "dim")
+    __slots__ = ("obj", "window", "min_periods", "center", "dim", "keep_attrs")
+    _attributes = ("window", "min_periods", "center", "dim", "keep_attrs")
 
-    def __init__(self, obj, windows, min_periods=None, center=False):
+    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
         """
         Moving window object.
 
@@ -65,6 +66,10 @@ class Rolling:
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -88,6 +93,10 @@ class Rolling:
 
         self.center = center
         self.dim = dim
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+        self.keep_attrs = keep_attrs
 
     @property
     def _min_periods(self):
@@ -143,7 +152,7 @@ class Rolling:
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False):
+    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
         """
         Moving window object for DataArray.
         You should use DataArray.rolling() method to construct this object
@@ -165,6 +174,10 @@ class DataArrayRolling(Rolling):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -177,7 +190,11 @@ class DataArrayRolling(Rolling):
         Dataset.rolling
         Dataset.groupby
         """
-        super().__init__(obj, windows, min_periods=min_periods, center=center)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+        super().__init__(
+            obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
+        )
 
         self.window_labels = self.obj[self.dim]
 
@@ -374,7 +391,7 @@ class DataArrayRolling(Rolling):
 class DatasetRolling(Rolling):
     __slots__ = ("rollings",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False):
+    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
         """
         Moving window object for Dataset.
         You should use Dataset.rolling() method to construct this object
@@ -396,6 +413,10 @@ class DatasetRolling(Rolling):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -408,7 +429,7 @@ class DatasetRolling(Rolling):
         Dataset.groupby
         DataArray.groupby
         """
-        super().__init__(obj, windows, min_periods, center)
+        super().__init__(obj, windows, min_periods, center, keep_attrs)
         if self.dim not in self.obj.dims:
             raise KeyError(self.dim)
         # Keep each Rolling object as a dictionary
@@ -416,7 +437,9 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
             if self.dim in da.dims:
-                self.rollings[key] = DataArrayRolling(da, windows, min_periods, center)
+                self.rollings[key] = DataArrayRolling(
+                    da, windows, min_periods, center, keep_attrs
+                )
 
     def _dataset_implementation(self, func, **kwargs):
         from .dataset import Dataset
@@ -427,7 +450,8 @@ class DatasetRolling(Rolling):
                 reduced[key] = func(self.rollings[key], **kwargs)
             else:
                 reduced[key] = self.obj[key]
-        return Dataset(reduced, coords=self.obj.coords)
+        attrs = self.obj.attrs if self.keep_attrs else {}
+        return Dataset(reduced, coords=self.obj.coords, attrs=attrs)
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some
@@ -466,7 +490,7 @@ class DatasetRolling(Rolling):
             **kwargs,
         )
 
-    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
+    def construct(self, window_dim, stride=1, fill_value=dtypes.NA, keep_attrs=None):
         """
         Convert this rolling object to xr.Dataset,
         where the window dimension is stacked as a new dimension
@@ -486,6 +510,9 @@ class DatasetRolling(Rolling):
         """
 
         from .dataset import Dataset
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
 
         dataset = {}
         for key, da in self.obj.data_vars.items():
@@ -509,10 +536,18 @@ class Coarsen:
     DataArray.coarsen
     """
 
-    __slots__ = ("obj", "boundary", "coord_func", "windows", "side", "trim_excess")
+    __slots__ = (
+        "obj",
+        "boundary",
+        "coord_func",
+        "windows",
+        "side",
+        "trim_excess",
+        "keep_attrs",
+    )
     _attributes = ("windows", "side", "trim_excess")
 
-    def __init__(self, obj, windows, boundary, side, coord_func):
+    def __init__(self, obj, windows, boundary, side, coord_func, keep_attrs):
         """
         Moving window object.
 
@@ -541,6 +576,7 @@ class Coarsen:
         self.windows = windows
         self.side = side
         self.boundary = boundary
+        self.keep_attrs = keep_attrs
 
         absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
         if absent_dims:
@@ -626,6 +662,11 @@ class DatasetCoarsen(Coarsen):
         def wrapped_func(self, **kwargs):
             from .dataset import Dataset
 
+            if self.keep_attrs:
+                attrs = self.obj.attrs
+            else:
+                attrs = {}
+
             reduced = {}
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
@@ -644,7 +685,7 @@ class DatasetCoarsen(Coarsen):
                     )
                 else:
                     coords[c] = v.variable
-            return Dataset(reduced, coords=coords)
+            return Dataset(reduced, coords=coords, attrs=attrs)
 
         return wrapped_func
 

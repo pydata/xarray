@@ -742,7 +742,10 @@ class Variable(
 
             data = as_indexable(self._data)[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
-            data = duck_array_ops.where(mask, fill_value, data)
+            # we need to invert the mask in order to pass data first. This helps
+            # pint to choose the correct unit
+            # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
+            data = duck_array_ops.where(np.logical_not(mask), data, fill_value)
         else:
             # array cannot be indexed along dimensions of size 0, so just
             # build the mask directly instead.
@@ -1054,7 +1057,9 @@ class Variable(
 
         invalid = indexers.keys() - set(self.dims)
         if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+            raise ValueError(
+                f"dimensions {invalid} do not exist. Expected one or more of {self.dims}"
+            )
 
         key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
         return self[key]
@@ -1099,24 +1104,16 @@ class Variable(
         else:
             dtype = self.dtype
 
-        shape = list(self.shape)
-        shape[axis] = min(abs(count), shape[axis])
+        width = min(abs(count), self.shape[axis])
+        dim_pad = (width, 0) if count >= 0 else (0, width)
+        pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        if isinstance(trimmed_data, dask_array_type):
-            chunks = list(trimmed_data.chunks)
-            chunks[axis] = (shape[axis],)
-            full = functools.partial(da.full, chunks=chunks)
-        else:
-            full = np.full
-
-        filler = full(shape, fill_value, dtype=dtype)
-
-        if count > 0:
-            arrays = [filler, trimmed_data]
-        else:
-            arrays = [trimmed_data, filler]
-
-        data = duck_array_ops.concatenate(arrays, axis)
+        data = duck_array_ops.pad(
+            trimmed_data.astype(dtype),
+            pads,
+            mode="constant",
+            constant_values=fill_value,
+        )
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
@@ -1951,6 +1948,9 @@ class Variable(
                 axes.append(i + axis_count)
             else:
                 shape.append(variable.shape[i])
+
+        keep_attrs = _get_keep_attrs(default=False)
+        variable.attrs = variable._attrs if keep_attrs else {}
 
         return variable.data.reshape(shape), tuple(axes)
 
