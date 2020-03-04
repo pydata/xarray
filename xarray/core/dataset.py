@@ -4879,6 +4879,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         difference : same type as caller
             The n-th order finite difference of this object.
 
+        .. note::
+
+            `n` matches numpy's behavior and is different from pandas' similarly
+            located `periods` argument
+
         Examples
         --------
         >>> ds = xr.Dataset({'foo': ('x', [5, 5, 6, 6])})
