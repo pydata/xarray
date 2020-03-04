@@ -112,6 +112,7 @@ implemented :py:meth:`~xarray.DataArray.stack` and
 As elsewhere in xarray, an ellipsis (`...`) can be used to represent all dimensions:
 
 .. ipython:: python
+
     stacked = array.stack(z=...)
     stacked
 
