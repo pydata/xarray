@@ -1152,6 +1152,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         from .dataarray import DataArray
         from .dataset import Dataset
 
+        if callable(cond):
+            return self.where(cond(self), other=other, drop=drop)
+
         if drop:
             if other is not dtypes.NA:
                 raise ValueError("cannot set `other` if drop=True")
