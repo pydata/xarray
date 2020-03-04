@@ -2868,6 +2868,12 @@ class TestDataset:
         actual = ds.stack(z=["x", "y"])
         assert_identical(expected, actual)
 
+        actual = ds.stack(z=[...])
+        assert_identical(expected, actual)
+
+        actual = ds.stack(z=...)
+        assert_identical(expected, actual)
+
         exp_index = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=["y", "x"])
         expected = Dataset(
             {"a": ("z", [0, 1, 0, 1]), "b": ("z", [0, 2, 1, 3]), "z": exp_index}

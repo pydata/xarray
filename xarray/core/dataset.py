@@ -3235,6 +3235,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables, indexes=indexes)
 
     def _stack_once(self, dims, new_dim):
+        if dims == ... or dims == [...]:
+            dims = self.dims
         variables = {}
         for name, var in self.variables.items():
             if name not in dims:
