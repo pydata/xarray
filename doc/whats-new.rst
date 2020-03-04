@@ -46,7 +46,7 @@ New Features
   By `Julia Signell <https://github.com/jsignell>`_.
 - An ellipsis (``...``) is now supported in the ``dims`` argument of
   :py:meth:`Dataset.stack` and :py:meth:`DataArray.stack`, meaning all
-  dimensions, similar to its meaning in :py:meth:`DataArray.transpose`
+  dimensions, similar to its meaning in :py:meth:`DataArray.transpose`.
   (:pull:`3826`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
