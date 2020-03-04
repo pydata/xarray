@@ -2040,7 +2040,7 @@ class TestDataArray:
         actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
         assert_identical(orig, actual)
 
-        actual = orig.stack(z=...).unstack("z").drop_vars(["x", "y"])
+        actual = orig.stack(z=[...]).unstack("z").drop_vars(["x", "y"])
         assert_identical(orig, actual)
 
         dims = ["a", "b", "c", "d", "e"]

@@ -2871,7 +2871,8 @@ class TestDataset:
         actual = ds.stack(z=[...])
         assert_identical(expected, actual)
 
-        actual = ds.stack(z=...)
+        # non list dims with ellipsis
+        actual = ds.stack(z=(...,))
         assert_identical(expected, actual)
 
         exp_index = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=["y", "x"])
