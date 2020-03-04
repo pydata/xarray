@@ -1,6 +1,5 @@
 import datetime
 import functools
-import warnings
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -1859,7 +1858,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # unstacked dataset
         return Dataset(data_dict)
 
-    def transpose(self, *dims: Hashable, transpose_coords: bool = None) -> "DataArray":
+    def transpose(self, *dims: Hashable, transpose_coords: bool = True) -> "DataArray":
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1867,7 +1866,7 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
-        transpose_coords : boolean, optional
+        transpose_coords : boolean, default True
             If True, also transpose the coordinates of this DataArray.
 
         Returns
@@ -1896,15 +1895,6 @@ class DataArray(AbstractArray, DataWithCoords):
                 coords[name] = coord.variable.transpose(*coord_dims)
             return self._replace(variable, coords)
         else:
-            if transpose_coords is None and any(self[c].ndim > 1 for c in self.coords):
-                warnings.warn(
-                    "This DataArray contains multi-dimensional "
-                    "coordinates. In the future, these coordinates "
-                    "will be transposed as well unless you specify "
-                    "transpose_coords=False.",
-                    FutureWarning,
-                    stacklevel=2,
-                )
             return self._replace(variable)
 
     @property

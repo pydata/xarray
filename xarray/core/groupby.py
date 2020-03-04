@@ -292,7 +292,7 @@ class GroupBy(SupportsArithmetic):
         bins : array-like, optional
             If `bins` is specified, the groups will be discretized into the
             specified bins by `pandas.cut`.
-        restore_coord_dims : bool, optional
+        restore_coord_dims : bool, default True
             If True, also restore the dimension order of multi-dimensional
             coordinates.
         cut_kwargs : dict, optional
@@ -390,14 +390,6 @@ class GroupBy(SupportsArithmetic):
             and restore_coord_dims is None
             and any(obj[c].ndim > 1 for c in obj.coords)
         ):
-            warnings.warn(
-                "This DataArray contains multi-dimensional "
-                "coordinates. In the future, the dimension order "
-                "of these coordinates will be restored as well "
-                "unless you specify restore_coord_dims=False.",
-                FutureWarning,
-                stacklevel=2,
-            )
             restore_coord_dims = False
 
         # specification for the groupby operation
