@@ -2694,8 +2694,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
         .. note::
 
-            `n` matches numpy's behavior and is different from pandas' similarly
-            located `periods` argument
+            `n` matches numpy's behavior and is different from pandas' first
+            argument named `periods`.
 
 
         Examples
