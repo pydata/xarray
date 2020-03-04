@@ -113,7 +113,7 @@ As elsewhere in xarray, an ellipsis (`...`) can be used to represent all dimensi
 
 .. ipython:: python
 
-    stacked = array.stack(z=...)
+    stacked = array.stack(z=[...])
     stacked
 
 These methods are modeled on the :py:class:`pandas.DataFrame` methods of the
