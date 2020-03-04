@@ -1153,7 +1153,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         from .dataset import Dataset
 
         if callable(cond):
-            return self.where(cond(self), other=other, drop=drop)
+            cond = cond(self)
 
         if drop:
             if other is not dtypes.NA:
