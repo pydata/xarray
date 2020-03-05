@@ -25,6 +25,9 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
+  and :py:meth:`Dataset.weighted` methods. By `Mathias Hauser <https://github.com/mathause>`_
+  (:issue:`422`).
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
@@ -137,9 +140,6 @@ New Features
 - :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and ``GroupBy.quantile``
   now work with dask Variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
-  and :py:meth:`Dataset.weighted` methods. By `Mathias Hauser <https://github.com/mathause>`_
-  (:issue:`422`).
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
