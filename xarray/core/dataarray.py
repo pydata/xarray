@@ -1,3 +1,4 @@
+import datetime
 import functools
 import warnings
 from numbers import Number
@@ -305,8 +306,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Name(s) of the data dimension(s). Must be either a hashable (only
             for 1D data) or a sequence of hashables with length equal to the
             number of dimensions. If this argument is omitted, dimension names
-            are taken from ``coords`` (if possible) and otherwise default to
-            ``['dim_0', ... 'dim_n']``.
+            default to ``['dim_0', ... 'dim_n']``.
         name : str or None, optional
             Name of this array.
         attrs : dict_like or None, optional
@@ -2043,7 +2043,9 @@ class DataArray(AbstractArray, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, str] = True,
-        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
+        max_gap: Union[
+            int, float, str, pd.Timedelta, np.timedelta64, datetime.timedelta
+        ] = None,
         **kwargs: Any,
     ) -> "DataArray":
         """Fill in NaNs by interpolating according to different methods.
@@ -2075,7 +2077,7 @@ class DataArray(AbstractArray, DataWithCoords):
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, default None.
+        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default None.
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
             and ``use_coordinate=True``, ``max_gap`` can be one of the following:
@@ -2083,6 +2085,7 @@ class DataArray(AbstractArray, DataWithCoords):
             - a string that is valid input for pandas.to_timedelta
             - a :py:class:`numpy.timedelta64` object
             - a :py:class:`pandas.Timedelta` object
+            - a :py:class:`datetime.timedelta` object
 
             Otherwise, ``max_gap`` must be an int or a float. Use of ``max_gap`` with unlabeled
             dimensions has not been implemented yet. Gap length is defined as the difference
@@ -2691,6 +2694,12 @@ class DataArray(AbstractArray, DataWithCoords):
         difference : same type as caller
             The n-th order finite difference of this object.
 
+        .. note::
+
+            `n` matches numpy's behavior and is different from pandas' first
+            argument named `periods`.
+
+
         Examples
         --------
         >>> arr = xr.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ['x'])
@@ -2971,7 +2980,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
 
         Examples
         --------

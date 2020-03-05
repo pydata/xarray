@@ -3,23 +3,25 @@ channels:
   # Don't change to pkgs/main, as it causes random timeouts in readthedocs
   - conda-forge
 dependencies:
-  - python=3.7
+  - python=3.8
   - bottleneck
   - cartopy
-  - cfgrib
-  - h5netcdf
+  - cfgrib>=0.9
+  - dask>=2.10
+  - h5netcdf>=0.7.4
   - ipykernel
   - ipython
-  - iris
+  - iris>=2.3
   - jupyter_client
   - nbsphinx
-  - netcdf4
+  - netcdf4>=1.5
   - numba
-  - numpy
+  - numpy>=1.17
   - numpydoc
-  - pandas<0.25  # Hack around https://github.com/pydata/xarray/issues/3369
-  - rasterio
+  - pandas>=1.0
+  - rasterio>=1.1
   - seaborn
-  - sphinx
-  - sphinx_rtd_theme
-  - zarr
+  - setuptools
+  - sphinx>=2.3
+  - sphinx_rtd_theme>=0.4
+  - zarr>=2.4

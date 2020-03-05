@@ -222,4 +222,4 @@ Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
 
 For more examples of using grouped operations on a time dimension, see
-:ref:`toy weather data`.
+:doc:`examples/weather-data`.

@@ -2,5 +2,5 @@
 
  - [ ] Closes #xxxx
  - [ ] Tests added
- - [ ] Passes `black . && mypy . && flake8`
+ - [ ] Passes `isort -rc . && black . && mypy . && flake8`
  - [ ] Fully documented, including `whats-new.rst` for all changes and `api.rst` for new API

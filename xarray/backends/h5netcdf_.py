@@ -1,10 +1,11 @@
 import functools
+from distutils.version import LooseVersion
 
 import numpy as np
 
-from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri
+from ..core.variable import Variable
 from .common import WritableCFDataStore, find_root_and_group
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
@@ -117,6 +118,7 @@ class H5NetCDFStore(WritableCFDataStore):
         lock=None,
         autoclose=False,
         invalid_netcdf=None,
+        phony_dims=None,
     ):
         import h5netcdf
 
@@ -124,6 +126,14 @@ class H5NetCDFStore(WritableCFDataStore):
             raise ValueError("invalid format for h5netcdf backend")
 
         kwargs = {"invalid_netcdf": invalid_netcdf}
+        if phony_dims is not None:
+            if LooseVersion(h5netcdf.__version__) >= LooseVersion("0.8.0"):
+                kwargs["phony_dims"] = phony_dims
+            else:
+                raise ValueError(
+                    "h5netcdf backend keyword argument 'phony_dims' needs "
+                    "h5netcdf >= 0.8.0."
+                )
 
         if lock is None:
             if mode == "r":

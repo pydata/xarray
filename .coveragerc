@@ -5,4 +5,3 @@ omit =
     xarray/core/npcompat.py
     xarray/core/pdcompat.py
     xarray/core/pycompat.py
-    xarray/_version.py

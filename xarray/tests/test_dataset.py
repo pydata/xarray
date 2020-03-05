@@ -1408,6 +1408,56 @@ class TestDataset:
                 )
             )
 
+    def test_sel_categorical(self):
+        ind = pd.Series(["foo", "bar"], dtype="category")
+        df = pd.DataFrame({"ind": ind, "values": [1, 2]})
+        ds = df.set_index("ind").to_xarray()
+        actual = ds.sel(ind="bar")
+        expected = ds.isel(ind=1)
+        assert_identical(expected, actual)
+
+    def test_sel_categorical_error(self):
+        ind = pd.Series(["foo", "bar"], dtype="category")
+        df = pd.DataFrame({"ind": ind, "values": [1, 2]})
+        ds = df.set_index("ind").to_xarray()
+        with pytest.raises(ValueError):
+            ds.sel(ind="bar", method="nearest")
+        with pytest.raises(ValueError):
+            ds.sel(ind="bar", tolerance="nearest")
+
+    def test_categorical_index(self):
+        cat = pd.CategoricalIndex(
+            ["foo", "bar", "foo"],
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
+        )
+        ds = xr.Dataset(
+            {"var": ("cat", np.arange(3))},
+            coords={"cat": ("cat", cat), "c": ("cat", [0, 1, 1])},
+        )
+        # test slice
+        actual = ds.sel(cat="foo")
+        expected = ds.isel(cat=[0, 2])
+        assert_identical(expected, actual)
+        # make sure the conversion to the array works
+        actual = ds.sel(cat="foo")["cat"].values
+        assert (actual == np.array(["foo", "foo"])).all()
+
+        ds = ds.set_index(index=["cat", "c"])
+        actual = ds.unstack("index")
+        assert actual["var"].shape == (2, 2)
+
+    def test_categorical_reindex(self):
+        cat = pd.CategoricalIndex(
+            ["foo", "bar", "baz"],
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
+        )
+        ds = xr.Dataset(
+            {"var": ("cat", np.arange(3))},
+            coords={"cat": ("cat", cat), "c": ("cat", [0, 1, 2])},
+        )
+        actual = ds.reindex(cat=["foo"])["cat"].values
+        assert (actual == np.array(["foo"])).all()
+
     def test_sel_drop(self):
         data = Dataset({"foo": ("x", [1, 2, 3])}, {"x": [0, 1, 2]})
         expected = Dataset({"foo": 1})
@@ -2546,7 +2596,7 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        assert actual.indexes["y"].equals(pd.Index(list("abc")))
+        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
 
         roundtripped = actual.swap_dims({"y": "x"})
         assert_identical(original.set_coords("y"), roundtripped)
@@ -2561,6 +2611,16 @@ class TestDataset:
         )
         actual = original.swap_dims({"x": "u"})
         assert_identical(expected, actual)
+
+        # handle multiindex case
+        idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
+        original = Dataset({"x": [1, 2, 3], "y": ("x", idx), "z": 42})
+        expected = Dataset({"z": 42}, {"x": ("y", [1, 2, 3]), "y": idx})
+        actual = original.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+        assert isinstance(actual.variables["y"], IndexVariable)
+        assert isinstance(actual.variables["x"], Variable)
+        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
 
     def test_expand_dims_error(self):
         original = Dataset(
@@ -3864,6 +3924,21 @@ class TestDataset:
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=["x", "y"])
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
+
+    def test_from_dataframe_categorical(self):
+        cat = pd.CategoricalDtype(
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"]
+        )
+        i1 = pd.Series(["foo", "bar", "foo"], dtype=cat)
+        i2 = pd.Series(["bar", "bar", "baz"], dtype=cat)
+
+        df = pd.DataFrame({"i1": i1, "i2": i2, "values": [1, 2, 3]})
+        ds = df.set_index("i1").to_xarray()
+        assert len(ds["i1"]) == 3
+
+        ds = df.set_index(["i1", "i2"]).to_xarray()
+        assert len(ds["i1"]) == 2
+        assert len(ds["i2"]) == 2
 
     @requires_sparse
     def test_from_dataframe_sparse(self):
@@ -5587,6 +5662,62 @@ def test_coarsen_coords_cftime():
     actual = da.coarsen(time=3).mean()
     expected_times = xr.cftime_range("2000-01-02", freq="3D", periods=2)
     np.testing.assert_array_equal(actual.time, expected_times)
+
+
+def test_coarsen_keep_attrs():
+    _attrs = {"units": "test", "long_name": "testing"}
+
+    var1 = np.linspace(10, 15, 100)
+    var2 = np.linspace(5, 10, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = Dataset(
+        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
+        coords={"coord": coords},
+        attrs=_attrs,
+    )
+
+    # Test dropped attrs
+    dat = ds.coarsen(coord=5).mean()
+    assert dat.attrs == {}
+
+    # Test kept attrs using dataset keyword
+    dat = ds.coarsen(coord=5, keep_attrs=True).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with set_options(keep_attrs=True):
+        dat = ds.coarsen(coord=5).mean()
+    assert dat.attrs == _attrs
+
+
+def test_rolling_keep_attrs():
+    _attrs = {"units": "test", "long_name": "testing"}
+
+    var1 = np.linspace(10, 15, 100)
+    var2 = np.linspace(5, 10, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = Dataset(
+        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
+        coords={"coord": coords},
+        attrs=_attrs,
+    )
+
+    # Test dropped attrs
+    dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
+    assert dat.attrs == {}
+
+    # Test kept attrs using dataset keyword
+    dat = ds.rolling(
+        dim={"coord": 5}, min_periods=None, center=False, keep_attrs=True
+    ).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with set_options(keep_attrs=True):
+        dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
+    assert dat.attrs == _attrs
 
 
 def test_rolling_properties(ds):

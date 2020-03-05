@@ -17,13 +17,11 @@ from .utils import (
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
-    _interval_to_double_bound_points,
-    _interval_to_mid_points,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
+    _resolve_intervals_1dplot,
     _resolve_intervals_2dplot,
     _update_axes,
-    _valid_other_type,
     get_axis,
     import_matplotlib_pyplot,
     label_from_attrs,
@@ -296,29 +294,10 @@ def line(
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, hue_label = _infer_line_data(darray, x, y, hue)
 
-    # Remove pd.Intervals if contained in xplt.values.
-    if _valid_other_type(xplt.values, [pd.Interval]):
-        # Is it a step plot? (see matplotlib.Axes.step)
-        if kwargs.get("linestyle", "").startswith("steps-"):
-            xplt_val, yplt_val = _interval_to_double_bound_points(
-                xplt.values, yplt.values
-            )
-            # Remove steps-* to be sure that matplotlib is not confused
-            kwargs["linestyle"] = (
-                kwargs["linestyle"]
-                .replace("steps-pre", "")
-                .replace("steps-post", "")
-                .replace("steps-mid", "")
-            )
-            if kwargs["linestyle"] == "":
-                del kwargs["linestyle"]
-        else:
-            xplt_val = _interval_to_mid_points(xplt.values)
-            yplt_val = yplt.values
-            xlabel += "_center"
-    else:
-        xplt_val = xplt.values
-        yplt_val = yplt.values
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, xlabel, ylabel, kwargs = _resolve_intervals_1dplot(
+        xplt.values, yplt.values, xlabel, ylabel, kwargs
+    )
 
     _ensure_plottable(xplt_val, yplt_val)
 
@@ -360,6 +339,7 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
     ----------
     where : {'pre', 'post', 'mid'}, optional, default 'pre'
         Define where the steps should be placed:
+
         - 'pre': The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
@@ -367,12 +347,13 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
         - 'mid': Steps occur half-way between the *x* positions.
-        Note that this parameter is ignored if the x coordinate consists of
+
+        Note that this parameter is ignored if one coordinate consists of
         :py:func:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
 
-    *args, **kwargs : optional
+    ``*args``, ``**kwargs`` : optional
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:

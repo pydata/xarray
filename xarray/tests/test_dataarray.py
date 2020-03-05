@@ -80,7 +80,7 @@ class TestDataArray:
         assert expected == repr(self.mda)
 
     @pytest.mark.skipif(
-        LooseVersion(np.__version__) < "1.15",
+        LooseVersion(np.__version__) < "1.16",
         reason="old versions of numpy have different printing behavior",
     )
     def test_repr_multiindex_long(self):
@@ -1536,11 +1536,30 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
 
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
+
+        # multiindex case
+        idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
+        array = DataArray(np.random.randn(3), {"y": ("x", idx)}, "x")
+        expected = DataArray(array.values, {"y": idx}, "y")
+        actual = array.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
 
     def test_expand_dims_error(self):
         array = DataArray(
