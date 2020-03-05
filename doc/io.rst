@@ -776,9 +776,9 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
     <xarray.DataArray (band: 3, y: 718, x: 791)>
     [1703814 values with dtype=uint8]
     Coordinates:
-    * band         (band) int64 1 2 3
-    * y            (y) float64 2.827e+06 2.826e+06 ... 2.612e+06 2.612e+06
-    * x            (x) float64 1.021e+05 1.024e+05 ... 3.389e+05 3.392e+05
+      * band         (band) int64 1 2 3
+      * y            (y) float64 2.827e+06 2.826e+06 ... 2.612e+06 2.612e+06
+      * x            (x) float64 1.021e+05 1.024e+05 ... 3.389e+05 3.392e+05
         spatial_ref  int64 0
     Attributes:
         STATISTICS_MAXIMUM:  255
@@ -792,14 +792,12 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
         grid_mapping:        spatial_ref
 
     In [4]: rds.rio.crs
-    Out[4]:
-    CRS.from_epsg(32618)
+    Out[4]: CRS.from_epsg(32618)
 
     In [5]: rds4326 = rio.rio.reproject("epsg:4326")
 
     In [6]: rds4326.rio.crs
-    Out[6]:
-    CRS.from_epsg(4326)
+    Out[6]: CRS.from_epsg(4326)
 
     In [7]: rds4326.rio.to_raster('RGB.byte.4326.tif')
 
@@ -848,7 +846,7 @@ To write to a local directory, we pass a path to a directory
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
 there.) If the directory does not exist, it will be created. If a zarr
 store is already present at that path, an error will be raised, preventing it
-from being overwritten. To override this behavior and overwrite an existing
+
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
 It is also possible to append to an existing store. For that, set
