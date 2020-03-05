@@ -2692,6 +2692,12 @@ class DataArray(AbstractArray, DataWithCoords):
         difference : same type as caller
             The n-th order finite difference of this object.
 
+        .. note::
+
+            `n` matches numpy's behavior and is different from pandas' first
+            argument named `periods`.
+
+
         Examples
         --------
         >>> arr = xr.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ['x'])
