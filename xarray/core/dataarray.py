@@ -3508,6 +3508,194 @@ class DataArray(AbstractArray, DataWithCoords):
         )
         return self._from_temp_dataset(ds)
 
+    def idxmin(
+        self,
+        dim: Hashable = None,
+        skipna: bool = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool = None,
+    ) -> "DataArray":
+        """Return the coordinate label of the minimum value along a dimension.
+
+        Returns a new `DataArray` named after the dimension with the values of
+        the coordinate labels along that dimension corresponding to minimum
+        values along that dimension.
+
+        In comparison to :py:meth:`~DataArray.argmin`, this returns the
+        coordinate label while :py:meth:`~DataArray.argmin` returns the index.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension over which to apply `idxmin`.  This is optional for 1D
+            arrays, but required for arrays with 2 or more dimensions.
+        skipna : bool or None, default None
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for ``float``, ``complex``, and ``object``
+            dtypes; other dtypes either do not have a sentinel missing value
+            (``int``) or ``skipna=True`` has not been implemented
+            (``datetime64`` or ``timedelta64``).
+        fill_value : Any, default NaN
+            Value to be filled in case all of the values along a dimension are
+            null.  By default this is NaN.  The fill value and result are
+            automatically converted to a compatible dtype if possible.
+            Ignored if ``skipna`` is False.
+        keep_attrs : bool, default False
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one.  If False (default), the new object
+            will be returned without attributes.
+
+        Returns
+        -------
+        reduced : DataArray
+            New `DataArray` object with `idxmin` applied to its data and the
+            indicated dimension removed.
+
+        See also
+        --------
+        Dataset.idxmin, DataArray.idxmax, DataArray.min, DataArray.argmin
+
+        Examples
+        --------
+
+        >>> array = xr.DataArray([0, 2, 1, 0, -2], dims="x",
+        ...                      coords={"x": ['a', 'b', 'c', 'd', 'e']})
+        >>> array.min()
+        <xarray.DataArray ()>
+        array(-2)
+        >>> array.argmin()
+        <xarray.DataArray ()>
+        array(4)
+        >>> array.idxmin()
+        <xarray.DataArray 'x' ()>
+        array('e', dtype='<U1')
+
+        >>> array = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
+        ...                       [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...                       [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
+        ...                      dims=["y", "x"],
+        ...                      coords={"y": [-1, 0, 1],
+        ...                              "x": np.arange(5.)**2}
+        ...                      )
+        >>> array.min(dim="x")
+        <xarray.DataArray (y: 3)>
+        array([-2., -4.,  1.])
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        >>> array.argmin(dim="x")
+        <xarray.DataArray (y: 3)>
+        array([4, 0, 2])
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        >>> array.idxmin(dim="x")
+        <xarray.DataArray 'x' (y: 3)>
+        array([16.,  0.,  4.])
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        """
+        return computation._calc_idxminmax(
+            array=self,
+            func=lambda x, *args, **kwargs: x.argmin(*args, **kwargs),
+            dim=dim,
+            skipna=skipna,
+            fill_value=fill_value,
+            keep_attrs=keep_attrs,
+        )
+
+    def idxmax(
+        self,
+        dim: Hashable = None,
+        skipna: bool = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool = None,
+    ) -> "DataArray":
+        """Return the coordinate label of the maximum value along a dimension.
+
+        Returns a new `DataArray` named after the dimension with the values of
+        the coordinate labels along that dimension corresponding to maximum
+        values along that dimension.
+
+        In comparison to :py:meth:`~DataArray.argmax`, this returns the
+        coordinate label while :py:meth:`~DataArray.argmax` returns the index.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension over which to apply `idxmax`.  This is optional for 1D
+            arrays, but required for arrays with 2 or more dimensions.
+        skipna : bool or None, default None
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for ``float``, ``complex``, and ``object``
+            dtypes; other dtypes either do not have a sentinel missing value
+            (``int``) or ``skipna=True`` has not been implemented
+            (``datetime64`` or ``timedelta64``).
+        fill_value : Any, default NaN
+            Value to be filled in case all of the values along a dimension are
+            null.  By default this is NaN.  The fill value and result are
+            automatically converted to a compatible dtype if possible.
+            Ignored if ``skipna`` is False.
+        keep_attrs : bool, default False
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one.  If False (default), the new object
+            will be returned without attributes.
+
+        Returns
+        -------
+        reduced : DataArray
+            New `DataArray` object with `idxmax` applied to its data and the
+            indicated dimension removed.
+
+        See also
+        --------
+        Dataset.idxmax, DataArray.idxmin, DataArray.max, DataArray.argmax
+
+        Examples
+        --------
+
+        >>> array = xr.DataArray([0, 2, 1, 0, -2], dims="x",
+        ...                      coords={"x": ['a', 'b', 'c', 'd', 'e']})
+        >>> array.max()
+        <xarray.DataArray ()>
+        array(2)
+        >>> array.argmax()
+        <xarray.DataArray ()>
+        array(1)
+        >>> array.idxmax()
+        <xarray.DataArray 'x' ()>
+        array('b', dtype='<U1')
+
+        >>> array = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
+        ...                       [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...                       [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
+        ...                      dims=["y", "x"],
+        ...                      coords={"y": [-1, 0, 1],
+        ...                              "x": np.arange(5.)**2}
+        ...                      )
+        >>> array.max(dim="x")
+        <xarray.DataArray (y: 3)>
+        array([2., 2., 1.])
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        >>> array.argmax(dim="x")
+        <xarray.DataArray (y: 3)>
+        array([0, 2, 2])
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        >>> array.idxmax(dim="x")
+        <xarray.DataArray 'x' (y: 3)>
+        array([0., 4., 4.])
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        """
+        return computation._calc_idxminmax(
+            array=self,
+            func=lambda x, *args, **kwargs: x.argmax(*args, **kwargs),
+            dim=dim,
+            skipna=skipna,
+            fill_value=fill_value,
+            keep_attrs=keep_attrs,
+        )
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
