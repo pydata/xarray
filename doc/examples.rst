@@ -17,3 +17,12 @@ Using apply_ufunc
     :maxdepth: 2
 
     examples/apply_ufunc_vectorize_1d
+
+External Examples
+-----------------
+.. toctree::
+    :maxdepth: 2
+
+    Managing raster data with rioxarray <https://corteva.github.io/rioxarray/stable/examples/examples.html>
+    Xarray with dask <https://examples.dask.org/xarray.html>
+    Xarray and dask on the cloud with Pangeo <http://pangeo.io/use_cases/index.html#use-cases>

@@ -759,9 +759,53 @@ for an example of how to convert these to longitudes and latitudes.
     considered as being experimental. Please report any bug you may find
     on xarray's github repository.
 
+
+Additionally, you can use `rioxarray`_ for reading in GeoTiff, netCDF or other
+GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIFF.
+`rioxarray`_ can also handle geospatial related tasks such as re-projecting and clipping.
+
+.. ipython::
+    :verbatim:
+
+    In [1]: import rioxarray
+
+    In [2]: rds = rioxarray.open_rasterio('RGB.byte.tif')
+
+    In [3]: rds
+    Out[3]:
+    <xarray.DataArray (band: 3, y: 718, x: 791)>
+    [1703814 values with dtype=uint8]
+    Coordinates:
+      * band         (band) int64 1 2 3
+      * y            (y) float64 2.827e+06 2.826e+06 ... 2.612e+06 2.612e+06
+      * x            (x) float64 1.021e+05 1.024e+05 ... 3.389e+05 3.392e+05
+        spatial_ref  int64 0
+    Attributes:
+        STATISTICS_MAXIMUM:  255
+        STATISTICS_MEAN:     29.947726688477
+        STATISTICS_MINIMUM:  0
+        STATISTICS_STDDEV:   52.340921626611
+        transform:           (300.0379266750948, 0.0, 101985.0, 0.0, -300.0417827...
+        _FillValue:          0.0
+        scale_factor:        1.0
+        add_offset:          0.0
+        grid_mapping:        spatial_ref
+
+    In [4]: rds.rio.crs
+    Out[4]: CRS.from_epsg(32618)
+
+    In [5]: rds4326 = rio.rio.reproject("epsg:4326")
+
+    In [6]: rds4326.rio.crs
+    Out[6]: CRS.from_epsg(4326)
+
+    In [7]: rds4326.rio.to_raster('RGB.byte.4326.tif')
+
+
 .. _rasterio: https://rasterio.readthedocs.io/en/latest/
+.. _rioxarray: https://corteva.github.io/rioxarray/stable/
 .. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
-.. _pyproj: https://github.com/jswhit/pyproj
+.. _pyproj: https://github.com/pyproj4/pyproj
 
 .. _io.zarr:
 
