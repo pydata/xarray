@@ -133,10 +133,11 @@ def pad(array, pad_width, mode="constant", **kwargs):
     # workaround for inconsistency between numpy and dask: https://github.com/dask/dask/issues/5303
     if mode == "mean" and issubclass(array.dtype.type, np.integer):
         warnings.warn(
-            '`dask.array.pad(mode="mean")` converts integers to floats. xarray converts '
-            "these floats back to integers, to keep the interface consistent. There is a chance that "
+            'dask.array.pad(mode="mean") converts integers to floats. xarray converts '
+            "these floats back to integers to keep the interface consistent. There is a chance that "
             "this introduces rounding errors. If you wish to keep the values as floats, first change "
-            "the type to a float before calling `pad`."
+            "the dtype to a float before calling pad.",
+            UserWarning,
         )
         return da.round(padded).astype(array.dtype)
     _validate_pad_output_shape(array.shape, pad_width, padded.shape)

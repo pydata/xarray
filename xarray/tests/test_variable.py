@@ -38,6 +38,14 @@ from . import (
     source_ndarray,
 )
 
+_PAD_XR_NP_ARGS = [
+    [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
+    [{"x": 1}, ((1, 1), (0, 0), (0, 0))],
+    [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
+    [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
+    [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
+]
+
 
 class VariableSubclassobjects:
     def test_properties(self):
@@ -809,34 +817,18 @@ class VariableSubclassobjects:
             "wrap",
         ],
     )
-    @pytest.mark.parametrize(
-        "xr_arg, np_arg",
-        [
-            [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
-            [{"x": 1}, ((1, 1), (0, 0), (0, 0))],
-            [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
-            [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
-            [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
-        ],
-    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
     def test_pad(self, mode, xr_arg, np_arg):
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
 
         actual = v.pad(mode=mode, **xr_arg)
-        expected = np.pad(data, np_arg, mode=mode,)
+        expected = np.pad(data, np_arg, mode=mode)
 
         assert_array_equal(actual, expected)
         assert isinstance(actual._data, type(v._data))
 
-    @pytest.mark.parametrize(
-        "xr_arg, np_arg",
-        [
-            [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
-            [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
-            [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
-        ],
-    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
     def test_pad_constant_values(self, xr_arg, np_arg):
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
@@ -2078,7 +2070,6 @@ class TestIndexVariable(VariableSubclassobjects):
     def test_getitem_uint(self):
         super().test_getitem_fancy()
 
-    # TODO would be nice if it was not necessary to repeat all the parameters
     @pytest.mark.xfail
     @pytest.mark.parametrize(
         "mode",
@@ -2094,26 +2085,12 @@ class TestIndexVariable(VariableSubclassobjects):
             "wrap",
         ],
     )
-    @pytest.mark.parametrize(
-        "xr_arg, np_arg",
-        [
-            [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
-            [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
-            [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
-        ],
-    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
     @pytest.mark.xfail
-    @pytest.mark.parametrize(
-        "xr_arg, np_arg",
-        [
-            [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
-            [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
-            [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
-        ],
-    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
     def test_pad_constant_values(self, xr_arg, np_arg):
         super().test_pad_constant_values(xr_arg, np_arg)
 

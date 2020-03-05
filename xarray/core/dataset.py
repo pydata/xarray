@@ -5713,8 +5713,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
             Number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode : str (taken from numpy docs)
-            One of the following string values.
+        mode : str
+            One of the following string values (taken from numpy docs).
 
             'constant' (default)
                 Pads with a constant value.
@@ -5783,7 +5783,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             subtracting the reflected values from two times the edge value.
         **pad_width_kwargs:
             The keyword arguments form of ``pad_width``.
-            One of pad_width or pad_width_kwarg must be provided.
+            One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
 
         Returns
         -------
@@ -5793,6 +5793,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See also
         --------
         Dataset.shift, Dataset.roll, numpy.pad, dask.array.pad
+
+        Notes
+        -----
+        By default when ``mode="constant"`` and ``constant_values=None``, integer types will be
+        promoted to ``float`` and padded with ``np.nan``. To avoid type promotion
+        specify ``constant_values=np.nan``
 
         Examples
         --------

@@ -3257,8 +3257,8 @@ class DataArray(AbstractArray, DataWithCoords):
         pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
             Number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode : str (taken from numpy docs)
-            One of the following string values
+        mode : str
+            One of the following string values (taken from numpy docs)
 
             'constant' (default)
                 Pads with a constant value.
@@ -3327,7 +3327,7 @@ class DataArray(AbstractArray, DataWithCoords):
             subtracting the reflected values from two times the edge value.
         **pad_width_kwargs:
             The keyword arguments form of ``pad_width``.
-            One of pad_width or pad_width_kwarg must be provided.
+            One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
 
         Returns
         -------
@@ -3338,6 +3338,12 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.shift, DataArray.roll, numpy.pad, dask.array.pad
 
+        Notes
+        -----
+        By default when ``mode="constant"`` and ``constant_values=None``, integer types will be
+        promoted to ``float`` and padded with ``np.nan``. To avoid type promotion
+        specify ``constant_values=np.nan``
+
         Examples
         --------
 
@@ -3347,6 +3353,35 @@ class DataArray(AbstractArray, DataWithCoords):
         array([0, 5, 6, 7, 0, 0])
         Coordinates:
           * x        (x) float64 nan 0.0 1.0 2.0 nan nan
+
+        >>> da = xr.DataArray([[0,1,2,3], [10,11,12,13]],
+                              dims=["x", "y"],
+                              coords={"x": [0,1], "y": [10, 20 ,30, 40], "z": ("x", [100, 200])}
+            )
+        >>> da.pad(x=1)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[nan, nan, nan, nan],
+               [ 0.,  1.,  2.,  3.],
+               [10., 11., 12., 13.],
+               [nan, nan, nan, nan]])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 nan
+          * y        (y) int64 10 20 30 40
+            z        (x) float64 nan 100.0 200.0 nan
+        >>> da.pad(x=1, constant_values=np.nan)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[-9223372036854775808, -9223372036854775808, -9223372036854775808,
+                -9223372036854775808],
+               [                   0,                    1,                    2,
+                                   3],
+               [                  10,                   11,                   12,
+                                  13],
+               [-9223372036854775808, -9223372036854775808, -9223372036854775808,
+                -9223372036854775808]])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 nan
+          * y        (y) int64 10 20 30 40
+            z        (x) float64 nan 100.0 200.0 nan
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,

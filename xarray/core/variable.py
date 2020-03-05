@@ -1206,8 +1206,8 @@ class Variable(
             default with an unaltered reflection around the edge value.  For
             the 'odd' style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
-        **pad_width_kwarg:
-            One of pad_width or pad_width_kwarg must be provided.
+        **pad_width_kwargs:
+            One of pad_width or pad_width_kwargs must be provided.
 
         Returns
         -------
