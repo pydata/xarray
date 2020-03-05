@@ -50,7 +50,7 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
 
 
 class Weighted:
-    """A object that implements weighted operations.
+    """An object that implements weighted operations.
 
     You should create a Weighted object by using the ``DataArray.weighted`` or
     ``Dataset.weighted`` methods.
@@ -118,13 +118,12 @@ class Weighted:
 
         # `dot` does not broadcast arrays, so this avoids creating a large
         # DataArray (if `weights` has additional dimensions)
-        # TODO: maybe add fasttrack (`(mask * weights).sum(dims=dim, skipna=skipna)`)
+        # TODO: add fasttrack (`(mask * weights).sum(dims=dim, skipna=skipna)`)
         sum_of_weights = dot(mask, self.weights, dims=dim)
 
-        # find all weights that are valid (not 0)
+        # 0-weights are not valid
         valid_weights = sum_of_weights != 0.0
 
-        # set invalid weights to nan
         return sum_of_weights.where(valid_weights)
 
     def _weighted_sum(
@@ -145,7 +144,7 @@ class Weighted:
 
         # `dot` does not broadcast arrays, so this avoids creating a large
         # DataArray (if `weights` has additional dimensions)
-        # TODO: maybe add fasttrack (`(da * weights).sum(dims=dim, skipna=skipna)`)
+        # maybe add fasttrack (`(da * weights).sum(dims=dim, skipna=skipna)`)
         return dot(da, self.weights, dims=dim)
 
     def _weighted_mean(
@@ -156,13 +155,10 @@ class Weighted:
     ) -> "DataArray":
         """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
 
-        # get weighted sum
         weighted_sum = self._weighted_sum(da, dim=dim, skipna=skipna)
 
-        # get the sum of weights
         sum_of_weights = self._sum_of_weights(da, dim=dim)
 
-        # calculate weighted mean
         return weighted_sum / sum_of_weights
 
     def _implementation(self, func, dim, **kwargs):
