@@ -68,12 +68,12 @@ def test_nested_options():
 
 
 def test_display_style():
-    original = "text"
+    original = "html"
     assert OPTIONS["display_style"] == original
     with pytest.raises(ValueError):
         xarray.set_options(display_style="invalid_str")
-    with xarray.set_options(display_style="html"):
-        assert OPTIONS["display_style"] == "html"
+    with xarray.set_options(display_style="text"):
+        assert OPTIONS["display_style"] == "text"
     assert OPTIONS["display_style"] == original
 
 
@@ -177,10 +177,11 @@ class TestAttrRetention:
 
     def test_display_style_text(self):
         ds = create_test_dataset_attrs()
-        text = ds._repr_html_()
-        assert text.startswith("<pre>")
-        assert "&#x27;nested&#x27;" in text
-        assert "&lt;xarray.Dataset&gt;" in text
+        with xarray.set_options(display_style="text"):
+            text = ds._repr_html_()
+            assert text.startswith("<pre>")
+            assert "&#x27;nested&#x27;" in text
+            assert "&lt;xarray.Dataset&gt;" in text
 
     def test_display_style_html(self):
         ds = create_test_dataset_attrs()
@@ -191,9 +192,10 @@ class TestAttrRetention:
 
     def test_display_dataarray_style_text(self):
         da = create_test_dataarray_attrs()
-        text = da._repr_html_()
-        assert text.startswith("<pre>")
-        assert "&lt;xarray.DataArray &#x27;var1&#x27;" in text
+        with xarray.set_options(display_style="text"):
+            text = da._repr_html_()
+            assert text.startswith("<pre>")
+            assert "&lt;xarray.DataArray &#x27;var1&#x27;" in text
 
     def test_display_dataarray_style_html(self):
         da = create_test_dataarray_attrs()
