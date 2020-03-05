@@ -25,8 +25,9 @@ assignees: ''
 <!-- this should explain why the current behavior is a problem and why the expected output is a better solution -->
 
 
-#### Output of ``xr.show_versions()``
-<details>
+#### Output of `xr.show_versions()`
+
+<details><summary>Installed versions</summary>
 <!-- Paste the output here xr.show_versions() here -->
 
 </details>
