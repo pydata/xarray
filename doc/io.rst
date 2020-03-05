@@ -846,7 +846,7 @@ To write to a local directory, we pass a path to a directory
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
 there.) If the directory does not exist, it will be created. If a zarr
 store is already present at that path, an error will be raised, preventing it
-
+from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
 It is also possible to append to an existing store. For that, set
