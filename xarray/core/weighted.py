@@ -104,6 +104,31 @@ class Weighted:
         self.obj = obj
         self.weights = weights
 
+    @staticmethod
+    def _reduce(
+        da: "DataArray",
+        weights: "DataArray",
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+    ) -> "DataArray":
+        """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
+
+            for internal use only
+        """
+
+        # need to infer dims as we use `dot`
+        if dim is None:
+            dim = ...
+
+        # need to mask invalid values in da, as `dot` does not implement skipna
+        if skipna or (skipna is None and da.dtype.kind in "cfO"):
+            da = da.fillna(0.0)
+
+        # `dot` does not broadcast arrays, so this avoids creating a large
+        # DataArray (if `weights` has additional dimensions)
+        # maybe add fasttrack (`(da * weights).sum(dims=dim, skipna=skipna)`)
+        return dot(da, weights, dims=dim)
+
     def _sum_of_weights(
         self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
     ) -> "DataArray":
@@ -112,14 +137,7 @@ class Weighted:
         # we need to mask data values that are nan; else the weights are wrong
         mask = da.notnull()
 
-        # need to infer dims as we use `dot`
-        if dim is None:
-            dim = ...
-
-        # `dot` does not broadcast arrays, so this avoids creating a large
-        # DataArray (if `weights` has additional dimensions)
-        # TODO: add fasttrack (`(mask * weights).sum(dims=dim, skipna=skipna)`)
-        sum_of_weights = dot(mask, self.weights, dims=dim)
+        sum_of_weights = self._reduce(mask, self.weights, dim=dim, skipna=False)
 
         # 0-weights are not valid
         valid_weights = sum_of_weights != 0.0
@@ -134,18 +152,7 @@ class Weighted:
     ) -> "DataArray":
         """Reduce a DataArray by a by a weighted ``sum`` along some dimension(s)."""
 
-        # need to infer dims as we use `dot`
-        if dim is None:
-            dim = ...
-
-        # need to mask invalid DATA as `dot` does not implement skipna
-        if skipna or (skipna is None and da.dtype.kind in "cfO"):
-            da = da.fillna(0.0)
-
-        # `dot` does not broadcast arrays, so this avoids creating a large
-        # DataArray (if `weights` has additional dimensions)
-        # maybe add fasttrack (`(da * weights).sum(dims=dim, skipna=skipna)`)
-        return dot(da, self.weights, dims=dim)
+        return self._reduce(da, self.weights, dim=dim, skipna=skipna)
 
     def _weighted_mean(
         self,
