@@ -1119,6 +1119,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         >>> import numpy as np
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=('x', 'y'))
+        >>> a
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+            [ 5,  6,  7,  8,  9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 4)
         <xarray.DataArray (x: 5, y: 5)>
         array([[  0.,   1.,   2.,   3.,  nan],
@@ -1127,6 +1136,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                [ 15.,  nan,  nan,  nan,  nan],
                [ nan,  nan,  nan,  nan,  nan]])
         Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 5, -1)
         <xarray.DataArray (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
@@ -1135,7 +1145,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                [15, 16, -1, -1, -1],
                [20, -1, -1, -1, -1]])
         Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 4, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  0.,   1.,   2.,   3.],
+               [  5.,   6.,   7.,  nan],
+               [ 10.,  11.,  nan,  nan],
+               [ 15.,  nan,  nan,  nan]])
+        Dimensions without coordinates: x, y
+
+        >>> a.where(lambda x: x.x + x.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)>
         array([[  0.,   1.,   2.,   3.],
                [  5.,   6.,   7.,  nan],
