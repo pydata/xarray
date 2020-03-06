@@ -86,6 +86,7 @@ from .utils import (
     decode_numpy_dict_values,
     either_dict_or_kwargs,
     hashable,
+    infix_dims,
     is_dict_like,
     is_scalar,
     maybe_wrap_array,
@@ -3235,8 +3236,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables, indexes=indexes)
 
     def _stack_once(self, dims, new_dim):
-        if list(dims) == [...]:
-            dims = self.dims
+        if ... in dims:
+            dims = list(infix_dims(dims, self.dims))
         variables = {}
         for name, var in self.variables.items():
             if name not in dims:
@@ -3279,7 +3280,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dimensions : Mapping of the form new_name=(dim1, dim2, ...)
             Names of new dimensions, and the existing dimensions that they
-            replace. Passing a list with an ellipsis (`[...]`) as existing
+            replace. Passing a list containing an ellipsis (`[...]`)
             dimensions will stack over all dimensions.
         **dimensions_kwargs:
             The keyword arguments form of ``dimensions``.
