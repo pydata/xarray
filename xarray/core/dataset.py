@@ -4362,8 +4362,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
@@ -4383,7 +4381,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Where the value is a callable, evaluated on dataset:
 
-        >>> x.assign(temperature_f = lambda x: x.temperature_c * 9 / 5 + 32)
+        >>> x.assign(temperature_f=lambda x: x.temperature_c * 9 / 5 + 32)
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
