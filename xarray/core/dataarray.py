@@ -2939,6 +2939,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dim: Union[Hashable, Sequence[Hashable], None] = None,
         interpolation: str = "linear",
         keep_attrs: bool = None,
+        skipna: bool = True,
     ) -> "DataArray":
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -3015,7 +3016,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
 
         ds = self._to_temp_dataset().quantile(
-            q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation
+            q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation, skipna=skipna
         )
         return self._from_temp_dataset(ds)
 
