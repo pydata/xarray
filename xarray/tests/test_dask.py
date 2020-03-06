@@ -1196,6 +1196,7 @@ def test_map_blocks_errors_bad_template(obj):
     with raises_regex(ValueError, "Received dimension 'x' of length 1"):
         xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=obj).compute()
 
+
 def test_map_blocks_errors_bad_template_2(map_ds):
     with raises_regex(ValueError, "unexpected data variables {'xyz'}"):
         xr.map_blocks(lambda x: x.assign(xyz=1), map_ds, template=map_ds).compute()
