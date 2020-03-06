@@ -65,7 +65,8 @@ Bug fixes
   to preserve attributes. :py:meth:`Dataset.coarsen` accepts a keyword
   argument ``keep_attrs`` to change this setting. (:issue:`3376`,
   :pull:`3801`) By `Andrew Thomas <https://github.com/amcnicho>`_.
-  
+- Delete associated indexes when deleting coordinate variables. (:issue:`3746`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
   simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
 

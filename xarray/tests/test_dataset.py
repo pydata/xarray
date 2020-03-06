@@ -744,6 +744,10 @@ class TestDataset:
         expected = data.merge({"c": 11}).set_coords("c")
         assert_identical(expected, actual)
 
+        # regression test for GH3746
+        del actual.coords["x"]
+        assert "x" not in actual.indexes
+
     def test_update_index(self):
         actual = Dataset(coords={"x": [1, 2, 3]})
         actual["x"] = ["a", "b", "c"]
