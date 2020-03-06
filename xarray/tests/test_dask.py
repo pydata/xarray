@@ -1184,8 +1184,21 @@ def test_map_blocks_da_ds_with_template(obj):
         actual = xr.map_blocks(func, obj, template=template)
     assert_identical(actual, template)
 
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks_errors_bad_template(obj):
+    with raises_regex(ValueError, "unexpected coordinate variables"):
+        xr.map_blocks(lambda x: x.assign_coords(a=10), obj, template=obj).compute()
+    with raises_regex(ValueError, "does not contain coordinate variables"):
+        xr.map_blocks(lambda x: x.drop_vars("cxy"), obj, template=obj).compute()
     with raises_regex(ValueError, "Dimensions {'x'} missing"):
-        xr.map_blocks(lambda x: x.isel(x=1), obj, template=template).compute()
+        xr.map_blocks(lambda x: x.isel(x=1), obj, template=obj).compute()
+    with raises_regex(ValueError, "Received dimension 'x' of length 1"):
+        xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=obj).compute()
+
+def test_map_blocks_errors_bad_template_2(map_ds):
+    with raises_regex(ValueError, "unexpected data variables {'xyz'}"):
+        xr.map_blocks(lambda x: x.assign(xyz=1), map_ds, template=map_ds).compute()
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])

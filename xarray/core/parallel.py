@@ -31,6 +31,30 @@ from .dataset import Dataset
 T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
 
+def check_result_variables(
+    result: Union[DataArray, Dataset], expected: dict, kind: str
+):
+
+    if kind == "coords":
+        nice_str = "coordinate"
+    elif kind == "data_vars":
+        nice_str = "data"
+
+    # check that coords and data variables are as expected
+    missing = expected[kind] - set(getattr(result, kind))
+    if missing:
+        raise ValueError(
+            "Result from applying user function does not contain "
+            f"{nice_str} variables {missing}."
+        )
+    extra = set(getattr(result, kind)) - expected[kind]
+    if extra:
+        raise ValueError(
+            "Result from applying user function has unexpected "
+            f"{nice_str} variables {extra}."
+        )
+
+
 def dataset_to_dataarray(obj: Dataset) -> DataArray:
     if not isinstance(obj, Dataset):
         raise TypeError("Expected Dataset, got %s" % type(obj))
@@ -201,27 +225,33 @@ def map_blocks(
         * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
     """
 
-    def _wrapper(func, obj, to_array, args, kwargs, expected_shapes):
+    def _wrapper(func, obj, to_array, args, kwargs, expected):
         check_shapes = dict(obj.dims)
-        check_shapes.update(expected_shapes)
+        check_shapes.update(expected["shapes"])
 
         if to_array:
             obj = dataset_to_dataarray(obj)
 
         result = func(obj, *args, **kwargs)
 
-        missing_dimensions = set(expected_shapes) - set(result.sizes)
+        # check all dims are present
+        missing_dimensions = set(expected["shapes"]) - set(result.sizes)
         if missing_dimensions:
             raise ValueError(
                 f"Dimensions {missing_dimensions} missing on returned object."
             )
 
+        # check that index lengths are as expected
         for name, index in result.indexes.items():
             if name in check_shapes:
                 if len(index) != check_shapes[name]:
                     raise ValueError(
-                        f"Received dimension {name} of length {len(index)}. Expected length {expected_shapes[name]}."
+                        f"Received dimension {name!r} of length {len(index)}. Expected length {check_shapes[name]}."
                     )
+
+        check_result_variables(result, expected, "coords")
+        if isinstance(result, Dataset):
+            check_result_variables(result, expected, "data_vars")
 
         return make_dict(result)
 
@@ -356,10 +386,15 @@ def map_blocks(
             else:
                 data_vars.append([name, chunk_variable_task])
 
+        # expected["shapes", "coords", "data_vars"] are used to raise nice error messages in _wrapper
+        expected = {}
         # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
         # even if length of dimension is changed by the applied function
-        # expected_shapes is used to raise nice error messages in _wrapper
-        expected_shapes = {k: output_chunks[k][v] for k, v in input_chunk_index.items()}
+        expected["shapes"] = {
+            k: output_chunks[k][v] for k, v in input_chunk_index.items()
+        }
+        expected["data_vars"] = set(template.data_vars.keys())  # type: ignore
+        expected["coords"] = set(template.coords.keys())  # type: ignore
 
         from_wrapper = (gname,) + v
         graph[from_wrapper] = (
@@ -369,7 +404,7 @@ def map_blocks(
             input_is_array,
             args,
             kwargs,
-            expected_shapes,
+            expected,
         )
 
         # mapping from variable name to dask graph key
