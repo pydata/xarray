@@ -4349,12 +4349,21 @@ class TestDataset:
         assert actual.a.name == "a"
         assert actual.a.attrs == ds.a.attrs
 
+        # lambda
+        ds = Dataset({"a": ("x", range(5))})
+        expected = Dataset({"a": ("x", [np.nan, np.nan, 2, 3, 4])})
+        actual = ds.where(lambda x: x > 1)
+        assert_identical(expected, actual)
+
     def test_where_other(self):
         ds = Dataset({"a": ("x", range(5))}, {"x": range(5)})
         expected = Dataset({"a": ("x", [-1, -1, 2, 3, 4])}, {"x": range(5)})
         actual = ds.where(ds > 1, -1)
         assert_equal(expected, actual)
         assert actual.a.dtype == int
+
+        actual = ds.where(lambda x: x > 1, -1)
+        assert_equal(expected, actual)
 
         with raises_regex(ValueError, "cannot set"):
             ds.where(ds > 1, other=0, drop=True)
