@@ -961,70 +961,71 @@ def test_merge_dataarray(variant, unit, error, dtype):
     data_unit, dim_unit, coord_unit = variants.get(variant)
 
     array1 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * original_unit
-    array2 = np.linspace(1, 2, 2 * 4).reshape(2, 4).astype(dtype) * data_unit
-    array3 = np.linspace(0, 2, 3 * 4).reshape(3, 4).astype(dtype) * data_unit
+    x1 = np.arange(2) * original_unit
+    y1 = np.arange(3) * original_unit
+    u1 = np.linspace(10, 20, 2) * original_unit
+    v1 = np.linspace(10, 20, 3) * original_unit
 
-    x = np.arange(2) * original_unit
-    y = np.arange(3) * original_unit
-    z = np.arange(4) * original_unit
-    u = np.linspace(10, 20, 2) * original_unit
-    v = np.linspace(10, 20, 3) * original_unit
-    w = np.linspace(10, 20, 4) * original_unit
+    array2 = np.linspace(1, 2, 2 * 4).reshape(2, 4).astype(dtype) * data_unit
+    x2 = np.arange(2, 4) * dim_unit
+    z2 = np.arange(4) * original_unit
+    u2 = np.linspace(20, 30, 2) * coord_unit
+    w2 = np.linspace(10, 20, 4) * original_unit
+
+    array3 = np.linspace(0, 2, 3 * 4).reshape(3, 4).astype(dtype) * data_unit
+    y3 = np.arange(3, 6) * dim_unit
+    z3 = np.arange(4, 8) * dim_unit
+    v3 = np.linspace(10, 20, 3) * coord_unit
+    w3 = np.linspace(10, 20, 4) * coord_unit
 
     arr1 = xr.DataArray(
         name="a",
         data=array1,
-        coords={"x": x, "y": y, "u": ("x", u), "v": ("y", v)},
+        coords={"x": x1, "y": y1, "u": ("x", u1), "v": ("y", v1)},
         dims=("x", "y"),
     )
     arr2 = xr.DataArray(
-        name="b",
+        name="a",
         data=array2,
-        coords={
-            "x": np.arange(2, 4) * dim_unit,
-            "z": z,
-            "u": ("x", np.linspace(20, 30, 2) * coord_unit),
-            "w": ("z", w),
-        },
+        coords={"x": x2, "z": z2, "u": ("x", u2), "w": ("z", w2)},
         dims=("x", "z"),
     )
     arr3 = xr.DataArray(
-        name="c",
+        name="a",
         data=array3,
-        coords={
-            "y": np.arange(3, 6) * dim_unit,
-            "z": np.arange(4, 8) * dim_unit,
-            "v": ("y", np.linspace(10, 20, 3) * coord_unit),
-            "w": ("z", np.linspace(10, 20, 4) * coord_unit),
-        },
+        coords={"y": y3, "z": z3, "v": ("y", v3), "w": ("z", w3)},
         dims=("y", "z"),
     )
 
-    if error is not None and variant != "data":
+    if error is not None:
         with pytest.raises(error):
             xr.merge([arr1, arr2, arr3])
 
         return
 
-    units = {name: original_unit for name in list("uvwxyz")}
+    units = {name: original_unit for name in list("axyzuvw")}
+
     convert_and_strip = lambda arr: strip_units(convert_units(arr, units))
     expected_units = {
         "a": original_unit,
-        "b": data_unit,
-        "c": data_unit,
-        "u": coord_unit,
-        "v": coord_unit,
-        "w": coord_unit,
+        "u": original_unit,
+        "v": original_unit,
+        "w": original_unit,
         "x": original_unit,
         "y": original_unit,
-        "z": dim_unit,
+        "z": original_unit,
     }
+
     expected = convert_units(
         attach_units(
             xr.merge(
-                [strip_units(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]
+                [
+                    convert_and_strip(arr1),
+                    convert_and_strip(arr2),
+                    convert_and_strip(arr3),
+                ]
             ),
-            {**units, **{"a": original_unit, "b": data_unit, "c": data_unit}},
+            units,
         ),
         expected_units,
     )
