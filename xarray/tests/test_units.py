@@ -1110,17 +1110,13 @@ def test_merge_dataset(variant, unit, error, dtype):
 
     units = extract_units(ds1)
     convert_and_strip = lambda ds: strip_units(convert_units(ds, units))
-    expected_units = {
-        "a": data_unit,
-        "b": data_unit,
-        "x": original_unit,
-        "y": original_unit,
-        "u": coord_unit,
-    }
+    expected_units = {name: original_unit for name in list("abxyzu")}
     expected = convert_units(
         attach_units(
-            func([strip_units(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]),
-            {**units, **{"a": original_unit, "b": original_unit, "z": original_unit}},
+            func(
+                [convert_and_strip(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]
+            ),
+            units,
         ),
         expected_units,
     )
