@@ -4688,12 +4688,13 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
-    def test_quantile(self, q):
+    def test_quantile(self, q, skipna):
         ds = create_test_data(seed=123)
 
         for dim in [None, "dim1", ["dim1"]]:
-            ds_quantile = ds.quantile(q, dim=dim)
+            ds_quantile = ds.quantile(q, dim=dim, skipna=skipna)
             if is_scalar(q):
                 assert "quantile" not in ds_quantile.dims
             else:
@@ -4701,11 +4702,26 @@ class TestDataset:
 
             for var, dar in ds.data_vars.items():
                 assert var in ds_quantile
-                assert_identical(ds_quantile[var], dar.quantile(q, dim=dim))
+                assert_identical(
+                    ds_quantile[var], dar.quantile(q, dim=dim, skipna=skipna)
+                )
         dim = ["dim1", "dim2"]
-        ds_quantile = ds.quantile(q, dim=dim)
+        ds_quantile = ds.quantile(q, dim=dim, skipna=skipna)
         assert "dim3" in ds_quantile.dims
         assert all(d not in ds_quantile.dims for d in dim)
+
+    @pytest.mark.parametrize("skipna", [True, False])
+    def test_quantile_skipna(self, skipna):
+        q = 0.1
+        dim = "time"
+        ds = Dataset({"a": ([dim], np.arange(0, 11))})
+        ds = ds.where(ds >= 1)
+
+        result = ds.quantile(q=q, dim=dim, skipna=skipna)
+
+        value = 1.9 if skipna else np.nan
+        expected = Dataset({"a": value}, coords={"quantile": q})
+        assert_identical(result, expected)
 
     @requires_bottleneck
     def test_rank(self):

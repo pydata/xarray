@@ -2362,13 +2362,15 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
+    @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
-    def test_quantile(self, q, axis, dim):
-        actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True)
-        expected = np.nanpercentile(self.dv.values, np.array(q) * 100, axis=axis)
+    def test_quantile(self, q, axis, dim, skipna):
+        actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True, skipna=skipna)
+        _percentile_func = np.nanpercentile if skipna else np.percentile
+        expected = _percentile_func(self.dv.values, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
         if is_scalar(q):
             assert "quantile" not in actual.dims
