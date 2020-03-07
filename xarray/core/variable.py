@@ -1678,7 +1678,9 @@ class Variable(
         """
         return self.broadcast_equals(other, equiv=equiv)
 
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True):
+    def quantile(
+        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
+    ):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -1724,6 +1726,7 @@ class Variable(
         """
 
         from .computation import apply_ufunc
+
         _quantile_func = np.nanquantile if skipna else np.quantile
 
         if keep_attrs is None:

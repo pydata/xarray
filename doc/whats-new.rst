@@ -43,6 +43,9 @@ New Features
   in 0.14.1) is now on by default. To disable, use
   ``xarray.set_options(display_style="text")``.
   By `Julia Signell <https://github.com/jsignell>`_.
+- implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
+  :py:meth:`Dataset.groupby.quantile`, :py:meth:`DataArray.groupby.quantile`
+  (:issue:`3843`, :pull:`3844`) `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Bug fixes
