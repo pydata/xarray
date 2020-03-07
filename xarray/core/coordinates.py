@@ -246,10 +246,6 @@ class DatasetCoordinates(Coordinates):
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data[key]
-            if key in self._data.indexes:
-                indexes = dict(self._data.indexes)
-                indexes.pop(key)
-                self._data._indexes = indexes
         else:
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
@@ -318,10 +314,7 @@ class DataArrayCoordinates(Coordinates):
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data._coords[key]
-            if key in self._data.indexes:
-                indexes = dict(self._data.indexes)
-                indexes.pop(key)
-                self._data._indexes = indexes
+            del self._data._indexes[key]
         else:
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
