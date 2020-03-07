@@ -51,8 +51,8 @@ Bug reports must:
    <http://github.github.com/github-flavored-markdown/>`_::
 
       ```python
-      >>> from xarray import Dataset
-      >>> df = Dataset(...)
+      >>> import xarray as xr
+      >>> df = xr.Dataset(...)
       ...
       ```
 
@@ -378,7 +378,7 @@ and then running::
 
    pre-commit install
 
-from the root of the xarray repository. You can skip the pre-commit checks with
+
 ``git commit --no-verify``.
 
 
