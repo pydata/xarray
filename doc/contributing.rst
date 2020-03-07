@@ -378,8 +378,8 @@ and then running::
 
    pre-commit install
 
-
-``git commit --no-verify``.
+from the root of the xarray repository. You can skip the pre-commit checks
+with ``git commit --no-verify``.
 
 
 Backwards Compatibility
