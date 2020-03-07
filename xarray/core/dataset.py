@@ -5177,6 +5177,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             object will be returned without attributes.
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -5189,7 +5191,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, DataArray.quantile
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, DataArray.quantile
 
         Examples
         --------

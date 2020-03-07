@@ -2967,6 +2967,8 @@ class DataArray(AbstractArray, DataWithCoords):
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -2979,7 +2981,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
 
         Examples
         --------
@@ -3016,7 +3018,11 @@ class DataArray(AbstractArray, DataWithCoords):
         """
 
         ds = self._to_temp_dataset().quantile(
-            q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation, skipna=skipna
+            q,
+            dim=dim,
+            keep_attrs=keep_attrs,
+            interpolation=interpolation,
+            skipna=skipna,
         )
         return self._from_temp_dataset(ds)
 
