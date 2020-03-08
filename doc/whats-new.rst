@@ -46,9 +46,10 @@ New Features
 - :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
   first argument, which is then called on the input; replicating pandas' behavior.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
+- Implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
   :py:meth:`Dataset.groupby.quantile`, :py:meth:`DataArray.groupby.quantile`
-  (:issue:`3843`, :pull:`3844`) `Aaron Spring <https://github.com/aaronspring>`_.
+  (:issue:`3843`, :pull:`3844`) 
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Bug fixes
