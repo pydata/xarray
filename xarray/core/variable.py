@@ -1678,7 +1678,9 @@ class Variable(
         """
         return self.broadcast_equals(other, equiv=equiv)
 
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+    def quantile(
+        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
+    ):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -1725,6 +1727,8 @@ class Variable(
 
         from .computation import apply_ufunc
 
+        _quantile_func = np.nanquantile if skipna else np.quantile
+
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
@@ -1739,7 +1743,7 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return np.moveaxis(np.nanquantile(npa, **kwargs), 0, -1)
+            return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
         result = apply_ufunc(

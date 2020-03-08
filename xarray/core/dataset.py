@@ -5140,7 +5140,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return aligned_self.isel(**indices)
 
     def quantile(
-        self, q, dim=None, interpolation="linear", numeric_only=False, keep_attrs=None
+        self,
+        q,
+        dim=None,
+        interpolation="linear",
+        numeric_only=False,
+        keep_attrs=None,
+        skipna=True,
     ):
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5171,6 +5177,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             object will be returned without attributes.
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -5183,7 +5191,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, DataArray.quantile
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, DataArray.quantile
 
         Examples
         --------
@@ -5258,6 +5266,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             dim=reduce_dims,
                             interpolation=interpolation,
                             keep_attrs=keep_attrs,
+                            skipna=skipna,
                         )
 
             else:
