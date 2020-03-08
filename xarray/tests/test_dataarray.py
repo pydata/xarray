@@ -1536,11 +1536,30 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
 
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
+
+        # multiindex case
+        idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
+        array = DataArray(np.random.randn(3), {"y": ("x", idx)}, "x")
+        expected = DataArray(array.values, {"y": idx}, "y")
+        actual = array.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
 
     def test_expand_dims_error(self):
         array = DataArray(
@@ -2194,6 +2213,12 @@ class TestDataArray:
         arr = DataArray(np.arange(4), dims="x")
         expected = arr.sel(x=slice(2))
         actual = arr.where(arr.x < 2, drop=True)
+        assert_identical(actual, expected)
+
+    def test_where_lambda(self):
+        arr = DataArray(np.arange(4), dims="y")
+        expected = arr.sel(y=slice(2))
+        actual = arr.where(lambda x: x.y < 2, drop=True)
         assert_identical(actual, expected)
 
     def test_where_string(self):

@@ -19,13 +19,14 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
+  - isort
   - lxml    # Optional dep of pydap
   - matplotlib
   - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy<1.18  # FIXME https://github.com/pydata/xarray/issues/3409
+  - numpy
   - pandas
   - pint
   - pip
@@ -38,6 +39,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
+  - setuptools
   - sparse
   - toolz
   - zarr

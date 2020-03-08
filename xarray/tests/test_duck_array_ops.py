@@ -1,3 +1,4 @@
+import datetime as dt
 import warnings
 from textwrap import dedent
 
@@ -16,8 +17,12 @@ from xarray.core.duck_array_ops import (
     gradient,
     last,
     mean,
+    np_timedelta64_to_float,
+    pd_timedelta_to_float,
+    py_timedelta_to_float,
     rolling_window,
     stack,
+    timedelta_to_numeric,
     where,
 )
 from xarray.core.pycompat import dask_array_type
@@ -672,13 +677,15 @@ def test_datetime_to_numeric_datetime64():
 
 @requires_cftime
 def test_datetime_to_numeric_cftime():
-    times = cftime_range("2000", periods=5, freq="7D").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
+    times = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
+    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(times, offset=offset, datetime_unit="h")
+    result = duck_array_ops.datetime_to_numeric(
+        times, offset=offset, datetime_unit="h", dtype=int
+    )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
@@ -686,3 +693,70 @@ def test_datetime_to_numeric_cftime():
     result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=dtype)
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime
+def test_datetime_to_numeric_potential_overflow():
+    import cftime
+
+    times = pd.date_range("2000", periods=5, freq="7D").values.astype("datetime64[us]")
+    cftimes = cftime_range(
+        "2000", periods=5, freq="7D", calendar="proleptic_gregorian"
+    ).values
+
+    offset = np.datetime64("0001-01-01")
+    cfoffset = cftime.DatetimeProlepticGregorian(1, 1, 1)
+
+    result = duck_array_ops.datetime_to_numeric(
+        times, offset=offset, datetime_unit="D", dtype=int
+    )
+    cfresult = duck_array_ops.datetime_to_numeric(
+        cftimes, offset=cfoffset, datetime_unit="D", dtype=int
+    )
+
+    expected = 730119 + np.arange(0, 35, 7)
+
+    np.testing.assert_array_equal(result, expected)
+    np.testing.assert_array_equal(cfresult, expected)
+
+
+def test_py_timedelta_to_float():
+    assert py_timedelta_to_float(dt.timedelta(days=1), "ns") == 86400 * 1e9
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ps") == 86400 * 1e18
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ns") == 86400 * 1e15
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "us") == 86400 * 1e12
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ms") == 86400 * 1e9
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "s") == 86400 * 1e6
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "D") == 1e6
+
+
+@pytest.mark.parametrize(
+    "td, expected",
+    ([np.timedelta64(1, "D"), 86400 * 1e9], [np.timedelta64(1, "ns"), 1.0]),
+)
+def test_np_timedelta64_to_float(td, expected):
+    out = np_timedelta64_to_float(td, datetime_unit="ns")
+    np.testing.assert_allclose(out, expected)
+    assert isinstance(out, float)
+
+    out = np_timedelta64_to_float(np.atleast_1d(td), datetime_unit="ns")
+    np.testing.assert_allclose(out, expected)
+
+
+@pytest.mark.parametrize(
+    "td, expected", ([pd.Timedelta(1, "D"), 86400 * 1e9], [pd.Timedelta(1, "ns"), 1.0])
+)
+def test_pd_timedelta_to_float(td, expected):
+    out = pd_timedelta_to_float(td, datetime_unit="ns")
+    np.testing.assert_allclose(out, expected)
+    assert isinstance(out, float)
+
+
+@pytest.mark.parametrize(
+    "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"]
+)
+def test_timedelta_to_numeric(td):
+    # Scalar input
+    out = timedelta_to_numeric(td, "ns")
+    np.testing.assert_allclose(out, 86400 * 1e9)
+    assert isinstance(out, float)

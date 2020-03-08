@@ -2596,7 +2596,7 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        assert actual.indexes["y"].equals(pd.Index(list("abc")))
+        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
 
         roundtripped = actual.swap_dims({"y": "x"})
         assert_identical(original.set_coords("y"), roundtripped)
@@ -2611,6 +2611,16 @@ class TestDataset:
         )
         actual = original.swap_dims({"x": "u"})
         assert_identical(expected, actual)
+
+        # handle multiindex case
+        idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
+        original = Dataset({"x": [1, 2, 3], "y": ("x", idx), "z": 42})
+        expected = Dataset({"z": 42}, {"x": ("y", [1, 2, 3]), "y": idx})
+        actual = original.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+        assert isinstance(actual.variables["y"], IndexVariable)
+        assert isinstance(actual.variables["x"], Variable)
+        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
 
     def test_expand_dims_error(self):
         original = Dataset(
@@ -4339,12 +4349,21 @@ class TestDataset:
         assert actual.a.name == "a"
         assert actual.a.attrs == ds.a.attrs
 
+        # lambda
+        ds = Dataset({"a": ("x", range(5))})
+        expected = Dataset({"a": ("x", [np.nan, np.nan, 2, 3, 4])})
+        actual = ds.where(lambda x: x > 1)
+        assert_identical(expected, actual)
+
     def test_where_other(self):
         ds = Dataset({"a": ("x", range(5))}, {"x": range(5)})
         expected = Dataset({"a": ("x", [-1, -1, 2, 3, 4])}, {"x": range(5)})
         actual = ds.where(ds > 1, -1)
         assert_equal(expected, actual)
         assert actual.a.dtype == int
+
+        actual = ds.where(lambda x: x > 1, -1)
+        assert_equal(expected, actual)
 
         with raises_regex(ValueError, "cannot set"):
             ds.where(ds > 1, other=0, drop=True)
@@ -5665,6 +5684,62 @@ def test_coarsen_coords_cftime():
     actual = da.coarsen(time=3).mean()
     expected_times = xr.cftime_range("2000-01-02", freq="3D", periods=2)
     np.testing.assert_array_equal(actual.time, expected_times)
+
+
+def test_coarsen_keep_attrs():
+    _attrs = {"units": "test", "long_name": "testing"}
+
+    var1 = np.linspace(10, 15, 100)
+    var2 = np.linspace(5, 10, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = Dataset(
+        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
+        coords={"coord": coords},
+        attrs=_attrs,
+    )
+
+    # Test dropped attrs
+    dat = ds.coarsen(coord=5).mean()
+    assert dat.attrs == {}
+
+    # Test kept attrs using dataset keyword
+    dat = ds.coarsen(coord=5, keep_attrs=True).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with set_options(keep_attrs=True):
+        dat = ds.coarsen(coord=5).mean()
+    assert dat.attrs == _attrs
+
+
+def test_rolling_keep_attrs():
+    _attrs = {"units": "test", "long_name": "testing"}
+
+    var1 = np.linspace(10, 15, 100)
+    var2 = np.linspace(5, 10, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = Dataset(
+        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
+        coords={"coord": coords},
+        attrs=_attrs,
+    )
+
+    # Test dropped attrs
+    dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
+    assert dat.attrs == {}
+
+    # Test kept attrs using dataset keyword
+    dat = ds.rolling(
+        dim={"coord": 5}, min_periods=None, center=False, keep_attrs=True
+    ).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with set_options(keep_attrs=True):
+        dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
+    assert dat.attrs == _attrs
 
 
 def test_rolling_properties(ds):

@@ -4,6 +4,8 @@ from typing import Iterable
 
 import numpy as np
 
+from .pycompat import dask_array_type
+
 try:
     import dask.array as da
     from dask import __version__ as dask_version
@@ -37,7 +39,7 @@ else:
         """
         # If using x._meta, x must be a Dask Array, some libraries (e.g. zarr)
         # implement a _meta attribute that are incompatible with Dask Array._meta
-        if hasattr(x, "_meta") and isinstance(x, da.Array):
+        if hasattr(x, "_meta") and isinstance(x, dask_array_type):
             x = x._meta
 
         if dtype is None and x is None:

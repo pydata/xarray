@@ -1,4 +1,5 @@
 import copy
+import datetime
 import functools
 import sys
 import warnings
@@ -2947,7 +2948,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if k in self.indexes:
                     indexes[k] = self.indexes[k]
                 else:
-                    indexes[k] = var.to_index()
+                    new_index = var.to_index()
+                    if new_index.nlevels == 1:
+                        # make sure index name matches dimension name
+                        new_index = new_index.rename(k)
+                    indexes[k] = new_index
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -3995,7 +4000,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         limit: int = None,
         use_coordinate: Union[bool, Hashable] = True,
-        max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
+        max_gap: Union[
+            int, float, str, pd.Timedelta, np.timedelta64, datetime.timedelta
+        ] = None,
         **kwargs: Any,
     ) -> "Dataset":
         """Fill in NaNs by interpolating according to different methods.
@@ -4028,7 +4035,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, default None.
+        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default None.
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
             and ``use_coordinate=True``, ``max_gap`` can be one of the following:
@@ -4036,6 +4043,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - a string that is valid input for pandas.to_timedelta
             - a :py:class:`numpy.timedelta64` object
             - a :py:class:`pandas.Timedelta` object
+            - a :py:class:`datetime.timedelta` object
 
             Otherwise, ``max_gap`` must be an int or a float. Use of ``max_gap`` with unlabeled
             dimensions has not been implemented yet. Gap length is defined as the difference
@@ -4870,6 +4878,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         difference : same type as caller
             The n-th order finite difference of this object.
+
+        .. note::
+
+            `n` matches numpy's behavior and is different from pandas' first
+            argument named `periods`.
 
         Examples
         --------
