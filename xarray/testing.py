@@ -134,6 +134,9 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     equiv.__name__ = "allclose"
 
     def compat_variable(a, b):
+        a = getattr(a, "variable", a)
+        b = getattr(b, "variable", b)
+
         return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
 
     if isinstance(a, Variable):
