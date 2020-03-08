@@ -1404,6 +1404,14 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    def test_aggregate_complex(self):
+        variable = xr.Variable("x", [1, 2j, np.nan] * unit_registry.m)
+        expected = xr.Variable((), (0.5 + 1j) * unit_registry.m)
+        actual = variable.mean()
+
+        assert_units_equal(expected, actual)
+        xr.testing.assert_allclose(expected, actual)
+
     @pytest.mark.parametrize(
         "func",
         (
