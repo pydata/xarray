@@ -122,9 +122,6 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     --------
     assert_identical, assert_equal, numpy.testing.assert_allclose
     """
-    # todo:
-    # - one assert statement per type using utils.dict_equiv with "_data_allclose_or_equiv"
-    # - add the possibility to pass callables as compat to diff_{array,dataset}_repr
     __tracebackhide__ = True
     assert type(a) == type(b)
 
