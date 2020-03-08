@@ -2043,7 +2043,7 @@ class TestVariable(VariableSubclassobjects):
             ((3, 1), (0, 0), (2, 0)),
         ]
         for xr_arg, np_arg in zip(xr_args, np_args):
-            actual = v.pad_with_fill_value(**xr_arg)
+            actual = v.pad(**xr_arg, mode="constant")
             expected = xr.Variable(
                 v.dims,
                 np.pad(
@@ -2061,7 +2061,7 @@ class TestVariable(VariableSubclassobjects):
         data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)
         v = xr.Variable(["x", "y", "z"], data)
         for xr_arg, np_arg in zip(xr_args, np_args):
-            actual = v.pad_with_fill_value(fill_value=data.flat[0], **xr_arg)
+            actual = v.pad(**xr_arg, mode="constant", constant_values=data.flat[0])
             expected = xr.Variable(
                 v.dims,
                 np.pad(v.data, np_arg, mode="constant", constant_values=v.data.flat[0]),

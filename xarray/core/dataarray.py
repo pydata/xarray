@@ -3244,13 +3244,13 @@ class DataArray(AbstractArray, DataWithCoords):
         pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
         stat_length: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         constant_values: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         end_values: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
@@ -3345,7 +3345,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See also
         --------
-        DataArray.shift, DataArray.roll, numpy.pad, dask.array.pad
+        DataArray.shift, DataArray.roll, DataArray.bfill, DataArray.ffill, numpy.pad, dask.array.pad
 
         Notes
         -----

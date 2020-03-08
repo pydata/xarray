@@ -5704,13 +5704,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
         stat_length: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         constant_values: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         end_values: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
@@ -5805,7 +5805,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See also
         --------
-        Dataset.shift, Dataset.roll, numpy.pad, dask.array.pad
+        Dataset.shift, Dataset.roll, Dataset.bfill, Dataset.ffill, numpy.pad, dask.array.pad
 
         Notes
         -----

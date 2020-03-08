@@ -33,12 +33,6 @@ from .utils import (
     infix_dims,
 )
 
-try:
-    import dask.array as da
-except ImportError:
-    pass
-
-
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
     pd.Index,
@@ -1168,13 +1162,13 @@ class Variable(
         pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
         stat_length: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         constant_values: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         end_values: Union[
-            None, int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
         ] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
@@ -1214,7 +1208,9 @@ class Variable(
         pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
         # change default behaviour of pad with mode constant
-        if mode == "constant" and constant_values is None:
+        if mode == "constant" and (
+            constant_values is None or constant_values is dtypes.NA
+        ):
             dtype, constant_values = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
