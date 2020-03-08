@@ -47,7 +47,7 @@ New Features
   first argument, which is then called on the input; replicating pandas' behavior.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
-  :py:meth:`Dataset.groupby.quantile`, :py:meth:`DataArray.groupby.quantile`
+  :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
   (:issue:`3843`, :pull:`3844`) 
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
