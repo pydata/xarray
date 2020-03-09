@@ -2243,20 +2243,14 @@ class DataArray(AbstractArray, DataWithCoords):
         * 0D -> `xarray.DataArray`
         * 1D -> `pandas.Series`
         * 2D -> `pandas.DataFrame`
-        * 3D -> `pandas.Panel` *(deprecated)*
 
-        Only works for arrays with 3 or fewer dimensions.
+        Only works for arrays with 2 or fewer dimensions.
 
         The DataArray constructor performs the inverse transformation.
         """
         # TODO: consolidate the info about pandas constructors and the
         # attributes that correspond to their indexes into a separate module?
-        constructors = {
-            0: lambda x: x,
-            1: pd.Series,
-            2: pd.DataFrame,
-            3: pdcompat.Panel,
-        }
+        constructors = {0: lambda x: x, 1: pd.Series, 2: pd.DataFrame}
         try:
             constructor = constructors[self.ndim]
         except KeyError:
@@ -2939,6 +2933,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dim: Union[Hashable, Sequence[Hashable], None] = None,
         interpolation: str = "linear",
         keep_attrs: bool = None,
+        skipna: bool = True,
     ) -> "DataArray":
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -2966,6 +2961,8 @@ class DataArray(AbstractArray, DataWithCoords):
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -2978,7 +2975,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
 
         Examples
         --------
@@ -3015,7 +3012,11 @@ class DataArray(AbstractArray, DataWithCoords):
         """
 
         ds = self._to_temp_dataset().quantile(
-            q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation
+            q,
+            dim=dim,
+            keep_attrs=keep_attrs,
+            interpolation=interpolation,
+            skipna=skipna,
         )
         return self._from_temp_dataset(ds)
 

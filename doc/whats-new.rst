@@ -43,6 +43,13 @@ New Features
   in 0.14.1) is now on by default. To disable, use
   ``xarray.set_options(display_style="text")``.
   By `Julia Signell <https://github.com/jsignell>`_.
+- :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
+  first argument, which is then called on the input; replicating pandas' behavior.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
+  :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
+  (:issue:`3843`, :pull:`3844`) 
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Bug fixes
@@ -90,6 +97,9 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - Removed xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Removed conversion to :py:class:`pandas.Panel`, given its removal in pandas
+  in favor of xarray's objects.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.15.0:
 
