@@ -1401,7 +1401,6 @@ def delete_attrs(*to_delete):
     "test_datetime64_conversion",
     "test_timedelta64_conversion",
     "test_pandas_period_index",
-    "test_1d_math",
     "test_1d_reduce",
     "test_array_interface",
     "test___array__",
@@ -1787,6 +1786,10 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize(
         "unit,error",
         (
