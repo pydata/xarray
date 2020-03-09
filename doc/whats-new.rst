@@ -95,6 +95,8 @@ Internal Changes
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
 - Updated Azure CI MacOS image, given pending removal.
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- Removed xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Removed conversion to :py:class:`pandas.Panel`, given its removal in pandas
   in favor of xarray's objects.
   By `Maximilian Roos <https://github.com/max-sixty>`_
