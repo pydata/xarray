@@ -425,6 +425,10 @@ def test_apply_ufunc_dataset(dtype):
     assert_identical(expected, actual)
 
 
+# TODO: remove once pint==0.12 has been released
+@pytest.mark.xfail(
+    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -512,6 +516,10 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
     assert_allclose(expected_b, actual_b)
 
 
+# TODO: remove once pint==0.12 has been released
+@pytest.mark.xfail(
+    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -929,6 +937,10 @@ def test_concat_dataset(variant, unit, error, dtype):
     assert_identical(expected, actual)
 
 
+# TODO: remove once pint==0.12 has been released
+@pytest.mark.xfail(
+    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -1036,6 +1048,10 @@ def test_merge_dataarray(variant, unit, error, dtype):
     assert_allclose(expected, actual)
 
 
+# TODO: remove once pint==0.12 has been released
+@pytest.mark.xfail(
+    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
