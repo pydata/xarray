@@ -55,7 +55,7 @@ def check_result_variables(
         )
 
 
-def subset_dataset_to_chunk(graph, gname, dataset, input_chunks, chunk_tuple):
+def subset_dataset_to_block(graph, gname, dataset, input_chunks, chunk_tuple):
 
     # mapping from dimension name to chunk index
     input_chunk_index = dict(zip(input_chunks.keys(), chunk_tuple))
@@ -457,16 +457,12 @@ def map_blocks(
         # mapping from dimension name to chunk index
         input_chunk_index = dict(zip(input_chunks.keys(), chunk_tuple))
 
-        chunked_args = []
-        for arg in (dataset,) + tuple(converted_args):
-            if isinstance(arg, (DataArray, Dataset)):
-                chunked_args.append(
-                    subset_dataset_to_chunk(
-                        graph, gname, arg, input_chunks, chunk_tuple
-                    )
-                )
-            else:
-                chunked_args.append(arg)
+        blocked_args = [
+            subset_dataset_to_block(graph, gname, arg, input_chunks, chunk_tuple)
+            if isinstance(arg, (DataArray, Dataset))
+            else arg
+            for arg in (dataset,) + tuple(converted_args)
+        ]
 
         # expected["shapes", "coords", "data_vars", "indexes"] are used to raise nice error messages in _wrapper
         expected = {}
@@ -486,7 +482,7 @@ def map_blocks(
         graph[from_wrapper] = (
             _wrapper,
             func,
-            chunked_args,
+            blocked_args,
             kwargs,
             [input_is_array] + arg_is_array,
             expected,
