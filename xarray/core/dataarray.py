@@ -2243,20 +2243,14 @@ class DataArray(AbstractArray, DataWithCoords):
         * 0D -> `xarray.DataArray`
         * 1D -> `pandas.Series`
         * 2D -> `pandas.DataFrame`
-        * 3D -> `pandas.Panel` *(deprecated)*
 
-        Only works for arrays with 3 or fewer dimensions.
+        Only works for arrays with 2 or fewer dimensions.
 
         The DataArray constructor performs the inverse transformation.
         """
         # TODO: consolidate the info about pandas constructors and the
         # attributes that correspond to their indexes into a separate module?
-        constructors = {
-            0: lambda x: x,
-            1: pd.Series,
-            2: pd.DataFrame,
-            3: pdcompat.Panel,
-        }
+        constructors = {0: lambda x: x, 1: pd.Series, 2: pd.DataFrame}
         try:
             constructor = constructors[self.ndim]
         except KeyError:
