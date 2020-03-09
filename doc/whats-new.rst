@@ -95,6 +95,9 @@ Internal Changes
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
 - Updated Azure CI MacOS image, given pending removal.
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- Removed conversion to :py:class:`pandas.Panel`, given its removal in pandas
+  in favor of xarray's objects.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.15.0:
 
