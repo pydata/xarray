@@ -32,7 +32,7 @@ New Features
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- implement pint support. (:issue:`3594`, :pull:`3706`)
+- Support unit aware arrays with pint. (:issue:`3594`, :pull:`3706`, :pull:`3611`)
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
   `TypeError` on multiple string arguments. Receiving multiple string arguments
@@ -45,7 +45,12 @@ New Features
   By `Julia Signell <https://github.com/jsignell>`_.
 - :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
   first argument, which is then called on the input; replicating pandas' behavior.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
+  :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
+  (:issue:`3843`, :pull:`3844`) 
+  By `Aaron Spring <https://github.com/aaronspring>`_.
+
 
 Bug fixes
 ~~~~~~~~~
@@ -89,6 +94,11 @@ Internal Changes
   (:issue:`3777`, :pull:`3780`).
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
 - Updated Azure CI MacOS image, given pending removal.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Removed xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Removed conversion to :py:class:`pandas.Panel`, given its removal in pandas
+  in favor of xarray's objects.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.15.0:
