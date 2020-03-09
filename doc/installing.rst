@@ -127,7 +127,7 @@ with its recommended dependencies using the conda command line tool::
 
 .. _conda: http://conda.io/
 
-If you require other :doc:`optional-dependencies` add them to the line above.
+If you require other :ref:`optional-dependencies` add them to the line above.
 
 We recommend using the community maintained `conda-forge <https://conda-forge.github.io/>`__ channel,
 as some of the dependencies are difficult to build. New releases may also appear in conda-forge before
