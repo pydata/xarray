@@ -314,7 +314,8 @@ class DataArrayCoordinates(Coordinates):
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data._coords[key]
-            del self._data._indexes[key]
+            if self._data._indexes is not None and key in self._data._indexes:
+                del self._data._indexes[key]
         else:
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
