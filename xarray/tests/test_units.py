@@ -1367,6 +1367,13 @@ class TestVariable(VariableSubclassobjects):
         ]:
             yield (self.cls("x", data), data)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
+    def test_real_and_imag(self):
+        super().test_real_and_imag()
+
     @pytest.mark.parametrize(
         "func",
         (
@@ -1404,6 +1411,10 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     def test_aggregate_complex(self):
         variable = xr.Variable("x", [1, 2j, np.nan] * unit_registry.m)
         expected = xr.Variable((), (0.5 + 1j) * unit_registry.m)
@@ -1412,6 +1423,10 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_allclose(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize(
         "func",
         (
