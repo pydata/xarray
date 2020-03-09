@@ -194,7 +194,23 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                 for k in getattr(datasets[0], subset):
                     if k not in concat_over:
                         equals[k] = None
-                        variables = [ds.variables[k] for ds in datasets]
+
+                        variables = []
+                        for ds in datasets:
+                            if k in ds.variables:
+                                variables.append(ds.variables[k])
+
+                        if len(variables) == 1:
+                            # coords="different" doesn't make sense when only one object
+                            # contains a particular variable.
+                            break
+                        elif len(variables) != len(datasets) and opt == "different":
+                            raise ValueError(
+                                f"{k!r} not present in all datasets and coords='different'. "
+                                f"Either add {k!r} to datasets where it is missing or "
+                                "specify coords='minimal'."
+                            )
+
                         # first check without comparing values i.e. no computes
                         for var in variables[1:]:
                             equals[k] = getattr(variables[0], compat)(

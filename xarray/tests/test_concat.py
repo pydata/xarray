@@ -475,3 +475,24 @@ def test_concat_attrs_first_variable(attr1, attr2):
 
     concat_attrs = concat(arrs, "y").attrs
     assert concat_attrs == attr1
+
+
+def test_concat_merge_single_non_dim_coord():
+    da1 = DataArray([1, 2, 3], dims="x", coords={"x": [1, 2, 3], "y": 1})
+    da2 = DataArray([4, 5, 6], dims="x", coords={"x": [4, 5, 6]})
+
+    expected = DataArray(range(1, 7), dims="x", coords={"x": range(1, 7), "y": 1})
+
+    for coords in ["different", "minimal"]:
+        actual = concat([da1, da2], "x", coords=coords)
+        assert_identical(actual, expected)
+
+    with raises_regex(ValueError, "'y' is not present in all datasets."):
+        concat([da1, da2], dim="x", coords="all")
+
+    da1 = DataArray([1, 2, 3], dims="x", coords={"x": [1, 2, 3], "y": 1})
+    da2 = DataArray([4, 5, 6], dims="x", coords={"x": [4, 5, 6]})
+    da3 = DataArray([7, 8, 9], dims="x", coords={"x": [7, 8, 9], "y": 1})
+    for coords in ["different", "all"]:
+        with raises_regex(ValueError, "'y' not present in all datasets"):
+            concat([da1, da2, da3], dim="x")

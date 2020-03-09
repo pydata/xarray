@@ -2948,7 +2948,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if k in self.indexes:
                     indexes[k] = self.indexes[k]
                 else:
-                    indexes[k] = var.to_index()
+                    new_index = var.to_index()
+                    if new_index.nlevels == 1:
+                        # make sure index name matches dimension name
+                        new_index = new_index.rename(k)
+                    indexes[k] = new_index
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -4875,6 +4879,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         difference : same type as caller
             The n-th order finite difference of this object.
 
+        .. note::
+
+            `n` matches numpy's behavior and is different from pandas' first
+            argument named `periods`.
+
         Examples
         --------
         >>> ds = xr.Dataset({'foo': ('x', [5, 5, 6, 6])})
@@ -5131,7 +5140,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return aligned_self.isel(**indices)
 
     def quantile(
-        self, q, dim=None, interpolation="linear", numeric_only=False, keep_attrs=None
+        self,
+        q,
+        dim=None,
+        interpolation="linear",
+        numeric_only=False,
+        keep_attrs=None,
+        skipna=True,
     ):
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5162,6 +5177,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             object will be returned without attributes.
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -5174,7 +5191,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, DataArray.quantile
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, DataArray.quantile
 
         Examples
         --------
@@ -5249,6 +5266,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             dim=reduce_dims,
                             interpolation=interpolation,
                             keep_attrs=keep_attrs,
+                            skipna=skipna,
                         )
 
             else:

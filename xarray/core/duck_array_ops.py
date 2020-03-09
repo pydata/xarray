@@ -37,7 +37,7 @@ def _dask_or_eager_func(
                 dispatch_args = args[0]
             else:
                 dispatch_args = args[array_args]
-            if any(isinstance(a, dask_array.Array) for a in dispatch_args):
+            if any(isinstance(a, dask_array_type) for a in dispatch_args):
                 try:
                     wrapped = getattr(dask_module, name)
                 except AttributeError as e:
@@ -71,14 +71,7 @@ around = _dask_or_eager_func("around")
 isclose = _dask_or_eager_func("isclose")
 
 
-if hasattr(np, "isnat") and (
-    dask_array is None or hasattr(dask_array_type, "__array_ufunc__")
-):
-    # np.isnat is available since NumPy 1.13, so __array_ufunc__ is always
-    # supported.
-    isnat = np.isnat
-else:
-    isnat = _dask_or_eager_func("isnull", eager_module=pd)
+isnat = np.isnat
 isnan = _dask_or_eager_func("isnan")
 zeros_like = _dask_or_eager_func("zeros_like")
 
@@ -121,6 +114,7 @@ _where = _dask_or_eager_func("where", array_args=slice(3))
 isin = _dask_or_eager_func("isin", array_args=slice(2))
 take = _dask_or_eager_func("take")
 broadcast_to = _dask_or_eager_func("broadcast_to")
+pad = _dask_or_eager_func("pad")
 
 _concatenate = _dask_or_eager_func("concatenate", list_of_args=True)
 _stack = _dask_or_eager_func("stack", list_of_args=True)
@@ -189,8 +183,8 @@ def lazy_array_equiv(arr1, arr2):
         return False
     if (
         dask_array
-        and isinstance(arr1, dask_array.Array)
-        and isinstance(arr2, dask_array.Array)
+        and isinstance(arr1, dask_array_type)
+        and isinstance(arr2, dask_array_type)
     ):
         # GH3068
         if arr1.name == arr2.name:
@@ -261,7 +255,10 @@ def where_method(data, cond, other=dtypes.NA):
 
 
 def fillna(data, other):
-    return where(isnull(data), other, data)
+    # we need to pass data first so pint has a chance of returning the
+    # correct unit
+    # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
+    return where(notnull(data), data, other)
 
 
 def concatenate(arrays, axis=0):
