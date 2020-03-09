@@ -28,4 +28,5 @@ def test_allclose_regression():
     ),
 )
 def test_assert_allclose(obj1, obj2):
-    xr.testing.assert_allclose(obj1, obj2)
+    with pytest.raises(AssertionError):
+        xr.testing.assert_allclose(obj1, obj2)
