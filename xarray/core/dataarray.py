@@ -1475,20 +1475,23 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
+
         >>> arr = xr.DataArray(data=[0, 1], dims="x",
-                               coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        ...                    coords={"x": ["a", "b"], "y": ("x", [0, 1])})
         >>> arr
         <xarray.DataArray (x: 2)>
         array([0, 1])
         Coordinates:
           * x        (x) <U1 'a' 'b'
             y        (x) int64 0 1
+
         >>> arr.swap_dims({"x": "y"})
         <xarray.DataArray (y: 2)>
         array([0, 1])
         Coordinates:
             x        (y) <U1 'a' 'b'
           * y        (y) int64 0 1
+
         >>> arr.swap_dims({"x": "z"})
         <xarray.DataArray (z: 2)>
         array([0, 1])
@@ -1718,7 +1721,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        >>> arr = xr.DataArray(np.arange(6).reshape(2, 3),
         ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
@@ -1768,7 +1771,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        >>> arr = xr.DataArray(np.arange(6).reshape(2, 3),
         ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
@@ -1817,7 +1820,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
         >>> import xarray as xr
-        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        >>> arr = xr.DataArray(np.arange(6).reshape(2, 3),
         ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
         >>> data = xr.Dataset({'a': arr, 'b': arr.isel(y=0)})
         >>> data
@@ -2623,7 +2626,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         Access plotting functions for DataArray's
 
-        >>> d = DataArray([[1, 2], [3, 4]])
+        >>> d = xr.DataArray([[1, 2], [3, 4]])
 
         For convenience just call this directly
 
@@ -2849,18 +2852,20 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
 
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
-        >>> da = DataArray(da_vals, dims=['x', 'y', 'z'])
+        >>> da = xr.DataArray(da_vals, dims=['x', 'y', 'z'])
         >>> dm_vals = np.arange(4)
-        >>> dm = DataArray(dm_vals, dims=['z'])
+        >>> dm = xr.DataArray(dm_vals, dims=['z'])
 
         >>> dm.dims
         ('z')
+
         >>> da.dims
         ('x', 'y', 'z')
 
         >>> dot_result = da.dot(dm)
         >>> dot_result.dims
         ('x', 'y')
+
         """
         if isinstance(other, Dataset):
             raise NotImplementedError(
