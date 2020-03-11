@@ -269,27 +269,27 @@ class CFTimeIndex(pd.Index):
         >>> import pandas as pd
         >>> import xarray as xr
         >>> da = xr.DataArray([1, 2],
-                              coords=[[DatetimeNoLeap(2001, 1, 1),
-                                       DatetimeNoLeap(2001, 2, 1)]],
-                              dims=['time'])
+        ...                   coords=[[DatetimeNoLeap(2001, 1, 1),
+        ...                            DatetimeNoLeap(2001, 2, 1)]],
+        ...                   dims=['time'])
         >>> da.sel(time='2001-01-01')
         <xarray.DataArray (time: 1)>
         array([1])
         Coordinates:
           * time     (time) object 2001-01-01 00:00:00
         >>> da = xr.DataArray([1, 2],
-                              coords=[[pd.Timestamp(2001, 1, 1),
-                                       pd.Timestamp(2001, 2, 1)]],
-                              dims=['time'])
+        ...                   coords=[[pd.Timestamp(2001, 1, 1),
+        ...                            pd.Timestamp(2001, 2, 1)]],
+        ...                   dims=['time'])
         >>> da.sel(time='2001-01-01')
         <xarray.DataArray ()>
         array(1)
         Coordinates:
             time     datetime64[ns] 2001-01-01
         >>> da = xr.DataArray([1, 2],
-                              coords=[[pd.Timestamp(2001, 1, 1, 1),
-                                       pd.Timestamp(2001, 2, 1)]],
-                              dims=['time'])
+        ...                   coords=[[pd.Timestamp(2001, 1, 1, 1),
+        ...                            pd.Timestamp(2001, 2, 1)]],
+        ...                   dims=['time'])
         >>> da.sel(time='2001-01-01')
         <xarray.DataArray (time: 1)>
         array([1])

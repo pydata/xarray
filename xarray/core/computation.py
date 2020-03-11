@@ -1252,7 +1252,7 @@ def where(cond, x, y):
     Coordinates:
     * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
-    >>> >>> y = xr.DataArray(
+    >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
     ...     dims=["lat", "lon"],
     ...     coords={"lat": np.arange(3), "lon": 10 + np.arange(3)},

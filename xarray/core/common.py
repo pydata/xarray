@@ -1479,7 +1479,7 @@ def ones_like(other, dtype: DTypeLike = None):
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
 
-    >>> >>> xr.ones_like(x)
+    >>> xr.ones_like(x)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[1, 1, 1],
            [1, 1, 1]])
