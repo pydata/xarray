@@ -1010,8 +1010,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Shallow copy versus deep copy
 
         >>> da = xr.DataArray(np.random.randn(2, 3))
-        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])},
-        ...                 coords={'x': ['one', 'two']})
+        >>> ds = xr.Dataset(
+        ...     {"foo": da, "bar": ("x", [-1, 2])}, coords={"x": ["one", "two"]},
+        ... )
         >>> ds.copy()
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -1023,7 +1024,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             bar      (x) int64 -1 2
 
         >>> ds_0 = ds.copy(deep=False)
-        >>> ds_0['foo'][0, 0] = 7
+        >>> ds_0["foo"][0, 0] = 7
         >>> ds_0
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -1048,7 +1049,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         structure of the original object, but with the new data. Original
         object is unaffected.
 
-        >>> ds.copy(data={'foo': np.arange(6).reshape(2, 3), 'bar': ['a', 'b']})
+        >>> ds.copy(
+        ...     data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"],}
+        ... )
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
@@ -2358,9 +2361,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature": ("station", 20 * np.random.rand(4)),
-        ...         "pressure": ("station", 500 * np.random.rand(4))
+        ...         "pressure": ("station", 500 * np.random.rand(4)),
         ...     },
-        ...     coords={"station": ["boston", "nyc", "seattle", "denver"]})
+        ...     coords={"station": ["boston", "nyc", "seattle", "denver"]},
+        ... )
         >>> x
         <xarray.Dataset>
         Dimensions:      (station: 4)
@@ -2375,8 +2379,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Create a new index and reindex the dataset. By default values in the new index that
         do not have corresponding records in the dataset are assigned `NaN`.
 
-        >>> new_index = ['boston', 'austin', 'seattle', 'lincoln']
-        >>> x.reindex({'station': new_index})
+        >>> new_index = ["boston", "austin", "seattle", "lincoln"]
+        >>> x.reindex({"station": new_index})
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
@@ -2387,7 +2391,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         We can fill in the missing values by passing a value to the keyword `fill_value`.
 
-        >>> x.reindex({'station': new_index}, fill_value=0)
+        >>> x.reindex({"station": new_index}, fill_value=0)
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
@@ -2399,7 +2403,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Because the index is not monotonically increasing or decreasing, we cannot use arguments
         to the keyword method to fill the `NaN` values.
 
-        >>> x.reindex({'station': new_index}, method='nearest')
+        >>> x.reindex({"station": new_index}, method="nearest")
         Traceback (most recent call last):
         ...
             raise ValueError('index must be monotonic increasing or decreasing')
@@ -2410,10 +2414,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         >>> x2 = xr.Dataset(
         ...     {
-        ...         "temperature": ("time", [15.57, 12.77, np.nan, 0.3081, 16.59, 15.12]),
-        ...         "pressure": ("time", 500 * np.random.rand(6))
+        ...         "temperature": (
+        ...             "time",
+        ...             [15.57, 12.77, np.nan, 0.3081, 16.59, 15.12],
+        ...         ),
+        ...         "pressure": ("time", 500 * np.random.rand(6)),
         ...     },
-        ...     coords={"time": pd.date_range('01/01/2019', periods=6, freq='D')})
+        ...     coords={"time": pd.date_range("01/01/2019", periods=6, freq="D")},
+        ... )
         >>> x2
         <xarray.Dataset>
         Dimensions:      (time: 6)
@@ -2425,8 +2433,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Suppose we decide to expand the dataset to cover a wider date range.
 
-        >>> time_index2 = pd.date_range('12/29/2018', periods=10, freq='D')
-        >>> x2.reindex({'time': time_index2})
+        >>> time_index2 = pd.date_range("12/29/2018", periods=10, freq="D")
+        >>> x2.reindex({"time": time_index2})
         <xarray.Dataset>
         Dimensions:      (time: 10)
         Coordinates:
@@ -2441,7 +2449,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         For example, to back-propagate the last valid value to fill the `NaN` values,
         pass `bfill` as an argument to the `method` keyword.
 
-        >>> x3 = x2.reindex({'time': time_index2}, method='bfill')
+        >>> x3 = x2.reindex({"time": time_index2}, method="bfill")
         >>> x3
         <xarray.Dataset>
         Dimensions:      (time: 10)
@@ -2885,8 +2893,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> ds = xr.Dataset(data_vars={"a": ("x", [5, 7]), "b": ("x", [0.1, 2.4])},
-        ...                 coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        >>> ds = xr.Dataset(
+        ...     data_vars={"a": ("x", [5, 7]), "b": ("x", [0.1, 2.4])},
+        ...     coords={"x": ["a", "b"], "y": ("x", [0, 1])},
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2)
@@ -3127,13 +3137,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> arr = xr.DataArray(data=np.ones((2, 3)),
-        ...                    dims=['x', 'y'],
-        ...                    coords={'x':
-        ...                        range(2), 'y':
-        ...                        range(3), 'a': ('x', [3, 4])
-        ...                    })
-        >>> ds = xr.Dataset({'v': arr})
+        >>> arr = xr.DataArray(
+        ...     data=np.ones((2, 3)),
+        ...     dims=["x", "y"],
+        ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4]),},
+        ... )
+        >>> ds = xr.Dataset({"v": arr})
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 3)
@@ -3143,7 +3152,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             a        (x) int64 3 4
         Data variables:
             v        (x, y) float64 1.0 1.0 1.0 1.0 1.0 1.0
-        >>> ds.set_index(x='a')
+        >>> ds.set_index(x="a")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 3)
         Coordinates:
@@ -3347,9 +3356,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> data = xr.Dataset(
-        ...     data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
-        ...                'b': ('x', [6, 7])},
-        ...     coords={'y': ['u', 'v', 'w']}
+        ...     data_vars={
+        ...         "a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]),
+        ...         "b": ("x", [6, 7]),
+        ...     },
+        ...     coords={"y": ["u", "v", "w"]},
         ... )
 
         >>> data
@@ -3362,7 +3373,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             a        (x, y) int64 0 1 2 3 4 5
             b        (x) int64 6 7
 
-        >>> data.to_stacked_array("z", sample_dims=['x'])
+        >>> data.to_stacked_array("z", sample_dims=["x"])
         <xarray.DataArray (x: 2, z: 4)>
         array([[0, 1, 2, 6],
             [3, 4, 5, 7]])
@@ -3733,9 +3744,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> data = np.random.randn(2, 3)
-        >>> labels = ['a', 'b', 'c']
-        >>> ds = xr.Dataset({'A': (['x', 'y'], data), 'y': labels})
-        >>> ds.drop_sel(y=['a', 'c'])
+        >>> labels = ["a", "b", "c"]
+        >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
+        >>> ds.drop_sel(y=["a", "c"])
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 1)
         Coordinates:
@@ -3743,7 +3754,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dimensions without coordinates: x
         Data variables:
             A        (x, y) float64 -0.3454 0.1734
-        >>> ds.drop_sel(y='b')
+        >>> ds.drop_sel(y="b")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
@@ -3948,9 +3959,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...         "A": ("x", [np.nan, 2, np.nan, 0]),
         ...         "B": ("x", [3, 4, np.nan, 1]),
         ...         "C": ("x", [np.nan, np.nan, np.nan, 5]),
-        ...         "D": ("x", [np.nan, 3, np.nan, 4])
+        ...         "D": ("x", [np.nan, 3, np.nan, 4]),
         ...     },
-        ...     coords={"x": [0, 1, 2, 3]})
+        ...     coords={"x": [0, 1, 2, 3]},
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 4)
@@ -3977,7 +3989,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Replace all `NaN` elements in column ‘A’, ‘B’, ‘C’, and ‘D’, with 0, 1, 2, and 3 respectively.
 
-        >>> values = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        >>> values = {"A": 0, "B": 1, "C": 2, "D": 3}
         >>> ds.fillna(value=values)
         <xarray.Dataset>
         Dimensions:  (x: 4)
@@ -4284,7 +4296,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> da = xr.DataArray(np.random.randn(2, 3))
-        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])})
+        >>> ds = xr.Dataset({"foo": da, "bar": ("x", [-1, 2])})
         >>> ds
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -4371,8 +4383,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> import xarray as xr
         >>> x = xr.Dataset(
         ...     {
-        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
-        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
+        ...         "temperature_c": (
+        ...             ("lat", "lon"),
+        ...             20 * np.random.rand(4).reshape(2, 2),
+        ...         ),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2),),
         ...     },
         ...     coords={"lat": [10, 20], "lon": [150, 160]},
         ... )
@@ -4388,7 +4403,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Where the value is a callable, evaluated on dataset:
 
-        >>> x.assign(temperature_f = lambda x: x.temperature_c * 9 / 5 + 32)
+        >>> x.assign(temperature_f=lambda x: x.temperature_c * 9 / 5 + 32)
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
@@ -4891,15 +4906,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> ds = xr.Dataset({'foo': ('x', [5, 5, 6, 6])})
-        >>> ds.diff('x')
+        >>> ds = xr.Dataset({"foo": ("x", [5, 5, 6, 6])})
+        >>> ds.diff("x")
         <xarray.Dataset>
         Dimensions:  (x: 3)
         Coordinates:
           * x        (x) int64 1 2 3
         Data variables:
             foo      (x) int64 0 1 0
-        >>> ds.diff('x', 2)
+        >>> ds.diff("x", 2)
         <xarray.Dataset>
         Dimensions:  (x: 2)
         Coordinates:
@@ -4983,7 +4998,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> ds = xr.Dataset({'foo': ('x', list('abcde'))})
+        >>> ds = xr.Dataset({"foo": ("x", list("abcde"))})
         >>> ds.shift(x=2)
         <xarray.Dataset>
         Dimensions:  (x: 5)
@@ -5042,7 +5057,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> ds = xr.Dataset({'foo': ('x', list('abcde'))})
+        >>> ds = xr.Dataset({"foo": ("x", list("abcde"))})
         >>> ds.roll(x=2)
         <xarray.Dataset>
         Dimensions:  (x: 5)
@@ -5202,7 +5217,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
 
         >>> ds = xr.Dataset(
-        ...     {"a": (("x", "y"), [[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]])},
+        ...     {"a": (("x", "y"), [[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],)},
         ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
         ... )
         >>> ds.quantile(0)  # or ds.quantile(0, dim=...)
@@ -5420,7 +5435,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> ds = xr.Dataset(
-        ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0])},
+        ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0]),},
         ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
         ... )
         >>> ds
@@ -5555,19 +5570,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> precip = 10 * np.random.rand(2, 2, 3)
         >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
         >>> lat = [[42.25, 42.21], [42.63, 42.59]]
-        >>> dims = ['x', 'y', 'time']
-        >>> temp_attr = dict(standard_name='air_potential_temperature')
-        >>> precip_attr = dict(standard_name='convective_precipitation_flux')
-        >>> ds = xr.Dataset({
-        ...         'temperature': (dims,  temp, temp_attr),
-        ...         'precipitation': (dims, precip, precip_attr)},
-        ...                 coords={
-        ...         'lon': (['x', 'y'], lon),
-        ...         'lat': (['x', 'y'], lat),
-        ...         'time': pd.date_range('2014-09-06', periods=3),
-        ...         'reference_time': pd.Timestamp('2014-09-05')})
+        >>> dims = ["x", "y", "time"]
+        >>> temp_attr = dict(standard_name="air_potential_temperature")
+        >>> precip_attr = dict(standard_name="convective_precipitation_flux")
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "temperature": (dims, temp, temp_attr),
+        ...         "precipitation": (dims, precip, precip_attr),
+        ...     },
+        ...     coords={
+        ...         "lon": (["x", "y"], lon),
+        ...         "lat": (["x", "y"], lat),
+        ...         "time": pd.date_range("2014-09-06", periods=3),
+        ...         "reference_time": pd.Timestamp("2014-09-05"),
+        ...     },
+        ... )
         >>> # Get variables matching a specific standard_name.
-        >>> ds.filter_by_attrs(standard_name='convective_precipitation_flux')
+        >>> ds.filter_by_attrs(standard_name="convective_precipitation_flux")
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:

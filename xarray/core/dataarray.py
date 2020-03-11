@@ -875,8 +875,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Shallow versus deep copy
 
-        >>> array = xr.DataArray([1, 2, 3], dims='x',
-        ...                      coords={'x': ['a', 'b', 'c']})
+        >>> array = xr.DataArray([1, 2, 3], dims="x", coords={"x": ["a", "b", "c"]})
         >>> array.copy()
         <xarray.DataArray (x: 3)>
         array([1, 2, 3])
@@ -1344,7 +1343,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> da = xr.DataArray([1, 3], [('x', np.arange(2))])
+        >>> da = xr.DataArray([1, 3], [("x", np.arange(2))])
         >>> da.interp(x=0.5)
         <xarray.DataArray ()>
         array(2.0)
@@ -1476,8 +1475,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray(data=[0, 1], dims="x",
-        ...                    coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        >>> arr = xr.DataArray(
+        ...     data=[0, 1], dims="x", coords={"x": ["a", "b"], "y": ("x", [0, 1])},
+        ... )
         >>> arr
         <xarray.DataArray (x: 2)>
         array([0, 1])
@@ -1592,12 +1592,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> arr = xr.DataArray(data=np.ones((2, 3)),
-        ...                    dims=['x', 'y'],
-        ...                    coords={'x':
-        ...                        range(2), 'y':
-        ...                        range(3), 'a': ('x', [3, 4])
-        ...                    })
+        >>> arr = xr.DataArray(
+        ...     data=np.ones((2, 3)),
+        ...     dims=["x", "y"],
+        ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4]),},
+        ... )
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
         array([[1., 1., 1.],
@@ -1606,7 +1605,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) int64 0 1
           * y        (y) int64 0 1 2
             a        (x) int64 3 4
-        >>> arr.set_index(x='a')
+        >>> arr.set_index(x="a")
         <xarray.DataArray (x: 2, y: 3)>
         array([[1., 1., 1.],
                [1., 1., 1.]])
@@ -1721,8 +1720,10 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray(np.arange(6).reshape(2, 3),
-        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr = xr.DataArray(
+        ...     np.arange(6).reshape(2, 3),
+        ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
+        ... )
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
         array([[0, 1, 2],
@@ -1730,8 +1731,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) |S1 'a' 'b'
           * y        (y) int64 0 1 2
-        >>> stacked = arr.stack(z=('x', 'y'))
-        >>> stacked.indexes['z']
+        >>> stacked = arr.stack(z=("x", "y"))
+        >>> stacked.indexes["z"]
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                    codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
@@ -1771,8 +1772,10 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray(np.arange(6).reshape(2, 3),
-        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr = xr.DataArray(
+        ...     np.arange(6).reshape(2, 3),
+        ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
+        ... )
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
         array([[0, 1, 2],
@@ -1780,8 +1783,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) |S1 'a' 'b'
           * y        (y) int64 0 1 2
-        >>> stacked = arr.stack(z=('x', 'y'))
-        >>> stacked.indexes['z']
+        >>> stacked = arr.stack(z=("x", "y"))
+        >>> stacked.indexes["z"]
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                    codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
@@ -1820,9 +1823,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
         >>> import xarray as xr
-        >>> arr = xr.DataArray(np.arange(6).reshape(2, 3),
-        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
-        >>> data = xr.Dataset({'a': arr, 'b': arr.isel(y=0)})
+        >>> arr = xr.DataArray(
+        ...     np.arange(6).reshape(2, 3),
+        ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
+        ... )
+        >>> data = xr.Dataset({"a": arr, "b": arr.isel(y=0)})
         >>> data
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 3)
@@ -1832,12 +1837,12 @@ class DataArray(AbstractArray, DataWithCoords):
         Data variables:
             a        (x, y) int64 0 1 2 3 4 5
             b        (x) int64 0 3
-        >>> stacked = data.to_stacked_array("z", ['y'])
-        >>> stacked.indexes['z']
+        >>> stacked = data.to_stacked_array("z", ["y"])
+        >>> stacked.indexes["z"]
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                 labels=[[0, 0, 0, 1], [0, 1, 2, -1]],
                 names=['variable', 'y'])
-        >>> roundtripped = stacked.to_unstacked_dataset(dim='z')
+        >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
         >>> data.identical(roundtripped)
         True
 
@@ -2697,13 +2702,13 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> arr = xr.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ['x'])
-        >>> arr.diff('x')
+        >>> arr = xr.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ["x"])
+        >>> arr.diff("x")
         <xarray.DataArray (x: 3)>
         array([0, 1, 0])
         Coordinates:
         * x        (x) int64 2 3 4
-        >>> arr.diff('x', 2)
+        >>> arr.diff("x", 2)
         <xarray.DataArray (x: 2)>
         array([ 1, -1])
         Coordinates:
@@ -2753,7 +2758,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray([5, 6, 7], dims='x')
+        >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.shift(x=1)
         <xarray.DataArray (x: 3)>
         array([ nan,   5.,   6.])
@@ -2803,7 +2808,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray([5, 6, 7], dims='x')
+        >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.roll(x=1)
         <xarray.DataArray (x: 3)>
         array([7, 5, 6])
@@ -2852,9 +2857,9 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
 
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
-        >>> da = xr.DataArray(da_vals, dims=['x', 'y', 'z'])
+        >>> da = xr.DataArray(da_vals, dims=["x", "y", "z"])
         >>> dm_vals = np.arange(4)
-        >>> dm = xr.DataArray(dm_vals, dims=['z'])
+        >>> dm = xr.DataArray(dm_vals, dims=["z"])
 
         >>> dm.dims
         ('z')
@@ -2914,9 +2919,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> da = xr.DataArray(np.random.rand(5),
-        ...                   coords=[pd.date_range('1/1/2000', periods=5)],
-        ...                   dims='time')
+        >>> da = xr.DataArray(
+        ...     np.random.rand(5),
+        ...     coords=[pd.date_range("1/1/2000", periods=5)],
+        ...     dims="time",
+        ... )
         >>> da
         <xarray.DataArray (time: 5)>
         array([ 0.965471,  0.615637,  0.26532 ,  0.270962,  0.552878])
@@ -3057,8 +3064,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray([5, 6, 7], dims='x')
-        >>> arr.rank('x')
+        >>> arr = xr.DataArray([5, 6, 7], dims="x")
+        >>> arr.rank("x")
         <xarray.DataArray (x: 3)>
         array([ 1.,   2.,   3.])
         Dimensions without coordinates: x
@@ -3098,8 +3105,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
-        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da = xr.DataArray(
+        ...     np.arange(12).reshape(4, 3),
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 0.1, 1.1, 1.2]},
+        ... )
         >>> da
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0,  1,  2],
@@ -3110,7 +3120,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
-        >>> da.differentiate('x')
+        >>> da.differentiate("x")
         <xarray.DataArray (x: 4, y: 3)>
         array([[30.      , 30.      , 30.      ],
                [27.545455, 27.545455, 27.545455],
@@ -3152,8 +3162,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
-        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da = xr.DataArray(
+        ...     np.arange(12).reshape(4, 3),
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 0.1, 1.1, 1.2]},
+        ... )
         >>> da
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0,  1,  2],
@@ -3164,7 +3177,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
-        >>> da.integrate('x')
+        >>> da.integrate("x")
         <xarray.DataArray (y: 3)>
         array([5.4, 6.6, 7.8])
         Dimensions without coordinates: y

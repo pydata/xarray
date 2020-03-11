@@ -121,10 +121,16 @@ def align(
     --------
 
     >>> import xarray as xr
-    >>> x = xr.DataArray([[25, 35], [10, 24]], dims=('lat', 'lon'),
-    ...              coords={'lat': [35., 40.], 'lon': [100., 120.]})
-    >>> y = xr.DataArray([[20, 5], [7, 13]], dims=('lat', 'lon'),
-    ...              coords={'lat': [35., 42.], 'lon': [100., 120.]})
+    >>> x = xr.DataArray(
+    ...     [[25, 35], [10, 24]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 40.0], "lon": [100.0, 120.0]},
+    ... )
+    >>> y = xr.DataArray(
+    ...     [[20, 5], [7, 13]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 42.0], "lon": [100.0, 120.0]},
+    ... )
 
     >>> x
     <xarray.DataArray (lat: 2, lon: 2)>
@@ -156,7 +162,7 @@ def align(
     * lat      (lat) float64 35.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='outer')
+    >>> a, b = xr.align(x, y, join="outer")
     >>> a
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[25., 35.],
@@ -174,7 +180,7 @@ def align(
     * lat      (lat) float64 35.0 40.0 42.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='outer', fill_value=-999)
+    >>> a, b = xr.align(x, y, join="outer", fill_value=-999)
     >>> a
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[  25,   35],
@@ -192,7 +198,7 @@ def align(
     * lat      (lat) float64 35.0 40.0 42.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='left')
+    >>> a, b = xr.align(x, y, join="left")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
@@ -208,7 +214,7 @@ def align(
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='right')
+    >>> a, b = xr.align(x, y, join="right")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25., 35.],
@@ -224,13 +230,13 @@ def align(
     * lat      (lat) float64 35.0 42.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='exact')
+    >>> a, b = xr.align(x, y, join="exact")
     Traceback (most recent call last):
     ...
         "indexes along dimension {!r} are not equal".format(dim)
     ValueError: indexes along dimension 'lat' are not equal
 
-    >>> a, b = xr.align(x, y, join='override')
+    >>> a, b = xr.align(x, y, join="override")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
@@ -674,8 +680,8 @@ def broadcast(*args, exclude=None):
 
     Broadcast two data arrays against one another to fill out their dimensions:
 
-    >>> a = xr.DataArray([1, 2, 3], dims='x')
-    >>> b = xr.DataArray([5, 6], dims='y')
+    >>> a = xr.DataArray([1, 2, 3], dims="x")
+    >>> b = xr.DataArray([5, 6], dims="y")
     >>> a
     <xarray.DataArray (x: 3)>
     array([1, 2, 3])
@@ -706,8 +712,8 @@ def broadcast(*args, exclude=None):
 
     Fill out the dimensions of all data variables in a dataset:
 
-    >>> ds = xr.Dataset({'a': a, 'b': b})
-    >>> ds2, = xr.broadcast(ds)  # use tuple unpacking to extract one dataset
+    >>> ds = xr.Dataset({"a": a, "b": b})
+    >>> (ds2,) = xr.broadcast(ds)  # use tuple unpacking to extract one dataset
     >>> ds2
     <xarray.Dataset>
     Dimensions:  (x: 3, y: 2)

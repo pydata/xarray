@@ -268,29 +268,32 @@ class CFTimeIndex(pd.Index):
         >>> from cftime import DatetimeNoLeap
         >>> import pandas as pd
         >>> import xarray as xr
-        >>> da = xr.DataArray([1, 2],
-        ...                   coords=[[DatetimeNoLeap(2001, 1, 1),
-        ...                            DatetimeNoLeap(2001, 2, 1)]],
-        ...                   dims=['time'])
-        >>> da.sel(time='2001-01-01')
+        >>> da = xr.DataArray(
+        ...     [1, 2],
+        ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1),]],
+        ...     dims=["time"],
+        ... )
+        >>> da.sel(time="2001-01-01")
         <xarray.DataArray (time: 1)>
         array([1])
         Coordinates:
           * time     (time) object 2001-01-01 00:00:00
-        >>> da = xr.DataArray([1, 2],
-        ...                   coords=[[pd.Timestamp(2001, 1, 1),
-        ...                            pd.Timestamp(2001, 2, 1)]],
-        ...                   dims=['time'])
-        >>> da.sel(time='2001-01-01')
+        >>> da = xr.DataArray(
+        ...     [1, 2],
+        ...     coords=[[pd.Timestamp(2001, 1, 1), pd.Timestamp(2001, 2, 1)]],
+        ...     dims=["time"],
+        ... )
+        >>> da.sel(time="2001-01-01")
         <xarray.DataArray ()>
         array(1)
         Coordinates:
             time     datetime64[ns] 2001-01-01
-        >>> da = xr.DataArray([1, 2],
-        ...                   coords=[[pd.Timestamp(2001, 1, 1, 1),
-        ...                            pd.Timestamp(2001, 2, 1)]],
-        ...                   dims=['time'])
-        >>> da.sel(time='2001-01-01')
+        >>> da = xr.DataArray(
+        ...     [1, 2],
+        ...     coords=[[pd.Timestamp(2001, 1, 1, 1), pd.Timestamp(2001, 2, 1),]],
+        ...     dims=["time"],
+        ... )
+        >>> da.sel(time="2001-01-01")
         <xarray.DataArray (time: 1)>
         array([1])
         Coordinates:
@@ -396,10 +399,10 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> index = xr.cftime_range('2000', periods=1, freq='M')
+        >>> index = xr.cftime_range("2000", periods=1, freq="M")
         >>> index
         CFTimeIndex([2000-01-31 00:00:00], dtype='object')
-        >>> index.shift(1, 'M')
+        >>> index.shift(1, "M")
         CFTimeIndex([2000-02-29 00:00:00], dtype='object')
         """
         from .cftime_offsets import to_offset
@@ -479,7 +482,7 @@ class CFTimeIndex(pd.Index):
         Examples
         --------
         >>> import xarray as xr
-        >>> times = xr.cftime_range('2000', periods=2, calendar='gregorian')
+        >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00], dtype='object')
         >>> times.to_datetimeindex()
@@ -518,9 +521,10 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> rng = xr.cftime_range(start='2000', periods=5, freq='2MS',
-        ...                       calendar='noleap')
-        >>> rng.strftime('%B %d, %Y, %r')
+        >>> rng = xr.cftime_range(
+        ...     start="2000", periods=5, freq="2MS", calendar="noleap"
+        ... )
+        >>> rng.strftime("%B %d, %Y, %r")
         Index(['January 01, 2000, 12:00:00 AM', 'March 01, 2000, 12:00:00 AM',
                'May 01, 2000, 12:00:00 AM', 'July 01, 2000, 12:00:00 AM',
                'September 01, 2000, 12:00:00 AM'],

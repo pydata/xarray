@@ -412,7 +412,7 @@ def combine_nested(
       precipitation     (x, y) float64 5.904 2.453 3.404 ...
 
     >>> ds_grid = [[x1y1, x1y2], [x2y1, x2y2]]
-    >>> combined = xr.combine_nested(ds_grid, concat_dim=['x', 'y'])
+    >>> combined = xr.combine_nested(ds_grid, concat_dim=["x", "y"])
     <xarray.Dataset>
     Dimensions:         (x: 4, y: 4)
     Dimensions without coordinates: x, y
@@ -441,7 +441,7 @@ def combine_nested(
       precipitation     (t) float64 5.904 2.453 3.404 ...
 
     >>> ds_grid = [[t1temp, t1precip], [t2temp, t2precip]]
-    >>> combined = xr.combine_nested(ds_grid, concat_dim=['t', None])
+    >>> combined = xr.combine_nested(ds_grid, concat_dim=["t", None])
     <xarray.Dataset>
     Dimensions:         (t: 10)
     Dimensions without coordinates: t
@@ -580,22 +580,22 @@ def combine_by_coords(
 
     >>> x1 = xr.Dataset(
     ...     {
-    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3),),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3),),
     ...     },
     ...     coords={"y": [0, 1], "x": [10, 20, 30]},
     ... )
     >>> x2 = xr.Dataset(
     ...     {
-    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3),),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3),),
     ...     },
     ...     coords={"y": [2, 3], "x": [10, 20, 30]},
     ... )
     >>> x3 = xr.Dataset(
     ...     {
-    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
-    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3),),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3),),
     ...     },
     ...     coords={"y": [2, 3], "x": [40, 50, 60]},
     ... )
@@ -650,7 +650,7 @@ def combine_by_coords(
         temperature    (y, x) float64 1.654 10.63 7.015 nan ... nan 12.46 2.22 15.96
         precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
 
-    >>> xr.combine_by_coords([x3, x1], join='override')
+    >>> xr.combine_by_coords([x3, x1], join="override")
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 4)
     Coordinates:
