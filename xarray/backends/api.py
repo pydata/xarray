@@ -302,6 +302,7 @@ def open_dataset(
     cache=None,
     drop_variables=None,
     backend_kwargs=None,
+    backend_env=None,
     use_cftime=None,
 ):
     """Open and decode a dataset from a file or file-like object.
@@ -373,6 +374,11 @@ def open_dataset(
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
+    backend_env: dictionary, opional
+        A dictionary of key/value pairs used to temporarily modify the system
+        environment.  This may be useful when you have backend options that
+        depend on environmental variables, but you don't want to set these for
+        the entire session.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
@@ -441,6 +447,18 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
+
+    if backend_env:
+        try:
+            assert isinstance(backend_env, dict)
+        except:
+            raise (
+                "Backend environmental settings must be given as a dictionary! You gave %s."
+                % type(backend_env)
+            )
+        for key, value in backend_env.items():
+            old_env = os.environ.copy()
+            os.environ[key] = value
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -542,6 +560,10 @@ def open_dataset(
         if isinstance(filename_or_obj, str):
             ds.encoding["source"] = filename_or_obj
 
+    # PG: Restore the environment again
+    if backend_env:
+        os.environ = old_env
+
     return ds
 
 
@@ -560,6 +582,7 @@ def open_dataarray(
     cache=None,
     drop_variables=None,
     backend_kwargs=None,
+    backend_env=None,
     use_cftime=None,
 ):
     """Open an DataArray from a file or file-like object containing a single
@@ -630,6 +653,9 @@ def open_dataarray(
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
+    backend_env: dictionary, optional
+        A dictionary of key/value pairs used to temporarily modify the system
+        environment while opening the file.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
@@ -670,6 +696,7 @@ def open_dataarray(
         cache=cache,
         drop_variables=drop_variables,
         backend_kwargs=backend_kwargs,
+        backend_env=backend_env,
         use_cftime=use_cftime,
     )
 
