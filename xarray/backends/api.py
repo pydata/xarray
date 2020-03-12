@@ -451,7 +451,7 @@ def open_dataset(
     if backend_env:
         try:
             assert isinstance(backend_env, dict)
-        except:
+        except AssertionError:
             raise (
                 "Backend environmental settings must be given as a dictionary! You gave %s."
                 % type(backend_env)
