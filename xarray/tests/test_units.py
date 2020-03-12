@@ -2234,14 +2234,8 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                function("all"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
-            pytest.param(
-                function("any"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
+            function("all"),
+            function("any"),
             function("argmax"),
             function("argmin"),
             function("max"),
@@ -2262,14 +2256,8 @@ class TestDataArray:
             function("var"),
             function("cumsum"),
             function("cumprod"),
-            pytest.param(
-                method("all"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
-            pytest.param(
-                method("any"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
+            method("all"),
+            method("any"),
             method("argmax"),
             method("argmin"),
             method("max"),
