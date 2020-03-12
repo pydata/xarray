@@ -22,7 +22,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..plot.plot import _PlotMethods
 from . import (
     computation,
     dtypes,
@@ -34,6 +33,7 @@ from . import (
     rolling,
     utils,
 )
+from ..plot.plot import _PlotMethods
 from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
