@@ -580,22 +580,22 @@ def combine_by_coords(
 
     >>> x1 = xr.Dataset(
     ...     {
-    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3),),
-    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3),),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
     ...     },
     ...     coords={"y": [0, 1], "x": [10, 20, 30]},
     ... )
     >>> x2 = xr.Dataset(
     ...     {
-    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3),),
-    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3),),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
     ...     },
     ...     coords={"y": [2, 3], "x": [10, 20, 30]},
     ... )
     >>> x3 = xr.Dataset(
     ...     {
-    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3),),
-    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3),),
+    ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
+    ...         "precipitation": (("y", "x"), np.random.rand(6).reshape(2, 3)),
     ...     },
     ...     coords={"y": [2, 3], "x": [40, 50, 60]},
     ... )

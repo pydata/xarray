@@ -537,7 +537,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...             ("lat", "lon"),
         ...             20 * np.random.rand(4).reshape(2, 2),
         ...         ),
-        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2),),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
         ...     },
         ...     coords={"lat": [10, 20], "lon": [150, 160]},
         ... )

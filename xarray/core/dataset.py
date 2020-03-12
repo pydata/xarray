@@ -1050,7 +1050,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         object is unaffected.
 
         >>> ds.copy(
-        ...     data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"],}
+        ...     data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]}
         ... )
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -3140,7 +3140,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> arr = xr.DataArray(
         ...     data=np.ones((2, 3)),
         ...     dims=["x", "y"],
-        ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4]),},
+        ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
         ... )
         >>> ds = xr.Dataset({"v": arr})
         >>> ds
@@ -4387,7 +4387,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...             ("lat", "lon"),
         ...             20 * np.random.rand(4).reshape(2, 2),
         ...         ),
-        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2),),
+        ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
         ...     },
         ...     coords={"lat": [10, 20], "lon": [150, 160]},
         ... )
@@ -5217,7 +5217,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
 
         >>> ds = xr.Dataset(
-        ...     {"a": (("x", "y"), [[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],)},
+        ...     {"a": (("x", "y"), [[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]])},
         ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
         ... )
         >>> ds.quantile(0)  # or ds.quantile(0, dim=...)
@@ -5435,7 +5435,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> ds = xr.Dataset(
-        ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0]),},
+        ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0])},
         ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
         ... )
         >>> ds

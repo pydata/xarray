@@ -111,7 +111,7 @@ def register_dataset_accessor(name):
     Back in an interactive IPython session:
 
         >>> ds = xarray.Dataset(
-        ...     {"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20),}
+        ...     {"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)}
         ... )
         >>> ds.geo.center
         (5.0, 10.0)

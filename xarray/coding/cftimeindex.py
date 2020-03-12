@@ -270,7 +270,7 @@ class CFTimeIndex(pd.Index):
         >>> import xarray as xr
         >>> da = xr.DataArray(
         ...     [1, 2],
-        ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1),]],
+        ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1)]],
         ...     dims=["time"],
         ... )
         >>> da.sel(time="2001-01-01")
@@ -290,7 +290,7 @@ class CFTimeIndex(pd.Index):
             time     datetime64[ns] 2001-01-01
         >>> da = xr.DataArray(
         ...     [1, 2],
-        ...     coords=[[pd.Timestamp(2001, 1, 1, 1), pd.Timestamp(2001, 2, 1),]],
+        ...     coords=[[pd.Timestamp(2001, 1, 1, 1), pd.Timestamp(2001, 2, 1)]],
         ...     dims=["time"],
         ... )
         >>> da.sel(time="2001-01-01")

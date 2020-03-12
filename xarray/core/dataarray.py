@@ -1595,7 +1595,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> arr = xr.DataArray(
         ...     data=np.ones((2, 3)),
         ...     dims=["x", "y"],
-        ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4]),},
+        ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
         ... )
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
