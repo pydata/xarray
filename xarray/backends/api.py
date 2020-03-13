@@ -456,8 +456,8 @@ def open_dataset(
                 "Backend environmental settings must be given as a dictionary! You gave %s."
                 % type(backend_env)
             )
+        old_env = os.environ.copy()
         for key, value in backend_env.items():
-            old_env = os.environ.copy()
             os.environ[key] = value
 
     def maybe_decode_store(store, lock=False):
