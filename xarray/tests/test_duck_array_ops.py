@@ -754,7 +754,7 @@ def test_pd_timedelta_to_float(td, expected):
 
 
 @pytest.mark.parametrize(
-    "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"],
+    "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"]
 )
 def test_timedelta_to_numeric(td):
     # Scalar input

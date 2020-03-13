@@ -23,8 +23,10 @@ dependencies:
   - hdf5=1.10
   - hypothesis
   - iris=2.2
+  - isort
   - lxml=4.4  # Optional dep of pydap
   - matplotlib=3.1
+  - msgpack-python=0.6  # remove once distributed is bumped. distributed GH3491
   - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2
   - netcdf4=1.4
@@ -42,6 +44,7 @@ dependencies:
   - rasterio=1.0
   - scipy=1.3
   - seaborn=0.9
+  - setuptools=41.2
   # - sparse  # See py36-min-nep18.yml
   - toolz=0.10
   - zarr=2.3

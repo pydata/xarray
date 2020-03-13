@@ -417,7 +417,7 @@ Universal functions
    for the ``xarray.ufuncs`` module, which should not be used for new code
    unless compatibility with versions of NumPy prior to v1.13 is required.
 
-This functions are copied from NumPy, but extended to work on NumPy arrays,
+These functions are copied from NumPy, but extended to work on NumPy arrays,
 dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
 module:
 
@@ -652,6 +652,7 @@ Plotting
    plot.imshow
    plot.line
    plot.pcolormesh
+   plot.step
    plot.FacetGrid
 
 Faceting

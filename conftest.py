@@ -21,3 +21,14 @@ def pytest_runtest_setup(item):
         pytest.skip(
             "set --run-network-tests to run test requiring an " "internet connection"
         )
+
+
+@pytest.fixture(autouse=True)
+def add_standard_imports(doctest_namespace):
+    import numpy as np
+    import pandas as pd
+    import xarray as xr
+
+    doctest_namespace["np"] = np
+    doctest_namespace["pd"] = pd
+    doctest_namespace["xr"] = xr

@@ -660,6 +660,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
         """
+        # While we don't generally check the type of every arg, passing
+        # multiple dimensions as multiple arguments is common enough, and the
+        # consequences hidden enough (strings evaluate as true) to warrant
+        # checking here.
+        # A future version could make squeeze kwarg only, but would face
+        # backward-compat issues.
+        if not isinstance(squeeze, bool):
+            raise TypeError(
+                f"`squeeze` must be True or False, but {squeeze} was supplied"
+            )
+
         return self._groupby_cls(
             self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
         )
@@ -742,6 +753,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
         center: bool = False,
+        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -758,6 +770,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -799,8 +815,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
+        return self._rolling_cls(
+            self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs
+        )
 
     def rolling_exp(
         self,
@@ -848,6 +869,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         boundary: str = "exact",
         side: Union[str, Mapping[Hashable, str]] = "left",
         coord_func: str = "mean",
+        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -868,8 +890,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func : function (name) that is applied to the coordintes,
+        coord_func : function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -904,9 +930,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(
-            self, dim, boundary=boundary, side=side, coord_func=coord_func
+            self,
+            dim,
+            boundary=boundary,
+            side=side,
+            coord_func=coord_func,
+            keep_attrs=keep_attrs,
         )
 
     def resample(
@@ -1085,6 +1119,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         >>> import numpy as np
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=('x', 'y'))
+        >>> a
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+            [ 5,  6,  7,  8,  9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 4)
         <xarray.DataArray (x: 5, y: 5)>
         array([[  0.,   1.,   2.,   3.,  nan],
@@ -1093,6 +1136,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                [ 15.,  nan,  nan,  nan,  nan],
                [ nan,  nan,  nan,  nan,  nan]])
         Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 5, -1)
         <xarray.DataArray (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
@@ -1101,7 +1145,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                [15, 16, -1, -1, -1],
                [20, -1, -1, -1, -1]])
         Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 4, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  0.,   1.,   2.,   3.],
+               [  5.,   6.,   7.,  nan],
+               [ 10.,  11.,  nan,  nan],
+               [ 15.,  nan,  nan,  nan]])
+        Dimensions without coordinates: x, y
+
+        >>> a.where(lambda x: x.x + x.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)>
         array([[  0.,   1.,   2.,   3.],
                [  5.,   6.,   7.,  nan],
@@ -1117,6 +1170,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         from .alignment import align
         from .dataarray import DataArray
         from .dataset import Dataset
+
+        if callable(cond):
+            cond = cond(self)
 
         if drop:
             if other is not dtypes.NA:

@@ -51,8 +51,8 @@ Bug reports must:
    <http://github.github.com/github-flavored-markdown/>`_::
 
       ```python
-      >>> from xarray import Dataset
-      >>> df = Dataset(...)
+      >>> import xarray as xr
+      >>> df = xr.Dataset(...)
       ...
       ```
 
@@ -345,33 +345,31 @@ as possible to avoid mass breakages.
 Code Formatting
 ~~~~~~~~~~~~~~~
 
-Xarray uses `Black <https://black.readthedocs.io/en/stable/>`_ and
-`Flake8 <http://flake8.pycqa.org/en/latest/>`_ to ensure a consistent code
-format throughout the project. ``black`` and ``flake8`` can be installed with
+xarray uses several tools to ensure a consistent code format throughout the project:
+
+- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized code formatting
+- `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
+- `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
+  See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
+- `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
+  <https://docs.python.org/3/library/typing.html>`_
+
 ``pip``::
 
-   pip install black flake8
+   pip install black flake8 isort mypy
 
 and then run from the root of the Xarray repository::
 
-   black .
+   isort -rc .
+   black -t py36 .
    flake8
+   mypy .
 
 to auto-format your code. Additionally, many editors have plugins that will
 apply ``black`` as you edit files.
 
-Other recommended but optional tools for checking code quality (not currently
-enforced in CI):
-
-- `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
-  make it easier to catch bugs. Please run ``mypy xarray`` if you annotate any
-  code with `type hints <https://docs.python.org/3/library/typing.html>`_.
-- `isort <https://github.com/timothycrosley/isort>`_ will highlight
-  incorrectly sorted imports. ``isort -y`` will automatically fix them. See
-  also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
-
 Optionally, you may wish to setup `pre-commit hooks <https://pre-commit.com/>`_
-to automatically run ``black`` and ``flake8`` when you make a git commit. This
+to automatically run all the above tools every time you make a git commit. This
 can be done by installing ``pre-commit``::
 
    pip install pre-commit
@@ -380,25 +378,9 @@ and then running::
 
    pre-commit install
 
-from the root of the Xarray repository. Now ``black`` and ``flake8`` will be run
-each time you commit changes. You can skip these checks with
-``git commit --no-verify``.
+from the root of the xarray repository. You can skip the pre-commit checks
+with ``git commit --no-verify``.
 
-.. note::
-
-  If you were working on a branch *prior* to the code being reformatted with black,
-  you will likely face some merge conflicts. These steps can eliminate many of those
-  conflicts. Because they have had limited testing, please reach out to the core devs
-  on your pull request if you face any issues, and we'll help with the merge:
-
-  - Merge the commit on master prior to the ``black`` commit into your branch
-    ``git merge f172c673``. If you have conflicts here, resolve and commit.
-  - Apply ``black .`` to your branch and commit ``git commit -am "black"``
-  - Apply a patch of other changes we made on that commit: ``curl https://gist.githubusercontent.com/max-sixty/3cceb8472ed4ea806353999ca43aed52/raw/03cbee4e386156bddb61acaa250c0bfc726f596d/xarray%2520black%2520diff | git apply -``
-  - Commit (``git commit -am "black2"``)
-  - Merge master at the ``black`` commit, resolving in favor of 'our' changes:
-    ``git merge d089df38 -X ours``. You shouldn't have any merge conflicts
-  - Merge current master ``git merge master``; resolve and commit any conflicts
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~

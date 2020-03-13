@@ -1012,7 +1012,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         >>> da = xr.DataArray(np.random.randn(2, 3))
         >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])},
-                            coords={'x': ['one', 'two']})
+        ...                 coords={'x': ['one', 'two']})
         >>> ds.copy()
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -1022,6 +1022,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) float64 -0.8079 0.3897 -1.862 -0.6091 -1.051 -0.3003
             bar      (x) int64 -1 2
+
         >>> ds_0 = ds.copy(deep=False)
         >>> ds_0['foo'][0, 0] = 7
         >>> ds_0
@@ -1033,6 +1034,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
             bar      (x) int64 -1 2
+
         >>> ds
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -1056,6 +1058,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) int64 0 1 2 3 4 5
             bar      (x) <U1 'a' 'b'
+
         >>> ds
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -2572,6 +2575,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
         indexers = dict(self._validate_interp_indexers(coords))
 
+        if coords:
+            # This avoids broadcasting over coordinates that are both in
+            # the original array AND in the indexing array. It essentially
+            # forces interpolation along the shared coordinates.
+            sdims = (
+                set(self.dims)
+                .intersection(*[set(nx.dims) for nx in indexers.values()])
+                .difference(coords.keys())
+            )
+            indexers.update({d: self.variables[d] for d in sdims})
+
         obj = self if assume_sorted else self.sortby([k for k in coords])
 
         def maybe_variable(obj, k):
@@ -2884,7 +2898,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> ds = xr.Dataset(data_vars={"a": ("x", [5, 7]), "b": ("x", [0.1, 2.4])},
-                            coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        ...                 coords={"x": ["a", "b"], "y": ("x", [0, 1])})
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2)
@@ -2894,6 +2908,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             a        (x) int64 5 7
             b        (x) float64 0.1 2.4
+
         >>> ds.swap_dims({"x": "y"})
         <xarray.Dataset>
         Dimensions:  (y: 2)
@@ -2903,6 +2918,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             a        (y) int64 5 7
             b        (y) float64 0.1 2.4
+
         >>> ds.swap_dims({"x": "z"})
         <xarray.Dataset>
         Dimensions:  (z: 2)
@@ -2949,7 +2965,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if k in self.indexes:
                     indexes[k] = self.indexes[k]
                 else:
-                    indexes[k] = var.to_index()
+                    new_index = var.to_index()
+                    if new_index.nlevels == 1:
+                        # make sure index name matches dimension name
+                        new_index = new_index.rename(k)
+                    indexes[k] = new_index
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -3338,7 +3358,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> data = Dataset(
+        >>> data = xr.Dataset(
         ...     data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
         ...                'b': ('x', [6, 7])},
         ...     coords={'y': ['u', 'v', 'w']}
@@ -4876,6 +4896,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         difference : same type as caller
             The n-th order finite difference of this object.
 
+        .. note::
+
+            `n` matches numpy's behavior and is different from pandas' first
+            argument named `periods`.
+
         Examples
         --------
         >>> ds = xr.Dataset({'foo': ('x', [5, 5, 6, 6])})
@@ -5132,7 +5157,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return aligned_self.isel(**indices)
 
     def quantile(
-        self, q, dim=None, interpolation="linear", numeric_only=False, keep_attrs=None
+        self,
+        q,
+        dim=None,
+        interpolation="linear",
+        numeric_only=False,
+        keep_attrs=None,
+        skipna=True,
     ):
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5163,6 +5194,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             object will be returned without attributes.
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -5175,7 +5208,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, DataArray.quantile
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, DataArray.quantile
 
         Examples
         --------
@@ -5250,6 +5283,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             dim=reduce_dims,
                             interpolation=interpolation,
                             keep_attrs=keep_attrs,
+                            skipna=skipna,
                         )
 
             else:

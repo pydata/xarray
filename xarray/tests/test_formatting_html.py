@@ -130,5 +130,5 @@ def test_repr_of_dataset(dataset):
     assert (
         formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
     )
-    assert "&lt;U4" in formatted
+    assert "&lt;U4" in formatted or "&gt;U4" in formatted
     assert "&lt;IA&gt;" in formatted
