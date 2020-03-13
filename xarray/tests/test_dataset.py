@@ -1467,7 +1467,6 @@ class TestDataset:
             ["i1", "i2"]
         )
         actual = df.to_xarray()
-        print(actual)
         assert actual["values"].shape == (1, 2)
 
     def test_sel_drop(self):
