@@ -5761,7 +5761,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             to the coefficients.
         cov : Union[bool, str], optional
             Whether to return to the covariance matrix in addition to the coefficients.
-            The matrix is not scaled if `cov = 'unscaled'`.
+            The matrix is not scaled if `cov='unscaled'`.
 
         See documentation of `numpy.polyfit`.
 
@@ -5773,6 +5773,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             [dim]_matrix_rank : The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
             [dim]_singular_values : The singular values of the scaled Vandermonde coefficient matrix (only included if `full=True`)
             [var_]polyfit_covariance : The covariance matrix of the polynomial coefficient estimates (only included if `full=False` and `cov=True`)
+
+        See also
+        --------
+        numpy.polyfit
         """
         variables = {}
         skipna_da = skipna
