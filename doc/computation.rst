@@ -328,7 +328,7 @@ best fitting coefficients along a given dimension and for a given order,
 
 .. ipython:: python
 
-    x = np.arange(10)
+    x = xr.DataArray(np.arange(10), dims=['x'], name='x')
     a = xr.DataArray(3 + 4 * x, dims=['x'], coords={'x': x})
     out = a.polyfit(dim='x', deg=1, full=True)
     out
