@@ -5749,7 +5749,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Degree of the fitting polynomial.
         skipna : bool, optional
             If True, removes all invalid values before fitting each 1D slices of the array
-            Default is True if data is stored in as dask.array or if there is any
+            Default is True if data is stored in a dask.array or if there is any
             invalid values, False otherwise.
         rcond : float, optional
             Relative condition number to the fit.
