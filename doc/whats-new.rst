@@ -54,6 +54,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
+  indexed variable (:issue:`3252`).
+  By `David Huard <https://github.com/huard>`_.
 
 - Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
