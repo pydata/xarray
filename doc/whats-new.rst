@@ -55,6 +55,8 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
+- Fix use of multi-index with categorical values (:issue:`3674`).
+  By `Matthieu Ancellin <https://github.com/mancellin>`_.
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
   (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
