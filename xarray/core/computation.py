@@ -1310,13 +1310,13 @@ def polyval(coord, coeffs, degree_dim="degree"):
         The 1D coordinate along which to evaluate the polynomial.
     coeffs : DataArray
         Coefficients of the polynomials.
-    degree_dim : str, optional
+    degree_dim : str, default "degree"
         Name of the polynomial degree dimension in `coeffs`.
 
     See also
     --------
-    `xarray.DataArray.polyfit`
-    `numpy.polyval`
+    xarray.DataArray.polyfit
+    numpy.polyval
     """
     from .dataarray import DataArray
     from .missing import get_clean_interp_index

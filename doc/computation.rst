@@ -333,10 +333,10 @@ best fitting coefficients along a given dimension and for a given order,
     out = a.polyfit(dim='x', deg=1, full=True)
     out
 
-The method outputs a dataset containing the coefficients (and more if `full = True`).
+The method outputs a dataset containing the coefficients (and more if `full=True`).
 The inverse operation is done with :py:meth:`~xarray.polyval`,
 
-.. ipython::python
+.. ipython:: python
 
     xr.polyval(coord=x, coeffs=out.polyfit_coefficients)
 
