@@ -50,7 +50,7 @@ def _override_indexes(objects, all_indexes, exclude):
     objects = list(objects)
     for idx, obj in enumerate(objects[1:]):
         new_indexes = {}
-        for dim in obj.dims:
+        for dim in obj.indexes:
             if dim not in exclude:
                 new_indexes[dim] = all_indexes[dim][0]
         objects[idx + 1] = obj._overwrite_indexes(new_indexes)

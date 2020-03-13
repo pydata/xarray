@@ -250,6 +250,13 @@ class TestConcatDataset:
             actual = concat([ds1, ds2], join=join, dim="x")
             assert_equal(actual, expected[join])
 
+        # regression test for #3681
+        actual = concat([ds1.drop("x"), ds2.drop("x")], join="override", dim="y")
+        expected = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2))}, coords={"y": [0, 0.0001]}
+        )
+        assert_identical(actual, expected)
+
     def test_concat_promote_shape(self):
         # mixed dims within variables
         objs = [Dataset({}, {"x": 0}), Dataset({"x": [1]})]

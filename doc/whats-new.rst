@@ -55,6 +55,8 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
+- Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
   (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
