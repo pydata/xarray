@@ -49,6 +49,7 @@ import pandas as pd
 
 from xarray.core.utils import is_scalar
 
+from ..core.common import _contains_cftime_datetimes
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
@@ -326,6 +327,32 @@ class CFTimeIndex(pd.Index):
             raise KeyError(key)
         return loc
 
+    def _get_nearest_indexer(self, target, limit, tolerance):
+        """Adapted from pandas.Index._get_nearest_indexer"""
+        left_indexer = self.get_indexer(target, "pad", limit=limit)
+        right_indexer = self.get_indexer(target, "backfill", limit=limit)
+        left_distances = abs(self.values[left_indexer] - target.values)
+        right_distances = abs(self.values[right_indexer] - target.values)
+
+        if self.is_monotonic_increasing:
+            condition = (left_distances < right_distances) | (right_indexer == -1)
+        else:
+            condition = (left_distances <= right_distances) | (right_indexer == -1)
+        indexer = np.where(condition, left_indexer, right_indexer)
+
+        if tolerance is not None:
+            indexer = self._filter_indexer_tolerance(target, indexer, tolerance)
+        return indexer
+
+    def _filter_indexer_tolerance(self, target, indexer, tolerance):
+        """Adapted from pandas.Index._filter_indexer_tolerance"""
+        if isinstance(target, pd.Index):
+            distance = abs(self.values[indexer] - target.values)
+        else:
+            distance = abs(self.values[indexer] - target)
+        indexer = np.where(distance <= tolerance, indexer, -1)
+        return indexer
+
     def get_loc(self, key, method=None, tolerance=None):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
         if isinstance(key, str):
@@ -427,9 +454,11 @@ class CFTimeIndex(pd.Index):
         return CFTimeIndex(other + np.array(self))
 
     def __sub__(self, other):
-        import cftime
-
-        if isinstance(other, (CFTimeIndex, cftime.datetime)):
+        if _contains_datetime_timedeltas(other):
+            return CFTimeIndex(np.array(self) - other)
+        elif isinstance(other, pd.TimedeltaIndex):
+            return CFTimeIndex(np.array(self) - other.to_pytimedelta())
+        elif _contains_cftime_datetimes(np.array(other)):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
             except OverflowError:
@@ -437,14 +466,17 @@ class CFTimeIndex(pd.Index):
                     "The time difference exceeds the range of values "
                     "that can be expressed at the nanosecond resolution."
                 )
-
-        elif isinstance(other, pd.TimedeltaIndex):
-            return CFTimeIndex(np.array(self) - other.to_pytimedelta())
         else:
-            return CFTimeIndex(np.array(self) - other)
+            return NotImplemented
 
     def __rsub__(self, other):
-        return pd.TimedeltaIndex(other - np.array(self))
+        try:
+            return pd.TimedeltaIndex(other - np.array(self))
+        except OverflowError:
+            raise ValueError(
+                "The time difference exceeds the range of values "
+                "that can be expressed at the nanosecond resolution."
+            )
 
     def to_datetimeindex(self, unsafe=False):
         """If possible, convert this index to a pandas.DatetimeIndex.
@@ -631,6 +663,12 @@ def _parse_array_of_cftime_strings(strings, date_type):
     return np.array(
         [_parse_iso8601_without_reso(date_type, s) for s in strings.ravel()]
     ).reshape(strings.shape)
+
+
+def _contains_datetime_timedeltas(array):
+    """Check if an input array contains datetime.timedelta objects."""
+    array = np.atleast_1d(array)
+    return isinstance(array[0], timedelta)
 
 
 def _cftimeindex_from_i8(values, date_type, name):
