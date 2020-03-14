@@ -6,21 +6,22 @@ dependencies:
   - python=3.8
   - bottleneck
   - cartopy
-  - cfgrib
-  - h5netcdf
+  - cfgrib>=0.9
+  - dask>=2.10
+  - h5netcdf>=0.7.4
   - ipykernel
   - ipython
-  - iris
+  - iris>=2.3
   - jupyter_client
   - nbsphinx
-  - netcdf4
+  - netcdf4>=1.5
   - numba
-  - numpy
+  - numpy>=1.17
   - numpydoc
-  - pandas
-  - rasterio
+  - pandas>=1.0
+  - rasterio>=1.1
   - seaborn
   - setuptools
-  - sphinx
-  - sphinx_rtd_theme
-  - zarr
+  - sphinx>=2.3
+  - sphinx_rtd_theme>=0.4
+  - zarr>=2.4

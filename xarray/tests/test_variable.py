@@ -9,7 +9,7 @@ import pytest
 import pytz
 
 from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
-from xarray.core import dtypes, indexing
+from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer,
@@ -1511,14 +1511,16 @@ class TestVariable(VariableSubclassobjects):
         with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
             v.mean(dim="x", allow_lazy=False)
 
+    @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
-    def test_quantile(self, q, axis, dim):
+    def test_quantile(self, q, axis, dim, skipna):
         v = Variable(["x", "y"], self.d)
-        actual = v.quantile(q, dim=dim)
-        expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+        actual = v.quantile(q, dim=dim, skipna=skipna)
+        _percentile_func = np.nanpercentile if skipna else np.percentile
+        expected = _percentile_func(self.d, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
 
     @requires_dask
@@ -1878,6 +1880,26 @@ class TestVariable(VariableSubclassobjects):
         actual = v.coarsen(dict(x=2, y=2), func="sum", boundary="exact", skipna=True)
         expected = self.cls(("x", "y"), [[10, 18], [42, 35]])
         assert_equal(actual, expected)
+
+    # perhaps @pytest.mark.parametrize("operation", [f for f in duck_array_ops])
+    def test_coarsen_keep_attrs(self, operation="mean"):
+        _attrs = {"units": "test", "long_name": "testing"}
+
+        test_func = getattr(duck_array_ops, operation, None)
+
+        # Test dropped attrs
+        with set_options(keep_attrs=False):
+            new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
+                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+            )
+        assert new.attrs == {}
+
+        # Test kept attrs
+        with set_options(keep_attrs=True):
+            new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
+                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+            )
+        assert new.attrs == _attrs
 
 
 @requires_dask

@@ -516,6 +516,11 @@ def test_groupby_reduce_dimension_error(array):
     assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
 
 
+def test_groupby_multiple_string_args(array):
+    with pytest.raises(TypeError):
+        array.groupby("x", "y")
+
+
 def test_groupby_bins_timeseries():
     ds = xr.Dataset()
     ds["time"] = xr.DataArray(
