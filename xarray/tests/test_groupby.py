@@ -127,7 +127,7 @@ def test_groupby_map_shrink_groups(obj):
         xr.Dataset({"foo": ("x", [1, 2, 3])}, {"x": [1, 2, 2]}),
     ],
 )
-def test_ds_groupby_map_change_group_size(obj):
+def test_groupby_map_change_group_size(obj):
     def func(group):
         if group.sizes["x"] == 1:
             result = group.isel(x=[0, 0])
