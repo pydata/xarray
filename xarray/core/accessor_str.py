@@ -67,7 +67,7 @@ class StringAccessor:
     Similar to pandas, fields can be accessed through the `.str` attribute
     for applicable DataArrays.
 
-        >>> da = xr.DataArray(['some', 'text', 'in', 'an', 'array'])
+        >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
         >>> ds.str.len()
         <xarray.DataArray (dim_0: 5)>
         array([4, 4, 2, 2, 5])

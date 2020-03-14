@@ -938,7 +938,7 @@ def cftime_range(
     This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
     objects associated with the specified calendar type, e.g.
 
-    >>> xr.cftime_range(start='2000', periods=6, freq='2MS', calendar='noleap')
+    >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object')

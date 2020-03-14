@@ -108,7 +108,7 @@ class set_options:
 
     You can use ``set_options`` either as a context manager:
 
-    >>> ds = xr.Dataset({'x': np.arange(1000)})
+    >>> ds = xr.Dataset({"x": np.arange(1000)})
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
     <xarray.Dataset>

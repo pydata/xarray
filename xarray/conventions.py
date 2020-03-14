@@ -19,7 +19,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     big endian) into native endianness, so they can be used with Cython
     functions, such as those found in bottleneck and pandas.
 
-    >>> x = np.arange(5, dtype='>i2')
+    >>> x = np.arange(5, dtype=">i2")
 
     >>> x.dtype
     dtype('>i2')
@@ -50,7 +50,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     This is useful for decoding boolean arrays from integer typed netCDF
     variables.
 
-    >>> x = np.array([1, 0, 1, 1, 0], dtype='i1')
+    >>> x = np.array([1, 0, 1, 1, 0], dtype="i1")
 
     >>> x.dtype
     dtype('>i2')

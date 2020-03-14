@@ -678,7 +678,7 @@ def merge(
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
         var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
 
-    >>> xr.merge([x, y, z], compat='identical')
+    >>> xr.merge([x, y, z], compat="identical")
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
@@ -690,7 +690,7 @@ def merge(
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
         var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
 
-    >>> xr.merge([x, y, z], compat='equals')
+    >>> xr.merge([x, y, z], compat="equals")
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
@@ -702,7 +702,7 @@ def merge(
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
         var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
 
-    >>> xr.merge([x, y, z], compat='equals', fill_value=-999.)
+    >>> xr.merge([x, y, z], compat="equals", fill_value=-999.0)
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
@@ -714,7 +714,7 @@ def merge(
         var2     (lat, lon) float64 5.0 -999.0 6.0 -999.0 ... -999.0 7.0 -999.0 8.0
         var3     (time, lon) float64 0.0 -999.0 3.0 4.0 -999.0 9.0
 
-    >>> xr.merge([x, y, z], join='override')
+    >>> xr.merge([x, y, z], join="override")
     <xarray.Dataset>
     Dimensions:  (lat: 2, lon: 2, time: 2)
     Coordinates:
@@ -726,7 +726,7 @@ def merge(
         var2     (lat, lon) float64 5.0 6.0 7.0 8.0
         var3     (time, lon) float64 0.0 3.0 4.0 9.0
 
-    >>> xr.merge([x, y, z], join='inner')
+    >>> xr.merge([x, y, z], join="inner")
     <xarray.Dataset>
     Dimensions:  (lat: 1, lon: 1, time: 2)
     Coordinates:
@@ -738,7 +738,7 @@ def merge(
         var2     (lat, lon) float64 5.0
         var3     (time, lon) float64 0.0 4.0
 
-    >>> xr.merge([x, y, z], compat='identical', join='inner')
+    >>> xr.merge([x, y, z], compat="identical", join="inner")
     <xarray.Dataset>
     Dimensions:  (lat: 1, lon: 1, time: 2)
     Coordinates:
@@ -750,7 +750,7 @@ def merge(
         var2     (lat, lon) float64 5.0
         var3     (time, lon) float64 0.0 4.0
 
-    >>> xr.merge([x, y, z], compat='broadcast_equals', join='outer')
+    >>> xr.merge([x, y, z], compat="broadcast_equals", join="outer")
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
@@ -762,7 +762,7 @@ def merge(
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
         var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
 
-    >>> xr.merge([x, y, z], join='exact')
+    >>> xr.merge([x, y, z], join="exact")
     Traceback (most recent call last):
     ...
     ValueError: indexes along dimension 'lat' are not equal

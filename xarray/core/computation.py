@@ -889,7 +889,7 @@ def apply_ufunc(
     You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
     objects, with automatically preserved dimensions and coordinates, e.g.,
 
-    >>> array = xr.DataArray([1, 2, 3], coords=[('x', [0.1, 0.2, 0.3])])
+    >>> array = xr.DataArray([1, 2, 3], coords=[("x", [0.1, 0.2, 0.3])])
     >>> magnitude(array, -array)
     <xarray.DataArray (x: 3)>
     array([1.414214, 2.828427, 4.242641])
@@ -1093,10 +1093,9 @@ def dot(*arrays, dims=None, **kwargs):
 
     >>> import numpy as np
     >>> import xarray as xr
-    >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=['a', 'b'])
-    >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2),
-    ...                     dims=['a', 'b', 'c'])
-    >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=['c', 'd'])
+    >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
+    >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2), dims=["a", "b", "c"])
+    >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=["c", "d"])
 
     >>> da_a
     <xarray.DataArray (a: 3, b: 2)>
@@ -1121,18 +1120,18 @@ def dot(*arrays, dims=None, **kwargs):
            [3, 4, 5]])
     Dimensions without coordinates: c, d
 
-    >>> xr.dot(da_a, da_b, dims=['a', 'b'])
+    >>> xr.dot(da_a, da_b, dims=["a", "b"])
     <xarray.DataArray (c: 2)>
     array([110, 125])
     Dimensions without coordinates: c
 
-    >>> xr.dot(da_a, da_b, dims=['a'])
+    >>> xr.dot(da_a, da_b, dims=["a"])
     <xarray.DataArray (b: 2, c: 2)>
     array([[40, 46],
            [70, 79]])
     Dimensions without coordinates: b, c
 
-    >>> xr.dot(da_a, da_b, da_c, dims=['b', 'c'])
+    >>> xr.dot(da_a, da_b, da_c, dims=["b", "c"])
     <xarray.DataArray (a: 3, d: 3)>
     array([[  9,  14,  19],
            [ 93, 150, 207],
@@ -1238,21 +1237,25 @@ def where(cond, x, y):
     --------
     >>> import xarray as xr
     >>> import numpy as np
-    >>> x = xr.DataArray(0.1 * np.arange(10), dims=['lat'],
-    ...                  coords={'lat': np.arange(10)}, name='sst')
+    >>> x = xr.DataArray(
+    ...     0.1 * np.arange(10),
+    ...     dims=["lat"],
+    ...     coords={"lat": np.arange(10)},
+    ...     name="sst",
+    ... )
     >>> x
     <xarray.DataArray 'sst' (lat: 10)>
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
     * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
-    >>> xr.where(x < 0.5, x,  100*x)
+    >>> xr.where(x < 0.5, x, 100 * x)
     <xarray.DataArray 'sst' (lat: 10)>
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
     * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
-    >>> >>> y = xr.DataArray(
+    >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
     ...     dims=["lat", "lon"],
     ...     coords={"lat": np.arange(3), "lon": 10 + np.arange(3)},
@@ -1276,8 +1279,8 @@ def where(cond, x, y):
     * lat      (lat) int64 0 1 2
     * lon      (lon) int64 10 11 12
 
-    >>> cond = xr.DataArray([True, False], dims=['x'])
-    >>> x = xr.DataArray([1, 2], dims=['y'])
+    >>> cond = xr.DataArray([True, False], dims=["x"])
+    >>> x = xr.DataArray([1, 2], dims=["y"])
     >>> xr.where(cond, x, 0)
     <xarray.DataArray (x: 2, y: 2)>
     array([[1, 2],
