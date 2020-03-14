@@ -843,7 +843,7 @@ class Variable(
 
         Shallow copy versus deep copy
 
-        >>> var = xr.Variable(data=[1, 2, 3], dims='x')
+        >>> var = xr.Variable(data=[1, 2, 3], dims="x")
         >>> var.copy()
         <xarray.Variable (x: 3)>
         array([1, 2, 3])
@@ -1844,13 +1844,13 @@ class Variable(
 
         Examples
         --------
-        >>> v=Variable(('a', 'b'), np.arange(8).reshape((2,4)))
-        >>> v.rolling_window(x, 'b', 3, 'window_dim')
+        >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
+        >>> v.rolling_window(x, "b", 3, "window_dim")
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
         array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
                [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
 
-        >>> v.rolling_window(x, 'b', 3, 'window_dim', center=True)
+        >>> v.rolling_window(x, "b", 3, "window_dim", center=True)
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
         array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
                [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
