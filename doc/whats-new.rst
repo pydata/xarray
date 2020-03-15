@@ -32,7 +32,7 @@ New Features
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- implement pint support. (:issue:`3594`, :pull:`3706`)
+- Support unit aware arrays with pint. (:issue:`3594`, :pull:`3706`, :pull:`3611`)
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
   `TypeError` on multiple string arguments. Receiving multiple string arguments
@@ -49,10 +49,26 @@ New Features
   dimensions, similar to its meaning in :py:meth:`DataArray.transpose`.
   (:pull:`3826`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
+  first argument, which is then called on the input; replicating pandas' behavior.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
+  :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
+  (:issue:`3843`, :pull:`3844`) 
+  By `Aaron Spring <https://github.com/aaronspring>`_.
+
 
 Bug fixes
 ~~~~~~~~~
+- Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
+  indexed variable (:issue:`3252`).
+  By `David Huard <https://github.com/huard>`_.
 
+
+- Fix use of multi-index with categorical values (:issue:`3674`).
+  By `Matthieu Ancellin <https://github.com/mancellin>`_.
+- Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
   (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
@@ -79,6 +95,9 @@ Documentation
 - Fix documentation of :py:class:`DataArray` removing the deprecated mention
   that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Update the installation instructions: only explicitly list recommended dependencies
+  (:issue:`3756`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -91,6 +110,19 @@ Internal Changes
 - Changed test_open_mfdataset_list_attr to only run with dask installed
   (:issue:`3777`, :pull:`3780`).
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
+- Preserved the ability to index with ``method="nearest"`` with a
+  :py:class:`CFTimeIndex` with pandas versions greater than 1.0.1
+  (:issue:`3751`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Greater flexibility and improved test coverage of subtracting various types
+  of objects from a :py:class:`CFTimeIndex`. By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Updated Azure CI MacOS image, given pending removal.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Removed xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Removed conversion to :py:class:`pandas.Panel`, given its removal in pandas
+  in favor of xarray's objects.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.15.0:
 
