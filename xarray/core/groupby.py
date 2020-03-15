@@ -550,7 +550,9 @@ class GroupBy(SupportsArithmetic):
         out = ops.fillna(self, value)
         return out
 
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+    def quantile(
+        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
+    ):
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
 
@@ -574,6 +576,8 @@ class GroupBy(SupportsArithmetic):
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -587,7 +591,7 @@ class GroupBy(SupportsArithmetic):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
 
         Examples
@@ -648,6 +652,7 @@ class GroupBy(SupportsArithmetic):
             dim=dim,
             interpolation=interpolation,
             keep_attrs=keep_attrs,
+            skipna=skipna,
         )
 
         return out

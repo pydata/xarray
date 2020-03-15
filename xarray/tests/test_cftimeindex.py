@@ -452,9 +452,20 @@ def test_sel_date_scalar(da, date_type, index):
 
 @pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
+def test_sel_date_distant_date(da, date_type, index):
+    expected = xr.DataArray(4).assign_coords(time=index[3])
+    result = da.sel(time=date_type(2000, 1, 1), method="nearest")
+    assert_identical(result, expected)
+
+
+@requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
-    [{"method": "nearest"}, {"method": "nearest", "tolerance": timedelta(days=70)}],
+    [
+        {"method": "nearest"},
+        {"method": "nearest", "tolerance": timedelta(days=70)},
+        {"method": "nearest", "tolerance": timedelta(days=1800000)},
+    ],
 )
 def test_sel_date_scalar_nearest(da, date_type, index, sel_kwargs):
     expected = xr.DataArray(2).assign_coords(time=index[1])
@@ -738,7 +749,7 @@ def test_timedeltaindex_add_cftimeindex(calendar):
 
 
 @requires_cftime
-def test_cftimeindex_sub(index):
+def test_cftimeindex_sub_timedelta(index):
     date_type = index.date_type
     expected_dates = [
         date_type(1, 1, 2),
@@ -749,6 +760,27 @@ def test_cftimeindex_sub(index):
     expected = CFTimeIndex(expected_dates)
     result = index + timedelta(days=2)
     result = result - timedelta(days=1)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    "other",
+    [np.array(4 * [timedelta(days=1)]), np.array(timedelta(days=1))],
+    ids=["1d-array", "scalar-array"],
+)
+def test_cftimeindex_sub_timedelta_array(index, other):
+    date_type = index.date_type
+    expected_dates = [
+        date_type(1, 1, 2),
+        date_type(1, 2, 2),
+        date_type(2, 1, 2),
+        date_type(2, 2, 2),
+    ]
+    expected = CFTimeIndex(expected_dates)
+    result = index + timedelta(days=2)
+    result = result - other
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
 
@@ -786,6 +818,14 @@ def test_cftime_datetime_sub_cftimeindex(calendar):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_distant_cftime_datetime_sub_cftimeindex(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    with pytest.raises(ValueError, match="difference exceeds"):
+        a.date_type(1, 1, 1) - a
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_sub_timedeltaindex(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
@@ -793,6 +833,25 @@ def test_cftimeindex_sub_timedeltaindex(calendar):
     expected = a.shift(-2, "D")
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_sub_index_of_cftime_datetimes(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    b = pd.Index(a.values)
+    expected = a - a
+    result = a - b
+    assert result.equals(expected)
+    assert isinstance(result, pd.TimedeltaIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_sub_not_implemented(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    with pytest.raises(TypeError, match="unsupported operand"):
+        a - 1
 
 
 @requires_cftime

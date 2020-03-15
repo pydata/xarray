@@ -250,8 +250,8 @@ class DatetimeAccessor(Properties):
     ---------
     >>> import xarray as xr
     >>> import pandas as pd
-    >>> dates = pd.date_range(start='2000/01/01', freq='D', periods=10)
-    >>> ts = xr.DataArray(dates, dims=('time'))
+    >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
+    >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 10)>
     array(['2000-01-01T00:00:00.000000000', '2000-01-02T00:00:00.000000000',
@@ -296,8 +296,8 @@ class DatetimeAccessor(Properties):
 
         Examples
         --------
-        >>> rng = xr.Dataset({'time': datetime.datetime(2000, 1, 1)})
-        >>> rng['time'].dt.strftime('%B %d, %Y, %r')
+        >>> rng = xr.Dataset({"time": datetime.datetime(2000, 1, 1)})
+        >>> rng["time"].dt.strftime("%B %d, %Y, %r")
         <xarray.DataArray 'strftime' ()>
         array('January 01, 2000, 12:00:00 AM', dtype=object)
         """
@@ -400,7 +400,7 @@ class TimedeltaAccessor(Properties):
     >>> import pandas as pd
     >>> import xarray as xr
     >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
-    >>> ts = xr.DataArray(dates, dims=('time'))
+    >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 20)>
     array([ 86400000000000, 108000000000000, 129600000000000, 151200000000000,
