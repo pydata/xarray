@@ -207,10 +207,9 @@ class Weighted:
     def __repr__(self):
         """provide a nice str repr of our Weighted object"""
 
-        msg = "{klass} with weights along dimensions: {weight_dims}"
-        return msg.format(
-            klass=self.__class__.__name__, weight_dims=", ".join(self.weights.dims)
-        )
+        klass = self.__class__.__name__
+        weight_dims = ", ".join(self.weights.dims)
+        return f"{klass} with weights along dimensions: {weight_dims}"
 
 
 class DataArrayWeighted(Weighted):

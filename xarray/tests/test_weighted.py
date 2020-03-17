@@ -126,7 +126,7 @@ def test_weighted_mean_equal_weights(da, skipna, factor):
 
 
 @pytest.mark.parametrize(
-    ("weights", "expected"), (([4, 6], 1.6), ([1, 0], 1.0), ([0, 0], np.nan)),
+    ("weights", "expected"), (([4, 6], 1.6), ([1, 0], 1.0), ([0, 0], np.nan))
 )
 def test_weighted_mean_no_nan(weights, expected):
 
@@ -140,7 +140,7 @@ def test_weighted_mean_no_nan(weights, expected):
 
 
 @pytest.mark.parametrize(
-    ("weights", "expected"), (([4, 6], 2.0), ([1, 0], np.nan), ([0, 0], np.nan)),
+    ("weights", "expected"), (([4, 6], 2.0), ([1, 0], np.nan), ([0, 0], np.nan))
 )
 @pytest.mark.parametrize("skipna", (True, False))
 def test_weighted_mean_nan(weights, expected, skipna):
@@ -159,7 +159,9 @@ def test_weighted_mean_nan(weights, expected, skipna):
 
 
 def expected_weighted(da, weights, dim, skipna, operation):
-    """ operations implemented via ``*`` and ``sum``; da.Weighted uses ``dot``
+    """
+    Generate expected result using ``*`` and ``sum``. This is checked against
+    the result of da.weighted which uses ``dot``
     """
 
     weighted_sum = (da * weights).sum(dim=dim, skipna=skipna)
