@@ -57,8 +57,10 @@ Bug fixes
 - Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
   indexed variable (:issue:`3252`).
   By `David Huard <https://github.com/huard>`_.
-
-
+- Fix recombination of groups in :py:meth:`Dataset.groupby` and
+  :py:meth:`DataArray.groupby` when performing an operation that changes the
+  size of the groups along the grouped dimension. By `Eric Jansen
+  <https://github.com/ej81>`_.
 - Fix use of multi-index with categorical values (:issue:`3674`).
   By `Matthieu Ancellin <https://github.com/mancellin>`_.
 - Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
