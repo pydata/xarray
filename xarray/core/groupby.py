@@ -838,7 +838,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if isinstance(combined, type(self._obj)):
             # only restore dimension order for arrays
             combined = self._restore_dim_order(combined)
-        if coord is not None and applied_example.sizes.get(dim, 0) == 0:
+        # assign coord when the applied function does not return that coord
+        if coord is not None and dim not in applied_example.dims:
             if shortcut:
                 coord_var = as_variable(coord)
                 combined._coords[coord.name] = coord_var
@@ -954,7 +955,8 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         coord, dim, positions = self._infer_concat_args(applied_example)
         combined = concat(applied, dim)
         combined = _maybe_reorder(combined, dim, positions)
-        if coord is not None and applied_example.sizes.get(dim, 0) == 0:
+        # assign coord when the applied function does not return that coord
+        if coord is not None and dim not in applied_example.dims:
             combined[coord.name] = coord
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
