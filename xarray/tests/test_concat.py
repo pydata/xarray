@@ -40,8 +40,7 @@ def test_concat_compat():
     assert_equal(ds2.no_x_y, result.no_x_y.transpose())
 
     for var in ["has_x", "no_x_y"]:
-        assert "y" not in result[var]
-
+        assert "y" not in result[var].dims and "y" not in result[var].coords
     with raises_regex(ValueError, "coordinates in some datasets but not others"):
         concat([ds1, ds2], dim="q")
     with raises_regex(ValueError, "'q' is not present in all datasets"):

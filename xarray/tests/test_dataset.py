@@ -6031,7 +6031,7 @@ def test_integrate(dask):
     actual = da.integrate("x")
     # coordinate that contains x should be dropped.
     expected_x = xr.DataArray(
-        np.trapz(da, da["x"], axis=0),
+        np.trapz(da.compute(), da["x"], axis=0),
         dims=["y"],
         coords={k: v for k, v in da.coords.items() if "x" not in v.dims},
     )

@@ -1750,7 +1750,7 @@ class TestFacetGrid(PlotTestCase):
 
     @pytest.mark.slow
     def test_can_set_norm(self):
-        norm = mpl.colors.SymLogNorm(0.1)
+        norm = mpl.colors.SymLogNorm(0.1, base=10)
         self.g.map_dataarray(xplt.imshow, "x", "y", norm=norm)
         for image in plt.gcf().findobj(mpl.image.AxesImage):
             assert image.norm is norm
