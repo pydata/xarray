@@ -89,8 +89,8 @@ class Weighted:
             Each value in the obj contributes to the reduction operation
             according to its associated weight.
 
-        Note
-        ----
+        Notes
+        -----
         ``weights`` must be a ``DataArray`` and cannot contain missing values.
         Missing values can be replaced by ``weights.fillna(0)``.
         """
@@ -212,10 +212,9 @@ class Weighted:
     def __repr__(self):
         """provide a nice str repr of our Weighted object"""
 
-        msg = "{klass} with weights along dimensions: {weight_dims}"
-        return msg.format(
-            klass=self.__class__.__name__, weight_dims=", ".join(self.weights.dims)
-        )
+        klass = self.__class__.__name__
+        weight_dims = ", ".join(self.weights.dims)
+        return f"{klass} with weights along dimensions: {weight_dims}"
 
 
 class DataArrayWeighted(Weighted):
