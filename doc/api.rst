@@ -579,6 +579,22 @@ Rolling objects
    core.rolling.DatasetRolling.reduce
    core.rolling_exp.RollingExp
 
+Weighted objects
+================
+
+.. autosummary::
+   :toctree: generated/
+
+   core.weighted.DataArrayWeighted
+   core.weighted.DataArrayWeighted.mean
+   core.weighted.DataArrayWeighted.sum
+   core.weighted.DataArrayWeighted.sum_of_weights
+   core.weighted.DatasetWeighted
+   core.weighted.DatasetWeighted.mean
+   core.weighted.DatasetWeighted.sum
+   core.weighted.DatasetWeighted.sum_of_weights
+
+
 Coarsen objects
 ===============
 

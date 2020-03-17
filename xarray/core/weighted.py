@@ -84,8 +84,8 @@ class Weighted:
             Each value in the obj contributes to the reduction operation
             according to its associated weight.
 
-        Note
-        ----
+        Notes
+        -----
         ``weights`` must be a ``DataArray`` and cannot contain missing values.
         Missing values can be replaced by ``weights.fillna(0)``.
         """

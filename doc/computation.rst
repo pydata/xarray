@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _comput:
 
 ###########
@@ -246,8 +248,8 @@ You can also use ``construct`` to compute a weighted rolling sum:
 Weighted array reductions
 =========================
 
-``DataArray`` and ``Dataset`` objects include :py:meth:`~xarray.DataArray.weighted`
-and :py:meth:`~xarray.Dataset.weighted` array reduction methods. They currently
+:py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
+and :py:meth:`Dataset.weighted` array reduction methods. They currently
 support weighted ``sum`` and weighted ``mean``.
 
 .. ipython:: python
@@ -303,13 +305,13 @@ Using ``(data * weights).sum() / weights.sum()`` would (incorrectly) result
 in 0.6.
 
 .. note::
-  ``weights`` must be a ``DataArray`` and cannot contain missing values.
-  Missing values can be replaced manually by `weights.fillna(0)`.
+  ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
+  Missing values can be replaced manually by ``weights.fillna(0)``.
 
 Coarsen large arrays
 ====================
 
-``DataArray`` and ``Dataset`` objects include a
+:py:class:`DataArray` and :py:class:`Dataset` objects include a
 :py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
 methods. This supports the block aggregation along multiple dimensions,
 

@@ -759,9 +759,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Each value in the data contributes to the reduction operation
             according to its associated weight.
 
-        Note
-        ----
-        ``weights`` must be a ``DataArray`` and cannot contain missing values.
+        Notes
+        -----
+        ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
         Missing values can be replaced by ``weights.fillna(0)``.
         """
 
