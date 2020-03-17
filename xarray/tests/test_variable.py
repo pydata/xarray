@@ -538,6 +538,10 @@ class VariableSubclassobjects:
         new_data = np.arange(5, 20)
         with raises_regex(ValueError, "must match shape of object"):
             orig.copy(data=new_data)
+        with raises_regex(ValueError, "Cannot assign to the .data"):
+            orig.data = new_data
+        with raises_regex(ValueError, "Cannot assign to the .values"):
+            orig.values = new_data
 
     def test_replace(self):
         var = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
