@@ -530,8 +530,7 @@ class VariableSubclassobjects:
         orig = IndexVariable("x", np.arange(5))
         new_data = np.arange(5, 10)
         actual = orig.copy(data=new_data)
-        expected = orig.copy()
-        expected.data = new_data
+        expected = IndexVariable("x", np.arange(5, 10))
         assert_identical(expected, actual)
 
     def test_copy_index_with_data_errors(self):
