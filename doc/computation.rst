@@ -243,7 +243,7 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
-.. _comput.coarsen:
+.. _comput.weighted:
 
 Weighted array reductions
 =========================
@@ -307,6 +307,8 @@ in 0.6.
 .. note::
   ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
   Missing values can be replaced manually by ``weights.fillna(0)``.
+
+.. _comput.coarsen:
 
 Coarsen large arrays
 ====================
