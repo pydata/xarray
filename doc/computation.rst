@@ -302,6 +302,23 @@ However, the functions also take missing values in the data into account:
 Using ``(data * weights).sum() / weights.sum()`` would (incorrectly) result
 in 0.6.
 
+
+If the weights add up to to 0, ``sum`` returns 0:
+
+.. ipython:: python
+
+  data = xr.DataArray([1.0, 1.0])
+  weights = xr.DataArray([-1.0, 1.0])
+
+  data.weighted(weights).sum()
+
+and ``mean`` returns ``NaN``:
+
+.. ipython:: python
+
+  data.weighted(weights).mean()
+
+
 .. note::
   ``weights`` must be a ``DataArray`` and cannot contain missing values.
   Missing values can be replaced manually by `weights.fillna(0)`.

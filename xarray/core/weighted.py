@@ -28,6 +28,11 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     reduced : {cls}
         New {cls} object with weighted ``{fcn}`` applied to its data and
         the indicated dimension(s) removed.
+
+    Notes
+    -----
+        Returns {on_zero} if the ``weights`` sum to 0.0 along the reduced
+        dimension(s).
     """
 
 _SUM_OF_WEIGHTS_DOCSTRING = """
@@ -238,10 +243,13 @@ def _inject_docstring(cls, cls_name):
 
     cls.sum_of_weights.__doc__ = _SUM_OF_WEIGHTS_DOCSTRING.format(cls=cls_name)
 
-    for operator in ["sum", "mean"]:
-        getattr(cls, operator).__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
-            cls=cls_name, fcn=operator
-        )
+    cls.sum.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
+        cls=cls_name, fcn="sum", on_zero="0"
+    )
+
+    cls.mean.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
+        cls=cls_name, fcn="mean", on_zero="NaN"
+    )
 
 
 _inject_docstring(DataArrayWeighted, "DataArray")
