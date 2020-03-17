@@ -2061,9 +2061,17 @@ class IndexVariable(Variable):
     # https://github.com/python/mypy/issues/1465
     @Variable.data.setter  # type: ignore
     def data(self, data):
-        Variable.data.fset(self, data)
-        if not isinstance(self._data, PandasIndexAdapter):
-            self._data = PandasIndexAdapter(self._data)
+        raise ValueError(
+            f"Cannot assign to the .data attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
+            f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
+        )
+
+    @Variable.values.setter  # type: ignore
+    def values(self, values):
+        raise ValueError(
+            f"Cannot assign to the .values attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
+            f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
+        )
 
     def chunk(self, chunks=None, name=None, lock=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
