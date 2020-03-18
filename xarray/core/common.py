@@ -758,7 +758,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Notes
         -----
-        ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
+        ``weights`` must be a DataArray and cannot contain missing values.
         Missing values can be replaced by ``weights.fillna(0)``.
         """
 
