@@ -11,16 +11,14 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from . import dask_array_ops, dtypes, npcompat, nputils
+from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array
-    from . import dask_array_compat
 except ImportError:
     dask_array = None  # type: ignore
-    dask_array_compat = None  # type: ignore
 
 
 def _dask_or_eager_func(
@@ -116,7 +114,7 @@ _where = _dask_or_eager_func("where", array_args=slice(3))
 isin = _dask_or_eager_func("isin", array_args=slice(2))
 take = _dask_or_eager_func("take")
 broadcast_to = _dask_or_eager_func("broadcast_to")
-pad = _dask_or_eager_func("pad")
+pad = _dask_or_eager_func("pad", dask_module=dask_array_compat)
 
 _concatenate = _dask_or_eager_func("concatenate", list_of_args=True)
 _stack = _dask_or_eager_func("stack", list_of_args=True)
@@ -599,6 +597,3 @@ def rolling_window(array, axis, window, center, fill_value):
         return dask_array_ops.rolling_window(array, axis, window, center, fill_value)
     else:  # np.ndarray
         return nputils.rolling_window(array, axis, window, center, fill_value)
-
-
-pad = _dask_or_eager_func("pad", dask_module=dask_array_compat)
