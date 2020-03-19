@@ -1234,8 +1234,8 @@ def where(cond, x, y):
 
     Returns
     -------
-    Dataset, DataArray, Variable or array, whichever type appears as an input
-    argument.
+    In priority order: Dataset, DataArray, Variable or array, whichever
+    type appears as an input argument.
 
     Examples
     --------
