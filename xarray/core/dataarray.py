@@ -3257,6 +3257,10 @@ class DataArray(AbstractArray, DataWithCoords):
     ) -> "DataArray":
         """Pad this array along one or more dimensions.
 
+        .. warning::
+            This function is experimental and its behaviour is likely to change
+            especially regarding padding of dimension coordinates (or IndexVariables).
+
         When using one of the modes ("edge", "reflect", "symmetric", "wrap"),
         coordinates will be padded with the same mode, otherwise coordinates
         are padded using the "constant" mode with fill_value dtypes.NA.

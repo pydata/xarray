@@ -5717,6 +5717,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     ) -> "Dataset":
         """Pad this dataset along one or more dimensions.
 
+        .. warning::
+            This function is experimental and its behaviour is likely to change
+            especially regarding padding of dimension coordinates (or IndexVariables).
+
         When using one of the modes ("edge", "reflect", "symmetric", "wrap"),
         coordinates will be padded with the same mode, otherwise coordinates
         are padded using the "constant" mode with fill_value dtypes.NA.
@@ -5854,7 +5858,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
             else:
                 variables[name] = var.pad(
-                    pad_width=var_pad_width, mode=coord_pad_mode, **coord_pad_options,  # type: ignore
+                    pad_width=var_pad_width,
+                    mode=coord_pad_mode,
+                    **coord_pad_options,  # type: ignore
                 )
 
         return self._replace_vars_and_dims(variables)
