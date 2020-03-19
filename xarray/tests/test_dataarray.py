@@ -2035,7 +2035,7 @@ class TestDataArray:
                 codes=[[], []],
                 names=["x", "y"],
             )
-        pd.util.testing.assert_index_equal(a, b)
+        pd.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
         assert_identical(orig, actual)
@@ -3488,7 +3488,7 @@ class TestDataArray:
 
     def test_to_and_from_empty_series(self):
         # GH697
-        expected = pd.Series([])
+        expected = pd.Series([], dtype=np.float64)
         da = DataArray.from_series(expected)
         assert len(da) == 0
         actual = da.to_series()
