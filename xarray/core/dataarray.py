@@ -3260,6 +3260,174 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return map_blocks(func, self, args, kwargs)
 
+    def pad(
+        self,
+        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        mode: str = "constant",
+        stat_length: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        constant_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        end_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        reflect_type: str = None,
+        **pad_width_kwargs: Any,
+    ) -> "DataArray":
+        """Pad this array along one or more dimensions.
+
+        .. warning::
+            This function is experimental and its behaviour is likely to change
+            especially regarding padding of dimension coordinates (or IndexVariables).
+
+        When using one of the modes ("edge", "reflect", "symmetric", "wrap"),
+        coordinates will be padded with the same mode, otherwise coordinates
+        are padded using the "constant" mode with fill_value dtypes.NA.
+
+        Parameters
+        ----------
+        pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
+            Number of values padded along each dimension.
+            {dim: pad} is a shortcut for pad_before = pad_after = pad
+        mode : str
+            One of the following string values (taken from numpy docs)
+
+            'constant' (default)
+                Pads with a constant value.
+            'edge'
+                Pads with the edge values of array.
+            'linear_ramp'
+                Pads with the linear ramp between end_value and the
+                array edge value.
+            'maximum'
+                Pads with the maximum value of all or part of the
+                vector along each axis.
+            'mean'
+                Pads with the mean value of all or part of the
+                vector along each axis.
+            'median'
+                Pads with the median value of all or part of the
+                vector along each axis.
+            'minimum'
+                Pads with the minimum value of all or part of the
+                vector along each axis.
+            'reflect'
+                Pads with the reflection of the vector mirrored on
+                the first and last values of the vector along each
+                axis.
+            'symmetric'
+                Pads with the reflection of the vector mirrored
+                along the edge of the array.
+            'wrap'
+                Pads with the wrap of the vector along the axis.
+                The first values are used to pad the end and the
+                end values are used to pad the beginning.
+        stat_length : int, tuple or mapping of the form {dim: tuple}
+            Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
+            values at edge of each axis used to calculate the statistic value.
+            {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)} unique
+            statistic lengths along each dimension.
+            ((before, after),) yields same before and after statistic lengths
+            for each dimension.
+            (stat_length,) or int is a shortcut for before = after = statistic
+            length for all axes.
+            Default is ``None``, to use the entire axis.
+        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'constant'.  The values to set the padded values for each
+            axis.
+            ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
+            pad constants along each dimension.
+            ``((before, after),)`` yields same before and after constants for each
+            dimension.
+            ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+            all dimensions.
+            Default is 0.
+        end_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'linear_ramp'.  The values used for the ending value of the
+            linear_ramp and that will form the edge of the padded array.
+            ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
+            end values along each dimension.
+            ``((before, after),)`` yields same before and after end values for each
+            axis.
+            ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+            all axes.
+            Default is 0.
+        reflect_type : {'even', 'odd'}, optional
+            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+            default with an unaltered reflection around the edge value.  For
+            the 'odd' style, the extended part of the array is created by
+            subtracting the reflected values from two times the edge value.
+        **pad_width_kwargs:
+            The keyword arguments form of ``pad_width``.
+            One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
+
+        Returns
+        -------
+        padded : DataArray
+            DataArray with the padded coordinates and data.
+
+        See also
+        --------
+        DataArray.shift, DataArray.roll, DataArray.bfill, DataArray.ffill, numpy.pad, dask.array.pad
+
+        Notes
+        -----
+        By default when ``mode="constant"`` and ``constant_values=None``, integer types will be
+        promoted to ``float`` and padded with ``np.nan``. To avoid type promotion
+        specify ``constant_values=np.nan``
+
+        Examples
+        --------
+
+        >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0,1,2])])
+        >>> arr.pad(x=(1,2), constant_values=0)
+        <xarray.DataArray (x: 6)>
+        array([0, 5, 6, 7, 0, 0])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 2.0 nan nan
+
+        >>> da = xr.DataArray([[0,1,2,3], [10,11,12,13]],
+                              dims=["x", "y"],
+                              coords={"x": [0,1], "y": [10, 20 ,30, 40], "z": ("x", [100, 200])}
+            )
+        >>> da.pad(x=1)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[nan, nan, nan, nan],
+               [ 0.,  1.,  2.,  3.],
+               [10., 11., 12., 13.],
+               [nan, nan, nan, nan]])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 nan
+          * y        (y) int64 10 20 30 40
+            z        (x) float64 nan 100.0 200.0 nan
+        >>> da.pad(x=1, constant_values=np.nan)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[-9223372036854775808, -9223372036854775808, -9223372036854775808,
+                -9223372036854775808],
+               [                   0,                    1,                    2,
+                                   3],
+               [                  10,                   11,                   12,
+                                  13],
+               [-9223372036854775808, -9223372036854775808, -9223372036854775808,
+                -9223372036854775808]])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 nan
+          * y        (y) int64 10 20 30 40
+            z        (x) float64 nan 100.0 200.0 nan
+        """
+        ds = self._to_temp_dataset().pad(
+            pad_width=pad_width,
+            mode=mode,
+            stat_length=stat_length,
+            constant_values=constant_values,
+            end_values=end_values,
+            reflect_type=reflect_type,
+            **pad_width_kwargs,
+        )
+        return self._from_temp_dataset(ds)
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
