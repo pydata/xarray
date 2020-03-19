@@ -25,6 +25,9 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
+  and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
+  By `Mathias Hauser <https://github.com/mathause>`_
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
@@ -54,7 +57,17 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
+  indexed variable (:issue:`3252`).
+  By `David Huard <https://github.com/huard>`_.
+- Fix recombination of groups in :py:meth:`Dataset.groupby` and
+  :py:meth:`DataArray.groupby` when performing an operation that changes the
+  size of the groups along the grouped dimension. By `Eric Jansen
+  <https://github.com/ej81>`_.
+- Fix use of multi-index with categorical values (:issue:`3674`).
+  By `Matthieu Ancellin <https://github.com/mancellin>`_.
+- Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
   (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
@@ -81,6 +94,9 @@ Documentation
 - Fix documentation of :py:class:`DataArray` removing the deprecated mention
   that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Update the installation instructions: only explicitly list recommended dependencies
+  (:issue:`3756`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -93,6 +109,12 @@ Internal Changes
 - Changed test_open_mfdataset_list_attr to only run with dask installed
   (:issue:`3777`, :pull:`3780`).
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
+- Preserved the ability to index with ``method="nearest"`` with a
+  :py:class:`CFTimeIndex` with pandas versions greater than 1.0.1
+  (:issue:`3751`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Greater flexibility and improved test coverage of subtracting various types
+  of objects from a :py:class:`CFTimeIndex`. By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Updated Azure CI MacOS image, given pending removal.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - Removed xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
@@ -135,6 +157,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:meth:`DataArray.pad` and :py:meth:`Dataset.pad`. (:issue:`2605`, :pull:`3596`).
+  By `Mark Boer <https://github.com/mark-boer>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` now support :py:class:`pandas.CategoricalIndex`. (:issue:`3669`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Support using an existing, opened h5netcdf ``File`` with

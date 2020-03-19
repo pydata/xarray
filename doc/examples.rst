@@ -6,6 +6,7 @@ Examples
 
     examples/weather-data
     examples/monthly-means
+    examples/area_weighted_temperature
     examples/multidimensional-coords
     examples/visualization_gallery
     examples/ROMS_ocean_model

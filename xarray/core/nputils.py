@@ -165,7 +165,7 @@ def _rolling_window(a, window, axis=-1):
 
     Examples
     --------
-    >>> x=np.arange(10).reshape((2,5))
+    >>> x = np.arange(10).reshape((2, 5))
     >>> np.rolling_window(x, 3, axis=-1)
     array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
            [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])

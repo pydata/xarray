@@ -33,6 +33,7 @@ from . import (
     resample,
     rolling,
     utils,
+    weighted,
 )
 from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
@@ -258,6 +259,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _rolling_cls = rolling.DataArrayRolling
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
+    _weighted_cls = weighted.DataArrayWeighted
 
     dt = property(CombinedDatetimelikeAccessor)
 
@@ -875,8 +877,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Shallow versus deep copy
 
-        >>> array = xr.DataArray([1, 2, 3], dims='x',
-        ...                      coords={'x': ['a', 'b', 'c']})
+        >>> array = xr.DataArray([1, 2, 3], dims="x", coords={"x": ["a", "b", "c"]})
         >>> array.copy()
         <xarray.DataArray (x: 3)>
         array([1, 2, 3])
@@ -1344,7 +1345,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> da = xr.DataArray([1, 3], [('x', np.arange(2))])
+        >>> da = xr.DataArray([1, 3], [("x", np.arange(2))])
         >>> da.interp(x=0.5)
         <xarray.DataArray ()>
         array(2.0)
@@ -1475,20 +1476,24 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> arr = xr.DataArray(data=[0, 1], dims="x",
-                               coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+
+        >>> arr = xr.DataArray(
+        ...     data=[0, 1], dims="x", coords={"x": ["a", "b"], "y": ("x", [0, 1])},
+        ... )
         >>> arr
         <xarray.DataArray (x: 2)>
         array([0, 1])
         Coordinates:
           * x        (x) <U1 'a' 'b'
             y        (x) int64 0 1
+
         >>> arr.swap_dims({"x": "y"})
         <xarray.DataArray (y: 2)>
         array([0, 1])
         Coordinates:
             x        (y) <U1 'a' 'b'
           * y        (y) int64 0 1
+
         >>> arr.swap_dims({"x": "z"})
         <xarray.DataArray (z: 2)>
         array([0, 1])
@@ -1589,12 +1594,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> arr = xr.DataArray(data=np.ones((2, 3)),
-        ...                    dims=['x', 'y'],
-        ...                    coords={'x':
-        ...                        range(2), 'y':
-        ...                        range(3), 'a': ('x', [3, 4])
-        ...                    })
+        >>> arr = xr.DataArray(
+        ...     data=np.ones((2, 3)),
+        ...     dims=["x", "y"],
+        ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
+        ... )
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
         array([[1., 1., 1.],
@@ -1603,7 +1607,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) int64 0 1
           * y        (y) int64 0 1 2
             a        (x) int64 3 4
-        >>> arr.set_index(x='a')
+        >>> arr.set_index(x="a")
         <xarray.DataArray (x: 2, y: 3)>
         array([[1., 1., 1.],
                [1., 1., 1.]])
@@ -1718,8 +1722,10 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = DataArray(np.arange(6).reshape(2, 3),
-        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr = xr.DataArray(
+        ...     np.arange(6).reshape(2, 3),
+        ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
+        ... )
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
         array([[0, 1, 2],
@@ -1727,8 +1733,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) |S1 'a' 'b'
           * y        (y) int64 0 1 2
-        >>> stacked = arr.stack(z=('x', 'y'))
-        >>> stacked.indexes['z']
+        >>> stacked = arr.stack(z=("x", "y"))
+        >>> stacked.indexes["z"]
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                    codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
@@ -1768,8 +1774,10 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = DataArray(np.arange(6).reshape(2, 3),
-        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr = xr.DataArray(
+        ...     np.arange(6).reshape(2, 3),
+        ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
+        ... )
         >>> arr
         <xarray.DataArray (x: 2, y: 3)>
         array([[0, 1, 2],
@@ -1777,8 +1785,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) |S1 'a' 'b'
           * y        (y) int64 0 1 2
-        >>> stacked = arr.stack(z=('x', 'y'))
-        >>> stacked.indexes['z']
+        >>> stacked = arr.stack(z=("x", "y"))
+        >>> stacked.indexes["z"]
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                    codes=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
                    names=['x', 'y'])
@@ -1817,9 +1825,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
         >>> import xarray as xr
-        >>> arr = DataArray(np.arange(6).reshape(2, 3),
-        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
-        >>> data = xr.Dataset({'a': arr, 'b': arr.isel(y=0)})
+        >>> arr = xr.DataArray(
+        ...     np.arange(6).reshape(2, 3),
+        ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
+        ... )
+        >>> data = xr.Dataset({"a": arr, "b": arr.isel(y=0)})
         >>> data
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 3)
@@ -1829,12 +1839,12 @@ class DataArray(AbstractArray, DataWithCoords):
         Data variables:
             a        (x, y) int64 0 1 2 3 4 5
             b        (x) int64 0 3
-        >>> stacked = data.to_stacked_array("z", ['y'])
-        >>> stacked.indexes['z']
+        >>> stacked = data.to_stacked_array("z", ["y"])
+        >>> stacked.indexes["z"]
         MultiIndex(levels=[['a', 'b'], [0, 1, 2]],
                 labels=[[0, 0, 0, 1], [0, 1, 2, -1]],
                 names=['variable', 'y'])
-        >>> roundtripped = stacked.to_unstacked_dataset(dim='z')
+        >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
         >>> data.identical(roundtripped)
         True
 
@@ -2623,7 +2633,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         Access plotting functions for DataArray's
 
-        >>> d = DataArray([[1, 2], [3, 4]])
+        >>> d = xr.DataArray([[1, 2], [3, 4]])
 
         For convenience just call this directly
 
@@ -2694,13 +2704,13 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> arr = xr.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ['x'])
-        >>> arr.diff('x')
+        >>> arr = xr.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ["x"])
+        >>> arr.diff("x")
         <xarray.DataArray (x: 3)>
         array([0, 1, 0])
         Coordinates:
         * x        (x) int64 2 3 4
-        >>> arr.diff('x', 2)
+        >>> arr.diff("x", 2)
         <xarray.DataArray (x: 2)>
         array([ 1, -1])
         Coordinates:
@@ -2750,7 +2760,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray([5, 6, 7], dims='x')
+        >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.shift(x=1)
         <xarray.DataArray (x: 3)>
         array([ nan,   5.,   6.])
@@ -2800,7 +2810,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray([5, 6, 7], dims='x')
+        >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.roll(x=1)
         <xarray.DataArray (x: 3)>
         array([7, 5, 6])
@@ -2849,18 +2859,20 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
 
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
-        >>> da = DataArray(da_vals, dims=['x', 'y', 'z'])
+        >>> da = xr.DataArray(da_vals, dims=["x", "y", "z"])
         >>> dm_vals = np.arange(4)
-        >>> dm = DataArray(dm_vals, dims=['z'])
+        >>> dm = xr.DataArray(dm_vals, dims=["z"])
 
         >>> dm.dims
         ('z')
+
         >>> da.dims
         ('x', 'y', 'z')
 
         >>> dot_result = da.dot(dm)
         >>> dot_result.dims
         ('x', 'y')
+
         """
         if isinstance(other, Dataset):
             raise NotImplementedError(
@@ -2909,9 +2921,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> da = xr.DataArray(np.random.rand(5),
-        ...                   coords=[pd.date_range('1/1/2000', periods=5)],
-        ...                   dims='time')
+        >>> da = xr.DataArray(
+        ...     np.random.rand(5),
+        ...     coords=[pd.date_range("1/1/2000", periods=5)],
+        ...     dims="time",
+        ... )
         >>> da
         <xarray.DataArray (time: 5)>
         array([ 0.965471,  0.615637,  0.26532 ,  0.270962,  0.552878])
@@ -3052,8 +3066,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray([5, 6, 7], dims='x')
-        >>> arr.rank('x')
+        >>> arr = xr.DataArray([5, 6, 7], dims="x")
+        >>> arr.rank("x")
         <xarray.DataArray (x: 3)>
         array([ 1.,   2.,   3.])
         Dimensions without coordinates: x
@@ -3093,8 +3107,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
-        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da = xr.DataArray(
+        ...     np.arange(12).reshape(4, 3),
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 0.1, 1.1, 1.2]},
+        ... )
         >>> da
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0,  1,  2],
@@ -3105,7 +3122,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
-        >>> da.differentiate('x')
+        >>> da.differentiate("x")
         <xarray.DataArray (x: 4, y: 3)>
         array([[30.      , 30.      , 30.      ],
                [27.545455, 27.545455, 27.545455],
@@ -3147,8 +3164,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
-        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da = xr.DataArray(
+        ...     np.arange(12).reshape(4, 3),
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 0.1, 1.1, 1.2]},
+        ... )
         >>> da
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0,  1,  2],
@@ -3159,7 +3179,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
-        >>> da.integrate('x')
+        >>> da.integrate("x")
         <xarray.DataArray (y: 3)>
         array([5.4, 6.6, 7.8])
         Dimensions without coordinates: y
@@ -3239,6 +3259,174 @@ class DataArray(AbstractArray, DataWithCoords):
         from .parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs)
+
+    def pad(
+        self,
+        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        mode: str = "constant",
+        stat_length: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        constant_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        end_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        reflect_type: str = None,
+        **pad_width_kwargs: Any,
+    ) -> "DataArray":
+        """Pad this array along one or more dimensions.
+
+        .. warning::
+            This function is experimental and its behaviour is likely to change
+            especially regarding padding of dimension coordinates (or IndexVariables).
+
+        When using one of the modes ("edge", "reflect", "symmetric", "wrap"),
+        coordinates will be padded with the same mode, otherwise coordinates
+        are padded using the "constant" mode with fill_value dtypes.NA.
+
+        Parameters
+        ----------
+        pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
+            Number of values padded along each dimension.
+            {dim: pad} is a shortcut for pad_before = pad_after = pad
+        mode : str
+            One of the following string values (taken from numpy docs)
+
+            'constant' (default)
+                Pads with a constant value.
+            'edge'
+                Pads with the edge values of array.
+            'linear_ramp'
+                Pads with the linear ramp between end_value and the
+                array edge value.
+            'maximum'
+                Pads with the maximum value of all or part of the
+                vector along each axis.
+            'mean'
+                Pads with the mean value of all or part of the
+                vector along each axis.
+            'median'
+                Pads with the median value of all or part of the
+                vector along each axis.
+            'minimum'
+                Pads with the minimum value of all or part of the
+                vector along each axis.
+            'reflect'
+                Pads with the reflection of the vector mirrored on
+                the first and last values of the vector along each
+                axis.
+            'symmetric'
+                Pads with the reflection of the vector mirrored
+                along the edge of the array.
+            'wrap'
+                Pads with the wrap of the vector along the axis.
+                The first values are used to pad the end and the
+                end values are used to pad the beginning.
+        stat_length : int, tuple or mapping of the form {dim: tuple}
+            Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
+            values at edge of each axis used to calculate the statistic value.
+            {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)} unique
+            statistic lengths along each dimension.
+            ((before, after),) yields same before and after statistic lengths
+            for each dimension.
+            (stat_length,) or int is a shortcut for before = after = statistic
+            length for all axes.
+            Default is ``None``, to use the entire axis.
+        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'constant'.  The values to set the padded values for each
+            axis.
+            ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
+            pad constants along each dimension.
+            ``((before, after),)`` yields same before and after constants for each
+            dimension.
+            ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+            all dimensions.
+            Default is 0.
+        end_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'linear_ramp'.  The values used for the ending value of the
+            linear_ramp and that will form the edge of the padded array.
+            ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
+            end values along each dimension.
+            ``((before, after),)`` yields same before and after end values for each
+            axis.
+            ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+            all axes.
+            Default is 0.
+        reflect_type : {'even', 'odd'}, optional
+            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+            default with an unaltered reflection around the edge value.  For
+            the 'odd' style, the extended part of the array is created by
+            subtracting the reflected values from two times the edge value.
+        **pad_width_kwargs:
+            The keyword arguments form of ``pad_width``.
+            One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
+
+        Returns
+        -------
+        padded : DataArray
+            DataArray with the padded coordinates and data.
+
+        See also
+        --------
+        DataArray.shift, DataArray.roll, DataArray.bfill, DataArray.ffill, numpy.pad, dask.array.pad
+
+        Notes
+        -----
+        By default when ``mode="constant"`` and ``constant_values=None``, integer types will be
+        promoted to ``float`` and padded with ``np.nan``. To avoid type promotion
+        specify ``constant_values=np.nan``
+
+        Examples
+        --------
+
+        >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0,1,2])])
+        >>> arr.pad(x=(1,2), constant_values=0)
+        <xarray.DataArray (x: 6)>
+        array([0, 5, 6, 7, 0, 0])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 2.0 nan nan
+
+        >>> da = xr.DataArray([[0,1,2,3], [10,11,12,13]],
+                              dims=["x", "y"],
+                              coords={"x": [0,1], "y": [10, 20 ,30, 40], "z": ("x", [100, 200])}
+            )
+        >>> da.pad(x=1)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[nan, nan, nan, nan],
+               [ 0.,  1.,  2.,  3.],
+               [10., 11., 12., 13.],
+               [nan, nan, nan, nan]])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 nan
+          * y        (y) int64 10 20 30 40
+            z        (x) float64 nan 100.0 200.0 nan
+        >>> da.pad(x=1, constant_values=np.nan)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[-9223372036854775808, -9223372036854775808, -9223372036854775808,
+                -9223372036854775808],
+               [                   0,                    1,                    2,
+                                   3],
+               [                  10,                   11,                   12,
+                                  13],
+               [-9223372036854775808, -9223372036854775808, -9223372036854775808,
+                -9223372036854775808]])
+        Coordinates:
+          * x        (x) float64 nan 0.0 1.0 nan
+          * y        (y) int64 10 20 30 40
+            z        (x) float64 nan 100.0 200.0 nan
+        """
+        ds = self._to_temp_dataset().pad(
+            pad_width=pad_width,
+            mode=mode,
+            stat_length=stat_length,
+            constant_values=constant_values,
+            end_values=end_values,
+            reflect_type=reflect_type,
+            **pad_width_kwargs,
+        )
+        return self._from_temp_dataset(ds)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
