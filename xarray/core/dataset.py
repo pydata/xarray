@@ -46,6 +46,7 @@ from . import (
     resample,
     rolling,
     utils,
+    weighted,
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .common import (
@@ -457,6 +458,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _rolling_cls = rolling.DatasetRolling
     _coarsen_cls = rolling.DatasetCoarsen
     _resample_cls = resample.DatasetResample
+    _weighted_cls = weighted.DatasetWeighted
 
     def __init__(
         self,

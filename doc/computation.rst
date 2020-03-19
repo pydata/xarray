@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _comput:
 
 ###########
@@ -241,12 +243,94 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
+.. _comput.weighted:
+
+Weighted array reductions
+=========================
+
+:py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
+and :py:meth:`Dataset.weighted` array reduction methods. They currently
+support weighted ``sum`` and weighted ``mean``.
+
+.. ipython:: python
+
+  coords = dict(month=('month', [1, 2, 3]))
+
+  prec = xr.DataArray([1.1, 1.0, 0.9], dims=('month', ), coords=coords)
+  weights = xr.DataArray([31, 28, 31], dims=('month', ), coords=coords)
+
+Create a weighted object:
+
+.. ipython:: python
+
+  weighted_prec = prec.weighted(weights)
+  weighted_prec
+
+Calculate the weighted sum:
+
+.. ipython:: python
+
+  weighted_prec.sum()
+
+Calculate the weighted mean:
+
+.. ipython:: python
+
+        weighted_prec.mean(dim="month")
+
+The weighted sum corresponds to:
+
+.. ipython:: python
+
+  weighted_sum = (prec * weights).sum()
+  weighted_sum
+
+and the weighted mean to:
+
+.. ipython:: python
+
+  weighted_mean = weighted_sum / weights.sum()
+  weighted_mean
+
+However, the functions also take missing values in the data into account:
+
+.. ipython:: python
+
+  data = xr.DataArray([np.NaN, 2, 4])
+  weights = xr.DataArray([8, 1, 1])
+
+  data.weighted(weights).mean()
+
+Using ``(data * weights).sum() / weights.sum()`` would (incorrectly) result
+in 0.6.
+
+
+If the weights add up to to 0, ``sum`` returns 0:
+
+.. ipython:: python
+
+  data = xr.DataArray([1.0, 1.0])
+  weights = xr.DataArray([-1.0, 1.0])
+
+  data.weighted(weights).sum()
+
+and ``mean`` returns ``NaN``:
+
+.. ipython:: python
+
+  data.weighted(weights).mean()
+
+
+.. note::
+  ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
+  Missing values can be replaced manually by ``weights.fillna(0)``.
+
 .. _comput.coarsen:
 
 Coarsen large arrays
 ====================
 
-``DataArray`` and ``Dataset`` objects include a
+:py:class:`DataArray` and :py:class:`Dataset` objects include a
 :py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
 methods. This supports the block aggregation along multiple dimensions,
 

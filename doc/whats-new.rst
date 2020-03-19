@@ -25,6 +25,9 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
+  and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
+  By `Mathias Hauser <https://github.com/mathause>`_
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.

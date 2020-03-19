@@ -165,6 +165,7 @@ Computation
    Dataset.groupby_bins
    Dataset.rolling
    Dataset.rolling_exp
+   Dataset.weighted
    Dataset.coarsen
    Dataset.resample
    Dataset.diff
@@ -340,6 +341,7 @@ Computation
    DataArray.groupby_bins
    DataArray.rolling
    DataArray.rolling_exp
+   DataArray.weighted
    DataArray.coarsen
    DataArray.dt
    DataArray.resample
@@ -576,6 +578,22 @@ Rolling objects
    core.rolling.DatasetRolling.construct
    core.rolling.DatasetRolling.reduce
    core.rolling_exp.RollingExp
+
+Weighted objects
+================
+
+.. autosummary::
+   :toctree: generated/
+
+   core.weighted.DataArrayWeighted
+   core.weighted.DataArrayWeighted.mean
+   core.weighted.DataArrayWeighted.sum
+   core.weighted.DataArrayWeighted.sum_of_weights
+   core.weighted.DatasetWeighted
+   core.weighted.DatasetWeighted.mean
+   core.weighted.DatasetWeighted.sum
+   core.weighted.DatasetWeighted.sum_of_weights
+
 
 Coarsen objects
 ===============
