@@ -33,6 +33,7 @@ from . import (
     resample,
     rolling,
     utils,
+    weighted,
 )
 from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
@@ -258,6 +259,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _rolling_cls = rolling.DataArrayRolling
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
+    _weighted_cls = weighted.DataArrayWeighted
 
     dt = property(CombinedDatetimelikeAccessor)
 
