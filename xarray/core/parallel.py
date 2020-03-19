@@ -298,7 +298,9 @@ def map_blocks(
         new_indexes = template_indexes - dataset_indexes
         indexes = {dim: dataset.indexes[dim] for dim in preserved_indexes}
         indexes.update({k: template.indexes[k] for k in new_indexes})
-        output_chunks = input_chunks
+        output_chunks = {
+            dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
+        }
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
@@ -308,7 +310,7 @@ def map_blocks(
         if isinstance(template, DataArray):
             output_chunks = dict(zip(template.dims, template.chunks))  # type: ignore
         else:
-            output_chunks = template.chunks
+            output_chunks = template.chunks  # type: ignore
 
     if isinstance(template, DataArray):
         result_is_array = True
@@ -394,7 +396,9 @@ def map_blocks(
         # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
         # even if length of dimension is changed by the applied function
         expected["shapes"] = {
-            k: output_chunks[k][v] for k, v in input_chunk_index.items()
+            k: output_chunks[k][v]
+            for k, v in input_chunk_index.items()
+            if k in output_chunks
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore
         expected["coords"] = set(template.coords.keys())  # type: ignore
