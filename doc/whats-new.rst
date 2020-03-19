@@ -39,13 +39,19 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
   `TypeError` on multiple string arguments. Receiving multiple string arguments
-  often means a user is attempting to pass multiple dimensions to group over
-  and should instead pass a list.
+  often means a user is attempting to pass multiple dimensions as separate
+  arguments and should instead pass a single list of dimensions.
+  (:pull:`3802`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - The new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` (introduced
   in 0.14.1) is now on by default. To disable, use
   ``xarray.set_options(display_style="text")``.
   By `Julia Signell <https://github.com/jsignell>`_.
+- An ellipsis (``...``) is now supported in the ``dims`` argument of
+  :py:meth:`Dataset.stack` and :py:meth:`DataArray.stack`, meaning all
+  unlisted dimensions, similar to its meaning in :py:meth:`DataArray.transpose`.
+  (:pull:`3826`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
   first argument, which is then called on the input; replicating pandas' behavior.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
