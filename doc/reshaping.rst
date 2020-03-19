@@ -109,11 +109,11 @@ implemented :py:meth:`~xarray.DataArray.stack` and
     stacked
     stacked.unstack('z')
 
-As elsewhere in xarray, an ellipsis (`...`) can be used to represent all dimensions:
+As elsewhere in xarray, an ellipsis (`...`) can be used to represent all unlisted dimensions:
 
 .. ipython:: python
 
-    stacked = array.stack(z=[...])
+    stacked = array.stack(z=[..., "x"])
     stacked
 
 These methods are modeled on the :py:class:`pandas.DataFrame` methods of the

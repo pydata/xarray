@@ -1707,8 +1707,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dimensions : Mapping of the form new_name=(dim1, dim2, ...)
             Names of new dimensions, and the existing dimensions that they
-            replace. Passing a list containing an ellipsis (`[...]`)
-            dimensions will stack over all dimensions.
+            replace. An ellipsis (`...`) will be replaced by all unlisted dimensions.
         **dimensions_kwargs:
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
