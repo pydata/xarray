@@ -281,7 +281,7 @@ Almost all of xarray's built-in operations work on Dask arrays. If you want to
 use a function that isn't wrapped by xarray, and have it applied in parallel on
 each block of your xarray object, you have three options:
 
-1. One option is to extract Dask arrays from xarray objects (``.data``) and use Dask directly.
+1. Extract Dask arrays from xarray objects (``.data``) and use Dask directly.
 2. Use :py:func:`~xarray.apply_ufunc` to apply functions that consume and return NumPy arrays.
 3. Use :py:func:`~xarray.map_blocks`, :py:meth:`Dataset.map_blocks` or :py:meth:`DataArray.map_blocks`
    to apply functions that consume and return xarray objects.
