@@ -1184,6 +1184,10 @@ def test_map_blocks_da_ds_with_template(obj):
         actual = xr.map_blocks(func, obj, template=template)
     assert_identical(actual, template)
 
+    with raise_if_dask_computes():
+        actual = obj.map_blocks(func, template=template)
+    assert_identical(actual, template)
+
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_errors_bad_template(obj):
