@@ -5645,16 +5645,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         template: Union["DataArray", "Dataset"] = None,
     ) -> "T_DSorDA":
         """
-        Apply a function to each chunk of this Dataset. This method is experimental and
-        its signature may change.
+        Apply a function to each block of this Dataset.
+
+        .. warning::
+            This method is experimental and its signature may change.
 
         Parameters
         ----------
         func: callable
-            User-provided function that accepts a DataArray or Dataset as its first
-            parameter. The function will receive a subset of 'obj' (see below),
-            corresponding to one chunk along each chunked dimension. ``func`` will be
-            executed as ``func(obj_subset, *args, **kwargs)``.
+            User-provided function that accepts a Dataset as its first
+            parameter. The function will receive a subset, i.e. one block, of this Dataset
+            (see below), corresponding to one chunk along each chunked dimension. ``func`` will be
+            executed as ``func(block_subset, *args, **kwargs)``.
 
             This function must return either a single DataArray or a single Dataset.
 

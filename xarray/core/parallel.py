@@ -134,8 +134,10 @@ def map_blocks(
     kwargs: Mapping[str, Any] = None,
     template: Union[DataArray, Dataset] = None,
 ) -> T_DSorDA:
-    """Apply a function to each chunk of a DataArray or Dataset. This function is
-    experimental and its signature may change.
+    """Apply a function to each block of a DataArray or Dataset.
+
+    .. warning::
+        This function is experimental and its signature may change.
 
     Parameters
     ----------
