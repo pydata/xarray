@@ -25,6 +25,9 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
+  and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
+  By `Mathias Hauser <https://github.com/mathause>`_
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
@@ -57,8 +60,10 @@ Bug fixes
 - Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
   indexed variable (:issue:`3252`).
   By `David Huard <https://github.com/huard>`_.
-
-
+- Fix recombination of groups in :py:meth:`Dataset.groupby` and
+  :py:meth:`DataArray.groupby` when performing an operation that changes the
+  size of the groups along the grouped dimension. By `Eric Jansen
+  <https://github.com/ej81>`_.
 - Fix use of multi-index with categorical values (:issue:`3674`).
   By `Matthieu Ancellin <https://github.com/mancellin>`_.
 - Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
@@ -152,6 +157,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:meth:`DataArray.pad` and :py:meth:`Dataset.pad`. (:issue:`2605`, :pull:`3596`).
+  By `Mark Boer <https://github.com/mark-boer>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` now support :py:class:`pandas.CategoricalIndex`. (:issue:`3669`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Support using an existing, opened h5netcdf ``File`` with
