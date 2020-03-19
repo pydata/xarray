@@ -5495,6 +5495,19 @@ class TestDataset:
             ds.data_vars[item]  # should not raise
         assert sorted(actual) == sorted(expected)
 
+    def test_pad(self):
+        ds = create_test_data(seed=1)
+        padded = ds.pad(dim2=(1, 1), constant_values=42)
+
+        assert padded["dim2"].shape == (11,)
+        assert padded["var1"].shape == (8, 11)
+        assert padded["var2"].shape == (8, 11)
+        assert padded["var3"].shape == (10, 8)
+        assert dict(padded.dims) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
+
+        np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
+        np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
+
 
 # Py.test tests
 
@@ -6053,7 +6066,7 @@ def test_integrate(dask):
     actual = da.integrate("x")
     # coordinate that contains x should be dropped.
     expected_x = xr.DataArray(
-        np.trapz(da, da["x"], axis=0),
+        np.trapz(da.compute(), da["x"], axis=0),
         dims=["y"],
         coords={k: v for k, v in da.coords.items() if "x" not in v.dims},
     )
