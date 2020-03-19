@@ -221,6 +221,7 @@ Reshaping and reorganizing
    Dataset.to_stacked_array
    Dataset.shift
    Dataset.roll
+   Dataset.pad
    Dataset.sortby
    Dataset.broadcast_like
 
@@ -401,6 +402,7 @@ Reshaping and reorganizing
    DataArray.to_unstacked_dataset
    DataArray.shift
    DataArray.roll
+   DataArray.pad
    DataArray.sortby
    DataArray.broadcast_like
 
