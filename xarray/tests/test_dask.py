@@ -1344,6 +1344,7 @@ def test_normalize_token_with_backend(map_ds):
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
         assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+        read.close()
 
 
 @pytest.mark.parametrize(

@@ -347,6 +347,7 @@ def test_field_access(data, field):
 
 
 @requires_cftime
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_cftime_strftime_access(data):
     """ compare cftime formatting against datetime formatting """
     date_format = "%Y%m%d%H"

@@ -447,7 +447,8 @@ def test_groupby_drops_nans():
 
     # reduction operation along a different dimension
     actual = grouped.mean("time")
-    expected = ds.mean("time").where(ds.id.notnull())
+    with pytest.warns(RuntimeWarning):  # mean of empty slice
+        expected = ds.mean("time").where(ds.id.notnull())
     assert_identical(actual, expected)
 
     # NaN in non-dimensional coordinate
