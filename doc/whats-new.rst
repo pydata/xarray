@@ -25,10 +25,14 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
+  ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
+  :py:class:`~core.accessor_dt.DatetimeAccessor`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_ 
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- implement pint support. (:issue:`3594`, :pull:`3706`)
+- Support unit aware arrays with pint. (:issue:`3594`, :pull:`3706`, :pull:`3611`)
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
   `TypeError` on multiple string arguments. Receiving multiple string arguments
@@ -37,10 +41,31 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:func:`map_blocks` can now apply functions that add new unindexed dimensions.
   By `Deepak Cherian <https://github.com/dcherian>`_
+- The new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` (introduced
+  in 0.14.1) is now on by default. To disable, use
+  ``xarray.set_options(display_style="text")``.
+  By `Julia Signell <https://github.com/jsignell>`_.
+- :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
+  first argument, which is then called on the input; replicating pandas' behavior.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
+  :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
+  (:issue:`3843`, :pull:`3844`) 
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
+  indexed variable (:issue:`3252`).
+  By `David Huard <https://github.com/huard>`_.
+- Fix recombination of groups in :py:meth:`Dataset.groupby` and
+  :py:meth:`DataArray.groupby` when performing an operation that changes the
+  size of the groups along the grouped dimension. By `Eric Jansen
+  <https://github.com/ej81>`_.
+- Fix use of multi-index with categorical values (:issue:`3674`).
+  By `Matthieu Ancellin <https://github.com/mancellin>`_.
+- Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
   (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
@@ -54,9 +79,22 @@ Bug fixes
 - xarray now respects the over, under and bad colors if set on a provided colormap.
   (:issue:`3590`, :pull:`3601`)
   By `johnomotani <https://github.com/johnomotani>`_.
+- :py:func:`coarsen` now respects ``xr.set_options(keep_attrs=True)``
+  to preserve attributes. :py:meth:`Dataset.coarsen` accepts a keyword
+  argument ``keep_attrs`` to change this setting. (:issue:`3376`,
+  :pull:`3801`) By `Andrew Thomas <https://github.com/amcnicho>`_.
+  
+- Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
+  simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
 
 Documentation
 ~~~~~~~~~~~~~
+- Fix documentation of :py:class:`DataArray` removing the deprecated mention
+  that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Update the installation instructions: only explicitly list recommended dependencies
+  (:issue:`3756`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -69,6 +107,19 @@ Internal Changes
 - Changed test_open_mfdataset_list_attr to only run with dask installed
   (:issue:`3777`, :pull:`3780`).
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
+- Preserved the ability to index with ``method="nearest"`` with a
+  :py:class:`CFTimeIndex` with pandas versions greater than 1.0.1
+  (:issue:`3751`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Greater flexibility and improved test coverage of subtracting various types
+  of objects from a :py:class:`CFTimeIndex`. By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Updated Azure CI MacOS image, given pending removal.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Removed xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Removed conversion to :py:class:`pandas.Panel`, given its removal in pandas
+  in favor of xarray's objects.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.15.0:
 

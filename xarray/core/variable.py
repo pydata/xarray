@@ -843,7 +843,7 @@ class Variable(
 
         Shallow copy versus deep copy
 
-        >>> var = xr.Variable(data=[1, 2, 3], dims='x')
+        >>> var = xr.Variable(data=[1, 2, 3], dims="x")
         >>> var.copy()
         <xarray.Variable (x: 3)>
         array([1, 2, 3])
@@ -1678,7 +1678,9 @@ class Variable(
         """
         return self.broadcast_equals(other, equiv=equiv)
 
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+    def quantile(
+        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
+    ):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -1725,6 +1727,8 @@ class Variable(
 
         from .computation import apply_ufunc
 
+        _quantile_func = np.nanquantile if skipna else np.quantile
+
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
@@ -1739,7 +1743,7 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return np.moveaxis(np.nanquantile(npa, **kwargs), 0, -1)
+            return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
         result = apply_ufunc(
@@ -1840,13 +1844,13 @@ class Variable(
 
         Examples
         --------
-        >>> v=Variable(('a', 'b'), np.arange(8).reshape((2,4)))
-        >>> v.rolling_window(x, 'b', 3, 'window_dim')
+        >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
+        >>> v.rolling_window(x, "b", 3, "window_dim")
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
         array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
                [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
 
-        >>> v.rolling_window(x, 'b', 3, 'window_dim', center=True)
+        >>> v.rolling_window(x, "b", 3, "window_dim", center=True)
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
         array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
                [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
@@ -1948,6 +1952,9 @@ class Variable(
                 axes.append(i + axis_count)
             else:
                 shape.append(variable.shape[i])
+
+        keep_attrs = _get_keep_attrs(default=False)
+        variable.attrs = variable._attrs if keep_attrs else {}
 
         return variable.data.reshape(shape), tuple(axes)
 
