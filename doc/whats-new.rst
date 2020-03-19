@@ -94,6 +94,8 @@ Documentation
 - Fix documentation of :py:class:`DataArray` removing the deprecated mention
   that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Improve the :py:func:`where` docstring.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Update the installation instructions: only explicitly list recommended dependencies
   (:issue:`3756`).
   By `Mathias Hauser <https://github.com/mathause>`_.

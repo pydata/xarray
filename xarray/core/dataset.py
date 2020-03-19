@@ -4392,8 +4392,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature_c": (
