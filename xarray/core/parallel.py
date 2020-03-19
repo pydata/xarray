@@ -104,7 +104,8 @@ def infer_template(
         template = func(*meta_args, **kwargs)
     except Exception as e:
         raise Exception(
-            "Cannot infer object returned from running user provided function."
+            "Cannot infer object returned from running user provided function. "
+            "Please supply the 'template' kwarg to map_blocks."
         ) from e
 
     if not isinstance(template, (Dataset, DataArray)):

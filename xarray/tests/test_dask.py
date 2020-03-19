@@ -1039,7 +1039,7 @@ def test_map_blocks_error(map_da, map_ds):
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
 
-    with raises_regex(ValueError, "Received dimension.*"):
+    with raises_regex(ValueError, "Received dimension 'x' of length 1"):
         xr.map_blocks(bad_func, map_da).compute()
 
     def returns_numpy(darray):
