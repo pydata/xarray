@@ -171,6 +171,7 @@ Computation
    Dataset.quantile
    Dataset.differentiate
    Dataset.integrate
+   Dataset.map_blocks
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -350,6 +351,8 @@ Computation
    DataArray.differentiate
    DataArray.integrate
    DataArray.str
+   DataArray.map_blocks
+
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -507,7 +510,6 @@ Dataset methods
    Dataset.load
    Dataset.chunk
    Dataset.unify_chunks
-   Dataset.map_blocks
    Dataset.filter_by_attrs
    Dataset.info
 
@@ -539,7 +541,6 @@ DataArray methods
    DataArray.load
    DataArray.chunk
    DataArray.unify_chunks
-   DataArray.map_blocks
 
 Coordinates objects
 ===================
