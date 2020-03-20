@@ -95,7 +95,7 @@ def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
 
     cssclass_idx = " class='xr-has-index'" if is_index else ""
     dims_str = f"({', '.join(escape(dim) for dim in var.dims)})"
-    name = escape(name)
+    name = escape(str(name))
     dtype = dtype or escape(str(var.dtype))
 
     # "unique" ids required to expand/collapse subsections

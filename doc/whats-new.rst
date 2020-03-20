@@ -94,6 +94,8 @@ Bug fixes
   
 - Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
   simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
+- Fix html repr on :py:class:`Dataset` with non-string keys (:pull:`3807`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
