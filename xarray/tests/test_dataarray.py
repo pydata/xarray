@@ -1412,6 +1412,12 @@ class TestDataArray:
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
 
+    def test_coords_delitem_delete_indexes(self):
+        # regression test for GH3746
+        arr = DataArray(np.ones((2,)), dims="x", coords={"x": [0, 1]})
+        del arr.coords["x"]
+        assert "x" not in arr.indexes
+
     def test_broadcast_like(self):
         arr1 = DataArray(
             np.ones((2, 3)),
