@@ -24,7 +24,7 @@ Breaking changes
 
 - Raise an error when assigning to the ``.values`` or ``.data`` attribute of
   dimension coordinates i.e. ``IndexVariable`` objects. This has been broken since
-  v0.13.0. (:issue:`3470`)
+  v0.12.0. (:issue:`3470`, :pull:`3862`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 
 New Features
