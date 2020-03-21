@@ -43,6 +43,8 @@ New Features
   arguments and should instead pass a single list of dimensions.
   (:pull:`3802`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`map_blocks` can now apply functions that add new unindexed dimensions.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - The new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` (introduced
   in 0.14.1) is now on by default. To disable, use
   ``xarray.set_options(display_style="text")``.
@@ -59,7 +61,6 @@ New Features
   :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
   (:issue:`3843`, :pull:`3844`) 
   By `Aaron Spring <https://github.com/aaronspring>`_.
-
 
 Bug fixes
 ~~~~~~~~~
