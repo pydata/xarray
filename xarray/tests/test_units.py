@@ -2800,7 +2800,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="interpolate strips units")
+    @pytest.mark.xfail(reason="uses numpy.vectorize")
     def test_interpolate_na(self):
         array = (
             np.array([-1.03, 0.1, 1.4, np.nan, 2.3, np.nan, np.nan, 9.1])
