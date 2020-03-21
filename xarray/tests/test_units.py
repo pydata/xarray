@@ -2801,13 +2801,13 @@ class TestDataArray:
         xr.testing.assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="interpolate strips units")
-    def test_interpolate_na(self, dtype):
+    def test_interpolate_na(self):
         array = (
             np.array([-1.03, 0.1, 1.4, np.nan, 2.3, np.nan, np.nan, 9.1])
             * unit_registry.m
         )
         x = np.arange(len(array))
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x").astype(dtype)
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
         units = extract_units(data_array)
         expected = attach_units(strip_units(data_array).interpolate_na(dim="x"), units)
