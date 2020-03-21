@@ -247,7 +247,7 @@ class DatasetCoordinates(Coordinates):
         if key in self:
             del self._data[key]
         else:
-            raise KeyError(key)
+            raise KeyError(f"{key!r} is not a coordinate variable.")
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython. """
@@ -291,7 +291,7 @@ class DataArrayCoordinates(Coordinates):
         dims = calculate_dimensions(coords_plus_data)
         if not set(dims) <= set(self.dims):
             raise ValueError(
-                "cannot add coordinates with new dimensions to " "a DataArray"
+                "cannot add coordinates with new dimensions to a DataArray"
             )
         self._data._coords = coords
 
@@ -312,7 +312,12 @@ class DataArrayCoordinates(Coordinates):
         return Dataset._construct_direct(coords, set(coords))
 
     def __delitem__(self, key: Hashable) -> None:
-        del self._data._coords[key]
+        if key in self:
+            del self._data._coords[key]
+            if self._data._indexes is not None and key in self._data._indexes:
+                del self._data._indexes[key]
+        else:
+            raise KeyError(f"{key!r} is not a coordinate variable.")
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython. """
