@@ -19,7 +19,6 @@ steps:
         --upgrade \
         matplotlib \
         numpy \
-        pandas \
         scipy
     python -m pip install \
         --no-deps \
@@ -30,7 +29,8 @@ steps:
         git+https://github.com/Unidata/cftime \
         git+https://github.com/mapbox/rasterio \
         git+https://github.com/hgrecco/pint \
-        git+https://github.com/pydata/bottleneck
+        git+https://github.com/pydata/bottleneck \
+        git+https://github.com/pandas-dev/pandas.git
   condition: eq(variables['UPSTREAM_DEV'], 'true')
   displayName: Install upstream dev dependencies
 
