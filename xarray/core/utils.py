@@ -371,6 +371,35 @@ def ordered_dict_intersection(
     return new_dict
 
 
+def ordered_dict_union(
+    first_dict: MutableMapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> MutableMapping[K, V]:
+    """Return the union of two dictionaries as a new dictionary.
+
+    An exception is raised if any keys are found in both dictionaries and the values are
+    not compatible.
+
+    Parameters
+    ----------
+    first_dict, second_dict : dict-like
+        Mappings to merge.
+    compat : function, optional
+        Binary operator to determine if two values are compatible. By default,
+        checks for equivalence.
+
+    Returns
+    -------
+    union : dict
+        union of the contents.
+    """
+    new_dict = dict(first_dict)
+    update_safety_check(first_dict, second_dict, compat)
+    new_dict.update(second_dict)
+    return new_dict
+
+
 class Frozen(Mapping[K, V]):
     """Wrapper around an object implementing the mapping interface to make it
     immutable. If you really want to modify the mapping, the mutable version is
