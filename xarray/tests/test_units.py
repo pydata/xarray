@@ -1885,7 +1885,10 @@ class TestVariable(VariableSubclassobjects):
             method("coarsen", windows={"y": 2}, func=np.mean),
             pytest.param(
                 method("quantile", q=[0.25, 0.75]),
-                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+                marks=pytest.mark.xfail(
+                    LooseVersion(pint.__version__) < "0.12",
+                    reason="quantile / nanquantile not implemented yet",
+                ),
             ),
             pytest.param(
                 method("rank", dim="x"),
@@ -3531,7 +3534,10 @@ class TestDataArray:
             method("integrate", dim="x"),
             pytest.param(
                 method("quantile", q=[0.25, 0.75]),
-                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+                marks=pytest.mark.xfail(
+                    LooseVersion(pint.__version__) < "0.12",
+                    reason="quantile / nanquantile not implemented yet",
+                ),
             ),
             method("reduce", func=np.sum, dim="x"),
             pytest.param(lambda x: x.dot(x), id="method_dot"),
@@ -3618,7 +3624,10 @@ class TestDataArray:
             method("last"),
             pytest.param(
                 method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
-                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+                marks=pytest.mark.xfail(
+                    LooseVersion(pint.__version__) < "0.12",
+                    reason="quantile / nanquantile not implemented yet",
+                ),
             ),
         ),
         ids=repr,
