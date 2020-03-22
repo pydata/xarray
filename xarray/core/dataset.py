@@ -536,7 +536,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if isinstance(coords, Dataset):
             coords = coords.variables
 
-        variables, coord_names, dims, indexes = merge_data_and_coords(
+        variables, coord_names, dims, indexes, _ = merge_data_and_coords(
             data_vars, coords, compat="broadcast_equals"
         )
 
