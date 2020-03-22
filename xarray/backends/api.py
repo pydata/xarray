@@ -1196,8 +1196,8 @@ def save_mfdataset(
 
     Save a dataset into one netCDF per year of data:
 
-    >>> years, datasets = zip(*ds.groupby('time.year'))
-    >>> paths = ['%s.nc' % y for y in years]
+    >>> years, datasets = zip(*ds.groupby("time.year"))
+    >>> paths = ["%s.nc" % y for y in years]
     >>> xr.save_mfdataset(datasets, paths)
     """
     if mode == "w" and len(set(paths)) < len(paths):
@@ -1253,7 +1253,7 @@ def _validate_datatypes_for_zarr_append(dataset):
         if (
             not np.issubdtype(var.dtype, np.number)
             and not np.issubdtype(var.dtype, np.datetime64)
-            and not np.issubdtype(var.dtype, np.bool)
+            and not np.issubdtype(var.dtype, np.bool_)
             and not coding.strings.is_unicode_dtype(var.dtype)
             and not var.dtype == object
         ):

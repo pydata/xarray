@@ -51,6 +51,11 @@ def test_short_data_repr_html(dataarray):
     assert data_repr.startswith("array")
 
 
+def test_short_data_repr_html_non_str_keys(dataset):
+    ds = dataset.assign({2: lambda x: x["tmin"]})
+    fh.dataset_repr(ds)
+
+
 def test_short_data_repr_html_dask(dask_dataarray):
     import dask
 

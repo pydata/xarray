@@ -162,18 +162,19 @@ def map_blocks(
     ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
     its indices, and its methods like ``.groupby()``.
 
-    >>> def calculate_anomaly(da, groupby_type='time.month'):
+    >>> def calculate_anomaly(da, groupby_type="time.month"):
     ...     # Necessary workaround to xarray's check with zero dimensions
     ...     # https://github.com/pydata/xarray/issues/3575
     ...     if sum(da.shape) == 0:
     ...         return da
     ...     gb = da.groupby(groupby_type)
-    ...     clim = gb.mean(dim='time')
+    ...     clim = gb.mean(dim="time")
     ...     return gb - clim
-    >>> time = xr.cftime_range('1990-01', '1992-01', freq='M')
+    >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
     >>> np.random.seed(123)
-    >>> array = xr.DataArray(np.random.rand(len(time)),
-    ...                      dims="time", coords=[time]).chunk()
+    >>> array = xr.DataArray(
+    ...     np.random.rand(len(time)), dims="time", coords=[time]
+    ... ).chunk()
     >>> xr.map_blocks(calculate_anomaly, array).compute()
     <xarray.DataArray (time: 24)>
     array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
@@ -187,7 +188,9 @@ def map_blocks(
     Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
     to the function being applied in ``xr.map_blocks()``:
 
-    >>> xr.map_blocks(calculate_anomaly, array, kwargs={'groupby_type': 'time.year'})
+    >>> xr.map_blocks(
+    ...     calculate_anomaly, array, kwargs={"groupby_type": "time.year"},
+    ... )
     <xarray.DataArray (time: 24)>
     array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,
            -0.11974531,  0.43791243,  0.14197797, -0.06191987, -0.15073425,
@@ -383,6 +386,9 @@ def map_blocks(
                 var_chunks.append(input_chunks[dim])
             elif dim in indexes:
                 var_chunks.append((len(indexes[dim]),))
+            elif dim in template.dims:
+                # new unindexed dimension
+                var_chunks.append((template.sizes[dim],))
 
         data = dask.array.Array(
             hlg, name=gname_l, chunks=var_chunks, dtype=template[name].dtype

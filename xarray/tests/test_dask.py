@@ -1147,6 +1147,7 @@ def test_map_blocks_to_array(map_ds):
         lambda x: x.to_dataset(),
         lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
+        lambda x: x.expand_dims(k=3),
         lambda x: x.assign_coords(new_coord=("y", x.y * 2)),
         lambda x: x.astype(np.int32),
         # TODO: [lambda x: x.isel(x=1).drop_vars("x"), map_da],
@@ -1167,6 +1168,7 @@ def test_map_blocks_da_transformations(func, map_da):
         lambda x: x.drop_vars("a"),
         lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
+        lambda x: x.expand_dims(k=3),
         lambda x: x.rename({"a": "new1", "b": "new2"}),
         # TODO: [lambda x: x.isel(x=1)],
     ],
@@ -1344,6 +1346,7 @@ def test_normalize_token_with_backend(map_ds):
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
         assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+        read.close()
 
 
 @pytest.mark.parametrize(
