@@ -31,6 +31,10 @@ from .dataset import Dataset
 T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
 
+def get_index_vars(obj):
+    return {dim: obj[dim] for dim in obj.indexes}
+
+
 def check_result_variables(
     result: Union[DataArray, Dataset], expected: Mapping[str, Any], kind: str
 ):
@@ -377,7 +381,7 @@ def map_blocks(
     # TODO: align args and dataset here?
     # TODO: unify_chunks for args and dataset
     input_chunks = dict(dataset.chunks)
-    input_indexes = dict(dataset.indexes)
+    input_indexes = get_index_vars(dataset)
     converted_args = []
     arg_is_array = []
     for arg in args:
@@ -397,16 +401,15 @@ def map_blocks(
         preserved_indexes = template_indexes & set(input_indexes)
         new_indexes = template_indexes - set(input_indexes)
         indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
-        indexes.update({k: template.indexes[k] for k in new_indexes})
+        indexes.update({k: template[k] for k in new_indexes})
         output_chunks = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
         }
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
-        template_indexes = set(template.indexes)
         indexes = input_indexes
-        indexes.update({k: template.indexes[k] for k in template_indexes})
+        indexes.update(get_index_vars(template))
         if isinstance(template, DataArray):
             output_chunks = dict(zip(template.dims, template.chunks))  # type: ignore
         else:
