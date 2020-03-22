@@ -253,6 +253,7 @@ class CFTimeIndex(pd.Index):
         result = object.__new__(cls)
         result._data = np.array(data, dtype="O")
         result.name = name
+        result._cache = {}
         return result
 
     def _partial_date_slice(self, resolution, parsed):
