@@ -2418,7 +2418,12 @@ class TestDataArray:
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.mm, None, id="compatible_unit"),
+            pytest.param(
+                unit_registry.mm,
+                None,
+                id="compatible_unit",
+                marks=pytest.mark.xfail(reason="pint converts to the wrong units"),
+            ),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
@@ -2429,7 +2434,7 @@ class TestDataArray:
 
         if error is not None:
             with pytest.raises(error):
-                np.maximum(data_array, 0 * unit)
+                np.maximum(data_array, 1 * unit)
 
             return
 
@@ -2437,16 +2442,16 @@ class TestDataArray:
         expected = attach_units(
             np.maximum(
                 strip_units(data_array),
-                strip_units(convert_units(0 * unit, expected_units)),
+                strip_units(convert_units(1 * unit, expected_units)),
             ),
             expected_units,
         )
 
-        actual = np.maximum(data_array, 0 * unit)
+        actual = np.maximum(data_array, 1 * unit)
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
-        actual = np.maximum(0 * unit, data_array)
+        actual = np.maximum(1 * unit, data_array)
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
