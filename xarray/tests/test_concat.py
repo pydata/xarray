@@ -40,8 +40,7 @@ def test_concat_compat():
     assert_equal(ds2.no_x_y, result.no_x_y.transpose())
 
     for var in ["has_x", "no_x_y"]:
-        assert "y" not in result[var]
-
+        assert "y" not in result[var].dims and "y" not in result[var].coords
     with raises_regex(ValueError, "coordinates in some datasets but not others"):
         concat([ds1, ds2], dim="q")
     with raises_regex(ValueError, "'q' is not present in all datasets"):
@@ -249,6 +248,13 @@ class TestConcatDataset:
         for join in expected:
             actual = concat([ds1, ds2], join=join, dim="x")
             assert_equal(actual, expected[join])
+
+        # regression test for #3681
+        actual = concat([ds1.drop("x"), ds2.drop("x")], join="override", dim="y")
+        expected = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2))}, coords={"y": [0, 0.0001]}
+        )
+        assert_identical(actual, expected)
 
     def test_concat_promote_shape(self):
         # mixed dims within variables

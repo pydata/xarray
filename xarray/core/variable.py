@@ -1,11 +1,12 @@
 import copy
 import functools
 import itertools
+import numbers
 import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Dict, Hashable, Mapping, TypeVar, Union
+from typing import Any, Dict, Hashable, Mapping, Tuple, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -31,12 +32,6 @@ from .utils import (
     ensure_us_time_resolution,
     infix_dims,
 )
-
-try:
-    import dask.array as da
-except ImportError:
-    pass
-
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -843,7 +838,7 @@ class Variable(
 
         Shallow copy versus deep copy
 
-        >>> var = xr.Variable(data=[1, 2, 3], dims='x')
+        >>> var = xr.Variable(data=[1, 2, 3], dims="x")
         >>> var.copy()
         <xarray.Variable (x: 3)>
         array([1, 2, 3])
@@ -1150,66 +1145,114 @@ class Variable(
             result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
 
-    def pad_with_fill_value(
-        self, pad_widths=None, fill_value=dtypes.NA, **pad_widths_kwargs
+    def _pad_options_dim_to_index(
+        self,
+        pad_option: Mapping[Hashable, Union[int, Tuple[int, int]]],
+        fill_with_shape=False,
+    ):
+        if fill_with_shape:
+            return [
+                (n, n) if d not in pad_option else pad_option[d]
+                for d, n in zip(self.dims, self.data.shape)
+            ]
+        return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
+
+    def pad(
+        self,
+        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        mode: str = "constant",
+        stat_length: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        constant_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        end_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        reflect_type: str = None,
+        **pad_width_kwargs: Any,
     ):
         """
-        Return a new Variable with paddings.
+        Return a new Variable with padded data.
 
         Parameters
         ----------
-        pad_width: Mapping of the form {dim: (before, after)}
-            Number of values padded to the edges of each dimension.
-        **pad_widths_kwargs:
-            Keyword argument for pad_widths
-        """
-        pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
+        pad_width: Mapping with the form of {dim: (pad_before, pad_after)}
+            Number of values padded along each dimension.
+            {dim: pad} is a shortcut for pad_before = pad_after = pad
+        mode: (str)
+            See numpy / Dask docs
+        stat_length : int, tuple or mapping of the form {dim: tuple}
+            Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
+            values at edge of each axis used to calculate the statistic value.
+        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'constant'.  The values to set the padded values for each
+            axis.
+        end_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'linear_ramp'.  The values used for the ending value of the
+            linear_ramp and that will form the edge of the padded array.
+        reflect_type : {'even', 'odd'}, optional
+            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+            default with an unaltered reflection around the edge value.  For
+            the 'odd' style, the extended part of the array is created by
+            subtracting the reflected values from two times the edge value.
+        **pad_width_kwargs:
+            One of pad_width or pad_width_kwargs must be provided.
 
-        if fill_value is dtypes.NA:
-            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        Returns
+        -------
+        padded : Variable
+            Variable with the same dimensions and attributes but padded data.
+        """
+        pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
+
+        # change default behaviour of pad with mode constant
+        if mode == "constant" and (
+            constant_values is None or constant_values is dtypes.NA
+        ):
+            dtype, constant_values = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
 
-        if isinstance(self.data, dask_array_type):
-            array = self.data
-
-            # Dask does not yet support pad. We manually implement it.
-            # https://github.com/dask/dask/issues/1926
-            for d, pad in pad_widths.items():
-                axis = self.get_axis_num(d)
-                before_shape = list(array.shape)
-                before_shape[axis] = pad[0]
-                before_chunks = list(array.chunks)
-                before_chunks[axis] = (pad[0],)
-                after_shape = list(array.shape)
-                after_shape[axis] = pad[1]
-                after_chunks = list(array.chunks)
-                after_chunks[axis] = (pad[1],)
-
-                arrays = []
-                if pad[0] > 0:
-                    arrays.append(
-                        da.full(
-                            before_shape, fill_value, dtype=dtype, chunks=before_chunks
-                        )
-                    )
-                arrays.append(array)
-                if pad[1] > 0:
-                    arrays.append(
-                        da.full(
-                            after_shape, fill_value, dtype=dtype, chunks=after_chunks
-                        )
-                    )
-                if len(arrays) > 1:
-                    array = da.concatenate(arrays, axis=axis)
-        else:
-            pads = [(0, 0) if d not in pad_widths else pad_widths[d] for d in self.dims]
-            array = np.pad(
-                self.data.astype(dtype, copy=False),
-                pads,
-                mode="constant",
-                constant_values=fill_value,
+        # create pad_options_kwargs, numpy requires only relevant kwargs to be nonempty
+        if isinstance(stat_length, dict):
+            stat_length = self._pad_options_dim_to_index(
+                stat_length, fill_with_shape=True
             )
+        if isinstance(constant_values, dict):
+            constant_values = self._pad_options_dim_to_index(constant_values)
+        if isinstance(end_values, dict):
+            end_values = self._pad_options_dim_to_index(end_values)
+
+        # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303
+        if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
+            stat_length = [(n, n) for n in self.data.shape]  # type: ignore
+
+        # change integer values to a tuple of two of those values and change pad_width to index
+        for k, v in pad_width.items():
+            if isinstance(v, numbers.Number):
+                pad_width[k] = (v, v)
+        pad_width_by_index = self._pad_options_dim_to_index(pad_width)
+
+        # create pad_options_kwargs, numpy/dask requires only relevant kwargs to be nonempty
+        pad_option_kwargs = {}
+        if stat_length is not None:
+            pad_option_kwargs["stat_length"] = stat_length
+        if constant_values is not None:
+            pad_option_kwargs["constant_values"] = constant_values
+        if end_values is not None:
+            pad_option_kwargs["end_values"] = end_values
+        if reflect_type is not None:
+            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore
+
+        array = duck_array_ops.pad(
+            self.data.astype(dtype, copy=False),
+            pad_width_by_index,
+            mode=mode,
+            **pad_option_kwargs,
+        )
+
         return type(self)(self.dims, array)
 
     def _roll_one_dim(self, dim, count):
@@ -1844,13 +1887,13 @@ class Variable(
 
         Examples
         --------
-        >>> v=Variable(('a', 'b'), np.arange(8).reshape((2,4)))
-        >>> v.rolling_window(x, 'b', 3, 'window_dim')
+        >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
+        >>> v.rolling_window(x, "b", 3, "window_dim")
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
         array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
                [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
 
-        >>> v.rolling_window(x, 'b', 3, 'window_dim', center=True)
+        >>> v.rolling_window(x, "b", 3, "window_dim", center=True)
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
         array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
                [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
@@ -1930,10 +1973,10 @@ class Variable(
                 if pad < 0:
                     pad += window
                 if side[d] == "left":
-                    pad_widths = {d: (0, pad)}
+                    pad_width = {d: (0, pad)}
                 else:
-                    pad_widths = {d: (pad, 0)}
-                variable = variable.pad_with_fill_value(pad_widths)
+                    pad_width = {d: (pad, 0)}
+                variable = variable.pad(pad_width, mode="constant")
             else:
                 raise TypeError(
                     "{} is invalid for boundary. Valid option is 'exact', "

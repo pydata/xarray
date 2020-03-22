@@ -31,6 +31,9 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
+  and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
+  By `Mathias Hauser <https://github.com/mathause>`_
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
@@ -42,13 +45,21 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
   `TypeError` on multiple string arguments. Receiving multiple string arguments
-  often means a user is attempting to pass multiple dimensions to group over
-  and should instead pass a list.
+  often means a user is attempting to pass multiple dimensions as separate
+  arguments and should instead pass a single list of dimensions.
+  (:pull:`3802`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`map_blocks` can now apply functions that add new unindexed dimensions.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - The new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` (introduced
   in 0.14.1) is now on by default. To disable, use
   ``xarray.set_options(display_style="text")``.
   By `Julia Signell <https://github.com/jsignell>`_.
+- An ellipsis (``...``) is now supported in the ``dims`` argument of
+  :py:meth:`Dataset.stack` and :py:meth:`DataArray.stack`, meaning all
+  unlisted dimensions, similar to its meaning in :py:meth:`DataArray.transpose`.
+  (:pull:`3826`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
   first argument, which is then called on the input; replicating pandas' behavior.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -57,10 +68,19 @@ New Features
   (:issue:`3843`, :pull:`3844`) 
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
-
 Bug fixes
 ~~~~~~~~~
-
+- Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
+  indexed variable (:issue:`3252`).
+  By `David Huard <https://github.com/huard>`_.
+- Fix recombination of groups in :py:meth:`Dataset.groupby` and
+  :py:meth:`DataArray.groupby` when performing an operation that changes the
+  size of the groups along the grouped dimension. By `Eric Jansen
+  <https://github.com/ej81>`_.
+- Fix use of multi-index with categorical values (:issue:`3674`).
+  By `Matthieu Ancellin <https://github.com/mancellin>`_.
+- Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
   (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
@@ -78,15 +98,20 @@ Bug fixes
   to preserve attributes. :py:meth:`Dataset.coarsen` accepts a keyword
   argument ``keep_attrs`` to change this setting. (:issue:`3376`,
   :pull:`3801`) By `Andrew Thomas <https://github.com/amcnicho>`_.
-  
+- Delete associated indexes when deleting coordinate variables. (:issue:`3746`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
   simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
+- Fix html repr on :py:class:`Dataset` with non-string keys (:pull:`3807`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 - Fix documentation of :py:class:`DataArray` removing the deprecated mention
   that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Improve the :py:func:`where` docstring.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Update the installation instructions: only explicitly list recommended dependencies
   (:issue:`3756`).
   By `Mathias Hauser <https://github.com/mathause>`_.
@@ -150,6 +175,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:meth:`DataArray.pad` and :py:meth:`Dataset.pad`. (:issue:`2605`, :pull:`3596`).
+  By `Mark Boer <https://github.com/mark-boer>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` now support :py:class:`pandas.CategoricalIndex`. (:issue:`3669`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Support using an existing, opened h5netcdf ``File`` with
