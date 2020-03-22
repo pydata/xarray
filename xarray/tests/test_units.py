@@ -2632,10 +2632,7 @@ class TestDataArray:
             )
             * unit_registry.degK
         )
-        x = np.arange(array.shape[0]) * unit_registry.m
-        y = np.arange(array.shape[1]) * unit_registry.m
-
-        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
+        data_array = xr.DataArray(data=array)
 
         expected = func(strip_units(data_array))
         actual = func(data_array)
