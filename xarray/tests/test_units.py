@@ -2500,7 +2500,7 @@ class TestDataArray:
         expected = func(strip_units(data_array)) * unit_registry.m
         actual = func(data_array)
 
-        assert np.all(expected == actual)
+        np.testing.assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
