@@ -3576,7 +3576,12 @@ class TestDataArray:
             method("groupby", "x"),
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
-            method("rolling", y=3),
+            pytest.param(
+                method("rolling", y=3),
+                marks=pytest.mark.xfail(
+                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
+                ),
+            ),
             pytest.param(
                 method("rolling_exp", y=3),
                 marks=pytest.mark.xfail(reason="units not supported by numbagg"),
