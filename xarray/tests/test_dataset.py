@@ -744,6 +744,10 @@ class TestDataset:
         expected = data.merge({"c": 11}).set_coords("c")
         assert_identical(expected, actual)
 
+        # regression test for GH3746
+        del actual.coords["x"]
+        assert "x" not in actual.indexes
+
     def test_update_index(self):
         actual = Dataset(coords={"x": [1, 2, 3]})
         actual["x"] = ["a", "b", "c"]
@@ -2877,6 +2881,17 @@ class TestDataset:
             {"a": ("z", [0, 0, 1, 1]), "b": ("z", [0, 1, 2, 3]), "z": exp_index}
         )
         actual = ds.stack(z=["x", "y"])
+        assert_identical(expected, actual)
+
+        actual = ds.stack(z=[...])
+        assert_identical(expected, actual)
+
+        # non list dims with ellipsis
+        actual = ds.stack(z=(...,))
+        assert_identical(expected, actual)
+
+        # ellipsis with given dim
+        actual = ds.stack(z=[..., "y"])
         assert_identical(expected, actual)
 
         exp_index = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=["y", "x"])
