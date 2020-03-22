@@ -3292,6 +3292,38 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("variant", ("data", "coords"))
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("interp"), marks=pytest.mark.xfail(reason="uses scipy")
+            ),
+            method("reindex"),
+        ),
+        ids=repr,
+    )
+    def test_interp_reindex(self, variant, func, dtype):
+        variants = {
+            "data": (unit_registry.m, 1),
+            "coords": (1, unit_registry.m),
+        }
+        data_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(1, 2, 10).astype(dtype) * data_unit
+        y = np.arange(10) * coord_unit
+
+        x = np.arange(10)
+        new_x = np.arange(10) + 0.5
+        data_array = xr.DataArray(array, coords={"x": x, "y": ("x", y)}, dims="x")
+
+        units = extract_units(data_array)
+        expected = attach_units(func(strip_units(data_array), x=new_x), units)
+        actual = func(data_array, x=new_x)
+
+        assert_units_equal(expected, actual)
+        xr.testing.assert_allclose(expected, actual)
+
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
@@ -3305,30 +3337,30 @@ class TestDataArray:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_interp(self, unit, error):
-        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        new_coords = (np.arange(10) + 0.5) * unit
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-        }
-
-        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
+    @pytest.mark.parametrize(
+        "func", (method("interp"), method("reindex")), ids=repr,
+    )
+    def test_interp_reindex_indexing(self, func, unit, error, dtype):
+        array = np.linspace(1, 2, 10).astype(dtype)
+        x = np.arange(10) * unit_registry.m
+        new_x = (np.arange(10) + 0.5) * unit
+        data_array = xr.DataArray(array, coords={"x": x}, dims="x")
 
         if error is not None:
             with pytest.raises(error):
-                data_array.interp(x=new_coords)
+                func(data_array, x=new_x)
 
             return
 
         units = extract_units(data_array)
         expected = attach_units(
-            strip_units(data_array).interp(
-                x=strip_units(convert_units(new_coords, {None: unit_registry.m}))
+            func(
+                strip_units(data_array),
+                x=strip_units(convert_units(new_x, {None: unit_registry.m})),
             ),
             units,
         )
-        actual = data_array.interp(x=new_coords)
+        actual = func(data_array, x=new_x)
 
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
@@ -3374,50 +3406,6 @@ class TestDataArray:
             units,
         )
         actual = data_array.interp_like(other)
-
-        assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
-
-    @pytest.mark.xfail(reason="indexes don't support units")
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
-    def test_reindex(self, unit, error, dtype):
-        array = (
-            np.linspace(1, 2, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        new_coords = (np.arange(10) + 0.5) * unit
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-        }
-
-        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
-        func = method("reindex")
-
-        if error is not None:
-            with pytest.raises(error):
-                func(data_array, x=new_coords)
-
-            return
-
-        expected = attach_units(
-            func(
-                strip_units(data_array),
-                x=strip_units(convert_units(new_coords, {None: unit_registry.m})),
-            ),
-            {None: unit_registry.degK},
-        )
-        actual = func(data_array, x=new_coords)
 
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
