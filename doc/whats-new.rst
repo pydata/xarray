@@ -35,7 +35,7 @@ New Features
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Add partial support unit for aware arrays with pint. (:pull:`3706`, :pull:`3611`)
+- Add partial support for unit aware arrays with pint. (:pull:`3706`, :pull:`3611`)
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
   `TypeError` on multiple string arguments. Receiving multiple string arguments
