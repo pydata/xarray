@@ -20,7 +20,7 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .utils import Frozen, dict_equiv, ordered_dict_union
+from .utils import Frozen, compat_dict_union, dict_equiv
 from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
 if TYPE_CHECKING:
@@ -506,7 +506,7 @@ def merge_attrs(variable_attrs, combine_attrs):
         result = dict(variable_attrs[0])
         for attrs in variable_attrs[1:]:
             try:
-                result = ordered_dict_union(result, attrs)
+                result = compat_dict_union(result, attrs)
             except ValueError:
                 raise MergeError(
                     "combine_attrs='no_conflicts', but some values are not "

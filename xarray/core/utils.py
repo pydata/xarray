@@ -361,6 +361,9 @@ def ordered_dict_intersection(
         Binary operator to determine if two values are compatible. By default,
         checks for equivalence.
 
+    # TODO: Rename to compat_dict_intersection, as we do not use OrderedDicts
+    # any more.
+
     Returns
     -------
     intersection : dict
@@ -371,15 +374,15 @@ def ordered_dict_intersection(
     return new_dict
 
 
-def ordered_dict_union(
+def compat_dict_union(
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> MutableMapping[K, V]:
     """Return the union of two dictionaries as a new dictionary.
 
-    An exception is raised if any keys are found in both dictionaries and the values are
-    not compatible.
+    An exception is raised if any keys are found in both dictionaries and the
+    values are not compatible.
 
     Parameters
     ----------

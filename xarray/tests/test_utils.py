@@ -124,16 +124,14 @@ class TestDictionaries:
         assert {"b": "B"} == utils.ordered_dict_intersection(self.x, self.y)
         assert {} == utils.ordered_dict_intersection(self.x, self.z)
 
-    def test_ordered_dict_union(self):
-        assert {"a": "A", "b": "B", "c": "C"} == utils.ordered_dict_union(
-            self.x, self.y
-        )
+    def test_compat_dict_union(self):
+        assert {"a": "A", "b": "B", "c": "C"} == utils.compat_dict_union(self.x, self.y)
         with raises_regex(
             ValueError,
             "unsafe to merge dictionaries without "
             "overriding values; conflicting key",
         ):
-            utils.ordered_dict_union(self.x, self.z)
+            utils.compat_dict_union(self.x, self.z)
 
     def test_dict_equiv(self):
         x = {}
