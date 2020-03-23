@@ -113,7 +113,7 @@ Time required: about an hour.
     ```
     git log "$(git tag --sort="v:refname" | sed -n 'x;$p').." --format="%aN" | sort -u
     ```
-    or by replacing `v0.X.Y` with the _previous_ release in:
+    or by substituting the _previous_ release in:
     ```
     git log v0.X.Y.. --format="%aN" | sort -u
     ```
