@@ -184,7 +184,7 @@ def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
 
 
 def update_safety_check(
-    first_dict: MutableMapping[K, V],
+    first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> None:
@@ -372,7 +372,7 @@ def ordered_dict_intersection(
 
 
 def ordered_dict_union(
-    first_dict: MutableMapping[K, V],
+    first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> MutableMapping[K, V]:
