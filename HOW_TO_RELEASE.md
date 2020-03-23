@@ -123,7 +123,7 @@ Time required: about an hour.
 Note on version numbering:
 
 We follow a rough approximation of semantic version. Only major releases (0.X.0)
-show include breaking changes. Minor releases (0.X.Y) are for bug fixes and
+should include breaking changes. Minor releases (0.X.Y) are for bug fixes and
 backwards compatible new features, but if a sufficient number of new features
 have arrived we will issue a major release even if there are no compatibility
 breaks.
