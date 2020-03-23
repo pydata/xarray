@@ -657,7 +657,7 @@ Additionally, the boolean kwarg ``add_guide`` can be used to prevent the display
 
 .. ipython:: python
 
-    ds.w.values = [1, 2, 3, 5]
+    ds = ds.assign(w=[1, 2, 3, 5])
     @savefig ds_discrete_legend_hue_scatter.png
     ds.plot.scatter(x='A', y='B', hue='w', hue_style='discrete')
 

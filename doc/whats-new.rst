@@ -22,6 +22,12 @@ v0.15.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Raise an error when assigning to the ``.values`` or ``.data`` attribute of
+  dimension coordinates i.e. ``IndexVariable`` objects. This has been broken since
+  v0.12.0. Please use :py:meth:`DataArray.assign_coords` or :py:meth:`Dataset.assign_coords`
+  instead. (:issue:`3470`, :pull:`3862`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
+
 New Features
 ~~~~~~~~~~~~
 

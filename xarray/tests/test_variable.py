@@ -538,8 +538,7 @@ class VariableSubclassobjects:
         orig = IndexVariable("x", np.arange(5))
         new_data = np.arange(5, 10)
         actual = orig.copy(data=new_data)
-        expected = orig.copy()
-        expected.data = new_data
+        expected = IndexVariable("x", np.arange(5, 10))
         assert_identical(expected, actual)
 
     def test_copy_index_with_data_errors(self):
@@ -547,6 +546,10 @@ class VariableSubclassobjects:
         new_data = np.arange(5, 20)
         with raises_regex(ValueError, "must match shape of object"):
             orig.copy(data=new_data)
+        with raises_regex(ValueError, "Cannot assign to the .data"):
+            orig.data = new_data
+        with raises_regex(ValueError, "Cannot assign to the .values"):
+            orig.values = new_data
 
     def test_replace(self):
         var = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
