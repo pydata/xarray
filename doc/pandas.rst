@@ -110,10 +110,10 @@ Multi-dimensional data
 Tidy data is great, but it sometimes you want to preserve dimensions instead of
 automatically stacking them into a ``MultiIndex``.
 
-:py:meth:`DataArray.to_pandas()` is a shortcut that
-lets you convert a DataArray directly into a pandas object with the same
-dimensionality (i.e., a 1D array is converted to a :py:class:`~pandas.Series` and
-2D to :py:class:`~pandas.DataFrame`):
+:py:meth:`DataArray.to_pandas()` is a shortcut that lets you convert a
+DataArray directly into a pandas object with the same dimensionality, if
+available in pandas (i.e., a 1D array is converted to a
+:py:class:`~pandas.Series` and 2D to :py:class:`~pandas.DataFrame`):
 
 .. ipython:: python
 
