@@ -112,8 +112,8 @@ automatically stacking them into a ``MultiIndex``.
 
 :py:meth:`DataArray.to_pandas()` is a shortcut that
 lets you convert a DataArray directly into a pandas object with the same
-dimensionality (i.e., a 1D array is converted to a :py:class:`~pandas.Series`,
-2D to :py:class:`~pandas.DataFrame` and 3D to ``pandas.Panel``):
+dimensionality (i.e., a 1D array is converted to a :py:class:`~pandas.Series` and
+2D to :py:class:`~pandas.DataFrame`):
 
 .. ipython:: python
 
@@ -151,13 +151,13 @@ However, you will need to set dimension names explicitly, either with the
 Transitioning from pandas.Panel to xarray
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``Panel``, pandas' data structure for 3D arrays, has always
-been a second class data structure compared to the Series and DataFrame. To
-allow pandas developers to focus more on its core functionality built around
-the DataFrame, pandas has deprecated ``Panel``. It will be removed in pandas
-0.25.
+``Panel``, pandas' data structure for 3D arrays, was always a second class
+data structure compared to the Series and DataFrame. To allow pandas
+developers to focus more on its core functionality built around the
+DataFrame, pandas removed ``Panel`` in favor of directing users who use
+multi-dimensional arrays to xarray.
 
-xarray has most of ``Panel``'s features, a more explicit API (particularly around
+Xarray has most of ``Panel``'s features, a more explicit API (particularly around
 indexing), and the ability to scale to >3 dimensions with the same interface.
 
 As discussed :ref:`elsewhere <data structures>` in the docs, there are two primary data structures in
@@ -210,7 +210,7 @@ You can also easily convert this data into ``Dataset``:
     array.to_dataset(dim='dim_0')
 
 Here, there are two data variables, each representing a DataFrame on panel's
-``items`` axis, and labelled as such. Each variable is a 2D array of the
+``items`` axis, and labeled as such. Each variable is a 2D array of the
 respective values along the ``items`` dimension.
 
 While the xarray docs are relatively complete, a few items stand out for Panel users:
