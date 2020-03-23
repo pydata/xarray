@@ -3,7 +3,7 @@ import pandas as pd
 from . import dtypes, utils
 from .alignment import align
 from .duck_array_ops import lazy_array_equiv
-from .merge import _VALID_COMPAT, unique_variable
+from .merge import _VALID_COMPAT, merge_attrs, unique_variable
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 
@@ -17,6 +17,7 @@ def concat(
     positions=None,
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="override",
 ):
     """Concatenate xarray objects along a new or existing dimension.
 
@@ -92,14 +93,19 @@ def concat(
         - 'override': if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'}, optional
+        String indicating how to combine attrs of the objects being merged:
+
+        - 'drop': empty attrs on returned Dataset.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - 'override': skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
     concatenated : type of objs
-
-    Notes
-    -----
-    Each concatenated Variable preserves corresponding ``attrs`` from the first element of ``objs``.
 
     See also
     --------
@@ -132,7 +138,9 @@ def concat(
             "can only concatenate xarray Dataset and DataArray "
             "objects, got %s" % type(first_obj)
         )
-    return f(objs, dim, data_vars, coords, compat, positions, fill_value, join)
+    return f(
+        objs, dim, data_vars, coords, compat, positions, fill_value, join, combine_attrs
+    )
 
 
 def _calc_concat_dim_coord(dim):
@@ -306,6 +314,7 @@ def _dataset_concat(
     positions,
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="override",
 ):
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -362,7 +371,7 @@ def _dataset_concat(
     result_vars.update(dim_coords)
 
     # assign attrs and encoding from first dataset
-    result_attrs = datasets[0].attrs
+    result_attrs = merge_attrs([ds.attrs for ds in datasets], combine_attrs)
     result_encoding = datasets[0].encoding
 
     # check that global attributes are fixed across all datasets if necessary
@@ -425,6 +434,7 @@ def _dataarray_concat(
     positions,
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="override",
 ):
     arrays = list(arrays)
 
@@ -453,5 +463,12 @@ def _dataarray_concat(
         positions,
         fill_value=fill_value,
         join=join,
+        combine_attrs="drop",
     )
-    return arrays[0]._from_temp_dataset(ds, name)
+
+    merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)
+
+    result = arrays[0]._from_temp_dataset(ds, name)
+    result.attrs = merged_attrs
+
+    return result
