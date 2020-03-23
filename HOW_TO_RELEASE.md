@@ -115,8 +115,10 @@ Time required: about an hour.
     ```
     or by substituting the _previous_ release in:
     ```
-    git log v0.X.Y.. --format="%aN" | sort -u
+    git log v0.X.Y-1.. --format="%aN" | sort -u
     ```
+    NB: copying this output into a Google Groups form can cause 
+    [issues](https://groups.google.com/forum/#!topic/xarray/hK158wAviPs) with line breaks, so take care
 
 Note on version numbering:
 
