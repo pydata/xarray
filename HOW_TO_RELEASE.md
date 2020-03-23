@@ -23,7 +23,7 @@ Time required: about an hour.
  4. Check that the ReadTheDocs build is passing.
  5. On the master branch, commit the release in git:
       ```
-      git commit -a -m 'Release v0.X.Y'
+      git commit -am 'Release v0.X.Y'
       ```
  6. Tag the release:
       ```
@@ -60,10 +60,35 @@ Time required: about an hour.
     It's OK to force push to 'stable' if necessary. (We also update the stable 
     branch with `git cherrypick` for documentation only fixes that apply the 
     current released version.)
-12. Add a section for the next release (v.X.(Y+1)) to doc/whats-new.rst.
+12. Add a section for the next release (v.X.Y+1) to doc/whats-new.rst:
+     ```
+     .. _whats-new.0.X.Y+1:
+
+     v0.X.Y+1 (unreleased)
+     ---------------------
+
+     Breaking changes
+     ~~~~~~~~~~~~~~~~
+
+
+     New Features
+     ~~~~~~~~~~~~
+
+
+     Bug fixes
+     ~~~~~~~~~
+
+
+     Documentation
+     ~~~~~~~~~~~~~
+
+
+     Internal Changes
+     ~~~~~~~~~~~~~~~~
+     ```
 13. Commit your changes and push to master again:
       ```
-      git commit -a -m 'New whatsnew section'
+      git commit -am 'New whatsnew section'
       git push upstream master
       ```
     You're done pushing to master!
