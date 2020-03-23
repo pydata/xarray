@@ -493,7 +493,7 @@ class DataArray(AbstractArray, DataWithCoords):
         name : hashable, optional
             Name to substitute for this array's name. Only valid if ``dim`` is
             not provided.
-        promote_attrs : bool, optional
+        promote_attrs : bool, default False
             Set to True to shallow copy attrs of DataArray to returned Dataset.
 
         Returns

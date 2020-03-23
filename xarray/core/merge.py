@@ -666,7 +666,8 @@ def merge(
           dimension must have the same size in all objects.
     fill_value : scalar, optional
         Value to use for newly missing values
-    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'}, optional
+    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'},
+                    default 'drop'
         String indicating how to combine attrs of the objects being merged:
 
         - 'drop': empty attrs on returned Dataset.
