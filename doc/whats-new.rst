@@ -16,7 +16,7 @@ What's New
 .. _whats-new.0.15.1:
 
 
-v0.15.1 (23 March 2020)
+v0.15.1 (23 Mar 2020)
 ---------------------
 
 This release brings many new features such as :py:meth:`Dataset.weighted` methods for weighted array
