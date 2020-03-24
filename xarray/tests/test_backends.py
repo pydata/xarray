@@ -3548,7 +3548,7 @@ class TestPseudoNetCDFFormat:
         assert_allclose(expected, actual)
         camxfile.close()
 
-    @pytest.mark.xfail("Flaky, GH3711")
+    @pytest.mark.xfail(reason="Flaky; see GH3711")
     def test_uamiv_format_write(self):
         fmtkw = {"format": "uamiv"}
 
