@@ -36,6 +36,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Use ``Fixes`` rather than ``Closes`` in GitHub Pull Request template, allowing
+  linking to issues.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 
 .. _whats-new.0.15.1:
