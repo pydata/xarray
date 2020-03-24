@@ -23,7 +23,7 @@ Time required: about an hour.
  4. Check that the ReadTheDocs build is passing.
  5. On the master branch, commit the release in git:
       ```
-      git commit -a -m 'Release v0.X.Y'
+      git commit -am 'Release v0.X.Y'
       ```
  6. Tag the release:
       ```
@@ -60,10 +60,35 @@ Time required: about an hour.
     It's OK to force push to 'stable' if necessary. (We also update the stable 
     branch with `git cherrypick` for documentation only fixes that apply the 
     current released version.)
-12. Add a section for the next release (v.X.(Y+1)) to doc/whats-new.rst.
+12. Add a section for the next release (v.X.Y+1) to doc/whats-new.rst:
+     ```
+     .. _whats-new.0.X.Y+1:
+
+     v0.X.Y+1 (unreleased)
+     ---------------------
+
+     Breaking changes
+     ~~~~~~~~~~~~~~~~
+
+
+     New Features
+     ~~~~~~~~~~~~
+
+
+     Bug fixes
+     ~~~~~~~~~
+
+
+     Documentation
+     ~~~~~~~~~~~~~
+
+
+     Internal Changes
+     ~~~~~~~~~~~~~~~~
+     ```
 13. Commit your changes and push to master again:
       ```
-      git commit -a -m 'New whatsnew section'
+      git commit -am 'New whatsnew section'
       git push upstream master
       ```
     You're done pushing to master!
@@ -88,15 +113,17 @@ Time required: about an hour.
     ```
     git log "$(git tag --sort="v:refname" | sed -n 'x;$p').." --format="%aN" | sort -u
     ```
-    or by replacing `v0.X.Y` with the _previous_ release in:
+    or by substituting the _previous_ release in:
     ```
-    git log v0.X.Y.. --format="%aN" | sort -u
+    git log v0.X.Y-1.. --format="%aN" | sort -u
     ```
+    NB: copying this output into a Google Groups form can cause 
+    [issues](https://groups.google.com/forum/#!topic/xarray/hK158wAviPs) with line breaks, so take care
 
 Note on version numbering:
 
 We follow a rough approximation of semantic version. Only major releases (0.X.0)
-show include breaking changes. Minor releases (0.X.Y) are for bug fixes and
+should include breaking changes. Minor releases (0.X.Y) are for bug fixes and
 backwards compatible new features, but if a sufficient number of new features
 have arrived we will issue a major release even if there are no compatibility
 breaks.
