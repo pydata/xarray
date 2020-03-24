@@ -20,7 +20,7 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .utils import Frozen, dict_equiv
+from .utils import Frozen, compat_dict_union, dict_equiv
 from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
 if TYPE_CHECKING:
@@ -491,17 +491,54 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
             )
 
 
+def merge_attrs(variable_attrs, combine_attrs):
+    """Combine attributes from different variables according to combine_attrs
+    """
+    if not variable_attrs:
+        # no attributes to merge
+        return None
+
+    if combine_attrs == "drop":
+        return {}
+    elif combine_attrs == "override":
+        return variable_attrs[0]
+    elif combine_attrs == "no_conflicts":
+        result = dict(variable_attrs[0])
+        for attrs in variable_attrs[1:]:
+            try:
+                result = compat_dict_union(result, attrs)
+            except ValueError:
+                raise MergeError(
+                    "combine_attrs='no_conflicts', but some values are not "
+                    "the same. Merging %s with %s" % (str(result), str(attrs))
+                )
+        return result
+    elif combine_attrs == "identical":
+        result = dict(variable_attrs[0])
+        for attrs in variable_attrs[1:]:
+            if not dict_equiv(result, attrs):
+                raise MergeError(
+                    "combine_attrs='identical', but attrs differ. First is %s "
+                    ", other is %s." % (str(result), str(attrs))
+                )
+        return result
+    else:
+        raise ValueError("Unrecognised value for combine_attrs=%s" % combine_attrs)
+
+
 class _MergeResult(NamedTuple):
     variables: Dict[Hashable, Variable]
     coord_names: Set[Hashable]
     dims: Dict[Hashable, int]
     indexes: Dict[Hashable, pd.Index]
+    attrs: Dict[Hashable, Any]
 
 
 def merge_core(
     objects: Iterable["CoercibleMapping"],
     compat: str = "broadcast_equals",
     join: str = "outer",
+    combine_attrs: Optional[str] = "override",
     priority_arg: Optional[int] = None,
     explicit_coords: Optional[Sequence] = None,
     indexes: Optional[Mapping[Hashable, pd.Index]] = None,
@@ -519,6 +556,8 @@ def merge_core(
         Compatibility checks to use when merging variables.
     join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
+    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'}, optional
+        How to combine attributes of objects
     priority_arg : integer, optional
         Optional argument in `objects` that takes precedence over the others.
     explicit_coords : set, optional
@@ -536,12 +575,15 @@ def merge_core(
         Set of coordinate names.
     dims : dict
         Dictionary mapping from dimension names to sizes.
+    attrs : dict
+        Dictionary of attributes
 
     Raises
     ------
     MergeError if the merge cannot be done successfully.
     """
-    from .dataset import calculate_dimensions
+    from .dataarray import DataArray
+    from .dataset import Dataset, calculate_dimensions
 
     _assert_compat_valid(compat)
 
@@ -571,7 +613,16 @@ def merge_core(
             "coordinates or not in the merged result: %s" % ambiguous_coords
         )
 
-    return _MergeResult(variables, coord_names, dims, out_indexes)
+    attrs = merge_attrs(
+        [
+            var.attrs
+            for var in coerced
+            if isinstance(var, Dataset) or isinstance(var, DataArray)
+        ],
+        combine_attrs,
+    )
+
+    return _MergeResult(variables, coord_names, dims, out_indexes, attrs)
 
 
 def merge(
@@ -579,6 +630,7 @@ def merge(
     compat: str = "no_conflicts",
     join: str = "outer",
     fill_value: object = dtypes.NA,
+    combine_attrs: str = "drop",
 ) -> "Dataset":
     """Merge any number of xarray objects into a single Dataset as variables.
 
@@ -614,6 +666,16 @@ def merge(
           dimension must have the same size in all objects.
     fill_value : scalar, optional
         Value to use for newly missing values
+    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'},
+                    default 'drop'
+        String indicating how to combine attrs of the objects being merged:
+
+        - 'drop': empty attrs on returned Dataset.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - 'override': skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
@@ -787,10 +849,16 @@ def merge(
                 "Dataset(s), DataArray(s), and dictionaries."
             )
 
-        obj = obj.to_dataset() if isinstance(obj, DataArray) else obj
+        obj = obj.to_dataset(promote_attrs=True) if isinstance(obj, DataArray) else obj
         dict_like_objects.append(obj)
 
-    merge_result = merge_core(dict_like_objects, compat, join, fill_value=fill_value)
+    merge_result = merge_core(
+        dict_like_objects,
+        compat,
+        join,
+        combine_attrs=combine_attrs,
+        fill_value=fill_value,
+    )
     merged = Dataset._construct_direct(**merge_result._asdict())
     return merged
 
@@ -861,4 +929,9 @@ def dataset_update_method(
                 if coord_names:
                     other[key] = value.drop_vars(coord_names)
 
-    return merge_core([dataset, other], priority_arg=1, indexes=dataset.indexes)
+    return merge_core(
+        [dataset, other],
+        priority_arg=1,
+        indexes=dataset.indexes,
+        combine_attrs="override",
+    )

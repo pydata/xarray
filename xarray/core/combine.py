@@ -155,6 +155,7 @@ def _combine_nd(
     compat="no_conflicts",
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="drop",
 ):
     """
     Combines an N-dimensional structure of datasets into one by applying a
@@ -202,13 +203,21 @@ def _combine_nd(
             compat=compat,
             fill_value=fill_value,
             join=join,
+            combine_attrs=combine_attrs,
         )
     (combined_ds,) = combined_ids.values()
     return combined_ds
 
 
 def _combine_all_along_first_dim(
-    combined_ids, dim, data_vars, coords, compat, fill_value=dtypes.NA, join="outer"
+    combined_ids,
+    dim,
+    data_vars,
+    coords,
+    compat,
+    fill_value=dtypes.NA,
+    join="outer",
+    combine_attrs="drop",
 ):
 
     # Group into lines of datasets which must be combined along dim
@@ -223,7 +232,7 @@ def _combine_all_along_first_dim(
         combined_ids = dict(sorted(group))
         datasets = combined_ids.values()
         new_combined_ids[new_id] = _combine_1d(
-            datasets, dim, compat, data_vars, coords, fill_value, join
+            datasets, dim, compat, data_vars, coords, fill_value, join, combine_attrs
         )
     return new_combined_ids
 
@@ -236,6 +245,7 @@ def _combine_1d(
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="drop",
 ):
     """
     Applies either concat or merge to 1D list of datasets depending on value
@@ -252,6 +262,7 @@ def _combine_1d(
                 compat=compat,
                 fill_value=fill_value,
                 join=join,
+                combine_attrs=combine_attrs,
             )
         except ValueError as err:
             if "encountered unexpected variable" in str(err):
@@ -265,7 +276,13 @@ def _combine_1d(
             else:
                 raise
     else:
-        combined = merge(datasets, compat=compat, fill_value=fill_value, join=join)
+        combined = merge(
+            datasets,
+            compat=compat,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
+        )
 
     return combined
 
@@ -284,6 +301,7 @@ def _nested_combine(
     ids,
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="drop",
 ):
 
     if len(datasets) == 0:
@@ -311,6 +329,7 @@ def _nested_combine(
         coords=coords,
         fill_value=fill_value,
         join=join,
+        combine_attrs=combine_attrs,
     )
     return combined
 
@@ -323,6 +342,7 @@ def combine_nested(
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="drop",
 ):
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
@@ -390,6 +410,16 @@ def combine_nested(
         - 'override': if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'},
+                    default 'drop'
+        String indicating how to combine attrs of the objects being merged:
+
+        - 'drop': empty attrs on returned Dataset.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - 'override': skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
@@ -468,6 +498,7 @@ def combine_nested(
         ids=False,
         fill_value=fill_value,
         join=join,
+        combine_attrs=combine_attrs,
     )
 
 
@@ -482,6 +513,7 @@ def combine_by_coords(
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="no_conflicts",
 ):
     """
     Attempt to auto-magically combine the given datasets into one by using
@@ -557,6 +589,16 @@ def combine_by_coords(
         - 'override': if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'},
+                    default 'drop'
+        String indicating how to combine attrs of the objects being merged:
+
+        - 'drop': empty attrs on returned Dataset.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - 'override': skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
@@ -700,6 +742,7 @@ def combine_by_coords(
             compat=compat,
             fill_value=fill_value,
             join=join,
+            combine_attrs=combine_attrs,
         )
 
         # Check the overall coordinates are monotonically increasing
@@ -717,6 +760,7 @@ def combine_by_coords(
         compat=compat,
         fill_value=fill_value,
         join=join,
+        combine_attrs=combine_attrs,
     )
 
 

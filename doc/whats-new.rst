@@ -24,6 +24,10 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
+  :py:func:`combine_by_coords` and :py:func:`combine_nested` using
+  combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
+  By `John Omotani <https://github.com/johnomotani>`_
 
 
 Bug fixes

@@ -475,7 +475,13 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
         return dataset
 
-    def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
+    def to_dataset(
+        self,
+        dim: Hashable = None,
+        *,
+        name: Hashable = None,
+        promote_attrs: bool = False,
+    ) -> Dataset:
         """Convert a DataArray to a Dataset.
 
         Parameters
@@ -487,6 +493,8 @@ class DataArray(AbstractArray, DataWithCoords):
         name : hashable, optional
             Name to substitute for this array's name. Only valid if ``dim`` is
             not provided.
+        promote_attrs : bool, default False
+            Set to True to shallow copy attrs of DataArray to returned Dataset.
 
         Returns
         -------
@@ -500,9 +508,14 @@ class DataArray(AbstractArray, DataWithCoords):
         if dim is not None:
             if name is not None:
                 raise TypeError("cannot supply both dim and name arguments")
-            return self._to_dataset_split(dim)
+            result = self._to_dataset_split(dim)
         else:
-            return self._to_dataset_whole(name)
+            result = self._to_dataset_whole(name)
+
+        if promote_attrs:
+            result.attrs = dict(self.attrs)
+
+        return result
 
     @property
     def name(self) -> Optional[Hashable]:
