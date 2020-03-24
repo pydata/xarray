@@ -1176,6 +1176,7 @@ def test_dayofweek_after_cftime_range(freq):
     np.testing.assert_array_equal(result, expected)
 
 
+@pytest.mark.xfail(reason="See GH3885")
 @pytest.mark.parametrize("freq", ["A", "M", "D"])
 def test_dayofyear_after_cftime_range(freq):
     pytest.importorskip("cftime", minversion="1.0.2.1")
