@@ -21,6 +21,9 @@ v0.16.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``groupby`` operations will restore coord dimension order. Pass ``restore_coord_dims=False``
+  to maintain existing behavior.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 New Features
 ~~~~~~~~~~~~

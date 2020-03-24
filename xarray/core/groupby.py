@@ -272,7 +272,7 @@ class GroupBy(SupportsArithmetic):
         squeeze=False,
         grouper=None,
         bins=None,
-        restore_coord_dims=None,
+        restore_coord_dims=True,
         cut_kwargs={},
     ):
         """Create a GroupBy object
@@ -384,13 +384,6 @@ class GroupBy(SupportsArithmetic):
                 raise ValueError(
                     "Failed to group data. Are you grouping by a variable that is all NaN?"
                 )
-
-        if (
-            isinstance(obj, DataArray)
-            and restore_coord_dims is None
-            and any(obj[c].ndim > 1 for c in obj.coords)
-        ):
-            restore_coord_dims = False
 
         # specification for the groupby operation
         self._obj = obj
