@@ -256,6 +256,28 @@ class TestConcatDataset:
         )
         assert_identical(actual, expected)
 
+    def test_concat_combine_attrs_kwarg(self):
+        ds1 = Dataset({"a": ("x", [0])}, coords={"x": [0]}, attrs={"b": 42})
+        ds2 = Dataset({"a": ("x", [0])}, coords={"x": [1]}, attrs={"b": 42, "c": 43})
+
+        expected = {}
+        expected["drop"] = Dataset({"a": ("x", [0, 0])}, {"x": [0, 1]})
+        expected["no_conflicts"] = Dataset(
+            {"a": ("x", [0, 0])}, {"x": [0, 1]}, {"b": 42, "c": 43}
+        )
+        expected["override"] = Dataset({"a": ("x", [0, 0])}, {"x": [0, 1]}, {"b": 42})
+
+        with raises_regex(ValueError, "combine_attrs='identical'"):
+            actual = concat([ds1, ds2], dim="x", combine_attrs="identical")
+        with raises_regex(ValueError, "combine_attrs='no_conflicts'"):
+            ds3 = ds2.copy(deep=True)
+            ds3.attrs["b"] = 44
+            actual = concat([ds1, ds3], dim="x", combine_attrs="no_conflicts")
+
+        for combine_attrs in expected:
+            actual = concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+            assert_identical(actual, expected[combine_attrs])
+
     def test_concat_promote_shape(self):
         # mixed dims within variables
         objs = [Dataset({}, {"x": 0}), Dataset({"x": [1]})]
@@ -468,6 +490,30 @@ class TestConcatDataArray:
         for join in expected:
             actual = concat([ds1, ds2], join=join, dim="x")
             assert_equal(actual, expected[join].to_array())
+
+    def test_concat_combine_attrs_kwarg(self):
+        da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
+        da2 = DataArray([0], coords=[("x", [1])], attrs={"b": 42, "c": 43})
+
+        expected = {}
+        expected["drop"] = DataArray([0, 0], coords=[("x", [0, 1])])
+        expected["no_conflicts"] = DataArray(
+            [0, 0], coords=[("x", [0, 1])], attrs={"b": 42, "c": 43}
+        )
+        expected["override"] = DataArray(
+            [0, 0], coords=[("x", [0, 1])], attrs={"b": 42}
+        )
+
+        with raises_regex(ValueError, "combine_attrs='identical'"):
+            actual = concat([da1, da2], dim="x", combine_attrs="identical")
+        with raises_regex(ValueError, "combine_attrs='no_conflicts'"):
+            da3 = da2.copy(deep=True)
+            da3.attrs["b"] = 44
+            actual = concat([da1, da3], dim="x", combine_attrs="no_conflicts")
+
+        for combine_attrs in expected:
+            actual = concat([da1, da2], dim="x", combine_attrs=combine_attrs)
+            assert_identical(actual, expected[combine_attrs])
 
 
 @pytest.mark.parametrize("attr1", ({"a": {"meta": [10, 20, 30]}}, {"a": [1, 2, 3]}, {}))

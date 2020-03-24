@@ -3750,9 +3750,16 @@ class TestDataArray:
         expected = Dataset({"foo": ("x", [1, 2])})
         assert_identical(expected, actual)
 
-        named = DataArray([1, 2], dims="x", name="foo")
+        named = DataArray([1, 2], dims="x", name="foo", attrs={"y": "testattr"})
         actual = named.to_dataset()
-        expected = Dataset({"foo": ("x", [1, 2])})
+        expected = Dataset({"foo": ("x", [1, 2], {"y": "testattr"})})
+        assert_identical(expected, actual)
+
+        # Test promoting attrs
+        actual = named.to_dataset(promote_attrs=True)
+        expected = Dataset(
+            {"foo": ("x", [1, 2], {"y": "testattr"})}, attrs={"y": "testattr"}
+        )
         assert_identical(expected, actual)
 
         with pytest.raises(TypeError):
