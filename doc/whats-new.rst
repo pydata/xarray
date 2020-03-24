@@ -13,7 +13,21 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.15.1:
+.. _whats-new.0.16.0:
+
+v0.16.0 (unreleased)
+---------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+New Features
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
 
 v0.16.0 (unreleased)
 ---------------------
@@ -37,11 +51,31 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-v0.15.1 (unreleased)
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.0.15.1:
+
+v0.15.1 (23 Mar 2020)
 ---------------------
+
+This release brings many new features such as :py:meth:`Dataset.weighted` methods for weighted array
+reductions, a new jupyter repr by default, and the start of units integration with pint. There's also
+the usual batch of usability improvements, documentation additions, and bug fixes.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- Raise an error when assigning to the ``.values`` or ``.data`` attribute of
+  dimension coordinates i.e. ``IndexVariable`` objects. This has been broken since
+  v0.12.0. Please use :py:meth:`DataArray.assign_coords` or :py:meth:`Dataset.assign_coords`
+  instead. (:issue:`3470`, :pull:`3862`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 New Features
 ~~~~~~~~~~~~
@@ -49,6 +83,10 @@ New Features
 - Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
   and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
   By `Mathias Hauser <https://github.com/mathause>`_
+- The new jupyter notebook repr (``Dataset._repr_html_`` and
+  ``DataArray._repr_html_``) (introduced in 0.14.1) is now on by default. To
+  disable, use ``xarray.set_options(display_style="text")``.
+  By `Julia Signell <https://github.com/jsignell>`_.
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
@@ -56,7 +94,7 @@ New Features
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Support unit aware arrays with pint. (:issue:`3594`, :pull:`3706`, :pull:`3611`)
+- Add partial support for unit aware arrays with pint. (:pull:`3706`, :pull:`3611`)
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
   `TypeError` on multiple string arguments. Receiving multiple string arguments
@@ -66,10 +104,6 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - :py:func:`map_blocks` can now apply functions that add new unindexed dimensions.
   By `Deepak Cherian <https://github.com/dcherian>`_
-- The new ``Dataset._repr_html_`` and ``DataArray._repr_html_`` (introduced
-  in 0.14.1) is now on by default. To disable, use
-  ``xarray.set_options(display_style="text")``.
-  By `Julia Signell <https://github.com/jsignell>`_.
 - An ellipsis (``...``) is now supported in the ``dims`` argument of
   :py:meth:`Dataset.stack` and :py:meth:`DataArray.stack`, meaning all
   unlisted dimensions, similar to its meaning in :py:meth:`DataArray.transpose`.
@@ -78,13 +112,14 @@ New Features
 - :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
   first argument, which is then called on the input; replicating pandas' behavior.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Implement ``skipna`` in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
+- ``skipna`` is available in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
   :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
   (:issue:`3843`, :pull:`3844`) 
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Bug fixes
 ~~~~~~~~~
+
 - Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
   indexed variable (:issue:`3252`).
   By `David Huard <https://github.com/huard>`_.
@@ -122,6 +157,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+
 - Fix documentation of :py:class:`DataArray` removing the deprecated mention
   that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
@@ -134,25 +170,25 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- Removed the internal ``import_seaborn`` function which handled the deprecation of
+- Remove the internal ``import_seaborn`` function which handled the deprecation of
   the ``seaborn.apionly`` entry point (:issue:`3747`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Don't test pint integration in combination with datetime objects. (:issue:`3778`, :pull:`3788`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Changed test_open_mfdataset_list_attr to only run with dask installed
+- Change test_open_mfdataset_list_attr to only run with dask installed
   (:issue:`3777`, :pull:`3780`).
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
-- Preserved the ability to index with ``method="nearest"`` with a
+- Preserve the ability to index with ``method="nearest"`` with a
   :py:class:`CFTimeIndex` with pandas versions greater than 1.0.1
   (:issue:`3751`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Greater flexibility and improved test coverage of subtracting various types
   of objects from a :py:class:`CFTimeIndex`. By `Spencer Clark
   <https://github.com/spencerkclark>`_.
-- Updated Azure CI MacOS image, given pending removal.
+- Update Azure CI MacOS image, given pending removal.
   By `Maximilian Roos <https://github.com/max-sixty>`_
-- Removed xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
+- Remove xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Removed conversion to :py:class:`pandas.Panel`, given its removal in pandas
+- Remove conversion to :py:class:`pandas.Panel`, given its removal in pandas
   in favor of xarray's objects.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 

@@ -1276,7 +1276,7 @@ def test_token_changes_when_data_changes(obj):
     assert t3 != t2
 
     # Change IndexVariable
-    obj.coords["x"] *= 2
+    obj = obj.assign_coords(x=obj.x * 2)
     with raise_if_dask_computes():
         t4 = dask.base.tokenize(obj)
     assert t4 != t3
