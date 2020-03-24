@@ -15,6 +15,27 @@ What's New
 
 .. _whats-new.0.15.1:
 
+v0.16.0 (unreleased)
+---------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+New Features
+~~~~~~~~~~~~
+- Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
+  :py:func:`combine_by_coords` and :py:func:`combine_nested` using
+  combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
+  By `John Omotani <https://github.com/johnomotani>`_
+
+Bug fixes
+~~~~~~~~~
+
+Documentation
+~~~~~~~~~~~~~
+
+Internal Changes
+~~~~~~~~~~~~~~~~
 
 v0.15.1 (unreleased)
 ---------------------
@@ -25,10 +46,6 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
-- Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
-  :py:func:`combine_by_coords` and :py:func:`combine_nested` using
-  combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
-  By `John Omotani <https://github.com/johnomotani>`_
 - Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
   and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
   By `Mathias Hauser <https://github.com/mathause>`_
