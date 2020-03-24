@@ -120,9 +120,9 @@ class TestDictionaries:
         with pytest.raises(ValueError):
             utils.update_safety_check(self.x, self.z)
 
-    def test_ordered_dict_intersection(self):
-        assert {"b": "B"} == utils.ordered_dict_intersection(self.x, self.y)
-        assert {} == utils.ordered_dict_intersection(self.x, self.z)
+    def test_compat_dict_intersection(self):
+        assert {"b": "B"} == utils.compat_dict_intersection(self.x, self.y)
+        assert {} == utils.compat_dict_intersection(self.x, self.z)
 
     def test_compat_dict_union(self):
         assert {"a": "A", "b": "B", "c": "C"} == utils.compat_dict_union(self.x, self.y)
