@@ -343,7 +343,7 @@ def dict_equiv(
     return True
 
 
-def ordered_dict_intersection(
+def compat_dict_intersection(
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -360,9 +360,6 @@ def ordered_dict_intersection(
     compat : function, optional
         Binary operator to determine if two values are compatible. By default,
         checks for equivalence.
-
-    # TODO: Rename to compat_dict_intersection, as we do not use OrderedDicts
-    # any more.
 
     Returns
     -------
