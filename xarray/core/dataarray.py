@@ -3275,6 +3275,68 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return map_blocks(func, self, args, kwargs)
 
+    def polyfit(
+        self,
+        dim: Hashable,
+        deg: int,
+        skipna: bool = None,
+        rcond: float = None,
+        w: Union[Hashable, Any] = None,
+        full: bool = False,
+        cov: bool = False,
+    ):
+        """
+        Least squares polynomial fit.
+
+        This replicates the behaviour of `numpy.polyfit` but differs by skipping
+        invalid values when `skipna = True`.
+
+        Parameters
+        ----------
+        dim : hashable
+            Coordinate along which to fit the polynomials.
+        deg : int
+            Degree of the fitting polynomial.
+        skipna : bool, optional
+            If True, removes all invalid values before fitting each 1D slices of the array.
+            Default is True if data is stored in a dask.array or if there is any
+            invalid values, False otherwise.
+        rcond : float, optional
+            Relative condition number to the fit.
+        w : Union[Hashable, Any], optional
+            Weights to apply to the y-coordinate of the sample points.
+            Can be an array-like object or the name of a coordinate in the dataset.
+        full : bool, optional
+            Whether to return the residuals, matrix rank and singular values in addition
+            to the coefficients.
+        cov : Union[bool, str], optional
+            Whether to return to the covariance matrix in addition to the coefficients.
+            The matrix is not scaled if `cov='unscaled'`.
+
+        Returns
+        -------
+        polyfit_results : Dataset
+            A single dataset which contains:
+
+            polyfit_coefficients
+                The coefficients of the best fit.
+            polyfit_residuals
+                The residuals of the least-square computation (only included if `full=True`)
+            [dim]_matrix_rank
+                The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
+            [dim]_singular_value
+                The singular values of the scaled Vandermonde coefficient matrix (only included if `full=True`)
+            polyfit_covariance
+                The covariance matrix of the polynomial coefficient estimates (only included if `full=False` and `cov=True`)
+
+        See also
+        --------
+        numpy.polyfit
+        """
+        return self._to_temp_dataset().polyfit(
+            dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
+        )
+
     def pad(
         self,
         pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,

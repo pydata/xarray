@@ -220,6 +220,39 @@ def _create_bottleneck_method(name, npmodule=np):
     return f
 
 
+def _nanpolyfit_1d(arr, x, rcond=None):
+    out = np.full((x.shape[1] + 1,), np.nan)
+    mask = np.isnan(arr)
+    if not np.all(mask):
+        out[:-1], out[-1], _, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
+    return out
+
+
+def least_squares(lhs, rhs, rcond=None, skipna=False):
+    if skipna:
+        added_dim = rhs.ndim == 1
+        if added_dim:
+            rhs = rhs.reshape(rhs.shape[0], 1)
+        nan_cols = np.any(np.isnan(rhs), axis=0)
+        out = np.empty((lhs.shape[1] + 1, rhs.shape[1]))
+        if np.any(nan_cols):
+            out[:, nan_cols] = np.apply_along_axis(
+                _nanpolyfit_1d, 0, rhs[:, nan_cols], lhs
+            )
+        if np.any(~nan_cols):
+            out[:-1, ~nan_cols], out[-1, ~nan_cols], _, _ = np.linalg.lstsq(
+                lhs, rhs[:, ~nan_cols], rcond=rcond
+            )
+        coeffs = out[:-1, :]
+        residuals = out[-1, :]
+        if added_dim:
+            coeffs = coeffs.reshape(coeffs.shape[0])
+            residuals = residuals.reshape(residuals.shape[0])
+    else:
+        coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs, rcond=rcond)
+    return coeffs, residuals
+
+
 nanmin = _create_bottleneck_method("nanmin")
 nanmax = _create_bottleneck_method("nanmax")
 nanmean = _create_bottleneck_method("nanmean")
