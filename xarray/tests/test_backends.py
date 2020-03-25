@@ -1987,8 +1987,9 @@ class TestZarrZipStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
         import zarr
-        with create_tmp_file(suffix='.zip') as tmp:
-            with zarr.ZipStore(tmp, mode='w') as tmp:
+
+        with create_tmp_file(suffix=".zip") as tmp:
+            with zarr.ZipStore(tmp, mode="w") as tmp:
                 yield tmp
 
 
