@@ -4240,6 +4240,7 @@ class TestDataArray:
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
         assert out.x_matrix_rank == 3
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
+
     def test_pad_constant(self):
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
         actual = ar.pad(dim_0=(1, 3))

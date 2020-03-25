@@ -24,6 +24,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
@@ -212,8 +214,6 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
-  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Implement :py:meth:`DataArray.pad` and :py:meth:`Dataset.pad`. (:issue:`2605`, :pull:`3596`).
   By `Mark Boer <https://github.com/mark-boer>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` now support :py:class:`pandas.CategoricalIndex`. (:issue:`3669`)
