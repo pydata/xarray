@@ -1982,6 +1982,16 @@ class TestZarrDirectoryStore(ZarrBase):
             yield tmp
 
 
+@requires_zarr
+class TestZarrZipStore(ZarrBase):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        import zarr
+        with create_tmp_file(suffix='.zip') as tmp:
+            with zarr.ZipStore(tmp, mode='w') as tmp:
+                yield tmp
+
+
 @requires_scipy
 class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
     engine = "scipy"
