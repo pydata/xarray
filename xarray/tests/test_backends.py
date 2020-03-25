@@ -1921,32 +1921,35 @@ class ZarrBase(CFEncodedBase):
         ds, ds_to_append, _ = create_append_test_data()
         ds, ds_to_append = ds.chunk(), ds_to_append.chunk()
 
-        with self.create_zarr_target() as store:
-            delayed_obj = self.save(ds, store, compute=False, mode="w")
-            assert isinstance(delayed_obj, Delayed)
+        with pytest.warns(SerializationWarning):
+            with self.create_zarr_target() as store:
+                delayed_obj = self.save(ds, store, compute=False, mode="w")
+                assert isinstance(delayed_obj, Delayed)
 
-            with pytest.raises(AssertionError):
+                with pytest.raises(AssertionError):
+                    with self.open(store) as actual:
+                        assert_identical(ds, actual)
+
+                delayed_obj.compute()
+
                 with self.open(store) as actual:
                     assert_identical(ds, actual)
 
-            delayed_obj.compute()
+                delayed_obj = self.save(
+                    ds_to_append, store, compute=False, append_dim="time"
+                )
+                assert isinstance(delayed_obj, Delayed)
 
-            with self.open(store) as actual:
-                assert_identical(ds, actual)
+                with pytest.raises(AssertionError):
+                    with self.open(store) as actual:
+                        assert_identical(
+                            xr.concat([ds, ds_to_append], dim="time"), actual
+                        )
 
-            delayed_obj = self.save(
-                ds_to_append, store, compute=False, append_dim="time"
-            )
-            assert isinstance(delayed_obj, Delayed)
+                delayed_obj.compute()
 
-            with pytest.raises(AssertionError):
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
-
-            delayed_obj.compute()
-
-            with self.open(store) as actual:
-                assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
 
     def test_encoding_chunksizes(self):
         # regression test for GH2278
@@ -3519,6 +3522,7 @@ class TestPseudoNetCDFFormat:
             ["example.uamiv", "example.uamiv"],
             engine="pseudonetcdf",
             concat_dim="TSTEP",
+            combine="nested",
             backend_kwargs={"format": "uamiv"},
         )
 
@@ -3544,6 +3548,7 @@ class TestPseudoNetCDFFormat:
         assert_allclose(expected, actual)
         camxfile.close()
 
+    @pytest.mark.xfail(reason="Flaky; see GH3711")
     def test_uamiv_format_write(self):
         fmtkw = {"format": "uamiv"}
 

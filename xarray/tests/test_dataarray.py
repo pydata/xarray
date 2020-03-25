@@ -1413,6 +1413,12 @@ class TestDataArray:
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
 
+    def test_coords_delitem_delete_indexes(self):
+        # regression test for GH3746
+        arr = DataArray(np.ones((2,)), dims="x", coords={"x": [0, 1]})
+        del arr.coords["x"]
+        assert "x" not in arr.indexes
+
     def test_broadcast_like(self):
         arr1 = DataArray(
             np.ones((2, 3)),
@@ -2036,9 +2042,12 @@ class TestDataArray:
                 codes=[[], []],
                 names=["x", "y"],
             )
-        pd.util.testing.assert_index_equal(a, b)
+        pd.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
+        assert_identical(orig, actual)
+
+        actual = orig.stack(z=[...]).unstack("z").drop_vars(["x", "y"])
         assert_identical(orig, actual)
 
         dims = ["a", "b", "c", "d", "e"]
@@ -3489,7 +3498,7 @@ class TestDataArray:
 
     def test_to_and_from_empty_series(self):
         # GH697
-        expected = pd.Series([])
+        expected = pd.Series([], dtype=np.float64)
         da = DataArray.from_series(expected)
         assert len(da) == 0
         actual = da.to_series()
@@ -3742,9 +3751,16 @@ class TestDataArray:
         expected = Dataset({"foo": ("x", [1, 2])})
         assert_identical(expected, actual)
 
-        named = DataArray([1, 2], dims="x", name="foo")
+        named = DataArray([1, 2], dims="x", name="foo", attrs={"y": "testattr"})
         actual = named.to_dataset()
-        expected = Dataset({"foo": ("x", [1, 2])})
+        expected = Dataset({"foo": ("x", [1, 2], {"y": "testattr"})})
+        assert_identical(expected, actual)
+
+        # Test promoting attrs
+        actual = named.to_dataset(promote_attrs=True)
+        expected = Dataset(
+            {"foo": ("x", [1, 2], {"y": "testattr"})}, attrs={"y": "testattr"}
+        )
         assert_identical(expected, actual)
 
         with pytest.raises(TypeError):
@@ -4224,6 +4240,112 @@ class TestDataArray:
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
         assert out.x_matrix_rank == 3
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
+    def test_pad_constant(self):
+        ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
+        actual = ar.pad(dim_0=(1, 3))
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5).astype(np.float32),
+                mode="constant",
+                pad_width=((1, 3), (0, 0), (0, 0)),
+                constant_values=np.nan,
+            )
+        )
+        assert actual.shape == (7, 4, 5)
+        assert_identical(actual, expected)
+
+    def test_pad_coords(self):
+        ar = DataArray(
+            np.arange(3 * 4 * 5).reshape(3, 4, 5),
+            [("x", np.arange(3)), ("y", np.arange(4)), ("z", np.arange(5))],
+        )
+        actual = ar.pad(x=(1, 3), constant_values=1)
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5),
+                mode="constant",
+                pad_width=((1, 3), (0, 0), (0, 0)),
+                constant_values=1,
+            ),
+            [
+                (
+                    "x",
+                    np.pad(
+                        np.arange(3).astype(np.float32),
+                        mode="constant",
+                        pad_width=(1, 3),
+                        constant_values=np.nan,
+                    ),
+                ),
+                ("y", np.arange(4)),
+                ("z", np.arange(5)),
+            ],
+        )
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("mode", ("minimum", "maximum", "mean", "median"))
+    @pytest.mark.parametrize(
+        "stat_length", (None, 3, (1, 3), {"dim_0": (2, 1), "dim_2": (4, 2)})
+    )
+    def test_pad_stat_length(self, mode, stat_length):
+        ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
+        actual = ar.pad(dim_0=(1, 3), dim_2=(2, 2), mode=mode, stat_length=stat_length)
+        if isinstance(stat_length, dict):
+            stat_length = (stat_length["dim_0"], (4, 4), stat_length["dim_2"])
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5),
+                pad_width=((1, 3), (0, 0), (2, 2)),
+                mode=mode,
+                stat_length=stat_length,
+            )
+        )
+        assert actual.shape == (7, 4, 9)
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "end_values", (None, 3, (3, 5), {"dim_0": (2, 1), "dim_2": (4, 2)})
+    )
+    def test_pad_linear_ramp(self, end_values):
+        ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
+        actual = ar.pad(
+            dim_0=(1, 3), dim_2=(2, 2), mode="linear_ramp", end_values=end_values
+        )
+        if end_values is None:
+            end_values = 0
+        elif isinstance(end_values, dict):
+            end_values = (end_values["dim_0"], (4, 4), end_values["dim_2"])
+        expected = DataArray(
+            np.pad(
+                np.arange(3 * 4 * 5).reshape(3, 4, 5),
+                pad_width=((1, 3), (0, 0), (2, 2)),
+                mode="linear_ramp",
+                end_values=end_values,
+            )
+        )
+        assert actual.shape == (7, 4, 9)
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("mode", ("reflect", "symmetric"))
+    @pytest.mark.parametrize("reflect_type", (None, "even", "odd"))
+    def test_pad_reflect(self, mode, reflect_type):
+
+        ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
+        actual = ar.pad(
+            dim_0=(1, 3), dim_2=(2, 2), mode=mode, reflect_type=reflect_type
+        )
+        np_kwargs = {
+            "array": np.arange(3 * 4 * 5).reshape(3, 4, 5),
+            "pad_width": ((1, 3), (0, 0), (2, 2)),
+            "mode": mode,
+        }
+        # numpy does not support reflect_type=None
+        if reflect_type is not None:
+            np_kwargs["reflect_type"] = reflect_type
+        expected = DataArray(np.pad(**np_kwargs))
+
+        assert actual.shape == (7, 4, 9)
+        assert_identical(actual, expected)
 
 
 @pytest.fixture(params=[1])

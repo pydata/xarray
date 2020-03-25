@@ -744,6 +744,10 @@ class TestDataset:
         expected = data.merge({"c": 11}).set_coords("c")
         assert_identical(expected, actual)
 
+        # regression test for GH3746
+        del actual.coords["x"]
+        assert "x" not in actual.indexes
+
     def test_update_index(self):
         actual = Dataset(coords={"x": [1, 2, 3]})
         actual["x"] = ["a", "b", "c"]
@@ -1457,6 +1461,17 @@ class TestDataset:
         )
         actual = ds.reindex(cat=["foo"])["cat"].values
         assert (actual == np.array(["foo"])).all()
+
+    def test_categorical_multiindex(self):
+        i1 = pd.Series([0, 0])
+        cat = pd.CategoricalDtype(categories=["foo", "baz", "bar"])
+        i2 = pd.Series(["baz", "bar"], dtype=cat)
+
+        df = pd.DataFrame({"i1": i1, "i2": i2, "values": [1, 2]}).set_index(
+            ["i1", "i2"]
+        )
+        actual = df.to_xarray()
+        assert actual["values"].shape == (1, 2)
 
     def test_sel_drop(self):
         data = Dataset({"foo": ("x", [1, 2, 3])}, {"x": [0, 1, 2]})
@@ -2866,6 +2881,17 @@ class TestDataset:
             {"a": ("z", [0, 0, 1, 1]), "b": ("z", [0, 1, 2, 3]), "z": exp_index}
         )
         actual = ds.stack(z=["x", "y"])
+        assert_identical(expected, actual)
+
+        actual = ds.stack(z=[...])
+        assert_identical(expected, actual)
+
+        # non list dims with ellipsis
+        actual = ds.stack(z=(...,))
+        assert_identical(expected, actual)
+
+        # ellipsis with given dim
+        actual = ds.stack(z=[..., "y"])
         assert_identical(expected, actual)
 
         exp_index = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=["y", "x"])
@@ -5486,6 +5512,19 @@ class TestDataset:
         out = ds.polyfit("time", 2)
         assert len(out.data_vars) == 0
 
+    def test_pad(self):
+        ds = create_test_data(seed=1)
+        padded = ds.pad(dim2=(1, 1), constant_values=42)
+
+        assert padded["dim2"].shape == (11,)
+        assert padded["var1"].shape == (8, 11)
+        assert padded["var2"].shape == (8, 11)
+        assert padded["var3"].shape == (10, 8)
+        assert dict(padded.dims) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
+
+        np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
+        np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
+
 
 # Py.test tests
 
@@ -6044,7 +6083,7 @@ def test_integrate(dask):
     actual = da.integrate("x")
     # coordinate that contains x should be dropped.
     expected_x = xr.DataArray(
-        np.trapz(da, da["x"], axis=0),
+        np.trapz(da.compute(), da["x"], axis=0),
         dims=["y"],
         coords={k: v for k, v in da.coords.items() if "x" not in v.dims},
     )

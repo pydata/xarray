@@ -80,7 +80,7 @@ class TestDatetimeAccessor:
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
-        nontime_data["time"].values = int_data
+        nontime_data = nontime_data.assign_coords(time=int_data)
         with raises_regex(TypeError, "dt"):
             nontime_data.time.dt
 
@@ -213,7 +213,7 @@ class TestTimedeltaAccessor:
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
-        nontime_data["time"].values = int_data
+        nontime_data = nontime_data.assign_coords(time=int_data)
         with raises_regex(TypeError, "dt"):
             nontime_data.time.dt
 
@@ -347,6 +347,7 @@ def test_field_access(data, field):
 
 
 @requires_cftime
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_cftime_strftime_access(data):
     """ compare cftime formatting against datetime formatting """
     date_format = "%Y%m%d%H"
