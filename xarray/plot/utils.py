@@ -465,7 +465,7 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
     """
 
     # Is it a step plot? (see matplotlib.Axes.step)
-    if kwargs.get("linestyle", "").startswith("steps-"):
+    if kwargs.get("drawstyle", "").startswith("steps-"):
 
         # Convert intervals to double points
         if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
@@ -476,7 +476,7 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
             yval, xval = _interval_to_double_bound_points(yval, xval)
 
         # Remove steps-* to be sure that matplotlib is not confused
-        del kwargs["linestyle"]
+        del kwargs["drawstyle"]
 
     # Is it another kind of plot?
     else:

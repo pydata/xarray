@@ -329,7 +329,7 @@ def line(
     return primitive
 
 
-def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
+def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
     Step plot of DataArray index against values
 
@@ -359,16 +359,16 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
     if where not in {"pre", "post", "mid"}:
         raise ValueError("'where' argument to step must be " "'pre', 'post' or 'mid'")
 
-    if ls is not None:
-        if linestyle is None:
-            linestyle = ls
+    if ds is not None:
+        if drawstyle is None:
+            drawstyle = ds
         else:
-            raise TypeError("ls and linestyle are mutually exclusive")
-    if linestyle is None:
-        linestyle = ""
-    linestyle = "steps-" + where + linestyle
+            raise TypeError("ds and drawstyle are mutually exclusive")
+    if drawstyle is None:
+        drawstyle = ""
+    drawstyle = "steps-" + where + drawstyle
 
-    return line(darray, *args, linestyle=linestyle, **kwargs)
+    return line(darray, *args, drawstyle=drawstyle, **kwargs)
 
 
 def hist(
