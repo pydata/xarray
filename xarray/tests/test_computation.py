@@ -1120,3 +1120,35 @@ def test_where():
     actual = xr.where(cond, 1, 0)
     expected = xr.DataArray([1, 0], dims="x")
     assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize("use_dask", [True, False])
+@pytest.mark.parametrize("use_datetime", [True, False])
+def test_polyval(use_dask, use_datetime):
+    if use_dask and not has_dask:
+        pytest.skip("requires dask")
+
+    if use_datetime:
+        xcoord = xr.DataArray(
+            pd.date_range("2000-01-01", freq="D", periods=10), dims=("x",), name="x"
+        )
+        x = xr.core.missing.get_clean_interp_index(xcoord, "x")
+    else:
+        xcoord = x = np.arange(10)
+
+    da = xr.DataArray(
+        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
+        dims=("d", "x"),
+        coords={"x": xcoord, "d": [0, 1]},
+    )
+    coeffs = xr.DataArray(
+        [[2, 1, 1], [3, 2, 1]],
+        dims=("d", "degree"),
+        coords={"d": [0, 1], "degree": [2, 1, 0]},
+    )
+    if use_dask:
+        coeffs = coeffs.chunk({"d": 2})
+
+    da_pv = xr.polyval(da.x, coeffs)
+
+    xr.testing.assert_allclose(da, da_pv.T)

@@ -24,9 +24,21 @@ Breaking changes
 - ``groupby`` operations will restore coord dimension order. Pass ``restore_coord_dims=False``
   to maintain existing behavior.
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- Alternate draw styles for :py:meth:`plot.step` must be passed using the
+  ``drawstyle`` (or ``ds``) keyword argument, instead of the ``linestyle`` (or
+  ``ls``) keyword argument, in line with the `upstream change in Matplotlib
+  <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
+  (:pull:`3274`)
+  By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
+  :py:func:`combine_by_coords` and :py:func:`combine_nested` using
+  combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
+  By `John Omotani <https://github.com/johnomotani>`_
 
 
 Bug fixes
@@ -788,12 +800,13 @@ Bug fixes
 - Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
   array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed bug in :meth:`DataArray.quantile` failing to keep attributes when
-  `keep_attrs` was True (:issue:`3304`). By David Huard `<https://github.com/huard>`_.
+  `keep_attrs` was True (:issue:`3304`). By `David Huard <https://github.com/huard>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ as a quick reference for tasks before creating a new PR
+- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ 
+  as a quick reference for tasks before creating a new PR
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 
