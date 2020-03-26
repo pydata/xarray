@@ -4498,3 +4498,48 @@ def test_invalid_netcdf_raises(engine):
     data = create_test_data()
     with raises_regex(ValueError, "unrecognized option 'invalid_netcdf'"):
         data.to_netcdf("foo.nc", engine=engine, invalid_netcdf=True)
+
+
+@requires_zarr
+def test_encode_zarr_attr_value():
+    # array -> list
+    arr = np.array([1, 2, 3])
+    expected = [1, 2, 3]
+    actual = backends.zarr.encode_zarr_attr_value(arr)
+    assert isinstance(actual, list)
+    assert actual == expected
+
+    # scalar array -> scalar
+    sarr = np.array(1)[()]
+    expected = 1
+    actual = backends.zarr.encode_zarr_attr_value(sarr)
+    assert isinstance(actual, int)
+    assert actual == expected
+
+    # string -> string (no change)
+    expected = 'foo'
+    actual = backends.zarr.encode_zarr_attr_value(expected)
+    assert isinstance(actual, str)
+    assert actual == expected
+
+
+@requires_zarr
+def test_extract_zarr_variable_encoding():
+
+    var = xr.Variable('x', [1, 2])
+    actual = backends.zarr.extract_zarr_variable_encoding(var)
+    assert 'chunks' in actual
+    assert actual['chunks'] is None
+
+    var = xr.Variable('x', [1, 2], encoding={'chunks': (1, )})
+    actual = backends.zarr.extract_zarr_variable_encoding(var)
+    assert actual['chunks'] is (1, )
+
+    # does not raise on invalid
+    var = xr.Variable('x', [1, 2], encoding={'foo': (1, )})
+    actual = backends.zarr.extract_zarr_variable_encoding(var)
+
+    # raises on invalid
+    var = xr.Variable('x', [1, 2], encoding={'foo': (1, )})
+    with raises_regex(ValueError, "unexpected encoding parameters"):
+        actual = backends.zarr.extract_zarr_variable_encoding(var, raise_on_invalid=True)
