@@ -4533,7 +4533,7 @@ def test_extract_zarr_variable_encoding():
 
     var = xr.Variable("x", [1, 2], encoding={"chunks": (1,)})
     actual = backends.zarr.extract_zarr_variable_encoding(var)
-    assert actual["chunks"] is (1,)
+    assert actual["chunks"] == (1,)
 
     # does not raise on invalid
     var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
