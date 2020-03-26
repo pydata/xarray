@@ -475,7 +475,13 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
         return dataset
 
-    def to_dataset(self, dim: Hashable = None, *, name: Hashable = None) -> Dataset:
+    def to_dataset(
+        self,
+        dim: Hashable = None,
+        *,
+        name: Hashable = None,
+        promote_attrs: bool = False,
+    ) -> Dataset:
         """Convert a DataArray to a Dataset.
 
         Parameters
@@ -487,6 +493,8 @@ class DataArray(AbstractArray, DataWithCoords):
         name : hashable, optional
             Name to substitute for this array's name. Only valid if ``dim`` is
             not provided.
+        promote_attrs : bool, default False
+            Set to True to shallow copy attrs of DataArray to returned Dataset.
 
         Returns
         -------
@@ -500,9 +508,14 @@ class DataArray(AbstractArray, DataWithCoords):
         if dim is not None:
             if name is not None:
                 raise TypeError("cannot supply both dim and name arguments")
-            return self._to_dataset_split(dim)
+            result = self._to_dataset_split(dim)
         else:
-            return self._to_dataset_whole(name)
+            result = self._to_dataset_whole(name)
+
+        if promote_attrs:
+            result.attrs = dict(self.attrs)
+
+        return result
 
     @property
     def name(self) -> Optional[Hashable]:
@@ -1709,7 +1722,9 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dimensions : Mapping of the form new_name=(dim1, dim2, ...)
             Names of new dimensions, and the existing dimensions that they
-            replace.
+            replace. An ellipsis (`...`) will be replaced by all unlisted dimensions.
+            Passing a list containing an ellipsis (`stacked_dim=[...]`) will stack over
+            all dimensions.
         **dimensions_kwargs:
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
@@ -3259,6 +3274,68 @@ class DataArray(AbstractArray, DataWithCoords):
         from .parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs)
+
+    def polyfit(
+        self,
+        dim: Hashable,
+        deg: int,
+        skipna: bool = None,
+        rcond: float = None,
+        w: Union[Hashable, Any] = None,
+        full: bool = False,
+        cov: bool = False,
+    ):
+        """
+        Least squares polynomial fit.
+
+        This replicates the behaviour of `numpy.polyfit` but differs by skipping
+        invalid values when `skipna = True`.
+
+        Parameters
+        ----------
+        dim : hashable
+            Coordinate along which to fit the polynomials.
+        deg : int
+            Degree of the fitting polynomial.
+        skipna : bool, optional
+            If True, removes all invalid values before fitting each 1D slices of the array.
+            Default is True if data is stored in a dask.array or if there is any
+            invalid values, False otherwise.
+        rcond : float, optional
+            Relative condition number to the fit.
+        w : Union[Hashable, Any], optional
+            Weights to apply to the y-coordinate of the sample points.
+            Can be an array-like object or the name of a coordinate in the dataset.
+        full : bool, optional
+            Whether to return the residuals, matrix rank and singular values in addition
+            to the coefficients.
+        cov : Union[bool, str], optional
+            Whether to return to the covariance matrix in addition to the coefficients.
+            The matrix is not scaled if `cov='unscaled'`.
+
+        Returns
+        -------
+        polyfit_results : Dataset
+            A single dataset which contains:
+
+            polyfit_coefficients
+                The coefficients of the best fit.
+            polyfit_residuals
+                The residuals of the least-square computation (only included if `full=True`)
+            [dim]_matrix_rank
+                The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
+            [dim]_singular_value
+                The singular values of the scaled Vandermonde coefficient matrix (only included if `full=True`)
+            polyfit_covariance
+                The covariance matrix of the polynomial coefficient estimates (only included if `full=False` and `cov=True`)
+
+        See also
+        --------
+        numpy.polyfit
+        """
+        return self._to_temp_dataset().polyfit(
+            dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
+        )
 
     def pad(
         self,

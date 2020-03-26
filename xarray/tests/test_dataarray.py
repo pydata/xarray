@@ -23,6 +23,7 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    has_dask,
     raises_regex,
     requires_bottleneck,
     requires_dask,
@@ -1412,6 +1413,12 @@ class TestDataArray:
         expected = DataArray(2, coords={1: 2}, name=1)
         assert_identical(actual, expected)
 
+    def test_coords_delitem_delete_indexes(self):
+        # regression test for GH3746
+        arr = DataArray(np.ones((2,)), dims="x", coords={"x": [0, 1]})
+        del arr.coords["x"]
+        assert "x" not in arr.indexes
+
     def test_broadcast_like(self):
         arr1 = DataArray(
             np.ones((2, 3)),
@@ -2038,6 +2045,9 @@ class TestDataArray:
         pd.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
+        assert_identical(orig, actual)
+
+        actual = orig.stack(z=[...]).unstack("z").drop_vars(["x", "y"])
         assert_identical(orig, actual)
 
         dims = ["a", "b", "c", "d", "e"]
@@ -3741,9 +3751,16 @@ class TestDataArray:
         expected = Dataset({"foo": ("x", [1, 2])})
         assert_identical(expected, actual)
 
-        named = DataArray([1, 2], dims="x", name="foo")
+        named = DataArray([1, 2], dims="x", name="foo", attrs={"y": "testattr"})
         actual = named.to_dataset()
-        expected = Dataset({"foo": ("x", [1, 2])})
+        expected = Dataset({"foo": ("x", [1, 2], {"y": "testattr"})})
+        assert_identical(expected, actual)
+
+        # Test promoting attrs
+        actual = named.to_dataset(promote_attrs=True)
+        expected = Dataset(
+            {"foo": ("x", [1, 2], {"y": "testattr"})}, attrs={"y": "testattr"}
+        )
         assert_identical(expected, actual)
 
         with pytest.raises(TypeError):
@@ -4174,6 +4191,55 @@ class TestDataArray:
         x = DataArray([3.0, 1.0, np.nan, 2.0, 4.0], dims=("z",))
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
+
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("use_datetime", [True, False])
+    def test_polyfit(self, use_dask, use_datetime):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        xcoord = xr.DataArray(
+            pd.date_range("1970-01-01", freq="D", periods=10), dims=("x",), name="x"
+        )
+        x = xr.core.missing.get_clean_interp_index(xcoord, "x")
+        if not use_datetime:
+            xcoord = x
+
+        da_raw = DataArray(
+            np.stack(
+                (10 + 1e-15 * x + 2e-28 * x ** 2, 30 + 2e-14 * x + 1e-29 * x ** 2)
+            ),
+            dims=("d", "x"),
+            coords={"x": xcoord, "d": [0, 1]},
+        )
+
+        if use_dask:
+            da = da_raw.chunk({"d": 1})
+        else:
+            da = da_raw
+
+        out = da.polyfit("x", 2)
+        expected = DataArray(
+            [[2e-28, 1e-15, 10], [1e-29, 2e-14, 30]],
+            dims=("d", "degree"),
+            coords={"degree": [2, 1, 0], "d": [0, 1]},
+        ).T
+        assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
+
+        # With NaN
+        da_raw[0, 1] = np.nan
+        if use_dask:
+            da = da_raw.chunk({"d": 1})
+        else:
+            da = da_raw
+        out = da.polyfit("x", 2, skipna=True, cov=True)
+        assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
+        assert "polyfit_covariance" in out
+
+        # Skipna + Full output
+        out = da.polyfit("x", 2, skipna=True, full=True)
+        assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
+        assert out.x_matrix_rank == 3
+        np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
 
     def test_pad_constant(self):
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
