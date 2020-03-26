@@ -4517,7 +4517,7 @@ def test_encode_zarr_attr_value():
     assert actual == expected
 
     # string -> string (no change)
-    expected = 'foo'
+    expected = "foo"
     actual = backends.zarr.encode_zarr_attr_value(expected)
     assert isinstance(actual, str)
     assert actual == expected
@@ -4526,20 +4526,22 @@ def test_encode_zarr_attr_value():
 @requires_zarr
 def test_extract_zarr_variable_encoding():
 
-    var = xr.Variable('x', [1, 2])
+    var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var)
-    assert 'chunks' in actual
-    assert actual['chunks'] is None
+    assert "chunks" in actual
+    assert actual["chunks"] is None
 
-    var = xr.Variable('x', [1, 2], encoding={'chunks': (1, )})
+    var = xr.Variable("x", [1, 2], encoding={"chunks": (1,)})
     actual = backends.zarr.extract_zarr_variable_encoding(var)
-    assert actual['chunks'] is (1, )
+    assert actual["chunks"] is (1,)
 
     # does not raise on invalid
-    var = xr.Variable('x', [1, 2], encoding={'foo': (1, )})
+    var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
     actual = backends.zarr.extract_zarr_variable_encoding(var)
 
     # raises on invalid
-    var = xr.Variable('x', [1, 2], encoding={'foo': (1, )})
+    var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
     with raises_regex(ValueError, "unexpected encoding parameters"):
-        actual = backends.zarr.extract_zarr_variable_encoding(var, raise_on_invalid=True)
+        actual = backends.zarr.extract_zarr_variable_encoding(
+            var, raise_on_invalid=True
+        )
