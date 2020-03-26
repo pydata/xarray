@@ -20,7 +20,12 @@ v0.16.0 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Alternate draw styles for :py:meth:`plot.step` must be passed using the
+  ``drawstyle`` (or ``ds``) keyword argument, instead of the ``linestyle`` (or
+  ``ls``) keyword argument, in line with the `upstream change in Matplotlib
+  <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
+  (:pull:`3274`)
+  By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
 
 New Features
 ~~~~~~~~~~~~
