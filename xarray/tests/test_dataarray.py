@@ -1202,6 +1202,26 @@ class TestDataArray:
         expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop_vars("y")
         assert_equal(actual, expected)
 
+    def test_stack_groupby_unsorted_coord(self):
+        data = [[0, 1], [2, 3]]
+        data_flat = [0, 1, 2, 3]
+        dims = ["x", "y"]
+        y_vals = [2, 3]
+
+        # "y" coord is in sorted order, and everything works
+        arr = xr.DataArray(data, dims=dims, coords={"y": y_vals})
+        actual1 = arr.stack(z=dims).groupby("z").first()
+        midx1 = pd.MultiIndex.from_product([[0, 1], [2, 3]], names=dims)
+        expected1 = xr.DataArray(data_flat, dims=["z"], coords={"z": midx1})
+        xr.testing.assert_equal(actual1, expected1)
+
+        # Now "y" coord is NOT in sorted order, and the bug appears
+        arr = xr.DataArray(data, dims=dims, coords={"y": y_vals[::-1]})
+        actual2 = arr.stack(z=dims).groupby("z").first()
+        midx2 = pd.MultiIndex.from_product([[0, 1], [3, 2]], names=dims)
+        expected2 = xr.DataArray(data_flat, dims=["z"], coords={"z": midx2})
+        xr.testing.assert_equal(actual2, expected2)
+
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims="x")
         expected = DataArray(range(5), dims="x", name="x")
