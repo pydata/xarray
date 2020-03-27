@@ -930,7 +930,10 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         variable = self.variable.copy(deep=deep, data=data)
         coords = {k: v.copy(deep=deep) for k, v in self._coords.items()}
-        indexes = self._indexes
+        if self._indexes is None:
+            indexes = self._indexes
+        else:
+            indexes = {k: v.copy(deep=deep) for k, v in self._indexes.items()}
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":

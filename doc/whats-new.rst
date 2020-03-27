@@ -42,6 +42,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
+  can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
+  By `Todd Jennings <https://github.com/toddrjen>`_
 
 
 Documentation
