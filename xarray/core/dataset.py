@@ -4901,7 +4901,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dim : str, optional
+        dim : str
             Dimension over which to calculate the finite difference.
         n : int, optional
             The number of times values are differenced.

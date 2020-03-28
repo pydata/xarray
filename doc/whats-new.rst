@@ -46,13 +46,14 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- update the docstring of :py:meth:`Dataset.diff` and
+  :py:meth:`DataArray.diff` so it does document the ``dim``
+  parameter as required. (:issue:`1040`, :pull:`3909`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Use ``Fixes`` rather than ``Closes`` in GitHub Pull Request template, allowing
-  linking to issues.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Run the ``isort`` pre-commit hook only on python source files
   and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
   By `Justus Magin <https://github.com/keewis>`_.
