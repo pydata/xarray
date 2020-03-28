@@ -115,7 +115,7 @@ class TestFormatting:
 
     def test_format_array_flat(self):
         actual = formatting.format_array_flat(np.arange(100), 2)
-        expected = "0 ... 99"
+        expected = "..."
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100), 9)
@@ -134,11 +134,13 @@ class TestFormatting:
         expected = "0 1 2 ... 98 99"
         assert expected == actual
 
+        # NB: Probably not ideal; an alternative would be cutting after the
+        # first ellipsis
         actual = formatting.format_array_flat(np.arange(100.0), 11)
-        expected = "0.0 ... 99.0"
+        expected = "0.0 ... ..."
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(100.0), 1)
+        actual = formatting.format_array_flat(np.arange(100.0), 12)
         expected = "0.0 ... 99.0"
         assert expected == actual
 
@@ -154,16 +156,25 @@ class TestFormatting:
         expected = ""
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(1), 0)
+        actual = formatting.format_array_flat(np.arange(1), 1)
         expected = "0"
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(2), 0)
+        actual = formatting.format_array_flat(np.arange(2), 3)
         expected = "0 1"
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(4), 0)
-        expected = "0 ... 3"
+        actual = formatting.format_array_flat(np.arange(4), 7)
+        expected = "0 1 2 3"
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(5), 7)
+        expected = "0 ... 4"
+        assert expected == actual
+
+        long_str = [" ".join(["hello world" for _ in range(100)])]
+        actual = formatting.format_array_flat(np.asarray([long_str]), 21)
+        expected = "'hello world hello..."
         assert expected == actual
 
     def test_pretty_print(self):
