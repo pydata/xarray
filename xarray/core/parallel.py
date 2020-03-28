@@ -16,6 +16,8 @@ from typing import (
     DefaultDict,
     Dict,
     Hashable,
+    Iterable,
+    List,
     Mapping,
     Sequence,
     Tuple,
@@ -32,7 +34,7 @@ from .dataset import Dataset
 T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
 
-def get_index_vars(obj):
+def get_index_vars(obj: Union[DataArray, Dataset]) -> dict:
     return {dim: obj[dim] for dim in obj.indexes}
 
 
@@ -76,7 +78,9 @@ def check_result_variables(
         )
 
 
-def subset_dataset_to_block(graph, gname, dataset, input_chunks, chunk_tuple):
+def subset_dataset_to_block(
+    graph: dict, gname: str, dataset: Dataset, input_chunks: dict, chunk_tuple: tuple
+):
 
     # mapping from dimension name to chunk index
     input_chunk_index = dict(zip(input_chunks.keys(), chunk_tuple))
@@ -328,7 +332,13 @@ def map_blocks(
         * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
     """
 
-    def _wrapper(func, args, kwargs, arg_is_array, expected):
+    def _wrapper(
+        func: Callable,
+        args: List,
+        kwargs: dict,
+        arg_is_array: Iterable[bool],
+        expected: dict,
+    ):
         check_shapes = dict(args[0].dims)
         check_shapes.update(expected["shapes"])
 
