@@ -591,6 +591,10 @@ class TestPlotStep(PlotTestCase):
     def test_step(self):
         self.darray[0, 0].plot.step()
 
+    @pytest.mark.parametrize("ds", ["pre", "post", "mid"])
+    def test_step_with_drawstyle(self, ds):
+        self.darray[0, 0].plot.step(drawstyle=ds)
+
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
@@ -1749,6 +1753,7 @@ class TestFacetGrid(PlotTestCase):
             assert np.allclose(expected, clim)
 
     @pytest.mark.slow
+    @pytest.mark.filterwarnings("ignore")
     def test_can_set_norm(self):
         norm = mpl.colors.SymLogNorm(0.1)
         self.g.map_dataarray(xplt.imshow, "x", "y", norm=norm)

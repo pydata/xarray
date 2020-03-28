@@ -78,20 +78,27 @@ def _get_date_field(values, name, dtype):
         return access_method(values, name)
 
 
-def _round_series(values, name, freq):
-    """Coerce an array of datetime-like values to a pandas Series and
-    apply requested rounding
+def _round_through_series_or_index(values, name, freq):
+    """Coerce an array of datetime-like values to a pandas Series or xarray
+    CFTimeIndex and apply requested rounding
     """
-    values_as_series = pd.Series(values.ravel())
-    method = getattr(values_as_series.dt, name)
+    from ..coding.cftimeindex import CFTimeIndex
+
+    if is_np_datetime_like(values.dtype):
+        values_as_series = pd.Series(values.ravel())
+        method = getattr(values_as_series.dt, name)
+    else:
+        values_as_cftimeindex = CFTimeIndex(values.ravel())
+        method = getattr(values_as_cftimeindex, name)
+
     field_values = method(freq=freq).values
 
     return field_values.reshape(values.shape)
 
 
 def _round_field(values, name, freq):
-    """Indirectly access pandas rounding functions by wrapping data
-    as a Series and calling through `.dt` attribute.
+    """Indirectly access rounding functions by wrapping data
+    as a Series or CFTimeIndex
 
     Parameters
     ----------
@@ -110,9 +117,12 @@ def _round_field(values, name, freq):
     if isinstance(values, dask_array_type):
         from dask.array import map_blocks
 
-        return map_blocks(_round_series, values, name, freq=freq, dtype=np.datetime64)
+        dtype = np.datetime64 if is_np_datetime_like(values.dtype) else np.dtype("O")
+        return map_blocks(
+            _round_through_series_or_index, values, name, freq=freq, dtype=dtype
+        )
     else:
-        return _round_series(values, name, freq)
+        return _round_through_series_or_index(values, name, freq)
 
 
 def _strftime_through_cftimeindex(values, date_format):
@@ -240,8 +250,8 @@ class DatetimeAccessor(Properties):
     ---------
     >>> import xarray as xr
     >>> import pandas as pd
-    >>> dates = pd.date_range(start='2000/01/01', freq='D', periods=10)
-    >>> ts = xr.DataArray(dates, dims=('time'))
+    >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
+    >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 10)>
     array(['2000-01-01T00:00:00.000000000', '2000-01-02T00:00:00.000000000',
@@ -286,8 +296,8 @@ class DatetimeAccessor(Properties):
 
         Examples
         --------
-        >>> rng = xr.Dataset({'time': datetime.datetime(2000, 1, 1)})
-        >>> rng['time'].dt.strftime('%B %d, %Y, %r')
+        >>> rng = xr.Dataset({"time": datetime.datetime(2000, 1, 1)})
+        >>> rng["time"].dt.strftime("%B %d, %Y, %r")
         <xarray.DataArray 'strftime' ()>
         array('January 01, 2000, 12:00:00 AM', dtype=object)
         """
@@ -390,7 +400,7 @@ class TimedeltaAccessor(Properties):
     >>> import pandas as pd
     >>> import xarray as xr
     >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
-    >>> ts = xr.DataArray(dates, dims=('time'))
+    >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 20)>
     array([ 86400000000000, 108000000000000, 129600000000000, 151200000000000,

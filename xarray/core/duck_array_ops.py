@@ -114,7 +114,7 @@ _where = _dask_or_eager_func("where", array_args=slice(3))
 isin = _dask_or_eager_func("isin", array_args=slice(2))
 take = _dask_or_eager_func("take")
 broadcast_to = _dask_or_eager_func("broadcast_to")
-pad = _dask_or_eager_func("pad")
+pad = _dask_or_eager_func("pad", dask_module=dask_array_compat)
 
 _concatenate = _dask_or_eager_func("concatenate", list_of_args=True)
 _stack = _dask_or_eager_func("stack", list_of_args=True)
@@ -597,3 +597,12 @@ def rolling_window(array, axis, window, center, fill_value):
         return dask_array_ops.rolling_window(array, axis, window, center, fill_value)
     else:  # np.ndarray
         return nputils.rolling_window(array, axis, window, center, fill_value)
+
+
+def least_squares(lhs, rhs, rcond=None, skipna=False):
+    """Return the coefficients and residuals of a least-squares fit.
+    """
+    if isinstance(rhs, dask_array_type):
+        return dask_array_ops.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
+    else:
+        return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)

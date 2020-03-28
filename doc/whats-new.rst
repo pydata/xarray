@@ -13,32 +13,120 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.15.1:
+.. _whats-new.0.16.0:
 
-
-v0.15.1 (unreleased)
+v0.16.0 (unreleased)
 ---------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Alternate draw styles for :py:meth:`plot.step` must be passed using the
+  ``drawstyle`` (or ``ds``) keyword argument, instead of the ``linestyle`` (or
+  ``ls``) keyword argument, in line with the `upstream change in Matplotlib
+  <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
+  (:pull:`3274`)
+  By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
 
 New Features
 ~~~~~~~~~~~~
-
-- Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
-  v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- implement pint support. (:issue:`3594`, :pull:`3706`)
-  By `Justus Magin <https://github.com/keewis>`_.
-- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
-  `TypeError` on multiple string arguments. Receiving multiple string arguments
-  often means a user is attempting to pass multiple dimensions to group over
-  and should instead pass a list.
+- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
+  :py:func:`combine_by_coords` and :py:func:`combine_nested` using
+  combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
+  By `John Omotani <https://github.com/johnomotani>`_
+- Limited the length of array items with long string reprs to a
+  reasonable width (:pull:`3900`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 Bug fixes
 ~~~~~~~~~
 
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Use ``Fixes`` rather than ``Closes`` in GitHub Pull Request template, allowing
+  linking to issues.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
+
+.. _whats-new.0.15.1:
+
+v0.15.1 (23 Mar 2020)
+---------------------
+
+This release brings many new features such as :py:meth:`Dataset.weighted` methods for weighted array
+reductions, a new jupyter repr by default, and the start of units integration with pint. There's also
+the usual batch of usability improvements, documentation additions, and bug fixes.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Raise an error when assigning to the ``.values`` or ``.data`` attribute of
+  dimension coordinates i.e. ``IndexVariable`` objects. This has been broken since
+  v0.12.0. Please use :py:meth:`DataArray.assign_coords` or :py:meth:`Dataset.assign_coords`
+  instead. (:issue:`3470`, :pull:`3862`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
+
+New Features
+~~~~~~~~~~~~
+
+- Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
+  and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
+  By `Mathias Hauser <https://github.com/mathause>`_
+- The new jupyter notebook repr (``Dataset._repr_html_`` and
+  ``DataArray._repr_html_``) (introduced in 0.14.1) is now on by default. To
+  disable, use ``xarray.set_options(display_style="text")``.
+  By `Julia Signell <https://github.com/jsignell>`_.
+- Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
+  ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
+  :py:class:`~core.accessor_dt.DatetimeAccessor`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_ 
+- Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
+  v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Add partial support for unit aware arrays with pint. (:pull:`3706`, :pull:`3611`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
+  `TypeError` on multiple string arguments. Receiving multiple string arguments
+  often means a user is attempting to pass multiple dimensions as separate
+  arguments and should instead pass a single list of dimensions.
+  (:pull:`3802`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:func:`map_blocks` can now apply functions that add new unindexed dimensions.
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- An ellipsis (``...``) is now supported in the ``dims`` argument of
+  :py:meth:`Dataset.stack` and :py:meth:`DataArray.stack`, meaning all
+  unlisted dimensions, similar to its meaning in :py:meth:`DataArray.transpose`.
+  (:pull:`3826`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- :py:meth:`Dataset.where` and :py:meth:`DataArray.where` accept a lambda as a
+  first argument, which is then called on the input; replicating pandas' behavior.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- ``skipna`` is available in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
+  :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
+  (:issue:`3843`, :pull:`3844`) 
+  By `Aaron Spring <https://github.com/aaronspring>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix :py:meth:`Dataset.interp` when indexing array shares coordinates with the
+  indexed variable (:issue:`3252`).
+  By `David Huard <https://github.com/huard>`_.
+- Fix recombination of groups in :py:meth:`Dataset.groupby` and
+  :py:meth:`DataArray.groupby` when performing an operation that changes the
+  size of the groups along the grouped dimension. By `Eric Jansen
+  <https://github.com/ej81>`_.
+- Fix use of multi-index with categorical values (:issue:`3674`).
+  By `Matthieu Ancellin <https://github.com/mancellin>`_.
+- Fix alignment with ``join="override"`` when some dimensions are unindexed. (:issue:`3681`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims` producing
   index with name reflecting the previous dimension name instead of the new one
   (:issue:`3748`, :pull:`3752`). By `Joseph K Aicher
@@ -52,21 +140,53 @@ Bug fixes
 - xarray now respects the over, under and bad colors if set on a provided colormap.
   (:issue:`3590`, :pull:`3601`)
   By `johnomotani <https://github.com/johnomotani>`_.
+- :py:func:`coarsen` now respects ``xr.set_options(keep_attrs=True)``
+  to preserve attributes. :py:meth:`Dataset.coarsen` accepts a keyword
+  argument ``keep_attrs`` to change this setting. (:issue:`3376`,
+  :pull:`3801`) By `Andrew Thomas <https://github.com/amcnicho>`_.
+- Delete associated indexes when deleting coordinate variables. (:issue:`3746`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
+  simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
+- Fix html repr on :py:class:`Dataset` with non-string keys (:pull:`3807`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Fix documentation of :py:class:`DataArray` removing the deprecated mention
+  that when omitted, `dims` are inferred from a `coords`-dict. (:pull:`3821`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Improve the :py:func:`where` docstring.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Update the installation instructions: only explicitly list recommended dependencies
+  (:issue:`3756`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- Removed the internal ``import_seaborn`` function which handled the deprecation of
+- Remove the internal ``import_seaborn`` function which handled the deprecation of
   the ``seaborn.apionly`` entry point (:issue:`3747`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Don't test pint integration in combination with datetime objects. (:issue:`3778`, :pull:`3788`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Changed test_open_mfdataset_list_attr to only run with dask installed
+- Change test_open_mfdataset_list_attr to only run with dask installed
   (:issue:`3777`, :pull:`3780`).
   By `Bruno Pagani <https://github.com/ArchangeGabriel>`_.
+- Preserve the ability to index with ``method="nearest"`` with a
+  :py:class:`CFTimeIndex` with pandas versions greater than 1.0.1
+  (:issue:`3751`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Greater flexibility and improved test coverage of subtracting various types
+  of objects from a :py:class:`CFTimeIndex`. By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Update Azure CI MacOS image, given pending removal.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Remove xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Remove conversion to :py:class:`pandas.Panel`, given its removal in pandas
+  in favor of xarray's objects.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.0.15.0:
 
@@ -102,6 +222,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Implement :py:meth:`DataArray.pad` and :py:meth:`Dataset.pad`. (:issue:`2605`, :pull:`3596`).
+  By `Mark Boer <https://github.com/mark-boer>`_.
 - :py:meth:`DataArray.sel` and :py:meth:`Dataset.sel` now support :py:class:`pandas.CategoricalIndex`. (:issue:`3669`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Support using an existing, opened h5netcdf ``File`` with
@@ -677,12 +799,13 @@ Bug fixes
 - Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
   array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed bug in :meth:`DataArray.quantile` failing to keep attributes when
-  `keep_attrs` was True (:issue:`3304`). By David Huard `<https://github.com/huard>`_.
+  `keep_attrs` was True (:issue:`3304`). By `David Huard <https://github.com/huard>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ as a quick reference for tasks before creating a new PR
+- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ 
+  as a quick reference for tasks before creating a new PR
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 

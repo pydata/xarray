@@ -30,6 +30,7 @@ Top-level functions
    zeros_like
    ones_like
    dot
+   polyval
    map_blocks
    show_versions
    set_options
@@ -165,6 +166,7 @@ Computation
    Dataset.groupby_bins
    Dataset.rolling
    Dataset.rolling_exp
+   Dataset.weighted
    Dataset.coarsen
    Dataset.resample
    Dataset.diff
@@ -172,6 +174,7 @@ Computation
    Dataset.differentiate
    Dataset.integrate
    Dataset.map_blocks
+   Dataset.polyfit
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -221,6 +224,7 @@ Reshaping and reorganizing
    Dataset.to_stacked_array
    Dataset.shift
    Dataset.roll
+   Dataset.pad
    Dataset.sortby
    Dataset.broadcast_like
 
@@ -341,6 +345,7 @@ Computation
    DataArray.groupby_bins
    DataArray.rolling
    DataArray.rolling_exp
+   DataArray.weighted
    DataArray.coarsen
    DataArray.dt
    DataArray.resample
@@ -350,6 +355,7 @@ Computation
    DataArray.quantile
    DataArray.differentiate
    DataArray.integrate
+   DataArray.polyfit
    DataArray.str
    DataArray.map_blocks
 
@@ -402,6 +408,7 @@ Reshaping and reorganizing
    DataArray.to_unstacked_dataset
    DataArray.shift
    DataArray.roll
+   DataArray.pad
    DataArray.sortby
    DataArray.broadcast_like
 
@@ -577,6 +584,22 @@ Rolling objects
    core.rolling.DatasetRolling.construct
    core.rolling.DatasetRolling.reduce
    core.rolling_exp.RollingExp
+
+Weighted objects
+================
+
+.. autosummary::
+   :toctree: generated/
+
+   core.weighted.DataArrayWeighted
+   core.weighted.DataArrayWeighted.mean
+   core.weighted.DataArrayWeighted.sum
+   core.weighted.DataArrayWeighted.sum_of_weights
+   core.weighted.DatasetWeighted
+   core.weighted.DatasetWeighted.mean
+   core.weighted.DatasetWeighted.sum
+   core.weighted.DatasetWeighted.sum_of_weights
+
 
 Coarsen objects
 ===============

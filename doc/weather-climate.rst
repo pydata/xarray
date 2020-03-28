@@ -105,6 +105,14 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    da.time.dt.dayofyear
    da.time.dt.dayofweek
 
+- Rounding of datetimes to fixed frequencies via the ``dt`` accessor:
+
+.. ipython:: python
+
+   da.time.dt.ceil('3D')
+   da.time.dt.floor('5D')
+   da.time.dt.round('2D')
+   
 - Group-by operations based on datetime accessor attributes (e.g. by month of
   the year):
 

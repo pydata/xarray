@@ -450,11 +450,21 @@ def test_sel_date_scalar(da, date_type, index):
     assert_identical(result, expected)
 
 
-@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
+@requires_cftime
+def test_sel_date_distant_date(da, date_type, index):
+    expected = xr.DataArray(4).assign_coords(time=index[3])
+    result = da.sel(time=date_type(2000, 1, 1), method="nearest")
+    assert_identical(result, expected)
+
+
 @requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
-    [{"method": "nearest"}, {"method": "nearest", "tolerance": timedelta(days=70)}],
+    [
+        {"method": "nearest"},
+        {"method": "nearest", "tolerance": timedelta(days=70)},
+        {"method": "nearest", "tolerance": timedelta(days=1800000)},
+    ],
 )
 def test_sel_date_scalar_nearest(da, date_type, index, sel_kwargs):
     expected = xr.DataArray(2).assign_coords(time=index[1])
@@ -502,12 +512,7 @@ def test_sel_date_scalar_backfill(da, date_type, index, sel_kwargs):
     [
         {"method": "pad", "tolerance": timedelta(days=20)},
         {"method": "backfill", "tolerance": timedelta(days=20)},
-        pytest.param(
-            {"method": "nearest", "tolerance": timedelta(days=20)},
-            marks=pytest.mark.xfail(
-                reason="https://github.com/pydata/xarray/issues/3751"
-            ),
-        ),
+        {"method": "nearest", "tolerance": timedelta(days=20)},
     ],
 )
 def test_sel_date_scalar_tolerance_raises(da, date_type, sel_kwargs):
@@ -515,7 +520,6 @@ def test_sel_date_scalar_tolerance_raises(da, date_type, sel_kwargs):
         da.sel(time=date_type(1, 5, 1), **sel_kwargs)
 
 
-@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
@@ -563,12 +567,7 @@ def test_sel_date_list_backfill(da, date_type, index, sel_kwargs):
     [
         {"method": "pad", "tolerance": timedelta(days=20)},
         {"method": "backfill", "tolerance": timedelta(days=20)},
-        pytest.param(
-            {"method": "nearest", "tolerance": timedelta(days=20)},
-            marks=pytest.mark.xfail(
-                reason="https://github.com/pydata/xarray/issues/3751"
-            ),
-        ),
+        {"method": "nearest", "tolerance": timedelta(days=20)},
     ],
 )
 def test_sel_date_list_tolerance_raises(da, date_type, sel_kwargs):
@@ -603,7 +602,6 @@ def range_args(date_type):
     ]
 
 
-@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/3751")
 @requires_cftime
 def test_indexing_in_series_getitem(series, index, scalar_args, range_args):
     for arg in scalar_args:
@@ -738,7 +736,7 @@ def test_timedeltaindex_add_cftimeindex(calendar):
 
 
 @requires_cftime
-def test_cftimeindex_sub(index):
+def test_cftimeindex_sub_timedelta(index):
     date_type = index.date_type
     expected_dates = [
         date_type(1, 1, 2),
@@ -749,6 +747,27 @@ def test_cftimeindex_sub(index):
     expected = CFTimeIndex(expected_dates)
     result = index + timedelta(days=2)
     result = result - timedelta(days=1)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    "other",
+    [np.array(4 * [timedelta(days=1)]), np.array(timedelta(days=1))],
+    ids=["1d-array", "scalar-array"],
+)
+def test_cftimeindex_sub_timedelta_array(index, other):
+    date_type = index.date_type
+    expected_dates = [
+        date_type(1, 1, 2),
+        date_type(1, 2, 2),
+        date_type(2, 1, 2),
+        date_type(2, 2, 2),
+    ]
+    expected = CFTimeIndex(expected_dates)
+    result = index + timedelta(days=2)
+    result = result - other
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
 
@@ -786,6 +805,14 @@ def test_cftime_datetime_sub_cftimeindex(calendar):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_distant_cftime_datetime_sub_cftimeindex(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    with pytest.raises(ValueError, match="difference exceeds"):
+        a.date_type(1, 1, 1) - a
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_sub_timedeltaindex(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
@@ -793,6 +820,25 @@ def test_cftimeindex_sub_timedeltaindex(calendar):
     expected = a.shift(-2, "D")
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_sub_index_of_cftime_datetimes(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    b = pd.Index(a.values)
+    expected = a - a
+    result = a - b
+    assert result.equals(expected)
+    assert isinstance(result, pd.TimedeltaIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_sub_not_implemented(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    with pytest.raises(TypeError, match="unsupported operand"):
+        a - 1
 
 
 @requires_cftime
@@ -904,3 +950,92 @@ def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")
     mindex = pd.MultiIndex.from_arrays([index])
     assert mindex.get_loc("2001-01") == slice(0, 30)
+
+
+@requires_cftime
+@pytest.mark.parametrize("freq", ["3663S", "33T", "2H"])
+@pytest.mark.parametrize("method", ["floor", "ceil", "round"])
+def test_rounding_methods_against_datetimeindex(freq, method):
+    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    expected = getattr(expected, method)(freq)
+    result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    result = getattr(result, method)(freq).to_datetimeindex()
+    assert result.equals(expected)
+
+
+@requires_cftime
+@pytest.mark.parametrize("method", ["floor", "ceil", "round"])
+def test_rounding_methods_invalid_freq(method):
+    index = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    with pytest.raises(ValueError, match="fixed"):
+        getattr(index, method)("MS")
+
+
+@pytest.fixture
+def rounding_index(date_type):
+    return xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 1, 59, 59, 999512),
+            date_type(1, 1, 1, 3, 0, 1, 500001),
+            date_type(1, 1, 1, 7, 0, 6, 499999),
+        ]
+    )
+
+
+@requires_cftime
+def test_ceil(rounding_index, date_type):
+    result = rounding_index.ceil("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 2, 0, 0, 0),
+            date_type(1, 1, 1, 3, 0, 2, 0),
+            date_type(1, 1, 1, 7, 0, 7, 0),
+        ]
+    )
+    assert result.equals(expected)
+
+
+@requires_cftime
+def test_floor(rounding_index, date_type):
+    result = rounding_index.floor("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 1, 59, 59, 0),
+            date_type(1, 1, 1, 3, 0, 1, 0),
+            date_type(1, 1, 1, 7, 0, 6, 0),
+        ]
+    )
+    assert result.equals(expected)
+
+
+@requires_cftime
+def test_round(rounding_index, date_type):
+    result = rounding_index.round("S")
+    expected = xr.CFTimeIndex(
+        [
+            date_type(1, 1, 1, 2, 0, 0, 0),
+            date_type(1, 1, 1, 3, 0, 2, 0),
+            date_type(1, 1, 1, 7, 0, 6, 0),
+        ]
+    )
+    assert result.equals(expected)
+
+
+@requires_cftime
+def test_asi8(date_type):
+    index = xr.CFTimeIndex([date_type(1970, 1, 1), date_type(1970, 1, 2)])
+    result = index.asi8
+    expected = 1000000 * 86400 * np.array([0, 1])
+    np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime
+def test_asi8_distant_date():
+    """Test that asi8 conversion is truly exact."""
+    import cftime
+
+    date_type = cftime.DatetimeProlepticGregorian
+    index = xr.CFTimeIndex([date_type(10731, 4, 22, 3, 25, 45, 123456)])
+    result = index.asi8
+    expected = np.array([1000000 * 86400 * 400 * 8000 + 12345 * 1000000 + 123456])
+    np.testing.assert_array_equal(result, expected)

@@ -46,6 +46,7 @@ from . import (
     resample,
     rolling,
     utils,
+    weighted,
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .common import (
@@ -75,6 +76,7 @@ from .merge import (
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
+from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import (
@@ -86,6 +88,7 @@ from .utils import (
     decode_numpy_dict_values,
     either_dict_or_kwargs,
     hashable,
+    infix_dims,
     is_dict_like,
     is_scalar,
     maybe_wrap_array,
@@ -457,6 +460,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _rolling_cls = rolling.DatasetRolling
     _coarsen_cls = rolling.DatasetCoarsen
     _resample_cls = resample.DatasetResample
+    _weighted_cls = weighted.DatasetWeighted
 
     def __init__(
         self,
@@ -533,7 +537,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if isinstance(coords, Dataset):
             coords = coords.variables
 
-        variables, coord_names, dims, indexes = merge_data_and_coords(
+        variables, coord_names, dims, indexes, _ = merge_data_and_coords(
             data_vars, coords, compat="broadcast_equals"
         )
 
@@ -1010,8 +1014,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Shallow copy versus deep copy
 
         >>> da = xr.DataArray(np.random.randn(2, 3))
-        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])},
-                            coords={'x': ['one', 'two']})
+        >>> ds = xr.Dataset(
+        ...     {"foo": da, "bar": ("x", [-1, 2])}, coords={"x": ["one", "two"]},
+        ... )
         >>> ds.copy()
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -1021,8 +1026,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) float64 -0.8079 0.3897 -1.862 -0.6091 -1.051 -0.3003
             bar      (x) int64 -1 2
+
         >>> ds_0 = ds.copy(deep=False)
-        >>> ds_0['foo'][0, 0] = 7
+        >>> ds_0["foo"][0, 0] = 7
         >>> ds_0
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -1032,6 +1038,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
             bar      (x) int64 -1 2
+
         >>> ds
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -1046,7 +1053,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         structure of the original object, but with the new data. Original
         object is unaffected.
 
-        >>> ds.copy(data={'foo': np.arange(6).reshape(2, 3), 'bar': ['a', 'b']})
+        >>> ds.copy(
+        ...     data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]}
+        ... )
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
@@ -1055,6 +1064,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) int64 0 1 2 3 4 5
             bar      (x) <U1 'a' 'b'
+
         >>> ds
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -2355,9 +2365,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature": ("station", 20 * np.random.rand(4)),
-        ...         "pressure": ("station", 500 * np.random.rand(4))
+        ...         "pressure": ("station", 500 * np.random.rand(4)),
         ...     },
-        ...     coords={"station": ["boston", "nyc", "seattle", "denver"]})
+        ...     coords={"station": ["boston", "nyc", "seattle", "denver"]},
+        ... )
         >>> x
         <xarray.Dataset>
         Dimensions:      (station: 4)
@@ -2372,8 +2383,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Create a new index and reindex the dataset. By default values in the new index that
         do not have corresponding records in the dataset are assigned `NaN`.
 
-        >>> new_index = ['boston', 'austin', 'seattle', 'lincoln']
-        >>> x.reindex({'station': new_index})
+        >>> new_index = ["boston", "austin", "seattle", "lincoln"]
+        >>> x.reindex({"station": new_index})
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
@@ -2384,7 +2395,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         We can fill in the missing values by passing a value to the keyword `fill_value`.
 
-        >>> x.reindex({'station': new_index}, fill_value=0)
+        >>> x.reindex({"station": new_index}, fill_value=0)
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
@@ -2396,7 +2407,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Because the index is not monotonically increasing or decreasing, we cannot use arguments
         to the keyword method to fill the `NaN` values.
 
-        >>> x.reindex({'station': new_index}, method='nearest')
+        >>> x.reindex({"station": new_index}, method="nearest")
         Traceback (most recent call last):
         ...
             raise ValueError('index must be monotonic increasing or decreasing')
@@ -2407,10 +2418,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         >>> x2 = xr.Dataset(
         ...     {
-        ...         "temperature": ("time", [15.57, 12.77, np.nan, 0.3081, 16.59, 15.12]),
-        ...         "pressure": ("time", 500 * np.random.rand(6))
+        ...         "temperature": (
+        ...             "time",
+        ...             [15.57, 12.77, np.nan, 0.3081, 16.59, 15.12],
+        ...         ),
+        ...         "pressure": ("time", 500 * np.random.rand(6)),
         ...     },
-        ...     coords={"time": pd.date_range('01/01/2019', periods=6, freq='D')})
+        ...     coords={"time": pd.date_range("01/01/2019", periods=6, freq="D")},
+        ... )
         >>> x2
         <xarray.Dataset>
         Dimensions:      (time: 6)
@@ -2422,8 +2437,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Suppose we decide to expand the dataset to cover a wider date range.
 
-        >>> time_index2 = pd.date_range('12/29/2018', periods=10, freq='D')
-        >>> x2.reindex({'time': time_index2})
+        >>> time_index2 = pd.date_range("12/29/2018", periods=10, freq="D")
+        >>> x2.reindex({"time": time_index2})
         <xarray.Dataset>
         Dimensions:      (time: 10)
         Coordinates:
@@ -2438,7 +2453,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         For example, to back-propagate the last valid value to fill the `NaN` values,
         pass `bfill` as an argument to the `method` keyword.
 
-        >>> x3 = x2.reindex({'time': time_index2}, method='bfill')
+        >>> x3 = x2.reindex({"time": time_index2}, method="bfill")
         >>> x3
         <xarray.Dataset>
         Dimensions:      (time: 10)
@@ -2570,6 +2585,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
         indexers = dict(self._validate_interp_indexers(coords))
+
+        if coords:
+            # This avoids broadcasting over coordinates that are both in
+            # the original array AND in the indexing array. It essentially
+            # forces interpolation along the shared coordinates.
+            sdims = (
+                set(self.dims)
+                .intersection(*[set(nx.dims) for nx in indexers.values()])
+                .difference(coords.keys())
+            )
+            indexers.update({d: self.variables[d] for d in sdims})
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
 
@@ -2882,8 +2908,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> ds = xr.Dataset(data_vars={"a": ("x", [5, 7]), "b": ("x", [0.1, 2.4])},
-                            coords={"x": ["a", "b"], "y": ("x", [0, 1])})
+        >>> ds = xr.Dataset(
+        ...     data_vars={"a": ("x", [5, 7]), "b": ("x", [0.1, 2.4])},
+        ...     coords={"x": ["a", "b"], "y": ("x", [0, 1])},
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2)
@@ -2893,6 +2921,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             a        (x) int64 5 7
             b        (x) float64 0.1 2.4
+
         >>> ds.swap_dims({"x": "y"})
         <xarray.Dataset>
         Dimensions:  (y: 2)
@@ -2902,6 +2931,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             a        (y) int64 5 7
             b        (y) float64 0.1 2.4
+
         >>> ds.swap_dims({"x": "z"})
         <xarray.Dataset>
         Dimensions:  (z: 2)
@@ -3122,13 +3152,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> arr = xr.DataArray(data=np.ones((2, 3)),
-        ...                    dims=['x', 'y'],
-        ...                    coords={'x':
-        ...                        range(2), 'y':
-        ...                        range(3), 'a': ('x', [3, 4])
-        ...                    })
-        >>> ds = xr.Dataset({'v': arr})
+        >>> arr = xr.DataArray(
+        ...     data=np.ones((2, 3)),
+        ...     dims=["x", "y"],
+        ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
+        ... )
+        >>> ds = xr.Dataset({"v": arr})
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 3)
@@ -3138,7 +3167,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             a        (x) int64 3 4
         Data variables:
             v        (x, y) float64 1.0 1.0 1.0 1.0 1.0 1.0
-        >>> ds.set_index(x='a')
+        >>> ds.set_index(x="a")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 3)
         Coordinates:
@@ -3235,6 +3264,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables, indexes=indexes)
 
     def _stack_once(self, dims, new_dim):
+        if ... in dims:
+            dims = list(infix_dims(dims, self.dims))
         variables = {}
         for name, var in self.variables.items():
             if name not in dims:
@@ -3277,7 +3308,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dimensions : Mapping of the form new_name=(dim1, dim2, ...)
             Names of new dimensions, and the existing dimensions that they
-            replace.
+            replace. An ellipsis (`...`) will be replaced by all unlisted dimensions.
+            Passing a list containing an ellipsis (`stacked_dim=[...]`) will stack over
+            all dimensions.
         **dimensions_kwargs:
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
@@ -3341,10 +3374,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> data = Dataset(
-        ...     data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
-        ...                'b': ('x', [6, 7])},
-        ...     coords={'y': ['u', 'v', 'w']}
+        >>> data = xr.Dataset(
+        ...     data_vars={
+        ...         "a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]),
+        ...         "b": ("x", [6, 7]),
+        ...     },
+        ...     coords={"y": ["u", "v", "w"]},
         ... )
 
         >>> data
@@ -3357,7 +3392,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             a        (x, y) int64 0 1 2 3 4 5
             b        (x) int64 6 7
 
-        >>> data.to_stacked_array("z", sample_dims=['x'])
+        >>> data.to_stacked_array("z", sample_dims=["x"])
         <xarray.DataArray (x: 2, z: 4)>
         array([[0, 1, 2, 6],
             [3, 4, 5, 7]])
@@ -3728,9 +3763,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> data = np.random.randn(2, 3)
-        >>> labels = ['a', 'b', 'c']
-        >>> ds = xr.Dataset({'A': (['x', 'y'], data), 'y': labels})
-        >>> ds.drop_sel(y=['a', 'c'])
+        >>> labels = ["a", "b", "c"]
+        >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
+        >>> ds.drop_sel(y=["a", "c"])
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 1)
         Coordinates:
@@ -3738,7 +3773,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dimensions without coordinates: x
         Data variables:
             A        (x, y) float64 -0.3454 0.1734
-        >>> ds.drop_sel(y='b')
+        >>> ds.drop_sel(y="b")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
@@ -3943,9 +3978,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...         "A": ("x", [np.nan, 2, np.nan, 0]),
         ...         "B": ("x", [3, 4, np.nan, 1]),
         ...         "C": ("x", [np.nan, np.nan, np.nan, 5]),
-        ...         "D": ("x", [np.nan, 3, np.nan, 4])
+        ...         "D": ("x", [np.nan, 3, np.nan, 4]),
         ...     },
-        ...     coords={"x": [0, 1, 2, 3]})
+        ...     coords={"x": [0, 1, 2, 3]},
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 4)
@@ -3972,7 +4008,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Replace all `NaN` elements in column ‘A’, ‘B’, ‘C’, and ‘D’, with 0, 1, 2, and 3 respectively.
 
-        >>> values = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        >>> values = {"A": 0, "B": 1, "C": 2, "D": 3}
         >>> ds.fillna(value=values)
         <xarray.Dataset>
         Dimensions:  (x: 4)
@@ -4279,7 +4315,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> da = xr.DataArray(np.random.randn(2, 3))
-        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])})
+        >>> ds = xr.Dataset({"foo": da, "bar": ("x", [-1, 2])})
         >>> ds
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
@@ -4362,11 +4398,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> x = xr.Dataset(
         ...     {
-        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
+        ...         "temperature_c": (
+        ...             ("lat", "lon"),
+        ...             20 * np.random.rand(4).reshape(2, 2),
+        ...         ),
         ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
         ...     },
         ...     coords={"lat": [10, 20], "lon": [150, 160]},
@@ -4383,7 +4420,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Where the value is a callable, evaluated on dataset:
 
-        >>> x.assign(temperature_f = lambda x: x.temperature_c * 9 / 5 + 32)
+        >>> x.assign(temperature_f=lambda x: x.temperature_c * 9 / 5 + 32)
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
@@ -4879,17 +4916,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         difference : same type as caller
             The n-th order finite difference of this object.
 
+        .. note::
+
+            `n` matches numpy's behavior and is different from pandas' first
+            argument named `periods`.
+
         Examples
         --------
-        >>> ds = xr.Dataset({'foo': ('x', [5, 5, 6, 6])})
-        >>> ds.diff('x')
+        >>> ds = xr.Dataset({"foo": ("x", [5, 5, 6, 6])})
+        >>> ds.diff("x")
         <xarray.Dataset>
         Dimensions:  (x: 3)
         Coordinates:
           * x        (x) int64 1 2 3
         Data variables:
             foo      (x) int64 0 1 0
-        >>> ds.diff('x', 2)
+        >>> ds.diff("x", 2)
         <xarray.Dataset>
         Dimensions:  (x: 2)
         Coordinates:
@@ -4973,7 +5015,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> ds = xr.Dataset({'foo': ('x', list('abcde'))})
+        >>> ds = xr.Dataset({"foo": ("x", list("abcde"))})
         >>> ds.shift(x=2)
         <xarray.Dataset>
         Dimensions:  (x: 5)
@@ -5032,7 +5074,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> ds = xr.Dataset({'foo': ('x', list('abcde'))})
+        >>> ds = xr.Dataset({"foo": ("x", list("abcde"))})
         >>> ds.roll(x=2)
         <xarray.Dataset>
         Dimensions:  (x: 5)
@@ -5135,7 +5177,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return aligned_self.isel(**indices)
 
     def quantile(
-        self, q, dim=None, interpolation="linear", numeric_only=False, keep_attrs=None
+        self,
+        q,
+        dim=None,
+        interpolation="linear",
+        numeric_only=False,
+        keep_attrs=None,
+        skipna=True,
     ):
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5166,6 +5214,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             object will be returned without attributes.
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -5178,7 +5228,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, DataArray.quantile
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, DataArray.quantile
 
         Examples
         --------
@@ -5253,6 +5303,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             dim=reduce_dims,
                             interpolation=interpolation,
                             keep_attrs=keep_attrs,
+                            skipna=skipna,
                         )
 
             else:
@@ -5536,19 +5587,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> precip = 10 * np.random.rand(2, 2, 3)
         >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
         >>> lat = [[42.25, 42.21], [42.63, 42.59]]
-        >>> dims = ['x', 'y', 'time']
-        >>> temp_attr = dict(standard_name='air_potential_temperature')
-        >>> precip_attr = dict(standard_name='convective_precipitation_flux')
-        >>> ds = xr.Dataset({
-        ...         'temperature': (dims,  temp, temp_attr),
-        ...         'precipitation': (dims, precip, precip_attr)},
-        ...                 coords={
-        ...         'lon': (['x', 'y'], lon),
-        ...         'lat': (['x', 'y'], lat),
-        ...         'time': pd.date_range('2014-09-06', periods=3),
-        ...         'reference_time': pd.Timestamp('2014-09-05')})
+        >>> dims = ["x", "y", "time"]
+        >>> temp_attr = dict(standard_name="air_potential_temperature")
+        >>> precip_attr = dict(standard_name="convective_precipitation_flux")
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "temperature": (dims, temp, temp_attr),
+        ...         "precipitation": (dims, precip, precip_attr),
+        ...     },
+        ...     coords={
+        ...         "lon": (["x", "y"], lon),
+        ...         "lat": (["x", "y"], lat),
+        ...         "time": pd.date_range("2014-09-06", periods=3),
+        ...         "reference_time": pd.Timestamp("2014-09-05"),
+        ...     },
+        ... )
         >>> # Get variables matching a specific standard_name.
-        >>> ds.filter_by_attrs(standard_name='convective_precipitation_flux')
+        >>> ds.filter_by_attrs(standard_name="convective_precipitation_flux")
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
@@ -5697,6 +5752,350 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         from .parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs, template)
+
+    def polyfit(
+        self,
+        dim: Hashable,
+        deg: int,
+        skipna: bool = None,
+        rcond: float = None,
+        w: Union[Hashable, Any] = None,
+        full: bool = False,
+        cov: Union[bool, str] = False,
+    ):
+        """
+        Least squares polynomial fit.
+
+        This replicates the behaviour of `numpy.polyfit` but differs by skipping
+        invalid values when `skipna = True`.
+
+        Parameters
+        ----------
+        dim : hashable
+            Coordinate along which to fit the polynomials.
+        deg : int
+            Degree of the fitting polynomial.
+        skipna : bool, optional
+            If True, removes all invalid values before fitting each 1D slices of the array.
+            Default is True if data is stored in a dask.array or if there is any
+            invalid values, False otherwise.
+        rcond : float, optional
+            Relative condition number to the fit.
+        w : Union[Hashable, Any], optional
+            Weights to apply to the y-coordinate of the sample points.
+            Can be an array-like object or the name of a coordinate in the dataset.
+        full : bool, optional
+            Whether to return the residuals, matrix rank and singular values in addition
+            to the coefficients.
+        cov : Union[bool, str], optional
+            Whether to return to the covariance matrix in addition to the coefficients.
+            The matrix is not scaled if `cov='unscaled'`.
+
+
+        Returns
+        -------
+        polyfit_results : Dataset
+            A single dataset which contains (for each "var" in the input dataset):
+
+            [var]_polyfit_coefficients
+                The coefficients of the best fit for each variable in this dataset.
+            [var]_polyfit_residuals
+                The residuals of the least-square computation for each variable (only included if `full=True`)
+            [dim]_matrix_rank
+                The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
+            [dim]_singular_values
+                The singular values of the scaled Vandermonde coefficient matrix (only included if `full=True`)
+            [var]_polyfit_covariance
+                The covariance matrix of the polynomial coefficient estimates (only included if `full=False` and `cov=True`)
+
+        See also
+        --------
+        numpy.polyfit
+        """
+        variables = {}
+        skipna_da = skipna
+
+        x = get_clean_interp_index(self, dim)
+        xname = "{}_".format(self[dim].name)
+        order = int(deg) + 1
+        lhs = np.vander(x, order)
+
+        if rcond is None:
+            rcond = x.shape[0] * np.core.finfo(x.dtype).eps
+
+        # Weights:
+        if w is not None:
+            if isinstance(w, Hashable):
+                w = self.coords[w]
+            w = np.asarray(w)
+            if w.ndim != 1:
+                raise TypeError("Expected a 1-d array for weights.")
+            if w.shape[0] != lhs.shape[0]:
+                raise TypeError("Expected w and {} to have the same length".format(dim))
+            lhs *= w[:, np.newaxis]
+
+        # Scaling
+        scale = np.sqrt((lhs * lhs).sum(axis=0))
+        lhs /= scale
+
+        degree_dim = utils.get_temp_dimname(self.dims, "degree")
+
+        rank = np.linalg.matrix_rank(lhs)
+        if rank != order and not full:
+            warnings.warn(
+                "Polyfit may be poorly conditioned", np.RankWarning, stacklevel=4
+            )
+
+        if full:
+            rank = xr.DataArray(rank, name=xname + "matrix_rank")
+            variables[rank.name] = rank
+            sing = np.linalg.svd(lhs, compute_uv=False)
+            sing = xr.DataArray(
+                sing,
+                dims=(degree_dim,),
+                coords={degree_dim: np.arange(order)[::-1]},
+                name=xname + "singular_values",
+            )
+            variables[sing.name] = sing
+
+        for name, da in self.data_vars.items():
+            if dim not in da.dims:
+                continue
+
+            if skipna is None:
+                if isinstance(da.data, dask_array_type):
+                    skipna_da = True
+                else:
+                    skipna_da = np.any(da.isnull())
+
+            dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
+            stacked_coords = {}
+            if dims_to_stack:
+                stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
+                rhs = da.transpose(dim, *dims_to_stack).stack(
+                    {stacked_dim: dims_to_stack}
+                )
+                stacked_coords = {stacked_dim: rhs[stacked_dim]}
+                scale_da = scale[:, np.newaxis]
+            else:
+                rhs = da
+                scale_da = scale
+
+            if w is not None:
+                rhs *= w[:, np.newaxis]
+
+            coeffs, residuals = duck_array_ops.least_squares(
+                lhs, rhs.data, rcond=rcond, skipna=skipna_da
+            )
+
+            if isinstance(name, str):
+                name = "{}_".format(name)
+            else:
+                # Thus a ReprObject => polyfit was called on a DataArray
+                name = ""
+
+            coeffs = xr.DataArray(
+                coeffs / scale_da,
+                dims=[degree_dim] + list(stacked_coords.keys()),
+                coords={degree_dim: np.arange(order)[::-1], **stacked_coords},
+                name=name + "polyfit_coefficients",
+            )
+            if dims_to_stack:
+                coeffs = coeffs.unstack(stacked_dim)
+            variables[coeffs.name] = coeffs
+
+            if full or (cov is True):
+                residuals = xr.DataArray(
+                    residuals if dims_to_stack else residuals.squeeze(),
+                    dims=list(stacked_coords.keys()),
+                    coords=stacked_coords,
+                    name=name + "polyfit_residuals",
+                )
+                if dims_to_stack:
+                    residuals = residuals.unstack(stacked_dim)
+                variables[residuals.name] = residuals
+
+            if cov:
+                Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
+                Vbase /= np.outer(scale, scale)
+                if cov == "unscaled":
+                    fac = 1
+                else:
+                    if x.shape[0] <= order:
+                        raise ValueError(
+                            "The number of data points must exceed order to scale the covariance matrix."
+                        )
+                    fac = residuals / (x.shape[0] - order)
+                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
+                variables[name + "polyfit_covariance"] = covariance
+
+        return Dataset(data_vars=variables, attrs=self.attrs.copy())
+
+    def pad(
+        self,
+        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        mode: str = "constant",
+        stat_length: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        constant_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        end_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        reflect_type: str = None,
+        **pad_width_kwargs: Any,
+    ) -> "Dataset":
+        """Pad this dataset along one or more dimensions.
+
+        .. warning::
+            This function is experimental and its behaviour is likely to change
+            especially regarding padding of dimension coordinates (or IndexVariables).
+
+        When using one of the modes ("edge", "reflect", "symmetric", "wrap"),
+        coordinates will be padded with the same mode, otherwise coordinates
+        are padded using the "constant" mode with fill_value dtypes.NA.
+
+        Parameters
+        ----------
+        pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
+            Number of values padded along each dimension.
+            {dim: pad} is a shortcut for pad_before = pad_after = pad
+        mode : str
+            One of the following string values (taken from numpy docs).
+
+            'constant' (default)
+                Pads with a constant value.
+            'edge'
+                Pads with the edge values of array.
+            'linear_ramp'
+                Pads with the linear ramp between end_value and the
+                array edge value.
+            'maximum'
+                Pads with the maximum value of all or part of the
+                vector along each axis.
+            'mean'
+                Pads with the mean value of all or part of the
+                vector along each axis.
+            'median'
+                Pads with the median value of all or part of the
+                vector along each axis.
+            'minimum'
+                Pads with the minimum value of all or part of the
+                vector along each axis.
+            'reflect'
+                Pads with the reflection of the vector mirrored on
+                the first and last values of the vector along each
+                axis.
+            'symmetric'
+                Pads with the reflection of the vector mirrored
+                along the edge of the array.
+            'wrap'
+                Pads with the wrap of the vector along the axis.
+                The first values are used to pad the end and the
+                end values are used to pad the beginning.
+        stat_length : int, tuple or mapping of the form {dim: tuple}
+            Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
+            values at edge of each axis used to calculate the statistic value.
+            {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)} unique
+            statistic lengths along each dimension.
+            ((before, after),) yields same before and after statistic lengths
+            for each dimension.
+            (stat_length,) or int is a shortcut for before = after = statistic
+            length for all axes.
+            Default is ``None``, to use the entire axis.
+        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'constant'.  The values to set the padded values for each
+            axis.
+            ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
+            pad constants along each dimension.
+            ``((before, after),)`` yields same before and after constants for each
+            dimension.
+            ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+            all dimensions.
+            Default is 0.
+        end_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'linear_ramp'.  The values used for the ending value of the
+            linear_ramp and that will form the edge of the padded array.
+            ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
+            end values along each dimension.
+            ``((before, after),)`` yields same before and after end values for each
+            axis.
+            ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
+            all axes.
+            Default is 0.
+        reflect_type : {'even', 'odd'}, optional
+            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+            default with an unaltered reflection around the edge value.  For
+            the 'odd' style, the extended part of the array is created by
+            subtracting the reflected values from two times the edge value.
+        **pad_width_kwargs:
+            The keyword arguments form of ``pad_width``.
+            One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
+
+        Returns
+        -------
+        padded : Dataset
+            Dataset with the padded coordinates and data.
+
+        See also
+        --------
+        Dataset.shift, Dataset.roll, Dataset.bfill, Dataset.ffill, numpy.pad, dask.array.pad
+
+        Notes
+        -----
+        By default when ``mode="constant"`` and ``constant_values=None``, integer types will be
+        promoted to ``float`` and padded with ``np.nan``. To avoid type promotion
+        specify ``constant_values=np.nan``
+
+        Examples
+        --------
+
+        >>> ds = xr.Dataset({'foo': ('x', range(5))})
+        >>> ds.pad(x=(1,2))
+        <xarray.Dataset>
+        Dimensions:  (x: 8)
+        Dimensions without coordinates: x
+        Data variables:
+            foo      (x) float64 nan 0.0 1.0 2.0 3.0 4.0 nan nan
+        """
+        pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
+
+        if mode in ("edge", "reflect", "symmetric", "wrap"):
+            coord_pad_mode = mode
+            coord_pad_options = {
+                "stat_length": stat_length,
+                "constant_values": constant_values,
+                "end_values": end_values,
+                "reflect_type": reflect_type,
+            }
+        else:
+            coord_pad_mode = "constant"
+            coord_pad_options = {}
+
+        variables = {}
+        for name, var in self.variables.items():
+            var_pad_width = {k: v for k, v in pad_width.items() if k in var.dims}
+            if not var_pad_width:
+                variables[name] = var
+            elif name in self.data_vars:
+                variables[name] = var.pad(
+                    pad_width=var_pad_width,
+                    mode=mode,
+                    stat_length=stat_length,
+                    constant_values=constant_values,
+                    end_values=end_values,
+                    reflect_type=reflect_type,
+                )
+            else:
+                variables[name] = var.pad(
+                    pad_width=var_pad_width,
+                    mode=coord_pad_mode,
+                    **coord_pad_options,  # type: ignore
+                )
+
+        return self._replace_vars_and_dims(variables)
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
