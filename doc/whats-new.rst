@@ -46,6 +46,10 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- update the docstring of :py:method:`Dataset.diff` and
+  :py:method:`DataArray.diff` so it does document the ``dim``
+  parameter as required. (:issue:`1040`, :pull:`3909`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Internal Changes
