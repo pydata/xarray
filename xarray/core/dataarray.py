@@ -2696,7 +2696,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim : hashable, optional
+        dim : hashable
             Dimension over which to calculate the finite difference.
         n : int, optional
             The number of times values are differenced.
