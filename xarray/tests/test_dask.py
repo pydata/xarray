@@ -1121,6 +1121,9 @@ def test_map_blocks_dask_args():
         mapped = xr.map_blocks(operator.add, da1, args=[da2])
     xr.testing.assert_equal(da1 + da2, mapped)
 
+    with raises_regex(ValueError, "Chunk sizes along dimension 'x'"):
+        xr.map_blocks(operator.add, da1, args=[da1.chunk({"x": 1})])
+
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_add_attrs(obj):

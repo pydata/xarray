@@ -35,6 +35,15 @@ def get_index_vars(obj):
     return {dim: obj[dim] for dim in obj.indexes}
 
 
+def assert_chunks_compatible(a: Dataset, b: Dataset):
+    a = a.unify_chunks()
+    b = b.unify_chunks()
+
+    for dim in set(a.chunks).intersection(set(b.chunks)):
+        if a.chunks[dim] != b.chunks[dim]:
+            raise ValueError(f"Chunk sizes along dimension {dim!r} are not equal.")
+
+
 def check_result_variables(
     result: Union[DataArray, Dataset], expected: Mapping[str, Any], kind: str
 ):
@@ -379,7 +388,6 @@ def map_blocks(
         input_is_array = False
 
     # TODO: align args and dataset here?
-    # TODO: unify_chunks for args and dataset
     input_chunks = dict(dataset.chunks)
     input_indexes = get_index_vars(dataset)
     converted_args = []
@@ -389,6 +397,7 @@ def map_blocks(
         if isinstance(arg, (Dataset, DataArray)):
             if isinstance(arg, DataArray):
                 converted_args.append(dataarray_to_dataset(arg))
+            assert_chunks_compatible(dataset, converted_args[-1])
             input_chunks.update(converted_args[-1].chunks)
             input_indexes.update(converted_args[-1].indexes)
         else:
