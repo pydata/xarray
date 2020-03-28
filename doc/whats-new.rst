@@ -53,6 +53,9 @@ Internal Changes
 - Use ``Fixes`` rather than ``Closes`` in GitHub Pull Request template, allowing
   linking to issues.
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- Run the ``isort`` pre-commit hook only on python source files
+  and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 .. _whats-new.0.15.1:
