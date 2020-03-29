@@ -41,7 +41,8 @@ New Features
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
-
+- Allow plotting of boolean arrays. (:pull:`3766`)
+  By `Marek Jacob <https://github.com/MeraX>`_
 
 Bug fixes
 ~~~~~~~~~
