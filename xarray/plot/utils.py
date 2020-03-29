@@ -237,18 +237,14 @@ def _determine_cmap_params(
             norm.vmin = vmin
         else:
             if not vmin_was_none and vmin != norm.vmin:
-                raise ValueError(
-                    "Cannot supply vmin and a norm" + " with a different vmin."
-                )
+                raise ValueError("Cannot supply vmin and a norm with a different vmin.")
             vmin = norm.vmin
 
         if norm.vmax is None:
             norm.vmax = vmax
         else:
             if not vmax_was_none and vmax != norm.vmax:
-                raise ValueError(
-                    "Cannot supply vmax and a norm" + " with a different vmax."
-                )
+                raise ValueError("Cannot supply vmax and a norm with a different vmax.")
             vmax = norm.vmax
 
     # if BoundaryNorm, then set levels
@@ -274,6 +270,10 @@ def _determine_cmap_params(
                 ticker = mpl.ticker.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
+
+    # GH3734
+    if vmin == vmax:
+        vmin, _, vmax = mpl.ticker.LinearLocator(3).tick_values(vmin, vmax)
 
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
