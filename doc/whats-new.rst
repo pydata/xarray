@@ -48,7 +48,8 @@ Bug fixes
 - Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
   can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
-
+- Fix contour when ``levels`` is a scalar and ``norm`` is provided. (:issue:`3735`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 Documentation
 ~~~~~~~~~~~~~
