@@ -6,6 +6,7 @@ import warnings
 from collections import defaultdict
 from html import escape
 from numbers import Number
+from operator import methodcaller
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -6092,6 +6093,196 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
 
         return self._replace_vars_and_dims(variables)
+
+    def idxmin(
+        self,
+        dim: Hashable = None,
+        skipna: bool = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool = None,
+    ) -> "Dataset":
+        """Return the coordinate label of the minimum value along a dimension.
+
+        Returns a new `Dataset` named after the dimension with the values of
+        the coordinate labels along that dimension corresponding to minimum
+        values along that dimension.
+
+        In comparison to :py:meth:`~Dataset.argmin`, this returns the
+        coordinate label while :py:meth:`~Dataset.argmin` returns the index.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension over which to apply `idxmin`.  This is optional for 1D
+            variables, but required for variables with 2 or more dimensions.
+        skipna : bool or None, default None
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for ``float``, ``complex``, and ``object``
+            dtypes; other dtypes either do not have a sentinel missing value
+            (``int``) or ``skipna=True`` has not been implemented
+            (``datetime64`` or ``timedelta64``).
+        fill_value : Any, default NaN
+            Value to be filled in case all of the values along a dimension are
+            null.  By default this is NaN.  The fill value and result are
+            automatically converted to a compatible dtype if possible.
+            Ignored if ``skipna`` is False.
+        keep_attrs : bool, default False
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one.  If False (default), the new object
+            will be returned without attributes.
+
+        Returns
+        -------
+        reduced : Dataset
+            New `Dataset` object with `idxmin` applied to its data and the
+            indicated dimension removed.
+
+        See also
+        --------
+        DataArray.idxmin, Dataset.idxmax, Dataset.min, Dataset.argmin
+
+        Examples
+        --------
+
+        >>> array1 = xr.DataArray([0, 2, 1, 0, -2], dims="x",
+        ...                       coords={"x": ['a', 'b', 'c', 'd', 'e']})
+        >>> array2 = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
+        ...                        [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...                        [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
+        ...                       dims=["y", "x"],
+        ...                       coords={"y": [-1, 0, 1],
+        ...                               "x": ['a', 'b', 'c', 'd', 'e']}
+        ...                       )
+        >>> ds = xr.Dataset({'int': array1, 'float': array2})
+        >>> ds.min(dim='x')
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      int64 -2
+            float    (y) float64 -2.0 -4.0 1.0
+        >>> ds.argmin(dim='x')
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      int64 4
+            float    (y) int64 4 0 2
+        >>> ds.idxmin(dim='x')
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      <U1 'e'
+            float    (y) <U1 'e' 'a' 'c'
+        """
+        return self.map(
+            methodcaller(
+                "idxmin",
+                dim=dim,
+                skipna=skipna,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+            ),
+        )
+
+    def idxmax(
+        self,
+        dim: Hashable = None,
+        skipna: bool = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool = None,
+    ) -> "Dataset":
+        """Return the coordinate label of the maximum value along a dimension.
+
+        Returns a new `Dataset` named after the dimension with the values of
+        the coordinate labels along that dimension corresponding to maximum
+        values along that dimension.
+
+        In comparison to :py:meth:`~Dataset.argmax`, this returns the
+        coordinate label while :py:meth:`~Dataset.argmax` returns the index.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension over which to apply `idxmax`.  This is optional for 1D
+            variables, but required for variables with 2 or more dimensions.
+        skipna : bool or None, default None
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for ``float``, ``complex``, and ``object``
+            dtypes; other dtypes either do not have a sentinel missing value
+            (``int``) or ``skipna=True`` has not been implemented
+            (``datetime64`` or ``timedelta64``).
+        fill_value : Any, default NaN
+            Value to be filled in case all of the values along a dimension are
+            null.  By default this is NaN.  The fill value and result are
+            automatically converted to a compatible dtype if possible.
+            Ignored if ``skipna`` is False.
+        keep_attrs : bool, default False
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one.  If False (default), the new object
+            will be returned without attributes.
+
+        Returns
+        -------
+        reduced : Dataset
+            New `Dataset` object with `idxmax` applied to its data and the
+            indicated dimension removed.
+
+        See also
+        --------
+        DataArray.idxmax, Dataset.idxmin, Dataset.max, Dataset.argmax
+
+        Examples
+        --------
+
+        >>> array1 = xr.DataArray([0, 2, 1, 0, -2], dims="x",
+        ...                       coords={"x": ['a', 'b', 'c', 'd', 'e']})
+        >>> array2 = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
+        ...                        [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...                        [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
+        ...                       dims=["y", "x"],
+        ...                       coords={"y": [-1, 0, 1],
+        ...                               "x": ['a', 'b', 'c', 'd', 'e']}
+        ...                       )
+        >>> ds = xr.Dataset({'int': array1, 'float': array2})
+        >>> ds.max(dim='x')
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      int64 2
+            float    (y) float64 2.0 2.0 1.0
+        >>> ds.argmax(dim='x')
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      int64 1
+            float    (y) int64 0 2 2
+        >>> ds.idxmax(dim='x')
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      <U1 'b'
+            float    (y) object 'a' 'c' 'c'
+        """
+        return self.map(
+            methodcaller(
+                "idxmax",
+                dim=dim,
+                skipna=skipna,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+            ),
+        )
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
