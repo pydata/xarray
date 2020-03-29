@@ -9,7 +9,7 @@ import pytest
 import pytz
 
 from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
-from xarray.core import dtypes, indexing
+from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer,
@@ -37,6 +37,14 @@ from . import (
     requires_sparse,
     source_ndarray,
 )
+
+_PAD_XR_NP_ARGS = [
+    [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
+    [{"x": 1}, ((1, 1), (0, 0), (0, 0))],
+    [{"y": (0, 3)}, ((0, 0), (0, 3), (0, 0))],
+    [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
+    [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
+]
 
 
 class VariableSubclassobjects:
@@ -530,8 +538,7 @@ class VariableSubclassobjects:
         orig = IndexVariable("x", np.arange(5))
         new_data = np.arange(5, 10)
         actual = orig.copy(data=new_data)
-        expected = orig.copy()
-        expected.data = new_data
+        expected = IndexVariable("x", np.arange(5, 10))
         assert_identical(expected, actual)
 
     def test_copy_index_with_data_errors(self):
@@ -539,6 +546,10 @@ class VariableSubclassobjects:
         new_data = np.arange(5, 20)
         with raises_regex(ValueError, "must match shape of object"):
             orig.copy(data=new_data)
+        with raises_regex(ValueError, "Cannot assign to the .data"):
+            orig.data = new_data
+        with raises_regex(ValueError, "Cannot assign to the .values"):
+            orig.values = new_data
 
     def test_replace(self):
         var = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
@@ -785,36 +796,65 @@ class VariableSubclassobjects:
         with raises_regex(IndexError, "Dimensions of indexers mis"):
             v[:, ind]
 
-    def test_pad(self):
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "mean",
+            pytest.param(
+                "median",
+                marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
+            ),
+            pytest.param(
+                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
+            ),
+            "edge",
+            pytest.param(
+                "linear_ramp",
+                marks=pytest.mark.xfail(
+                    reason="pint bug: https://github.com/hgrecco/pint/issues/1026"
+                ),
+            ),
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    def test_pad(self, mode, xr_arg, np_arg):
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
 
-        xr_args = [{"x": (2, 1)}, {"y": (0, 3)}, {"x": (3, 1), "z": (2, 0)}]
-        np_args = [
-            ((2, 1), (0, 0), (0, 0)),
-            ((0, 0), (0, 3), (0, 0)),
-            ((3, 1), (0, 0), (2, 0)),
-        ]
-        for xr_arg, np_arg in zip(xr_args, np_args):
-            actual = v.pad_with_fill_value(**xr_arg)
-            expected = np.pad(
-                np.array(v.data.astype(float)),
-                np_arg,
-                mode="constant",
-                constant_values=np.nan,
-            )
-            assert_array_equal(actual, expected)
-            assert isinstance(actual._data, type(v._data))
+        actual = v.pad(mode=mode, **xr_arg)
+        expected = np.pad(data, np_arg, mode=mode)
+
+        assert_array_equal(actual, expected)
+        assert isinstance(actual._data, type(v._data))
+
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    def test_pad_constant_values(self, xr_arg, np_arg):
+        data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
+        v = self.cls(["x", "y", "z"], data)
+
+        actual = v.pad(**xr_arg)
+        expected = np.pad(
+            np.array(v.data.astype(float)),
+            np_arg,
+            mode="constant",
+            constant_values=np.nan,
+        )
+        assert_array_equal(actual, expected)
+        assert isinstance(actual._data, type(v._data))
 
         # for the boolean array, we pad False
         data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
-        for xr_arg, np_arg in zip(xr_args, np_args):
-            actual = v.pad_with_fill_value(fill_value=False, **xr_arg)
-            expected = np.pad(
-                np.array(v.data), np_arg, mode="constant", constant_values=False
-            )
-            assert_array_equal(actual, expected)
+
+        actual = v.pad(mode="constant", constant_values=False, **xr_arg)
+        expected = np.pad(
+            np.array(v.data), np_arg, mode="constant", constant_values=False
+        )
+        assert_array_equal(actual, expected)
 
     def test_rolling_window(self):
         # Just a working test. See test_nputils for the algorithm validation
@@ -1511,14 +1551,16 @@ class TestVariable(VariableSubclassobjects):
         with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
             v.mean(dim="x", allow_lazy=False)
 
+    @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
-    def test_quantile(self, q, axis, dim):
+    def test_quantile(self, q, axis, dim, skipna):
         v = Variable(["x", "y"], self.d)
-        actual = v.quantile(q, dim=dim)
-        expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+        actual = v.quantile(q, dim=dim, skipna=skipna)
+        _percentile_func = np.nanpercentile if skipna else np.percentile
+        expected = _percentile_func(self.d, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
 
     @requires_dask
@@ -1879,6 +1921,26 @@ class TestVariable(VariableSubclassobjects):
         expected = self.cls(("x", "y"), [[10, 18], [42, 35]])
         assert_equal(actual, expected)
 
+    # perhaps @pytest.mark.parametrize("operation", [f for f in duck_array_ops])
+    def test_coarsen_keep_attrs(self, operation="mean"):
+        _attrs = {"units": "test", "long_name": "testing"}
+
+        test_func = getattr(duck_array_ops, operation, None)
+
+        # Test dropped attrs
+        with set_options(keep_attrs=False):
+            new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
+                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+            )
+        assert new.attrs == {}
+
+        # Test kept attrs
+        with set_options(keep_attrs=True):
+            new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
+                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+            )
+        assert new.attrs == _attrs
+
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
@@ -2034,8 +2096,28 @@ class TestIndexVariable(VariableSubclassobjects):
         super().test_getitem_fancy()
 
     @pytest.mark.xfail
-    def test_pad(self):
-        super().test_rolling_window()
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "mean",
+            "median",
+            "reflect",
+            "edge",
+            "linear_ramp",
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    def test_pad(self, mode, xr_arg, np_arg):
+        super().test_pad(mode, xr_arg, np_arg)
+
+    @pytest.mark.xfail
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    def test_pad_constant_values(self, xr_arg, np_arg):
+        super().test_pad_constant_values(xr_arg, np_arg)
 
     @pytest.mark.xfail
     def test_rolling_window(self):

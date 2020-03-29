@@ -10,13 +10,20 @@ from ..core.variable import Variable
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
 # need some special secret attributes to tell us the dimensions
-_DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 
-# zarr attributes have to be serializable as json
-# many xarray datasets / variables have numpy arrays and values
-# these functions handle encoding / decoding of such items
-def _encode_zarr_attr_value(value):
+def encode_zarr_attr_value(value):
+    """
+    Encode a attribute value as something that can be serialized as json
+
+    Many xarray datasets / variables have numpy arrays and values. This
+    function handles encoding / decoding of such items.
+
+    ndarray -> list
+    scalar array -> scalar
+    other -> other (no change)
+    """
     if isinstance(value, np.ndarray):
         encoded = value.tolist()
     # this checks if it's a scalar number
@@ -170,7 +177,20 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
     return dimensions, attributes
 
 
-def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
+def extract_zarr_variable_encoding(variable, raise_on_invalid=False):
+    """
+    Extract zarr encoding dictionary from xarray Variable
+
+    Parameters
+    ----------
+    variable : xarray.Variable
+    raise_on_invalid : bool, optional
+
+    Returns
+    -------
+    encoding : dict
+        Zarr encoding for `variable`
+    """
     encoding = variable.encoding.copy()
 
     valid_encodings = {"chunks", "compressor", "filters", "cache_metadata"}
@@ -271,7 +291,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
-        dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, _DIMENSION_KEY)
+        dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, DIMENSION_KEY)
         attributes = dict(attributes)
         encoding = {
             "chunks": zarr_array.chunks,
@@ -298,7 +318,7 @@ class ZarrStore(AbstractWritableDataStore):
         dimensions = {}
         for k, v in self.ds.arrays():
             try:
-                for d, s in zip(v.attrs[_DIMENSION_KEY], v.shape):
+                for d, s in zip(v.attrs[DIMENSION_KEY], v.shape):
                     if d in dimensions and dimensions[d] != s:
                         raise ValueError(
                             "found conflicting lengths for dimension %s "
@@ -310,7 +330,7 @@ class ZarrStore(AbstractWritableDataStore):
                 raise KeyError(
                     "Zarr object is missing the attribute `%s`, "
                     "which is required for xarray to determine "
-                    "variable dimensions." % (_DIMENSION_KEY)
+                    "variable dimensions." % (DIMENSION_KEY)
                 )
         return dimensions
 
@@ -328,7 +348,7 @@ class ZarrStore(AbstractWritableDataStore):
         return variable
 
     def encode_attribute(self, a):
-        return _encode_zarr_attr_value(a)
+        return encode_zarr_attr_value(a)
 
     def store(
         self,
@@ -373,7 +393,7 @@ class ZarrStore(AbstractWritableDataStore):
         if len(existing_variables) > 0:
             # there are variables to append
             # their encoding must be the same as in the store
-            ds = open_zarr(self.ds.store, chunks=None)
+            ds = open_zarr(self.ds.store, group=self.ds.path, chunks=None)
             variables_with_encoding = {}
             for vn in existing_variables:
                 variables_with_encoding[vn] = variables[vn].copy(deep=False)
@@ -433,10 +453,10 @@ class ZarrStore(AbstractWritableDataStore):
                     writer.add(v.data, zarr_array, region=tuple(new_region))
             else:
                 # new variable
-                encoding = _extract_zarr_variable_encoding(v, raise_on_invalid=check)
+                encoding = extract_zarr_variable_encoding(v, raise_on_invalid=check)
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
-                encoded_attrs[_DIMENSION_KEY] = dims
+                encoded_attrs[DIMENSION_KEY] = dims
                 for k2, v2 in attrs.items():
                     encoded_attrs[k2] = self.encode_attribute(v2)
 
@@ -487,7 +507,7 @@ def open_zarr(
         directory in file system where a Zarr DirectoryStore has been stored.
     synchronizer : object, optional
         Array synchronizer provided to zarr
-    group : str, obtional
+    group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
     chunks : int or dict or tuple or {None, 'auto'}, optional
         Chunk sizes along each dimension, e.g., ``5`` or

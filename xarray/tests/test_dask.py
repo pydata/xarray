@@ -1147,6 +1147,7 @@ def test_map_blocks_to_array(map_ds):
         lambda x: x.to_dataset(),
         lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
+        lambda x: x.expand_dims(k=3),
         lambda x: x.assign_coords(new_coord=("y", x.y * 2)),
         lambda x: x.astype(np.int32),
         # TODO: [lambda x: x.isel(x=1).drop_vars("x"), map_da],
@@ -1167,6 +1168,7 @@ def test_map_blocks_da_transformations(func, map_da):
         lambda x: x.drop_vars("a"),
         lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
+        lambda x: x.expand_dims(k=3),
         lambda x: x.rename({"a": "new1", "b": "new2"}),
         # TODO: [lambda x: x.isel(x=1)],
     ],
@@ -1274,7 +1276,7 @@ def test_token_changes_when_data_changes(obj):
     assert t3 != t2
 
     # Change IndexVariable
-    obj.coords["x"] *= 2
+    obj = obj.assign_coords(x=obj.x * 2)
     with raise_if_dask_computes():
         t4 = dask.base.tokenize(obj)
     assert t4 != t3
@@ -1344,6 +1346,7 @@ def test_normalize_token_with_backend(map_ds):
         map_ds.to_netcdf(tmp_file)
         read = xr.open_dataset(tmp_file)
         assert not dask.base.tokenize(map_ds) == dask.base.tokenize(read)
+        read.close()
 
 
 @pytest.mark.parametrize(
@@ -1390,3 +1393,58 @@ def test_lazy_array_equiv_merge(compat):
             xr.merge([da1, da3], compat=compat)
     with raise_if_dask_computes(max_computes=2):
         xr.merge([da1, da2 / 2], compat=compat)
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")  # transpose_coords
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+@pytest.mark.parametrize(
+    "transform",
+    [
+        lambda a: a.assign_attrs(new_attr="anew"),
+        lambda a: a.assign_coords(cxy=a.cxy),
+        lambda a: a.copy(),
+        lambda a: a.isel(x=np.arange(a.sizes["x"])),
+        lambda a: a.isel(x=slice(None)),
+        lambda a: a.loc[dict(x=slice(None))],
+        lambda a: a.loc[dict(x=np.arange(a.sizes["x"]))],
+        lambda a: a.loc[dict(x=a.x)],
+        lambda a: a.sel(x=a.x),
+        lambda a: a.sel(x=a.x.values),
+        lambda a: a.transpose(...),
+        lambda a: a.squeeze(),  # no dimensions to squeeze
+        lambda a: a.sortby("x"),  # "x" is already sorted
+        lambda a: a.reindex(x=a.x),
+        lambda a: a.reindex_like(a),
+        lambda a: a.rename({"cxy": "cnew"}).rename({"cnew": "cxy"}),
+        lambda a: a.pipe(lambda x: x),
+        lambda a: xr.align(a, xr.zeros_like(a))[0],
+        # assign
+        # swap_dims
+        # set_index / reset_index
+    ],
+)
+def test_transforms_pass_lazy_array_equiv(obj, transform):
+    with raise_if_dask_computes():
+        assert_equal(obj, transform(obj))
+
+
+def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
+    with raise_if_dask_computes():
+        assert_equal(map_ds.cxy.broadcast_like(map_ds.cxy), map_ds.cxy)
+        assert_equal(xr.broadcast(map_ds.cxy, map_ds.cxy)[0], map_ds.cxy)
+        assert_equal(map_ds.map(lambda x: x), map_ds)
+        assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
+        assert_equal(map_ds.update({"a": map_ds.a}), map_ds)
+
+        # fails because of index error
+        # assert_equal(
+        #     map_ds.rename_dims({"x": "xnew"}).rename_dims({"xnew": "x"}), map_ds
+        # )
+
+        assert_equal(
+            map_ds.rename_vars({"cxy": "cnew"}).rename_vars({"cnew": "cxy"}), map_ds
+        )
+
+        assert_equal(map_da._from_temp_dataset(map_da._to_temp_dataset()), map_da)
+        assert_equal(map_da.astype(map_da.dtype), map_da)
+        assert_equal(map_da.transpose("y", "x", transpose_coords=False).cxy, map_da.cxy)

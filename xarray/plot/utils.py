@@ -78,6 +78,30 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     # copy the old cmap name, for easier testing
     new_cmap.name = getattr(cmap, "name", cmap)
 
+    # copy colors to use for bad, under, and over values in case they have been
+    # set to non-default values
+    try:
+        # matplotlib<3.2 only uses bad color for masked values
+        bad = cmap(np.ma.masked_invalid([np.nan]))[0]
+    except TypeError:
+        # cmap was a str or list rather than a color-map object, so there are
+        # no bad, under or over values to check or copy
+        pass
+    else:
+        under = cmap(-np.inf)
+        over = cmap(np.inf)
+
+        new_cmap.set_bad(bad)
+
+        # Only update under and over if they were explicitly changed by the user
+        # (i.e. are different from the lowest or highest values in cmap). Otherwise
+        # leave unchanged so new_cmap uses its default values (its own lowest and
+        # highest values).
+        if under != cmap(0):
+            new_cmap.set_under(under)
+        if over != cmap(cmap.N - 1):
+            new_cmap.set_over(over)
+
     return new_cmap, cnorm
 
 
@@ -441,7 +465,7 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
     """
 
     # Is it a step plot? (see matplotlib.Axes.step)
-    if kwargs.get("linestyle", "").startswith("steps-"):
+    if kwargs.get("drawstyle", "").startswith("steps-"):
 
         # Convert intervals to double points
         if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
@@ -452,7 +476,7 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
             yval, xval = _interval_to_double_bound_points(yval, xval)
 
         # Remove steps-* to be sure that matplotlib is not confused
-        del kwargs["linestyle"]
+        del kwargs["drawstyle"]
 
     # Is it another kind of plot?
     else:

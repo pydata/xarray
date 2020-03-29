@@ -1,4 +1,4 @@
-How to issue an xarray release in 14 easy steps
+How to issue an xarray release in 16 easy steps
 
 Time required: about an hour.
 
@@ -20,32 +20,37 @@ Time required: about an hour.
       ```
       pytest
       ```
- 4. On the master branch, commit the release in git:
+ 4. Check that the ReadTheDocs build is passing.
+ 5. On the master branch, commit the release in git:
       ```
-      git commit -a -m 'Release v0.X.Y'
+      git commit -am 'Release v0.X.Y'
       ```
- 5. Tag the release:
+ 6. Tag the release:
       ```
       git tag -a v0.X.Y -m 'v0.X.Y'
       ```
- 6. Build source and binary wheels for pypi:
+ 7. Build source and binary wheels for pypi:
       ```
       git clean -xdf  # this deletes all uncommited changes!
       python setup.py bdist_wheel sdist
       ```
- 7. Use twine to register and upload the release on pypi. Be careful, you can't
+ 8. Use twine to check the package build:
+      ```
+      twine check dist/xarray-0.X.Y*
+      ```
+ 9. Use twine to register and upload the release on pypi. Be careful, you can't
     take this back!
       ```
       twine upload dist/xarray-0.X.Y*
       ```
     You will need to be listed as a package owner at
     https://pypi.python.org/pypi/xarray for this to work.
- 8. Push your changes to master:
+10. Push your changes to master:
       ```
       git push upstream master
       git push upstream --tags
       ```
- 9. Update the stable branch (used by ReadTheDocs) and switch back to master:
+11. Update the stable branch (used by ReadTheDocs) and switch back to master:
      ```
       git checkout stable
       git rebase master
@@ -55,20 +60,45 @@ Time required: about an hour.
     It's OK to force push to 'stable' if necessary. (We also update the stable 
     branch with `git cherrypick` for documentation only fixes that apply the 
     current released version.)
-10. Add a section for the next release (v.X.(Y+1)) to doc/whats-new.rst.
-11. Commit your changes and push to master again:
+12. Add a section for the next release (v.X.Y+1) to doc/whats-new.rst:
+     ```
+     .. _whats-new.0.X.Y+1:
+
+     v0.X.Y+1 (unreleased)
+     ---------------------
+
+     Breaking changes
+     ~~~~~~~~~~~~~~~~
+
+
+     New Features
+     ~~~~~~~~~~~~
+
+
+     Bug fixes
+     ~~~~~~~~~
+
+
+     Documentation
+     ~~~~~~~~~~~~~
+
+
+     Internal Changes
+     ~~~~~~~~~~~~~~~~
+     ```
+13. Commit your changes and push to master again:
       ```
-      git commit -a -m 'New whatsnew section'
+      git commit -am 'New whatsnew section'
       git push upstream master
       ```
     You're done pushing to master!
-12. Issue the release on GitHub. Click on "Draft a new release" at
+14. Issue the release on GitHub. Click on "Draft a new release" at
     https://github.com/pydata/xarray/releases. Type in the version number, but
     don't bother to describe it -- we maintain that on the docs instead.
-13. Update the docs. Login to https://readthedocs.org/projects/xray/versions/
+15. Update the docs. Login to https://readthedocs.org/projects/xray/versions/
     and switch your new release tag (at the bottom) from "Inactive" to "Active".
     It should now build automatically.
-14. Issue the release announcement! For bug fix releases, I usually only email
+16. Issue the release announcement! For bug fix releases, I usually only email
     xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
       - pydata@googlegroups.com
@@ -83,15 +113,17 @@ Time required: about an hour.
     ```
     git log "$(git tag --sort="v:refname" | sed -n 'x;$p').." --format="%aN" | sort -u
     ```
-    or by replacing `v0.X.Y` with the _previous_ release in:
+    or by substituting the _previous_ release in:
     ```
-    git log v0.X.Y.. --format="%aN" | sort -u
+    git log v0.X.Y-1.. --format="%aN" | sort -u
     ```
+    NB: copying this output into a Google Groups form can cause 
+    [issues](https://groups.google.com/forum/#!topic/xarray/hK158wAviPs) with line breaks, so take care
 
 Note on version numbering:
 
 We follow a rough approximation of semantic version. Only major releases (0.X.0)
-show include breaking changes. Minor releases (0.X.Y) are for bug fixes and
+should include breaking changes. Minor releases (0.X.Y) are for bug fixes and
 backwards compatible new features, but if a sufficient number of new features
 have arrived we will issue a major release even if there are no compatibility
 breaks.
