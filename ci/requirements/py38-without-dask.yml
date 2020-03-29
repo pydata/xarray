@@ -16,7 +16,6 @@ dependencies:
   - h5py
   - hdf5
   - hypothesis
-  - iris
   - isort
   - lxml    # Optional dep of pydap
   - matplotlib
