@@ -118,6 +118,7 @@ def show_versions(file=sys.stdout):
         ("cartopy", lambda mod: mod.__version__),
         ("seaborn", lambda mod: mod.__version__),
         ("numbagg", lambda mod: mod.__version__),
+        ("pint", lambda mod: mod.__version__),
         # xarray setup/test
         ("setuptools", lambda mod: mod.__version__),
         ("pip", lambda mod: mod.__version__),
