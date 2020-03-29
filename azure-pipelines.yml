@@ -20,8 +20,8 @@ jobs:
         conda_env: py37
       py38:
         conda_env: py38
-      py38-without-dask:
-        conda_env: py38-without-dask
+      py38-all-but-dask:
+        conda_env: py38-all-but-dask
       py38-upstream-dev:
         conda_env: py38
         upstream_dev: true
