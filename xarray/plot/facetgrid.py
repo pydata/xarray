@@ -273,7 +273,7 @@ class FacetGrid:
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
+                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs, _is_facetgrid=True)
                 self._mappables.append(mappable)
 
         self._finalize_grid(x, y)
