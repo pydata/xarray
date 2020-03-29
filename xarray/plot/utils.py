@@ -216,8 +216,13 @@ def _determine_cmap_params(
         vlim = abs(vmax - center)
 
     if possibly_divergent:
+        levels_are_divergent = (
+            isinstance(levels, Iterable) and levels[0] * levels[-1] < 0
+        )
         # kwargs not specific about divergent or not: infer defaults from data
-        divergent = ((vmin < 0) and (vmax > 0)) or not center_is_none
+        divergent = (
+            ((vmin < 0) and (vmax > 0)) or not center_is_none or levels_are_divergent
+        )
     else:
         divergent = False
 

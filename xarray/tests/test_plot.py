@@ -827,6 +827,12 @@ class TestDetermineCmapParams:
         assert cmap_params["vmax"] == 0.6
         assert cmap_params["cmap"] == "viridis"
 
+        # regression test for GH3524
+        # infer diverging colormap from divergent levels
+        cmap_params = _determine_cmap_params(pos, levels=[-0.1, 0, 1])
+        # specifying levels makes cmap a Colormap object
+        assert cmap_params["cmap"].name == "RdBu_r"
+
     def test_norm_sets_vmin_vmax(self):
         vmin = self.data.min()
         vmax = self.data.max()
