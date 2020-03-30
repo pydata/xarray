@@ -581,6 +581,10 @@ class DatasetIOBase:
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
+    @pytest.mark.xfail(
+        not has_dask,
+        reason="the code for indexing without dask handles negative steps in slices incorrectly",
+    )
     def test_vectorized_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -3949,6 +3953,9 @@ class TestRasterio:
                 ex = expected.sel(band=1).mean(dim="x")
                 assert_allclose(ac, ex)
 
+    @pytest.mark.xfail(
+        not has_dask, reason="without dask, a non-serializable lock is used"
+    )
     def test_pickle_rasterio(self):
         # regression test for https://github.com/pydata/xarray/issues/2121
         with create_tmp_geotiff() as (tmp_file, expected):
