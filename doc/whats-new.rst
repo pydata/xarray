@@ -35,6 +35,12 @@ New Features
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
   By `John Omotani <https://github.com/johnomotani>`_
+- Limited the length of array items with long string reprs to a
+  reasonable width (:pull:`3900`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
+  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
+  By `Todd Jennings <https://github.com/toddrjen>`_
 
 
 Bug fixes
@@ -42,16 +48,24 @@ Bug fixes
 - Fix renaming of coords when one or more stacked coords is not in
   sorted order during stack+groupby+apply operations. (:issue:`3287`,
   :pull:`3906`) By `Spencer Hill <https://github.com/spencerahill>`_
+- Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
+  can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
+  By `Todd Jennings <https://github.com/toddrjen>`_
+
 
 Documentation
 ~~~~~~~~~~~~~
+- update the docstring of :py:meth:`Dataset.diff` and
+  :py:meth:`DataArray.diff` so it does document the ``dim``
+  parameter as required. (:issue:`1040`, :pull:`3909`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Use ``Fixes`` rather than ``Closes`` in GitHub Pull Request template, allowing
-  linking to issues.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Run the ``isort`` pre-commit hook only on python source files
+  and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 .. _whats-new.0.15.1:
