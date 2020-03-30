@@ -63,6 +63,9 @@ Internal Changes
 - Run the ``isort`` pre-commit hook only on python source files
   and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Add a CI job that runs the tests with every optional dependency
+  except ``dask``. (:issue:`3794`, :pull:`3919`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 .. _whats-new.0.15.1:
