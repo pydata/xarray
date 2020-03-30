@@ -273,7 +273,7 @@ def _determine_cmap_params(
 
     # GH3734
     if vmin == vmax:
-        vmin, _, vmax = mpl.ticker.LinearLocator(3).tick_values(vmin, vmax)
+        vmin, vmax = mpl.ticker.LinearLocator(2).tick_values(vmin, vmax)
 
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
