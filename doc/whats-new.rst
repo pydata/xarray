@@ -39,7 +39,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix renaming of coords when one or more stacked coords is not in
+  sorted order during stack+groupby+apply operations. (:issue:`3287`,
+  :pull:`3906`) By `Spencer Hill <https://github.com/spencerahill>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -83,13 +85,13 @@ New Features
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
-  By `Spencer Clark <https://github.com/spencerkclark>`_ 
+  By `Spencer Clark <https://github.com/spencerkclark>`_
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Add partial support for unit aware arrays with pint. (:pull:`3706`, :pull:`3611`)
   By `Justus Magin <https://github.com/keewis>`_.
-- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
+- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a
   `TypeError` on multiple string arguments. Receiving multiple string arguments
   often means a user is attempting to pass multiple dimensions as separate
   arguments and should instead pass a single list of dimensions.
@@ -107,7 +109,7 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - ``skipna`` is available in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
   :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
-  (:issue:`3843`, :pull:`3844`) 
+  (:issue:`3843`, :pull:`3844`)
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Bug fixes
@@ -801,7 +803,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ 
+- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_
   as a quick reference for tasks before creating a new PR
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
