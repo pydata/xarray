@@ -586,6 +586,12 @@ def open_zarr(
                 "Instead found %s. " % chunks
             )
 
+    if chunks == "auto":
+        try:
+            import dask.array  # noqa
+        except ImportError:
+            chunks = None
+
     if not decode_cf:
         mask_and_scale = False
         decode_times = False
