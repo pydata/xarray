@@ -3513,6 +3513,7 @@ class TestPseudoNetCDFFormat:
         assert_allclose(expected, actual)
         camxfile.close()
 
+    @requires_dask
     def test_uamiv_format_mfread(self):
         """
         Open a CAMx file and test data variables
@@ -4012,6 +4013,7 @@ class TestRasterio:
             with xr.open_rasterio(tmp_file) as rioda:
                 assert isinstance(rioda.attrs["AREA_OR_POINT"], str)
 
+    @requires_dask
     def test_no_mftime(self):
         # rasterio can accept "filename" urguments that are actually urls,
         # including paths to remote files.
