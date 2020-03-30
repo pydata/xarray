@@ -1539,6 +1539,7 @@ class ZarrBase(CFEncodedBase):
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
+    @requires_dask
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
@@ -1556,6 +1557,7 @@ class ZarrBase(CFEncodedBase):
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
 
+    @requires_dask
     @pytest.mark.filterwarnings("ignore:Specified Dask chunks")
     def test_manual_chunk(self):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
@@ -1598,6 +1600,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
 
+    @requires_dask
     def test_warning_on_bad_chunks(self):
         original = create_test_data().chunk({"dim1": 4, "dim2": 3, "dim3": 5})
 
@@ -1620,6 +1623,7 @@ class ZarrBase(CFEncodedBase):
                         assert v._in_memory == (k in actual.dims)
             assert len(record) == 0
 
+    @requires_dask
     def test_deprecate_auto_chunk(self):
         original = create_test_data().chunk()
         with pytest.warns(FutureWarning):
@@ -1638,6 +1642,7 @@ class ZarrBase(CFEncodedBase):
                     # there should be no chunks
                     assert v.chunks is None
 
+    @requires_dask
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
@@ -1662,6 +1667,7 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(data) as actual:
                 pass
 
+    @requires_dask
     def test_chunk_encoding_with_dask(self):
         # These datasets DO have dask chunks. Need to check for various
         # interactions between dask and zarr chunks
@@ -1896,6 +1902,7 @@ class ZarrBase(CFEncodedBase):
             combined["new_var"] = ds_with_new_var["new_var"]
             assert_identical(combined, xr.open_zarr(store_target))
 
+    @requires_dask
     def test_to_zarr_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
@@ -1915,6 +1922,7 @@ class ZarrBase(CFEncodedBase):
             with self.open(store) as actual:
                 assert_identical(original, actual)
 
+    @requires_dask
     def test_to_zarr_append_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
@@ -1951,6 +1959,7 @@ class ZarrBase(CFEncodedBase):
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
 
+    @requires_dask
     def test_encoding_chunksizes(self):
         # regression test for GH2278
         # see also test_encoding_chunksizes_unlimited
