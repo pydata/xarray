@@ -169,7 +169,7 @@ def _determine_cmap_params(
     """
     import matplotlib as mpl
 
-    if levels is not None:
+    if isinstance(levels, Iterable):
         levels = sorted(levels)
 
     calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
