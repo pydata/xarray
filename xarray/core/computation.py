@@ -1384,8 +1384,9 @@ def _calc_idxminmax(
     coordarray = array[dim]
 
     # Handle dask arrays.
-    if isinstance(array, dask_array_type):
-        res = dask_array.map_blocks(coordarray, indx, dtype=indx.dtype)
+    if isinstance(array.data, dask_array_type):
+        res = array.map_blocks(lambda a, b: a[b], coordarray, indx,
+                               dtype=indx.dtype).compute()
     else:
         res = coordarray[
             indx,
