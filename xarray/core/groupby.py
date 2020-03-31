@@ -370,8 +370,10 @@ class GroupBy(SupportsArithmetic):
                 group = group.dropna(group_dim)
 
             # look through group to find the unique values
+            group_as_index = safe_cast_to_index(group)
+            sort = bins is None and (not isinstance(group_as_index, pd.MultiIndex))
             unique_values, group_indices = unique_value_groups(
-                safe_cast_to_index(group), sort=(bins is None)
+                group_as_index, sort=sort
             )
             unique_coord = IndexVariable(group.name, unique_values)
 
