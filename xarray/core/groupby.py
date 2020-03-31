@@ -371,9 +371,7 @@ class GroupBy(SupportsArithmetic):
 
             # look through group to find the unique values
             group_as_index = safe_cast_to_index(group)
-            sort = bins is None and (
-                not isinstance(group_as_index, pd.MultiIndex)
-            )
+            sort = bins is None and (not isinstance(group_as_index, pd.MultiIndex))
             unique_values, group_indices = unique_value_groups(
                 group_as_index, sort=sort
             )
