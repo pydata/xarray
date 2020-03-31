@@ -169,6 +169,9 @@ def _determine_cmap_params(
     """
     import matplotlib as mpl
 
+    if levels is not None:
+        levels = sorted(levels)
+
     calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
 
     # Handle all-NaN input data gracefully
