@@ -4584,6 +4584,7 @@ class TestDataset:
     def test_reduce_strings(self):
         expected = Dataset({"x": "a"})
         ds = Dataset({"x": ("y", ["a", "b"])})
+        ds.coords["y"] = [-10, 10]
         actual = ds.min()
         assert_identical(expected, actual)
 
@@ -4597,6 +4598,14 @@ class TestDataset:
 
         expected = Dataset({"x": 1})
         actual = ds.argmax()
+        assert_identical(expected, actual)
+
+        expected = Dataset({"x": -10})
+        actual = ds.idxmin()
+        assert_identical(expected, actual)
+
+        expected = Dataset({"x": 10})
+        actual = ds.idxmax()
         assert_identical(expected, actual)
 
         expected = Dataset({"x": b"a"})
@@ -5498,6 +5507,19 @@ class TestDataset:
         for item in actual:
             ds.data_vars[item]  # should not raise
         assert sorted(actual) == sorted(expected)
+
+    def test_polyfit_output(self):
+        ds = create_test_data(seed=1)
+
+        out = ds.polyfit("dim2", 2, full=False)
+        assert "var1_polyfit_coefficients" in out
+
+        out = ds.polyfit("dim1", 2, full=True)
+        assert "var1_polyfit_coefficients" in out
+        assert "dim1_matrix_rank" in out
+
+        out = ds.polyfit("time", 2)
+        assert len(out.data_vars) == 0
 
     def test_pad(self):
         ds = create_test_data(seed=1)

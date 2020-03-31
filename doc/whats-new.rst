@@ -20,10 +20,17 @@ v0.16.0 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Alternate draw styles for :py:meth:`plot.step` must be passed using the
+  ``drawstyle`` (or ``ds``) keyword argument, instead of the ``linestyle`` (or
+  ``ls``) keyword argument, in line with the `upstream change in Matplotlib
+  <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
+  (:pull:`3274`)
+  By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
@@ -33,21 +40,37 @@ New Features
   passed to ``isel`` is not present with a warning, or just ignore the
   dimension. (:issue:`3866`, :pull:`3923`)
   By `John Omotani <https://github.com/johnomotani>`_
+- Limited the length of array items with long string reprs to a
+  reasonable width (:pull:`3900`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
+  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
+  By `Todd Jennings <https://github.com/toddrjen>`_
 
 
 Bug fixes
 ~~~~~~~~~
+- Fix renaming of coords when one or more stacked coords is not in
+  sorted order during stack+groupby+apply operations. (:issue:`3287`,
+  :pull:`3906`) By `Spencer Hill <https://github.com/spencerahill>`_
+- Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
+  can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
+  By `Todd Jennings <https://github.com/toddrjen>`_
 
 
 Documentation
 ~~~~~~~~~~~~~
+- update the docstring of :py:meth:`Dataset.diff` and
+  :py:meth:`DataArray.diff` so it does document the ``dim``
+  parameter as required. (:issue:`1040`, :pull:`3909`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Use ``Fixes`` rather than ``Closes`` in GitHub Pull Request template, allowing
-  linking to issues.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Run the ``isort`` pre-commit hook only on python source files
+  and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 .. _whats-new.0.15.1:
@@ -81,13 +104,13 @@ New Features
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
-  By `Spencer Clark <https://github.com/spencerkclark>`_ 
+  By `Spencer Clark <https://github.com/spencerkclark>`_
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Add partial support for unit aware arrays with pint. (:pull:`3706`, :pull:`3611`)
   By `Justus Magin <https://github.com/keewis>`_.
-- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
+- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a
   `TypeError` on multiple string arguments. Receiving multiple string arguments
   often means a user is attempting to pass multiple dimensions as separate
   arguments and should instead pass a single list of dimensions.
@@ -105,7 +128,7 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - ``skipna`` is available in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
   :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
-  (:issue:`3843`, :pull:`3844`) 
+  (:issue:`3843`, :pull:`3844`)
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Bug fixes
@@ -794,12 +817,13 @@ Bug fixes
 - Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
   array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed bug in :meth:`DataArray.quantile` failing to keep attributes when
-  `keep_attrs` was True (:issue:`3304`). By David Huard `<https://github.com/huard>`_.
+  `keep_attrs` was True (:issue:`3304`). By `David Huard <https://github.com/huard>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ as a quick reference for tasks before creating a new PR
+- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_
+  as a quick reference for tasks before creating a new PR
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
 

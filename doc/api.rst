@@ -30,6 +30,7 @@ Top-level functions
    zeros_like
    ones_like
    dot
+   polyval
    map_blocks
    show_versions
    set_options
@@ -172,12 +173,15 @@ Computation
    Dataset.quantile
    Dataset.differentiate
    Dataset.integrate
+   Dataset.polyfit
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
 :py:attr:`~Dataset.any`
 :py:attr:`~Dataset.argmax`
 :py:attr:`~Dataset.argmin`
+:py:attr:`~Dataset.idxmax`
+:py:attr:`~Dataset.idxmin`
 :py:attr:`~Dataset.max`
 :py:attr:`~Dataset.mean`
 :py:attr:`~Dataset.median`
@@ -352,6 +356,7 @@ Computation
    DataArray.quantile
    DataArray.differentiate
    DataArray.integrate
+   DataArray.polyfit
    DataArray.str
 
 **Aggregation**:
@@ -359,6 +364,8 @@ Computation
 :py:attr:`~DataArray.any`
 :py:attr:`~DataArray.argmax`
 :py:attr:`~DataArray.argmin`
+:py:attr:`~DataArray.idxmax`
+:py:attr:`~DataArray.idxmin`
 :py:attr:`~DataArray.max`
 :py:attr:`~DataArray.mean`
 :py:attr:`~DataArray.median`

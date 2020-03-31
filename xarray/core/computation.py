@@ -23,9 +23,10 @@ from typing import (
 
 import numpy as np
 
-from . import duck_array_ops, utils
+from . import dtypes, duck_array_ops, utils
 from .alignment import deep_align
 from .merge import merge_coordinates_without_align
+from .nanops import dask_array
 from .options import OPTIONS
 from .pycompat import dask_array_type
 from .utils import is_dict_like
@@ -1306,3 +1307,98 @@ def where(cond, x, y):
         dataset_join="exact",
         dask="allowed",
     )
+
+
+def polyval(coord, coeffs, degree_dim="degree"):
+    """Evaluate a polynomial at specific values
+
+    Parameters
+    ----------
+    coord : DataArray
+        The 1D coordinate along which to evaluate the polynomial.
+    coeffs : DataArray
+        Coefficients of the polynomials.
+    degree_dim : str, default "degree"
+        Name of the polynomial degree dimension in `coeffs`.
+
+    See also
+    --------
+    xarray.DataArray.polyfit
+    numpy.polyval
+    """
+    from .dataarray import DataArray
+    from .missing import get_clean_interp_index
+
+    x = get_clean_interp_index(coord, coord.name)
+
+    deg_coord = coeffs[degree_dim]
+
+    lhs = DataArray(
+        np.vander(x, int(deg_coord.max()) + 1),
+        dims=(coord.name, degree_dim),
+        coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)[::-1]},
+    )
+    return (lhs * coeffs).sum(degree_dim)
+
+
+def _calc_idxminmax(
+    *,
+    array,
+    func: Callable,
+    dim: Hashable = None,
+    skipna: bool = None,
+    fill_value: Any = dtypes.NA,
+    keep_attrs: bool = None,
+):
+    """Apply common operations for idxmin and idxmax."""
+    # This function doesn't make sense for scalars so don't try
+    if not array.ndim:
+        raise ValueError("This function does not apply for scalars")
+
+    if dim is not None:
+        pass  # Use the dim if available
+    elif array.ndim == 1:
+        # it is okay to guess the dim if there is only 1
+        dim = array.dims[0]
+    else:
+        # The dim is not specified and ambiguous.  Don't guess.
+        raise ValueError("Must supply 'dim' argument for multidimensional arrays")
+
+    if dim not in array.dims:
+        raise KeyError(f'Dimension "{dim}" not in dimension')
+    if dim not in array.coords:
+        raise KeyError(f'Dimension "{dim}" does not have coordinates')
+
+    # These are dtypes with NaN values argmin and argmax can handle
+    na_dtypes = "cfO"
+
+    if skipna or (skipna is None and array.dtype.kind in na_dtypes):
+        # Need to skip NaN values since argmin and argmax can't handle them
+        allna = array.isnull().all(dim)
+        array = array.where(~allna, 0)
+
+    # This will run argmin or argmax.
+    indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+
+    # Get the coordinate we want.
+    coordarray = array[dim]
+
+    # Handle dask arrays.
+    if isinstance(array, dask_array_type):
+        res = dask_array.map_blocks(coordarray, indx, dtype=indx.dtype)
+    else:
+        res = coordarray[
+            indx,
+        ]
+
+    if skipna or (skipna is None and array.dtype.kind in na_dtypes):
+        # Put the NaN values back in after removing them
+        res = res.where(~allna, fill_value)
+
+    # The dim is gone but we need to remove the corresponding coordinate.
+    del res.coords[dim]
+
+    # Copy attributes from argmin/argmax, if any
+    res.attrs = indx.attrs
+
+    return res

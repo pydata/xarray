@@ -16,6 +16,7 @@ from xarray.core.duck_array_ops import (
     first,
     gradient,
     last,
+    least_squares,
     mean,
     np_timedelta64_to_float,
     pd_timedelta_to_float,
@@ -761,3 +762,20 @@ def test_timedelta_to_numeric(td):
     out = timedelta_to_numeric(td, "ns")
     np.testing.assert_allclose(out, 86400 * 1e9)
     assert isinstance(out, float)
+
+
+@pytest.mark.parametrize("use_dask", [True, False])
+@pytest.mark.parametrize("skipna", [True, False])
+def test_least_squares(use_dask, skipna):
+    if use_dask and not has_dask:
+        pytest.skip("requires dask")
+    lhs = np.array([[1, 2], [1, 2], [3, 2]])
+    rhs = DataArray(np.array([3, 5, 7]), dims=("y",))
+
+    if use_dask:
+        rhs = rhs.chunk({"y": 1})
+
+    coeffs, residuals = least_squares(lhs, rhs.data, skipna=skipna)
+
+    np.testing.assert_allclose(coeffs, [1.5, 1.25])
+    np.testing.assert_allclose(residuals, [2.0])
