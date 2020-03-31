@@ -26,7 +26,6 @@ import numpy as np
 from . import dtypes, duck_array_ops, utils
 from .alignment import deep_align
 from .merge import merge_coordinates_without_align
-from .nanops import dask_array
 from .options import OPTIONS
 from .pycompat import dask_array_type
 from .utils import is_dict_like
@@ -1385,8 +1384,9 @@ def _calc_idxminmax(
 
     # Handle dask arrays.
     if isinstance(array.data, dask_array_type):
-        res = array.map_blocks(lambda a, b: a[b], coordarray, indx,
-                               dtype=indx.dtype).compute()
+        res = array.map_blocks(
+            lambda a, b: a[b], coordarray, indx, dtype=indx.dtype
+        ).compute()
     else:
         res = coordarray[
             indx,
