@@ -85,6 +85,7 @@ from .utils import (
     _check_inplace,
     _default,
     decode_numpy_dict_values,
+    drop_dims_from_indexers,
     either_dict_or_kwargs,
     hashable,
     infix_dims,
@@ -1765,7 +1766,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Hashable, Any]
+        self, indexers: Mapping[Hashable, Any], missing_dims: str = "exception",
     ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
@@ -1775,9 +1776,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from .dataarray import DataArray
 
-        invalid = indexers.keys() - self.dims.keys()
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+        indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
@@ -1956,10 +1955,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             file_obj=self._file_obj,
         )
 
-    def _isel_fancy(self, indexers: Mapping[Hashable, Any], *, drop: bool) -> "Dataset":
+    def _isel_fancy(
+        self,
+        indexers: Mapping[Hashable, Any],
+        *,
+        drop: bool,
+        missing_dims: str = "exception",
+    ) -> "Dataset":
         # Note: we need to preserve the original indexers variable in order to merge the
         # coords below
-        indexers_list = list(self._validate_indexers(indexers))
+        indexers_list = list(self._validate_indexers(indexers, missing_dims))
 
         variables: Dict[Hashable, Variable] = {}
         indexes: Dict[Hashable, pd.Index] = {}

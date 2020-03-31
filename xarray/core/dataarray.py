@@ -1004,25 +1004,51 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         indexers: Mapping[Hashable, Any] = None,
         drop: bool = False,
+        missing_dims: str = "exception",
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by integer indexing
         along the specified dimension(s).
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and values given
+            by integers, slice objects or arrays.
+            indexer can be a integer, slice, array-like or DataArray.
+            If DataArrays are passed as indexers, xarray-style indexing will be
+            carried out. See :ref:`indexing` for the details.
+            One of indexers or indexers_kwargs must be provided.
+        drop : bool, optional
+            If ``drop=True``, drop coordinates variables indexed by integers
+            instead of making them scalar.
+        missing_dims : {"exception", "warning", "ignore"}, default "exception"
+            What to do if dimensions that should be selected from are not present in the
+            DataArray:
+            - "exception": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+        **indexers_kwargs : {dim: indexer, ...}, optional
+            The keyword arguments form of ``indexers``.
 
         See Also
         --------
         Dataset.isel
         DataArray.sel
         """
+
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
+
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
-            ds = self._to_temp_dataset()._isel_fancy(indexers, drop=drop)
+            ds = self._to_temp_dataset()._isel_fancy(
+                indexers, drop=drop, missing_dims=missing_dims
+            )
             return self._from_temp_dataset(ds)
 
         # Much faster algorithm for when all indexers are ints, slices, one-dimensional
         # lists, or zero or one-dimensional np.ndarray's
 
-        variable = self._variable.isel(indexers)
+        variable = self._variable.isel(indexers, missing_dims=missing_dims)
 
         coords = {}
         for coord_name, coord_value in self._coords.items():

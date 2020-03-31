@@ -28,6 +28,7 @@ from .utils import (
     OrderedSet,
     _default,
     decode_numpy_dict_values,
+    drop_dims_from_indexers,
     either_dict_or_kwargs,
     ensure_us_time_resolution,
     infix_dims,
@@ -1030,6 +1031,7 @@ class Variable(
     def isel(
         self: VariableType,
         indexers: Mapping[Hashable, Any] = None,
+        missing_dims: str = "exception",
         **indexers_kwargs: Any,
     ) -> VariableType:
         """Return a new array indexed along the specified dimension(s).
@@ -1039,6 +1041,12 @@ class Variable(
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
+        missing_dims : {"exception", "warning", "ignore"}, default "exception"
+            What to do if dimensions that should be selected from are not present in the
+            DataArray:
+            - "exception": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -1050,11 +1058,7 @@ class Variable(
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
-        invalid = indexers.keys() - set(self.dims)
-        if invalid:
-            raise ValueError(
-                f"dimensions {invalid} do not exist. Expected one or more of {self.dims}"
-            )
+        indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
         return self[key]

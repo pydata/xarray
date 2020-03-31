@@ -1254,8 +1254,19 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.isel(x=0), v[:, 0])
         assert_identical(v.isel(x=[0, 2]), v[:, [0, 2]])
         assert_identical(v.isel(time=[]), v[[]])
-        with raises_regex(ValueError, "do not exist"):
-            v.isel(not_a_dim=0)
+        with raises_regex(
+            ValueError,
+            r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            r"\('x', 'y'\)",
+        ):
+            self.dv.isel(not_a_dim=0)
+        with pytest.warns(
+            UserWarning,
+            match=r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            r"\('x', 'y'\)",
+        ):
+            self.v.isel(not_a_dim=0, missing_dims="warning")
+        assert_identical(self.dv, self.dv.isel(not_a_dim=0, missing_dims="ignore"))
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings

@@ -780,6 +780,19 @@ class TestDataArray:
         assert_identical(self.dv, self.dv.isel(x=slice(None)))
         assert_identical(self.dv[:3], self.dv.isel(x=slice(3)))
         assert_identical(self.dv[:3, :5], self.dv.isel(x=slice(3), y=slice(5)))
+        with raises_regex(
+            ValueError,
+            r"dimensions {'not_a_dim'} do not exist. Expected "
+            r"one or more of \('x', 'y'\)",
+        ):
+            self.dv.isel(not_a_dim=0)
+        with pytest.warns(
+            UserWarning,
+            match=r"dimensions {'not_a_dim'} do not exist. "
+            r"Expected one or more of \('x', 'y'\)",
+        ):
+            self.dv.isel(not_a_dim=0, missing_dims="warning")
+        assert_identical(self.dv, self.dv.isel(not_a_dim=0, missing_dims="ignore"))
 
     def test_isel_types(self):
         # regression test for #1405
