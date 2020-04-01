@@ -549,8 +549,8 @@ def _localize(var, indexes_coords):
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
         index = x.to_index()
-        imin = index.get_loc(np.min(new_x.values), method="nearest")
-        imax = index.get_loc(np.max(new_x.values), method="nearest")
+        imin = index.get_loc(np.nanmin(new_x.values), method="nearest")
+        imax = index.get_loc(np.nanmax(new_x.values), method="nearest")
 
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
