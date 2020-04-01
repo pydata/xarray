@@ -205,27 +205,35 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
 
 def get_dim_indexers(data_obj, indexers):
     """Given a xarray data object and label based indexers, return a mapping
-    of label indexers with only dimension names as keys.
+    of label indexers with only dimension names (or 1D non-dimensional coord
+    names) as keys.
 
     It groups multiple level indexers given on a multi-index dimension
     into a single, dictionary indexer for that dimension (Raise a ValueError
     if it is not possible).
     """
+    non_dim_1d_coords = [coord for coord in data_obj.coords
+                         if len(data_obj[coord].dims) == 1]
     invalid = [
-        k
-        for k in indexers
-        if k not in data_obj.dims and k not in data_obj._level_coords
+        k for k in indexers
+           if k not in data_obj.dims and k not in data_obj._level_coords
+             and k not in non_dim_1d_coords
     ]
-    if invalid:
-        raise ValueError(f"dimensions or multi-index levels {invalid!r} do not exist")
+    if invalid:  # TODO This was never covered by testing
+         raise ValueError(f"dimensions, 1D coordinates, or  multi-index levels"
+                          f" {invalid!r} do not exist")
 
     level_indexers = defaultdict(dict)
     dim_indexers = {}
     for key, label in indexers.items():
         (dim,) = data_obj[key].dims
         if key != dim:
-            # assume here multi-index level indexer
-            level_indexers[dim][key] = label
+            # If key is 1D non-dimension coordinate let it pass through
+            if key in data_obj.coords and data_obj.coords[key].dims == (dim,):
+                dim_indexers[key] = label
+            else:
+                # assume here multi-index level indexer
+                level_indexers[dim][key] = label
         else:
             dim_indexers[key] = label
 
@@ -253,9 +261,31 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
 
     dim_indexers = get_dim_indexers(data_obj, indexers)
     for dim, label in dim_indexers.items():
-        try:
+        if dim in data_obj.indexes:
             index = data_obj.indexes[dim]
-        except KeyError:
+
+            coords_dtype = data_obj.coords[dim].dtype
+            label = maybe_cast_to_coords_dtype(label, coords_dtype)
+            idxr, new_idx = convert_label_indexer(index, label, dim,
+                                                  method, tolerance)
+            pos_indexers[dim] = idxr
+            if new_idx is not None:
+                new_indexes[dim] = new_idx
+
+        elif dim in data_obj.coords and len(data_obj.coords[dim] == 1):
+            # 1D non-dimension coord
+            index = data_obj.coords[dim].to_index()
+            (dim,) = data_obj[dim].dims
+
+            coords_dtype = data_obj.coords[dim].dtype
+            label = maybe_cast_to_coords_dtype(label, coords_dtype)
+            idxr, new_idx = convert_label_indexer(index, label, dim,
+                                                  method, tolerance)
+            pos_indexers[dim] = idxr
+            if new_idx is not None:
+                new_indexes[dim] = new_idx
+
+        else:
             # no index for this dimension: reuse the provided labels
             if method is not None or tolerance is not None:
                 raise ValueError(
@@ -264,13 +294,6 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
                     "an associated coordinate."
                 )
             pos_indexers[dim] = label
-        else:
-            coords_dtype = data_obj.coords[dim].dtype
-            label = maybe_cast_to_coords_dtype(label, coords_dtype)
-            idxr, new_idx = convert_label_indexer(index, label, dim, method, tolerance)
-            pos_indexers[dim] = idxr
-            if new_idx is not None:
-                new_indexes[dim] = new_idx
 
     return pos_indexers, new_indexes
 
