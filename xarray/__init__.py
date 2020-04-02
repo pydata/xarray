@@ -46,7 +46,6 @@ __all__ = (
     "align",
     "apply_ufunc",
     "as_variable",
-    "auto_combine",
     "broadcast",
     "cftime_range",
     "combine_by_coords",
