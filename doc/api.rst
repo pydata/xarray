@@ -21,7 +21,6 @@ Top-level functions
    broadcast
    concat
    merge
-   auto_combine
    combine_by_coords
    combine_nested
    where
