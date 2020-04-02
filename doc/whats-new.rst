@@ -26,6 +26,13 @@ Breaking changes
   <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
   (:pull:`3274`)
   By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
+- The old :py:func:`xarray.auto_combine` function is now fully deprecated in
+  favour of the :py:func:`xarray.combine_by_coords` and
+  :py:func:`xarray.combine_nested` functions. This also means that
+  the default behaviour of :py:func:`xarray.open_mfdataset` has changed to use
+  ``combine='by_coords'`` as the default argument value. (:issue:`2616`, :pull:`3926`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 New Features
 ~~~~~~~~~~~~
