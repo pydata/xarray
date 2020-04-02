@@ -2908,15 +2908,6 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp2, tmp1], combine="by_coords") as actual:
                     assert_identical(original, actual)
 
-    def test_open_mfdataset_combine_nested_no_concat_dim(self):
-        original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                original.isel(x=slice(5)).to_netcdf(tmp1)
-                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-
-                with raises_regex(ValueError, "Must supply concat_dim"):
-                    open_mfdataset([tmp2, tmp1], combine="nested")
 
     @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
     def test_encoding_mfdataset(self):
@@ -3132,73 +3123,6 @@ class TestDask(DatasetIOBase):
             # this would fail if we used open_dataarray instead of
             # load_dataarray
             ds.to_netcdf(tmp)
-
-
-@requires_scipy_or_netCDF4
-@requires_dask
-class TestOpenMFDataSetDeprecation:
-    """
-    Set of tests to check that FutureWarnings are correctly raised until the
-    deprecation cycle is complete. #2616
-    """
-
-    def test_open_mfdataset_default(self):
-        ds1, ds2 = Dataset({"x": [0]}), Dataset({"x": [1]})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-
-                with pytest.warns(
-                    FutureWarning, match="default behaviour of" " `open_mfdataset`"
-                ):
-                    open_mfdataset([tmp1, tmp2])
-
-    def test_open_mfdataset_with_concat_dim(self):
-        ds1, ds2 = Dataset({"x": [0]}), Dataset({"x": [1]})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-
-                with pytest.warns(FutureWarning, match="`concat_dim`"):
-                    open_mfdataset([tmp1, tmp2], concat_dim="x")
-
-    def test_auto_combine_with_merge_and_concat(self):
-        ds1, ds2 = Dataset({"x": [0]}), Dataset({"x": [1]})
-        ds3 = Dataset({"z": ((), 99)})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                with create_tmp_file() as tmp3:
-                    ds1.to_netcdf(tmp1)
-                    ds2.to_netcdf(tmp2)
-                    ds3.to_netcdf(tmp3)
-
-                    with pytest.warns(
-                        FutureWarning, match="require both concatenation"
-                    ):
-                        open_mfdataset([tmp1, tmp2, tmp3])
-
-    def test_auto_combine_with_coords(self):
-        ds1 = Dataset({"foo": ("x", [0])}, coords={"x": ("x", [0])})
-        ds2 = Dataset({"foo": ("x", [1])}, coords={"x": ("x", [1])})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-
-                with pytest.warns(FutureWarning, match="supplied have global"):
-                    open_mfdataset([tmp1, tmp2])
-
-    def test_auto_combine_without_coords(self):
-        ds1, ds2 = Dataset({"foo": ("x", [0])}), Dataset({"foo": ("x", [1])})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-
-                with pytest.warns(FutureWarning, match="supplied do not have global"):
-                    open_mfdataset([tmp1, tmp2])
 
 
 @requires_scipy_or_netCDF4
