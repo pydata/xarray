@@ -1257,16 +1257,16 @@ class TestVariable(VariableSubclassobjects):
         with raises_regex(
             ValueError,
             r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
-            r"\('x', 'y'\)",
+            r"\('time', 'x'\)",
         ):
-            self.dv.isel(not_a_dim=0)
+            v.isel(not_a_dim=0)
         with pytest.warns(
             UserWarning,
             match=r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
-            r"\('x', 'y'\)",
+            r"\('time', 'x'\)",
         ):
-            self.v.isel(not_a_dim=0, missing_dims="warning")
-        assert_identical(self.dv, self.dv.isel(not_a_dim=0, missing_dims="ignore"))
+            v.isel(not_a_dim=0, missing_dims="warning")
+        assert_identical(v, v.isel(not_a_dim=0, missing_dims="ignore"))
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings
