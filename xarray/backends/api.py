@@ -23,7 +23,6 @@ from ..core import indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
-    auto_combine,
     combine_by_coords,
 )
 from ..core.dataarray import DataArray
@@ -717,7 +716,7 @@ def open_mfdataset(
     lock=None,
     data_vars="all",
     coords="different",
-    combine="_old_auto",
+    combine="by_coords",
     autoclose=None,
     parallel=False,
     join="outer",
@@ -730,9 +729,8 @@ def open_mfdataset(
     the datasets into one before returning the result, and if combine='nested' then
     ``combine_nested`` is used. The filepaths must be structured according to which
     combining function is used, the details of which are given in the documentation for
-    ``combine_by_coords`` and ``combine_nested``. By default the old (now deprecated)
-    ``auto_combine`` will be used, please specify either ``combine='by_coords'`` or
-    ``combine='nested'`` in future. Requires dask to be installed. See documentation for
+    ``combine_by_coords`` and ``combine_nested``. By default ``combine='by_coords'``
+    will be used. Requires dask to be installed. See documentation for
     details on dask [1]_. Global attributes from the ``attrs_file`` are used
     for the combined dataset.
 
@@ -742,7 +740,7 @@ def open_mfdataset(
         Either a string glob in the form ``"path/to/my/files/*.nc"`` or an explicit list of
         files to open. Paths can be given as strings or as pathlib Paths. If
         concatenation along more than one dimension is desired, then ``paths`` must be a
-        nested list-of-lists (see ``manual_combine`` for details). (A string glob will
+        nested list-of-lists (see ``combine_nested`` for details). (A string glob will
         be expanded to a 1-dimensional list.)
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk sizes.
@@ -752,15 +750,16 @@ def open_mfdataset(
         see the full documentation for more details [2]_.
     concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
-        if any of the dimensions along which you want to concatenate is not a dimension
-        in the original datasets, e.g., if you want to stack a collection of 2D arrays
-        along a third dimension. Set ``concat_dim=[..., None, ...]`` explicitly to
-        disable concatenation along a particular dimension.
+        if ``combine='by_coords'``, and if any of the dimensions along which you want to
+        concatenate is not a dimension in the original datasets, e.g., if you want to
+        stack a collection of 2D arrays along a third dimension. Set
+        ``concat_dim=[..., None, ...]`` explicitly to disable concatenation along a
+        particular dimension. Default is None, which for a 1D list of filepaths is
+        equivalent to opening the files separately and then merging them with
+        ``xarray.merge``.
     combine : {'by_coords', 'nested'}, optional
         Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is used to
-        combine all the data. If this argument is not provided, `xarray.auto_combine` is
-        used, but in the future this behavior will switch to use
-        `xarray.combine_by_coords` by default.
+        combine all the data. Default is to use ``xarray.combine_by_coords``.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
@@ -853,7 +852,6 @@ def open_mfdataset(
     --------
     combine_by_coords
     combine_nested
-    auto_combine
     open_dataset
 
     References
@@ -881,11 +879,8 @@ def open_mfdataset(
     # If combine='nested' then this creates a flat list which is easier to
     # iterate over, while saving the originally-supplied structure as "ids"
     if combine == "nested":
-        if str(concat_dim) == "_not_supplied":
-            raise ValueError("Must supply concat_dim when using " "combine='nested'")
-        else:
-            if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
-                concat_dim = [concat_dim]
+        if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+            concat_dim = [concat_dim]
     combined_ids_paths = _infer_concat_order_from_positions(paths)
     ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
@@ -917,30 +912,7 @@ def open_mfdataset(
 
     # Combine all datasets, closing them in case of a ValueError
     try:
-        if combine == "_old_auto":
-            # Use the old auto_combine for now
-            # Remove this after deprecation cycle from #2616 is complete
-            basic_msg = dedent(
-                """\
-            In xarray version 0.15 the default behaviour of `open_mfdataset`
-            will change. To retain the existing behavior, pass
-            combine='nested'. To use future default behavior, pass
-            combine='by_coords'. See
-            http://xarray.pydata.org/en/stable/combining.html#combining-multi
-            """
-            )
-            warnings.warn(basic_msg, FutureWarning, stacklevel=2)
-
-            combined = auto_combine(
-                datasets,
-                concat_dim=concat_dim,
-                compat=compat,
-                data_vars=data_vars,
-                coords=coords,
-                join=join,
-                from_openmfds=True,
-            )
-        elif combine == "nested":
+        if combine == "nested":
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(

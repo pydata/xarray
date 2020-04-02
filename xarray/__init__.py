@@ -15,7 +15,7 @@ from .coding.cftime_offsets import cftime_range
 from .coding.cftimeindex import CFTimeIndex
 from .conventions import SerializationWarning, decode_cf
 from .core.alignment import align, broadcast
-from .core.combine import auto_combine, combine_by_coords, combine_nested
+from .core.combine import combine_by_coords, combine_nested
 from .core.common import ALL_DIMS, full_like, ones_like, zeros_like
 from .core.computation import apply_ufunc, dot, polyval, where
 from .core.concat import concat
