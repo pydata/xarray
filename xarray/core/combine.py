@@ -760,5 +760,3 @@ def combine_by_coords(
         join=join,
         combine_attrs=combine_attrs,
     )
-
-

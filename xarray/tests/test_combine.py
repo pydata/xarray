@@ -4,13 +4,7 @@ from itertools import product
 import numpy as np
 import pytest
 
-from xarray import (
-    DataArray,
-    Dataset,
-    combine_by_coords,
-    combine_nested,
-    concat,
-)
+from xarray import DataArray, Dataset, combine_by_coords, combine_nested, concat
 from xarray.core import dtypes
 from xarray.core.combine import (
     _check_shape_tile_ids,
