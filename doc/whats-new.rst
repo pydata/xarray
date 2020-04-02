@@ -38,6 +38,9 @@ New Features
 - Limited the length of array items with long string reprs to a
   reasonable width (:pull:`3900`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- Limited the number of lines of large arrays when numpy reprs would have greater than 40.
+  (:pull:`3905`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 
 Bug fixes
