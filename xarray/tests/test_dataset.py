@@ -56,7 +56,7 @@ except ImportError:
     pass
 
 
-def create_test_data(seed=None):
+def create_test_data(seed=None, dim_coords=True):
     rs = np.random.RandomState(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
@@ -66,9 +66,14 @@ def create_test_data(seed=None):
     _dims = {"dim1": 8, "dim2": 9, "dim3": 10}
 
     obj = Dataset()
-    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
-    obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
-    obj["dim3"] = ("dim3", list("abcdefghij"))
+    if dim_coords:
+        obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
+        obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
+        obj["dim3"] = ("dim3", list("abcdefghij"))
+    else:
+        obj.coords["time_coord"] = ("time", pd.date_range("2000-01-01", periods=20))
+        obj.coords["coord2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
+        obj.coords["coord3"] = ("dim3", list("abcdefghij"))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data, {"foo": "variable"})
@@ -1367,6 +1372,16 @@ class TestDataset:
         expected = data.isel(dim2=[0, 1, 2])
         assert_equal(actual.drop_vars("new_dim"), expected)
         assert np.allclose(actual["new_dim"].values, ind["new_dim"].values)
+
+    def test_sel_non_index_coord(self):
+        data = create_test_data(dim_coords=False)
+        int_slicers = {"dim2": slice(2),
+                       "dim3": slice(3)}
+        loc_slicers = {
+            "coord2": slice(0, 0.5),
+            "coord3": slice("a", "c"),
+        }
+        assert_equal(data.isel(**int_slicers), data.sel(**loc_slicers))
 
     def test_sel_dataarray_mindex(self):
         midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
