@@ -41,6 +41,9 @@ New Features
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
+- Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
+  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Bug fixes
