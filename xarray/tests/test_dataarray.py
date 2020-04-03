@@ -4494,6 +4494,8 @@ class TestReduce1D(TestReduce):
     def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask):
         if use_dask and not has_dask:
             pytest.skip("requires dask")
+        if use_dask & (x.dtype.kind == "M"):
+            pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs,
         )
@@ -4502,8 +4504,6 @@ class TestReduce1D(TestReduce):
             ar0 = ar0_raw.chunk({})
         else:
             ar0 = ar0_raw
-
-        print(ar0)
 
         # dim doesn't exist
         with pytest.raises(KeyError):
@@ -4600,6 +4600,8 @@ class TestReduce1D(TestReduce):
     def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask):
         if use_dask and not has_dask:
             pytest.skip("requires dask")
+        if use_dask & (x.dtype.kind == "M"):
+            pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs,
         )
@@ -4928,13 +4930,23 @@ class TestReduce2D(TestReduce):
 
         assert_identical(result3, expected2)
 
-    def test_idxmin(self, x, minindex, maxindex, nanindex):
-        ar0 = xr.DataArray(
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        if use_dask & (x.dtype.kind == "M"):
+            pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
+        ar0_raw = xr.DataArray(
             x,
             dims=["y", "x"],
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
+
+        if use_dask:
+            ar0 = ar0_raw.chunk({})
+        else:
+            ar0 = ar0_raw
 
         assert_identical(ar0, ar0)
 
@@ -5035,13 +5047,23 @@ class TestReduce2D(TestReduce):
         result7 = ar0.idxmin(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
-    def test_idxmax(self, x, minindex, maxindex, nanindex):
-        ar0 = xr.DataArray(
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        if use_dask & (x.dtype.kind == "M"):
+            pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
+        ar0_raw = xr.DataArray(
             x,
             dims=["y", "x"],
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
+
+        if use_dask:
+            ar0 = ar0_raw.chunk({})
+        else:
+            ar0 = ar0_raw
 
         # No dimension specified
         with pytest.raises(ValueError):
