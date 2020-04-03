@@ -139,6 +139,12 @@ class TestPlot(PlotTestCase):
         with raises_regex(ValueError, "None"):
             self.darray[:, 0, 0].plot(x="dim_1")
 
+        with raises_regex(TypeError, "complex128"):
+            (self.darray[:, 0, 0] + 1j).plot()
+
+    def test_1d_bool(self):
+        xr.ones_like(self.darray[:, 0, 0], dtype=np.bool).plot()
+
     def test_1d_x_y_kw(self):
         z = np.arange(10)
         da = DataArray(np.cos(z), dims=["z"], coords=[z], name="f")
@@ -988,6 +994,13 @@ class Common2dMixin:
     def test_1d_raises_valueerror(self):
         with raises_regex(ValueError, r"DataArray must be 2d"):
             self.plotfunc(self.darray[0, :])
+
+    def test_bool(self):
+        xr.ones_like(self.darray, dtype=np.bool).plot()
+
+    def test_complex_raises_typeerror(self):
+        with raises_regex(TypeError, "complex128"):
+            (self.darray + 1j).plot()
 
     def test_3d_raises_valueerror(self):
         a = DataArray(easy_array((2, 3, 4)))
