@@ -837,6 +837,7 @@ class TestSparseCoords:
         )
 
 
+@requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
     a = DataArray(s)
