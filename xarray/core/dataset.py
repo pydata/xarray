@@ -1874,6 +1874,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         indexers: Mapping[Hashable, Any] = None,
         drop: bool = False,
+        missing_dims: str = "raise",
         **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along the specified
@@ -1895,6 +1896,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
+        missing_dims : {"raise", "warn", "ignore"}, default "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "exception": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -1917,13 +1924,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
-            return self._isel_fancy(indexers, drop=drop)
+            return self._isel_fancy(indexers, drop=drop, missing_dims=missing_dims)
 
         # Much faster algorithm for when all indexers are ints, slices, one-dimensional
         # lists, or zero or one-dimensional np.ndarray's
-        invalid = indexers.keys() - self.dims.keys()
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+        indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         variables = {}
         dims: Dict[Hashable, Tuple[int, ...]] = {}

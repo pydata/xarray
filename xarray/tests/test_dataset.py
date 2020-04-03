@@ -1023,6 +1023,21 @@ class TestDataset:
 
         with pytest.raises(ValueError):
             data.isel(not_a_dim=slice(0, 2))
+        with raises_regex(
+            ValueError,
+            r"dimensions {'not_a_dim'} do not exist. Expected "
+            r"one or more of "
+            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+        ):
+            data.isel(not_a_dim=slice(0, 2))
+        with pytest.warns(
+            UserWarning,
+            match=r"dimensions {'not_a_dim'} do not exist. "
+            r"Expected one or more of "
+            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+        ):
+            data.isel(not_a_dim=slice(0, 2), missing_dims="warn")
+        assert_identical(data, data.isel(not_a_dim=slice(0, 2), missing_dims="ignore"))
 
         ret = data.isel(dim1=0)
         assert {"time": 20, "dim2": 9, "dim3": 10} == ret.dims
