@@ -4193,7 +4193,6 @@ class TestDataArray:
         assert_equal(y.rank("z", pct=True), y)
 
     @pytest.mark.parametrize("use_dask", [True, False])
-    @pytest.mark.parametrize("use_datetime", [True, False])
     def test_polyfit(self, use_dask, use_datetime):
         if use_dask and not has_dask:
             pytest.skip("requires dask")
@@ -4490,10 +4489,20 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
-    def test_idxmin(self, x, minindex, maxindex, nanindex):
-        ar0 = xr.DataArray(
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs,
         )
+
+        if use_dask:
+            ar0 = ar0_raw.chunk({})
+        else:
+            ar0 = ar0_raw
+
+        print(ar0)
 
         # dim doesn't exist
         with pytest.raises(KeyError):
@@ -4586,10 +4595,18 @@ class TestReduce1D(TestReduce):
         result7 = ar0.idxmin(fill_value=-1j)
         assert_identical(result7, expected7)
 
-    def test_idxmax(self, x, minindex, maxindex, nanindex):
-        ar0 = xr.DataArray(
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs,
         )
+
+        if use_dask:
+            ar0 = ar0_raw.chunk({})
+        else:
+            ar0 = ar0_raw
 
         # dim doesn't exist
         with pytest.raises(KeyError):
