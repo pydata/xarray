@@ -1754,6 +1754,13 @@ class TestFacetGrid(PlotTestCase):
             assert np.allclose(expected, clim)
 
     @pytest.mark.slow
+    def test_vmin_vmax_equal(self):
+        # regression test for GH3734
+        fg = self.g.map_dataarray(xplt.imshow, "x", "y", vmin=50, vmax=50)
+        for mappable in fg._mappables:
+            assert mappable.norm.vmin != mappable.norm.vmax
+
+    @pytest.mark.slow
     @pytest.mark.filterwarnings("ignore")
     def test_can_set_norm(self):
         norm = mpl.colors.SymLogNorm(0.1)
