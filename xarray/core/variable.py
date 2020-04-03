@@ -1031,7 +1031,7 @@ class Variable(
     def isel(
         self: VariableType,
         indexers: Mapping[Hashable, Any] = None,
-        missing_dims: str = "exception",
+        missing_dims: str = "raise",
         **indexers_kwargs: Any,
     ) -> VariableType:
         """Return a new array indexed along the specified dimension(s).
@@ -1041,7 +1041,7 @@ class Variable(
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
-        missing_dims : {"exception", "warning", "ignore"}, default "exception"
+        missing_dims : {"raise", "warn", "ignore"}, default "raise"
             What to do if dimensions that should be selected from are not present in the
             DataArray:
             - "exception": raise an exception

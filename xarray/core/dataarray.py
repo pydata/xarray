@@ -1007,7 +1007,7 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         indexers: Mapping[Hashable, Any] = None,
         drop: bool = False,
-        missing_dims: str = "exception",
+        missing_dims: str = "raise",
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by integer indexing
@@ -1025,7 +1025,7 @@ class DataArray(AbstractArray, DataWithCoords):
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
-        missing_dims : {"exception", "warning", "ignore"}, default "exception"
+        missing_dims : {"raise", "warn", "ignore"}, default "raise"
             What to do if dimensions that should be selected from are not present in the
             DataArray:
             - "exception": raise an exception

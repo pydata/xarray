@@ -1265,7 +1265,7 @@ class TestVariable(VariableSubclassobjects):
             match=r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
             r"\('time', 'x'\)",
         ):
-            v.isel(not_a_dim=0, missing_dims="warning")
+            v.isel(not_a_dim=0, missing_dims="warn")
         assert_identical(v, v.isel(not_a_dim=0, missing_dims="ignore"))
 
     def test_index_0d_numpy_string(self):

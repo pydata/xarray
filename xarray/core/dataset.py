@@ -1768,7 +1768,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Hashable, Any], missing_dims: str = "exception",
+        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise",
     ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
@@ -1962,7 +1962,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexers: Mapping[Hashable, Any],
         *,
         drop: bool,
-        missing_dims: str = "exception",
+        missing_dims: str = "raise",
     ) -> "Dataset":
         # Note: we need to preserve the original indexers variable in order to merge the
         # coords below

@@ -751,10 +751,10 @@ def drop_dims_from_indexers(
     ----------
     indexers : dict
     dims : sequence
-    missing_dims : {"exception", "warning", "ignore"}
+    missing_dims : {"raise", "warn", "ignore"}
     """
 
-    if missing_dims == "exception":
+    if missing_dims == "raise":
         invalid = indexers.keys() - set(dims)
         if invalid:
             raise ValueError(
@@ -763,7 +763,7 @@ def drop_dims_from_indexers(
 
         return indexers
 
-    elif missing_dims == "warning":
+    elif missing_dims == "warn":
 
         # don't modify input
         indexers = dict(indexers)

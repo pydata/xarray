@@ -792,7 +792,7 @@ class TestDataArray:
             match=r"dimensions {'not_a_dim'} do not exist. "
             r"Expected one or more of \('x', 'y'\)",
         ):
-            self.dv.isel(not_a_dim=0, missing_dims="warning")
+            self.dv.isel(not_a_dim=0, missing_dims="warn")
         assert_identical(self.dv, self.dv.isel(not_a_dim=0, missing_dims="ignore"))
 
     def test_isel_types(self):
