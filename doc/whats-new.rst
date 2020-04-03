@@ -35,10 +35,10 @@ New Features
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
   By `John Omotani <https://github.com/johnomotani>`_
-- 'missing_dims' argument to :py:meth:`DataArray.isel` and
-  :py:meth:`Variable.isel` to allow replacing the exception when a dimension
-  passed to ``isel`` is not present with a warning, or just ignore the
-  dimension. (:issue:`3866`, :pull:`3923`)
+- 'missing_dims' argument to :py:meth:`Dataset.isel`,
+  `:py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
+  the exception when a dimension passed to ``isel`` is not present with a
+  warning, or just ignore the dimension. (:issue:`3866`, :pull:`3923`)
   By `John Omotani <https://github.com/johnomotani>`_
 - Limited the length of array items with long string reprs to a
   reasonable width (:pull:`3900`)
