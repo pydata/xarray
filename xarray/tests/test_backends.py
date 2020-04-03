@@ -4334,6 +4334,12 @@ def test_source_encoding_always_present():
             assert ds.encoding["source"] == tmp
 
 
+def _assert_no_dates_out_of_range_warning(record):
+    undesired_message = "dates out of range"
+    for warning in record:
+        assert undesired_message not in str(warning.message)
+
+
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_use_cftime_standard_calendar_default_in_range(calendar):
@@ -4360,7 +4366,7 @@ def test_use_cftime_standard_calendar_default_in_range(calendar):
             with open_dataset(tmp_file) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
-            assert not record
+            _assert_no_dates_out_of_range_warning(record)
 
 
 @requires_cftime
@@ -4423,7 +4429,7 @@ def test_use_cftime_true(calendar, units_year):
             with open_dataset(tmp_file, use_cftime=True) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
-            assert not record
+            _assert_no_dates_out_of_range_warning(record)
 
 
 @requires_scipy_or_netCDF4
@@ -4452,7 +4458,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
             with open_dataset(tmp_file, use_cftime=False) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
-            assert not record
+            _assert_no_dates_out_of_range_warning(record)
 
 
 @requires_scipy_or_netCDF4
