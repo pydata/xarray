@@ -833,10 +833,10 @@ class TestDetermineCmapParams:
 
         for norm, extend in zip(
             [
-                mpl.colors.LogNorm(),
-                mpl.colors.LogNorm(vmin + 1, vmax - 1),
-                mpl.colors.LogNorm(None, vmax - 1),
-                mpl.colors.LogNorm(vmin + 1, None),
+                mpl.colors.Normalize(),
+                mpl.colors.Normalize(vmin + 0.1, vmax - 0.1),
+                mpl.colors.Normalize(None, vmax - 0.1),
+                mpl.colors.Normalize(vmin + 0.1, None),
             ],
             ["neither", "both", "max", "min"],
         ):
@@ -1751,6 +1751,13 @@ class TestFacetGrid(PlotTestCase):
         for image in plt.gcf().findobj(mpl.image.AxesImage):
             clim = np.array(image.get_clim())
             assert np.allclose(expected, clim)
+
+    @pytest.mark.slow
+    def test_vmin_vmax_equal(self):
+        # regression test for GH3734
+        fg = self.g.map_dataarray(xplt.imshow, "x", "y", vmin=50, vmax=50)
+        for mappable in fg._mappables:
+            assert mappable.norm.vmin != mappable.norm.vmax
 
     @pytest.mark.slow
     @pytest.mark.filterwarnings("ignore")
