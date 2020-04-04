@@ -59,6 +59,9 @@ Bug fixes
   By `Todd Jennings <https://github.com/toddrjen>`_
 - Fix ``FacetGrid`` when ``vmin == vmax``. (:issue:`3734`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Fix bug where plotting line plots with 2D coordinates depended on dimension
+  order. (:issue:`3933`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~

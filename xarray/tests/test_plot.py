@@ -257,6 +257,17 @@ class TestPlot(PlotTestCase):
         with pytest.raises(ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x="lon", hue="lat")
 
+    def test_2d_coord_line_plot_coords_transpose_invariant(self):
+        # checks for bug reported in GH #3933
+        x = np.arange(10)
+        y = np.arange(20)
+        ds = xr.Dataset(coords={"x": x, "y": y})
+
+        for z in [ds.y + ds.x, ds.x + ds.y]:
+            ds = ds.assign_coords(z=z)
+            ds["v"] = ds.x + ds.y
+            ds["v"].plot.line(y="z", hue="x")
+
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
