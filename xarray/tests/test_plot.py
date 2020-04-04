@@ -261,12 +261,12 @@ class TestPlot(PlotTestCase):
         # checks for bug reported in GH #3933
         x = np.arange(10)
         y = np.arange(20)
-        ds = xr.Dataset(coords={'x': x, 'y': y})
+        ds = xr.Dataset(coords={"x": x, "y": y})
 
         for z in [ds.y + ds.x, ds.x + ds.y]:
             ds = ds.assign_coords(z=z)
-            ds['v'] = (ds.x + ds.y)
-            ds['v'].plot.line(y='z', hue='x')
+            ds["v"] = ds.x + ds.y
+            ds["v"].plot.line(y="z", hue="x")
 
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
