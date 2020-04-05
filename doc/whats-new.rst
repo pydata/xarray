@@ -79,7 +79,7 @@ Documentation
 - Updated :doc:`Calculating Seasonal Averages from Timeseries of Monthly Means
   <examples/monthly-means>` example notebook to take advantage of the new
   ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`
-  (:pull:`3935`). `Spencer Clark <https://github.com/spencerkclark>`_.
+  (:pull:`3935`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
