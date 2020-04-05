@@ -15,7 +15,7 @@ from xarray.coding.cftimeindex import (
 )
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import raises_regex, requires_cftime
+from . import raises_regex, requires_cftime, requires_cftime_1_1_0
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
@@ -229,7 +229,7 @@ def test_cftimeindex_dayofweek_accessor(index):
     assert_array_equal(result, expected)
 
 
-@requires_cftime
+@requires_cftime_1_1_0
 def test_cftimeindex_days_in_month_accessor(index):
     result = index.days_in_month
     expected = [date.daysinmonth for date in index]
