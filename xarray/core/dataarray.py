@@ -3738,7 +3738,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         if dim is None:
             dim = self.dims
-        if isinstance(dim, Hashable):
+        if not isinstance(dim, Sequence) or isinstance(dim, str):
             dim = (dim,)
 
         # Get a name for the new dimension that does not conflict with any existing
