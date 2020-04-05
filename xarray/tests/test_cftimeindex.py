@@ -230,6 +230,13 @@ def test_cftimeindex_dayofweek_accessor(index):
 
 
 @requires_cftime
+def test_cftimeindex_days_in_month_accessor(index):
+    result = index.days_in_month
+    expected = [date.daysinmonth for date in index]
+    assert_array_equal(result, expected)
+
+
+@requires_cftime
 @pytest.mark.parametrize(
     ("string", "date_args", "reso"),
     [
