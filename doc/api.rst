@@ -366,6 +366,8 @@ Computation
 :py:attr:`~DataArray.argmin`
 :py:attr:`~DataArray.idxmax`
 :py:attr:`~DataArray.idxmin`
+:py:attr:`~DataArray.indices_max`
+:py:attr:`~DataArray.indices_min`
 :py:attr:`~DataArray.max`
 :py:attr:`~DataArray.mean`
 :py:attr:`~DataArray.median`

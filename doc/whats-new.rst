@@ -29,6 +29,11 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`DataArray.indices_min` and :py:meth:`DataArray.indices_max`
+  to get a dict of the indices for each dimension of the minimum or maximum of
+  a DataArray. (:pull:`3936`)
+  By `John Omotani <https://github.com/johnomotani>`_, thanks to `Keisuke Fujii
+  <https://github.com/fujiisoup>`_ for work in :pull:`1469`.
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
