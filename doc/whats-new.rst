@@ -35,6 +35,11 @@ New Features
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
   By `John Omotani <https://github.com/johnomotani>`_
+- 'missing_dims' argument to :py:meth:`Dataset.isel`,
+  `:py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
+  the exception when a dimension passed to ``isel`` is not present with a
+  warning, or just ignore the dimension. (:issue:`3866`, :pull:`3923`)
+  By `John Omotani <https://github.com/johnomotani>`_
 - Limited the length of array items with long string reprs to a
   reasonable width (:pull:`3900`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
@@ -49,6 +54,8 @@ New Features
   feature requires cftime version 1.1.0 or greater.  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
 
+- Allow plotting of boolean arrays. (:pull:`3766`)
+  By `Marek Jacob <https://github.com/MeraX>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -58,7 +65,11 @@ Bug fixes
 - Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
   can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
-
+- Fix ``FacetGrid`` when ``vmin == vmax``. (:issue:`3734`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- Fix bug where plotting line plots with 2D coordinates depended on dimension
+  order. (:issue:`3933`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -72,6 +83,9 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Run the ``isort`` pre-commit hook only on python source files
   and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add a CI job that runs the tests with every optional dependency
+  except ``dask``. (:issue:`3794`, :pull:`3919`)
   By `Justus Magin <https://github.com/keewis>`_.
 
 

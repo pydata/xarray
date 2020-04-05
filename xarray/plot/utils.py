@@ -237,18 +237,14 @@ def _determine_cmap_params(
             norm.vmin = vmin
         else:
             if not vmin_was_none and vmin != norm.vmin:
-                raise ValueError(
-                    "Cannot supply vmin and a norm" + " with a different vmin."
-                )
+                raise ValueError("Cannot supply vmin and a norm with a different vmin.")
             vmin = norm.vmin
 
         if norm.vmax is None:
             norm.vmax = vmax
         else:
             if not vmax_was_none and vmax != norm.vmax:
-                raise ValueError(
-                    "Cannot supply vmax and a norm" + " with a different vmax."
-                )
+                raise ValueError("Cannot supply vmax and a norm with a different vmax.")
             vmax = norm.vmax
 
     # if BoundaryNorm, then set levels
@@ -274,6 +270,10 @@ def _determine_cmap_params(
                 ticker = mpl.ticker.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
+
+    # GH3734
+    if vmin == vmax:
+        vmin, vmax = mpl.ticker.LinearLocator(2).tick_values(vmin, vmax)
 
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
@@ -534,7 +534,7 @@ def _ensure_plottable(*args):
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64, np.bool_]
     other_types = [datetime]
     try:
         import cftime
@@ -549,10 +549,10 @@ def _ensure_plottable(*args):
             or _valid_other_type(np.array(x), other_types)
         ):
             raise TypeError(
-                "Plotting requires coordinates to be numeric "
-                "or dates of type np.datetime64, "
+                "Plotting requires coordinates to be numeric, boolean, "
+                "or dates of type numpy.datetime64, "
                 "datetime.datetime, cftime.datetime or "
-                "pd.Interval."
+                f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
             _valid_other_type(np.array(x), cftime_datetime)
