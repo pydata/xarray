@@ -35,21 +35,37 @@ New Features
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
   By `John Omotani <https://github.com/johnomotani>`_
+- 'missing_dims' argument to :py:meth:`Dataset.isel`,
+  `:py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
+  the exception when a dimension passed to ``isel`` is not present with a
+  warning, or just ignore the dimension. (:issue:`3866`, :pull:`3923`)
+  By `John Omotani <https://github.com/johnomotani>`_
 - Limited the length of array items with long string reprs to a
   reasonable width (:pull:`3900`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
-
+- Allow plotting of boolean arrays. (:pull:`3766`)
+  By `Marek Jacob <https://github.com/MeraX>`_
 
 Bug fixes
 ~~~~~~~~~
+- Fix renaming of coords when one or more stacked coords is not in
+  sorted order during stack+groupby+apply operations. (:issue:`3287`,
+  :pull:`3906`) By `Spencer Hill <https://github.com/spencerahill>`_
 - Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
   can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
 - Ensure that colormap parameters are only determined once for FacetGrid plots.
   (:issue:`3569`). By `Deepak Cherian <https://github.com/dcherian>`_
+- Use divergent colormap if ``levels`` spans 0. (:issue:`3524`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- Fix ``FacetGrid`` when ``vmin == vmax``. (:issue:`3734`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- Fix bug where plotting line plots with 2D coordinates depended on dimension
+  order. (:issue:`3933`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -63,6 +79,9 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Run the ``isort`` pre-commit hook only on python source files
   and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add a CI job that runs the tests with every optional dependency
+  except ``dask``. (:issue:`3794`, :pull:`3919`)
   By `Justus Magin <https://github.com/keewis>`_.
 
 
@@ -97,13 +116,13 @@ New Features
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
   ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
-  By `Spencer Clark <https://github.com/spencerkclark>`_ 
+  By `Spencer Clark <https://github.com/spencerkclark>`_
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
   v0.8.0 for :py:class:`~xarray.backends.H5NetCDFStore`.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Add partial support for unit aware arrays with pint. (:pull:`3706`, :pull:`3611`)
   By `Justus Magin <https://github.com/keewis>`_.
-- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a 
+- :py:meth:`Dataset.groupby` and :py:meth:`DataArray.groupby` now raise a
   `TypeError` on multiple string arguments. Receiving multiple string arguments
   often means a user is attempting to pass multiple dimensions as separate
   arguments and should instead pass a single list of dimensions.
@@ -121,7 +140,7 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - ``skipna`` is available in :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile`,
   :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
-  (:issue:`3843`, :pull:`3844`) 
+  (:issue:`3843`, :pull:`3844`)
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Bug fixes
@@ -815,7 +834,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_ 
+- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_
   as a quick reference for tasks before creating a new PR
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
