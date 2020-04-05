@@ -164,6 +164,22 @@ class TestPlot(PlotTestCase):
         with raises_regex(ValueError, "None"):
             da.plot(x="z", y="f")
 
+    def test_multiindex_level_as_coord(self):
+        da = xr.DataArray(
+            np.arange(5),
+            dims="x",
+            coords=dict(a=("x", np.arange(5)), b=("x", np.arange(5, 10))),
+        )
+        da = da.set_index(x=["a", "b"])
+
+        for x in ["a", "b"]:
+            h = da.plot(x=x)[0]
+            assert_array_equal(h.get_xdata(), da[x].values)
+
+        for y in ["a", "b"]:
+            h = da.plot(y=y)[0]
+            assert_array_equal(h.get_ydata(), da[y].values)
+
     # Test for bug in GH issue #2725
     def test_infer_line_data(self):
         current = DataArray(
@@ -1025,6 +1041,16 @@ class Common2dMixin:
         with raises_regex(TypeError, r"[Pp]lot"):
             self.plotfunc(a)
 
+    def test_multiindex_raises_typeerror(self):
+        a = DataArray(
+            easy_array((3, 2)),
+            dims=("x", "y"),
+            coords=dict(x=("x", [0, 1, 2]), a=("y", [0, 1]), b=("y", [2, 3])),
+        )
+        a = a.set_index(y=("a", "b"))
+        with raises_regex(TypeError, r"[Pp]lot"):
+            self.plotfunc(a)
+
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.plotmethod)
 
@@ -1175,6 +1201,23 @@ class Common2dMixin:
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         assert np.min(ax.get_xlim()) > 100.0
+
+    def test_multiindex_level_as_coord(self):
+        da = DataArray(
+            easy_array((3, 2)),
+            dims=("x", "y"),
+            coords=dict(x=("x", [0, 1, 2]), a=("y", [0, 1]), b=("y", [2, 3])),
+        )
+        da = da.set_index(y=["a", "b"])
+
+        for x, y in (("a", "x"), ("b", "x"), ("x", "a"), ("x", "b")):
+            self.plotfunc(da, x=x, y=y)
+
+        with raises_regex(ValueError, "levels of the same MultiIndex"):
+            self.plotfunc(da, x="a", y="b")
+
+        with raises_regex(ValueError, "MultiIndex and one of its levels"):
+            self.plotfunc(da, x="a", y="y")
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=["a", "b", "c"])

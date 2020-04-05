@@ -34,14 +34,24 @@ def _infer_line_data(darray, x, y, hue):
     )
     ndims = len(darray.dims)
 
-    if x is not None and x not in darray.dims and x not in darray.coords:
+    if (
+        x is not None
+        and x not in darray.dims
+        and x not in darray.coords
+        and x not in darray._level_coords
+    ):
         raise ValueError("x " + error_msg)
 
-    if y is not None and y not in darray.dims and y not in darray.coords:
+    if (
+        y is not None
+        and y not in darray.dims
+        and y not in darray.coords
+        and y not in darray._level_coords
+    ):
         raise ValueError("y " + error_msg)
 
     if x is not None and y is not None:
-        raise ValueError("You cannot specify both x and y kwargs" "for line plots.")
+        raise ValueError("You cannot specify both x and y kwargs for line plots.")
 
     if ndims == 1:
         huename = None

@@ -48,6 +48,8 @@ New Features
   By `Todd Jennings <https://github.com/toddrjen>`_
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
+- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`). 
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Bug fixes
 ~~~~~~~~~
