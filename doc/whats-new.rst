@@ -76,7 +76,10 @@ Documentation
   :py:meth:`DataArray.diff` so it does document the ``dim``
   parameter as required. (:issue:`1040`, :pull:`3909`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Updated :doc:`Calculating Seasonal Averages from Timeseries of Monthly Means
+  <examples/monthly-means>` example notebook to take advantage of the new
+  ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`
+  (:pull:`3935`). `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
