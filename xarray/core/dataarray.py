@@ -55,7 +55,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, _extract_indexes_from_coords
-from .options import OPTIONS
+from .options import OPTIONS, _get_keep_attrs
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
@@ -3763,6 +3763,8 @@ class DataArray(AbstractArray, DataWithCoords):
             for d, i in zip(dim, result_unravelled_indices)
         }
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         if keep_attrs:
             for da in result.values():
                 da.attrs = self.attrs
@@ -3772,7 +3774,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def indices_min(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
-        keep_attrs: bool = False,
+        keep_attrs: bool = None,
         skipna: bool = None,
     ) -> Dict[Hashable, "DataArray"]:
         """Indices of the minimum of the DataArray over one or more dimensions. Result
@@ -3860,7 +3862,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def indices_max(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
-        keep_attrs: bool = False,
+        keep_attrs: bool = None,
         skipna: bool = None,
     ) -> Dict[Hashable, "DataArray"]:
         """Indices of the maximum of the DataArray over one or more dimensions. Result
