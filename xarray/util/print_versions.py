@@ -9,7 +9,7 @@ import sys
 
 
 def get_sys_info():
-    "Returns system information as a dict"
+    """Returns system information as a dict"""
 
     blob = []
 
@@ -22,7 +22,7 @@ def get_sys_info():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            so, serr = pipe.communicate()
+            so, _ = pipe.communicate()
         except Exception:
             pass
         else:
@@ -37,7 +37,7 @@ def get_sys_info():
     blob.append(("commit", commit))
 
     try:
-        (sysname, nodename, release, version, machine, processor) = platform.uname()
+        (sysname, _nodename, release, _version, machine, processor) = platform.uname()
         blob.extend(
             [
                 ("python", sys.version),
@@ -118,6 +118,7 @@ def show_versions(file=sys.stdout):
         ("cartopy", lambda mod: mod.__version__),
         ("seaborn", lambda mod: mod.__version__),
         ("numbagg", lambda mod: mod.__version__),
+        ("pint", lambda mod: mod.__version__),
         # xarray setup/test
         ("setuptools", lambda mod: mod.__version__),
         ("pip", lambda mod: mod.__version__),
