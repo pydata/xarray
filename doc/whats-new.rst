@@ -29,9 +29,11 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Added :py:meth:`DataArray.indices_min` and :py:meth:`DataArray.indices_max`
-  to get a dict of the indices for each dimension of the minimum or maximum of
-  a DataArray. (:pull:`3936`)
+- :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax` now support
+  sequences of 'dim' arguments, and if a sequence is passed return a dict
+  (which can be passed to :py:meth:`isel` to get the value of the minimum) of
+  the indices for each dimension of the minimum or maximum of a DataArray.
+  (:pull:`3936`)
   By `John Omotani <https://github.com/johnomotani>`_, thanks to `Keisuke Fujii
   <https://github.com/fujiisoup>`_ for work in :pull:`1469`.
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)

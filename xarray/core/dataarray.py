@@ -3730,16 +3730,35 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         argminmax: Hashable,
         dim: Union[Hashable, Sequence[Hashable], None],
-        keep_attrs: bool,
+        axis: Union[int, None],
+        keep_attrs: Optional[bool],
         skipna: Optional[bool],
     ) -> Dict[Hashable, "DataArray"]:
         """Apply argmin or argmax over one or more dimensions, returning the result as a
         dict of DataArray that can be passed directly to isel.
         """
-        if dim is None:
+        if dim is None and axis is None:
+            warnings.warn(
+                "Behaviour of argmin/argmax with neither dim nor axis argument will "
+                "change to return a dict of indices of each dimension. To get a "
+                "single, flat index, please use np.argmin(da) or np.argmax(da) instead "
+                "of da.argmin() or da.argmax().",
+                DeprecationWarning,
+            )
+        if dim is ...:
+            # In future, should do this also when (dim is None and axis is None)
             dim = self.dims
-        if not isinstance(dim, Sequence) or isinstance(dim, str):
-            dim = (dim,)
+        if (
+            dim is None
+            or axis is not None
+            or not isinstance(dim, Sequence)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            return getattr(self, str(argminmax))(
+                dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna
+            )
 
         # Get a name for the new dimension that does not conflict with any existing
         # dimension
@@ -3771,9 +3790,10 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return result
 
-    def indices_min(
+    def argmin(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
+        axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
     ) -> Dict[Hashable, "DataArray"]:
@@ -3788,6 +3808,9 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : hashable or sequence of hashable, optional
             The dimensions over which to find the minimum. By default, finds minimum over
             all dimensions.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -3815,10 +3838,10 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> array.argmin()
         <xarray.DataArray ()>
         array(2)
-        >>> array.indices_min()
+        >>> array.argmin(...)
         {'x': <xarray.DataArray ()>
         array(2)}
-        >>> array.isel(array.indices_min())
+        >>> array.isel(array.argmin(...))
         array(-1)
 
         >>> array = xr.DataArray([[[3, 2, 1], [3, 1, 2], [2, 1, 3]],
@@ -3836,7 +3859,7 @@ class DataArray(AbstractArray, DataWithCoords):
                [1, 1, 1],
                [0, 0, 1]])
         Dimensions without coordinates: y, z
-        >>> array.indices_min(dim="x")
+        >>> array.argmin(dim=["x"])
         {'x': <xarray.DataArray (y: 3, z: 3)>
         array([[1, 0, 0],
                [1, 1, 1],
@@ -3846,22 +3869,23 @@ class DataArray(AbstractArray, DataWithCoords):
         <xarray.DataArray (y: 3)>
         array([ 1, -5,  1])
         Dimensions without coordinates: y
-        >>> array.indices_min(dim=("x", "z"))
+        >>> array.argmin(dim=["x", "z"])
         {'x': <xarray.DataArray (y: 3)>
         array([0, 1, 0])
         Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)>
         array([2, 1, 1])
         Dimensions without coordinates: y}
-        >>> array.isel(array.indices_min(dim=("x", "z")))
+        >>> array.isel(array.argmin(dim=["x", "z"]))
         <xarray.DataArray (y: 3)>
         array([ 1, -5,  1])
         Dimensions without coordinates: y
         """
-        return self._unravel_argminmax("argmin", dim, keep_attrs, skipna)
+        return self._unravel_argminmax("_argmin_base", dim, axis, keep_attrs, skipna)
 
-    def indices_max(
+    def argmax(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
+        axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
     ) -> Dict[Hashable, "DataArray"]:
@@ -3876,6 +3900,9 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : hashable or sequence of hashable, optional
             The dimensions over which to find the maximum. By default, finds maximum over
             all dimensions.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -3903,10 +3930,10 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> array.argmax()
         <xarray.DataArray ()>
         array(3)
-        >>> array.indices_max()
+        >>> array.argmax(...)
         {'x': <xarray.DataArray ()>
         array(3)}
-        >>> array.isel(array.indices_max())
+        >>> array.isel(array.argmax(...))
         <xarray.DataArray ()>
         array(3)
 
@@ -3925,7 +3952,7 @@ class DataArray(AbstractArray, DataWithCoords):
                [0, 1, 0],
                [0, 1, 0]])
         Dimensions without coordinates: y, z
-        >>> array.indices_max(dim="x")
+        >>> array.argmax(dim=["x"])
         {'x': <xarray.DataArray (y: 3, z: 3)>
         array([[0, 1, 1],
                [0, 1, 0],
@@ -3935,18 +3962,18 @@ class DataArray(AbstractArray, DataWithCoords):
         <xarray.DataArray (y: 3)>
         array([3, 5, 3])
         Dimensions without coordinates: y
-        >>> array.indices_max(dim=("x", "z"))
+        >>> array.argmax(dim=["x", "z"])
         {'x': <xarray.DataArray (y: 3)>
         array([0, 1, 0])
         Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)>
         array([0, 1, 2])
         Dimensions without coordinates: y}
-        >>> array.isel(array.indices_max(dim=("x", "z")))
+        >>> array.isel(array.argmax(dim=["x", "z"]))
         <xarray.DataArray (y: 3)>
         array([3, 5, 3])
         Dimensions without coordinates: y
         """
-        return self._unravel_argminmax("argmax", dim, keep_attrs, skipna)
+        return self._unravel_argminmax("_argmax_base", dim, axis, keep_attrs, skipna)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
