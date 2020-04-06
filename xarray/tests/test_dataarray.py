@@ -781,6 +781,19 @@ class TestDataArray:
         assert_identical(self.dv, self.dv.isel(x=slice(None)))
         assert_identical(self.dv[:3], self.dv.isel(x=slice(3)))
         assert_identical(self.dv[:3, :5], self.dv.isel(x=slice(3), y=slice(5)))
+        with raises_regex(
+            ValueError,
+            r"dimensions {'not_a_dim'} do not exist. Expected "
+            r"one or more of \('x', 'y'\)",
+        ):
+            self.dv.isel(not_a_dim=0)
+        with pytest.warns(
+            UserWarning,
+            match=r"dimensions {'not_a_dim'} do not exist. "
+            r"Expected one or more of \('x', 'y'\)",
+        ):
+            self.dv.isel(not_a_dim=0, missing_dims="warn")
+        assert_identical(self.dv, self.dv.isel(not_a_dim=0, missing_dims="ignore"))
 
     def test_isel_types(self):
         # regression test for #1405
@@ -1201,6 +1214,25 @@ class TestDataArray:
         actual = data.sel(y="a")
         expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop_vars("y")
         assert_equal(actual, expected)
+
+    def test_stack_groupby_unsorted_coord(self):
+        data = [[0, 1], [2, 3]]
+        data_flat = [0, 1, 2, 3]
+        dims = ["x", "y"]
+        y_vals = [2, 3]
+
+        arr = xr.DataArray(data, dims=dims, coords={"y": y_vals})
+        actual1 = arr.stack(z=dims).groupby("z").first()
+        midx1 = pd.MultiIndex.from_product([[0, 1], [2, 3]], names=dims)
+        expected1 = xr.DataArray(data_flat, dims=["z"], coords={"z": midx1})
+        xr.testing.assert_equal(actual1, expected1)
+
+        # GH: 3287.  Note that y coord values are not in sorted order.
+        arr = xr.DataArray(data, dims=dims, coords={"y": y_vals[::-1]})
+        actual2 = arr.stack(z=dims).groupby("z").first()
+        midx2 = pd.MultiIndex.from_product([[0, 1], [3, 2]], names=dims)
+        expected2 = xr.DataArray(data_flat, dims=["z"], coords={"z": midx2})
+        xr.testing.assert_equal(actual2, expected2)
 
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims="x")

@@ -93,6 +93,7 @@ def _infer_line_data(darray, x, y, hue):
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     otherdim = darray.dims[otherindex]
                     xplt = darray.transpose(otherdim, huename, transpose_coords=False)
+                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError(
                         "For 2D inputs, hue must be a dimension"
@@ -689,7 +690,7 @@ def _plot2d(plotfunc):
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
         yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
 
-        _ensure_plottable(xplt, yplt)
+        _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
             plotfunc, zval.data, **locals()
