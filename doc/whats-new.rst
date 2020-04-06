@@ -48,6 +48,13 @@ New Features
   By `Todd Jennings <https://github.com/toddrjen>`_
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
+- A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
+  the ``days_in_month`` accessor for a :py:class:`pandas.DatetimeIndex`, which
+  returns the days in the month each datetime in the index.  Now days in month
+  weights for both standard and non-standard calendars can be obtained using
+  the :py:class:`~core.accessor_dt.DatetimeAccessor` (:pull:`3935`).  This
+  feature requires cftime version 1.1.0 or greater.  By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -71,7 +78,10 @@ Documentation
   :py:meth:`DataArray.diff` so it does document the ``dim``
   parameter as required. (:issue:`1040`, :pull:`3909`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Updated :doc:`Calculating Seasonal Averages from Timeseries of Monthly Means
+  <examples/monthly-means>` example notebook to take advantage of the new
+  ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`
+  (:pull:`3935`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
