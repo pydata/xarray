@@ -6294,5 +6294,55 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ),
         )
 
+    def argmin(self, dim=None, axis=None, **kwargs):
+        if dim is None and axis is None:
+            warnings.warn(
+                "Behaviour of DataArray.argmin() with neither dim nor axis argument "
+                "will change to return a dict of indices of each dimension, and then it "
+                "will be an error to call Dataset.argmin() with no argument. To get a "
+                "single, flat index, please use np.argmin(ds) instead of ds.argmin().",
+                DeprecationWarning,
+            )
+        if (
+            dim is None
+            or axis is not None
+            or not isinstance(dim, Sequence)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            return getattr(self, "_argmin_base")(dim=dim, axis=axis, **kwargs)
+        else:
+            raise ValueError(
+                "When dim is a sequence, DataArray.argmin() returns a "
+                "dict. dicts cannot be contained in a Dataset, so cannot "
+                "call Dataset.argmin() with a sequence for dim"
+            )
+
+    def argmax(self, dim=None, axis=None, **kwargs):
+        if dim is None and axis is None:
+            warnings.warn(
+                "Behaviour of DataArray.argmin() with neither dim nor axis argument "
+                "will change to return a dict of indices of each dimension, and then it "
+                "will be an error to call Dataset.argmin() with no argument. To get a "
+                "single, flat index, please use np.argmin(ds) instead of ds.argmin().",
+                DeprecationWarning,
+            )
+        if (
+            dim is None
+            or axis is not None
+            or not isinstance(dim, Sequence)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            return getattr(self, "_argmax_base")(dim=dim, axis=axis, **kwargs)
+        else:
+            raise ValueError(
+                "When dim is a sequence, DataArray.argmax() returns a "
+                "dict. dicts cannot be contained in a Dataset, so cannot "
+                "call Dataset.argmax() with a sequence for dim"
+            )
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
