@@ -35,9 +35,7 @@ class SupportsArithmetic:
         # See the docstring example for numpy.lib.mixins.NDArrayOperatorsMixin.
         out = kwargs.get("out", ())
         for x in inputs + out:
-            if not isinstance(
-                x, self._HANDLED_TYPES + (SupportsArithmetic,)
-            ) and not hasattr(x, "__array_ufunc__"):
+            if not isinstance(x, self._HANDLED_TYPES + (SupportsArithmetic,)):
                 return NotImplemented
 
         if ufunc.signature is not None:
