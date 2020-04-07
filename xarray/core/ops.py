@@ -47,8 +47,8 @@ PANDAS_UNARY_FUNCTIONS = ["isnull", "notnull"]
 # methods which remove an axis
 REDUCE_METHODS = ["all", "any"]
 NAN_REDUCE_METHODS = [
-    "_argmax_base",
-    "_argmin_base",
+    "argmax",
+    "argmin",
     "max",
     "min",
     "mean",

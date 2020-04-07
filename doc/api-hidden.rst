@@ -43,8 +43,8 @@
 
    core.rolling.DatasetCoarsen.all
    core.rolling.DatasetCoarsen.any
-   core.rolling.DatasetCoarsen._argmax_base
-   core.rolling.DatasetCoarsen._argmin_base
+   core.rolling.DatasetCoarsen.argmax
+   core.rolling.DatasetCoarsen.argmin
    core.rolling.DatasetCoarsen.count
    core.rolling.DatasetCoarsen.max
    core.rolling.DatasetCoarsen.mean
@@ -70,8 +70,8 @@
    core.groupby.DatasetGroupBy.where
    core.groupby.DatasetGroupBy.all
    core.groupby.DatasetGroupBy.any
-   core.groupby.DatasetGroupBy._argmax_base
-   core.groupby.DatasetGroupBy._argmin_base
+   core.groupby.DatasetGroupBy.argmax
+   core.groupby.DatasetGroupBy.argmin
    core.groupby.DatasetGroupBy.count
    core.groupby.DatasetGroupBy.max
    core.groupby.DatasetGroupBy.mean
@@ -87,8 +87,8 @@
    core.resample.DatasetResample.all
    core.resample.DatasetResample.any
    core.resample.DatasetResample.apply
-   core.resample.DatasetResample._argmax_base
-   core.resample.DatasetResample._argmin_base
+   core.resample.DatasetResample.argmax
+   core.resample.DatasetResample.argmin
    core.resample.DatasetResample.assign
    core.resample.DatasetResample.assign_coords
    core.resample.DatasetResample.bfill
@@ -114,8 +114,8 @@
    core.resample.DatasetResample.dims
    core.resample.DatasetResample.groups
 
-   core.rolling.DatasetRolling._argmax_base
-   core.rolling.DatasetRolling._argmin_base
+   core.rolling.DatasetRolling.argmax
+   core.rolling.DatasetRolling.argmin
    core.rolling.DatasetRolling.count
    core.rolling.DatasetRolling.max
    core.rolling.DatasetRolling.mean
@@ -189,8 +189,8 @@
 
    core.rolling.DataArrayCoarsen.all
    core.rolling.DataArrayCoarsen.any
-   core.rolling.DataArrayCoarsen._argmax_base
-   core.rolling.DataArrayCoarsen._argmin_base
+   core.rolling.DataArrayCoarsen.argmax
+   core.rolling.DataArrayCoarsen.argmin
    core.rolling.DataArrayCoarsen.count
    core.rolling.DataArrayCoarsen.max
    core.rolling.DataArrayCoarsen.mean
@@ -215,8 +215,8 @@
    core.groupby.DataArrayGroupBy.where
    core.groupby.DataArrayGroupBy.all
    core.groupby.DataArrayGroupBy.any
-   core.groupby.DataArrayGroupBy._argmax_base
-   core.groupby.DataArrayGroupBy._argmin_base
+   core.groupby.DataArrayGroupBy.argmax
+   core.groupby.DataArrayGroupBy.argmin
    core.groupby.DataArrayGroupBy.count
    core.groupby.DataArrayGroupBy.max
    core.groupby.DataArrayGroupBy.mean
@@ -232,8 +232,8 @@
    core.resample.DataArrayResample.all
    core.resample.DataArrayResample.any
    core.resample.DataArrayResample.apply
-   core.resample.DataArrayResample._argmax_base
-   core.resample.DataArrayResample._argmin_base
+   core.resample.DataArrayResample.argmax
+   core.resample.DataArrayResample.argmin
    core.resample.DataArrayResample.assign_coords
    core.resample.DataArrayResample.bfill
    core.resample.DataArrayResample.count
@@ -258,8 +258,8 @@
    core.resample.DataArrayResample.dims
    core.resample.DataArrayResample.groups
 
-   core.rolling.DataArrayRolling._argmax_base
-   core.rolling.DataArrayRolling._argmin_base
+   core.rolling.DataArrayRolling.argmax
+   core.rolling.DataArrayRolling.argmin
    core.rolling.DataArrayRolling.count
    core.rolling.DataArrayRolling.max
    core.rolling.DataArrayRolling.mean
@@ -357,8 +357,8 @@
 
    Variable.all
    Variable.any
-   Variable._argmax_base
-   Variable._argmin_base
+   Variable.argmax
+   Variable.argmin
    Variable.argsort
    Variable.astype
    Variable.broadcast_equals
@@ -431,8 +431,8 @@
 
    IndexVariable.all
    IndexVariable.any
-   IndexVariable._argmax_base
-   IndexVariable._argmin_base
+   IndexVariable.argmax
+   IndexVariable.argmin
    IndexVariable.argsort
    IndexVariable.astype
    IndexVariable.broadcast_equals

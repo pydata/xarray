@@ -209,11 +209,11 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u.mean(), v.mean())
         self.assertLazyAndAllClose(u.std(), v.std())
         with raise_if_dask_computes():
-            actual = v._argmax_base(dim="x")
-        self.assertLazyAndAllClose(u._argmax_base(dim="x"), actual)
+            actual = v.argmax(dim="x")
+        self.assertLazyAndAllClose(u.argmax(dim="x"), actual)
         with raise_if_dask_computes():
-            actual = v._argmin_base(dim="x")
-        self.assertLazyAndAllClose(u._argmin_base(dim="x"), actual)
+            actual = v.argmin(dim="x")
+        self.assertLazyAndAllClose(u.argmin(dim="x"), actual)
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
         with raises_regex(NotImplementedError, "only works along an axis"):

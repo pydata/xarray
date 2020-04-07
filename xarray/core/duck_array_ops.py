@@ -319,8 +319,8 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
 
 # Attributes `numeric_only`, `available_min_count` is used for docs.
 # See ops.inject_reduce_methods
-_argmax_base = _create_nan_agg_method("argmax", coerce_strings=True)
-_argmin_base = _create_nan_agg_method("argmin", coerce_strings=True)
+argmax = _create_nan_agg_method("argmax", coerce_strings=True)
+argmin = _create_nan_agg_method("argmin", coerce_strings=True)
 max = _create_nan_agg_method("max", coerce_strings=True)
 min = _create_nan_agg_method("min", coerce_strings=True)
 sum = _create_nan_agg_method("sum")

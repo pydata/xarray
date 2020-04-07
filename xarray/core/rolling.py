@@ -130,8 +130,8 @@ class Rolling:
         method.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=name)
         return method
 
-    _argmax_base = _reduce_method("_argmax_base")
-    _argmin_base = _reduce_method("_argmin_base")
+    argmax = _reduce_method("argmax")
+    argmin = _reduce_method("argmin")
     max = _reduce_method("max")
     min = _reduce_method("min")
     mean = _reduce_method("mean")

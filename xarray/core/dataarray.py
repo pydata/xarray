@@ -3752,7 +3752,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
-            return getattr(self, str(argminmax))(
+            return getattr(self, str("_injected_" + argminmax))(
                 dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna
             )
 
@@ -3769,7 +3769,7 @@ class DataArray(AbstractArray, DataWithCoords):
         result_dims = stacked.dims[:-1]
         reduce_shape = tuple(self.sizes[d] for d in dim)
 
-        result_flat_indices = getattr(stacked, str(argminmax))(axis=-1, skipna=skipna)
+        result_flat_indices = getattr(stacked, str("_injected_" + argminmax))(axis=-1, skipna=skipna)
 
         result_unravelled_indices = np.unravel_index(result_flat_indices, reduce_shape)
 
@@ -3876,7 +3876,7 @@ class DataArray(AbstractArray, DataWithCoords):
         array([ 1, -5,  1])
         Dimensions without coordinates: y
         """
-        return self._unravel_argminmax("_argmin_base", dim, axis, keep_attrs, skipna)
+        return self._unravel_argminmax("argmin", dim, axis, keep_attrs, skipna)
 
     def argmax(
         self,
@@ -3969,7 +3969,7 @@ class DataArray(AbstractArray, DataWithCoords):
         array([3, 5, 3])
         Dimensions without coordinates: y
         """
-        return self._unravel_argminmax("_argmax_base", dim, axis, keep_attrs, skipna)
+        return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
