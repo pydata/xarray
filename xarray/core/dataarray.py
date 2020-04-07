@@ -3722,10 +3722,6 @@ class DataArray(AbstractArray, DataWithCoords):
             keep_attrs=keep_attrs,
         )
 
-    # this needs to be at the end, or mypy will confuse with `str`
-    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
-    str = property(StringAccessor)
-
     def _unravel_argminmax(
         self,
         argminmax: Hashable,
@@ -3974,6 +3970,10 @@ class DataArray(AbstractArray, DataWithCoords):
         Dimensions without coordinates: y
         """
         return self._unravel_argminmax("_argmax_base", dim, axis, keep_attrs, skipna)
+
+    # this needs to be at the end, or mypy will confuse with `str`
+    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
+    str = property(StringAccessor)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
