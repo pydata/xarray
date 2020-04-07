@@ -82,6 +82,8 @@ Documentation
   <examples/monthly-means>` example notebook to take advantage of the new
   ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`
   (:pull:`3935`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Updated the list of current core developers. (:issue:`3892`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
