@@ -18,6 +18,8 @@
    Dataset.any
    Dataset.argmax
    Dataset.argmin
+   Dataset._injected_argmax
+   Dataset._injected_argmin
    Dataset.max
    Dataset.min
    Dataset.mean
@@ -94,6 +96,8 @@
    core.resample.DatasetResample.ffill
    core.resample.DatasetResample.fillna
    core.resample.DatasetResample.first
+   core.resample.DatasetResample._injected_argmax
+   core.resample.DatasetResample._injected_argmin
    core.resample.DatasetResample.last
    core.resample.DatasetResample.map
    core.resample.DatasetResample.max
@@ -160,6 +164,8 @@
    DataArray.any
    DataArray.argmax
    DataArray.argmin
+   DataArray._injected_argmax
+   DataArray._injected_argmin
    DataArray.max
    DataArray.min
    DataArray.mean
@@ -234,6 +240,8 @@
    core.resample.DataArrayResample.ffill
    core.resample.DataArrayResample.fillna
    core.resample.DataArrayResample.first
+   core.resample.DataArrayResample._injected_argmax
+   core.resample.DataArrayResample._injected_argmin
    core.resample.DataArrayResample.last
    core.resample.DataArrayResample.map
    core.resample.DataArrayResample.max
@@ -369,6 +377,8 @@
    Variable.fillna
    Variable.get_axis_num
    Variable.identical
+   Variable._injected_argmax
+   Variable._injected_argmin
    Variable.isel
    Variable.isnull
    Variable.item
@@ -442,6 +452,8 @@
    IndexVariable.get_axis_num
    IndexVariable.get_level_variable
    IndexVariable.identical
+   IndexVariable._injected_argmax
+   IndexVariable._injected_argmin
    IndexVariable.isel
    IndexVariable.isnull
    IndexVariable.item
