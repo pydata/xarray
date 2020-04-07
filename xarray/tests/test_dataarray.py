@@ -3517,8 +3517,8 @@ class TestDataArray:
 
     def test_from_series_multiindex(self):
         # GH:3951
-        df = pd.DataFrame({'B': [1, 2, 3], 'A': [4, 5, 6]}) 
-        df = df.rename_axis('num').rename_axis('alpha', axis=1) 
+        df = pd.DataFrame({'B': [1, 2, 3], 'A': [4, 5, 6]})
+        df = df.rename_axis('num').rename_axis('alpha', axis=1)
         actual = df.stack('alpha').to_xarray()
         assert (actual.sel(alpha='B') == [1, 2, 3]).all()
         assert (actual.sel(alpha='A') == [4, 5, 6]).all()
