@@ -3515,6 +3515,14 @@ class TestDataArray:
             expected_da, DataArray.from_series(actual).drop_vars(["x", "y"])
         )
 
+    def test_from_series_multiindex(self):
+        # GH:3951
+        df = pd.DataFrame({"B": [1, 2, 3], "A": [4, 5, 6]})
+        df = df.rename_axis("num").rename_axis("alpha", axis=1)
+        actual = df.stack("alpha").to_xarray()
+        assert (actual.sel(alpha="B") == [1, 2, 3]).all()
+        assert (actual.sel(alpha="A") == [4, 5, 6]).all()
+
     @requires_sparse
     def test_from_series_sparse(self):
         import sparse
@@ -4524,7 +4532,7 @@ class TestReduce1D(TestReduce):
 
     def test_idxmin(self, x, minindex, maxindex, nanindex):
         ar0 = xr.DataArray(
-            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs,
+            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
 
         # dim doesn't exist
@@ -4620,7 +4628,7 @@ class TestReduce1D(TestReduce):
 
     def test_idxmax(self, x, minindex, maxindex, nanindex):
         ar0 = xr.DataArray(
-            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs,
+            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
 
         # dim doesn't exist
