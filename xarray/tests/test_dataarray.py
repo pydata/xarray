@@ -5239,7 +5239,7 @@ class TestReduce2D(TestReduce):
             return
 
         expected0 = [
-            indarr.isel(y=yi, drop=True).isel(x=indi, drop=True)
+            indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex)
         ]
         expected0 = {"x": xr.concat(expected0, dim="y")}
@@ -5259,7 +5259,7 @@ class TestReduce2D(TestReduce):
             for x, y in zip(minindex, nanindex)
         ]
         expected2 = [
-            indarr.isel(y=yi, drop=True).isel(x=indi, drop=True)
+            indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex)
         ]
         expected2 = {"x": xr.concat(expected2, dim="y")}
@@ -5296,7 +5296,7 @@ class TestReduce2D(TestReduce):
             return
 
         expected0 = [
-            indarr.isel(y=yi, drop=True).isel(x=indi, drop=True)
+            indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex)
         ]
         expected0 = {"x": xr.concat(expected0, dim="y")}
@@ -5316,7 +5316,7 @@ class TestReduce2D(TestReduce):
             for x, y in zip(maxindex, nanindex)
         ]
         expected2 = [
-            indarr.isel(y=yi, drop=True).isel(x=indi, drop=True)
+            indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex)
         ]
         expected2 = {"x": xr.concat(expected2, dim="y")}
@@ -5576,7 +5576,7 @@ class TestReduce3D(TestReduce):
             for key, value in minindices_x.items()
         }
         for key in expected0:
-            assert_identical(result0[key], expected0[key])
+            assert_identical(result0[key].drop_vars(["y", "z"]), expected0[key])
 
         result1 = ar.argmin(dim=["y"])
         expected1 = {
@@ -5584,7 +5584,7 @@ class TestReduce3D(TestReduce):
             for key, value in minindices_y.items()
         }
         for key in expected1:
-            assert_identical(result1[key], expected1[key])
+            assert_identical(result1[key].drop_vars(["x", "z"]), expected1[key])
 
         result2 = ar.argmin(dim=["z"])
         expected2 = {
@@ -5592,28 +5592,28 @@ class TestReduce3D(TestReduce):
             for key, value in minindices_z.items()
         }
         for key in expected2:
-            assert_identical(result2[key], expected2[key])
+            assert_identical(result2[key].drop_vars(["x", "y"]), expected2[key])
 
         result3 = ar.argmin(dim=("x", "y"))
         expected3 = {
             key: xr.DataArray(value, dims=("z")) for key, value in minindices_xy.items()
         }
         for key in expected3:
-            assert_identical(result3[key], expected3[key])
+            assert_identical(result3[key].drop_vars("z"), expected3[key])
 
         result4 = ar.argmin(dim=("x", "z"))
         expected4 = {
             key: xr.DataArray(value, dims=("y")) for key, value in minindices_xz.items()
         }
         for key in expected4:
-            assert_identical(result4[key], expected4[key])
+            assert_identical(result4[key].drop_vars("y"), expected4[key])
 
         result5 = ar.argmin(dim=("y", "z"))
         expected5 = {
             key: xr.DataArray(value, dims=("x")) for key, value in minindices_yz.items()
         }
         for key in expected5:
-            assert_identical(result5[key], expected5[key])
+            assert_identical(result5[key].drop_vars("x"), expected5[key])
 
         result6 = ar.argmin(...)
         expected6 = {key: xr.DataArray(value) for key, value in minindices_xyz.items()}
@@ -5633,7 +5633,7 @@ class TestReduce3D(TestReduce):
 
         result7 = ar.argmin(dim=["x"], skipna=False)
         for key in expected7:
-            assert_identical(result7[key], expected7[key])
+            assert_identical(result7[key].drop_vars(["y", "z"]), expected7[key])
 
         minindices_y = {
             key: xr.where(
@@ -5648,7 +5648,7 @@ class TestReduce3D(TestReduce):
 
         result8 = ar.argmin(dim=["y"], skipna=False)
         for key in expected8:
-            assert_identical(result8[key], expected8[key])
+            assert_identical(result8[key].drop_vars(["x", "z"]), expected8[key])
 
         minindices_z = {
             key: xr.where(
@@ -5663,7 +5663,7 @@ class TestReduce3D(TestReduce):
 
         result9 = ar.argmin(dim=["z"], skipna=False)
         for key in expected9:
-            assert_identical(result9[key], expected9[key])
+            assert_identical(result9[key].drop_vars(["x", "y"]), expected9[key])
 
         minindices_xy = {
             key: xr.where(
@@ -5677,7 +5677,7 @@ class TestReduce3D(TestReduce):
 
         result10 = ar.argmin(dim=("x", "y"), skipna=False)
         for key in expected10:
-            assert_identical(result10[key], expected10[key])
+            assert_identical(result10[key].drop_vars("z"), expected10[key])
 
         minindices_xz = {
             key: xr.where(
@@ -5691,7 +5691,7 @@ class TestReduce3D(TestReduce):
 
         result11 = ar.argmin(dim=("x", "z"), skipna=False)
         for key in expected11:
-            assert_identical(result11[key], expected11[key])
+            assert_identical(result11[key].drop_vars("y"), expected11[key])
 
         minindices_yz = {
             key: xr.where(
@@ -5705,7 +5705,7 @@ class TestReduce3D(TestReduce):
 
         result12 = ar.argmin(dim=("y", "z"), skipna=False)
         for key in expected12:
-            assert_identical(result12[key], expected12[key])
+            assert_identical(result12[key].drop_vars("x"), expected12[key])
 
         minindices_xyz = {
             key: xr.where(
@@ -5791,7 +5791,7 @@ class TestReduce3D(TestReduce):
             for key, value in maxindices_x.items()
         }
         for key in expected0:
-            assert_identical(result0[key], expected0[key])
+            assert_identical(result0[key].drop_vars(["y", "z"]), expected0[key])
 
         result1 = ar.argmax(dim=["y"])
         expected1 = {
@@ -5799,7 +5799,7 @@ class TestReduce3D(TestReduce):
             for key, value in maxindices_y.items()
         }
         for key in expected1:
-            assert_identical(result1[key], expected1[key])
+            assert_identical(result1[key].drop_vars(["x", "z"]), expected1[key])
 
         result2 = ar.argmax(dim=["z"])
         expected2 = {
@@ -5807,28 +5807,28 @@ class TestReduce3D(TestReduce):
             for key, value in maxindices_z.items()
         }
         for key in expected2:
-            assert_identical(result2[key], expected2[key])
+            assert_identical(result2[key].drop_vars(["x", "y"]), expected2[key])
 
         result3 = ar.argmax(dim=("x", "y"))
         expected3 = {
             key: xr.DataArray(value, dims=("z")) for key, value in maxindices_xy.items()
         }
         for key in expected3:
-            assert_identical(result3[key], expected3[key])
+            assert_identical(result3[key].drop_vars("z"), expected3[key])
 
         result4 = ar.argmax(dim=("x", "z"))
         expected4 = {
             key: xr.DataArray(value, dims=("y")) for key, value in maxindices_xz.items()
         }
         for key in expected4:
-            assert_identical(result4[key], expected4[key])
+            assert_identical(result4[key].drop_vars("y"), expected4[key])
 
         result5 = ar.argmax(dim=("y", "z"))
         expected5 = {
             key: xr.DataArray(value, dims=("x")) for key, value in maxindices_yz.items()
         }
         for key in expected5:
-            assert_identical(result5[key], expected5[key])
+            assert_identical(result5[key].drop_vars("x"), expected5[key])
 
         result6 = ar.argmax(...)
         expected6 = {key: xr.DataArray(value) for key, value in maxindices_xyz.items()}
@@ -5848,7 +5848,7 @@ class TestReduce3D(TestReduce):
 
         result7 = ar.argmax(dim=["x"], skipna=False)
         for key in expected7:
-            assert_identical(result7[key], expected7[key])
+            assert_identical(result7[key].drop_vars(["y", "z"]), expected7[key])
 
         maxindices_y = {
             key: xr.where(
@@ -5863,7 +5863,7 @@ class TestReduce3D(TestReduce):
 
         result8 = ar.argmax(dim=["y"], skipna=False)
         for key in expected8:
-            assert_identical(result8[key], expected8[key])
+            assert_identical(result8[key].drop_vars(["x", "z"]), expected8[key])
 
         maxindices_z = {
             key: xr.where(
@@ -5878,7 +5878,7 @@ class TestReduce3D(TestReduce):
 
         result9 = ar.argmax(dim=["z"], skipna=False)
         for key in expected9:
-            assert_identical(result9[key], expected9[key])
+            assert_identical(result9[key].drop_vars(["x", "y"]), expected9[key])
 
         maxindices_xy = {
             key: xr.where(
@@ -5892,7 +5892,7 @@ class TestReduce3D(TestReduce):
 
         result10 = ar.argmax(dim=("x", "y"), skipna=False)
         for key in expected10:
-            assert_identical(result10[key], expected10[key])
+            assert_identical(result10[key].drop_vars("z"), expected10[key])
 
         maxindices_xz = {
             key: xr.where(
@@ -5906,7 +5906,7 @@ class TestReduce3D(TestReduce):
 
         result11 = ar.argmax(dim=("x", "z"), skipna=False)
         for key in expected11:
-            assert_identical(result11[key], expected11[key])
+            assert_identical(result11[key].drop_vars("y"), expected11[key])
 
         maxindices_yz = {
             key: xr.where(
@@ -5920,7 +5920,7 @@ class TestReduce3D(TestReduce):
 
         result12 = ar.argmax(dim=("y", "z"), skipna=False)
         for key in expected12:
-            assert_identical(result12[key], expected12[key])
+            assert_identical(result12[key].drop_vars("x"), expected12[key])
 
         maxindices_xyz = {
             key: xr.where(
