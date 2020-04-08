@@ -55,7 +55,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, _extract_indexes_from_coords
-from .options import OPTIONS, _get_keep_attrs
+from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
@@ -3722,77 +3722,13 @@ class DataArray(AbstractArray, DataWithCoords):
             keep_attrs=keep_attrs,
         )
 
-    def _unravel_argminmax(
-        self,
-        argminmax: Hashable,
-        dim: Union[Hashable, Sequence[Hashable], None],
-        axis: Union[int, None],
-        keep_attrs: Optional[bool],
-        skipna: Optional[bool],
-    ) -> Dict[Hashable, "DataArray"]:
-        """Apply argmin or argmax over one or more dimensions, returning the result as a
-        dict of DataArray that can be passed directly to isel.
-        """
-        if dim is None and axis is None:
-            warnings.warn(
-                "Behaviour of argmin/argmax with neither dim nor axis argument will "
-                "change to return a dict of indices of each dimension. To get a "
-                "single, flat index, please use np.argmin(da) or np.argmax(da) instead "
-                "of da.argmin() or da.argmax().",
-                DeprecationWarning,
-            )
-        if dim is ...:
-            # In future, should do this also when (dim is None and axis is None)
-            dim = self.dims
-        if (
-            dim is None
-            or axis is not None
-            or not isinstance(dim, Sequence)
-            or isinstance(dim, str)
-        ):
-            # Return int index if single dimension is passed, and is not part of a
-            # sequence
-            return getattr(self, str("_injected_" + argminmax))(
-                dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna
-            )
-
-        # Get a name for the new dimension that does not conflict with any existing
-        # dimension
-        newdimname = "_unravel_argminmax_dim_0"
-        count = 1
-        while newdimname in self.dims:
-            newdimname = "_unravel_argminmax_dim_{}".format(count)
-            count += 1
-
-        stacked = self.stack({newdimname: dim})
-
-        result_dims = stacked.dims[:-1]
-        reduce_shape = tuple(self.sizes[d] for d in dim)
-
-        result_flat_indices = getattr(stacked, str("_injected_" + argminmax))(axis=-1, skipna=skipna)
-
-        result_unravelled_indices = np.unravel_index(result_flat_indices, reduce_shape)
-
-        result = {
-            d: DataArray(i, dims=result_dims)
-            for d, i in zip(dim, result_unravelled_indices)
-        }
-
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-        if keep_attrs:
-            for da in result.values():
-                da.attrs = self.attrs
-
-        return result
-
     def argmin(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
         axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-    ) -> Dict[Hashable, "DataArray"]:
+    ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
         """Indices of the minimum of the DataArray over one or more dimensions. Result
         returned as dict of DataArrays, which can be passed directly to isel().
 
@@ -3823,7 +3759,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See also
         --------
-        DataArray.argmin, DataArray.idxmin
+        Variable.argmin, DataArray.idxmin
 
         Examples
         --------
@@ -3876,7 +3812,11 @@ class DataArray(AbstractArray, DataWithCoords):
         array([ 1, -5,  1])
         Dimensions without coordinates: y
         """
-        return self._unravel_argminmax("argmin", dim, axis, keep_attrs, skipna)
+        result = self.variable.argmin(dim, axis, keep_attrs, skipna)
+        if isinstance(result, dict):
+            return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
+        else:
+            return self._replace_maybe_drop_dims(result)
 
     def argmax(
         self,
@@ -3884,7 +3824,7 @@ class DataArray(AbstractArray, DataWithCoords):
         axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-    ) -> Dict[Hashable, "DataArray"]:
+    ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
         """Indices of the maximum of the DataArray over one or more dimensions. Result
         returned as dict of DataArrays, which can be passed directly to isel().
 
@@ -3915,7 +3855,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See also
         --------
-        DataArray.argmax, DataArray.idxmax
+        Variable.argmax, DataArray.idxmax
 
         Examples
         --------
@@ -3969,7 +3909,11 @@ class DataArray(AbstractArray, DataWithCoords):
         array([3, 5, 3])
         Dimensions without coordinates: y
         """
-        return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
+        result = self.variable.argmax(dim, axis, keep_attrs, skipna)
+        if isinstance(result, dict):
+            return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
+        else:
+            return self._replace_maybe_drop_dims(result)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
