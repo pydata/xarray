@@ -398,11 +398,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        coords : dict, optional
-            A dict with keys which are variables names. If the values are
-            callable, they are computed on this object and assigned to new
-            coordinate variables. If the values are not callable,
-            (e.g. a ``DataArray``, scalar, or array), they are simply assigned.
+        coords : (dict, tuple, optional)
+            If a dict is provided, the keys are the names of the coordinates
+            with the new values to assign. If the values are callable, they are
+            computed on this object and assigned to new coordinate variables.
+            If the values are not callable, (e.g. a ``DataArray``, scalar, or
+            array), they are simply assigned. A new coordinate can also be
+            defined and attached to an existing dimension using a tuple with
+            the first element the dimension name and the second element the
+            values for this new coordinate.
 
         **coords_kwargs : keyword, value pairs, optional
             The keyword arguments form of ``coords``.
@@ -440,10 +444,22 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * lon      (lon) int64 -2 -1 0 1
 
+        New coordinate can also be attached to an existing dimension :
+
+        >>> lon_2 = np.array([300, 289, 0, 1])
+        >>> da.assign_coords(lon_2=('lon', lon_2))
+        <xarray.DataArray (lon: 4)>
+        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        Coordinates:
+          * lon      (lon) int64 358 359 0 1
+            lon_2    (lon) int64 300 289 0 1
+        >>> # Note that the same result can also be obtained with a dict e.g.
+        >>> # `da.assign_coords(dict(lon_2=('lon', lon_2)))`
+
         Notes
         -----
-        Since ``coords_kwargs`` is a dictionary, the order of your arguments may
-        not be preserved, and so the order of the new variables is not well
+        Since ``coords_kwargs`` is a dictionary, the order of your arguments
+        may not be preserved, and so the order of the new variables is not well
         defined. Assigning multiple variables within the same ``assign_coords``
         is possible, but you cannot reference other variables created within
         the same ``assign_coords`` call.
