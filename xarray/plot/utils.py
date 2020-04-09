@@ -581,14 +581,15 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-    plt = import_matplotlib_pyplot()
+
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
     else:
         cbar_kwargs.setdefault("cax", cbar_ax)
 
-    cbar = plt.colorbar(primitive, **cbar_kwargs)
+    fig = ax.get_figure()
+    cbar = fig.colorbar(primitive, **cbar_kwargs)
 
     return cbar
 
