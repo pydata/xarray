@@ -115,7 +115,7 @@ reasons:
 
 Parametrizing an accessor is possible, too, by defining ``__call__``:
 
-.. ipython:: python
+.. code:: python
 
     @xr.register_dataarray_accessor("weighted")
     class Weighted:
@@ -132,7 +132,7 @@ Parametrizing an accessor is possible, too, by defining ``__call__``:
 If we need to require the parameter, the easiest way to do so is using
 a wrapper function:
 
-.. ipython:: python
+.. code:: python
 
     class Weighted:
         def __init__(self, obj, weight):
