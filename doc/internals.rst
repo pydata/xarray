@@ -113,6 +113,44 @@ reasons:
    a DataArray from a Dataset (ex. ``ds[var_name]``), will have new
    accessors created.
 
+Parametrizing an accessor is possible, too, by defining ``__call__``:
+
+.. ipython:: python
+
+    @xr.register_dataarray_accessor("weighted")
+    class Weighted:
+        def __init__(self, xarray_obj):
+            self._obj = xarray_obj
+            self._weight = None
+
+        def __call__(self, weight):
+            self._weight = weight
+
+        def sum(self, dim):
+            return "weighted sum"
+
+If we need to require the parameter, the easiest way to do so is using
+a wrapper function:
+
+.. ipython:: python
+
+    class Weighted:
+        def __init__(self, obj, weight):
+            self._obj = obj
+            self._weight = weight
+
+        def sum(self, dim):
+            return f"weighted sum over {dim} and with weight {self._weight}"
+
+    @xr.register_dataarray_accessor("weighted")
+    def weighted(obj):
+        def wrapped(weight):
+            return Weighted(obj, weight)
+        return wrapped
+
+    da = xr.DataArray(data=range(5), dims="x")
+    da.weighted(5).sum(dim="x")
+
 Back in an interactive IPython session, we can use these properties:
 
 .. ipython:: python
