@@ -444,7 +444,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * lon      (lon) int64 -2 -1 0 1
 
-        New coordinate can also be attached to an existing dimension :
+        New coordinate can also be attached to an existing dimension:
 
         >>> lon_2 = np.array([300, 289, 0, 1])
         >>> da.assign_coords(lon_2=('lon', lon_2))
