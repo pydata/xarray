@@ -398,8 +398,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        coords : (dict, tuple, optional)
-            If a dict is provided, the keys are the names of the coordinates
+        coords : dict, optional
+            A dict where the keys are the names of the coordinates
             with the new values to assign. If the values are callable, they are
             computed on this object and assigned to new coordinate variables.
             If the values are not callable, (e.g. a ``DataArray``, scalar, or
