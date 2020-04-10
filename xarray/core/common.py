@@ -453,8 +453,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * lon      (lon) int64 358 359 0 1
             lon_2    (lon) int64 300 289 0 1
-        >>> # Note that the same result can also be obtained with a dict e.g.
-        >>> # `da.assign_coords(dict(lon_2=('lon', lon_2)))`
+        
+        Note that the same result can also be obtained with a dict e.g.
+        >>> _ = da.assign_coords(dict(lon_2=('lon', lon_2)))
 
         Notes
         -----
