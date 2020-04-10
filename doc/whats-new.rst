@@ -76,6 +76,10 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- update the docstring of :py:meth:`DataArray.assign_coords` : clarify how to
+  add a new coordinate to an existing dimension and illustrative example
+  (:issue:`3958`, :pull:`3952`) By
+  `Etienne Combrisson <https://github.com/EtienneCmb>`_.
 - update the docstring of :py:meth:`Dataset.diff` and
   :py:meth:`DataArray.diff` so it does document the ``dim``
   parameter as required. (:issue:`1040`, :pull:`3909`)
