@@ -2086,6 +2086,7 @@ class Variable(
         axis: Union[int, None],
         keep_attrs: Optional[bool],
         skipna: Optional[bool],
+        out,
     ) -> Union["Variable", Dict[Hashable, "Variable"]]:
         """Apply argmin or argmax over one or more dimensions, returning the result as a
         dict of DataArray that can be passed directly to isel.
@@ -2110,7 +2111,7 @@ class Variable(
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             return getattr(self, "_injected_" + str(argminmax))(
-                dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna
+                dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna, out=out
             )
 
         # Get a name for the new dimension that does not conflict with any existing
@@ -2127,7 +2128,7 @@ class Variable(
         reduce_shape = tuple(self.sizes[d] for d in dim)
 
         result_flat_indices = getattr(stacked, "_injected_" + str(argminmax))(
-            axis=-1, skipna=skipna
+            axis=-1, skipna=skipna, out=out
         )
 
         result_unravelled_indices = np.unravel_index(result_flat_indices, reduce_shape)
@@ -2151,6 +2152,7 @@ class Variable(
         axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
+        out=None,
     ) -> Union["Variable", Dict[Hashable, "Variable"]]:
         """Indices of the minimum of the DataArray over one or more dimensions. Result
         returned as dict of DataArrays, which can be passed directly to isel().
@@ -2175,6 +2177,9 @@ class Variable(
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        out : None
+            'out' should not be passed - provided for compatibility with numpy function
+            signature
 
         Returns
         -------
@@ -2184,7 +2189,7 @@ class Variable(
         --------
         DataArray.argmin, DataArray.idxmin
         """
-        return self._unravel_argminmax("argmin", dim, axis, keep_attrs, skipna)
+        return self._unravel_argminmax("argmin", dim, axis, keep_attrs, skipna, out)
 
     def argmax(
         self,
@@ -2192,6 +2197,7 @@ class Variable(
         axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
+        out=None,
     ) -> Union["Variable", Dict[Hashable, "Variable"]]:
         """Indices of the maximum of the DataArray over one or more dimensions. Result
         returned as dict of DataArrays, which can be passed directly to isel().
@@ -2216,6 +2222,9 @@ class Variable(
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        out : None
+            'out' should not be passed - provided for compatibility with numpy function
+            signature
 
         Returns
         -------
@@ -2225,7 +2234,7 @@ class Variable(
         --------
         DataArray.argmax, DataArray.idxmax
         """
-        return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
+        return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna, out)
 
 
 ops.inject_all_ops_and_reduce_methods(Variable)
