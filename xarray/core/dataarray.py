@@ -3730,17 +3730,21 @@ class DataArray(AbstractArray, DataWithCoords):
         skipna: bool = None,
         out=None,
     ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
-        """Indices of the minimum of the DataArray over one or more dimensions. Result
-        returned as dict of DataArrays, which can be passed directly to isel().
+        """Index or indices of the minimum of the DataArray over one or more dimensions.
+        If a sequence is passed to 'dim', then result returned as dict of DataArrays,
+        which can be passed directly to isel(). If a single str is passed to 'dim' then
+        returns an int.
 
         If there are multiple minima, the indices of the first one found will be
         returned.
 
         Parameters
         ----------
-        dim : hashable or sequence of hashable, optional
+        dim : hashable, sequence of hashable or ..., optional
             The dimensions over which to find the minimum. By default, finds minimum over
-            all dimensions.
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will return a dict with indices for all
+            dimensions; to return a dict with all dimensions now, pass '...'.
         axis : int, optional
             Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
             can be supplied.
@@ -3759,7 +3763,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        result : dict of DataArray
+        result : DataArray or dict of DataArray
 
         See also
         --------
@@ -3830,17 +3834,21 @@ class DataArray(AbstractArray, DataWithCoords):
         skipna: bool = None,
         out=None,
     ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
-        """Indices of the maximum of the DataArray over one or more dimensions. Result
-        returned as dict of DataArrays, which can be passed directly to isel().
+        """Index or indices of the maximum of the DataArray over one or more dimensions.
+        If a sequence is passed to 'dim', then result returned as dict of DataArrays,
+        which can be passed directly to isel(). If a single str is passed to 'dim' then
+        returns an int.
 
         If there are multiple maxima, the indices of the first one found will be
         returned.
 
         Parameters
         ----------
-        dim : hashable or sequence of hashable, optional
+        dim : hashable, sequence of hashable or ..., optional
             The dimensions over which to find the maximum. By default, finds maximum over
-            all dimensions.
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will return a dict with indices for all
+            dimensions; to return a dict with all dimensions now, pass '...'.
         axis : int, optional
             Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
             can be supplied.
@@ -3859,7 +3867,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        result : dict of DataArray
+        result : DataArray or dict of DataArray
 
         See also
         --------
