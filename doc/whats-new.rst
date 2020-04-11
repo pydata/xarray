@@ -73,6 +73,8 @@ Bug fixes
 - Fix bug where plotting line plots with 2D coordinates depended on dimension
   order. (:issue:`3933`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix `RasterioDeprecationWarning` when using a `vrt` in `open_rasterio`. (:issue:`3964`)
+  By `Taher Chegini <https://github.com/cheginit>`_.
 
 Documentation
 ~~~~~~~~~~~~~
