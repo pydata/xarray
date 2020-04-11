@@ -66,9 +66,11 @@ Bug fixes
 - Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
   can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
+- Fix :py:class:`~xarray.plot.FacetGrid` plots with a single contour. (:issue:`3569`, :pull:`3915`).
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - Use divergent colormap if ``levels`` spans 0. (:issue:`3524`)
   By `Deepak Cherian <https://github.com/dcherian>`_
-- Fix ``FacetGrid`` when ``vmin == vmax``. (:issue:`3734`)
+- Fix :py:class:`~xarray.plot.FacetGrid` when ``vmin == vmax``. (:issue:`3734`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Fix bug where plotting line plots with 2D coordinates depended on dimension
   order. (:issue:`3933`)
