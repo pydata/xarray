@@ -153,6 +153,7 @@ def _determine_cmap_params(
     levels=None,
     filled=True,
     norm=None,
+    _is_facetgrid=False,
 ):
     """
     Use some heuristics to set good defaults for colorbar and range.
@@ -736,6 +737,7 @@ def _process_cmap_cbar_kwargs(
     colors=None,
     cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
     levels=None,
+    _is_facetgrid=False,
     **kwargs,
 ):
     """
@@ -782,6 +784,12 @@ def _process_cmap_cbar_kwargs(
 
     cmap_args = getfullargspec(_determine_cmap_params).args
     cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
-    cmap_params = _determine_cmap_params(**cmap_kwargs)
+    if not _is_facetgrid:
+        cmap_params = _determine_cmap_params(**cmap_kwargs)
+    else:
+        cmap_params = {
+            k: cmap_kwargs[k]
+            for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
+        }
 
     return cmap_params, cbar_kwargs

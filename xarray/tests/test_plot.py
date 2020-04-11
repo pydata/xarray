@@ -2319,3 +2319,15 @@ def test_plot_transposes_properly(plotfunc):
     # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
     # to ravel() on the LHS
     assert np.all(hdl.get_array().ravel() == da.to_masked_array().ravel())
+
+
+@requires_matplotlib
+def test_facetgrid_single_contour():
+    # regression test for GH3569
+    x, y = np.meshgrid(np.arange(12), np.arange(12))
+    z = xr.DataArray(np.sqrt(x ** 2 + y ** 2))
+    z2 = xr.DataArray(np.sqrt(x ** 2 + y ** 2) + 1)
+    ds = xr.concat([z, z2], dim="time")
+    ds["time"] = [0, 1]
+
+    ds.plot.contour(col="time", levels=[4], colors=["k"])
