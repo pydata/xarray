@@ -11,6 +11,7 @@ from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
+from .options import _get_keep_attrs
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -294,6 +295,7 @@ def interp_na(
     method: str = "linear",
     limit: int = None,
     max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
+    keep_attrs: bool = None,
     **kwargs,
 ):
     """Interpolate values according to different methods.
@@ -330,6 +332,8 @@ def interp_na(
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=False)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "overflow", RuntimeWarning)
@@ -343,7 +347,7 @@ def interp_na(
             output_dtypes=[self.dtype],
             dask="parallelized",
             vectorize=True,
-            keep_attrs=True,
+            keep_attrs=keep_attrs,
         ).transpose(*self.dims)
 
     if limit is not None:
