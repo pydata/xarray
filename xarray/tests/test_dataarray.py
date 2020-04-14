@@ -4537,7 +4537,7 @@ class TestReduce1D(TestReduce):
         if use_dask & (x.dtype.kind == "M"):
             pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
-            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs,
+            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
 
         if use_dask:
@@ -4643,7 +4643,7 @@ class TestReduce1D(TestReduce):
         if use_dask & (x.dtype.kind == "M"):
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
-            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs,
+            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
 
         if use_dask:
