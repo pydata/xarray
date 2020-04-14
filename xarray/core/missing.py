@@ -330,13 +330,14 @@ def interp_na(
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "overflow", RuntimeWarning)
         warnings.filterwarnings("ignore", "invalid value", RuntimeWarning)
         arr = apply_ufunc(
             interpolator,
-            index,
             self,
+            index,
             input_core_dims=[[dim], [dim]],
             output_core_dims=[[dim]],
             output_dtypes=[self.dtype],
@@ -359,8 +360,9 @@ def interp_na(
     return arr
 
 
-def func_interpolate_na(interpolator, x, y, **kwargs):
+def func_interpolate_na(interpolator, y, x, **kwargs):
     """helper function to apply interpolation along 1 dimension"""
+    # reversed arguments are so that attrs are preserved from da, not index
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
     out = y.copy()
