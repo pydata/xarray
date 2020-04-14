@@ -95,7 +95,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",
-  "season", "dayofyear", and "dayofweek"):
+  "season", "dayofyear", "dayofweek", and "days_in_month"):
 
 .. ipython:: python
 
@@ -104,6 +104,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    da.time.dt.season
    da.time.dt.dayofyear
    da.time.dt.dayofweek
+   da.time.dt.days_in_month
 
 - Rounding of datetimes to fixed frequencies via the ``dt`` accessor:
 
