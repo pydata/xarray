@@ -2153,9 +2153,9 @@ class DataArray(AbstractArray, DataWithCoords):
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-        keep_attrs : bool, optional
+        keep_attrs : bool, default True
             If True, the dataarray's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
