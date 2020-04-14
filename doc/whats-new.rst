@@ -86,6 +86,10 @@ Documentation
   (:pull:`3935`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Updated the list of current core developers. (:issue:`3892`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add example for multi-dimensional extrapolation and note different behavior
+  of ``kwargs`` in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`
+  for 1-d and n-d interpolation (:pull:`3956`).
+  By `Matthias Riße <https://github.com/risebell>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
