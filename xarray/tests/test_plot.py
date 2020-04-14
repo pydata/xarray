@@ -1,4 +1,5 @@
 import inspect
+from copy import deepcopy
 from datetime import datetime
 
 import numpy as np
@@ -14,7 +15,6 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
-    import_seaborn,
     label_from_attrs,
 )
 
@@ -139,6 +139,12 @@ class TestPlot(PlotTestCase):
         with raises_regex(ValueError, "None"):
             self.darray[:, 0, 0].plot(x="dim_1")
 
+        with raises_regex(TypeError, "complex128"):
+            (self.darray[:, 0, 0] + 1j).plot()
+
+    def test_1d_bool(self):
+        xr.ones_like(self.darray[:, 0, 0], dtype=np.bool).plot()
+
     def test_1d_x_y_kw(self):
         z = np.arange(10)
         da = DataArray(np.cos(z), dims=["z"], coords=[z], name="f")
@@ -251,6 +257,17 @@ class TestPlot(PlotTestCase):
         with pytest.raises(ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x="lon", hue="lat")
 
+    def test_2d_coord_line_plot_coords_transpose_invariant(self):
+        # checks for bug reported in GH #3933
+        x = np.arange(10)
+        y = np.arange(20)
+        ds = xr.Dataset(coords={"x": x, "y": y})
+
+        for z in [ds.y + ds.x, ds.x + ds.y]:
+            ds = ds.assign_coords(z=z)
+            ds["v"] = ds.x + ds.y
+            ds["v"].plot.line(y="z", hue="x")
+
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
@@ -275,6 +292,71 @@ class TestPlot(PlotTestCase):
 
         a.plot.contourf(x="time", y="depth")
         a.plot.contourf(x="depth", y="time")
+
+    def test_contourf_cmap_set(self):
+        a = DataArray(easy_array((4, 4)), dims=["z", "time"])
+
+        cmap = mpl.cm.viridis
+
+        # deepcopy to ensure cmap is not changed by contourf()
+        # Set vmin and vmax so that _build_discrete_colormap is called with
+        # extend='both'. extend is passed to
+        # mpl.colors.from_levels_and_colors(), which returns a result with
+        # sensible under and over values if extend='both', but not if
+        # extend='neither' (but if extend='neither' the under and over values
+        # would not be used because the data would all be within the plotted
+        # range)
+        pl = a.plot.contourf(cmap=deepcopy(cmap), vmin=0.1, vmax=0.9)
+
+        # check the set_bad color
+        assert np.all(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
+            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        # check the set_under color
+        assert pl.cmap(-np.inf) == cmap(-np.inf)
+
+        # check the set_over color
+        assert pl.cmap(np.inf) == cmap(np.inf)
+
+    def test_contourf_cmap_set_with_bad_under_over(self):
+        a = DataArray(easy_array((4, 4)), dims=["z", "time"])
+
+        # Make a copy here because we want a local cmap that we will modify.
+        # Use deepcopy because matplotlib Colormap objects have tuple members
+        # and we want to ensure we do not change the original.
+        cmap = deepcopy(mpl.cm.viridis)
+
+        cmap.set_bad("w")
+        # check we actually changed the set_bad color
+        assert np.all(
+            cmap(np.ma.masked_invalid([np.nan]))[0]
+            != mpl.cm.viridis(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        cmap.set_under("r")
+        # check we actually changed the set_under color
+        assert cmap(-np.inf) != mpl.cm.viridis(-np.inf)
+
+        cmap.set_over("g")
+        # check we actually changed the set_over color
+        assert cmap(np.inf) != mpl.cm.viridis(-np.inf)
+
+        # deepcopy to ensure cmap is not changed by contourf()
+        pl = a.plot.contourf(cmap=deepcopy(cmap))
+
+        # check the set_bad color has been kept
+        assert np.all(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
+            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        # check the set_under color has been kept
+        assert pl.cmap(-np.inf) == cmap(-np.inf)
+
+        # check the set_over color has been kept
+        assert pl.cmap(np.inf) == cmap(np.inf)
 
     def test3d(self):
         self.darray.plot()
@@ -526,6 +608,10 @@ class TestPlotStep(PlotTestCase):
     def test_step(self):
         self.darray[0, 0].plot.step()
 
+    @pytest.mark.parametrize("ds", ["pre", "post", "mid"])
+    def test_step_with_drawstyle(self, ds):
+        self.darray[0, 0].plot.step(drawstyle=ds)
+
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
@@ -758,16 +844,22 @@ class TestDetermineCmapParams:
         assert cmap_params["vmax"] == 0.6
         assert cmap_params["cmap"] == "viridis"
 
+        # regression test for GH3524
+        # infer diverging colormap from divergent levels
+        cmap_params = _determine_cmap_params(pos, levels=[-0.1, 0, 1])
+        # specifying levels makes cmap a Colormap object
+        assert cmap_params["cmap"].name == "RdBu_r"
+
     def test_norm_sets_vmin_vmax(self):
         vmin = self.data.min()
         vmax = self.data.max()
 
         for norm, extend in zip(
             [
-                mpl.colors.LogNorm(),
-                mpl.colors.LogNorm(vmin + 1, vmax - 1),
-                mpl.colors.LogNorm(None, vmax - 1),
-                mpl.colors.LogNorm(vmin + 1, None),
+                mpl.colors.Normalize(),
+                mpl.colors.Normalize(vmin + 0.1, vmax - 0.1),
+                mpl.colors.Normalize(None, vmax - 0.1),
+                mpl.colors.Normalize(vmin + 0.1, None),
             ],
             ["neither", "both", "max", "min"],
         ):
@@ -919,6 +1011,13 @@ class Common2dMixin:
     def test_1d_raises_valueerror(self):
         with raises_regex(ValueError, r"DataArray must be 2d"):
             self.plotfunc(self.darray[0, :])
+
+    def test_bool(self):
+        xr.ones_like(self.darray, dtype=np.bool).plot()
+
+    def test_complex_raises_typeerror(self):
+        with raises_regex(TypeError, "complex128"):
+            (self.darray + 1j).plot()
 
     def test_3d_raises_valueerror(self):
         a = DataArray(easy_array((2, 3, 4)))
@@ -1684,6 +1783,14 @@ class TestFacetGrid(PlotTestCase):
             assert np.allclose(expected, clim)
 
     @pytest.mark.slow
+    def test_vmin_vmax_equal(self):
+        # regression test for GH3734
+        fg = self.g.map_dataarray(xplt.imshow, "x", "y", vmin=50, vmax=50)
+        for mappable in fg._mappables:
+            assert mappable.norm.vmin != mappable.norm.vmax
+
+    @pytest.mark.slow
+    @pytest.mark.filterwarnings("ignore")
     def test_can_set_norm(self):
         norm = mpl.colors.SymLogNorm(0.1)
         self.g.map_dataarray(xplt.imshow, "x", "y", norm=norm)
@@ -2118,22 +2225,6 @@ class TestNcAxisNotInstalled(PlotTestCase):
             self.darray.plot.line()
 
 
-@requires_seaborn
-def test_import_seaborn_no_warning():
-    # GH1633
-    with pytest.warns(None) as record:
-        import_seaborn()
-    assert len(record) == 0
-
-
-@requires_matplotlib
-def test_plot_seaborn_no_import_warning():
-    # GH1633
-    with pytest.warns(None) as record:
-        _color_palette("Blues", 4)
-    assert len(record) == 0
-
-
 test_da_list = [
     DataArray(easy_array((10,))),
     DataArray(easy_array((10, 3))),
@@ -2228,3 +2319,15 @@ def test_plot_transposes_properly(plotfunc):
     # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
     # to ravel() on the LHS
     assert np.all(hdl.get_array().ravel() == da.to_masked_array().ravel())
+
+
+@requires_matplotlib
+def test_facetgrid_single_contour():
+    # regression test for GH3569
+    x, y = np.meshgrid(np.arange(12), np.arange(12))
+    z = xr.DataArray(np.sqrt(x ** 2 + y ** 2))
+    z2 = xr.DataArray(np.sqrt(x ** 2 + y ** 2) + 1)
+    ds = xr.concat([z, z2], dim="time")
+    ds["time"] = [0, 1]
+
+    ds.plot.contour(col="time", levels=[4], colors=["k"])

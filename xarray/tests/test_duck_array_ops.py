@@ -1,7 +1,7 @@
+import datetime as dt
 import warnings
 from textwrap import dedent
 
-import datetime as dt
 import numpy as np
 import pandas as pd
 import pytest
@@ -16,14 +16,15 @@ from xarray.core.duck_array_ops import (
     first,
     gradient,
     last,
+    least_squares,
     mean,
-    rolling_window,
-    stack,
-    where,
-    py_timedelta_to_float,
     np_timedelta64_to_float,
     pd_timedelta_to_float,
+    py_timedelta_to_float,
+    rolling_window,
+    stack,
     timedelta_to_numeric,
+    where,
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
@@ -279,6 +280,7 @@ def assert_dask_array(da, dask):
 
 
 @arm_xfail
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize("dask", [False, True] if has_dask else [False])
 def test_datetime_mean(dask):
     # Note: only testing numpy, as dask is broken upstream
@@ -753,10 +755,27 @@ def test_pd_timedelta_to_float(td, expected):
 
 
 @pytest.mark.parametrize(
-    "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"],
+    "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"]
 )
 def test_timedelta_to_numeric(td):
     # Scalar input
     out = timedelta_to_numeric(td, "ns")
     np.testing.assert_allclose(out, 86400 * 1e9)
     assert isinstance(out, float)
+
+
+@pytest.mark.parametrize("use_dask", [True, False])
+@pytest.mark.parametrize("skipna", [True, False])
+def test_least_squares(use_dask, skipna):
+    if use_dask and not has_dask:
+        pytest.skip("requires dask")
+    lhs = np.array([[1, 2], [1, 2], [3, 2]])
+    rhs = DataArray(np.array([3, 5, 7]), dims=("y",))
+
+    if use_dask:
+        rhs = rhs.chunk({"y": 1})
+
+    coeffs, residuals = least_squares(lhs, rhs.data, skipna=skipna)
+
+    np.testing.assert_allclose(coeffs, [1.5, 1.25])
+    np.testing.assert_allclose(residuals, [2.0])

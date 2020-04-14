@@ -93,6 +93,7 @@ def _infer_line_data(darray, x, y, hue):
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     otherdim = darray.dims[otherindex]
                     xplt = darray.transpose(otherdim, huename, transpose_coords=False)
+                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError(
                         "For 2D inputs, hue must be a dimension"
@@ -329,7 +330,7 @@ def line(
     return primitive
 
 
-def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
+def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
     Step plot of DataArray index against values
 
@@ -339,6 +340,7 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
     ----------
     where : {'pre', 'post', 'mid'}, optional, default 'pre'
         Define where the steps should be placed:
+
         - 'pre': The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
@@ -346,27 +348,28 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
         - 'mid': Steps occur half-way between the *x* positions.
+
         Note that this parameter is ignored if one coordinate consists of
         :py:func:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
 
-    *args, **kwargs : optional
+    ``*args``, ``**kwargs`` : optional
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:
         raise ValueError("'where' argument to step must be " "'pre', 'post' or 'mid'")
 
-    if ls is not None:
-        if linestyle is None:
-            linestyle = ls
+    if ds is not None:
+        if drawstyle is None:
+            drawstyle = ds
         else:
-            raise TypeError("ls and linestyle are mutually exclusive")
-    if linestyle is None:
-        linestyle = ""
-    linestyle = "steps-" + where + linestyle
+            raise TypeError("ds and drawstyle are mutually exclusive")
+    if drawstyle is None:
+        drawstyle = ""
+    drawstyle = "steps-" + where + drawstyle
 
-    return line(darray, *args, linestyle=linestyle, **kwargs)
+    return line(darray, *args, drawstyle=drawstyle, **kwargs)
 
 
 def hist(
@@ -687,10 +690,13 @@ def _plot2d(plotfunc):
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
         yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
 
-        _ensure_plottable(xplt, yplt)
+        _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, zval.data, **locals()
+            plotfunc,
+            zval.data,
+            **locals(),
+            _is_facetgrid=kwargs.pop("_is_facetgrid", False),
         )
 
         if "contour" in plotfunc.__name__:

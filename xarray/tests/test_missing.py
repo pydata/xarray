@@ -14,16 +14,15 @@ from xarray.core.missing import (
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
+    assert_allclose,
     assert_array_equal,
     assert_equal,
-    assert_allclose,
     raises_regex,
     requires_bottleneck,
+    requires_cftime,
     requires_dask,
     requires_scipy,
-    requires_cftime,
 )
-
 from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
 
 

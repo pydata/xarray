@@ -4,6 +4,7 @@ import contextlib
 import functools
 from datetime import datetime, timedelta
 from itertools import zip_longest
+from typing import Hashable
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ from .options import OPTIONS
 from .pycompat import dask_array_type, sparse_array_type
 
 
-def pretty_print(x, numchars):
+def pretty_print(x, numchars: int):
     """Given an object `x`, call `str(x)` and format the returned string so
     that it is numchars long, padding with trailing spaces or truncating with
     ellipses as necessary
@@ -163,7 +164,7 @@ def format_items(x):
     return formatted
 
 
-def format_array_flat(array, max_width):
+def format_array_flat(array, max_width: int):
     """Return a formatted string for as many items in the flattened version of
     array that will fit within max_width characters.
     """
@@ -198,11 +199,20 @@ def format_array_flat(array, max_width):
     num_back = count - num_front
     # note that num_back is 0 <--> array.size is 0 or 1
     #                         <--> relevant_back_items is []
-    pprint_str = (
-        " ".join(relevant_front_items[:num_front])
-        + padding
-        + " ".join(relevant_back_items[-num_back:])
+    pprint_str = "".join(
+        [
+            " ".join(relevant_front_items[:num_front]),
+            padding,
+            " ".join(relevant_back_items[-num_back:]),
+        ]
     )
+
+    # As a final check, if it's still too long even with the limit in values,
+    # replace the end with an ellipsis
+    # NB: this will still returns a full 3-character ellipsis when max_width < 3
+    if len(pprint_str) > max_width:
+        pprint_str = pprint_str[: max(max_width - 3, 0)] + "..."
+
     return pprint_str
 
 
@@ -258,10 +268,16 @@ def inline_variable_array_repr(var, max_width):
         return "..."
 
 
-def summarize_variable(name, var, col_width, marker=" ", max_width=None):
+def summarize_variable(
+    name: Hashable, var, col_width: int, marker: str = " ", max_width: int = None
+):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
     if max_width is None:
-        max_width = OPTIONS["display_width"]
+        max_width_options = OPTIONS["display_width"]
+        if not isinstance(max_width_options, int):
+            raise TypeError(f"`max_width` value of `{max_width}` is not a valid int")
+        else:
+            max_width = max_width_options
     first_col = pretty_print(f"  {marker} {name} ", col_width)
     if var.dims:
         dims_str = "({}) ".format(", ".join(map(str, var.dims)))
@@ -295,7 +311,7 @@ def summarize_datavar(name, var, col_width):
     return summarize_variable(name, var.variable, col_width)
 
 
-def summarize_coord(name, var, col_width):
+def summarize_coord(name: Hashable, var, col_width: int):
     is_index = name in var.dims
     marker = "*" if is_index else " "
     if is_index:
@@ -500,6 +516,13 @@ def diff_dim_summary(a, b):
 
 
 def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_width=None):
+    def is_array_like(value):
+        return (
+            hasattr(value, "ndim")
+            and hasattr(value, "shape")
+            and hasattr(value, "dtype")
+        )
+
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
@@ -522,7 +545,11 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
             is_variable = True
         except AttributeError:
             # compare attribute value
-            compatible = a_mapping[k] == b_mapping[k]
+            if is_array_like(a_mapping[k]) or is_array_like(b_mapping[k]):
+                compatible = array_equiv(a_mapping[k], b_mapping[k])
+            else:
+                compatible = a_mapping[k] == b_mapping[k]
+
             is_variable = False
 
         if not compatible:

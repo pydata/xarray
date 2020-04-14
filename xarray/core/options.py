@@ -20,7 +20,7 @@ OPTIONS = {
     CMAP_SEQUENTIAL: "viridis",
     CMAP_DIVERGENT: "RdBu_r",
     KEEP_ATTRS: "default",
-    DISPLAY_STYLE: "text",
+    DISPLAY_STYLE: "html",
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -108,7 +108,7 @@ class set_options:
 
     You can use ``set_options`` either as a context manager:
 
-    >>> ds = xr.Dataset({'x': np.arange(1000)})
+    >>> ds = xr.Dataset({"x": np.arange(1000)})
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
     <xarray.Dataset>

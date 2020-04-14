@@ -1,3 +1,5 @@
+import pkg_resources
+
 from . import testing, tutorial, ufuncs
 from .backends.api import (
     load_dataarray,
@@ -15,7 +17,7 @@ from .conventions import SerializationWarning, decode_cf
 from .core.alignment import align, broadcast
 from .core.combine import auto_combine, combine_by_coords, combine_nested
 from .core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from .core.computation import apply_ufunc, dot, where
+from .core.computation import apply_ufunc, dot, polyval, where
 from .core.concat import concat
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
@@ -27,11 +29,9 @@ from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
 try:
-    import pkg_resources
-
     __version__ = pkg_resources.get_distribution("xarray").version
 except Exception:
-    # Local copy, not installed with setuptools, or setuptools is not available.
+    # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
     __version__ = "999"
 
@@ -65,6 +65,7 @@ __all__ = (
     "open_mfdataset",
     "open_rasterio",
     "open_zarr",
+    "polyval",
     "register_dataarray_accessor",
     "register_dataset_accessor",
     "save_mfdataset",
