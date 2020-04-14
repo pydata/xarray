@@ -4974,7 +4974,7 @@ class TestReduce2D(TestReduce):
     def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask):
         if use_dask and not has_dask:
             pytest.skip("requires dask")
-        if use_dask & (x.dtype.kind == "M"):
+        if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
             x,
@@ -5091,7 +5091,7 @@ class TestReduce2D(TestReduce):
     def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask):
         if use_dask and not has_dask:
             pytest.skip("requires dask")
-        if use_dask & (x.dtype.kind == "M"):
+        if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
             x,
