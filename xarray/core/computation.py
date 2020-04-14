@@ -1379,21 +1379,9 @@ def _calc_idxminmax(
     # This will run argmin or argmax.
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
-    # Handle dask arrays.
-    if isinstance(array.data, dask_array_type):
-        res = indx.copy(
-            data=indx.data.map_blocks(
-                lambda ind, coord: coord[(ind,)],
-                array[dim].data,
-                dtype=array[dim].dtype,
-            )
-        )
-        # we need to attach back the dim name
-        res.name = dim
-    else:
-        res = array[dim][(indx,)]
-        # The dim is gone but we need to remove the corresponding coordinate.
-        del res.coords[dim]
+    res = array[dim][(indx,)]
+    # The dim is gone but we need to remove the corresponding coordinate.
+    del res.coords[dim]
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
