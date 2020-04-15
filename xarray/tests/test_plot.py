@@ -1219,6 +1219,10 @@ class Common2dMixin:
         for x, y in (("a", "x"), ("b", "x"), ("x", "a"), ("x", "b")):
             self.plotfunc(da, x=x, y=y)
 
+            ax = plt.gca()
+            assert x == ax.get_xlabel()
+            assert y == ax.get_ylabel()
+
         with raises_regex(ValueError, "levels of the same MultiIndex"):
             self.plotfunc(da, x="a", y="b")
 
