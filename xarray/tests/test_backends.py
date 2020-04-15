@@ -1544,11 +1544,12 @@ class ZarrBase(CFEncodedBase):
             assert_identical(expected, actual)
 
     def test_with_chunkstore(self):
-        save_kwargs = {}
         expected = create_test_data()
-        with self.create_zarr_target() as store_target:
+        with self.create_zarr_target() as store_target, \
+                self.create_zarr_target() as chunk_store:
+            save_kwargs = {'chunk_store': chunk_store}
             self.save(expected, store_target, **save_kwargs)
-            open_kwargs = {'chunk_store': store_target}
+            open_kwargs = {'chunk_store': chunk_store}
             with self.open(store_target, **open_kwargs) as ds:
                 assert_equal(ds, expected)
 
@@ -1820,7 +1821,7 @@ class ZarrBase(CFEncodedBase):
         # not relevant for zarr, since we don't use EncodedStringCoder
         pass
 
-    # TODO: someone who understand caching figure out whether chaching
+    # TODO: someone who understand caching figure out whether caching
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
