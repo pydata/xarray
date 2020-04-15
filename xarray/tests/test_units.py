@@ -3734,9 +3734,7 @@ class TestDataset:
             function("mean"),
             pytest.param(
                 function("median"),
-                marks=pytest.mark.xfail(
-                    reason="np.median does not work with dataset yet"
-                ),
+                marks=pytest.mark.xfail(reason="median does not work with dataset yet"),
             ),
             function("sum"),
             pytest.param(
@@ -3768,33 +3766,26 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        unit_a = (
-            unit_registry.Pa if func.name != "cumprod" else unit_registry.dimensionless
-        )
-        unit_b = (
-            unit_registry.kg / unit_registry.m ** 3
+        unit_a, unit_b = (
+            (unit_registry.Pa, unit_registry.kg / unit_registry.m ** 3)
             if func.name != "cumprod"
-            else unit_registry.dimensionless
-        )
-        a = xr.DataArray(data=np.linspace(0, 1, 10).astype(dtype) * unit_a, dims="x")
-        b = xr.DataArray(data=np.linspace(-1, 0, 10).astype(dtype) * unit_b, dims="x")
-        x = xr.DataArray(data=np.arange(10).astype(dtype) * unit_registry.m, dims="x")
-        y = xr.DataArray(
-            data=np.arange(10, 20).astype(dtype) * unit_registry.s, dims="x"
+            else (unit_registry.dimensionless, unit_registry.dimensionless)
         )
 
-        ds = xr.Dataset(data_vars={"a": a, "b": b}, coords={"x": x, "y": y})
+        a = np.linspace(0, 1, 10).astype(dtype) * unit_a
+        b = np.linspace(-1, 0, 10).astype(dtype) * unit_b
+
+        ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
+
+        units_a = extract_units(func(a)).get(None)
+        units_b = extract_units(func(b)).get(None)
+        units = {"a": units_a, "b": units_b}
 
         actual = func(ds)
-        expected = attach_units(
-            func(strip_units(ds)),
-            {
-                "a": extract_units(func(a)).get(None),
-                "b": extract_units(func(b)).get(None),
-            },
-        )
+        expected = attach_units(func(strip_units(ds)), units)
 
-        assert_equal_with_units(actual, expected)
+        assert_units_equal(expected, actual)
+        xr.testing.assert_equal(expected, actual)
 
     @pytest.mark.parametrize("property", ("imag", "real"))
     def test_numpy_properties(self, property, dtype):
