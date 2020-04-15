@@ -34,6 +34,8 @@ from xarray.tests import (
     source_ndarray,
 )
 
+from .test_dask import raise_if_dask_computes
+
 
 class TestDataArray:
     @pytest.fixture(autouse=True)
@@ -5136,15 +5138,18 @@ class TestReduce2D(TestReduce):
         expected0.name = "x"
 
         # Default fill value (NaN)
-        result0 = ar0.idxmax(dim="x")
+        with raise_if_dask_computes():
+            result0 = ar0.idxmax(dim="x")
         assert_identical(result0, expected0)
 
         # Manually specify NaN fill_value
-        result1 = ar0.idxmax(dim="x", fill_value=np.NaN)
+        with raise_if_dask_computes():
+            result1 = ar0.idxmax(dim="x", fill_value=np.NaN)
         assert_identical(result1, expected0)
 
         # keep_attrs
-        result2 = ar0.idxmax(dim="x", keep_attrs=True)
+        with raise_if_dask_computes():
+            result2 = ar0.idxmax(dim="x", keep_attrs=True)
         expected2 = expected0.copy()
         expected2.attrs = self.attrs
         assert_identical(result2, expected2)
@@ -5162,11 +5167,13 @@ class TestReduce2D(TestReduce):
         expected3.name = "x"
         expected3.attrs = {}
 
-        result3 = ar0.idxmax(dim="x", skipna=False)
+        with raise_if_dask_computes():
+            result3 = ar0.idxmax(dim="x", skipna=False)
         assert_identical(result3, expected3)
 
         # fill_value should be ignored with skipna=False
-        result4 = ar0.idxmax(dim="x", skipna=False, fill_value=-100j)
+        with raise_if_dask_computes():
+            result4 = ar0.idxmax(dim="x", skipna=False, fill_value=-100j)
         assert_identical(result4, expected3)
 
         # Float fill_value
@@ -5178,7 +5185,8 @@ class TestReduce2D(TestReduce):
         expected5 = xr.concat(expected5, dim="y")
         expected5.name = "x"
 
-        result5 = ar0.idxmax(dim="x", fill_value=-1.1)
+        with raise_if_dask_computes():
+            result5 = ar0.idxmax(dim="x", fill_value=-1.1)
         assert_identical(result5, expected5)
 
         # Integer fill_value
@@ -5190,7 +5198,8 @@ class TestReduce2D(TestReduce):
         expected6 = xr.concat(expected6, dim="y")
         expected6.name = "x"
 
-        result6 = ar0.idxmax(dim="x", fill_value=-1)
+        with raise_if_dask_computes():
+            result6 = ar0.idxmax(dim="x", fill_value=-1)
         assert_identical(result6, expected6)
 
         # Complex fill_value
@@ -5202,7 +5211,8 @@ class TestReduce2D(TestReduce):
         expected7 = xr.concat(expected7, dim="y")
         expected7.name = "x"
 
-        result7 = ar0.idxmax(dim="x", fill_value=-5j)
+        with raise_if_dask_computes():
+            result7 = ar0.idxmax(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
 
