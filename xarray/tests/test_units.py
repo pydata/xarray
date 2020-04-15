@@ -9,7 +9,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 from xarray.core.npcompat import IS_NEP18_ACTIVE
-from xarray.testing import assert_allclose, assert_identical
+from xarray.testing import assert_allclose, assert_equal, assert_identical
 
 from .test_variable import _PAD_XR_NP_ARGS, VariableSubclassobjects
 
@@ -3781,38 +3781,28 @@ class TestDataset:
 
         ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
 
-        units_a = extract_units(func(a)).get(None)
-        units_b = extract_units(func(b)).get(None)
+        units_a = array_extract_units(func(a))
+        units_b = array_extract_units(func(b))
         units = {"a": units_a, "b": units_b}
 
         actual = func(ds)
         expected = attach_units(func(strip_units(ds)), units)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize("property", ("imag", "real"))
     def test_numpy_properties(self, property, dtype):
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(
-                    data=np.linspace(0, 1, 10) * unit_registry.Pa, dims="x"
-                ),
-                "b": xr.DataArray(
-                    data=np.linspace(-1, 0, 15) * unit_registry.Pa, dims="y"
-                ),
-            },
-            coords={
-                "x": np.arange(10) * unit_registry.m,
-                "y": np.arange(15) * unit_registry.s,
-            },
-        )
+        a = np.linspace(0, 1, 10) * unit_registry.Pa
+        b = np.linspace(-1, 0, 15) * unit_registry.degK
+        ds = xr.Dataset({"a": ("x", a), "b": ("y", b)})
         units = extract_units(ds)
 
         actual = getattr(ds, property)
         expected = attach_units(getattr(strip_units(ds), property), units)
 
-        assert_equal_with_units(actual, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3826,31 +3816,19 @@ class TestDataset:
         ids=repr,
     )
     def test_numpy_methods(self, func, dtype):
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(
-                    data=np.linspace(1, -1, 10) * unit_registry.Pa, dims="x"
-                ),
-                "b": xr.DataArray(
-                    data=np.linspace(-1, 1, 15) * unit_registry.Pa, dims="y"
-                ),
-            },
-            coords={
-                "x": np.arange(10) * unit_registry.m,
-                "y": np.arange(15) * unit_registry.s,
-            },
-        )
-        units = {
-            "a": array_extract_units(func(ds.a)),
-            "b": array_extract_units(func(ds.b)),
-            "x": unit_registry.m,
-            "y": unit_registry.s,
-        }
+        a = np.linspace(1, -1, 10) * unit_registry.Pa
+        b = np.linspace(-1, 1, 15) * unit_registry.degK
+        ds = xr.Dataset({"a": ("x", a), "b": ("y", b)})
+
+        units_a = array_extract_units(func(a))
+        units_b = array_extract_units(func(b))
+        units = {"a": units_a, "b": units_b}
 
         actual = func(ds)
         expected = attach_units(func(strip_units(ds)), units)
 
-        assert_equal_with_units(actual, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize("func", (method("clip", min=3, max=8),), ids=repr)
     @pytest.mark.parametrize(
