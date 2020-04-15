@@ -29,9 +29,7 @@ from .utils import (
 
 
 def _infer_line_data(darray, x, y, hue):
-    error_msg = "must be either None or one of ({:s})".format(
-        ", ".join([repr(dd) for dd in darray.dims])
-    )
+    error_msg = "must be a dimension, coordinate, MultiIndex level name or None"
     ndims = len(darray.dims)
 
     if (
@@ -40,7 +38,7 @@ def _infer_line_data(darray, x, y, hue):
         and x not in darray.coords
         and x not in darray._level_coords
     ):
-        raise ValueError("x " + error_msg)
+        raise ValueError(f"x {error_msg}")
 
     if (
         y is not None
@@ -48,7 +46,7 @@ def _infer_line_data(darray, x, y, hue):
         and y not in darray.coords
         and y not in darray._level_coords
     ):
-        raise ValueError("y " + error_msg)
+        raise ValueError(f"y {error_msg}")
 
     if x is not None and y is not None:
         raise ValueError("You cannot specify both x and y kwargs for line plots.")

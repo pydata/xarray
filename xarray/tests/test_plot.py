@@ -155,13 +155,14 @@ class TestPlot(PlotTestCase):
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=ax.flat[aa])
 
-        with raises_regex(ValueError, "cannot"):
+        with raises_regex(ValueError, "cannot specify both"):
             da.plot(x="z", y="z")
 
-        with raises_regex(ValueError, "None"):
+        error_msg = "must be a dimension, coordinate, MultiIndex level name or None"
+        with raises_regex(ValueError, f"x {error_msg}"):
             da.plot(x="f", y="z")
 
-        with raises_regex(ValueError, "None"):
+        with raises_regex(ValueError, f"y {error_msg}"):
             da.plot(x="z", y="f")
 
     def test_multiindex_level_as_coord(self):
