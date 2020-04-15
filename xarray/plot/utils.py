@@ -360,7 +360,9 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
-    assert x is None or x != y
+    if (x is not None) and (x == y):
+        raise ValueError("'x' and 'y' cannot be equal.")
+
     if imshow and darray.ndim == 3:
         return _infer_xy_labels_3d(darray, x, y, rgb)
 

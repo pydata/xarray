@@ -1166,6 +1166,10 @@ class Common2dMixin:
         assert "y_long_name [y_units]" == ax.get_ylabel()
 
     def test_bad_x_string_exception(self):
+
+        with raises_regex(ValueError, "'x' and 'y' cannot be equal."):
+            self.plotmethod(x="y", y="y")
+
         error_msg = "must be a dimension, coordinate or MultiIndex level name"
         with raises_regex(ValueError, f"'x' and 'y' {error_msg}"):
             self.plotmethod("not_a_real_dim", "y")
