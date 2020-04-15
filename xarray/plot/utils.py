@@ -364,6 +364,7 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     if imshow and darray.ndim == 3:
         return _infer_xy_labels_3d(darray, x, y, rgb)
 
+    error_msg = "must be a dimension, coordinate or MultiIndex level name"
     if x is None and y is None:
         if darray.ndim != 2:
             raise ValueError("DataArray must be 2d")
@@ -374,7 +375,7 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             and y not in darray.coords
             and y not in darray._level_coords
         ):
-            raise ValueError("y must be a dimension name if x is not supplied")
+            raise ValueError(f"'y' {error_msg}")
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
         if (
@@ -382,7 +383,7 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             and x not in darray.coords
             and x not in darray._level_coords
         ):
-            raise ValueError("x must be a dimension name if y is not supplied")
+            raise ValueError(f"'x' {error_msg}")
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
     else:
         if any(
@@ -391,14 +392,14 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             and k not in darray._level_coords
             for k in (x, y)
         ):
-            raise ValueError("x and y must be coordinate variables")
+            raise ValueError(f"'x' and 'y' {error_msg}s")
         elif (
             all(k in darray._level_coords for k in (x, y))
             and darray._level_coords[x] == darray._level_coords[y]
         ):
-            raise ValueError("x and y cannot be levels of the same MultiIndex")
+            raise ValueError("'x' and 'y' cannot be levels of the same MultiIndex")
         elif darray._level_coords.get(x, x) == darray._level_coords.get(y, y):
-            raise ValueError("x and y cannot be a MultiIndex and one of its levels")
+            raise ValueError("'x' and 'y' cannot be a MultiIndex and one of its levels")
 
     return x, y
 

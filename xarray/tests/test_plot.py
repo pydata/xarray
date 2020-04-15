@@ -1165,15 +1165,12 @@ class Common2dMixin:
         assert "y_long_name [y_units]" == ax.get_ylabel()
 
     def test_bad_x_string_exception(self):
-        with raises_regex(ValueError, "x and y must be coordinate variables"):
+        error_msg = "must be a dimension, coordinate or MultiIndex level name"
+        with raises_regex(ValueError, f"'x' and 'y' {error_msg}"):
             self.plotmethod("not_a_real_dim", "y")
-        with raises_regex(
-            ValueError, "x must be a dimension name if y is not supplied"
-        ):
+        with raises_regex(ValueError, f"'x' {error_msg}"):
             self.plotmethod(x="not_a_real_dim")
-        with raises_regex(
-            ValueError, "y must be a dimension name if x is not supplied"
-        ):
+        with raises_regex(ValueError, f"'y' {error_msg}"):
             self.plotmethod(y="not_a_real_dim")
         self.darray.coords["z"] = 100
 
