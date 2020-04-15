@@ -54,7 +54,7 @@ from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
-from .merge import PANDAS_TYPES, _extract_indexes_from_coords
+from .merge import PANDAS_TYPES, _extract_indexes_from_coords, MergeError
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
@@ -2663,8 +2663,15 @@ class DataArray(AbstractArray, DataWithCoords):
             # don't support automatic alignment with in-place arithmetic.
             other_coords = getattr(other, "coords", None)
             other_variable = getattr(other, "variable", other)
-            with self.coords._merge_inplace(other_coords):
-                f(self.variable, other_variable)
+            try:
+                with self.coords._merge_inplace(other_coords):
+                    f(self.variable, other_variable)
+            except MergeError:
+                raise ValueError(
+                    "Automatic alignment is not supported for in-place operations.\n"
+                    "Consider aligning the indices manually or using a not-in-place operation.\n"
+                    "See https://github.com/pydata/xarray/issues/3910 for more explanations."
+                )
             return self
 
         return func
