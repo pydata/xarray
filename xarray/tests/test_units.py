@@ -3725,14 +3725,8 @@ class TestDataset:
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                function("all"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
-            ),
-            pytest.param(
-                function("any"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
-            ),
+            function("all"),
+            function("any"),
             function("argmax"),
             function("argmin"),
             function("max"),
@@ -3752,16 +3746,9 @@ class TestDataset:
             function("std"),
             function("var"),
             function("cumsum"),
-            pytest.param(
-                function("cumprod"),
-                marks=pytest.mark.xfail(reason="fails within xarray"),
-            ),
-            pytest.param(
-                method("all"), marks=pytest.mark.xfail(reason="not implemented by pint")
-            ),
-            pytest.param(
-                method("any"), marks=pytest.mark.xfail(reason="not implemented by pint")
-            ),
+            function("cumprod"),
+            method("all"),
+            method("any"),
             method("argmax"),
             method("argmin"),
             method("max"),
@@ -3776,9 +3763,7 @@ class TestDataset:
             method("std"),
             method("var"),
             method("cumsum"),
-            pytest.param(
-                method("cumprod"), marks=pytest.mark.xfail(reason="fails within xarray")
-            ),
+            method("cumprod"),
         ),
         ids=repr,
     )
