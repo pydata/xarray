@@ -703,7 +703,10 @@ def _plot2d(plotfunc):
         _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, zval.data, **locals()
+            plotfunc,
+            zval.data,
+            **locals(),
+            _is_facetgrid=kwargs.pop("_is_facetgrid", False),
         )
 
         if "contour" in plotfunc.__name__:
