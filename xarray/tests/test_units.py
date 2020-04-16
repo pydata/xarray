@@ -3778,7 +3778,7 @@ class TestDataset:
     )
     def test_aggregation(self, func, dtype):
         unit_a, unit_b = (
-            (unit_registry.Pa, unit_registry.kg / unit_registry.m ** 3)
+            (unit_registry.Pa, unit_registry.degK)
             if func.name != "cumprod"
             else (unit_registry.dimensionless, unit_registry.dimensionless)
         )
@@ -3903,22 +3903,13 @@ class TestDataset:
             * unit_registry.Pa
         )
 
-        x = np.arange(array1.shape[0]) * unit_registry.m
-        y = np.arange(array1.shape[1]) * unit_registry.m
-        z = np.arange(array2.shape[0]) * unit_registry.m
-
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("z", "x")),
-            },
-            coords={"x": x, "y": y, "z": z},
-        )
+        ds = xr.Dataset({"a": (("x", "y"), array1), "b": (("z", "x"), array2)})
 
         expected = func(strip_units(ds))
         actual = func(ds)
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="ffill and bfill lose the unit")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
@@ -3932,23 +3923,14 @@ class TestDataset:
             * unit_registry.Pa
         )
 
-        x = np.arange(len(array1))
+        ds = xr.Dataset({"a": ("x", array1), "b": ("y", array2)})
+        units = extract_units(ds)
 
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
-
-        expected = attach_units(
-            func(strip_units(ds), dim="x"),
-            {"a": unit_registry.degK, "b": unit_registry.Pa},
-        )
+        expected = attach_units(func(strip_units(ds), dim="x"), units,)
         actual = func(ds, dim="x")
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -3986,30 +3968,26 @@ class TestDataset:
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
             * unit_registry.m
         )
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            }
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
+        value = fill_value * unit
+        units = extract_units(ds)
 
         if error is not None:
             with pytest.raises(error):
-                ds.fillna(value=fill_value * unit)
+                ds.fillna(value=value)
 
             return
 
-        actual = ds.fillna(value=fill_value * unit)
+        actual = ds.fillna(value=value)
         expected = attach_units(
             strip_units(ds).fillna(
-                value=strip_units(
-                    convert_units(fill_value * unit, {None: unit_registry.m})
-                )
+                value=strip_units(convert_units(value, {None: unit_registry.m}))
             ),
-            {"a": unit_registry.m, "b": unit_registry.m},
+            units,
         )
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     def test_dropna(self, dtype):
         array1 = (
@@ -4020,22 +3998,14 @@ class TestDataset:
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
             * unit_registry.Pa
         )
-        x = np.arange(len(array1))
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
+        units = extract_units(ds)
 
-        expected = attach_units(
-            strip_units(ds).dropna(dim="x"),
-            {"a": unit_registry.degK, "b": unit_registry.Pa},
-        )
+        expected = attach_units(strip_units(ds).dropna(dim="x"), units)
         actual = ds.dropna(dim="x")
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -4056,34 +4026,27 @@ class TestDataset:
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
             * unit_registry.m
         )
-        x = np.arange(len(array1))
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
 
         raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
         values = raw_values * unit
 
-        if (
-            isinstance(values, unit_registry.Quantity)
-            and values.check(unit_registry.m)
-            and unit != unit_registry.m
-        ):
-            raw_values = values.to(unit_registry.m).magnitude
+        converted_values = convert_units(
+            values,
+            {None: unit_registry.m if is_compatible(unit, unit_registry.m) else None},
+        )
 
-        expected = strip_units(ds).isin(raw_values)
-        if not isinstance(values, unit_registry.Quantity) or not values.check(
-            unit_registry.m
-        ):
+        expected = strip_units(ds).isin(strip_units(converted_values))
+        # TODO: use `unit_registry.is_compatible_with(unit, unit_registry.m)` instead.
+        # Needs `pint>=0.12`, though, so we probably should wait until that is released.
+        if not is_compatible(unit, unit_registry.m):
             expected.a[:] = False
             expected.b[:] = False
+
         actual = ds.isin(values)
 
-        assert_equal_with_units(actual, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
@@ -4105,13 +4068,8 @@ class TestDataset:
         array1 = np.linspace(0, 1, 10).astype(dtype) * original_unit
         array2 = np.linspace(-1, 0, 10).astype(dtype) * original_unit
 
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": np.arange(len(array1))},
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
+        units = extract_units(ds)
 
         condition = ds < 0.5 * original_unit
         other = np.linspace(-2, -1, 10).astype(dtype) * unit
@@ -4133,15 +4091,13 @@ class TestDataset:
             for key, value in kwargs.items()
         }
 
-        expected = attach_units(
-            strip_units(ds).where(**kwargs_without_units),
-            {"a": original_unit, "b": original_unit},
-        )
+        expected = attach_units(strip_units(ds).where(**kwargs_without_units), units,)
         actual = ds.where(**kwargs)
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="interpolate strips units")
+    @pytest.mark.xfail(reason="interpolate_na uses numpy.vectorize")
     def test_interpolate_na(self, dtype):
         array1 = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
@@ -4151,22 +4107,14 @@ class TestDataset:
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
             * unit_registry.Pa
         )
-        x = np.arange(len(array1))
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
+        units = extract_units(ds)
 
-        expected = attach_units(
-            strip_units(ds).interpolate_na(dim="x"),
-            {"a": unit_registry.degK, "b": unit_registry.Pa},
-        )
+        expected = attach_units(strip_units(ds).interpolate_na(dim="x"), units,)
         actual = ds.interpolate_na(dim="x")
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="wrong argument order for `where`")
     @pytest.mark.parametrize(
