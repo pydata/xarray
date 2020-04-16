@@ -3963,7 +3963,7 @@ class TestDataset:
                 None,
                 id="compatible_unit",
                 marks=pytest.mark.xfail(
-                    reason="where converts the array, not the fill value"
+                    False, reason="where converts the array, not the fill value"
                 ),
             ),
             pytest.param(unit_registry.m, None, id="identical_unit"),
