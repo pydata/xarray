@@ -1,10 +1,12 @@
 from contextlib import suppress
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
 from xarray.coding import variables
+from xarray.conventions import decode_cf_variable, encode_cf_variable
 
 from . import assert_equal, assert_identical, requires_dask
 
@@ -18,6 +20,39 @@ def test_CFMaskCoder_decode():
     coder = variables.CFMaskCoder()
     encoded = coder.decode(original)
     assert_identical(expected, encoded)
+
+
+encoding_with_dtype = {
+    "dtype": np.dtype("float64"),
+    "_FillValue": np.float32(1e20),
+    "missing_value": np.float64(1e20),
+}
+encoding_without_dtype = {
+    "_FillValue": np.float32(1e20),
+    "missing_value": np.float64(1e20),
+}
+CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS = {
+    "numeric-with-dtype": ([0.0, -1.0, 1.0], encoding_with_dtype),
+    "numeric-without-dtype": ([0.0, -1.0, 1.0], encoding_without_dtype),
+    "times-with-dtype": (pd.date_range("2000", periods=3), encoding_with_dtype),
+}
+
+
+@pytest.mark.parametrize(
+    ("data", "encoding"),
+    CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS.values(),
+    ids=list(CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS.keys()),
+)
+def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding):
+    original = xr.Variable(("x",), data, encoding=encoding)
+    encoded = encode_cf_variable(original)
+
+    assert encoded.dtype == encoded.attrs["missing_value"].dtype
+    assert encoded.dtype == encoded.attrs["_FillValue"].dtype
+
+    with pytest.warns(variables.SerializationWarning):
+        roundtripped = decode_cf_variable("foo", encoded)
+        assert_identical(roundtripped, original)
 
 
 def test_CFMaskCoder_missing_value():

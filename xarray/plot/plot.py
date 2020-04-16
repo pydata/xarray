@@ -17,13 +17,11 @@ from .utils import (
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
-    _interval_to_double_bound_points,
-    _interval_to_mid_points,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
+    _resolve_intervals_1dplot,
     _resolve_intervals_2dplot,
     _update_axes,
-    _valid_other_type,
     get_axis,
     import_matplotlib_pyplot,
     label_from_attrs,
@@ -83,8 +81,8 @@ def _infer_line_data(darray, x, y, hue):
                     )
 
             else:
-                xdim, = darray[xname].dims
-                huedim, = darray[huename].dims
+                (xdim,) = darray[xname].dims
+                (huedim,) = darray[huename].dims
                 yplt = darray.transpose(xdim, huedim)
 
         else:
@@ -95,6 +93,7 @@ def _infer_line_data(darray, x, y, hue):
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     otherdim = darray.dims[otherindex]
                     xplt = darray.transpose(otherdim, huename, transpose_coords=False)
+                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError(
                         "For 2D inputs, hue must be a dimension"
@@ -102,8 +101,8 @@ def _infer_line_data(darray, x, y, hue):
                     )
 
             else:
-                ydim, = darray[yname].dims
-                huedim, = darray[huename].dims
+                (ydim,) = darray[yname].dims
+                (huedim,) = darray[huename].dims
                 xplt = darray.transpose(ydim, huedim)
 
         huelabel = label_from_attrs(darray[huename])
@@ -269,7 +268,7 @@ def line(
         if None, use the default for the matplotlib function.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
-    *args, **kwargs : optional
+    ``*args``, ``**kwargs`` : optional
         Additional arguments to matplotlib.pyplot.plot
     """
     # Handle facetgrids first
@@ -288,7 +287,7 @@ def line(
         )
 
     # The allargs dict passed to _easy_facetgrid above contains args
-    if args is ():
+    if args == ():
         args = kwargs.pop("args", ())
     else:
         assert "args" not in kwargs
@@ -296,29 +295,10 @@ def line(
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, hue_label = _infer_line_data(darray, x, y, hue)
 
-    # Remove pd.Intervals if contained in xplt.values.
-    if _valid_other_type(xplt.values, [pd.Interval]):
-        # Is it a step plot? (see matplotlib.Axes.step)
-        if kwargs.get("linestyle", "").startswith("steps-"):
-            xplt_val, yplt_val = _interval_to_double_bound_points(
-                xplt.values, yplt.values
-            )
-            # Remove steps-* to be sure that matplotlib is not confused
-            kwargs["linestyle"] = (
-                kwargs["linestyle"]
-                .replace("steps-pre", "")
-                .replace("steps-post", "")
-                .replace("steps-mid", "")
-            )
-            if kwargs["linestyle"] == "":
-                del kwargs["linestyle"]
-        else:
-            xplt_val = _interval_to_mid_points(xplt.values)
-            yplt_val = yplt.values
-            xlabel += "_center"
-    else:
-        xplt_val = xplt.values
-        yplt_val = yplt.values
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, xlabel, ylabel, kwargs = _resolve_intervals_1dplot(
+        xplt.values, yplt.values, xlabel, ylabel, kwargs
+    )
 
     _ensure_plottable(xplt_val, yplt_val)
 
@@ -350,7 +330,7 @@ def line(
     return primitive
 
 
-def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
+def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
     Step plot of DataArray index against values
 
@@ -360,6 +340,7 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
     ----------
     where : {'pre', 'post', 'mid'}, optional, default 'pre'
         Define where the steps should be placed:
+
         - 'pre': The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
@@ -367,27 +348,28 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
         - 'mid': Steps occur half-way between the *x* positions.
-        Note that this parameter is ignored if the x coordinate consists of
+
+        Note that this parameter is ignored if one coordinate consists of
         :py:func:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
 
-    *args, **kwargs : optional
+    ``*args``, ``**kwargs`` : optional
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:
         raise ValueError("'where' argument to step must be " "'pre', 'post' or 'mid'")
 
-    if ls is not None:
-        if linestyle is None:
-            linestyle = ls
+    if ds is not None:
+        if drawstyle is None:
+            drawstyle = ds
         else:
-            raise TypeError("ls and linestyle are mutually exclusive")
-    if linestyle is None:
-        linestyle = ""
-    linestyle = "steps-" + where + linestyle
+            raise TypeError("ds and drawstyle are mutually exclusive")
+    if drawstyle is None:
+        drawstyle = ""
+    drawstyle = "steps-" + where + drawstyle
 
-    return line(darray, *args, linestyle=linestyle, **kwargs)
+    return line(darray, *args, drawstyle=drawstyle, **kwargs)
 
 
 def hist(
@@ -672,10 +654,22 @@ def _plot2d(plotfunc):
 
         # check if we need to broadcast one dimension
         if xval.ndim < yval.ndim:
-            xval = np.broadcast_to(xval, yval.shape)
+            dims = darray[ylab].dims
+            if xval.shape[0] == yval.shape[0]:
+                xval = np.broadcast_to(xval[:, np.newaxis], yval.shape)
+            else:
+                xval = np.broadcast_to(xval[np.newaxis, :], yval.shape)
 
-        if yval.ndim < xval.ndim:
-            yval = np.broadcast_to(yval, xval.shape)
+        elif yval.ndim < xval.ndim:
+            dims = darray[xlab].dims
+            if yval.shape[0] == xval.shape[0]:
+                yval = np.broadcast_to(yval[:, np.newaxis], xval.shape)
+            else:
+                yval = np.broadcast_to(yval[np.newaxis, :], xval.shape)
+        elif xval.ndim == 2:
+            dims = darray[xlab].dims
+        else:
+            dims = (darray[ylab].dims[0], darray[xlab].dims[0])
 
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
@@ -685,10 +679,9 @@ def _plot2d(plotfunc):
             # we transpose to (y, x, color) to make this work.
             yx_dims = (ylab, xlab)
             dims = yx_dims + tuple(d for d in darray.dims if d not in yx_dims)
-            if dims != darray.dims:
-                darray = darray.transpose(*dims, transpose_coords=True)
-        elif darray[xlab].dims[-1] == darray.dims[0]:
-            darray = darray.transpose(transpose_coords=True)
+
+        if dims != darray.dims:
+            darray = darray.transpose(*dims, transpose_coords=True)
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
@@ -697,10 +690,13 @@ def _plot2d(plotfunc):
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
         yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
 
-        _ensure_plottable(xplt, yplt)
+        _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, zval.data, **locals()
+            plotfunc,
+            zval.data,
+            **locals(),
+            _is_facetgrid=kwargs.pop("_is_facetgrid", False),
         )
 
         if "contour" in plotfunc.__name__:

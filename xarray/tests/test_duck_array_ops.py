@@ -1,3 +1,4 @@
+import datetime as dt
 import warnings
 from textwrap import dedent
 
@@ -15,9 +16,14 @@ from xarray.core.duck_array_ops import (
     first,
     gradient,
     last,
+    least_squares,
     mean,
+    np_timedelta64_to_float,
+    pd_timedelta_to_float,
+    py_timedelta_to_float,
     rolling_window,
     stack,
+    timedelta_to_numeric,
     where,
 )
 from xarray.core.pycompat import dask_array_type
@@ -274,23 +280,40 @@ def assert_dask_array(da, dask):
 
 
 @arm_xfail
-@pytest.mark.parametrize("dask", [False, True])
-def test_datetime_reduce(dask):
-    time = np.array(pd.date_range("15/12/1999", periods=11))
-    time[8:11] = np.nan
-    da = DataArray(np.linspace(0, 365, num=11), dims="time", coords={"time": time})
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+@pytest.mark.parametrize("dask", [False, True] if has_dask else [False])
+def test_datetime_mean(dask):
+    # Note: only testing numpy, as dask is broken upstream
+    da = DataArray(
+        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8"),
+        dims=["time"],
+    )
+    if dask:
+        # Trigger use case where a chunk is full of NaT
+        da = da.chunk({"time": 3})
 
-    if dask and has_dask:
-        chunks = {"time": 5}
-        da = da.chunk(chunks)
+    expect = DataArray(np.array("2010-01-02", dtype="M8"))
+    expect_nat = DataArray(np.array("NaT", dtype="M8"))
 
-    actual = da["time"].mean()
-    assert not pd.isnull(actual)
-    actual = da["time"].mean(skipna=False)
-    assert pd.isnull(actual)
+    actual = da.mean()
+    if dask:
+        assert actual.chunks is not None
+    assert_equal(actual, expect)
 
-    # test for a 0d array
-    assert da["time"][0].mean() == da["time"][:1].mean()
+    actual = da.mean(skipna=False)
+    if dask:
+        assert actual.chunks is not None
+    assert_equal(actual, expect_nat)
+
+    # tests for 1d array full of NaT
+    assert_equal(da[[1]].mean(), expect_nat)
+    assert_equal(da[[1]].mean(skipna=False), expect_nat)
+
+    # tests for a 0d array
+    assert_equal(da[0].mean(), da[0])
+    assert_equal(da[0].mean(skipna=False), da[0])
+    assert_equal(da[1].mean(), expect_nat)
+    assert_equal(da[1].mean(skipna=False), expect_nat)
 
 
 @requires_cftime
@@ -440,7 +463,10 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
             **{aggdim: getattr(da, "arg" + func)(dim=aggdim, skipna=skipna).compute()}
         )
         expected = getattr(da, func)(dim=aggdim, skipna=skipna)
-        assert_allclose(actual.drop(actual.coords), expected.drop(expected.coords))
+        assert_allclose(
+            actual.drop_vars(list(actual.coords)),
+            expected.drop_vars(list(expected.coords)),
+        )
 
 
 def test_argmin_max_error():
@@ -653,13 +679,15 @@ def test_datetime_to_numeric_datetime64():
 
 @requires_cftime
 def test_datetime_to_numeric_cftime():
-    times = cftime_range("2000", periods=5, freq="7D").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
+    times = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
+    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(times, offset=offset, datetime_unit="h")
+    result = duck_array_ops.datetime_to_numeric(
+        times, offset=offset, datetime_unit="h", dtype=int
+    )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
@@ -667,3 +695,87 @@ def test_datetime_to_numeric_cftime():
     result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=dtype)
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime
+def test_datetime_to_numeric_potential_overflow():
+    import cftime
+
+    times = pd.date_range("2000", periods=5, freq="7D").values.astype("datetime64[us]")
+    cftimes = cftime_range(
+        "2000", periods=5, freq="7D", calendar="proleptic_gregorian"
+    ).values
+
+    offset = np.datetime64("0001-01-01")
+    cfoffset = cftime.DatetimeProlepticGregorian(1, 1, 1)
+
+    result = duck_array_ops.datetime_to_numeric(
+        times, offset=offset, datetime_unit="D", dtype=int
+    )
+    cfresult = duck_array_ops.datetime_to_numeric(
+        cftimes, offset=cfoffset, datetime_unit="D", dtype=int
+    )
+
+    expected = 730119 + np.arange(0, 35, 7)
+
+    np.testing.assert_array_equal(result, expected)
+    np.testing.assert_array_equal(cfresult, expected)
+
+
+def test_py_timedelta_to_float():
+    assert py_timedelta_to_float(dt.timedelta(days=1), "ns") == 86400 * 1e9
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ps") == 86400 * 1e18
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ns") == 86400 * 1e15
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "us") == 86400 * 1e12
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "ms") == 86400 * 1e9
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "s") == 86400 * 1e6
+    assert py_timedelta_to_float(dt.timedelta(days=1e6), "D") == 1e6
+
+
+@pytest.mark.parametrize(
+    "td, expected",
+    ([np.timedelta64(1, "D"), 86400 * 1e9], [np.timedelta64(1, "ns"), 1.0]),
+)
+def test_np_timedelta64_to_float(td, expected):
+    out = np_timedelta64_to_float(td, datetime_unit="ns")
+    np.testing.assert_allclose(out, expected)
+    assert isinstance(out, float)
+
+    out = np_timedelta64_to_float(np.atleast_1d(td), datetime_unit="ns")
+    np.testing.assert_allclose(out, expected)
+
+
+@pytest.mark.parametrize(
+    "td, expected", ([pd.Timedelta(1, "D"), 86400 * 1e9], [pd.Timedelta(1, "ns"), 1.0])
+)
+def test_pd_timedelta_to_float(td, expected):
+    out = pd_timedelta_to_float(td, datetime_unit="ns")
+    np.testing.assert_allclose(out, expected)
+    assert isinstance(out, float)
+
+
+@pytest.mark.parametrize(
+    "td", [dt.timedelta(days=1), np.timedelta64(1, "D"), pd.Timedelta(1, "D"), "1 day"]
+)
+def test_timedelta_to_numeric(td):
+    # Scalar input
+    out = timedelta_to_numeric(td, "ns")
+    np.testing.assert_allclose(out, 86400 * 1e9)
+    assert isinstance(out, float)
+
+
+@pytest.mark.parametrize("use_dask", [True, False])
+@pytest.mark.parametrize("skipna", [True, False])
+def test_least_squares(use_dask, skipna):
+    if use_dask and not has_dask:
+        pytest.skip("requires dask")
+    lhs = np.array([[1, 2], [1, 2], [3, 2]])
+    rhs = DataArray(np.array([3, 5, 7]), dims=("y",))
+
+    if use_dask:
+        rhs = rhs.chunk({"y": 1})
+
+    coeffs, residuals = least_squares(lhs, rhs.data, skipna=skipna)
+
+    np.testing.assert_allclose(coeffs, [1.5, 1.25])
+    np.testing.assert_allclose(residuals, [2.0])

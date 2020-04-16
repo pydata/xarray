@@ -13,6 +13,7 @@ priority order:
 Once NumPy 1.10 comes out with support for overriding ufuncs, this module will
 hopefully no longer be necessary.
 """
+import textwrap
 import warnings as _warnings
 
 import numpy as _np
@@ -78,10 +79,49 @@ class _UFuncDispatcher:
         return res
 
 
+def _skip_signature(doc, name):
+    if not isinstance(doc, str):
+        return doc
+
+    if doc.startswith(name):
+        signature_end = doc.find("\n\n")
+        doc = doc[signature_end + 2 :]
+
+    return doc
+
+
+def _remove_unused_reference_labels(doc):
+    if not isinstance(doc, str):
+        return doc
+
+    max_references = 5
+    for num in range(max_references):
+        label = f".. [{num}]"
+        reference = f"[{num}]_"
+        index = f"{num}.    "
+
+        if label not in doc or reference in doc:
+            continue
+
+        doc = doc.replace(label, index)
+
+    return doc
+
+
+def _dedent(doc):
+    if not isinstance(doc, str):
+        return doc
+
+    return textwrap.dedent(doc)
+
+
 def _create_op(name):
     func = _UFuncDispatcher(name)
     func.__name__ = name
     doc = getattr(_np, name).__doc__
+
+    doc = _remove_unused_reference_labels(_skip_signature(_dedent(doc), name))
+
     func.__doc__ = (
         "xarray specific variant of numpy.%s. Handles "
         "xarray.Dataset, xarray.DataArray, xarray.Variable, "
@@ -92,14 +132,68 @@ def _create_op(name):
     return func
 
 
-__all__ = """logaddexp logaddexp2 conj exp log log2 log10 log1p expm1 sqrt
-             square sin cos tan arcsin arccos arctan arctan2 hypot sinh cosh
-             tanh arcsinh arccosh arctanh deg2rad rad2deg logical_and
-             logical_or logical_xor logical_not maximum minimum fmax fmin
-             isreal iscomplex isfinite isinf isnan signbit copysign nextafter
-             ldexp fmod floor ceil trunc degrees radians rint fix angle real
-             imag fabs sign frexp fmod
-             """.split()
+__all__ = (  # noqa: F822
+    "angle",
+    "arccos",
+    "arccosh",
+    "arcsin",
+    "arcsinh",
+    "arctan",
+    "arctan2",
+    "arctanh",
+    "ceil",
+    "conj",
+    "copysign",
+    "cos",
+    "cosh",
+    "deg2rad",
+    "degrees",
+    "exp",
+    "expm1",
+    "fabs",
+    "fix",
+    "floor",
+    "fmax",
+    "fmin",
+    "fmod",
+    "fmod",
+    "frexp",
+    "hypot",
+    "imag",
+    "iscomplex",
+    "isfinite",
+    "isinf",
+    "isnan",
+    "isreal",
+    "ldexp",
+    "log",
+    "log10",
+    "log1p",
+    "log2",
+    "logaddexp",
+    "logaddexp2",
+    "logical_and",
+    "logical_not",
+    "logical_or",
+    "logical_xor",
+    "maximum",
+    "minimum",
+    "nextafter",
+    "rad2deg",
+    "radians",
+    "real",
+    "rint",
+    "sign",
+    "signbit",
+    "sin",
+    "sinh",
+    "sqrt",
+    "square",
+    "tan",
+    "tanh",
+    "trunc",
+)
+
 
 for name in __all__:
     globals()[name] = _create_op(name)

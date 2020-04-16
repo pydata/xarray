@@ -18,12 +18,14 @@ Reordering dimensions
 ---------------------
 
 To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
-on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`:
+on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An 
+ellipsis (`...`) can be use to represent all other dimensions:
 
 .. ipython:: python
 
     ds = xr.Dataset({'foo': (('x', 'y', 'z'), [[[42]]]), 'bar': (('y', 'z'), [[24]])})
     ds.transpose('y', 'z', 'x')
+    ds.transpose(..., 'x')  # equivalent
     ds.transpose()  # reverses all dimensions
 
 Expand and squeeze dimensions
@@ -107,6 +109,13 @@ implemented :py:meth:`~xarray.DataArray.stack` and
     stacked
     stacked.unstack('z')
 
+As elsewhere in xarray, an ellipsis (`...`) can be used to represent all unlisted dimensions:
+
+.. ipython:: python
+
+    stacked = array.stack(z=[..., "x"])
+    stacked
+
 These methods are modeled on the :py:class:`pandas.DataFrame` methods of the
 same name, although in xarray they always create new dimensions rather than
 adding to the existing index or columns.
@@ -162,6 +171,7 @@ like this:
                       'b': ('x', [6, 7])},
             coords={'y': ['u', 'v', 'w']}
         )
+        data
         stacked = data.to_stacked_array("z", sample_dims=['x'])
         stacked
         unstacked = stacked.to_unstacked_dataset("z")

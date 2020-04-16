@@ -2,7 +2,8 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
-from .merge import _VALID_COMPAT, unique_variable
+from .duck_array_ops import lazy_array_equiv
+from .merge import _VALID_COMPAT, merge_attrs, unique_variable
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 
@@ -16,6 +17,7 @@ def concat(
     positions=None,
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="override",
 ):
     """Concatenate xarray objects along a new or existing dimension.
 
@@ -44,6 +46,7 @@ def concat(
           * 'all': All data variables will be concatenated.
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
+
         If objects are DataArrays, data_vars must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
         These coordinate variables will be concatenated together:
@@ -90,8 +93,16 @@ def concat(
         - 'override': if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'},
+                    default 'override
+        String indicating how to combine attrs of the objects being merged:
 
-    indexers, mode, concat_over : deprecated
+        - 'drop': empty attrs on returned Dataset.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - 'override': skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
@@ -128,7 +139,9 @@ def concat(
             "can only concatenate xarray Dataset and DataArray "
             "objects, got %s" % type(first_obj)
         )
-    return f(objs, dim, data_vars, coords, compat, positions, fill_value, join)
+    return f(
+        objs, dim, data_vars, coords, compat, positions, fill_value, join, combine_attrs
+    )
 
 
 def _calc_concat_dim_coord(dim):
@@ -148,10 +161,10 @@ def _calc_concat_dim_coord(dim):
         dim = dim_name
     elif not isinstance(dim, DataArray):
         coord = as_variable(dim).to_index_variable()
-        dim, = coord.dims
+        (dim,) = coord.dims
     else:
         coord = dim
-        dim, = coord.dims
+        (dim,) = coord.dims
     return dim, coord
 
 
@@ -189,26 +202,59 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
                     if k not in concat_over:
-                        # Compare the variable of all datasets vs. the one
-                        # of the first dataset. Perform the minimum amount of
-                        # loads in order to avoid multiple loads from disk
-                        # while keeping the RAM footprint low.
-                        v_lhs = datasets[0].variables[k].load()
-                        # We'll need to know later on if variables are equal.
-                        computed = []
-                        for ds_rhs in datasets[1:]:
-                            v_rhs = ds_rhs.variables[k].compute()
-                            computed.append(v_rhs)
-                            if not getattr(v_lhs, compat)(v_rhs):
-                                concat_over.add(k)
-                                equals[k] = False
-                                # computed variables are not to be re-computed
-                                # again in the future
-                                for ds, v in zip(datasets[1:], computed):
-                                    ds.variables[k].data = v.data
+                        equals[k] = None
+
+                        variables = []
+                        for ds in datasets:
+                            if k in ds.variables:
+                                variables.append(ds.variables[k])
+
+                        if len(variables) == 1:
+                            # coords="different" doesn't make sense when only one object
+                            # contains a particular variable.
+                            break
+                        elif len(variables) != len(datasets) and opt == "different":
+                            raise ValueError(
+                                f"{k!r} not present in all datasets and coords='different'. "
+                                f"Either add {k!r} to datasets where it is missing or "
+                                "specify coords='minimal'."
+                            )
+
+                        # first check without comparing values i.e. no computes
+                        for var in variables[1:]:
+                            equals[k] = getattr(variables[0], compat)(
+                                var, equiv=lazy_array_equiv
+                            )
+                            if equals[k] is not True:
+                                # exit early if we know these are not equal or that
+                                # equality cannot be determined i.e. one or all of
+                                # the variables wraps a numpy array
                                 break
-                        else:
-                            equals[k] = True
+
+                        if equals[k] is False:
+                            concat_over.add(k)
+
+                        elif equals[k] is None:
+                            # Compare the variable of all datasets vs. the one
+                            # of the first dataset. Perform the minimum amount of
+                            # loads in order to avoid multiple loads from disk
+                            # while keeping the RAM footprint low.
+                            v_lhs = datasets[0].variables[k].load()
+                            # We'll need to know later on if variables are equal.
+                            computed = []
+                            for ds_rhs in datasets[1:]:
+                                v_rhs = ds_rhs.variables[k].compute()
+                                computed.append(v_rhs)
+                                if not getattr(v_lhs, compat)(v_rhs):
+                                    concat_over.add(k)
+                                    equals[k] = False
+                                    # computed variables are not to be re-computed
+                                    # again in the future
+                                    for ds, v in zip(datasets[1:], computed):
+                                        ds.variables[k].data = v.data
+                                    break
+                            else:
+                                equals[k] = True
 
             elif opt == "all":
                 concat_over.update(
@@ -269,6 +315,7 @@ def _dataset_concat(
     positions,
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="override",
 ):
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -325,7 +372,7 @@ def _dataset_concat(
     result_vars.update(dim_coords)
 
     # assign attrs and encoding from first dataset
-    result_attrs = datasets[0].attrs
+    result_attrs = merge_attrs([ds.attrs for ds in datasets], combine_attrs)
     result_encoding = datasets[0].encoding
 
     # check that global attributes are fixed across all datasets if necessary
@@ -370,7 +417,7 @@ def _dataset_concat(
     result = result.set_coords(coord_names)
     result.encoding = result_encoding
 
-    result = result.drop(unlabeled_dims, errors="ignore")
+    result = result.drop_vars(unlabeled_dims, errors="ignore")
 
     if coord is not None:
         # add concat dimension last to ensure that its in the final Dataset
@@ -388,6 +435,7 @@ def _dataarray_concat(
     positions,
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="override",
 ):
     arrays = list(arrays)
 
@@ -416,5 +464,12 @@ def _dataarray_concat(
         positions,
         fill_value=fill_value,
         join=join,
+        combine_attrs="drop",
     )
-    return arrays[0]._from_temp_dataset(ds, name)
+
+    merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)
+
+    result = arrays[0]._from_temp_dataset(ds, name)
+    result.attrs = merged_attrs
+
+    return result

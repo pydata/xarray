@@ -817,6 +817,24 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
+@requires_dask
+def test_vectorize_dask_new_output_dims():
+    # regression test for GH3574
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    func = lambda x: x[np.newaxis, ...]
+    expected = data_array.expand_dims("z")
+    actual = apply_ufunc(
+        func,
+        data_array.chunk({"x": 1}),
+        output_core_dims=[["z"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[float],
+        output_sizes={"z": 1},
+    ).transpose(*expected.dims)
+    assert_identical(expected, actual)
+
+
 def test_output_wrong_number():
     variable = xr.Variable("x", np.arange(10))
 
@@ -998,6 +1016,23 @@ def test_dot(use_dask):
     assert actual.dims == ("b",)
     assert (actual.data == np.zeros(actual.shape)).all()
 
+    # Ellipsis (...) sums over all dimensions
+    actual = xr.dot(da_a, da_b, dims=...)
+    assert actual.dims == ()
+    assert (actual.data == np.einsum("ij,ijk->", a, b)).all()
+
+    actual = xr.dot(da_a, da_b, da_c, dims=...)
+    assert actual.dims == ()
+    assert (actual.data == np.einsum("ij,ijk,kl-> ", a, b, c)).all()
+
+    actual = xr.dot(da_a, dims=...)
+    assert actual.dims == ()
+    assert (actual.data == np.einsum("ij-> ", a)).all()
+
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims=...)
+    assert actual.dims == ()
+    assert (actual.data == np.zeros(actual.shape)).all()
+
     # Invalid cases
     if not use_dask:
         with pytest.raises(TypeError):
@@ -1026,8 +1061,94 @@ def test_dot(use_dask):
     pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
+@pytest.mark.parametrize("use_dask", [True, False])
+def test_dot_align_coords(use_dask):
+    # GH 3694
+
+    if use_dask:
+        if not has_dask:
+            pytest.skip("test for dask.")
+
+    a = np.arange(30 * 4).reshape(30, 4)
+    b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
+
+    # use partially overlapping coords
+    coords_a = {"a": np.arange(30), "b": np.arange(4)}
+    coords_b = {"a": np.arange(5, 35), "b": np.arange(1, 5)}
+
+    da_a = xr.DataArray(a, dims=["a", "b"], coords=coords_a)
+    da_b = xr.DataArray(b, dims=["a", "b", "c"], coords=coords_b)
+
+    if use_dask:
+        da_a = da_a.chunk({"a": 3})
+        da_b = da_b.chunk({"a": 3})
+
+    # join="inner" is the default
+    actual = xr.dot(da_a, da_b)
+    # `dot` sums over the common dimensions of the arguments
+    expected = (da_a * da_b).sum(["a", "b"])
+    xr.testing.assert_allclose(expected, actual)
+
+    actual = xr.dot(da_a, da_b, dims=...)
+    expected = (da_a * da_b).sum()
+    xr.testing.assert_allclose(expected, actual)
+
+    with xr.set_options(arithmetic_join="exact"):
+        with raises_regex(ValueError, "indexes along dimension"):
+            xr.dot(da_a, da_b)
+
+    # NOTE: dot always uses `join="inner"` because `(a * b).sum()` yields the same for all
+    # join method (except "exact")
+    with xr.set_options(arithmetic_join="left"):
+        actual = xr.dot(da_a, da_b)
+        expected = (da_a * da_b).sum(["a", "b"])
+        xr.testing.assert_allclose(expected, actual)
+
+    with xr.set_options(arithmetic_join="right"):
+        actual = xr.dot(da_a, da_b)
+        expected = (da_a * da_b).sum(["a", "b"])
+        xr.testing.assert_allclose(expected, actual)
+
+    with xr.set_options(arithmetic_join="outer"):
+        actual = xr.dot(da_a, da_b)
+        expected = (da_a * da_b).sum(["a", "b"])
+        xr.testing.assert_allclose(expected, actual)
+
+
 def test_where():
     cond = xr.DataArray([True, False], dims="x")
     actual = xr.where(cond, 1, 0)
     expected = xr.DataArray([1, 0], dims="x")
     assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize("use_dask", [True, False])
+@pytest.mark.parametrize("use_datetime", [True, False])
+def test_polyval(use_dask, use_datetime):
+    if use_dask and not has_dask:
+        pytest.skip("requires dask")
+
+    if use_datetime:
+        xcoord = xr.DataArray(
+            pd.date_range("2000-01-01", freq="D", periods=10), dims=("x",), name="x"
+        )
+        x = xr.core.missing.get_clean_interp_index(xcoord, "x")
+    else:
+        xcoord = x = np.arange(10)
+
+    da = xr.DataArray(
+        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
+        dims=("d", "x"),
+        coords={"x": xcoord, "d": [0, 1]},
+    )
+    coeffs = xr.DataArray(
+        [[2, 1, 1], [3, 2, 1]],
+        dims=("d", "degree"),
+        coords={"d": [0, 1], "degree": [2, 1, 0]},
+    )
+    if use_dask:
+        coeffs = coeffs.chunk({"d": 2})
+
+    da_pv = xr.polyval(da.x, coeffs)
+
+    xr.testing.assert_allclose(da, da_pv.T)

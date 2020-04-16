@@ -6,7 +6,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-from typing import Dict, Iterator, Tuple
+from typing import Dict, Iterator, Optional, Tuple
 
 import yaml
 
@@ -15,6 +15,7 @@ IGNORE_DEPS = {
     "coveralls",
     "flake8",
     "hypothesis",
+    "isort",
     "mypy",
     "pip",
     "pytest",
@@ -34,10 +35,14 @@ def error(msg: str) -> None:
     print("ERROR:", msg)
 
 
-def parse_requirements(fname) -> Iterator[Tuple[str, int, int]]:
+def warning(msg: str) -> None:
+    print("WARNING:", msg)
+
+
+def parse_requirements(fname) -> Iterator[Tuple[str, int, int, Optional[int]]]:
     """Load requirements/py36-min-all-deps.yml
 
-    Yield (package name, major version, minor version)
+    Yield (package name, major version, minor version, [patch version])
     """
     global has_errors
 
@@ -52,15 +57,18 @@ def parse_requirements(fname) -> Iterator[Tuple[str, int, int]]:
         if pkg.endswith("<") or pkg.endswith(">") or eq != "=":
             error("package should be pinned with exact version: " + row)
             continue
+
         try:
-            major, minor = version.split(".")
+            version_tup = tuple(int(x) for x in version.split("."))
         except ValueError:
-            error("expected major.minor (without patch): " + row)
-            continue
-        try:
-            yield pkg, int(major), int(minor)
-        except ValueError:
-            error("failed to parse version: " + row)
+            raise ValueError("non-numerical version: " + row)
+
+        if len(version_tup) == 2:
+            yield (pkg, *version_tup, None)  # type: ignore
+        elif len(version_tup) == 3:
+            yield (pkg, *version_tup)  # type: ignore
+        else:
+            raise ValueError("expected major.minor or major.minor.patch: " + row)
 
 
 def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
@@ -80,9 +88,9 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
         label = label.strip()
         if label == "file name":
             value = value.strip()[len(pkg) :]
-            major, minor = value.split("-")[1].split(".")[:2]
-            major = int(major)
-            minor = int(minor)
+            smajor, sminor = value.split("-")[1].split(".")[:2]
+            major = int(smajor)
+            minor = int(sminor)
         if label == "timestamp":
             assert major is not None
             assert minor is not None
@@ -109,17 +117,15 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
 
 
 def process_pkg(
-    pkg: str, req_major: int, req_minor: int
-) -> Tuple[str, int, int, str, int, int, str, str]:
+    pkg: str, req_major: int, req_minor: int, req_patch: Optional[int]
+) -> Tuple[str, str, str, str, str, str]:
     """Compare package version from requirements file to available versions in conda.
     Return row to build pandas dataframe:
 
     - package name
-    - major version in requirements file
-    - minor version in requirements file
+    - major.minor.[patch] version in requirements file
     - publication date of version in requirements file (YYYY-MM-DD)
-    - major version suggested by policy
-    - minor version suggested by policy
+    - major.minor version suggested by policy
     - publication date of version suggested by policy (YYYY-MM-DD)
     - status ("<", "=", "> (!)")
     """
@@ -130,7 +136,7 @@ def process_pkg(
         req_published = versions[req_major, req_minor]
     except KeyError:
         error("not found in conda: " + pkg)
-        return pkg, req_major, req_minor, "-", 0, 0, "-", "(!)"
+        return pkg, fmt_version(req_major, req_minor, req_patch), "-", "-", "-", "(!)"
 
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
     policy_published = datetime.now() - timedelta(days=policy_months * 30)
@@ -153,30 +159,39 @@ def process_pkg(
     else:
         status = "="
 
+    if req_patch is not None:
+        warning("patch version should not appear in requirements file: " + pkg)
+        status += " (w)"
+
     return (
         pkg,
-        req_major,
-        req_minor,
+        fmt_version(req_major, req_minor, req_patch),
         req_published.strftime("%Y-%m-%d"),
-        policy_major,
-        policy_minor,
+        fmt_version(policy_major, policy_minor),
         policy_published_actual.strftime("%Y-%m-%d"),
         status,
     )
+
+
+def fmt_version(major: int, minor: int, patch: int = None) -> str:
+    if patch is None:
+        return f"{major}.{minor}"
+    else:
+        return f"{major}.{minor}.{patch}"
 
 
 def main() -> None:
     fname = sys.argv[1]
     with ThreadPoolExecutor(8) as ex:
         futures = [
-            ex.submit(process_pkg, pkg, major, minor)
-            for pkg, major, minor in parse_requirements(fname)
+            ex.submit(process_pkg, pkg, major, minor, patch)
+            for pkg, major, minor, patch in parse_requirements(fname)
         ]
         rows = [f.result() for f in futures]
 
-    print("Package       Required          Policy            Status")
-    print("------------- ----------------- ----------------- ------")
-    fmt = "{:13} {:>1d}.{:<2d} ({:10}) {:>1d}.{:<2d} ({:10}) {}"
+    print("Package       Required             Policy               Status")
+    print("------------- -------------------- -------------------- ------")
+    fmt = "{:13} {:7} ({:10}) {:7} ({:10}) {}"
     for row in rows:
         print(fmt.format(*row))
 

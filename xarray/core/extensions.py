@@ -20,10 +20,15 @@ class _CachedAccessor:
             # we're accessing the attribute of the class, i.e., Dataset.geo
             return self._accessor
 
+        # Use the same dict as @pandas.util.cache_readonly.
+        # It must be explicitly declared in obj.__slots__.
         try:
-            return obj._accessors[self._name]
-        except TypeError:
-            obj._accessors = {}
+            cache = obj._cache
+        except AttributeError:
+            cache = obj._cache = {}
+
+        try:
+            return cache[self._name]
         except KeyError:
             pass
 
@@ -35,7 +40,7 @@ class _CachedAccessor:
             # something else (GH933):
             raise RuntimeError("error initializing %r accessor." % self._name)
 
-        obj._accessors[self._name] = accessor_obj
+        cache[self._name] = accessor_obj
         return accessor_obj
 
 
@@ -105,8 +110,9 @@ def register_dataset_accessor(name):
 
     Back in an interactive IPython session:
 
-        >>> ds = xarray.Dataset({'longitude': np.linspace(0, 10),
-        ...                      'latitude': np.linspace(0, 20)})
+        >>> ds = xarray.Dataset(
+        ...     {"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)}
+        ... )
         >>> ds.geo.center
         (5.0, 10.0)
         >>> ds.geo.plot()

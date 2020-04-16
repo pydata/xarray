@@ -21,7 +21,7 @@ from xarray.testing import assert_identical
 from . import (
     assert_array_equal,
     raises_regex,
-    requires_cftime_or_netCDF4,
+    requires_cftime,
     requires_dask,
     requires_netCDF4,
 )
@@ -81,7 +81,7 @@ def test_decode_cf_with_conflicting_fill_missing_value():
     assert_identical(actual, expected)
 
 
-@requires_cftime_or_netCDF4
+@requires_cftime
 class TestEncodeCFVariable:
     def test_incompatible_attributes(self):
         invalid_vars = [
@@ -136,6 +136,20 @@ class TestEncodeCFVariable:
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
+    def test_do_not_overwrite_user_coordinates(self):
+        orig = Dataset(
+            coords={"x": [0, 1, 2], "y": ("x", [5, 6, 7]), "z": ("x", [8, 9, 10])},
+            data_vars={"a": ("x", [1, 2, 3]), "b": ("x", [3, 5, 6])},
+        )
+        orig["a"].encoding["coordinates"] = "y"
+        orig["b"].encoding["coordinates"] = "z"
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+        assert enc["a"].attrs["coordinates"] == "y"
+        assert enc["b"].attrs["coordinates"] == "z"
+        orig["a"].attrs["coordinates"] = "foo"
+        with raises_regex(ValueError, "'coordinates' found in both attrs"):
+            conventions.encode_dataset_coordinates(orig)
+
     @requires_dask
     def test_string_object_warning(self):
         original = Variable(("x",), np.array(["foo", "bar"], dtype=object)).chunk()
@@ -144,7 +158,7 @@ class TestEncodeCFVariable:
         assert_identical(original, encoded)
 
 
-@requires_cftime_or_netCDF4
+@requires_cftime
 class TestDecodeCF:
     def test_dataset(self):
         original = Dataset(
@@ -226,7 +240,7 @@ class TestDecodeCF:
         with raises_regex(ValueError, "unable to decode time"):
             decode_cf(ds)
 
-    @requires_cftime_or_netCDF4
+    @requires_cftime
     def test_dataset_repr_with_netcdf4_datetimes(self):
         # regression test for #347
         attrs = {"units": "days since 0001-01-01", "calendar": "noleap"}
@@ -239,7 +253,7 @@ class TestDecodeCF:
         ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}))
         assert "(time) datetime64[ns]" in repr(ds)
 
-    @requires_cftime_or_netCDF4
+    @requires_cftime
     def test_decode_cf_datetime_transition_to_invalid(self):
         # manually create dataset with not-decoded date
         from datetime import datetime

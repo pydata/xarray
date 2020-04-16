@@ -11,6 +11,8 @@ How do I ...
 
    * - How do I...
      - Solution
+   * - add a DataArray to my dataset as a new variable
+     - ``my_dataset[varname] = my_dataArray`` or :py:meth:`Dataset.assign` (see also :ref:`dictionary_like_methods`)
    * - add variables from other datasets to my dataset
      - :py:meth:`Dataset.merge`
    * - add a new dimension and/or coordinate
@@ -22,7 +24,7 @@ How do I ...
    * - change the order of dimensions
      - :py:meth:`DataArray.transpose`, :py:meth:`Dataset.transpose`
    * - remove a variable from my object
-     - :py:meth:`Dataset.drop`, :py:meth:`DataArray.drop`
+     - :py:meth:`Dataset.drop_vars`, :py:meth:`DataArray.drop_vars`
    * - remove dimensions of length 1 or 0
      - :py:meth:`DataArray.squeeze`, :py:meth:`Dataset.squeeze`
    * - remove all variables with a particular dimension
@@ -44,11 +46,11 @@ How do I ...
    * - convert a possibly irregularly sampled timeseries to a regularly sampled timeseries
      - :py:meth:`DataArray.resample`, :py:meth:`Dataset.resample` (see :ref:`resampling` for more)
    * - apply a function on all data variables in a Dataset
-     - :py:meth:`Dataset.apply`
+     - :py:meth:`Dataset.map`
    * - write xarray objects with complex values to a netCDF file
      - :py:func:`Dataset.to_netcdf`, :py:func:`DataArray.to_netcdf` specifying ``engine="h5netcdf", invalid_netcdf=True``
    * - make xarray objects look like other xarray objects
-     - :py:func:`~xarray.ones_like`, :py:func:`~xarray.zeros_like`, :py:func:`~xarray.full_like`, :py:meth:`Dataset.reindex_like`, :py:meth:`Dataset.interpolate_like`, :py:meth:`Dataset.broadcast_like`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interpolate_like`, :py:meth:`DataArray.broadcast_like`
+     - :py:func:`~xarray.ones_like`, :py:func:`~xarray.zeros_like`, :py:func:`~xarray.full_like`, :py:meth:`Dataset.reindex_like`, :py:meth:`Dataset.interp_like`, :py:meth:`Dataset.broadcast_like`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interp_like`, :py:meth:`DataArray.broadcast_like`
    * - replace NaNs with other values
      - :py:meth:`Dataset.fillna`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill`, :py:meth:`Dataset.interpolate_na`, :py:meth:`DataArray.fillna`, :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`DataArray.interpolate_na`
    * - extract the year, month, day or similar from a DataArray of time values
@@ -57,3 +59,4 @@ How do I ...
      - ``obj.dt.ceil``, ``obj.dt.floor``, ``obj.dt.round``. See :ref:`dt_accessor` for more.
    * - make a mask that is ``True`` where an object contains any of the values in a array
      - :py:meth:`Dataset.isin`, :py:meth:`DataArray.isin`
+

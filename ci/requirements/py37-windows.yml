@@ -8,7 +8,7 @@ dependencies:
   - bottleneck
   - cartopy
   # - cdms2  # Not available on Windows
-  # - cfgrib>=0.9.2  # Causes Python interpreter crash on Windows
+  # - cfgrib  # Causes Python interpreter crash on Windows
   - cftime
   - coveralls
   - dask
@@ -19,9 +19,10 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
+  - isort
   - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy=0.730  # Must match .pre-commit-config.yaml
+  - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
@@ -29,7 +30,7 @@ dependencies:
   - pandas
   - pint
   - pip
-  - pseudonetcdf<3.1  # FIXME https://github.com/pydata/xarray/issues/3409
+  - pseudonetcdf
   - pydap
   # - pynio  # Not available on Windows
   - pytest
@@ -38,6 +39,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
+  - setuptools
   - sparse
   - toolz
   - zarr

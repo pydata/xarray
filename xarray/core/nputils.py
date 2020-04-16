@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from numpy.core.multiarray import normalize_axis_index
 
 try:
     import bottleneck as bn
@@ -13,15 +14,6 @@ except ImportError:
     _USE_BOTTLENECK = False
 
 
-def _validate_axis(data, axis):
-    ndim = data.ndim
-    if not -ndim <= axis < ndim:
-        raise IndexError(f"axis {axis!r} out of bounds [-{ndim}, {ndim})")
-    if axis < 0:
-        axis += ndim
-    return axis
-
-
 def _select_along_axis(values, idx, axis):
     other_ind = np.ix_(*[np.arange(s) for s in idx.shape])
     sl = other_ind[:axis] + (idx,) + other_ind[axis:]
@@ -29,13 +21,13 @@ def _select_along_axis(values, idx, axis):
 
 
 def nanfirst(values, axis):
-    axis = _validate_axis(values, axis)
+    axis = normalize_axis_index(axis, values.ndim)
     idx_first = np.argmax(~pd.isnull(values), axis=axis)
     return _select_along_axis(values, idx_first, axis)
 
 
 def nanlast(values, axis):
-    axis = _validate_axis(values, axis)
+    axis = normalize_axis_index(axis, values.ndim)
     rev = (slice(None),) * axis + (slice(None, None, -1),)
     idx_last = -1 - np.argmax(~pd.isnull(values)[rev], axis=axis)
     return _select_along_axis(values, idx_last, axis)
@@ -173,7 +165,7 @@ def _rolling_window(a, window, axis=-1):
 
     Examples
     --------
-    >>> x=np.arange(10).reshape((2,5))
+    >>> x = np.arange(10).reshape((2, 5))
     >>> np.rolling_window(x, 3, axis=-1)
     array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
            [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
@@ -186,7 +178,7 @@ def _rolling_window(a, window, axis=-1):
     This function is taken from https://github.com/numpy/numpy/pull/31
     but slightly modified to accept axis option.
     """
-    axis = _validate_axis(a, axis)
+    axis = normalize_axis_index(axis, a.ndim)
     a = np.swapaxes(a, axis, -1)
 
     if window < 1:
@@ -226,6 +218,39 @@ def _create_bottleneck_method(name, npmodule=np):
 
     f.__name__ = name
     return f
+
+
+def _nanpolyfit_1d(arr, x, rcond=None):
+    out = np.full((x.shape[1] + 1,), np.nan)
+    mask = np.isnan(arr)
+    if not np.all(mask):
+        out[:-1], out[-1], _, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
+    return out
+
+
+def least_squares(lhs, rhs, rcond=None, skipna=False):
+    if skipna:
+        added_dim = rhs.ndim == 1
+        if added_dim:
+            rhs = rhs.reshape(rhs.shape[0], 1)
+        nan_cols = np.any(np.isnan(rhs), axis=0)
+        out = np.empty((lhs.shape[1] + 1, rhs.shape[1]))
+        if np.any(nan_cols):
+            out[:, nan_cols] = np.apply_along_axis(
+                _nanpolyfit_1d, 0, rhs[:, nan_cols], lhs
+            )
+        if np.any(~nan_cols):
+            out[:-1, ~nan_cols], out[-1, ~nan_cols], _, _ = np.linalg.lstsq(
+                lhs, rhs[:, ~nan_cols], rcond=rcond
+            )
+        coeffs = out[:-1, :]
+        residuals = out[-1, :]
+        if added_dim:
+            coeffs = coeffs.reshape(coeffs.shape[0])
+            residuals = residuals.reshape(residuals.shape[0])
+    else:
+        coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs, rcond=rcond)
+    return coeffs, residuals
 
 
 nanmin = _create_bottleneck_method("nanmin")

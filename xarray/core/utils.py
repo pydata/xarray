@@ -6,10 +6,12 @@ import itertools
 import os.path
 import re
 import warnings
+from enum import Enum
 from typing import (
     AbstractSet,
     Any,
     Callable,
+    Collection,
     Container,
     Dict,
     Hashable,
@@ -22,6 +24,7 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -182,7 +185,7 @@ def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
 
 
 def update_safety_check(
-    first_dict: MutableMapping[K, V],
+    first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> None:
@@ -341,7 +344,7 @@ def dict_equiv(
     return True
 
 
-def ordered_dict_intersection(
+def compat_dict_intersection(
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -366,6 +369,35 @@ def ordered_dict_intersection(
     """
     new_dict = dict(first_dict)
     remove_incompatible_items(new_dict, second_dict, compat)
+    return new_dict
+
+
+def compat_dict_union(
+    first_dict: Mapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> MutableMapping[K, V]:
+    """Return the union of two dictionaries as a new dictionary.
+
+    An exception is raised if any keys are found in both dictionaries and the
+    values are not compatible.
+
+    Parameters
+    ----------
+    first_dict, second_dict : dict-like
+        Mappings to merge.
+    compat : function, optional
+        Binary operator to determine if two values are compatible. By default,
+        checks for equivalence.
+
+    Returns
+    -------
+    union : dict
+        union of the contents.
+    """
+    new_dict = dict(first_dict)
+    update_safety_check(first_dict, second_dict, compat)
+    new_dict.update(second_dict)
     return new_dict
 
 
@@ -545,7 +577,12 @@ class ReprObject:
         return False
 
     def __hash__(self) -> int:
-        return hash((ReprObject, self._value))
+        return hash((type(self), self._value))
+
+    def __dask_tokenize__(self):
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._value))
 
 
 @contextlib.contextmanager
@@ -660,6 +697,30 @@ class HiddenKeyDict(MutableMapping[K, V]):
         return len(self._data) - num_hidden
 
 
+def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
+    """
+    Resolves a supplied list containing an ellispsis representing other items, to
+    a generator with the 'realized' list of all items
+    """
+    if ... in dims_supplied:
+        if len(set(dims_all)) != len(dims_all):
+            raise ValueError("Cannot use ellipsis with repeated dims")
+        if len([d for d in dims_supplied if d == ...]) > 1:
+            raise ValueError("More than one ellipsis supplied")
+        other_dims = [d for d in dims_all if d not in dims_supplied]
+        for d in dims_supplied:
+            if d == ...:
+                yield from other_dims
+            else:
+                yield d
+    else:
+        if set(dims_supplied) ^ set(dims_all):
+            raise ValueError(
+                f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
+            )
+        yield from dims_supplied
+
+
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     """ Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
@@ -676,3 +737,59 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     while new_dim in dims:
         new_dim = "_" + str(new_dim)
     return new_dim
+
+
+def drop_dims_from_indexers(
+    indexers: Mapping[Hashable, Any],
+    dims: Union[list, Mapping[Hashable, int]],
+    missing_dims: str,
+) -> Mapping[Hashable, Any]:
+    """ Depending on the setting of missing_dims, drop any dimensions from indexers that
+    are not present in dims.
+
+    Parameters
+    ----------
+    indexers : dict
+    dims : sequence
+    missing_dims : {"raise", "warn", "ignore"}
+    """
+
+    if missing_dims == "raise":
+        invalid = indexers.keys() - set(dims)
+        if invalid:
+            raise ValueError(
+                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return indexers
+
+    elif missing_dims == "warn":
+
+        # don't modify input
+        indexers = dict(indexers)
+
+        invalid = indexers.keys() - set(dims)
+        if invalid:
+            warnings.warn(
+                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+        for key in invalid:
+            indexers.pop(key)
+
+        return indexers
+
+    elif missing_dims == "ignore":
+        return {key: val for key, val in indexers.items() if key in dims}
+
+    else:
+        raise ValueError(
+            f"Unrecognised option {missing_dims} for missing_dims argument"
+        )
+
+
+# Singleton type, as per https://github.com/python/typing/pull/240
+class Default(Enum):
+    token = 0
+
+
+_default = Default.token

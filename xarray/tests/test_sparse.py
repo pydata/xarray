@@ -11,7 +11,7 @@ from xarray import DataArray, Variable
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import sparse_array_type
 
-from . import assert_equal, assert_identical
+from . import assert_equal, assert_identical, requires_dask
 
 param = pytest.param
 xfail = pytest.mark.xfail
@@ -175,7 +175,7 @@ def test_variable_property(prop):
             marks=xfail(reason="mixed sparse-dense operation"),
         ),
         param(
-            do("pad_with_fill_value", pad_widths={"x": (1, 1)}, fill_value=5),
+            do("pad", mode="constant", pad_widths={"x": (1, 1)}, fill_value=5),
             True,
             marks=xfail(reason="Missing implementation for np.pad"),
         ),
@@ -339,7 +339,7 @@ def test_dataarray_property(prop):
         (do("copy"), True),
         (do("count"), False),
         (do("diff", "x"), True),
-        (do("drop", "x"), True),
+        (do("drop_vars", "x"), True),
         (do("expand_dims", {"z": 2}, axis=2), True),
         (do("get_axis_num", "x"), False),
         (do("get_index", "x"), False),
@@ -756,8 +756,8 @@ class TestSparseDataArrayAndDataset:
     def test_groupby(self):
         x1 = self.ds_xr
         x2 = self.sp_xr
-        m1 = x1.groupby("x").mean(xr.ALL_DIMS)
-        m2 = x2.groupby("x").mean(xr.ALL_DIMS)
+        m1 = x1.groupby("x").mean(...)
+        m2 = x2.groupby("x").mean(...)
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
 
@@ -772,8 +772,8 @@ class TestSparseDataArrayAndDataset:
     def test_groupby_bins(self):
         x1 = self.ds_xr
         x2 = self.sp_xr
-        m1 = x1.groupby_bins("x", bins=[0, 3, 7, 10]).sum(xr.ALL_DIMS)
-        m2 = x2.groupby_bins("x", bins=[0, 3, 7, 10]).sum(xr.ALL_DIMS)
+        m1 = x1.groupby_bins("x", bins=[0, 3, 7, 10]).sum(...)
+        m2 = x2.groupby_bins("x", bins=[0, 3, 7, 10]).sum(...)
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
 
@@ -837,6 +837,7 @@ class TestSparseCoords:
         )
 
 
+@requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
     a = DataArray(s)
@@ -849,3 +850,40 @@ def test_chunk():
     dsc = ds.chunk(2)
     assert dsc.chunks == {"dim_0": (2, 2)}
     assert_identical(dsc, ds)
+
+
+@requires_dask
+def test_dask_token():
+    import dask
+
+    s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
+
+    # https://github.com/pydata/sparse/issues/300
+    s.__dask_tokenize__ = lambda: dask.base.normalize_token(s.__dict__)
+
+    a = DataArray(s)
+    t1 = dask.base.tokenize(a)
+    t2 = dask.base.tokenize(a)
+    t3 = dask.base.tokenize(a + 1)
+    assert t1 == t2
+    assert t3 != t2
+    assert isinstance(a.data, sparse.COO)
+
+    ac = a.chunk(2)
+    t4 = dask.base.tokenize(ac)
+    t5 = dask.base.tokenize(ac + 1)
+    assert t4 != t5
+    assert isinstance(ac.data._meta, sparse.COO)
+
+
+@requires_dask
+def test_apply_ufunc_meta_to_blockwise():
+    da = xr.DataArray(np.zeros((2, 3)), dims=["x", "y"]).chunk({"x": 2, "y": 1})
+    sparse_meta = sparse.COO.from_numpy(np.zeros((0, 0)))
+
+    # if dask computed meta, it would be np.ndarray
+    expected = xr.apply_ufunc(
+        lambda x: x, da, dask="parallelized", output_dtypes=[da.dtype], meta=sparse_meta
+    ).data._meta
+
+    assert_sparse_equal(expected, sparse_meta)

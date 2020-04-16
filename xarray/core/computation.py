@@ -23,9 +23,11 @@ from typing import (
 
 import numpy as np
 
-from . import duck_array_ops, utils
+from . import dtypes, duck_array_ops, utils
 from .alignment import deep_align
 from .merge import merge_coordinates_without_align
+from .nanops import dask_array
+from .options import OPTIONS
 from .pycompat import dask_array_type
 from .utils import is_dict_like
 from .variable import Variable
@@ -145,7 +147,7 @@ def result_name(objects: list) -> Any:
     names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
     names.discard(_DEFAULT_NAME)
     if len(names) == 1:
-        name, = names
+        (name,) = names
     else:
         name = None
     return name
@@ -187,7 +189,7 @@ def build_output_coords(
 
     if len(coords_list) == 1 and not exclude_dims:
         # we can skip the expensive merge
-        unpacked_coords, = coords_list
+        (unpacked_coords,) = coords_list
         merged_vars = dict(unpacked_coords.variables)
     else:
         # TODO: save these merged indexes, instead of re-computing them later
@@ -237,7 +239,7 @@ def apply_dataarray_vfunc(
             for variable, coords in zip(result_var, result_coords)
         )
     else:
-        coords, = result_coords
+        (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
     return out
@@ -304,7 +306,7 @@ def _as_variables_or_variable(arg):
 def _unpack_dict_tuples(
     result_vars: Mapping[Hashable, Tuple[Variable, ...]], num_outputs: int
 ) -> Tuple[Dict[Hashable, Variable], ...]:
-    out = tuple({} for _ in range(num_outputs))  # type: ignore
+    out: Tuple[Dict[Hashable, Variable], ...] = tuple({} for _ in range(num_outputs))
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
@@ -342,7 +344,7 @@ def _fast_dataset(
 
     variables.update(coord_variables)
     coord_names = set(coord_variables)
-    return Dataset._from_vars_and_coord_names(variables, coord_names)
+    return Dataset._construct_direct(variables, coord_names)
 
 
 def apply_dataset_vfunc(
@@ -384,7 +386,7 @@ def apply_dataset_vfunc(
     if signature.num_outputs > 1:
         out = tuple(_fast_dataset(*args) for args in zip(result_vars, list_of_coords))
     else:
-        coord_vars, = list_of_coords
+        (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
     if keep_attrs and isinstance(first_obj, Dataset):
@@ -547,6 +549,7 @@ def apply_variable_ufunc(
     output_dtypes=None,
     output_sizes=None,
     keep_attrs=False,
+    meta=None,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects.
     """
@@ -589,6 +592,7 @@ def apply_variable_ufunc(
                     signature,
                     output_dtypes,
                     output_sizes,
+                    meta,
                 )
 
         elif dask == "allowed":
@@ -647,7 +651,14 @@ def apply_variable_ufunc(
 
 
 def _apply_blockwise(
-    func, args, input_dims, output_dims, signature, output_dtypes, output_sizes=None
+    func,
+    args,
+    input_dims,
+    output_dims,
+    signature,
+    output_dtypes,
+    output_sizes=None,
+    meta=None,
 ):
     import dask.array
 
@@ -719,6 +730,7 @@ def _apply_blockwise(
         dtype=dtype,
         concatenate=True,
         new_axes=output_sizes,
+        meta=meta,
     )
 
 
@@ -760,6 +772,7 @@ def apply_ufunc(
     dask: str = "forbidden",
     output_dtypes: Sequence = None,
     output_sizes: Mapping[Any, int] = None,
+    meta: Any = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -856,6 +869,9 @@ def apply_ufunc(
         Optional mapping from dimension names to sizes for outputs. Only used
         if dask='parallelized' and new dimensions (not found on inputs) appear
         on outputs.
+    meta : optional
+        Size-0 object representing the type of array wrapped by dask array. Passed on to
+        ``dask.array.blockwise``.
 
     Returns
     -------
@@ -874,7 +890,7 @@ def apply_ufunc(
     You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
     objects, with automatically preserved dimensions and coordinates, e.g.,
 
-    >>> array = xr.DataArray([1, 2, 3], coords=[('x', [0.1, 0.2, 0.3])])
+    >>> array = xr.DataArray([1, 2, 3], coords=[("x", [0.1, 0.2, 0.3])])
     >>> magnitude(array, -array)
     <xarray.DataArray (x: 3)>
     array([1.414214, 2.828427, 4.242641])
@@ -884,7 +900,7 @@ def apply_ufunc(
     Plain scalars, numpy arrays and a mix of these with xarray objects is also
     supported:
 
-    >>> magnitude(4, 5)
+    >>> magnitude(3, 4)
     5.0
     >>> magnitude(3, np.array([0, 4]))
     array([3., 5.])
@@ -947,7 +963,7 @@ def apply_ufunc(
     appropriately for use in `apply`. You may find helper functions such as
     numpy.broadcast_arrays helpful in writing your function. `apply_ufunc` also
     works well with numba's vectorize and guvectorize. Further explanation with
-    examples are provided in the xarray documentation [3].
+    examples are provided in the xarray documentation [3]_.
 
     See also
     --------
@@ -989,6 +1005,11 @@ def apply_ufunc(
         func = functools.partial(func, **kwargs)
 
     if vectorize:
+        if meta is None:
+            # set meta=np.ndarray by default for numpy vectorized functions
+            # work around dask bug computing meta with vectorized functions: GH5642
+            meta = np.ndarray
+
         if signature.all_core_dims:
             func = np.vectorize(
                 func, otypes=output_dtypes, signature=signature.to_gufunc_string()
@@ -1005,6 +1026,7 @@ def apply_ufunc(
         dask=dask,
         output_dtypes=output_dtypes,
         output_sizes=output_sizes,
+        meta=meta,
     )
 
     if any(isinstance(a, GroupBy) for a in args):
@@ -1019,6 +1041,7 @@ def apply_ufunc(
             dataset_fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
             dask=dask,
+            meta=meta,
         )
         return apply_groupby_func(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
@@ -1055,9 +1078,9 @@ def dot(*arrays, dims=None, **kwargs):
     ----------
     arrays: DataArray (or Variable) objects
         Arrays to compute.
-    dims: str or tuple of strings, optional
-        Which dimensions to sum over.
-        If not speciified, then all the common dimensions are summed over.
+    dims: '...', str or tuple of strings, optional
+        Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
+        If not specified, then all the common dimensions are summed over.
     **kwargs: dict
         Additional keyword arguments passed to numpy.einsum or
         dask.array.einsum
@@ -1070,11 +1093,10 @@ def dot(*arrays, dims=None, **kwargs):
     --------
 
     >>> import numpy as np
-    >>> import xarray as xp
-    >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=['a', 'b'])
-    >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2),
-    ...                     dims=['a', 'b', 'c'])
-    >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=['c', 'd'])
+    >>> import xarray as xr
+    >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
+    >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2), dims=["a", "b", "c"])
+    >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=["c", "d"])
 
     >>> da_a
     <xarray.DataArray (a: 3, b: 2)>
@@ -1099,24 +1121,32 @@ def dot(*arrays, dims=None, **kwargs):
            [3, 4, 5]])
     Dimensions without coordinates: c, d
 
-    >>> xr.dot(da_a, da_b, dims=['a', 'b'])
+    >>> xr.dot(da_a, da_b, dims=["a", "b"])
     <xarray.DataArray (c: 2)>
     array([110, 125])
     Dimensions without coordinates: c
 
-    >>> xr.dot(da_a, da_b, dims=['a'])
+    >>> xr.dot(da_a, da_b, dims=["a"])
     <xarray.DataArray (b: 2, c: 2)>
     array([[40, 46],
            [70, 79]])
     Dimensions without coordinates: b, c
 
-    >>> xr.dot(da_a, da_b, da_c, dims=['b', 'c'])
+    >>> xr.dot(da_a, da_b, da_c, dims=["b", "c"])
     <xarray.DataArray (a: 3, d: 3)>
     array([[  9,  14,  19],
            [ 93, 150, 207],
            [273, 446, 619]])
     Dimensions without coordinates: a, d
 
+    >>> xr.dot(da_a, da_b)
+    <xarray.DataArray (c: 2)>
+    array([110, 125])
+    Dimensions without coordinates: c
+
+    >>> xr.dot(da_a, da_b, dims=...)
+    <xarray.DataArray ()>
+    array(235)
     """
     from .dataarray import DataArray
     from .variable import Variable
@@ -1141,7 +1171,9 @@ def dot(*arrays, dims=None, **kwargs):
     einsum_axes = "abcdefghijklmnopqrstuvwxyz"
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
-    if dims is None:
+    if dims is ...:
+        dims = all_dims
+    elif dims is None:
         # find dimensions that occur more than one times
         dim_counts = Counter()
         for arr in arrays:
@@ -1165,6 +1197,11 @@ def dot(*arrays, dims=None, **kwargs):
     subscripts = ",".join(subscripts_list)
     subscripts += "->..." + "".join([dim_map[d] for d in output_core_dims[0]])
 
+    join = OPTIONS["arithmetic_join"]
+    # using "inner" emulates `(a * b).sum()` for all joins (except "exact")
+    if join != "exact":
+        join = "inner"
+
     # subscripts should be passed to np.einsum as arg, not as kwargs. We need
     # to construct a partial function for apply_ufunc to work.
     func = functools.partial(duck_array_ops.einsum, subscripts, **kwargs)
@@ -1173,6 +1210,7 @@ def dot(*arrays, dims=None, **kwargs):
         *arrays,
         input_core_dims=input_core_dims,
         output_core_dims=output_core_dims,
+        join=join,
         dask="allowed",
     )
     return result.transpose(*[d for d in all_dims if d in result.dims])
@@ -1187,9 +1225,13 @@ def where(cond, x, y):
     ----------
     cond : scalar, array, Variable, DataArray or Dataset with boolean dtype
         When True, return values from `x`, otherwise returns values from `y`.
-    x, y : scalar, array, Variable, DataArray or Dataset
-        Values from which to choose. All dimension coordinates on these objects
-        must be aligned with each other and with `cond`.
+    x : scalar, array, Variable, DataArray or Dataset
+        values to choose from where `cond` is True
+    y : scalar, array, Variable, DataArray or Dataset
+        values to choose from where `cond` is False
+
+    All dimension coordinates on these objects must be aligned with each
+    other and with `cond`.
 
     Returns
     -------
@@ -1200,21 +1242,25 @@ def where(cond, x, y):
     --------
     >>> import xarray as xr
     >>> import numpy as np
-    >>> x = xr.DataArray(0.1 * np.arange(10), dims=['lat'],
-    ...                  coords={'lat': np.arange(10)}, name='sst')
+    >>> x = xr.DataArray(
+    ...     0.1 * np.arange(10),
+    ...     dims=["lat"],
+    ...     coords={"lat": np.arange(10)},
+    ...     name="sst",
+    ... )
     >>> x
     <xarray.DataArray 'sst' (lat: 10)>
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
     * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
-    >>> xr.where(x < 0.5, x,  100*x)
+    >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)>
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
     * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
-    >>> >>> y = xr.DataArray(
+    >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
     ...     dims=["lat", "lon"],
     ...     coords={"lat": np.arange(3), "lon": 10 + np.arange(3)},
@@ -1238,8 +1284,8 @@ def where(cond, x, y):
     * lat      (lat) int64 0 1 2
     * lon      (lon) int64 10 11 12
 
-    >>> cond = xr.DataArray([True, False], dims=['x'])
-    >>> x = xr.DataArray([1, 2], dims=['y'])
+    >>> cond = xr.DataArray([True, False], dims=["x"])
+    >>> x = xr.DataArray([1, 2], dims=["y"])
     >>> xr.where(cond, x, 0)
     <xarray.DataArray (x: 2, y: 2)>
     array([[1, 2],
@@ -1261,3 +1307,98 @@ def where(cond, x, y):
         dataset_join="exact",
         dask="allowed",
     )
+
+
+def polyval(coord, coeffs, degree_dim="degree"):
+    """Evaluate a polynomial at specific values
+
+    Parameters
+    ----------
+    coord : DataArray
+        The 1D coordinate along which to evaluate the polynomial.
+    coeffs : DataArray
+        Coefficients of the polynomials.
+    degree_dim : str, default "degree"
+        Name of the polynomial degree dimension in `coeffs`.
+
+    See also
+    --------
+    xarray.DataArray.polyfit
+    numpy.polyval
+    """
+    from .dataarray import DataArray
+    from .missing import get_clean_interp_index
+
+    x = get_clean_interp_index(coord, coord.name)
+
+    deg_coord = coeffs[degree_dim]
+
+    lhs = DataArray(
+        np.vander(x, int(deg_coord.max()) + 1),
+        dims=(coord.name, degree_dim),
+        coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)[::-1]},
+    )
+    return (lhs * coeffs).sum(degree_dim)
+
+
+def _calc_idxminmax(
+    *,
+    array,
+    func: Callable,
+    dim: Hashable = None,
+    skipna: bool = None,
+    fill_value: Any = dtypes.NA,
+    keep_attrs: bool = None,
+):
+    """Apply common operations for idxmin and idxmax."""
+    # This function doesn't make sense for scalars so don't try
+    if not array.ndim:
+        raise ValueError("This function does not apply for scalars")
+
+    if dim is not None:
+        pass  # Use the dim if available
+    elif array.ndim == 1:
+        # it is okay to guess the dim if there is only 1
+        dim = array.dims[0]
+    else:
+        # The dim is not specified and ambiguous.  Don't guess.
+        raise ValueError("Must supply 'dim' argument for multidimensional arrays")
+
+    if dim not in array.dims:
+        raise KeyError(f'Dimension "{dim}" not in dimension')
+    if dim not in array.coords:
+        raise KeyError(f'Dimension "{dim}" does not have coordinates')
+
+    # These are dtypes with NaN values argmin and argmax can handle
+    na_dtypes = "cfO"
+
+    if skipna or (skipna is None and array.dtype.kind in na_dtypes):
+        # Need to skip NaN values since argmin and argmax can't handle them
+        allna = array.isnull().all(dim)
+        array = array.where(~allna, 0)
+
+    # This will run argmin or argmax.
+    indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+
+    # Get the coordinate we want.
+    coordarray = array[dim]
+
+    # Handle dask arrays.
+    if isinstance(array, dask_array_type):
+        res = dask_array.map_blocks(coordarray, indx, dtype=indx.dtype)
+    else:
+        res = coordarray[
+            indx,
+        ]
+
+    if skipna or (skipna is None and array.dtype.kind in na_dtypes):
+        # Put the NaN values back in after removing them
+        res = res.where(~allna, fill_value)
+
+    # The dim is gone but we need to remove the corresponding coordinate.
+    del res.coords[dim]
+
+    # Copy attributes from argmin/argmax, if any
+    res.attrs = indx.attrs
+
+    return res

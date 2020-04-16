@@ -9,7 +9,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs
 
-from . import assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_dask
+from . import assert_array_equal, raises_regex, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -39,17 +39,12 @@ def test_safe_cast_to_index():
         assert expected.dtype == actual.dtype
 
 
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 def test_safe_cast_to_index_cftimeindex():
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         dates = [date_type(1, 1, day) for day in range(1, 20)]
-
-        if has_cftime:
-            expected = CFTimeIndex(dates)
-        else:
-            expected = pd.Index(dates)
-
+        expected = CFTimeIndex(dates)
         actual = utils.safe_cast_to_index(np.array(dates))
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
@@ -57,7 +52,7 @@ def test_safe_cast_to_index_cftimeindex():
 
 
 # Test that datetime.datetime objects are never used in a CFTimeIndex
-@pytest.mark.skipif(not has_cftime_or_netCDF4, reason="cftime not installed")
+@requires_cftime
 def test_safe_cast_to_index_datetime_datetime():
     dates = [datetime(1, 1, day) for day in range(1, 20)]
 
@@ -125,9 +120,18 @@ class TestDictionaries:
         with pytest.raises(ValueError):
             utils.update_safety_check(self.x, self.z)
 
-    def test_ordered_dict_intersection(self):
-        assert {"b": "B"} == utils.ordered_dict_intersection(self.x, self.y)
-        assert {} == utils.ordered_dict_intersection(self.x, self.z)
+    def test_compat_dict_intersection(self):
+        assert {"b": "B"} == utils.compat_dict_intersection(self.x, self.y)
+        assert {} == utils.compat_dict_intersection(self.x, self.z)
+
+    def test_compat_dict_union(self):
+        assert {"a": "A", "b": "B", "c": "C"} == utils.compat_dict_union(self.x, self.y)
+        with raises_regex(
+            ValueError,
+            "unsafe to merge dictionaries without "
+            "overriding values; conflicting key",
+        ):
+            utils.compat_dict_union(self.x, self.z)
 
     def test_dict_equiv(self):
         x = {}
@@ -275,3 +279,27 @@ def test_either_dict_or_kwargs():
 
     with pytest.raises(ValueError, match=r"foo"):
         result = either_dict_or_kwargs(dict(a=1), dict(a=1), "foo")
+
+
+@pytest.mark.parametrize(
+    ["supplied", "all_", "expected"],
+    [
+        (list("abc"), list("abc"), list("abc")),
+        (["a", ..., "c"], list("abc"), list("abc")),
+        (["a", ...], list("abc"), list("abc")),
+        (["c", ...], list("abc"), list("cab")),
+        ([..., "b"], list("abc"), list("acb")),
+        ([...], list("abc"), list("abc")),
+    ],
+)
+def test_infix_dims(supplied, all_, expected):
+    result = list(utils.infix_dims(supplied, all_))
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["supplied", "all_"], [([..., ...], list("abc")), ([...], list("aac"))]
+)
+def test_infix_dims_errors(supplied, all_):
+    with pytest.raises(ValueError):
+        list(utils.infix_dims(supplied, all_))

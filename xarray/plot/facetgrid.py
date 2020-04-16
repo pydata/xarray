@@ -61,6 +61,10 @@ class FacetGrid:
     axes : numpy object array
         Contains axes in corresponding position, as returned from
         plt.subplots
+    col_labels : list
+        list of :class:`matplotlib.text.Text` instances corresponding to column titles.
+    row_labels : list
+        list of :class:`matplotlib.text.Text` instances corresponding to row titles.
     fig : matplotlib.Figure
         The figure containing all the axes
     name_dicts : numpy object array
@@ -200,6 +204,8 @@ class FacetGrid:
         self._ncol = ncol
         self._col_var = col
         self._col_wrap = col_wrap
+        self.row_labels = [None] * nrow
+        self.col_labels = [None] * ncol
         self._x_var = None
         self._y_var = None
         self._cmap_extend = None
@@ -267,7 +273,9 @@ class FacetGrid:
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
+                mappable = func(
+                    subset, x=x, y=y, ax=ax, **func_kwargs, _is_facetgrid=True
+                )
                 self._mappables.append(mappable)
 
         self._finalize_grid(x, y)
@@ -294,7 +302,7 @@ class FacetGrid:
                     hue=hue,
                     add_legend=False,
                     _labels=False,
-                    **kwargs
+                    **kwargs,
                 )
                 self._mappables.append(mappable)
 
@@ -376,7 +384,7 @@ class FacetGrid:
             labels=list(self._hue_var.values),
             title=self._hue_label,
             loc="center right",
-            **kwargs
+            **kwargs,
         )
 
         self.figlegend = figlegend
@@ -482,22 +490,32 @@ class FacetGrid:
                     ax.set_title(title, size=size, **kwargs)
         else:
             # The row titles on the right edge of the grid
-            for ax, row_name in zip(self.axes[:, -1], self.row_names):
+            for index, (ax, row_name, handle) in enumerate(
+                zip(self.axes[:, -1], self.row_names, self.row_labels)
+            ):
                 title = nicetitle(coord=self._row_var, value=row_name, maxchar=maxchar)
-                ax.annotate(
-                    title,
-                    xy=(1.02, 0.5),
-                    xycoords="axes fraction",
-                    rotation=270,
-                    ha="left",
-                    va="center",
-                    **kwargs
-                )
+                if not handle:
+                    self.row_labels[index] = ax.annotate(
+                        title,
+                        xy=(1.02, 0.5),
+                        xycoords="axes fraction",
+                        rotation=270,
+                        ha="left",
+                        va="center",
+                        **kwargs,
+                    )
+                else:
+                    handle.set_text(title)
 
             # The column titles on the top row
-            for ax, col_name in zip(self.axes[0, :], self.col_names):
+            for index, (ax, col_name, handle) in enumerate(
+                zip(self.axes[0, :], self.col_names, self.col_labels)
+            ):
                 title = nicetitle(coord=self._col_var, value=col_name, maxchar=maxchar)
-                ax.set_title(title, size=size, **kwargs)
+                if not handle:
+                    self.col_labels[index] = ax.set_title(title, size=size, **kwargs)
+                else:
+                    handle.set_text(title)
 
         return self
 
@@ -590,7 +608,7 @@ def _easy_facetgrid(
     subplot_kws=None,
     ax=None,
     figsize=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods

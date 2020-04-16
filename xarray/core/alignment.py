@@ -50,7 +50,7 @@ def _override_indexes(objects, all_indexes, exclude):
     objects = list(objects)
     for idx, obj in enumerate(objects[1:]):
         new_indexes = {}
-        for dim in obj.dims:
+        for dim in obj.indexes:
             if dim not in exclude:
                 new_indexes[dim] = all_indexes[dim][0]
         objects[idx + 1] = obj._overwrite_indexes(new_indexes)
@@ -108,7 +108,7 @@ def align(
 
     Returns
     -------
-    aligned : same as *objects
+    aligned : same as `*objects`
         Tuple of objects with aligned coordinates.
 
     Raises
@@ -121,10 +121,16 @@ def align(
     --------
 
     >>> import xarray as xr
-    >>> x = xr.DataArray([[25, 35], [10, 24]], dims=('lat', 'lon'),
-    ...              coords={'lat': [35., 40.], 'lon': [100., 120.]})
-    >>> y = xr.DataArray([[20, 5], [7, 13]], dims=('lat', 'lon'),
-    ...              coords={'lat': [35., 42.], 'lon': [100., 120.]})
+    >>> x = xr.DataArray(
+    ...     [[25, 35], [10, 24]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 40.0], "lon": [100.0, 120.0]},
+    ... )
+    >>> y = xr.DataArray(
+    ...     [[20, 5], [7, 13]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 42.0], "lon": [100.0, 120.0]},
+    ... )
 
     >>> x
     <xarray.DataArray (lat: 2, lon: 2)>
@@ -156,7 +162,7 @@ def align(
     * lat      (lat) float64 35.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='outer')
+    >>> a, b = xr.align(x, y, join="outer")
     >>> a
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[25., 35.],
@@ -174,7 +180,7 @@ def align(
     * lat      (lat) float64 35.0 40.0 42.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='outer', fill_value=-999)
+    >>> a, b = xr.align(x, y, join="outer", fill_value=-999)
     >>> a
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[  25,   35],
@@ -192,7 +198,7 @@ def align(
     * lat      (lat) float64 35.0 40.0 42.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='left')
+    >>> a, b = xr.align(x, y, join="left")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
@@ -208,7 +214,7 @@ def align(
     * lat      (lat) float64 35.0 40.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='right')
+    >>> a, b = xr.align(x, y, join="right")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25., 35.],
@@ -224,13 +230,13 @@ def align(
     * lat      (lat) float64 35.0 42.0
     * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='exact')
+    >>> a, b = xr.align(x, y, join="exact")
     Traceback (most recent call last):
     ...
         "indexes along dimension {!r} are not equal".format(dim)
     ValueError: indexes along dimension 'lat' are not equal
 
-    >>> a, b = xr.align(x, y, join='override')
+    >>> a, b = xr.align(x, y, join="override")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
@@ -252,7 +258,7 @@ def align(
 
     if not indexes and len(objects) == 1:
         # fast path for the trivial case
-        obj, = objects
+        (obj,) = objects
         return (obj.copy(deep=copy),)
 
     all_indexes = defaultdict(list)
@@ -466,6 +472,7 @@ def reindex_variables(
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
+    sparse: bool = False,
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
@@ -503,6 +510,8 @@ def reindex_variables(
         the input. In either case, new xarray objects are always returned.
     fill_value : scalar, optional
         Value to use for newly missing values
+    sparse: bool, optional
+        Use an sparse-array
 
     Returns
     -------
@@ -571,6 +580,8 @@ def reindex_variables(
 
     for name, var in variables.items():
         if name not in indexers:
+            if sparse:
+                var = var._as_sparse(fill_value=fill_value)
             key = tuple(
                 slice(None) if d in unchanged_dims else int_indexers.get(d, slice(None))
                 for d in var.dims
@@ -669,8 +680,8 @@ def broadcast(*args, exclude=None):
 
     Broadcast two data arrays against one another to fill out their dimensions:
 
-    >>> a = xr.DataArray([1, 2, 3], dims='x')
-    >>> b = xr.DataArray([5, 6], dims='y')
+    >>> a = xr.DataArray([1, 2, 3], dims="x")
+    >>> b = xr.DataArray([5, 6], dims="y")
     >>> a
     <xarray.DataArray (x: 3)>
     array([1, 2, 3])
@@ -701,8 +712,8 @@ def broadcast(*args, exclude=None):
 
     Fill out the dimensions of all data variables in a dataset:
 
-    >>> ds = xr.Dataset({'a': a, 'b': b})
-    >>> ds2, = xr.broadcast(ds)  # use tuple unpacking to extract one dataset
+    >>> ds = xr.Dataset({"a": a, "b": b})
+    >>> (ds2,) = xr.broadcast(ds)  # use tuple unpacking to extract one dataset
     >>> ds2
     <xarray.Dataset>
     Dimensions:  (x: 3, y: 2)

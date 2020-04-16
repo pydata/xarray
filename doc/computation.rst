@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _comput:
 
 ###########
@@ -95,6 +97,9 @@ for filling missing values via 1D interpolation.
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
 of which values to use as the index in the interpolation.
+xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
+data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
+for more.
 
 Aggregation
 ===========
@@ -183,7 +188,7 @@ a value when aggregating:
 
    Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects.
 
-.. _bottleneck: https://github.com/kwgoodman/bottleneck/
+.. _bottleneck: https://github.com/pydata/bottleneck/
 
 We can also manually iterate through ``Rolling`` objects:
 
@@ -238,12 +243,94 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
+.. _comput.weighted:
+
+Weighted array reductions
+=========================
+
+:py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
+and :py:meth:`Dataset.weighted` array reduction methods. They currently
+support weighted ``sum`` and weighted ``mean``.
+
+.. ipython:: python
+
+  coords = dict(month=('month', [1, 2, 3]))
+
+  prec = xr.DataArray([1.1, 1.0, 0.9], dims=('month', ), coords=coords)
+  weights = xr.DataArray([31, 28, 31], dims=('month', ), coords=coords)
+
+Create a weighted object:
+
+.. ipython:: python
+
+  weighted_prec = prec.weighted(weights)
+  weighted_prec
+
+Calculate the weighted sum:
+
+.. ipython:: python
+
+  weighted_prec.sum()
+
+Calculate the weighted mean:
+
+.. ipython:: python
+
+        weighted_prec.mean(dim="month")
+
+The weighted sum corresponds to:
+
+.. ipython:: python
+
+  weighted_sum = (prec * weights).sum()
+  weighted_sum
+
+and the weighted mean to:
+
+.. ipython:: python
+
+  weighted_mean = weighted_sum / weights.sum()
+  weighted_mean
+
+However, the functions also take missing values in the data into account:
+
+.. ipython:: python
+
+  data = xr.DataArray([np.NaN, 2, 4])
+  weights = xr.DataArray([8, 1, 1])
+
+  data.weighted(weights).mean()
+
+Using ``(data * weights).sum() / weights.sum()`` would (incorrectly) result
+in 0.6.
+
+
+If the weights add up to to 0, ``sum`` returns 0:
+
+.. ipython:: python
+
+  data = xr.DataArray([1.0, 1.0])
+  weights = xr.DataArray([-1.0, 1.0])
+
+  data.weighted(weights).sum()
+
+and ``mean`` returns ``NaN``:
+
+.. ipython:: python
+
+  data.weighted(weights).mean()
+
+
+.. note::
+  ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
+  Missing values can be replaced manually by ``weights.fillna(0)``.
+
 .. _comput.coarsen:
 
 Coarsen large arrays
 ====================
 
-``DataArray`` and ``Dataset`` objects include a
+:py:class:`DataArray` and :py:class:`Dataset` objects include a
 :py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
 methods. This supports the block aggregation along multiple dimensions,
 
@@ -314,6 +401,32 @@ trapezoidal rule using their coordinates,
     and integration along multidimensional coordinate are not supported.
 
 
+.. _compute.polyfit:
+
+Fitting polynomials
+===================
+
+Xarray objects provide an interface for performing linear or polynomial regressions
+using the least-squares method. :py:meth:`~xarray.DataArray.polyfit` computes the
+best fitting coefficients along a given dimension and for a given order,
+
+.. ipython:: python
+
+    x = xr.DataArray(np.arange(10), dims=['x'], name='x')
+    a = xr.DataArray(3 + 4 * x, dims=['x'], coords={'x': x})
+    out = a.polyfit(dim='x', deg=1, full=True)
+    out
+
+The method outputs a dataset containing the coefficients (and more if `full=True`).
+The inverse operation is done with :py:meth:`~xarray.polyval`,
+
+.. ipython:: python
+
+    xr.polyval(coord=x, coeffs=out.polyfit_coefficients)
+
+.. note::
+    These methods replicate the behaviour of :py:func:`numpy.polyfit` and :py:func:`numpy.polyval`.
+
 .. _compute.broadcasting:
 
 Broadcasting by dimension name
@@ -322,8 +435,8 @@ Broadcasting by dimension name
 ``DataArray`` objects are automatically align themselves ("broadcasting" in
 the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
-operations to work, as commonly done in numpy with :py:func:`np.reshape` or
-:py:const:`np.newaxis`.
+operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or
+:py:data:`numpy.newaxis`.
 
 This is best illustrated by a few examples. Consider two one-dimensional
 arrays with different sizes aligned along different dimensions:
@@ -462,13 +575,13 @@ Datasets support most of the same methods found on data arrays:
     abs(ds)
 
 Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
-alternatively you can use :py:meth:`~xarray.Dataset.apply` to apply a function
+alternatively you can use :py:meth:`~xarray.Dataset.map` to map a function
 to each variable in a dataset:
 
 .. ipython:: python
 
     np.sin(ds)
-    ds.apply(np.sin)
+    ds.map(np.sin)
 
 Datasets also use looping over variables for *broadcasting* in binary
 arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:
@@ -563,7 +676,7 @@ to set ``axis=-1``. As an example, here is how we would wrap
 
 Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
 nicely with tools for building vectorized functions, like
-:func:`numpy.broadcast_arrays` and :func:`numpy.vectorize`. For high performance
+:py:func:`numpy.broadcast_arrays` and :py:class:`numpy.vectorize`. For high performance
 needs, consider using Numba's :doc:`vectorize and guvectorize <numba:user/vectorize>`.
 
 In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize
