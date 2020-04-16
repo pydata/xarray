@@ -48,6 +48,13 @@ def is_compatible(unit1, unit2):
     return dimensionality(unit1) == dimensionality(unit2)
 
 
+def map_values(func, mapping):
+    if isinstance(mapping, dict):
+        mapping = mapping.items()
+
+    return {key: func(value) for key, value in mapping}
+
+
 def compatible_mappings(first, second):
     return {
         key: is_compatible(unit1, unit2)
@@ -3845,22 +3852,12 @@ class TestDataset:
     )
     def test_numpy_methods_with_args(self, func, unit, error, dtype):
         data_unit = unit_registry.m
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=np.arange(10) * data_unit, dims="x"),
-                "b": xr.DataArray(data=np.arange(15) * data_unit, dims="y"),
-            },
-            coords={
-                "x": np.arange(10) * unit_registry.m,
-                "y": np.arange(15) * unit_registry.s,
-            },
-        )
+        a = np.linspace(0, 10, 15) * unit_registry.m
+        b = np.linspace(-2, 12, 20) * unit_registry.m
+        ds = xr.Dataset({"a": ("x", a), "b": ("y", b)})
         units = extract_units(ds)
 
-        kwargs = {
-            key: (value * unit if isinstance(value, (int, float)) else value)
-            for key, value in func.kwargs.items()
-        }
+        kwargs = map_values(lambda v: array_attach_units(v, unit), func.kwargs)
 
         if error is not None:
             with pytest.raises(error):
@@ -3868,15 +3865,15 @@ class TestDataset:
 
             return
 
-        stripped_kwargs = {
-            key: strip_units(convert_units(value, {None: data_unit}))
-            for key, value in kwargs.items()
-        }
+        stripped_kwargs = map_values(
+            lambda v: strip_units(convert_units(v, {None: data_unit})), kwargs,
+        )
 
         actual = func(ds, **kwargs)
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
 
-        assert_equal_with_units(actual, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
