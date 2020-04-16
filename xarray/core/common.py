@@ -1397,6 +1397,9 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     from .dataset import Dataset
     from .variable import Variable
 
+    if not np.isscalar(fill_value):
+        raise ValueError("fill_value must be scalar")
+
     if isinstance(other, Dataset):
         data_vars = {
             k: _full_like_variable(v, fill_value, dtype)
