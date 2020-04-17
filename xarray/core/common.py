@@ -25,7 +25,7 @@ from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, either_dict_or_kwargs
+from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
@@ -1397,7 +1397,7 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     from .dataset import Dataset
     from .variable import Variable
 
-    if not np.isscalar(fill_value):
+    if not is_scalar(fill_value):
         raise ValueError("fill_value must be scalar")
 
     if isinstance(other, Dataset):
