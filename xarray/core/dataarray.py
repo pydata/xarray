@@ -2666,12 +2666,12 @@ class DataArray(AbstractArray, DataWithCoords):
             try:
                 with self.coords._merge_inplace(other_coords):
                     f(self.variable, other_variable)
-            except MergeError:
-                raise ValueError(
+            except MergeError as exc:
+                raise MergeError(
                     "Automatic alignment is not supported for in-place operations.\n"
                     "Consider aligning the indices manually or using a not-in-place operation.\n"
                     "See https://github.com/pydata/xarray/issues/3910 for more explanations."
-                )
+                ) from exc
             return self
 
         return func
