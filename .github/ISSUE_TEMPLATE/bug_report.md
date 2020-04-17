@@ -27,7 +27,7 @@ assignees: ''
 
 #### Versions
 
-<details><summary>Output of `xr.show_versions()`</summary>
+<details><summary>Output of <tt>xr.show_versions()</tt></summary>
 
 <!-- Paste the output here xr.show_versions() here -->
 
