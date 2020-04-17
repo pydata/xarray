@@ -183,7 +183,7 @@ def array_section(obj):
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
     collapsed = ""
-    variable = obj.variable if hasattr(obj, "variable") else obj
+    variable = getattr(obj, "variable", obj)
     preview = escape(inline_variable_array_repr(variable, max_width=70))
     data_repr = short_data_repr_html(obj)
     data_icon = _icon("icon-database")
