@@ -4200,7 +4200,17 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("equals"),
+            pytest.param(
+                method("identical"),
+                marks=pytest.mark.skip("behaviour of identical is unclear"),
+            ),
+        ),
+        ids=repr,
+    )
     def test_comparisons(self, func, variant, unit, dtype):
         array1 = np.linspace(0, 5, 10).astype(dtype)
         array2 = np.linspace(-5, 0, 10).astype(dtype)
