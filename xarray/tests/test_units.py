@@ -4191,59 +4191,66 @@ class TestDataset:
         ),
     )
     @pytest.mark.parametrize(
-        "variation",
+        "variant",
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="units in indexes not supported")
+                "dims", marks=pytest.mark.skip(reason="units in indexes not supported")
             ),
             "coords",
         ),
     )
     @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
-    def test_comparisons(self, func, variation, unit, dtype):
-        def is_compatible(a, b):
-            a = a if a is not None else 1
-            b = b if b is not None else 1
-            quantity = np.arange(5) * a
-
-            return a == b or quantity.check(b)
-
+    def test_comparisons(self, func, variant, unit, dtype):
         array1 = np.linspace(0, 5, 10).astype(dtype)
         array2 = np.linspace(-5, 0, 10).astype(dtype)
 
         coord = np.arange(len(array1)).astype(dtype)
 
-        original_unit = unit_registry.m
-        quantity1 = array1 * original_unit
-        quantity2 = array2 * original_unit
-        x = coord * original_unit
-        y = coord * original_unit
+        variants = {
+            "data": (unit_registry.m, 1, 1),
+            "dims": (1, unit_registry.m, 1),
+            "coords": (1, 1, unit_registry.m),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
 
-        units = {"data": (unit, 1, 1), "dims": (1, unit, 1), "coords": (1, 1, unit)}
-        data_unit, dim_unit, coord_unit = units.get(variation)
+        a = array1 * data_unit
+        b = array2 * data_unit
+        x = coord * dim_unit
+        y = coord * coord_unit
 
         ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=quantity1, dims="x"),
-                "b": xr.DataArray(data=quantity2, dims="x"),
-            },
-            coords={"x": x, "y": ("x", y)},
+            data_vars={"a": ("x", a), "b": ("x", b)}, coords={"x": x, "y": ("x", y)},
         )
+        units = extract_units(ds)
+
+        other_variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        other_data_unit, other_dim_unit, other_coord_unit = other_variants.get(variant)
 
         other_units = {
-            "a": data_unit if quantity1.check(data_unit) else None,
-            "b": data_unit if quantity2.check(data_unit) else None,
-            "x": dim_unit if x.check(dim_unit) else None,
-            "y": coord_unit if y.check(coord_unit) else None,
+            "a": other_data_unit,
+            "b": other_data_unit,
+            "x": other_dim_unit,
+            "y": other_coord_unit,
         }
-        other = attach_units(strip_units(convert_units(ds, other_units)), other_units)
 
-        units = extract_units(ds)
+        to_convert = {
+            key: unit if is_compatible(unit, reference) else None
+            for key, (unit, reference) in merge_mappings(units, other_units)
+        }
+        # convert units where possible, then attach all units to the converted dataset
+        other = attach_units(strip_units(convert_units(ds, to_convert)), other_units)
         other_units = extract_units(other)
 
+        # make sure all units are compatible and only then try to
+        # convert and compare values
         equal_ds = all(
-            is_compatible(units[name], other_units[name]) for name in units.keys()
+            is_compatible(unit, other_unit)
+            for _, (unit, other_unit) in merge_mappings(units, other_units)
         ) and (strip_units(ds).equals(strip_units(convert_units(other, units))))
         equal_units = units == other_units
         expected = equal_ds and (func.name != "identical" or equal_units)
