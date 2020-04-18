@@ -4604,8 +4604,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx = remove_unused_levels_categories(dataframe.index)
-        dataframe = dataframe.set_index(idx)
+        idx, dataframe = remove_unused_levels_categories(dataframe.index, dataframe)
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
