@@ -810,6 +810,55 @@ class TestCombineAuto:
         with pytest.raises(ValueError):
             combine_by_coords([x1, x2, x3], fill_value=None)
 
+    def test_combine_by_non_dim_point_coords(self):
+        # GH issue #3774
+        ds0 = Dataset(
+            {"T": ("time", [10, 20, 30])}, coords={"time": [0, 1, 2], "trial": 0}
+        )
+
+        ds1 = Dataset(
+            {"T": ("time", [50, 60, 70])}, coords={"time": [0, 1, 2], "trial": 1}
+        )
+
+        expected = Dataset(
+            {"T": (["trial", "time"], [[10, 20, 30], [50, 60, 70]])},
+            coords={"time": [0, 1, 2], "trial": [0, 1]},
+        )
+
+        actual = combine_by_coords([ds0, ds1])
+        assert_identical(expected, actual)
+
+    def test_ignore_unused_non_dim_point_coords(self):
+        # GH issue #3774
+        ds0 = Dataset(
+            {"T": ("time", [10, 20, 30])},
+            coords={"time": [0, 1, 2], "trial": 0, "day": 0},
+        )
+        ds1 = Dataset(
+            {"T": ("time", [50, 60, 70])},
+            coords={"time": [0, 1, 2], "trial": 1, "day": 0},
+        )
+        actual = combine_by_coords([ds0, ds1])
+        # checking that there is no added "day" dimension
+        expected = Dataset(
+            {"T": (["trial", "time"], [[10, 20, 30], [50, 60, 70]])},
+            coords={"time": [0, 1, 2], "trial": [0, 1], "day": 0},
+        )
+        assert_identical(expected, actual)
+
+    def test_raise_on_ambiguous_non_dim_point_coords(self):
+        # GH issue #3774
+        ds0 = Dataset(
+            {"T": ("time", [10, 20, 30])},
+            coords={"time": [0, 1, 2], "trial": 0, "day": 5},
+        )
+        ds1 = Dataset(
+            {"T": ("time", [50, 60, 70])},
+            coords={"time": [0, 1, 2], "trial": 1, "day": 3},
+        )
+        with raises_regex(ValueError, "ambiguous"):
+            combine_by_coords([ds0, ds1])
+
 
 @requires_cftime
 def test_combine_by_coords_distant_cftime_dates():
