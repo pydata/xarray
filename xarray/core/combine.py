@@ -57,8 +57,11 @@ def _infer_concat_order_from_coords(datasets):
                                and len(ds0[coord].dims) == 0]
     for coord in non_dimension_0d_coords:
         if all(coord in ds.coords for ds in datasets):
-            datasets = [ds.expand_dims(coord) for ds in datasets]
-            concat_dim_candidates.append(coord)
+            # If 0D coord same on every ds treat as bystander, else add new dim
+            coord_vals = [ds.coords[coord].values for ds in datasets]
+            if not all(val == coord_vals[0] for val in coord_vals):
+                datasets = [ds.expand_dims(coord) for ds in datasets]
+                concat_dim_candidates.append(coord)
 
     concat_dims = []
     tile_ids = [() for ds in datasets]
