@@ -1381,13 +1381,10 @@ def _calc_idxminmax(
 
     # Handle dask arrays.
     if isinstance(array.data, dask_array_type):
-        res = indx.copy(
-            data=indx.data.map_blocks(
-                lambda ind, coord: coord[(ind,)],
-                array[dim].data,
-                dtype=array[dim].dtype,
-            )
-        )
+        import dask.array
+
+        dask_coord = dask.array.from_array(array[dim].data, chunks=(1,))
+        res = indx.copy(data=dask_coord[(indx.data,)])
         # we need to attach back the dim name
         res.name = dim
     else:
