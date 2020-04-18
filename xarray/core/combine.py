@@ -46,12 +46,24 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
 
 def _infer_concat_order_from_coords(datasets):
 
+    # All datasets have same variables because they've been grouped as such
+    ds0 = datasets[0]
+
+    concat_dim_candidates = list(ds0.dims.keys())
+
+    # Look for 0D coordinates which can be concatenated over but aren't dims
+    non_dimension_0d_coords = [coord for coord in ds0.coords
+                               if coord not in ds0.dims
+                               and len(ds0[coord].dims) == 0]
+    for coord in non_dimension_0d_coords:
+        if all(coord in ds.coords for ds in datasets):
+            datasets = [ds.expand_dims(coord) for ds in datasets]
+            concat_dim_candidates.append(coord)
+
     concat_dims = []
     tile_ids = [() for ds in datasets]
 
-    # All datasets have same variables because they've been grouped as such
-    ds0 = datasets[0]
-    for dim in ds0.dims:
+    for dim in concat_dim_candidates:
 
         # Check if dim is a coordinate dimension
         if dim in ds0:
