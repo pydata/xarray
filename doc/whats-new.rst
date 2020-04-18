@@ -48,6 +48,9 @@ New Features
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
+- :py:func:`combine_by_coords` will now also use zero-dimensional point coordinates
+  for concatenation where appropriate. (:issue:`3774`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Bug fixes
