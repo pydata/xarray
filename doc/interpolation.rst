@@ -150,8 +150,14 @@ Additional keyword arguments can be passed to scipy's functions.
 
     # fill 0 for the outside of the original coordinates.
     da.interp(x=np.linspace(-0.5, 1.5, 10), kwargs={'fill_value': 0.0})
-    # extrapolation
+    # 1-dimensional extrapolation
     da.interp(x=np.linspace(-0.5, 1.5, 10), kwargs={'fill_value': 'extrapolate'})
+    # multi-dimensional extrapolation
+    da = xr.DataArray(np.sin(0.3 * np.arange(12).reshape(4, 3)),
+                      [('time', np.arange(4)),
+                       ('space', [0.1, 0.2, 0.3])])
+
+    da.interp(time=4, space=np.linspace(-0.1, 0.5, 10), kwargs={'fill_value': None})
 
 
 Advanced Interpolation

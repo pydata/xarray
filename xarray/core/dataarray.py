@@ -1366,7 +1366,9 @@ class DataArray(AbstractArray, DataWithCoords):
             first. If True, x has to be an array of monotonically increasing
             values.
         kwargs: dictionary
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to scipy's interpolator. Valid
+            options and their behavior depend on if 1-dimensional or
+            multi-dimensional interpolation is used.
         ``**coords_kwargs`` : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
