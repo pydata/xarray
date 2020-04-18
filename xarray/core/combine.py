@@ -52,9 +52,11 @@ def _infer_concat_order_from_coords(datasets):
     concat_dim_candidates = list(ds0.dims.keys())
 
     # Look for 0D coordinates which can be concatenated over but aren't dims
-    non_dimension_0d_coords = [coord for coord in ds0.coords
-                               if coord not in ds0.dims
-                               and len(ds0[coord].dims) == 0]
+    non_dimension_0d_coords = [
+        coord
+        for coord in ds0.coords
+        if coord not in ds0.dims and len(ds0[coord].dims) == 0
+    ]
     for coord in non_dimension_0d_coords:
         if all(coord in ds.coords for ds in datasets):
             # If 0D coord same on every ds treat as bystander, else add new dim
