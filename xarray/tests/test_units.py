@@ -48,13 +48,6 @@ def is_compatible(unit1, unit2):
     return dimensionality(unit1) == dimensionality(unit2)
 
 
-def map_values(func, mapping):
-    if isinstance(mapping, dict):
-        mapping = mapping.items()
-
-    return {key: func(value) for key, value in mapping}
-
-
 def compatible_mappings(first, second):
     return {
         key: is_compatible(unit1, unit2)
@@ -3857,7 +3850,9 @@ class TestDataset:
         ds = xr.Dataset({"a": ("x", a), "b": ("y", b)})
         units = extract_units(ds)
 
-        kwargs = map_values(lambda v: array_attach_units(v, unit), func.kwargs)
+        kwargs = {
+            key: array_attach_units(value, unit) for key, value in func.kwargs.items()
+        }
 
         if error is not None:
             with pytest.raises(error):
@@ -3865,9 +3860,10 @@ class TestDataset:
 
             return
 
-        stripped_kwargs = map_values(
-            lambda v: strip_units(convert_units(v, {None: data_unit})), kwargs,
-        )
+        stripped_kwargs = {
+            key: strip_units(convert_units(value, {None: data_unit}))
+            for key, value in kwargs.items()
+        }
 
         actual = func(ds, **kwargs)
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
