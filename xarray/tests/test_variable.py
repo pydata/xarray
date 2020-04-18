@@ -1077,17 +1077,6 @@ class TestVariable(VariableSubclassobjects):
         ).strip()
         assert expected == repr(v)
 
-    def test_repr_html(self):
-        v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
-        assert hasattr(v, "_repr_html_")
-        with set_options(display_style="html"):
-            html = v._repr_html_().strip()
-        # We don't do a complete string identity since
-        # html output is probably subject to change, is long and... reasons.
-        # Just test that something reasonable was produced.
-        assert html.startswith("<div") and html.endswith("</div>")
-        assert "xarray.Variable" in html
-
     def test_repr_lazy_data(self):
         v = Variable("x", LazilyOuterIndexedArray(np.arange(2e5)))
         assert "200000 values with dtype" in repr(v)
