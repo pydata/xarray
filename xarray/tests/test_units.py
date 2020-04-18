@@ -4027,9 +4027,10 @@ class TestDataset:
         raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
         values = raw_values * unit
 
-        converted_values = convert_units(
-            values,
-            {None: unit_registry.m if is_compatible(unit, unit_registry.m) else None},
+        converted_values = (
+            convert_units(values, {None: unit_registry.m})
+            if is_compatible(unit, unit_registry.m)
+            else values
         )
 
         expected = strip_units(ds).isin(strip_units(converted_values))
