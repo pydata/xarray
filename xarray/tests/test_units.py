@@ -4266,6 +4266,7 @@ class TestDataset:
 
         assert expected == actual
 
+    @pytest.mark.skip(reason="IndexVariable does not support units")
     @pytest.mark.parametrize(
         "unit",
         (
@@ -4278,7 +4279,7 @@ class TestDataset:
     )
     def test_broadcast_like(self, unit, dtype):
         array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * unit_registry.Pa
-        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * unit_registry.Pa
+        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype)
 
         x1 = np.arange(2) * unit_registry.m
         x2 = np.arange(2) * unit
@@ -4297,7 +4298,8 @@ class TestDataset:
         )
         actual = ds1.broadcast_like(ds2)
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
