@@ -97,6 +97,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Raise more informative error messages for chunk size conflicts when writing to zarr files.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Run the ``isort`` pre-commit hook only on python source files
   and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
   By `Justus Magin <https://github.com/keewis>`_.
