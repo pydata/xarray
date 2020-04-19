@@ -2214,7 +2214,7 @@ class TestAsCompatibleData:
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
         # raise error on non-scalar fill_value
-        with pytest.raises(ValueError):
+        with raises_regex(ValueError, "must be scalar"):
             full_like(orig, [1.0, 2.0])
 
     @requires_dask
