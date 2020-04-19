@@ -113,6 +113,20 @@ reasons:
    a DataArray from a Dataset (ex. ``ds[var_name]``), will have new
    accessors created.
 
+Back in an interactive IPython session, we can use these properties:
+
+.. ipython:: python
+   :suppress:
+
+   exec(open("examples/_code/accessor_example.py").read())
+
+.. ipython:: python
+
+    ds = xr.Dataset({'longitude': np.linspace(0, 10),
+                     'latitude': np.linspace(0, 20)})
+    ds.geo.center
+    ds.geo.plot()
+
 Parametrizing an accessor is possible, too, by defining ``__call__``:
 
 .. code:: python
@@ -150,20 +164,6 @@ a wrapper function:
 
     da = xr.DataArray(data=range(5), dims="x")
     da.weighted(5).sum(dim="x")
-
-Back in an interactive IPython session, we can use these properties:
-
-.. ipython:: python
-   :suppress:
-
-   exec(open("examples/_code/accessor_example.py").read())
-
-.. ipython:: python
-
-    ds = xr.Dataset({'longitude': np.linspace(0, 10),
-                     'latitude': np.linspace(0, 20)})
-    ds.geo.center
-    ds.geo.plot()
 
 The intent here is that libraries that extend xarray could add such an accessor
 to implement subclass specific functionality rather than using actual subclasses
