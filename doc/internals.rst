@@ -127,9 +127,9 @@ Back in an interactive IPython session, we can use these properties:
     ds.geo.center
     ds.geo.plot()
 
-Parametrizing an accessor is possible, too, by defining ``__call__``:
+Parametrizing an accessor is possible by defining ``__call__``:
 
-.. code:: python
+.. code-block:: python
 
     @xr.register_dataarray_accessor("weighted")
     class Weighted:
@@ -146,7 +146,7 @@ Parametrizing an accessor is possible, too, by defining ``__call__``:
 If we need to require the parameter, the easiest way to do so is using
 a wrapper function:
 
-.. code:: python
+.. code-block:: python
 
     class Weighted:
         def __init__(self, obj, weight):
