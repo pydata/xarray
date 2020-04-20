@@ -138,20 +138,24 @@ functions:
        ...: class WeightedAccessor:
        ...:     def __init__(self, xarray_obj):
        ...:         self._obj = xarray_obj
-       ...:         self._weight = 1
+       ...:         self._weights = np.ones_like(xarray_obj) / xarray_obj.size
        ...:
-       ...:     def __call__(self, weight):
-       ...:         self._weight = weight
+       ...:     def __call__(self, weights):
+       ...:         self._weights = weights
        ...:         return self
        ...:
-       ...:     def sum(self):
-       ...:         return f"weighted sum with weight {self._weight}"
+       ...:     def sum(self, *args, **kwargs):
+       ...:         return np.sum(self._obj * self._weights, *args, **kwargs)
 
-    In [2]: da = xr.DataArray(data=np.linspace(0, 1, 10), dims="x")
+    In [2]: da = xr.DataArray(data=np.linspace(1, 2, 10), dims="x")
+       ...: weights = xr.DataArray(
+       ...:     np.array([0.25, 0, 0, 0, 0.25, 0, 0.25, 0, 0, 0.25]),
+       ...:     dims="x",
+       ...: )
 
     In [3]: da.weighted.sum()
 
-    In [4]: da.weighted(7).sum()
+    In [4]: da.weighted(weights).sum()
 
 If we want to require the parameter, the easiest way to do so is using
 a wrapper function:
@@ -161,22 +165,29 @@ a wrapper function:
     :okexcept:
 
     In [1]: class Weighted:
-       ...:     def __init__(self, obj, weight):
+       ...:     def __init__(self, obj, weights):
        ...:         self._obj = obj
-       ...:         self._weight = weight
+       ...:         self._weights = weights
        ...:
-       ...:     def sum(self):
-       ...:         return f"weighted sum with weight {self._weight}"
+       ...:     def sum(self, *args, **kwargs):
+       ...:         return np.sum(self._obj * self._weights, *args, **kwargs)
 
     In [2]: @xr.register_dataarray_accessor("weighted")
        ...: def weighted(obj):
-       ...:     def wrapped(weight):
-       ...:         return Weighted(obj, weight)
+       ...:     def wrapped(weights):
+       ...:         return Weighted(obj, weights)
        ...:     return wrapped
 
-    In [3]: da.weighted.sum()
+    In [3]: da = xr.DataArray(data=np.linspace(1, 2, 10), dims="x")
+       ...: weights = xr.DataArray(
+       ...:     np.array([0.25, 0, 0, 0, 0.25, 0, 0.25, 0, 0, 0.25]),
+       ...:     dims="x",
+       ...: )
 
-    In [4]: da.weighted(5).sum()
+    In [4]: da.weighted.sum()
+
+    In [5]: da.weighted(weights).sum()
+
 
 The intent here is that libraries that extend xarray could add such an accessor
 to implement subclass specific functionality rather than using actual subclasses
