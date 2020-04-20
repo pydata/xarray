@@ -132,8 +132,8 @@ to implement subclass specific functionality rather than using actual subclasses
 or patching in a large number of domain specific methods.
 
 Parametrizing an accessor is possible by defining ``__call__``. For
-example, we could use this to reimplement the :py:func:`DataArray.weighted`
-functionality:
+example, we could use this to reimplement the API of the
+:py:func:`DataArray.weighted` function:
 
 .. ipython::
     :okwarning:
