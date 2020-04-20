@@ -172,7 +172,7 @@ a wrapper function:
        ...:
        ...:     @property
        ...:     def center(self):
-       ...:         return f"geographic center point expressed in {self._crs}"
+       ...:         return f"geographic center point transformed to {self._crs}"
 
     In [2]: @xr.register_dataarray_accessor("geo2")
        ...: def geo2(obj):
