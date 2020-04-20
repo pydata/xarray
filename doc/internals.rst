@@ -129,41 +129,60 @@ Back in an interactive IPython session, we can use these properties:
 
 Parametrizing an accessor is possible by defining ``__call__``:
 
-.. code-block:: python
+.. ipython::
 
-    @xr.register_dataarray_accessor("weighted")
-    class Weighted:
-        def __init__(self, xarray_obj):
-            self._obj = xarray_obj
-            self._weight = None
+    In [1]: @xr.register_dataarray_accessor("geo")
+       ...: class GeoAccessor:
+       ...:     def __init__(self, xarray_obj):
+       ...:         self._obj = xarray_obj
+       ...:         self._crs = "wgs84"
+       ...:
+       ...:     def __call__(self, crs):
+       ...:         self._crs = crs
+       ...:         return self
+       ...:
+       ...:     @property
+       ...:     def center(self):
+       ...:         return f"geographic center point transformed to {self._crs}"
 
-        def __call__(self, weight):
-            self._weight = weight
+    In [2]: da = xr.DataArray(
+       ...:     data=np.linspace(0, 1, 50 * 50).reshape(50, 50),
+       ...:     dims=("longitude", "latitude"),
+       ...:     coords={
+       ...:         "longitude": np.linspace(0, 10),
+       ...:         "longitude": np.linspace(0, 20),
+       ...:     },
+       ...: )
 
-        def sum(self, dim):
-            return "weighted sum"
+    In [3]: da.geo.center
 
-If we need to require the parameter, the easiest way to do so is using
+    In [4]: da.geo(crs="grs80").center
+
+If we want to require the parameter, the easiest way to do so is using
 a wrapper function:
 
-.. code-block:: python
+.. ipython::
+    :okwarning:
+    :okexcept:
 
-    class Weighted:
-        def __init__(self, obj, weight):
-            self._obj = obj
-            self._weight = weight
+    In [1]: class GeoAccessor:
+       ...:     def __init__(self, obj, crs):
+       ...:         self._obj = obj
+       ...:         self._crs = crs
+       ...:
+       ...:     @property
+       ...:     def center(self):
+       ...:         return f"geographic center point expressed in {self._crs}"
 
-        def sum(self, dim):
-            return f"weighted sum over {dim} and with weight {self._weight}"
+    In [2]: @xr.register_dataarray_accessor("geo2")
+       ...: def geo2(obj):
+       ...:     def wrapped(crs):
+       ...:         return GeoAccessor(obj, crs)
+       ...:     return wrapped
 
-    @xr.register_dataarray_accessor("weighted")
-    def weighted(obj):
-        def wrapped(weight):
-            return Weighted(obj, weight)
-        return wrapped
+    In [3]: da.geo2(crs="wgs84").center
 
-    da = xr.DataArray(data=range(5), dims="x")
-    da.weighted(5).sum(dim="x")
+    In [4]: da.geo2.center
 
 The intent here is that libraries that extend xarray could add such an accessor
 to implement subclass specific functionality rather than using actual subclasses
