@@ -127,9 +127,13 @@ Back in an interactive IPython session, we can use these properties:
     ds.geo.center
     ds.geo.plot()
 
+The intent here is that libraries that extend xarray could add such an accessor
+to implement subclass specific functionality rather than using actual subclasses
+or patching in a large number of domain specific methods.
+
 Parametrizing an accessor is possible by defining ``__call__``. For
-example, we could use this to reimplement the :py:func:`Dataset.weighted`
-functions:
+example, we could use this to reimplement the :py:func:`DataArray.weighted`
+functionality:
 
 .. ipython::
     :okwarning:
@@ -188,12 +192,14 @@ a wrapper function:
 
     In [5]: da.weighted(weights).sum()
 
+.. note::
 
-The intent here is that libraries that extend xarray could add such an accessor
-to implement subclass specific functionality rather than using actual subclasses
-or patching in a large number of domain specific methods. For further reading
-on ways to write new accessors and the philosophy behind the approach, see
-:issue:`1080`.
+   Keep in mind, though, that accessors are designed to add new
+   namespaces to the :py:class:`Dataset` and :py:class:`DataArray`
+   objects and should not be used to add methods.
+
+For further reading on ways to write new accessors and the philosophy
+behind the approach, see :issue:`1080`.
 
 To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
