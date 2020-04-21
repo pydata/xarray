@@ -4765,9 +4765,9 @@ class TestReduce1D(TestReduce):
         )
         indarr = xr.DataArray(np.arange(x.size, dtype=np.intp), dims=["x"])
 
-        if np.isnan(minindex):
+        if np.isnan(maxindex):
             with pytest.raises(ValueError):
-                ar.argmin()
+                ar.argmax()
             return
 
         expected0 = {"x": indarr[maxindex]}
