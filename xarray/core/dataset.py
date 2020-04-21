@@ -5436,8 +5436,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 variables[k] = v
         return self._replace(variables)
 
-    def integrate(self, coord, datetime_unit=None):
-        """ integrate the array with the trapezoidal rule.
+    def integrate(
+        self, coord: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
+    ) -> "Dataset":
+        """ Integrate along the given coordinate using the trapezoidal rule.
 
         .. note::
             This feature is limited to simple cartesian geometry, i.e. coord
@@ -5445,7 +5447,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        coord: str, or a sequence of str
+        coord: hashable, or a sequence of hashable
             Coordinate(s) used for the integration.
         datetime_unit
             Can be specify the unit if datetime coordinate is used. One of
