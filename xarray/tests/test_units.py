@@ -1660,7 +1660,7 @@ class TestVariable(VariableSubclassobjects):
             method("equals"),
             pytest.param(
                 method("identical"),
-                marks=pytest.mark.skip(reason="behaviour of identical is unclear"),
+                marks=pytest.mark.skip(reason="behavior of identical is undecided"),
             ),
         ),
         ids=repr,
@@ -2873,7 +2873,17 @@ class TestDataArray:
             "coords",
         ),
     )
-    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("equals"),
+            pytest.params(
+                method("identical"),
+                marks=pytest.mark.skip(reason="the behavior of identical is undecided"),
+            ),
+        ),
+        ids=repr,
+    )
     def test_comparisons(self, func, variation, unit, dtype):
         def is_compatible(a, b):
             a = a if a is not None else 1
