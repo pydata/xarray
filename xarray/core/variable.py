@@ -2132,7 +2132,7 @@ class Variable(
 
         result_flat_indices = stacked.reduce(argminmax_func, axis=-1, skipna=skipna)
 
-        result_unravelled_indices = np.unravel_index(
+        result_unravelled_indices = duck_array_ops.unravel_index(
             result_flat_indices.data, reduce_shape
         )
 

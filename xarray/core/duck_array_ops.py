@@ -339,6 +339,7 @@ cumprod_1d = _create_nan_agg_method("cumprod")
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method("cumsum")
 cumsum_1d.numeric_only = True
+unravel_index = _dask_or_eager_func("unravel_index")
 
 
 _mean = _create_nan_agg_method("mean")
