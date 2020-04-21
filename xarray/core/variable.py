@@ -2086,7 +2086,6 @@ class Variable(
         axis: Union[int, None],
         keep_attrs: Optional[bool],
         skipna: Optional[bool],
-        out,
     ) -> Union["Variable", Dict[Hashable, "Variable"]]:
         """Apply argmin or argmax over one or more dimensions, returning the result as a
         dict of DataArray that can be passed directly to isel.
@@ -2156,7 +2155,6 @@ class Variable(
         axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-        out=None,
     ) -> Union["Variable", Dict[Hashable, "Variable"]]:
         """Index or indices of the minimum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
@@ -2185,9 +2183,6 @@ class Variable(
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
-        out : None
-            'out' should not be passed - provided for compatibility with numpy function
-            signature
 
         Returns
         -------
@@ -2197,7 +2192,7 @@ class Variable(
         --------
         DataArray.argmin, DataArray.idxmin
         """
-        return self._unravel_argminmax("argmin", dim, axis, keep_attrs, skipna, out)
+        return self._unravel_argminmax("argmin", dim, axis, keep_attrs, skipna)
 
     def argmax(
         self,
@@ -2205,7 +2200,6 @@ class Variable(
         axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-        out=None,
     ) -> Union["Variable", Dict[Hashable, "Variable"]]:
         """Index or indices of the maximum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
@@ -2234,9 +2228,6 @@ class Variable(
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
-        out : None
-            'out' should not be passed - provided for compatibility with numpy function
-            signature
 
         Returns
         -------
@@ -2246,7 +2237,7 @@ class Variable(
         --------
         DataArray.argmax, DataArray.idxmax
         """
-        return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna, out)
+        return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
 
 ops.inject_all_ops_and_reduce_methods(Variable)

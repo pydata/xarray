@@ -3728,7 +3728,6 @@ class DataArray(AbstractArray, DataWithCoords):
         axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-        out=None,
     ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
         """Index or indices of the minimum of the DataArray over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
@@ -3757,9 +3756,6 @@ class DataArray(AbstractArray, DataWithCoords):
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
-        out : None
-            'out' should not be passed - provided for compatibility with numpy function
-            signature
 
         Returns
         -------
@@ -3820,7 +3816,7 @@ class DataArray(AbstractArray, DataWithCoords):
         array([ 1, -5,  1])
         Dimensions without coordinates: y
         """
-        result = self.variable.argmin(dim, axis, keep_attrs, skipna, out)
+        result = self.variable.argmin(dim, axis, keep_attrs, skipna)
         if isinstance(result, dict):
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
@@ -3832,7 +3828,6 @@ class DataArray(AbstractArray, DataWithCoords):
         axis: Union[int, None] = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-        out=None,
     ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
         """Index or indices of the maximum of the DataArray over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
@@ -3861,9 +3856,6 @@ class DataArray(AbstractArray, DataWithCoords):
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
-        out : None
-            'out' should not be passed - provided for compatibility with numpy function
-            signature
 
         Returns
         -------
@@ -3925,7 +3917,7 @@ class DataArray(AbstractArray, DataWithCoords):
         array([3, 5, 3])
         Dimensions without coordinates: y
         """
-        result = self.variable.argmax(dim, axis, keep_attrs, skipna, out)
+        result = self.variable.argmax(dim, axis, keep_attrs, skipna)
         if isinstance(result, dict):
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
