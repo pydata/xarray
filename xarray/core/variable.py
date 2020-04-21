@@ -2099,6 +2099,9 @@ class Variable(
                 "np.argmax(da.data) instead of da.argmin() or da.argmax().",
                 DeprecationWarning,
             )
+
+        argminax_func = getattr(duck_array_ops, argminmax)
+
         if dim is ...:
             # In future, should do this also when (dim is None and axis is None)
             dim = self.dims
@@ -2110,8 +2113,8 @@ class Variable(
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
-            return getattr(self, "_injected_" + str(argminmax))(
-                dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna, out=out
+            return self.reduce(
+                argminax_func, dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna
             )
 
         # Get a name for the new dimension that does not conflict with any existing
@@ -2127,11 +2130,11 @@ class Variable(
         result_dims = stacked.dims[:-1]
         reduce_shape = tuple(self.sizes[d] for d in dim)
 
-        result_flat_indices = getattr(stacked, "_injected_" + str(argminmax))(
-            axis=-1, skipna=skipna, out=out
-        )
+        result_flat_indices = stacked.reduce(argminax_func, axis=-1, skipna=skipna)
 
-        result_unravelled_indices = np.unravel_index(result_flat_indices, reduce_shape)
+        result_unravelled_indices = np.unravel_index(
+            result_flat_indices.data, reduce_shape
+        )
 
         result = {
             d: Variable(dims=result_dims, data=i)
