@@ -6314,7 +6314,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
-            return getattr(self, "_injected_argmin")(dim=dim, axis=axis, **kwargs)
+            argmin_func = getattr(duck_array_ops, "argmin")
+            return self.reduce(argmin_func, dim=dim, axis=axis, **kwargs)
         else:
             raise ValueError(
                 "When dim is a sequence, DataArray.argmin() returns a "
@@ -6342,7 +6343,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
-            return getattr(self, "_injected_argmax")(dim=dim, axis=axis, **kwargs)
+            argmax_func = getattr(duck_array_ops, "argmax")
+            return self.reduce(argmax_func, dim=dim, axis=axis, **kwargs)
         else:
             raise ValueError(
                 "When dim is a sequence, DataArray.argmax() returns a "
