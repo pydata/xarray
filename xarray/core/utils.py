@@ -787,6 +787,14 @@ def drop_dims_from_indexers(
         )
 
 
+class property_:
+    def __init__(self, func):
+        self._func = func
+
+    def __get__(self, obj, cls):
+        return self._func(obj)
+
+
 # Singleton type, as per https://github.com/python/typing/pull/240
 class Default(Enum):
     token = 0
