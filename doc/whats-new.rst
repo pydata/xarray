@@ -27,6 +27,12 @@ Breaking changes
   (:pull:`3274`)
   By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
 
+- New deprecations (behavior will be changed in xarray 0.17):
+  - ``dim`` argument to :py:meth:`DataArray.integrate` is being deprecated in
+    favour of a ``coord`` arg, for consistency with :py:meth:`Dataset.integrate`.
+    For now using ``dim`` issues a ``FutureWarning``.
+    By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
