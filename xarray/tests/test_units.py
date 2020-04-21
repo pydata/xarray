@@ -2877,7 +2877,7 @@ class TestDataArray:
         "func",
         (
             method("equals"),
-            pytest.params(
+            pytest.param(
                 method("identical"),
                 marks=pytest.mark.skip(reason="the behavior of identical is undecided"),
             ),
