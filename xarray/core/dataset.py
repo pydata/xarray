@@ -2570,7 +2570,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coordinates are assumed to be an array of monotonically increasing
             values.
         kwargs: dictionary, optional
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to scipy's interpolator. Valid
+            options and their behavior depend on if 1-dimensional or
+            multi-dimensional interpolation is used.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
@@ -4604,8 +4606,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx = remove_unused_levels_categories(dataframe.index)
-        dataframe = dataframe.set_index(idx)
+        idx, dataframe = remove_unused_levels_categories(dataframe.index, dataframe)
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):

@@ -231,6 +231,17 @@ def test_interpolate_kwargs():
     assert_equal(actual, expected)
 
 
+def test_interpolate_keep_attrs():
+    vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
+    mvals = vals.copy()
+    mvals[2] = np.nan
+    missing = xr.DataArray(mvals, dims="x")
+    missing.attrs = {"test": "value"}
+
+    actual = missing.interpolate_na(dim="x", keep_attrs=True)
+    assert actual.attrs == {"test": "value"}
+
+
 def test_interpolate():
 
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)

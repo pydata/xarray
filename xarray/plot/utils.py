@@ -153,6 +153,7 @@ def _determine_cmap_params(
     levels=None,
     filled=True,
     norm=None,
+    _is_facetgrid=False,
 ):
     """
     Use some heuristics to set good defaults for colorbar and range.
@@ -581,14 +582,15 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-    plt = import_matplotlib_pyplot()
+
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
     else:
         cbar_kwargs.setdefault("cax", cbar_ax)
 
-    cbar = plt.colorbar(primitive, **cbar_kwargs)
+    fig = ax.get_figure()
+    cbar = fig.colorbar(primitive, **cbar_kwargs)
 
     return cbar
 
@@ -735,6 +737,7 @@ def _process_cmap_cbar_kwargs(
     colors=None,
     cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
     levels=None,
+    _is_facetgrid=False,
     **kwargs,
 ):
     """
@@ -781,6 +784,12 @@ def _process_cmap_cbar_kwargs(
 
     cmap_args = getfullargspec(_determine_cmap_params).args
     cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
-    cmap_params = _determine_cmap_params(**cmap_kwargs)
+    if not _is_facetgrid:
+        cmap_params = _determine_cmap_params(**cmap_kwargs)
+    else:
+        cmap_params = {
+            k: cmap_kwargs[k]
+            for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
+        }
 
     return cmap_params, cbar_kwargs

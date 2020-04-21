@@ -281,7 +281,7 @@ library::
         # glob expands paths with * to a list of files, like the unix shell
         paths = sorted(glob(files))
         datasets = [xr.open_dataset(p) for p in paths]
-        combined = xr.concat(dataset, dim)
+        combined = xr.concat(datasets, dim)
         return combined
 
     combined = read_netcdfs('/all/my/files/*.nc', dim='time')

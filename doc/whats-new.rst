@@ -51,30 +51,60 @@ New Features
 
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
+- A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
+  the ``days_in_month`` accessor for a :py:class:`pandas.DatetimeIndex`, which
+  returns the days in the month each datetime in the index.  Now days in month
+  weights for both standard and non-standard calendars can be obtained using
+  the :py:class:`~core.accessor_dt.DatetimeAccessor` (:pull:`3935`).  This
+  feature requires cftime version 1.1.0 or greater.  By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
+- Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``. (:issue:`3951`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fix renaming of coords when one or more stacked coords is not in
   sorted order during stack+groupby+apply operations. (:issue:`3287`,
   :pull:`3906`) By `Spencer Hill <https://github.com/spencerahill>`_
 - Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
   can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
+- Fix :py:class:`~xarray.plot.FacetGrid` plots with a single contour. (:issue:`3569`, :pull:`3915`).
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - Use divergent colormap if ``levels`` spans 0. (:issue:`3524`)
   By `Deepak Cherian <https://github.com/dcherian>`_
-- Fix ``FacetGrid`` when ``vmin == vmax``. (:issue:`3734`)
+- Fix :py:class:`~xarray.plot.FacetGrid` when ``vmin == vmax``. (:issue:`3734`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Fix bug where plotting line plots with 2D coordinates depended on dimension
   order. (:issue:`3933`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix ``RasterioDeprecationWarning`` when using a ``vrt`` in ``open_rasterio``. (:issue:`3964`)
+  By `Taher Chegini <https://github.com/cheginit>`_.
+- Fix bug causing :py:meth:`DataArray.interpolate_na` to always drop attributes,
+  and added `keep_attrs` argument. (:issue:`3968`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
+- update the docstring of :py:meth:`DataArray.assign_coords` : clarify how to
+  add a new coordinate to an existing dimension and illustrative example
+  (:issue:`3952`, :pull:`3958`) By
+  `Etienne Combrisson <https://github.com/EtienneCmb>`_.
 - update the docstring of :py:meth:`Dataset.diff` and
   :py:meth:`DataArray.diff` so it does document the ``dim``
   parameter as required. (:issue:`1040`, :pull:`3909`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Updated :doc:`Calculating Seasonal Averages from Timeseries of Monthly Means
+  <examples/monthly-means>` example notebook to take advantage of the new
+  ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`
+  (:pull:`3935`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Updated the list of current core developers. (:issue:`3892`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add example for multi-dimensional extrapolation and note different behavior
+  of ``kwargs`` in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`
+  for 1-d and n-d interpolation (:pull:`3956`).
+  By `Matthias Riße <https://github.com/risebell>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -84,7 +114,9 @@ Internal Changes
 - Add a CI job that runs the tests with every optional dependency
   except ``dask``. (:issue:`3794`, :pull:`3919`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Use ``async`` / ``await`` for the asynchronous distributed
+  tests. (:issue:`3987`, :pull:`3989`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 .. _whats-new.0.15.1:
 
