@@ -136,7 +136,7 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-        with raises_regex(ValueError, "None"):
+        with raises_regex(ValueError, "'x' must be None or 'dim_0'"):
             self.darray[:, 0, 0].plot(x="dim_1")
 
         with raises_regex(TypeError, "complex128"):
@@ -155,15 +155,15 @@ class TestPlot(PlotTestCase):
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=ax.flat[aa])
 
-        with raises_regex(ValueError, "cannot specify both"):
+        with raises_regex(ValueError, "Cannot specify both"):
             da.plot(x="z", y="z")
 
-        error_msg = "must be a dimension, coordinate, MultiIndex level name or None"
-        with raises_regex(ValueError, f"x {error_msg}"):
-            da.plot(x="f", y="z")
+        error_msg = "must be None or 'z'"
+        with raises_regex(ValueError, f"'x' {error_msg}"):
+            da.plot(x="f")
 
-        with raises_regex(ValueError, f"y {error_msg}"):
-            da.plot(x="z", y="f")
+        with raises_regex(ValueError, f"'y' {error_msg}"):
+            da.plot(y="f")
 
     def test_multiindex_level_as_coord(self):
         da = xr.DataArray(
@@ -228,7 +228,7 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x="dim_0", hue="dim_1")
         self.darray[:, :, 0].plot.line(y="dim_0", hue="dim_1")
 
-        with raises_regex(ValueError, "cannot"):
+        with raises_regex(ValueError, "Cannot"):
             self.darray[:, :, 0].plot.line(x="dim_1", y="dim_0", hue="dim_1")
 
     def test_2d_line_accepts_legend_kw(self):
@@ -1170,8 +1170,8 @@ class Common2dMixin:
         with raises_regex(ValueError, "'x' and 'y' cannot be equal."):
             self.plotmethod(x="y", y="y")
 
-        error_msg = "must be a dimension, coordinate or MultiIndex level name"
-        with raises_regex(ValueError, f"'x' and 'y' {error_msg}"):
+        error_msg = "must be one of None, 'x', 'x2d', 'y', 'y2d'"
+        with raises_regex(ValueError, f"'x' {error_msg}"):
             self.plotmethod("not_a_real_dim", "y")
         with raises_regex(ValueError, f"'x' {error_msg}"):
             self.plotmethod(x="not_a_real_dim")
@@ -1228,7 +1228,7 @@ class Common2dMixin:
         with raises_regex(ValueError, "levels of the same MultiIndex"):
             self.plotfunc(da, x="a", y="b")
 
-        with raises_regex(ValueError, "MultiIndex and one of its levels"):
+        with raises_regex(ValueError, "'y' must be one of None, 'a', 'b', 'x'"):
             self.plotfunc(da, x="a", y="y")
 
     def test_default_title(self):
