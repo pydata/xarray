@@ -6304,6 +6304,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "will be an error to call Dataset.argmin() with no argument. To get a "
                 "single, flat index, please use np.argmin(ds) instead of ds.argmin().",
                 DeprecationWarning,
+                stacklevel=2,
             )
         if (
             dim is None
@@ -6331,6 +6332,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "will be an error to call Dataset.argmin() with no argument. To get a "
                 "single, flat index, please use np.argmin(ds) instead of ds.argmin().",
                 DeprecationWarning,
+                stacklevel=2,
             )
         if (
             dim is None
