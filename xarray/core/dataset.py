@@ -6295,6 +6295,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
 
     def argmin(self, dim=None, axis=None, **kwargs):
+        """Apply argmin() to each variable in the Dataset
+        """
         if dim is None and axis is None:
             warnings.warn(
                 "Behaviour of DataArray.argmin() with neither dim nor axis argument "
@@ -6320,6 +6322,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
 
     def argmax(self, dim=None, axis=None, **kwargs):
+        """Apply argmax() to each variable in the Dataset
+        """
         if dim is None and axis is None:
             warnings.warn(
                 "Behaviour of DataArray.argmin() with neither dim nor axis argument "
