@@ -3473,7 +3473,7 @@ class TestDataArray:
         (
             method("diff", dim="x"),
             method("differentiate", coord="x"),
-            method("integrate", dim="x"),
+            method("integrate", coord="x"),
             pytest.param(
                 method("quantile", q=[0.25, 0.75]),
                 marks=pytest.mark.xfail(reason="nanquantile not implemented"),
