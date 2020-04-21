@@ -79,6 +79,10 @@ Bug fixes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fix ``RasterioDeprecationWarning`` when using a ``vrt`` in ``open_rasterio``. (:issue:`3964`)
   By `Taher Chegini <https://github.com/cheginit>`_.
+- Fix bug causing :py:meth:`DataArray.interpolate_na` to always drop attributes,
+  and added `keep_attrs` argument. (:issue:`3968`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
@@ -96,6 +100,10 @@ Documentation
   (:pull:`3935`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Updated the list of current core developers. (:issue:`3892`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add example for multi-dimensional extrapolation and note different behavior
+  of ``kwargs`` in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`
+  for 1-d and n-d interpolation (:pull:`3956`).
+  By `Matthias Riße <https://github.com/risebell>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -105,7 +113,9 @@ Internal Changes
 - Add a CI job that runs the tests with every optional dependency
   except ``dask``. (:issue:`3794`, :pull:`3919`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Use ``async`` / ``await`` for the asynchronous distributed
+  tests. (:issue:`3987`, :pull:`3989`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 .. _whats-new.0.15.1:
 

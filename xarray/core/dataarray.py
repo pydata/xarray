@@ -1366,7 +1366,9 @@ class DataArray(AbstractArray, DataWithCoords):
             first. If True, x has to be an array of monotonically increasing
             values.
         kwargs: dictionary
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to scipy's interpolator. Valid
+            options and their behavior depend on if 1-dimensional or
+            multi-dimensional interpolation is used.
         ``**coords_kwargs`` : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
@@ -2098,6 +2100,7 @@ class DataArray(AbstractArray, DataWithCoords):
         max_gap: Union[
             int, float, str, pd.Timedelta, np.timedelta64, datetime.timedelta
         ] = None,
+        keep_attrs: bool = None,
         **kwargs: Any,
     ) -> "DataArray":
         """Fill in NaNs by interpolating according to different methods.
@@ -2152,6 +2155,10 @@ class DataArray(AbstractArray, DataWithCoords):
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
+        keep_attrs : bool, default True
+            If True, the dataarray's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
+            object will be returned without attributes.
         kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
@@ -2174,6 +2181,7 @@ class DataArray(AbstractArray, DataWithCoords):
             limit=limit,
             use_coordinate=use_coordinate,
             max_gap=max_gap,
+            keep_attrs=keep_attrs,
             **kwargs,
         )
 
