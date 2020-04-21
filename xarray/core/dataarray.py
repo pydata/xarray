@@ -2680,7 +2680,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def _copy_attrs_from(self, other: Union["DataArray", Dataset, Variable]) -> None:
         self.attrs = other.attrs
 
-    @property
+    @utils.property_
     def plot(self) -> _PlotMethods:
         """
         Access plotting functions for DataArray's

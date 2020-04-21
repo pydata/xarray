@@ -679,6 +679,32 @@ Plotting
    plot.step
    plot.FacetGrid
 
+
+Dataset methods
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.plot.scatter
+
+
+DataArray methods
+-----------------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.plot
+   DataArray.plot.contourf
+   DataArray.plot.contour
+   DataArray.plot.hist
+   DataArray.plot.imshow
+   DataArray.plot.line
+   DataArray.plot.pcolormesh
+   DataArray.plot.step
+
+
 Faceting
 --------
 .. autosummary::

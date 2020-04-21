@@ -5551,7 +5551,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
-    @property
+    @utils.property_
     def plot(self):
         """
         Access plotting functions for Datasets.
