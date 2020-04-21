@@ -4596,6 +4596,9 @@ class TestDataset:
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
 
+    @pytest.mark.filterwarnings(
+        "ignore:Once the behaviour of DataArray:DeprecationWarning"
+    )
     def test_reduce_strings(self):
         expected = Dataset({"x": "a"})
         ds = Dataset({"x": ("y", ["a", "b"])})
@@ -4667,6 +4670,9 @@ class TestDataset:
         for k, v in ds.data_vars.items():
             assert v.attrs == data[k].attrs
 
+    @pytest.mark.filterwarnings(
+        "ignore:Once the behaviour of DataArray:DeprecationWarning"
+    )
     def test_reduce_argmin(self):
         # regression test for #205
         ds = Dataset({"a": ("x", [0, 1])})

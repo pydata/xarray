@@ -1437,6 +1437,9 @@ class TestVariable(VariableSubclassobjects):
         ),
         ids=repr,
     )
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_aggregation(self, func, dtype):
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
@@ -2236,15 +2239,15 @@ class TestDataArray:
                 function("argmax"),
                 marks=pytest.mark.skip(
                     reason="calling np.argmax as a function on xarray objects is not "
-                           "supported"
-                )
+                    "supported"
+                ),
             ),
             pytest.param(
                 function("argmin"),
                 marks=pytest.mark.skip(
                     reason="calling np.argmin as a function on xarray objects is not "
-                           "supported"
-                )
+                    "supported"
+                ),
             ),
             function("max"),
             function("mean"),
@@ -2295,6 +2298,9 @@ class TestDataArray:
             ),
         ),
         ids=repr,
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
     def test_aggregation(self, func, dtype):
         array = np.arange(10).astype(dtype) * (
@@ -3749,15 +3755,15 @@ class TestDataset:
                 function("argmax"),
                 marks=pytest.mark.skip(
                     reason="calling np.argmax as a function on xarray objects is not "
-                           "supported"
-                )
+                    "supported"
+                ),
             ),
             pytest.param(
                 function("argmin"),
                 marks=pytest.mark.skip(
                     reason="calling np.argmin as a function on xarray objects is not "
-                           "supported"
-                )
+                    "supported"
+                ),
             ),
             function("max"),
             function("min"),
@@ -3805,6 +3811,12 @@ class TestDataset:
             ),
         ),
         ids=repr,
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:Once the behaviour of DataArray:DeprecationWarning"
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
     def test_aggregation(self, func, dtype):
         unit_a = (

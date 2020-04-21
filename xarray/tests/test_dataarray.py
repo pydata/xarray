@@ -4464,6 +4464,9 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_argmin(self, x, minindex, maxindex, nanindex):
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
@@ -4493,6 +4496,9 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_argmax(self, x, minindex, maxindex, nanindex):
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
@@ -4714,6 +4720,9 @@ class TestReduce1D(TestReduce):
         result7 = ar0.idxmax(fill_value=-1j)
         assert_identical(result7, expected7)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_argmin_dim(self, x, minindex, maxindex, nanindex):
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
@@ -4747,6 +4756,9 @@ class TestReduce1D(TestReduce):
         for key in expected2:
             assert_identical(result2[key], expected2[key])
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_argmax_dim(self, x, minindex, maxindex, nanindex):
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
@@ -5223,6 +5235,9 @@ class TestReduce2D(TestReduce):
         result7 = ar0.idxmax(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_argmin_dim(self, x, minindex, maxindex, nanindex):
         ar = xr.DataArray(
             x,
@@ -5280,6 +5295,9 @@ class TestReduce2D(TestReduce):
         for key in expected3:
             assert_identical(result3[key], expected3[key])
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_argmax_dim(self, x, minindex, maxindex, nanindex):
         ar = xr.DataArray(
             x,
