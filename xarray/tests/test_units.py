@@ -2232,8 +2232,20 @@ class TestDataArray:
                 function("any"),
                 marks=pytest.mark.xfail(reason="not implemented by pint yet"),
             ),
-            function("argmax"),
-            function("argmin"),
+            pytest.param(
+                function("argmax"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmax as a function on xarray objects is not "
+                           "supported"
+                )
+            ),
+            pytest.param(
+                function("argmin"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmin as a function on xarray objects is not "
+                           "supported"
+                )
+            ),
             function("max"),
             function("mean"),
             pytest.param(
@@ -3733,8 +3745,20 @@ class TestDataset:
                 function("any"),
                 marks=pytest.mark.xfail(reason="not implemented by pint"),
             ),
-            function("argmax"),
-            function("argmin"),
+            pytest.param(
+                function("argmax"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmax as a function on xarray objects is not "
+                           "supported"
+                )
+            ),
+            pytest.param(
+                function("argmin"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmin as a function on xarray objects is not "
+                           "supported"
+                )
+            ),
             function("max"),
             function("min"),
             function("mean"),
