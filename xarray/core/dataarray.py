@@ -3730,6 +3730,7 @@ class DataArray(AbstractArray, DataWithCoords):
         skipna: bool = None,
     ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
         """Index or indices of the minimum of the DataArray over one or more dimensions.
+
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
         returns an int.
@@ -3830,6 +3831,7 @@ class DataArray(AbstractArray, DataWithCoords):
         skipna: bool = None,
     ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
         """Index or indices of the maximum of the DataArray over one or more dimensions.
+
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
         returns an int.
