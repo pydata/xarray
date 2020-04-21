@@ -111,7 +111,9 @@ Internal Changes
 - Add a CI job that runs the tests with every optional dependency
   except ``dask``. (:issue:`3794`, :pull:`3919`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Use ``async`` / ``await`` for the asynchronous distributed
+  tests. (:issue:`3987`, :pull:`3989`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 .. _whats-new.0.15.1:
 
