@@ -788,6 +788,8 @@ def drop_dims_from_indexers(
 
 
 class property_:
+    """ Acts like a property, but on both classes and class instances """
+
     def __init__(self, func):
         self._func = func
 
