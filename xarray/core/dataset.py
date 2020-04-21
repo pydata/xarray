@@ -6299,10 +6299,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if dim is None and axis is None:
             warnings.warn(
-                "Behaviour of DataArray.argmin() with neither dim nor axis argument "
-                "will change to return a dict of indices of each dimension, and then it "
-                "will be an error to call Dataset.argmin() with no argument. To get a "
-                "single, flat index, please use np.argmin(ds) instead of ds.argmin().",
+                "Once the behaviour of DataArray.argmin() and Variable.argmin() with "
+                "neither dim nor axis argument changes to return a dict of indices of "
+                "each dimension, for consistency it will be an error to call "
+                "Dataset.argmin() with no argument, since we don't return a dict of "
+                "Datasets.",
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -6328,10 +6329,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if dim is None and axis is None:
             warnings.warn(
-                "Behaviour of DataArray.argmin() with neither dim nor axis argument "
-                "will change to return a dict of indices of each dimension, and then it "
-                "will be an error to call Dataset.argmin() with no argument. To get a "
-                "single, flat index, please use np.argmin(ds) instead of ds.argmin().",
+                "Once the behaviour of DataArray.argmax() and Variable.argmax() with "
+                "neither dim nor axis argument changes to return a dict of indices of "
+                "each dimension, for consistency it will be an error to call "
+                "Dataset.argmax() with no argument, since we don't return a dict of "
+                "Datasets.",
                 DeprecationWarning,
                 stacklevel=2,
             )
