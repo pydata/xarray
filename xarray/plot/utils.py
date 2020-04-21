@@ -406,6 +406,16 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     return x, y
 
 
+def _assert_valid_xy(darray, xy, name):
+
+    # find MultiIndex
+    multiindex = set([darray._level_coords[lc] for lc in darray._level_coords])
+
+    valid_xy = (
+        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
+    ) - multiindex
+
+
 def get_axis(figsize, size, aspect, ax):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
