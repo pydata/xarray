@@ -260,9 +260,6 @@ def inject_reduce_methods(cls):
         + [("count", duck_array_ops.count, False)]
     )
     for name, f, include_skipna in methods:
-        if hasattr(cls, name):
-            name = "_injected_" + name
-
         numeric_only = getattr(f, "numeric_only", False)
         available_min_count = getattr(f, "available_min_count", False)
         min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ""
@@ -281,9 +278,6 @@ def inject_reduce_methods(cls):
 def inject_cum_methods(cls):
     methods = [(name, getattr(duck_array_ops, name), True) for name in NAN_CUM_METHODS]
     for name, f, include_skipna in methods:
-        if hasattr(cls, name):
-            name = "_injected_" + name
-
         numeric_only = getattr(f, "numeric_only", False)
         func = cls._reduce_method(f, include_skipna, numeric_only)
         func.__name__ = name
@@ -331,35 +325,24 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
 
     # patch in standard special operations
     for name in UNARY_OPS:
-        if hasattr(cls, op_str(name)):
-            name = "_injected_" + name
         setattr(cls, op_str(name), cls._unary_op(get_op(name)))
     inject_binary_ops(cls, inplace=True)
 
     # patch in numpy/pandas methods
     for name in NUMPY_UNARY_METHODS:
-        if hasattr(cls, op_str(name)):
-            name = "_injected_" + name
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
 
     for name in PANDAS_UNARY_FUNCTIONS:
         f = _func_slash_method_wrapper(getattr(duck_array_ops, name), name=name)
-        if hasattr(cls, op_str(name)):
-            name = "_injected_" + name
         setattr(cls, name, cls._unary_op(f))
 
     f = _func_slash_method_wrapper(duck_array_ops.around, name="round")
-    if hasattr(cls, "round"):
-        setattr(cls, "_injected_round", cls._unary_op(f))
-    else:
-        setattr(cls, "round", cls._unary_op(f))
+    setattr(cls, "round", cls._unary_op(f))
 
     if array_only:
         # these methods don't return arrays of the same shape as the input, so
         # don't try to patch these in for Dataset objects
         for name in NUMPY_SAME_METHODS:
-            if hasattr(cls, op_str(name)):
-                name = "_injected_" + name
             setattr(cls, name, _values_method_wrapper(name))
 
     inject_reduce_methods(cls)
