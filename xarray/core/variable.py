@@ -2081,7 +2081,7 @@ class Variable(
 
     def _unravel_argminmax(
         self,
-        argminmax: Hashable,
+        argminmax: str,
         dim: Union[Hashable, Sequence[Hashable], None],
         axis: Union[int, None],
         keep_attrs: Optional[bool],
