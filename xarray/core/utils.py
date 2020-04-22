@@ -787,19 +787,22 @@ def drop_dims_from_indexers(
         )
 
 
-class property_:
+class UncachedAccessor:
     """ Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
-    inspect classes where property returns itself and not the
+    inspect classes for which property returns itself and not the
     accessor.
     """
 
-    def __init__(self, func):
-        self._func = func
+    def __init__(self, accessor):
+        self._accessor = accessor
 
     def __get__(self, obj, cls):
-        return self._func(obj)
+        if obj is None:
+            return self._accessor
+
+        return self._accessor(obj)
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240

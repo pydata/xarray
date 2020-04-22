@@ -2680,24 +2680,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def _copy_attrs_from(self, other: Union["DataArray", Dataset, Variable]) -> None:
         self.attrs = other.attrs
 
-    @utils.property_
-    def plot(self) -> _PlotMethods:
-        """
-        Access plotting functions for DataArray's
-
-        >>> d = xr.DataArray([[1, 2], [3, 4]])
-
-        For convenience just call this directly
-
-        >>> d.plot()
-
-        Or use it as a namespace to use xarray.plot functions as
-        DataArray methods
-
-        >>> d.plot.imshow()  # equivalent to xarray.plot.imshow(d)
-
-        """
-        return _PlotMethods(self)
+    plot = utils.UncachedAccessor(_PlotMethods)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
         """
