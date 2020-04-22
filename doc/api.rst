@@ -667,34 +667,8 @@ Plotting
    :toctree: generated/
 
    Dataset.plot
-   plot.scatter
-   DataArray.plot
-   plot.plot
-   plot.contourf
-   plot.contour
-   plot.hist
-   plot.imshow
-   plot.line
-   plot.pcolormesh
-   plot.step
-   plot.FacetGrid
-
-
-Dataset methods
----------------
-
-.. autosummary::
-   :toctree: generated/
-
    Dataset.plot.scatter
-
-
-DataArray methods
------------------
-
-.. autosummary::
-   :toctree: generated/
-
+   plot.plot
    DataArray.plot
    DataArray.plot.contourf
    DataArray.plot.contour
