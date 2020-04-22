@@ -788,7 +788,12 @@ def drop_dims_from_indexers(
 
 
 class property_:
-    """ Acts like a property, but on both classes and class instances """
+    """ Acts like a property, but on both classes and class instances
+
+    This class is necessary because some tools (e.g. pydoc and sphinx)
+    inspect classes where property returns itself and not the
+    accessor.
+    """
 
     def __init__(self, func):
         self._func = func
