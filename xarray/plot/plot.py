@@ -443,6 +443,7 @@ class _PlotMethods:
     def __init__(self, darray):
         self._da = darray
 
+    @functools.wraps(plot)
     def __call__(self, **kwargs):
         return plot(self._da, **kwargs)
 
