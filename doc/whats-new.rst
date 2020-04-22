@@ -64,7 +64,7 @@ Bug fixes
   sorted order during stack+groupby+apply operations. (:issue:`3287`,
   :pull:`3906`) By `Spencer Hill <https://github.com/spencerahill>`_
 - Fix a regression where deleting a coordinate from a copied :py:class:`DataArray`
-  can affect the original :py:class:`Dataarray`.  (:issue:`3899`, :pull:`3871`)
+  can affect the original :py:class:`DataArray`.  (:issue:`3899`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
 - Fix :py:class:`~xarray.plot.FacetGrid` plots with a single contour. (:issue:`3569`, :pull:`3915`).
   By `Deepak Cherian <https://github.com/dcherian>`_
@@ -200,13 +200,13 @@ Bug fixes
 - xarray now respects the over, under and bad colors if set on a provided colormap.
   (:issue:`3590`, :pull:`3601`)
   By `johnomotani <https://github.com/johnomotani>`_.
-- :py:func:`coarsen` now respects ``xr.set_options(keep_attrs=True)``
+- ``coarsen`` and ``rolling`` now respect ``xr.set_options(keep_attrs=True)``
   to preserve attributes. :py:meth:`Dataset.coarsen` accepts a keyword
   argument ``keep_attrs`` to change this setting. (:issue:`3376`,
   :pull:`3801`) By `Andrew Thomas <https://github.com/amcnicho>`_.
 - Delete associated indexes when deleting coordinate variables. (:issue:`3746`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix :py:meth:`xarray.core.dataset.Dataset.to_zarr` when using `append_dim` and `group`
+- Fix :py:meth:`Dataset.to_zarr` when using ``append_dim`` and ``group``
   simultaneously. (:issue:`3170`). By `Matthias Meyer <https://github.com/niowniow>`_.
 - Fix html repr on :py:class:`Dataset` with non-string keys (:pull:`3807`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -244,7 +244,7 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - Remove xfails for scipy 1.0.1 for tests that append to netCDF files (:pull:`3805`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Remove conversion to :py:class:`pandas.Panel`, given its removal in pandas
+- Remove conversion to ``pandas.Panel``, given its removal in pandas
   in favor of xarray's objects.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
