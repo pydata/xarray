@@ -10,7 +10,7 @@ from .backends.api import (
     save_mfdataset,
 )
 from .backends.rasterio_ import open_rasterio
-from .backends.zarr import open_zarr
+from .backends.zarr import open_zarr, open_mzarr
 from .coding.cftime_offsets import cftime_range
 from .coding.cftimeindex import CFTimeIndex
 from .conventions import SerializationWarning, decode_cf
