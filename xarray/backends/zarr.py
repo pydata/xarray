@@ -901,41 +901,39 @@ def open_mzarr(
 
     # Combine all datasets, closing them in case of a ValueError
     try:
-        if combine == "_old_auto":
-            # Use the old auto_combine for now
-            # Remove this after deprecation cycle from #2616 is complete
-            basic_msg = dedent(
-                """\
-            In xarray version 0.15 the default behaviour of `open_mfdataset`
-            will change. To retain the existing behavior, pass
-            combine='nested'. To use future default behavior, pass
-            combine='by_coords'. See
-            http://xarray.pydata.org/en/stable/combining.html#combining-multi
-            """
-            )
-            warnings.warn(basic_msg, FutureWarning, stacklevel=2)
+        # if combine == "_old_auto":
+        #     # Use the old auto_combine for now
+        #     # Remove this after deprecation cycle from #2616 is complete
+        #     basic_msg = dedent(
+        #         """\
+        #     In xarray version 0.15 the default behaviour of `open_mfdataset`
+        #     will change. To retain the existing behavior, pass
+        #     combine='nested'. To use future default behavior, pass
+        #     combine='by_coords'. See
+        #     http://xarray.pydata.org/en/stable/combining.html#combining-multi
+        #     """
+        #     )
+        #     warnings.warn(basic_msg, FutureWarning, stacklevel=2)
 
-            combined = auto_combine(
-                datasets,
-                concat_dim=concat_dim,
-                compat=compat,
-                data_vars=data_vars,
-                coords=coords,
-                join=join,
-                from_openmfds=True,
-            )
-        elif combine == "nested":
+        #     combined = auto_combine(
+        #         datasets,
+        #         concat_dim=concat_dim,
+        #         compat=compat,
+        #         data_vars=data_vars,
+        #         coords=coords,
+        #         join=join,
+        #         from_openmfds=True,
+        #     )
+        if combine == "nested":
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
-            combined = _nested_combine(
-                datasets,
-                concat_dims=concat_dim,
-                compat=compat,
-                data_vars=data_vars,
-                coords=coords,
-                ids=ids,
-                join=join,
-            )
+            combined = _nested_combine(datasets,
+                                       concat_dims=concat_dim,
+                                       compat=compat,
+                                       data_vars=data_vars,
+                                       coords=coords,
+                                       ids=ids,
+                                       join=join)
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered
             # previously
