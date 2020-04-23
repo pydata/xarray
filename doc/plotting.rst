@@ -215,7 +215,7 @@ entire figure (as for matplotlib's ``figsize`` argument).
 Per default dimension coordinates are used for the x-axis (here the time coordinates).
 However, you can also use non-dimension coordinates, MultiIndex levels, and dimensions
 without coordinates along the x-axis. To illustrate this, let's calculate a 'decimal day' (epoch)
-from the time and assign this as a non-dimension coordinate:
+from the time and assign it as a non-dimension coordinate:
 
 .. ipython:: python
 

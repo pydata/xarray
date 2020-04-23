@@ -250,7 +250,7 @@ def line(
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
-        Dimensions, coordinates or MultiIndex level for x, y axis.
+        Dimension, coordinate or MultiIndex level for x, y axis.
         Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.

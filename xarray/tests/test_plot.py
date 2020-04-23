@@ -1167,7 +1167,7 @@ class Common2dMixin:
 
     def test_bad_x_string_exception(self):
 
-        with raises_regex(ValueError, "'x' and 'y' cannot be equal."):
+        with raises_regex(ValueError, "x and y cannot be equal."):
             self.plotmethod(x="y", y="y")
 
         error_msg = "must be one of None, 'x', 'x2d', 'y', 'y2d'"

@@ -361,7 +361,7 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
     if (x is not None) and (x == y):
-        raise ValueError("'x' and 'y' cannot be equal.")
+        raise ValueError("x and y cannot be equal.")
 
     if imshow and darray.ndim == 3:
         return _infer_xy_labels_3d(darray, x, y, rgb)
@@ -384,7 +384,7 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             all(k in darray._level_coords for k in (x, y))
             and darray._level_coords[x] == darray._level_coords[y]
         ):
-            raise ValueError("'x' and 'y' cannot be levels of the same MultiIndex")
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
 
     return x, y
 
