@@ -696,7 +696,7 @@ def open_zarr(
 
 def open_mzarr(
     paths,
-    chunks=None
+    chunks=None,
     concat_dim="_not_supplied",
     compat='no_conflicts',
     preprocesses=None,
