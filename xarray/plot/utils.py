@@ -403,7 +403,7 @@ def _assert_valid_xy(darray, xy, name):
 
     if xy not in valid_xy:
         valid_xy_str = "', '".join(sorted(valid_xy))
-        raise ValueError(f"'{name}' must be one of None, '{valid_xy_str}'")
+        raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
 
 
 def get_axis(figsize, size, aspect, ax):
