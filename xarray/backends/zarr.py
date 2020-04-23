@@ -15,6 +15,8 @@ from ..core.combine import (
     auto_combine,
     combine_by_coords,
 )
+from ..core.dataarray import DataArray
+
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
