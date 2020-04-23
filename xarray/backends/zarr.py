@@ -708,11 +708,9 @@ def open_mzarr(
     concat_dim="_not_supplied",
     compat='no_conflicts',
     preprocesses=None,
-    lock=None,
     data_vars="all",
     coords='different',
     combine="_old_auto",
-    autoclose=None,
     parallel=False,
     join="outer",
     attrs_file=None,
@@ -876,7 +874,7 @@ def open_mzarr(
 
     # provide with open_kwargs here specific to zarr stores
     open_kwargs = dict(
-        chunks=chunks or {}, lock=lock, autoclose=autoclose, **kwargs
+        chunks=chunks or {}, **kwargs
     )
 
     if parallel:
