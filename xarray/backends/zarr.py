@@ -2,13 +2,14 @@ import warnings
 
 import numpy as np
 from glob import glob
+
 from .. import coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, is_remote_uri
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
-from .backends.api import _infer_concat_order_from_positions
+from api import _infer_concat_order_from_positions
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
