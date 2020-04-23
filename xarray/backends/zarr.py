@@ -692,3 +692,157 @@ def open_zarr(
 
     variables = {k: maybe_chunk(k, v, chunks) for k, v in ds.variables.items()}
     return ds._replace_vars_and_dims(variables)
+
+
+def open_mfzarr(
+    paths,
+    chunks=None
+    concat_dim="_not_supplied",
+    compat='no_conflicts',
+    preprocesses=None,
+    lock=None,
+    data_vars="all",
+    coords='different',
+    combine="_old_auto",
+    autoclose=None,
+    parallel=False,
+    join="outer",
+    attrs_file=None,
+    **kwargs,
+):
+    """Open multiple zarr files as a single dataset.
+
+
+    If combine="by_coords" then the function ``combine_by_coords`` is used to
+    combine the datasets into one before returning the result, and if
+    combined="nested" then ``combine_nested`` is used. The filepaths must be
+    structured according to which combining function is used, the details of
+    which are given in the documentation ``combine_by_coords`` and
+    ``combine_nested``. Requires dask to be installed. Global attributes from
+    the ``attrs_file`` are used for the combined dataset.
+
+    Parameters
+    ----------
+    paths : str of sequence
+        Either a string glob in the form ``"path/to/my/files/*.zarr"``,
+        ``"path/to/my/files/*"`` (asumming the only directory is a zarr
+        store), or a explicit list of files to open. Paths can be given as
+        strings or as pathlib Paths.
+    chunks : int or dict, optional
+        Dictionary with keys given by dimension names and values given by
+        chunk sizes. In general, these should divide the dimensions of each
+        dataset. If int, chunk each dimension by ``chunks``. By default,
+        chunks will be chosen to load entire input files into memory at once.
+        This has major impact on performance: please see the full
+        documentation for more details [2]_.
+    concat_dim : str, or list of str, DataArray, Index or None, optional
+        Dimensions to concatenate files along. You only need to provide this
+        argument if any of the dimensions along which you want to concatenate
+        is not a dimension of the original dataset, e.g. you want to stack a
+        collection of 2D arrays along a third dimension. Set
+        ``concat_dim=[..., None, ...]`` explicitly to disable concatenation
+        along a particular dimension.
+    combine : {'by_coords', 'nested'}, optional
+        Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is
+        used to combine all the data. If this argument is not provided,
+        ``xarray.combine_by_coords`` is set by default.
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts','override'}, optional
+        String indicating how to compare variables of the same name for
+        potential conflicts when merging:
+
+        * 'broadcast_equals': all values must be equal when variables are
+        broadcast against each other to ensure common dimensions.
+        * 'equals': all values and dimensions must be the same.
+        * 'identical': all values, dimensions and attributes must be the same.
+        * 'no_conflicts': only values which are not null in both datasets
+        must be equal. The returned dataset then contains the combination of
+        all non-null values.
+        * 'override': skip comparing and pick variable from first dataset.
+
+    preprocess : callable, optional
+        If provided, call this function on each dataset prior to concatenation.
+        You can find the file-name from which each dataset was loaded in
+        ``ds.encoding[source]``.
+    lock: False or duck threading.Lock, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. By default, appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
+    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+        These data variables will be concatenated together:
+          * 'minimal': Only data variables in which the dimension already
+            appears are included.
+          * 'different': Data variables which are not equal (ignoring
+            attributes) across all datasets are also concatenated (as well as
+            all for which dimension already appears). Beware: this option may
+            load the data payload of data variables into memory if they are not
+            already loaded.
+          * 'all': All data variables will be concatenated.
+          * list of str: The listed data variables will be concatenated, in
+            addition to the 'minimal' data variables.
+     coords : {'minimal', 'different', 'all' or list of str}, optional
+        These coordinate variables will be concatenated together:
+          * 'minimal': Only coordinates in which the dimension already appears
+            are included.
+          * 'different': Coordinates which are not equal (ignoring attributes)
+            across all datasets are also concatenated (as well as all for which
+            dimension already appears). Beware: this option may load the data
+            payload of coordinate variables into memory if they are not already
+            loaded.
+          * 'all': All coordinate variables will be concatenated, except
+            those corresponding to other dimensions.
+          * list of str: The listed coordinate variables will be concatenated,
+            in addition the 'minimal' coordinates.
+        parallel : bool, optional
+            If True, the open and preprocess steps of this function will be
+            performed in parallel using ``dask.delayed``. Default is False.
+    join : {'outer', 'inner', 'left', 'right', 'exact, 'override'}, optional
+        String indicating how to combine differing indexes
+        (excluding concat_dim) in objects
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
+        - 'override': if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
+    attrs_file : str or pathlib.Path, optional
+        Path of the file used to read global attributes from.
+        By default global attributes are read from the first file provided,
+        with wildcard matches sorted by filename.
+    **kwargs : optional
+        Additional arguments passed on to :py:func:`xarray.open_zarr`.
+
+
+    Returns
+    -------
+    xarray.Dataset
+    Notes
+    -----
+    ``open_mfdataset`` opens files with read-only access. When you modify
+    values
+    of a Dataset, even one linked to files on disk, only the in-memory copy you
+    are manipulating in xarray is modified: the original file on disk is never
+    touched.
+    See Also
+    --------
+    combine_by_coords
+    combine_nested
+    auto_combine
+    open_dataset
+    References
+    ----------
+    .. [1] http://xarray.pydata.org/en/stable/dask.html
+    .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
+    """
+    pass
+
+
+
+
+
+
+
