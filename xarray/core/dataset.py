@@ -4598,6 +4598,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See also
         --------
         xarray.DataArray.from_series
+        pandas.DataFrame.to_xarray
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
