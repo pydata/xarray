@@ -694,6 +694,8 @@ def open_zarr(
     return ds._replace_vars_and_dims(variables)
 
 
+
+
 def open_mfzarr(
     paths,
     chunks=None
@@ -852,12 +854,108 @@ def open_mfzarr(
     if not paths:
         raise OSError("no files to open")
 
+    # If combine='by_coords' then this is unnecessary, but quick.
+    # If combine='nested' then this creates a flat list which is easier to
+    # iterate over, while saving the originally-supplied structure as "ids"
+    if combine == "nested":
+        if str(concat_dim) == "_not_supplied":
+            raise ValueError("Must supply concat_dim when using "
+                             "combine='nested'")
+        else:
+            if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+                concat_dim = [concat_dim]
+    combined_ids_paths = _infer_concat_order_from_positions(paths)
+    ids, paths = (list(combined_ids_paths.keys()),
+                  list(combined_ids_paths.values()))
 
-    pass
+    # provide with open_kwargs here specific to zarr stores
+    open_kwargs = dict(
+        chunks=chunks or {}, lock=lock, autoclose=autoclose, **kwargs
+    )
 
+    if parallel:
+        import dask
 
+        # wrap the open_dataset, getattr, and preprocess with delayed
+        open_ = dask.delayed(open_zarr)
+        getattr_ = dask.delayed(getattr)
+        if preprocess is not None:
+            preprocess = dask.delayed(preprocess)
+    else:
+        open_ = open_zarr
+        getattr_ = getattr
 
+    datasets = [open_(p, **open_kwargs) for p in paths]
+    file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
+    if preprocess is not None:
+        datasets = [preprocess(ds) for ds in datasets]
 
+    if parallel:
+        # calling compute here will return the datasets/file_objs lists,
+        # the underlying datasets will still be stored as dask arrays
+        datasets, file_objs = dask.compute(datasets, file_objs)
 
+    # Combine all datasets, closing them in case of a ValueError
+    try:
+        if combine == "_old_auto":
+            # Use the old auto_combine for now
+            # Remove this after deprecation cycle from #2616 is complete
+            basic_msg = dedent(
+                """\
+            In xarray version 0.15 the default behaviour of `open_mfdataset`
+            will change. To retain the existing behavior, pass
+            combine='nested'. To use future default behavior, pass
+            combine='by_coords'. See
+            http://xarray.pydata.org/en/stable/combining.html#combining-multi
+            """
+            )
+            warnings.warn(basic_msg, FutureWarning, stacklevel=2)
 
+            combined = auto_combine(
+                datasets,
+                concat_dim=concat_dim,
+                compat=compat,
+                data_vars=data_vars,
+                coords=coords,
+                join=join,
+                from_openmfds=True,
+            )
+        elif combine == "nested":
+            # Combined nested list by successive concat and merge operations
+            # along each dimension, using structure given by "ids"
+            combined = _nested_combine(
+                datasets,
+                concat_dims=concat_dim,
+                compat=compat,
+                data_vars=data_vars,
+                coords=coords,
+                ids=ids,
+                join=join,
+            )
+        elif combine == "by_coords":
+            # Redo ordering from coordinates, ignoring how they were ordered
+            # previously
+            combined = combine_by_coords(datasets,
+                                         compat=compat, data_vars=data_vars,
+                                         coords=coords, join=join)
+        else:
+            raise ValueError(
+                "{} is an invalid option for the keyword argument"
+                " ``combine``".format(combine)
+            )
+    except ValueError:
+        for ds in datasets:
+            ds.close()
+        raise
 
+    combined._file_obj = _MultiFileCloser(file_objs)
+
+    # read global attributes from the attrs_file or from the first dataset
+    if attrs_file is not None:
+        if isinstance(attrs_file, Path):
+            attrs_file = str(attrs_file)
+        combined.attrs = datasets[paths.index(attrs_file)].attrs
+    else:
+        combined.attrs = datasets[0].attrs
+
+    return combined
