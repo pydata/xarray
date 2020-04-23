@@ -707,7 +707,7 @@ def open_mzarr(
     chunks=None,
     concat_dim="_not_supplied",
     compat='no_conflicts',
-    preprocesses=None,
+    preprocess=None,
     data_vars="all",
     coords='different',
     combine="_old_auto",
