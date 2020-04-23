@@ -952,7 +952,7 @@ def open_mzarr(
             ds.close()
         raise
 
-    combined._file_obj = _MultiFileCloser(file_objs)
+    # combined._file_obj = _MultiFileCloser(file_objs)
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
