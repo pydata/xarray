@@ -136,7 +136,7 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-        with raises_regex(ValueError, "'x' must be None or 'dim_0'"):
+        with raises_regex(ValueError, "x must be one of None, 'dim_0'"):
             self.darray[:, 0, 0].plot(x="dim_1")
 
         with raises_regex(TypeError, "complex128"):
@@ -158,11 +158,11 @@ class TestPlot(PlotTestCase):
         with raises_regex(ValueError, "Cannot specify both"):
             da.plot(x="z", y="z")
 
-        error_msg = "must be None or 'z'"
-        with raises_regex(ValueError, f"'x' {error_msg}"):
+        error_msg = "must be one of None, 'z'"
+        with raises_regex(ValueError, f"x {error_msg}"):
             da.plot(x="f")
 
-        with raises_regex(ValueError, f"'y' {error_msg}"):
+        with raises_regex(ValueError, f"y {error_msg}"):
             da.plot(y="f")
 
     def test_multiindex_level_as_coord(self):
@@ -1171,11 +1171,11 @@ class Common2dMixin:
             self.plotmethod(x="y", y="y")
 
         error_msg = "must be one of None, 'x', 'x2d', 'y', 'y2d'"
-        with raises_regex(ValueError, f"'x' {error_msg}"):
+        with raises_regex(ValueError, f"x {error_msg}"):
             self.plotmethod("not_a_real_dim", "y")
-        with raises_regex(ValueError, f"'x' {error_msg}"):
+        with raises_regex(ValueError, f"x {error_msg}"):
             self.plotmethod(x="not_a_real_dim")
-        with raises_regex(ValueError, f"'y' {error_msg}"):
+        with raises_regex(ValueError, f"y {error_msg}"):
             self.plotmethod(y="not_a_real_dim")
         self.darray.coords["z"] = 100
 
@@ -1228,7 +1228,7 @@ class Common2dMixin:
         with raises_regex(ValueError, "levels of the same MultiIndex"):
             self.plotfunc(da, x="a", y="b")
 
-        with raises_regex(ValueError, "'y' must be one of None, 'a', 'b', 'x'"):
+        with raises_regex(ValueError, "y must be one of None, 'a', 'b', 'x'"):
             self.plotfunc(da, x="a", y="y")
 
     def test_default_title(self):

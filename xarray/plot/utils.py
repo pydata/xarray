@@ -402,11 +402,8 @@ def _assert_valid_xy(darray, xy, name):
     ) - multiindex
 
     if xy not in valid_xy:
-        valid_xy_str = "', '".join(sorted(list(valid_xy)))
-        if len(valid_xy) == 1:
-            raise ValueError(f"'{name}' must be None or '{valid_xy_str}'")
-        else:
-            raise ValueError(f"'{name}' must be one of None, '{valid_xy_str}'")
+        valid_xy_str = "', '".join(sorted(valid_xy))
+        raise ValueError(f"'{name}' must be one of None, '{valid_xy_str}'")
 
 
 def get_axis(figsize, size, aspect, ax):
