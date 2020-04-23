@@ -838,6 +838,18 @@ def open_mfzarr(
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
+    if isinstance(paths, str):
+        if is_remote_uri(paths):
+            raise ValueError(
+                "cannot do wild-card matching for paths that are remote URLs: "
+                "{!r}. Instead, supply paths as an explicit list of strings.".format(
+                    paths
+                )
+            )
+        paths = sorted(glob(paths))
+    else:
+        paths = [str(p) if isinstance(p, Path) else p for p in paths]
+
     pass
 
 
