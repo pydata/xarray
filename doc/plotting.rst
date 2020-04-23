@@ -229,7 +229,8 @@ To use ``'decimal_day'`` as x coordinate it must be explicitly specified:
 
     air1d_multi.plot(x="decimal_day")
 
-It is also possible to use a MultiIndex level:
+Creating a new MultiIndex named ``'date'`` from ``'time'`` and ``'decimal_day'``,
+it is also possible to use a MultiIndex level as x-axis:
 
 .. ipython:: python
 
@@ -242,6 +243,8 @@ Finally, if a dataset does not have any coordinates it enumerates all data point
 
     air1d_multi = air1d_multi.drop("date")
     air1d_multi.plot()
+
+The same applies to 2D plots below.
 
 ====================================================
  Multiple lines showing variation along a dimension
