@@ -5,7 +5,7 @@ import numpy as np
 from .. import coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import FrozenDict, HiddenKeyDict
+from ..core.utils import FrozenDict, HiddenKeyDict, is_remote_uri
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
