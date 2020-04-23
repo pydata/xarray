@@ -273,7 +273,7 @@ class GroupBy(SupportsArithmetic):
         grouper=None,
         bins=None,
         restore_coord_dims=None,
-        cut_kwargs={},
+        cut_kwargs=None,
     ):
         """Create a GroupBy object
 
@@ -299,6 +299,8 @@ class GroupBy(SupportsArithmetic):
             Extra keyword arguments to pass to `pandas.cut`
 
         """
+        if cut_kwargs is None:
+            cut_kwargs = {}
         from .dataarray import DataArray
 
         if grouper is not None and bins is not None:
