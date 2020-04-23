@@ -849,6 +849,9 @@ def open_mfzarr(
         paths = sorted(glob(paths))
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
+    if not paths:
+        raise OSError("no files to open")
+
 
     pass
 
