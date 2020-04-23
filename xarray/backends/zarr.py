@@ -694,9 +694,7 @@ def open_zarr(
     return ds._replace_vars_and_dims(variables)
 
 
-
-
-def open_mfzarr(
+def open_mzarr(
     paths,
     chunks=None
     concat_dim="_not_supplied",
