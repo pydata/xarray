@@ -432,6 +432,18 @@ def test_decode_360_day_calendar():
         assert_array_equal(actual, expected)
 
 
+@requires_cftime
+def test_decode_abbreviation():
+    """Test making sure we properly fall back to cftime on abbreviated units."""
+    import cftime
+
+    val = np.array([1586628000000.0])
+    units = "msecs since 1970-01-01T00:00:00Z"
+    actual = coding.times.decode_cf_datetime(val, units)
+    expected = coding.times.cftime_to_nptime(cftime.num2date(val, units))
+    assert_array_equal(actual, expected)
+
+
 @arm_xfail
 @requires_cftime
 @pytest.mark.parametrize(

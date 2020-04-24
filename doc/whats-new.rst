@@ -82,7 +82,9 @@ Bug fixes
 - Fix bug causing :py:meth:`DataArray.interpolate_na` to always drop attributes,
   and added `keep_attrs` argument. (:issue:`3968`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- Fix bug in time parsing failing to fall back to cftime. This was causing time
+  variables with a time unit of `'msecs'` to fail to parse. (:pull:`3998`)
+  By `Ryan May <https://github.com/dopplershift>`_.
 
 Documentation
 ~~~~~~~~~~~~~
