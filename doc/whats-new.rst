@@ -58,6 +58,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue`3977`)
+  By `Huite Bootsma <https://github.com/huite>`_.
 - Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``. (:issue:`3951`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fix renaming of coords when one or more stacked coords is not in

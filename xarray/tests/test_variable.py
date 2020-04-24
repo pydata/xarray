@@ -2213,6 +2213,10 @@ class TestAsCompatibleData:
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
+        # raise error on non-scalar fill_value
+        with raises_regex(ValueError, "must be scalar"):
+            full_like(orig, [1.0, 2.0])
+
     @requires_dask
     def test_full_like_dask(self):
         orig = Variable(
