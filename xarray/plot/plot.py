@@ -30,7 +30,7 @@ from .utils import (
 
 def _infer_line_data(darray, x, y, hue):
     error_msg = "must be either None or one of ({:s})".format(
-        ", ".join([repr(dd) for dd in darray.dims])
+        ", ".join(repr(dd) for dd in darray.dims)
     )
     ndims = len(darray.dims)
 
