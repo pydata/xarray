@@ -880,7 +880,7 @@ def open_mzarr(
     if parallel:
         import dask
 
-        # wrap the open_dataset, getattr, and preprocess with delayed
+        # wrap the open_zarr, getattr with delayed
         open_ = dask.delayed(open_zarr)
         getattr_ = dask.delayed(getattr)
         if preprocess is not None:
@@ -926,8 +926,6 @@ def open_mzarr(
         for ds in datasets:
             ds.close()
         raise
-
-    # combined._file_obj = _MultiFileCloser(file_objs)
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
