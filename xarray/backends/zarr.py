@@ -9,6 +9,7 @@ from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, is_remote_uri
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
+from pathlib import Path
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
