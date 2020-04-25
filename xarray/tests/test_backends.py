@@ -86,6 +86,7 @@ except ImportError:
     dask_version = "10.0"
 
 ON_WINDOWS = sys.platform == "win32"
+default_value = object()
 
 
 def open_example_dataset(name, *args, **kwargs):
@@ -3604,11 +3605,21 @@ def create_tmp_geotiff(
     ny=3,
     nz=3,
     transform=None,
-    transform_args=[5000, 80000, 1000, 2000.0],
-    crs={"units": "m", "no_defs": True, "ellps": "WGS84", "proj": "utm", "zone": 18},
+    transform_args=default_value,
+    crs=default_value,
     open_kwargs=None,
     additional_attrs=None,
 ):
+    if transform_args is default_value:
+        transform_args = [5000, 80000, 1000, 2000.0]
+    if crs is default_value:
+        crs = {
+            "units": "m",
+            "no_defs": True,
+            "ellps": "WGS84",
+            "proj": "utm",
+            "zone": 18,
+        }
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
