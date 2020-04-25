@@ -770,11 +770,6 @@ def open_mzarr(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding[source]``.
-    lock: False or duck threading.Lock, optional
-        Resource lock to use when reading data from disk. Only relevant when
-        using dask or another form of parallelism. By default, appropriate
-        locks are chosen to safely read and write files with the currently
-        active dask scheduler.
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         These data variables will be concatenated together:
           * 'minimal': Only data variables in which the dimension already
@@ -828,7 +823,7 @@ def open_mzarr(
     xarray.Dataset
     Notes
     -----
-    ``open_mfdataset`` opens files with read-only access. When you modify
+    ``open_zarr`` opens files with read-only access. When you modify
     values
     of a Dataset, even one linked to files on disk, only the in-memory copy you
     are manipulating in xarray is modified: the original file on disk is never
@@ -837,7 +832,6 @@ def open_mzarr(
     --------
     combine_by_coords
     combine_nested
-    auto_combine
     open_dataset
     References
     ----------
