@@ -3621,11 +3621,15 @@ def create_tmp_geotiff(
     ny=3,
     nz=3,
     transform=None,
-    transform_args=[5000, 80000, 1000, 2000.0],
-    crs={"units": "m", "no_defs": True, "ellps": "WGS84", "proj": "utm", "zone": 18},
+    transform_args=None,
+    crs=None,
     open_kwargs=None,
     additional_attrs=None,
 ):
+    if transform_args is None:
+        transform_args = [5000, 80000, 1000, 2000.0]
+    if crs is None:
+        crs = {"units": "m", "no_defs": True, "ellps": "WGS84", "proj": "utm", "zone": 18}
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
