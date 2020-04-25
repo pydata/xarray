@@ -12,7 +12,6 @@ from .common import AbstractWritableDataStore, BackendArray, _encode_variable_na
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
-    auto_combine,
     combine_by_coords,
 )
 from ..core.dataarray import DataArray
