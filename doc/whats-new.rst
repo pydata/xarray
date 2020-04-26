@@ -3272,7 +3272,7 @@ Enhancements
     In [1]: import xarray as xr; import numpy as np
 
     In [2]: arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5),
-                               dims=('x', 'y'))
+       ...:                    dims=('x', 'y'))
 
     In [3]: arr
     Out[3]:

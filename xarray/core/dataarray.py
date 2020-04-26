@@ -3503,9 +3503,9 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 nan 0.0 1.0 2.0 nan nan
 
         >>> da = xr.DataArray([[0,1,2,3], [10,11,12,13]],
-                              dims=["x", "y"],
-                              coords={"x": [0,1], "y": [10, 20 ,30, 40], "z": ("x", [100, 200])}
-            )
+        ...                   dims=["x", "y"],
+        ...                   coords={"x": [0,1], "y": [10, 20 ,30, 40], "z": ("x", [100, 200])}
+        ... )
         >>> da.pad(x=1)
         <xarray.DataArray (x: 4, y: 4)>
         array([[nan, nan, nan, nan],
