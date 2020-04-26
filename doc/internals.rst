@@ -90,7 +90,7 @@ defined that returns an instance of your class:
   class Dataset:
       ...
       @property
-      def geo(self)
+      def geo(self):
           return GeoAccessor(self)
 
 However, using the register accessor decorators is preferable to simply adding

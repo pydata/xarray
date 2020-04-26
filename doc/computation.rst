@@ -195,7 +195,8 @@ We can also manually iterate through ``Rolling`` objects:
 .. code:: python
 
    for label, arr_window in r:
-      # arr_window is a view of x
+       # arr_window is a view of x
+       ...
 
 .. _comput.rolling_exp:
 

@@ -467,7 +467,7 @@ typically find tests wrapped in a class.
 .. code-block:: python
 
     class TestReallyCoolFeature:
-        ....
+        ...
 
 Going forward, we are moving to a more *functional* style using the
 `pytest <http://doc.pytest.org/en/latest/>`__ framework, which offers a richer
@@ -477,7 +477,7 @@ writing test classes, we will write test functions like this:
 .. code-block:: python
 
     def test_really_cool_feature():
-        ....
+        ...
 
 Using ``pytest``
 ~~~~~~~~~~~~~~~~
