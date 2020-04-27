@@ -704,10 +704,13 @@ This script will plot the air temperature on a map.
     import cartopy.crs as ccrs
 
     air = xr.tutorial.open_dataset("air_temperature").air
+
     ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
-    air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree());
+    air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree())
+    ax.set_global()
+
     @savefig plotting_maps_cartopy.png width=100%
-    ax.set_global(); ax.coastlines();
+    ax.coastlines()
 
 When faceting on maps, the projection can be transferred to the ``plot``
 function using the ``subplot_kws`` keyword. The axes for the subplots created
@@ -724,7 +727,7 @@ by faceting are accessible in the object returned by ``plot``:
         ax.coastlines()
         ax.gridlines()
     @savefig plotting_maps_cartopy_facetting.png width=100%
-    plt.draw();
+    plt.draw()
 
 
 Details
@@ -825,7 +828,7 @@ instead of the default ones:
     )
 
     @savefig plotting_example_2d_irreg.png width=4in
-    da.plot.pcolormesh('lon', 'lat');
+    da.plot.pcolormesh("lon", "lat")
 
 Note that in this case, xarray still follows the pixel centered convention.
 This might be undesirable in some cases, for example when your data is defined
@@ -835,22 +838,25 @@ this convention when plotting on a map:
 .. ipython:: python
 
     import cartopy.crs as ccrs
-    ax = plt.subplot(projection=ccrs.PlateCarree());
-    da.plot.pcolormesh('lon', 'lat', ax=ax);
-    ax.scatter(lon, lat, transform=ccrs.PlateCarree());
+
+    ax = plt.subplot(projection=ccrs.PlateCarree())
+    da.plot.pcolormesh("lon", "lat", ax=ax)
+    ax.scatter(lon, lat, transform=ccrs.PlateCarree())
+    ax.coastlines()
     @savefig plotting_example_2d_irreg_map.png width=4in
-    ax.coastlines(); ax.gridlines(draw_labels=True);
+    ax.gridlines(draw_labels=True)
 
 You can however decide to infer the cell boundaries and use the
 ``infer_intervals`` keyword:
 
 .. ipython:: python
 
-    ax = plt.subplot(projection=ccrs.PlateCarree());
-    da.plot.pcolormesh('lon', 'lat', ax=ax, infer_intervals=True);
-    ax.scatter(lon, lat, transform=ccrs.PlateCarree());
+    ax = plt.subplot(projection=ccrs.PlateCarree())
+    da.plot.pcolormesh("lon", "lat", ax=ax, infer_intervals=True)
+    ax.scatter(lon, lat, transform=ccrs.PlateCarree())
+    ax.coastlines()
     @savefig plotting_example_2d_irreg_map_infer.png width=4in
-    ax.coastlines(); ax.gridlines(draw_labels=True);
+    ax.gridlines(draw_labels=True)
 
 .. note::
     The data model of xarray does not support datasets with `cell boundaries`_
@@ -864,6 +870,6 @@ One can also make line plots with multidimensional coordinates. In this case, ``
 .. ipython:: python
 
     f, ax = plt.subplots(2, 1)
-    da.plot.line(x='lon', hue='y', ax=ax[0]);
+    da.plot.line(x="lon", hue="y", ax=ax[0])
     @savefig plotting_example_2d_hue_xy.png
-    da.plot.line(x='lon', hue='x', ax=ax[1]);
+    da.plot.line(x="lon", hue="x", ax=ax[1])
