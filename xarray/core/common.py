@@ -447,7 +447,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         New coordinate can also be attached to an existing dimension:
 
         >>> lon_2 = np.array([300, 289, 0, 1])
-        >>> da.assign_coords(lon_2=('lon', lon_2))
+        >>> da.assign_coords(lon_2=("lon", lon_2))
         <xarray.DataArray (lon: 4)>
         array([0.28298 , 0.667347, 0.657938, 0.177683])
         Coordinates:
@@ -456,7 +456,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Note that the same result can also be obtained with a dict e.g.
 
-        >>> _ = da.assign_coords({"lon_2": ('lon', lon_2)})
+        >>> _ = da.assign_coords({"lon_2": ("lon", lon_2)})
 
         Notes
         -----
