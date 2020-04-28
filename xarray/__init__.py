@@ -65,7 +65,6 @@ __all__ = (
     "open_mfdataset",
     "open_rasterio",
     "open_zarr",
-    "open_mzarr",
     "polyval",
     "register_dataarray_accessor",
     "register_dataset_accessor",
