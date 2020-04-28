@@ -27,11 +27,6 @@ pytestmark = [
     pytest.mark.skipif(
         not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
     ),
-    # TODO: remove this once pint has a released version with __array_function__
-    pytest.mark.skipif(
-        not hasattr(unit_registry.Quantity, "__array_function__"),
-        reason="pint does not implement __array_function__ yet",
-    ),
     # pytest.mark.filterwarnings("ignore:::pint[.*]"),
 ]
 
