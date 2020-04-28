@@ -50,6 +50,14 @@ def compatible_mappings(first, second):
     }
 
 
+def merge_dicts(base, *mappings):
+    result = base.copy()
+    for m in mappings:
+        result.update(m)
+
+    return result
+
+
 def array_extract_units(obj):
     if isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
         obj = obj.data
@@ -4319,28 +4327,20 @@ class TestDataset:
         left_array2 = np.zeros(shape=(3, 6), dtype=dtype) * unit_registry.m
 
         right_array1 = np.ones(shape=(2,)) * unit
-        right_array2 = np.ones(shape=(3,)) * unit
+        right_array2 = np.zeros(shape=(3,)) * unit
 
         left = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=left_array1, dims=("x", "y")),
-                "b": xr.DataArray(data=left_array2, dims=("y", "z")),
-            }
+            {"a": (("x", "y"), left_array1), "b": (("y", "z"), left_array2)},
         )
-        right = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=right_array1, dims="x"),
-                "b": xr.DataArray(data=right_array2, dims="y"),
-            }
-        )
+        right = xr.Dataset({"a": ("x", right_array1), "b": ("y", right_array2)})
 
-        units = {
-            **extract_units(left),
-            **({} if left_array1.check(unit) else {"a": None, "b": None}),
-        }
-        expected = strip_units(left).broadcast_equals(
-            strip_units(convert_units(right, units))
-        ) & left_array1.check(unit)
+        units = merge_dicts(
+            extract_units(left),
+            {} if is_compatible(left_array1, unit) else {"a": None, "b": None},
+        )
+        expected = is_compatible(left_array1, unit) and strip_units(
+            left
+        ).broadcast_equals(strip_units(convert_units(right, units)))
         actual = left.broadcast_equals(right)
 
         assert expected == actual
