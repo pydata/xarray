@@ -4261,15 +4261,30 @@ class TestDataset:
 
         assert expected == actual
 
-    @pytest.mark.skip(reason="IndexVariable does not support units")
     @pytest.mark.parametrize(
         "unit",
         (
             pytest.param(1, id="no_unit"),
-            pytest.param(unit_registry.dimensionless, id="dimensionless"),
-            pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, id="compatible_unit"),
-            pytest.param(unit_registry.m, id="identical_unit"),
+            pytest.param(
+                unit_registry.dimensionless,
+                id="dimensionless",
+                marks=pytest.mark.skip(reason="IndexVariable does not support units"),
+            ),
+            pytest.param(
+                unit_registry.s,
+                id="incompatible_unit",
+                marks=pytest.mark.skip(reason="IndexVariable does not support units"),
+            ),
+            pytest.param(
+                unit_registry.cm,
+                id="compatible_unit",
+                marks=pytest.mark.skip(reason="IndexVariable does not support units"),
+            ),
+            pytest.param(
+                unit_registry.m,
+                id="identical_unit",
+                marks=pytest.mark.skip(reason="IndexVariable does not support units"),
+            ),
         ),
     )
     def test_broadcast_like(self, unit, dtype):
