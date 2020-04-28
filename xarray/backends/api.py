@@ -409,6 +409,7 @@ def open_dataset(
         "pynio",
         "cfgrib",
         "pseudonetcdf",
+        "zarr",
     ]
     if engine not in engines:
         raise ValueError(
@@ -519,6 +520,8 @@ def open_dataset(
             store = backends.CfGribDataStore(
                 filename_or_obj, lock=lock, **backend_kwargs
             )
+        elif engine == "zarr":
+            store = backends.ZarrStore(filename_or_obj, **backend_kwargs)
 
     else:
         if engine not in [None, "scipy", "h5netcdf"]:
