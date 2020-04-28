@@ -1,19 +1,12 @@
 import warnings
-from glob import glob
-from pathlib import Path
-
 import numpy as np
 
 from .. import coding, conventions
 from ..core import indexing
-from ..core.combine import (
-    _infer_concat_order_from_positions,
-    _nested_combine,
-    combine_by_coords,
-)
+
 from ..core.dataarray import DataArray
 from ..core.pycompat import integer_types
-from ..core.utils import FrozenDict, HiddenKeyDict, is_remote_uri
+from ..core.utils import FrozenDict, HiddenKeyDict
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
