@@ -107,6 +107,8 @@ Documentation
   of ``kwargs`` in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`
   for 1-d and n-d interpolation (:pull:`3956`).
   By `Matthias Riße <https://github.com/risebell>`_.
+- Apply ``black`` to all the code in the documentation (:pull:`4012`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
