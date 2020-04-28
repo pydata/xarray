@@ -4350,35 +4350,46 @@ class TestDataset:
         (method("unstack"), method("reset_index", "v"), method("reorder_levels")),
         ids=repr,
     )
-    def test_stacking_stacked(self, func, dtype):
-        array1 = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
-        )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims",
+                marks=pytest.mark.skip(reason="units not supported in IndexVariable"),
+            ),
+        ),
+    )
+    def test_stacking_stacked(self, variant, func, dtype):
+        variants = {
+            "data": (unit_registry.m, 1),
+            "dims": (1, unit_registry.m),
+        }
+        data_unit, dim_unit = variants.get(variant)
+
+        array1 = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
         array2 = (
             np.linspace(-10, 0, 5 * 10 * 15).reshape(5, 10, 15).astype(dtype)
-            * unit_registry.m
+            * data_unit
         )
 
-        x = np.arange(array1.shape[0])
-        y = np.arange(array1.shape[1])
-        z = np.arange(array2.shape[2])
+        x = np.arange(array1.shape[0]) * dim_unit
+        y = np.arange(array1.shape[1]) * dim_unit
+        z = np.arange(array2.shape[2]) * dim_unit
 
         ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
-            },
+            data_vars={"a": (("x", "y"), array1), "b": (("x", "y", "z"), array2)},
             coords={"x": x, "y": y, "z": z},
         )
+        units = extract_units(ds)
 
         stacked = ds.stack(v=("x", "y"))
 
-        expected = attach_units(
-            func(strip_units(stacked)), {"a": unit_registry.m, "b": unit_registry.m}
-        )
+        expected = attach_units(func(strip_units(stacked)), units)
         actual = func(stacked)
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="does not work with quantities yet")
     def test_to_stacked_array(self, dtype):
