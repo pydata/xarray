@@ -345,7 +345,7 @@ def open_dataset(
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib', \
-        'pseudonetcdf'}, optional
+        'pseudonetcdf', 'zarr'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -521,8 +521,16 @@ def open_dataset(
                 filename_or_obj, lock=lock, **backend_kwargs
             )
         elif engine == "zarr":
-            store = backends.ZarrStore(filename_or_obj, **backend_kwargs)
+            # on ZarrStore, mode='r', synchronizer=None, group=None,
+            # consolidated=False.
+            try:  # on open_zarr, chunks='auto'. This is what 'auto' does
+                import dask.array
+            except ImportError:
+                chunks = None
 
+            store = backends.ZarrStore.open_group(
+                filename_or_obj, **backend_kwargs
+            )
     else:
         if engine not in [None, "scipy", "h5netcdf"]:
             raise ValueError(
