@@ -4416,12 +4416,9 @@ class TestDataset:
         "func",
         (
             method("transpose", "y", "x", "z1", "z2"),
-            method("stack", a=("x", "y")),
+            method("stack", u=("x", "y")),
             method("set_index", x="x2"),
-            pytest.param(
-                method("shift", x=2),
-                marks=pytest.mark.xfail(reason="tries to concatenate nan arrays"),
-            ),
+            method("shift", x=2),
             method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
@@ -4446,18 +4443,18 @@ class TestDataset:
 
         ds = xr.Dataset(
             data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y", "z1")),
-                "b": xr.DataArray(data=array2, dims=("x", "y", "z2")),
+                "a": (("x", "y", "z1"), array1),
+                "b": (("x", "y", "z2"), array2),
             },
             coords={"x": x, "y": y, "z1": z1, "z2": z2, "x2": ("x", x2)},
         )
+        units = extract_units(ds)
 
-        expected = attach_units(
-            func(strip_units(ds)), {"a": unit_registry.Pa, "b": unit_registry.degK}
-        )
+        expected = attach_units(func(strip_units(ds)), units)
         actual = func(ds)
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="indexes strip units")
     @pytest.mark.parametrize(
