@@ -4391,27 +4391,26 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="does not work with quantities yet")
+    @pytest.mark.skip(
+        reason="stacked dimension's labels have to be hashable, but is a numpy.array"
+    )
     def test_to_stacked_array(self, dtype):
-        labels = np.arange(5).astype(dtype) * unit_registry.s
-        arrays = {name: np.linspace(0, 1, 10) * unit_registry.m for name in labels}
+        labels = range(5) * unit_registry.s
+        arrays = {
+            name: np.linspace(0, 1, 10).astype(dtype) * unit_registry.m
+            for name in labels
+        }
 
-        ds = xr.Dataset(
-            data_vars={
-                name: xr.DataArray(data=array, dims="x")
-                for name, array in arrays.items()
-            }
-        )
+        ds = xr.Dataset({name: ("x", array) for name, array in arrays.items()})
+        units = {None: unit_registry.m, "y": unit_registry.s}
 
         func = method("to_stacked_array", "z", variable_dim="y", sample_dims=["x"])
 
         actual = func(ds).rename(None)
-        expected = attach_units(
-            func(strip_units(ds)).rename(None),
-            {None: unit_registry.m, "y": unit_registry.s},
-        )
+        expected = attach_units(func(strip_units(ds)).rename(None), units,)
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
