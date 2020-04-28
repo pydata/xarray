@@ -4456,7 +4456,6 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes strip units")
     @pytest.mark.parametrize(
         "indices",
         (
@@ -4468,21 +4467,14 @@ class TestDataset:
         array1 = np.arange(10).astype(dtype) * unit_registry.s
         array2 = np.linspace(0, 1, 10).astype(dtype) * unit_registry.Pa
 
-        x = np.arange(len(array1)) * unit_registry.m
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("x", array2)})
+        units = extract_units(ds)
 
-        expected = attach_units(
-            strip_units(ds).isel(x=indices),
-            {"a": unit_registry.s, "b": unit_registry.Pa, "x": unit_registry.m},
-        )
+        expected = attach_units(strip_units(ds).isel(x=indices), units)
         actual = ds.isel(x=indices)
 
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
         assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
