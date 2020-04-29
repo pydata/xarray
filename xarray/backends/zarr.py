@@ -1,9 +1,9 @@
 import warnings
+
 import numpy as np
 
 from .. import coding, conventions
 from ..core import indexing
-
 from ..core.dataarray import DataArray
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict
@@ -693,4 +693,3 @@ def open_zarr(
 
     variables = {k: maybe_chunk(k, v, chunks) for k, v in ds.variables.items()}
     return ds._replace_vars_and_dims(variables)
-
