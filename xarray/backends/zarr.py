@@ -596,7 +596,7 @@ def open_zarr(
         chunks=chunks,
         drop_variables=drop_variables,
         overwrite_encoded_chunks=overwrite_encoded_chunks,
-        **backend_kwargs,
+        backend_kwargs=**backend_kwargs,
     )
 
     # if "auto_chunk" in kwargs:
