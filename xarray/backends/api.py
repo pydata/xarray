@@ -508,6 +508,14 @@ def open_dataset(
             store = backends.CfGribDataStore(
                 filename_or_obj, lock=lock, **backend_kwargs
             )
+        elif engine == 'zarr':
+            # on ZarrStore, mode='r', synchronizer=None, group=None,
+            # consolidated=False.
+            store = backends.ZarrStore.open_group(
+                store,
+                group=group,
+                **backend_kwargs
+            )
     else:
         if engine not in [None, "scipy", "h5netcdf"]:
             raise ValueError(
