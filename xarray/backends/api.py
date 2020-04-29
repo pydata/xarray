@@ -304,7 +304,6 @@ def open_dataset(
     drop_variables=None,
     backend_kwargs=None,
     use_cftime=None,
-    overwrite_encoded_chunks=False,
 ):
     """Open and decode a dataset from a file or file-like object.
 

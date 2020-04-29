@@ -580,7 +580,7 @@ def open_zarr(
     backend_kwargs = {
         "synchronizer": synchronizer,
         "consolidated": consolidated,
-        # "overwrite_encoded_chunks": overwrite_encoded_chunks,
+        "overwrite_encoded_chunks": overwrite_encoded_chunks,
         **kwargs,
     }
 
@@ -595,7 +595,6 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
-        overwrite_encoded_chunks=overwrite_encoded_chunks,
         backend_kwargs=backend_kwargs,
     )
 
