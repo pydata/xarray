@@ -577,21 +577,26 @@ def open_zarr(
         DeprecationWarning,
     )
 
+    backend_kwargs = {
+        "synchronizer": synchronizer,
+        "consolidated": consolidated,
+        # "overwrite_encoded_chunks": overwrite_encoded_chunks,
+        **kwargs,
+    }
+
     ds = open_dataset(
         filename_or_obj=store,
         group=group,
-        engine="zarr",
         decode_cf=decode_cf,
         mask_and_scale=mask_and_scale,
-        synchronizer=synchronizer,
-        chunks=chunks,
         decode_times=decode_times,
         concat_characters=concat_characters,
         decode_coords=decode_coords,
+        engine="zarr",
+        chunks=chunks,
         drop_variables=drop_variables,
-        consolidated=consolidated,
         overwrite_encoded_chunks=overwrite_encoded_chunks,
-        **kwargs,
+        **backend_kwargs,
     )
 
     # if "auto_chunk" in kwargs:
