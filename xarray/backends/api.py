@@ -474,6 +474,7 @@ def open_dataset(
         if engine == 'zarr':
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
+            overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
             store = backends.ZarrStore.open_group(
                 filename_or_obj,
                 group=group,
@@ -510,6 +511,7 @@ def open_dataset(
         elif engine == 'zarr':
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
+            overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
             store = backends.ZarrStore.open_group(
                 filename_or_obj,
                 group=group,
