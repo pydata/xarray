@@ -580,6 +580,7 @@ def open_zarr(
     ds = open_dataset(
         store=store,
         group=group,
+        engine="zarr",
         decode_cf=decode_cf,
         mask_and_scale=mask_and_scale,
         synchronizer=synchronizer,
