@@ -4262,40 +4262,43 @@ class TestDataset:
 
         assert expected == actual
 
+    # TODO: eventually use another decorator / wrapper function that
+    # applies a filter to the parametrize combinations:
+    # we only need a single test for data
     @pytest.mark.parametrize(
         "unit",
         (
             pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
             pytest.param(
-                unit_registry.dimensionless,
-                id="dimensionless",
-                marks=pytest.mark.skip(reason="IndexVariable does not support units"),
-            ),
-            pytest.param(
-                unit_registry.s,
-                id="incompatible_unit",
-                marks=pytest.mark.skip(reason="IndexVariable does not support units"),
-            ),
-            pytest.param(
-                unit_registry.cm,
-                id="compatible_unit",
-                marks=pytest.mark.skip(reason="IndexVariable does not support units"),
-            ),
-            pytest.param(
-                unit_registry.m,
-                id="identical_unit",
+                "dims",
                 marks=pytest.mark.skip(reason="IndexVariable does not support units"),
             ),
         ),
     )
-    def test_broadcast_like(self, unit, dtype):
-        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * unit_registry.Pa
-        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype)
+    def test_broadcast_like(self, variant, unit, dtype):
+        variants = {
+            "data": ((unit_registry.m, unit), (1, 1)),
+            "dims": ((1, 1), (unit_registry.m, unit)),
+        }
+        (data_unit1, data_unit2), (dim_unit1, dim_unit2) = variants.get(variant)
 
-        x1 = np.arange(2) * unit_registry.m
-        x2 = np.arange(2) * unit
-        y1 = np.array([0]) * unit_registry.m
-        y2 = np.arange(3) * unit
+        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * data_unit1
+        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * data_unit2
+
+        x1 = np.arange(2) * dim_unit1
+        x2 = np.arange(2) * dim_unit2
+        y1 = np.array([0]) * dim_unit1
+        y2 = np.arange(3) * dim_unit2
 
         ds1 = xr.Dataset(
             data_vars={"a": (("x", "y"), array1)}, coords={"x": x1, "y": y1}
