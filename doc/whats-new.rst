@@ -47,6 +47,9 @@ New Features
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
+- More support for unit aware arrays with pint (:pull:`3643`)
+  By `Justus Magin <https://github.com/keewis>`_.
+
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
 - A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
