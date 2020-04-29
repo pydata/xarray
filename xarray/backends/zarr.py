@@ -575,9 +575,23 @@ def open_zarr(
     warnings.warn(
         "open_zarr is deprecated. Use open_dataset(engine='zarr') instead.",
         DeprecationWarning,
-        )
+    )
 
-    ds = open_dataset()
+    ds = open_dataset(
+        store=store,
+        group=group,
+        decode_cf=decode_cf,
+        mask_and_scale=mask_and_scale,
+        synchronizer=synchronizer,
+        chunks=chunks,
+        decode_times=decode_times,
+        concat_characters=concat_characters,
+        decode_coords=decode_coords,
+        drop_variables=drop_variables,
+        consolidated=consolidated,
+        overwrite_encoded_chunks=overwrite_encoded_chunks,
+        **kwargs,
+    )
 
     # if "auto_chunk" in kwargs:
     #     auto_chunk = kwargs.pop("auto_chunk")
