@@ -532,10 +532,9 @@ def open_dataset(
         if isinstance(filename_or_obj, str):
             ds.encoding["source"] = filename_or_obj
 
-
     if chunks is not None:
         from dask.base import tokenize
-        if engine is not 'zarr':
+        if engine != 'zarr':
 
             # if passed an actual file path, augment the token with
             # the file modification time
@@ -602,7 +601,7 @@ def open_dataset(
                                     % (chunks[dim], chunk_spec[dim], dim),
                                     stacklevel=2,
                                 )
-                        chunk_spec[dim] = _chunks[dim]
+                        chunk_spec[dim] = chunks[dim]
                 return chunk_spec
 
             def maybe_chunk(name, var, chunks):
