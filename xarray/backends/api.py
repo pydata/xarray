@@ -500,11 +500,6 @@ def open_dataset(
         elif engine == "zarr":
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
-            if chunks == "auto":
-                try:  # on open_zarr, chunks='auto'. This is what 'auto' does
-                    import dask.array
-                except ImportError:
-                    chunks = None
             store = backends.ZarrStore.open_group(
                 filename_or_obj,
                 group=group,
