@@ -58,6 +58,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue`3977`)
+  By `Huite Bootsma <https://github.com/huite>`_.
 - Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``. (:issue:`3951`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fix renaming of coords when one or more stacked coords is not in
@@ -83,6 +85,9 @@ Bug fixes
 - Fix bug causing :py:meth:`DataArray.interpolate_na` to always drop attributes,
   and added `keep_attrs` argument. (:issue:`3968`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix bug in time parsing failing to fall back to cftime. This was causing time
+  variables with a time unit of `'msecs'` to fail to parse. (:pull:`3998`)
+  By `Ryan May <https://github.com/dopplershift>`_.
 
 Documentation
 ~~~~~~~~~~~~~
