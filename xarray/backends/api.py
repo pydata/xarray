@@ -476,7 +476,7 @@ def open_dataset(
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
             store = backends.ZarrStore.open_group(
-                store,
+                filename_or_obj,
                 group=group,
                 **backend_kwargs
             )
@@ -512,7 +512,7 @@ def open_dataset(
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
             store = backends.ZarrStore.open_group(
-                store,
+                filename_or_obj,
                 group=group,
                 **backend_kwargs
             )
