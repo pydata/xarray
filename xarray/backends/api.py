@@ -457,98 +457,7 @@ def open_dataset(
 
         _protect_dataset_variables_inplace(ds, cache)
 
-        if chunks is not None:
-            from dask.base import tokenize
-            if engine is not 'zarr':
-
-                # if passed an actual file path, augment the token with
-                # the file modification time
-                if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
-                    mtime = os.path.getmtime(filename_or_obj)
-                else:
-                    mtime = None
-                token = tokenize(
-                    filename_or_obj,
-                    mtime,
-                    group,
-                    decode_cf,
-                    mask_and_scale,
-                    decode_times,
-                    concat_characters,
-                    decode_coords,
-                    engine,
-                    chunks,
-                    drop_variables,
-                    use_cftime,
-                )
-                name_prefix = "open_dataset-%s" % token
-                ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-                ds2._file_obj = ds._file_obj
-
-            else:  # file is zarr!
-
-                # adapted from Dataset.Chunk() and taken from open_zarr
-                if not isinstance(chunks, (int, dict)):
-                    if chunks != "auto":
-                        raise ValueError(
-                            "chunks must be an int, dict, 'auto', or None. "
-                            "Instead found %s. " % chunks
-                        )
-                if isinstance(chunks, int):
-                    chunks = dict.fromkeys(ds.dims, chunks)
-
-                if isinstance(chunks, tuple) and len(chunks) == len(ds.dims):
-                    chunks = dict(zip(ds.dims, chunks))
-
-                def get_chunk(name, var, chunks):
-                    chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
-
-                    # Coordinate labels aren't chunked
-                    if var.ndim == 1 and var.dims[0] == name:
-                        return chunk_spec
-
-                    if chunks == "auto":
-                        return chunk_spec
-
-                    for dim in var.dims:
-                        if dim in chunks:
-                            spec = chunks[dim]
-                            if isinstance(spec, int):
-                                spec = (spec,)
-                            if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
-                                if any(s % chunk_spec[dim] for s in spec):
-                                    warnings.warn(
-                                        "Specified Dask chunks %r would "
-                                        "separate Zarr chunk shape %r for "
-                                        "dimension %r. This significantly "
-                                        "degrades performance. Consider "
-                                        "rechunking after loading instead."
-                                        % (chunks[dim], chunk_spec[dim], dim),
-                                        stacklevel=2,
-                                    )
-                            chunk_spec[dim] = _chunks[dim]
-                    return chunk_spec
-
-                def maybe_chunk(name, var, chunks):
-                    chunk_spec = get_chunk(name, var, chunks)
-
-                    if (var.ndim > 0) and (chunk_spec is not None):
-                        # does this cause any data to be read?
-                        token2 = tokenize(name, var._data)
-                        name2 = "zarr-%s" % token2
-                        var = var.chunk(chunk_spec, name=name2, lock=None)
-                        if overwrite_encoded_chunks and var.chunks is not None:
-                            var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
-                        return var
-                    else:
-                        return var
-
-                variables = {k: maybe_chunk(k, v, chunks) for k, v in ds.variables.items()}
-                ds2 = ds._replace_vars_and_dims(variables)
-            return ds2
-        else:
-            ds2 = ds
-        return ds2
+        return ds
 
     if isinstance(filename_or_obj, Path):
         filename_or_obj = str(filename_or_obj)
@@ -618,7 +527,100 @@ def open_dataset(
         if isinstance(filename_or_obj, str):
             ds.encoding["source"] = filename_or_obj
 
-    return ds
+
+    if chunks is not None:
+        from dask.base import tokenize
+        if engine is not 'zarr':
+
+            # if passed an actual file path, augment the token with
+            # the file modification time
+            if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
+                mtime = os.path.getmtime(filename_or_obj)
+            else:
+                mtime = None
+            token = tokenize(
+                filename_or_obj,
+                mtime,
+                group,
+                decode_cf,
+                mask_and_scale,
+                decode_times,
+                concat_characters,
+                decode_coords,
+                engine,
+                chunks,
+                drop_variables,
+                use_cftime,
+            )
+            name_prefix = "open_dataset-%s" % token
+            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
+            ds2._file_obj = ds._file_obj
+
+        else:  # file is zarr!
+
+            # adapted from Dataset.Chunk() and taken from open_zarr
+            if not isinstance(chunks, (int, dict)):
+                if chunks != "auto":
+                    raise ValueError(
+                        "chunks must be an int, dict, 'auto', or None. "
+                        "Instead found %s. " % chunks
+                    )
+            if isinstance(chunks, int):
+                chunks = dict.fromkeys(ds.dims, chunks)
+
+            if isinstance(chunks, tuple) and len(chunks) == len(ds.dims):
+                chunks = dict(zip(ds.dims, chunks))
+
+            def get_chunk(name, var, chunks):
+                chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
+
+                # Coordinate labels aren't chunked
+                if var.ndim == 1 and var.dims[0] == name:
+                    return chunk_spec
+
+                if chunks == "auto":
+                    return chunk_spec
+
+                for dim in var.dims:
+                    if dim in chunks:
+                        spec = chunks[dim]
+                        if isinstance(spec, int):
+                            spec = (spec,)
+                        if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
+                            if any(s % chunk_spec[dim] for s in spec):
+                                warnings.warn(
+                                    "Specified Dask chunks %r would "
+                                    "separate Zarr chunk shape %r for "
+                                    "dimension %r. This significantly "
+                                    "degrades performance. Consider "
+                                    "rechunking after loading instead."
+                                    % (chunks[dim], chunk_spec[dim], dim),
+                                    stacklevel=2,
+                                )
+                        chunk_spec[dim] = _chunks[dim]
+                return chunk_spec
+
+            def maybe_chunk(name, var, chunks):
+                chunk_spec = get_chunk(name, var, chunks)
+
+                if (var.ndim > 0) and (chunk_spec is not None):
+                    # does this cause any data to be read?
+                    token2 = tokenize(name, var._data)
+                    name2 = "zarr-%s" % token2
+                    var = var.chunk(chunk_spec, name=name2, lock=None)
+                    if overwrite_encoded_chunks and var.chunks is not None:
+                        var.encoding["chunks"] = tuple(x[0] for x in var.chunk)
+                    return var
+                else:
+                    return var
+
+            variables = {k: maybe_chunk(k, v, chunks) for k, v in ds.variables.items()}
+            ds2 = ds._replace_vars_and_dims(variables)
+        return ds2
+    else:
+        ds2 = ds
+
+    return ds2
 
 
 def open_dataarray(
