@@ -578,7 +578,7 @@ def open_zarr(
     )
 
     ds = open_dataset(
-        store=store,
+        filename_or_obj=store,
         group=group,
         engine="zarr",
         decode_cf=decode_cf,
