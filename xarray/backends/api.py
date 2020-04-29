@@ -1,11 +1,11 @@
 import os.path
 import warnings
+from collections.abc import MutableMapping
 from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
 from textwrap import dedent
-from collections.abc import MutableMapping
 from typing import (
     TYPE_CHECKING,
     Callable,
