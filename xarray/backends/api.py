@@ -471,8 +471,15 @@ def open_dataset(
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
 
-    elif isinstance(filename_or_obj, MutableMapping):
-        store = filename_or_obj
+    if isinstance(filename_or_obj, MutableMapping):
+        if engine == 'zarr':
+            # on ZarrStore, mode='r', synchronizer=None, group=None,
+            # consolidated=False.
+            store = backends.ZarrStore.open_group(
+                store,
+                group=group,
+                **backend_kwargs
+            )
 
     elif isinstance(filename_or_obj, str):
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -500,14 +507,6 @@ def open_dataset(
         elif engine == "cfgrib":
             store = backends.CfGribDataStore(
                 filename_or_obj, lock=lock, **backend_kwargs
-            )
-        elif engine == "zarr":
-            # on ZarrStore, mode='r', synchronizer=None, group=None,
-            # consolidated=False.
-            store = backends.ZarrStore.open_group(
-                store,
-                group=group,
-                **backend_kwargs
             )
     else:
         if engine not in [None, "scipy", "h5netcdf"]:
