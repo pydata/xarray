@@ -4,11 +4,12 @@ Interpolating data
 ==================
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 xarray offers flexible interpolation routines, which have a similar interface
@@ -27,9 +28,10 @@ indexing of a :py:class:`~xarray.DataArray`,
 
 .. ipython:: python
 
-    da = xr.DataArray(np.sin(0.3 * np.arange(12).reshape(4, 3)),
-                      [('time', np.arange(4)),
-                       ('space', [0.1, 0.2, 0.3])])
+    da = xr.DataArray(
+        np.sin(0.3 * np.arange(12).reshape(4, 3)),
+        [("time", np.arange(4)), ("space", [0.1, 0.2, 0.3])],
+    )
     # label lookup
     da.sel(time=3)
 
@@ -52,16 +54,17 @@ To interpolate data with a :py:doc:`numpy.datetime64 <reference/arrays.datetime>
 
 .. ipython:: python
 
-    da_dt64 = xr.DataArray([1, 3],
-                           [('time', pd.date_range('1/1/2000', '1/3/2000', periods=2))])
-    da_dt64.interp(time='2000-01-02')
+    da_dt64 = xr.DataArray(
+        [1, 3], [("time", pd.date_range("1/1/2000", "1/3/2000", periods=2))]
+    )
+    da_dt64.interp(time="2000-01-02")
 
 The interpolated data can be merged into the original :py:class:`~xarray.DataArray`
 by specifying the time periods required.
 
 .. ipython:: python
 
-    da_dt64.interp(time=pd.date_range('1/1/2000', '1/3/2000', periods=3))
+    da_dt64.interp(time=pd.date_range("1/1/2000", "1/3/2000", periods=3))
 
 Interpolation of data indexed by a :py:class:`~xarray.CFTimeIndex` is also
 allowed.  See :ref:`CFTimeIndex` for examples.
@@ -108,9 +111,10 @@ different coordinates,
 
 .. ipython:: python
 
-  other = xr.DataArray(np.sin(0.4 * np.arange(9).reshape(3, 3)),
-                       [('time', [0.9, 1.9, 2.9]),
-                       ('space', [0.15, 0.25, 0.35])])
+    other = xr.DataArray(
+        np.sin(0.4 * np.arange(9).reshape(3, 3)),
+        [("time", [0.9, 1.9, 2.9]), ("space", [0.15, 0.25, 0.35])],
+    )
 
 it might be a good idea to first interpolate ``da`` so that it will stay on the
 same coordinates of ``other``, and then subtract it.
@@ -118,9 +122,9 @@ same coordinates of ``other``, and then subtract it.
 
 .. ipython:: python
 
-  # interpolate da along other's coordinates
-  interpolated = da.interp_like(other)
-  interpolated
+    # interpolate da along other's coordinates
+    interpolated = da.interp_like(other)
+    interpolated
 
 It is now possible to safely compute the difference ``other - interpolated``.
 
@@ -135,12 +139,15 @@ The interpolation method can be specified by the optional ``method`` argument.
 
 .. ipython:: python
 
-    da = xr.DataArray(np.sin(np.linspace(0, 2 * np.pi, 10)), dims='x',
-                      coords={'x': np.linspace(0, 1, 10)})
+    da = xr.DataArray(
+        np.sin(np.linspace(0, 2 * np.pi, 10)),
+        dims="x",
+        coords={"x": np.linspace(0, 1, 10)},
+    )
 
-    da.plot.line('o', label='original')
-    da.interp(x=np.linspace(0, 1, 100)).plot.line(label='linear (default)')
-    da.interp(x=np.linspace(0, 1, 100), method='cubic').plot.line(label='cubic')
+    da.plot.line("o", label="original")
+    da.interp(x=np.linspace(0, 1, 100)).plot.line(label="linear (default)")
+    da.interp(x=np.linspace(0, 1, 100), method="cubic").plot.line(label="cubic")
     @savefig interpolation_sample1.png width=4in
     plt.legend()
 
@@ -149,15 +156,16 @@ Additional keyword arguments can be passed to scipy's functions.
 .. ipython:: python
 
     # fill 0 for the outside of the original coordinates.
-    da.interp(x=np.linspace(-0.5, 1.5, 10), kwargs={'fill_value': 0.0})
+    da.interp(x=np.linspace(-0.5, 1.5, 10), kwargs={"fill_value": 0.0})
     # 1-dimensional extrapolation
-    da.interp(x=np.linspace(-0.5, 1.5, 10), kwargs={'fill_value': 'extrapolate'})
+    da.interp(x=np.linspace(-0.5, 1.5, 10), kwargs={"fill_value": "extrapolate"})
     # multi-dimensional extrapolation
-    da = xr.DataArray(np.sin(0.3 * np.arange(12).reshape(4, 3)),
-                      [('time', np.arange(4)),
-                       ('space', [0.1, 0.2, 0.3])])
+    da = xr.DataArray(
+        np.sin(0.3 * np.arange(12).reshape(4, 3)),
+        [("time", np.arange(4)), ("space", [0.1, 0.2, 0.3])],
+    )
 
-    da.interp(time=4, space=np.linspace(-0.1, 0.5, 10), kwargs={'fill_value': None})
+    da.interp(time=4, space=np.linspace(-0.1, 0.5, 10), kwargs={"fill_value": None})
 
 
 Advanced Interpolation
@@ -181,17 +189,18 @@ For example:
 
 .. ipython:: python
 
-    da = xr.DataArray(np.sin(0.3 * np.arange(20).reshape(5, 4)),
-                      [('x', np.arange(5)),
-                       ('y', [0.1, 0.2, 0.3, 0.4])])
+    da = xr.DataArray(
+        np.sin(0.3 * np.arange(20).reshape(5, 4)),
+        [("x", np.arange(5)), ("y", [0.1, 0.2, 0.3, 0.4])],
+    )
     # advanced indexing
-    x = xr.DataArray([0, 2, 4], dims='z')
-    y = xr.DataArray([0.1, 0.2, 0.3], dims='z')
+    x = xr.DataArray([0, 2, 4], dims="z")
+    y = xr.DataArray([0.1, 0.2, 0.3], dims="z")
     da.sel(x=x, y=y)
 
     # advanced interpolation
-    x = xr.DataArray([0.5, 1.5, 2.5], dims='z')
-    y = xr.DataArray([0.15, 0.25, 0.35], dims='z')
+    x = xr.DataArray([0.5, 1.5, 2.5], dims="z")
+    y = xr.DataArray([0.15, 0.25, 0.35], dims="z")
     da.interp(x=x, y=y)
 
 where values on the original coordinates
@@ -203,9 +212,8 @@ If you want to add a coordinate to the new dimension ``z``, you can supply
 
 .. ipython:: python
 
-    x = xr.DataArray([0.5, 1.5, 2.5], dims='z', coords={'z': ['a', 'b','c']})
-    y = xr.DataArray([0.15, 0.25, 0.35], dims='z',
-                     coords={'z': ['a', 'b','c']})
+    x = xr.DataArray([0.5, 1.5, 2.5], dims="z", coords={"z": ["a", "b", "c"]})
+    y = xr.DataArray([0.15, 0.25, 0.35], dims="z", coords={"z": ["a", "b", "c"]})
     da.interp(x=x, y=y)
 
 For the details of the advanced indexing,
@@ -224,19 +232,18 @@ while other methods such as ``cubic`` or ``quadratic`` return all NaN arrays.
 
 .. ipython:: python
 
-    da = xr.DataArray([0, 2, np.nan, 3, 3.25], dims='x',
-                      coords={'x': range(5)})
+    da = xr.DataArray([0, 2, np.nan, 3, 3.25], dims="x", coords={"x": range(5)})
     da.interp(x=[0.5, 1.5, 2.5])
-    da.interp(x=[0.5, 1.5, 2.5], method='cubic')
+    da.interp(x=[0.5, 1.5, 2.5], method="cubic")
 
 To avoid this, you can drop NaN by :py:meth:`~xarray.DataArray.dropna`, and
 then make the interpolation
 
 .. ipython:: python
 
-    dropped = da.dropna('x')
+    dropped = da.dropna("x")
     dropped
-    dropped.interp(x=[0.5, 1.5, 2.5], method='cubic')
+    dropped.interp(x=[0.5, 1.5, 2.5], method="cubic")
 
 If NaNs are distributed randomly in your multidimensional array,
 dropping all the columns containing more than one NaNs by
@@ -246,7 +253,7 @@ which is similar to :py:meth:`pandas.Series.interpolate`.
 
 .. ipython:: python
 
-    filled = da.interpolate_na(dim='x')
+    filled = da.interpolate_na(dim="x")
     filled
 
 This fills NaN by interpolating along the specified dimension.
@@ -254,7 +261,7 @@ After filling NaNs, you can interpolate:
 
 .. ipython:: python
 
-    filled.interp(x=[0.5, 1.5, 2.5], method='cubic')
+    filled.interp(x=[0.5, 1.5, 2.5], method="cubic")
 
 For the details of :py:meth:`~xarray.DataArray.interpolate_na`,
 see :ref:`Missing values <missing_values>`.
@@ -268,18 +275,18 @@ Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
 .. ipython:: python
 
     # Raw data
-    ds = xr.tutorial.open_dataset('air_temperature').isel(time=0)
+    ds = xr.tutorial.open_dataset("air_temperature").isel(time=0)
     fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
     ds.air.plot(ax=axes[0])
-    axes[0].set_title('Raw data')
+    axes[0].set_title("Raw data")
 
     # Interpolated data
-    new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims['lon'] * 4)
-    new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.dims['lat'] * 4)
+    new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims["lon"] * 4)
+    new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.dims["lat"] * 4)
     dsi = ds.interp(lat=new_lat, lon=new_lon)
     dsi.air.plot(ax=axes[1])
     @savefig interpolation_sample3.png width=8in
-    axes[1].set_title('Interpolated data')
+    axes[1].set_title("Interpolated data")
 
 Our advanced interpolation can be used to remap the data to the new coordinate.
 Consider the new coordinates x and z on the two dimensional plane.
@@ -291,20 +298,23 @@ The remapping can be done as follows
     x = np.linspace(240, 300, 100)
     z = np.linspace(20, 70, 100)
     # relation between new and original coordinates
-    lat = xr.DataArray(z, dims=['z'], coords={'z': z})
-    lon = xr.DataArray((x[:, np.newaxis]-270)/np.cos(z*np.pi/180)+270,
-                       dims=['x', 'z'], coords={'x': x, 'z': z})
+    lat = xr.DataArray(z, dims=["z"], coords={"z": z})
+    lon = xr.DataArray(
+        (x[:, np.newaxis] - 270) / np.cos(z * np.pi / 180) + 270,
+        dims=["x", "z"],
+        coords={"x": x, "z": z},
+    )
 
     fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
     ds.air.plot(ax=axes[0])
     # draw the new coordinate on the original coordinates.
     for idx in [0, 33, 66, 99]:
-        axes[0].plot(lon.isel(x=idx), lat, '--k')
+        axes[0].plot(lon.isel(x=idx), lat, "--k")
     for idx in [0, 33, 66, 99]:
-        axes[0].plot(*xr.broadcast(lon.isel(z=idx), lat.isel(z=idx)), '--k')
-    axes[0].set_title('Raw data')
+        axes[0].plot(*xr.broadcast(lon.isel(z=idx), lat.isel(z=idx)), "--k")
+    axes[0].set_title("Raw data")
 
     dsi = ds.interp(lon=lon, lat=lat)
     dsi.air.plot(ax=axes[1])
     @savefig interpolation_sample4.png width=8in
-    axes[1].set_title('Remapped data')
+    axes[1].set_title("Remapped data")

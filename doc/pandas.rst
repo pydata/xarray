@@ -20,6 +20,7 @@ __ http://seaborn.pydata.org/
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 Hierarchical and tidy data
@@ -47,10 +48,15 @@ To convert any dataset to a ``DataFrame`` in tidy form, use the
 
 .. ipython:: python
 
-    ds = xr.Dataset({'foo': (('x', 'y'), np.random.randn(2, 3))},
-                     coords={'x': [10, 20], 'y': ['a', 'b', 'c'],
-                             'along_x': ('x', np.random.randn(2)),
-                             'scalar': 123})
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.randn(2, 3))},
+        coords={
+            "x": [10, 20],
+            "y": ["a", "b", "c"],
+            "along_x": ("x", np.random.randn(2)),
+            "scalar": 123,
+        },
+    )
     ds
     df = ds.to_dataframe()
     df
@@ -91,7 +97,7 @@ DataFrames:
 
 .. ipython:: python
 
-    s = ds['foo'].to_series()
+    s = ds["foo"].to_series()
     s
     # or equivalently, with Series.to_xarray()
     xr.DataArray.from_series(s)
@@ -117,8 +123,9 @@ available in pandas (i.e., a 1D array is converted to a
 
 .. ipython:: python
 
-    arr = xr.DataArray(np.random.randn(2, 3),
-                       coords=[('x', [10, 20]), ('y', ['a', 'b', 'c'])])
+    arr = xr.DataArray(
+        np.random.randn(2, 3), coords=[("x", [10, 20]), ("y", ["a", "b", "c"])]
+    )
     df = arr.to_pandas()
     df
 
@@ -136,9 +143,10 @@ preserve all use of multi-indexes:
 
 .. ipython:: python
 
-    index = pd.MultiIndex.from_arrays([['a', 'a', 'b'], [0, 1, 2]],
-                                      names=['one', 'two'])
-    df = pd.DataFrame({'x': 1, 'y': 2}, index=index)
+    index = pd.MultiIndex.from_arrays(
+        [["a", "a", "b"], [0, 1, 2]], names=["one", "two"]
+    )
+    df = pd.DataFrame({"x": 1, "y": 2}, index=index)
     ds = xr.Dataset(df)
     ds
 
@@ -175,9 +183,9 @@ Let's take a look:
 .. ipython:: python
 
     data = np.random.RandomState(0).rand(2, 3, 4)
-    items = list('ab')
-    major_axis = list('mno')
-    minor_axis = pd.date_range(start='2000', periods=4, name='date')
+    items = list("ab")
+    major_axis = list("mno")
+    minor_axis = pd.date_range(start="2000", periods=4, name="date")
 
 With old versions of pandas (prior to 0.25), this could stored in a ``Panel``:
 
@@ -207,7 +215,7 @@ You can also easily convert this data into ``Dataset``:
 
 .. ipython:: python
 
-    array.to_dataset(dim='dim_0')
+    array.to_dataset(dim="dim_0")
 
 Here, there are two data variables, each representing a DataFrame on panel's
 ``items`` axis, and labeled as such. Each variable is a 2D array of the

@@ -4,11 +4,12 @@ Data Structures
 ===============
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
     np.set_printoptions(threshold=10)
 
@@ -57,9 +58,9 @@ The :py:class:`~xarray.DataArray` constructor takes:
 .. ipython:: python
 
     data = np.random.rand(4, 3)
-    locs = ['IA', 'IL', 'IN']
-    times = pd.date_range('2000-01-01', periods=4)
-    foo = xr.DataArray(data, coords=[times, locs], dims=['time', 'space'])
+    locs = ["IA", "IL", "IN"]
+    times = pd.date_range("2000-01-01", periods=4)
+    foo = xr.DataArray(data, coords=[times, locs], dims=["time", "space"])
     foo
 
 Only ``data`` is required; all of other arguments will be filled
@@ -105,23 +106,37 @@ As a list of tuples:
 
 .. ipython:: python
 
-    xr.DataArray(data, coords=[('time', times), ('space', locs)])
+    xr.DataArray(data, coords=[("time", times), ("space", locs)])
 
 As a dictionary:
 
 .. ipython:: python
 
-    xr.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
-                               'ranking': ('space', [1, 2, 3])},
-                 dims=['time', 'space'])
+    xr.DataArray(
+        data,
+        coords={
+            "time": times,
+            "space": locs,
+            "const": 42,
+            "ranking": ("space", [1, 2, 3]),
+        },
+        dims=["time", "space"],
+    )
 
 As a dictionary with coords across multiple dimensions:
 
 .. ipython:: python
 
-    xr.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
-                               'ranking': (('time', 'space'), np.arange(12).reshape(4,3))},
-                 dims=['time', 'space'])
+    xr.DataArray(
+        data,
+        coords={
+            "time": times,
+            "space": locs,
+            "const": 42,
+            "ranking": (("time", "space"), np.arange(12).reshape(4, 3)),
+        },
+        dims=["time", "space"],
+    )
 
 If you create a ``DataArray`` by supplying a pandas
 :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or
@@ -130,9 +145,9 @@ If you create a ``DataArray`` by supplying a pandas
 
 .. ipython:: python
 
-    df = pd.DataFrame({'x': [0, 1], 'y': [2, 3]}, index=['a', 'b'])
-    df.index.name = 'abc'
-    df.columns.name = 'xyz'
+    df = pd.DataFrame({"x": [0, 1], "y": [2, 3]}, index=["a", "b"])
+    df.index.name = "abc"
+    df.columns.name = "xyz"
     df
     xr.DataArray(df)
 
@@ -153,7 +168,7 @@ You can modify ``values`` inplace:
 
 .. ipython:: python
 
-   foo.values = 1.0 * foo.values
+    foo.values = 1.0 * foo.values
 
 .. note::
 
@@ -166,8 +181,8 @@ Now fill in some of that missing metadata:
 
 .. ipython:: python
 
-    foo.name = 'foo'
-    foo.attrs['units'] = 'meters'
+    foo.name = "foo"
+    foo.attrs["units"] = "meters"
     foo
 
 The :py:meth:`~xarray.DataArray.rename` method is another option, returning a
@@ -175,7 +190,7 @@ new data array:
 
 .. ipython:: python
 
-   foo.rename('bar')
+    foo.rename("bar")
 
 DataArray Coordinates
 ~~~~~~~~~~~~~~~~~~~~~
@@ -186,8 +201,8 @@ itself:
 
 .. ipython:: python
 
-    foo.coords['time']
-    foo['time']
+    foo.coords["time"]
+    foo["time"]
 
 These are also :py:class:`~xarray.DataArray` objects, which contain tick-labels
 for each dimension.
@@ -196,9 +211,9 @@ Coordinates can also be set or removed by using the dictionary like syntax:
 
 .. ipython:: python
 
-    foo['ranking'] = ('space', [1, 2, 3])
+    foo["ranking"] = ("space", [1, 2, 3])
     foo.coords
-    del foo['ranking']
+    del foo["ranking"]
     foo.coords
 
 For more details, see :ref:`coordinates` below.
@@ -276,12 +291,18 @@ Let's create some fake data for the example we show above:
 
     # for real use cases, its good practice to supply array attributes such as
     # units, but we won't bother here for the sake of brevity
-    ds = xr.Dataset({'temperature': (['x', 'y', 'time'],  temp),
-                     'precipitation': (['x', 'y', 'time'], precip)},
-                    coords={'lon': (['x', 'y'], lon),
-                            'lat': (['x', 'y'], lat),
-                            'time': pd.date_range('2014-09-06', periods=3),
-                            'reference_time': pd.Timestamp('2014-09-05')})
+    ds = xr.Dataset(
+        {
+            "temperature": (["x", "y", "time"], temp),
+            "precipitation": (["x", "y", "time"], precip),
+        },
+        coords={
+            "lon": (["x", "y"], lon),
+            "lat": (["x", "y"], lat),
+            "time": pd.date_range("2014-09-06", periods=3),
+            "reference_time": pd.Timestamp("2014-09-05"),
+        },
+    )
     ds
 
 Here we pass :py:class:`xarray.DataArray` objects or a pandas object as values
@@ -289,12 +310,12 @@ in the dictionary:
 
 .. ipython:: python
 
-    xr.Dataset({'bar': foo})
+    xr.Dataset({"bar": foo})
 
 
 .. ipython:: python
 
-    xr.Dataset({'bar': foo.to_pandas()})
+    xr.Dataset({"bar": foo.to_pandas()})
 
 Where a pandas object is supplied as a value, the names of its indexes are used as dimension
 names, and its data is aligned to any existing dimensions.
@@ -315,8 +336,8 @@ values given by :py:class:`xarray.DataArray` objects:
 
 .. ipython:: python
 
-    'temperature' in ds
-    ds['temperature']
+    "temperature" in ds
+    ds["temperature"]
 
 Valid keys include each listed coordinate and data variable.
 
@@ -336,7 +357,7 @@ of `attributes`:
 
     ds.attrs
 
-    ds.attrs['title'] = 'example attribute'
+    ds.attrs["title"] = "example attribute"
     ds
 
 xarray does not enforce any restrictions on attributes, but serialization to
@@ -364,13 +385,13 @@ example, to create this example dataset from scratch, we could have written:
 .. ipython:: python
 
     ds = xr.Dataset()
-    ds['temperature'] = (('x', 'y', 'time'), temp)
-    ds['temperature_double'] = (('x', 'y', 'time'), temp * 2 )
-    ds['precipitation'] = (('x', 'y', 'time'), precip)
-    ds.coords['lat'] = (('x', 'y'), lat)
-    ds.coords['lon'] = (('x', 'y'), lon)
-    ds.coords['time'] = pd.date_range('2014-09-06', periods=3)
-    ds.coords['reference_time'] = pd.Timestamp('2014-09-05')
+    ds["temperature"] = (("x", "y", "time"), temp)
+    ds["temperature_double"] = (("x", "y", "time"), temp * 2)
+    ds["precipitation"] = (("x", "y", "time"), precip)
+    ds.coords["lat"] = (("x", "y"), lat)
+    ds.coords["lon"] = (("x", "y"), lon)
+    ds.coords["time"] = pd.date_range("2014-09-06", periods=3)
+    ds.coords["reference_time"] = pd.Timestamp("2014-09-05")
 
 To change the variables in a ``Dataset``, you can use all the standard dictionary
 methods, including ``values``, ``items``, ``__delitem__``, ``get`` and
@@ -400,16 +421,16 @@ operations keep around coordinates:
 
 .. ipython:: python
 
-    ds[['temperature']]
-    ds[['temperature', 'temperature_double']]
-    ds.drop_vars('temperature')
+    ds[["temperature"]]
+    ds[["temperature", "temperature_double"]]
+    ds.drop_vars("temperature")
 
 To remove a dimension, you can use :py:meth:`~xarray.Dataset.drop_dims` method.
 Any variables using that dimension are dropped:
 
 .. ipython:: python
 
-    ds.drop_dims('time')
+    ds.drop_dims("time")
 
 As an alternate to dictionary-like modifications, you can use
 :py:meth:`~xarray.Dataset.assign` and :py:meth:`~xarray.Dataset.assign_coords`.
@@ -417,7 +438,7 @@ These methods return a new dataset with additional (or replaced) values:
 
 .. ipython:: python
 
-    ds.assign(temperature2 = 2 * ds.temperature)
+    ds.assign(temperature2=2 * ds.temperature)
 
 There is also the :py:meth:`~xarray.Dataset.pipe` method that allows you to use
 a method call with an external function (e.g., ``ds.pipe(func)``) instead of
@@ -429,12 +450,8 @@ follow nested function calls:
 
     # these lines are equivalent, but with pipe we can make the logic flow
     # entirely from left to right
-    plt.plot((2 * ds.temperature.sel(x=0)).mean('y'))
-    (ds.temperature
-     .sel(x=0)
-     .pipe(lambda x: 2 * x)
-     .mean('y')
-     .pipe(plt.plot))
+    plt.plot((2 * ds.temperature.sel(x=0)).mean("y"))
+    (ds.temperature.sel(x=0).pipe(lambda x: 2 * x).mean("y").pipe(plt.plot))
 
 Both ``pipe`` and ``assign`` replicate the pandas methods of the same names
 (:py:meth:`DataFrame.pipe <pandas.DataFrame.pipe>` and
@@ -453,15 +470,15 @@ dataset variables:
 
 .. ipython:: python
 
-    ds.rename({'temperature': 'temp', 'precipitation': 'precip'})
+    ds.rename({"temperature": "temp", "precipitation": "precip"})
 
 The related :py:meth:`~xarray.Dataset.swap_dims` method allows you do to swap
 dimension and non-dimension variables:
 
 .. ipython:: python
 
-    ds.coords['day'] = ('time', [6, 7, 8])
-    ds.swap_dims({'time': 'day'})
+    ds.coords["day"] = ("time", [6, 7, 8])
+    ds.swap_dims({"time": "day"})
 
 .. _coordinates:
 
@@ -519,8 +536,8 @@ To convert back and forth between data and coordinates, you can use the
 .. ipython:: python
 
     ds.reset_coords()
-    ds.set_coords(['temperature', 'precipitation'])
-    ds['temperature'].reset_coords(drop=True)
+    ds.set_coords(["temperature", "precipitation"])
+    ds["temperature"].reset_coords(drop=True)
 
 Notice that these operations skip coordinates with names given by dimensions,
 as used for indexing. This mostly because we are not entirely sure how to
@@ -544,7 +561,7 @@ logic used for merging coordinates in arithmetic operations
 
 .. ipython:: python
 
-    alt = xr.Dataset(coords={'z': [10], 'lat': 0, 'lon': 0})
+    alt = xr.Dataset(coords={"z": [10], "lat": 0, "lon": 0})
     ds.coords.merge(alt.coords)
 
 The ``coords.merge`` method may be useful if you want to implement your own
@@ -560,7 +577,7 @@ To convert a coordinate (or any ``DataArray``) into an actual
 
 .. ipython:: python
 
-    ds['time'].to_index()
+    ds["time"].to_index()
 
 A useful shortcut is the ``indexes`` property (on both ``DataArray`` and
 ``Dataset``), which lazily constructs a dictionary whose keys are given by each
@@ -577,9 +594,10 @@ Xarray supports labeling coordinate values with a :py:class:`pandas.MultiIndex`:
 
 .. ipython:: python
 
-    midx = pd.MultiIndex.from_arrays([['R', 'R', 'V', 'V'], [.1, .2, .7, .9]],
-                                     names=('band', 'wn'))
-    mda = xr.DataArray(np.random.rand(4), coords={'spec': midx}, dims='spec')
+    midx = pd.MultiIndex.from_arrays(
+        [["R", "R", "V", "V"], [0.1, 0.2, 0.7, 0.9]], names=("band", "wn")
+    )
+    mda = xr.DataArray(np.random.rand(4), coords={"spec": midx}, dims="spec")
     mda
 
 For convenience multi-index levels are directly accessible as "virtual" or
@@ -587,8 +605,8 @@ For convenience multi-index levels are directly accessible as "virtual" or
 
 .. ipython:: python
 
-     mda['band']
-     mda.wn
+    mda["band"]
+    mda.wn
 
 Indexing with multi-index levels is also possible using the ``sel`` method
 (see :ref:`multi-level indexing`).

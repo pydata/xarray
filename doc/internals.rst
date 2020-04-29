@@ -46,11 +46,12 @@ Extending xarray
 ----------------
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 xarray is designed as a general purpose library, and hence tries to avoid
@@ -87,11 +88,12 @@ defined that returns an instance of your class:
 
 .. code-block:: python
 
-  class Dataset:
-      ...
-      @property
-      def geo(self)
-          return GeoAccessor(self)
+    class Dataset:
+        ...
+
+        @property
+        def geo(self):
+            return GeoAccessor(self)
 
 However, using the register accessor decorators is preferable to simply adding
 your own ad-hoc property (i.e., ``Dataset.geo = property(...)``), for several
@@ -116,14 +118,13 @@ reasons:
 Back in an interactive IPython session, we can use these properties:
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
-   exec(open("examples/_code/accessor_example.py").read())
+    exec(open("examples/_code/accessor_example.py").read())
 
 .. ipython:: python
 
-    ds = xr.Dataset({'longitude': np.linspace(0, 10),
-                     'latitude': np.linspace(0, 20)})
+    ds = xr.Dataset({"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)})
     ds.geo.center
     ds.geo.plot()
 

@@ -4,11 +4,12 @@ Combining data
 --------------
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 * For combining datasets or data arrays along a single dimension, see concatenate_.
@@ -28,11 +29,10 @@ that dimension:
 
 .. ipython:: python
 
-    arr = xr.DataArray(np.random.randn(2, 3),
-                       [('x', ['a', 'b']), ('y', [10, 20, 30])])
+    arr = xr.DataArray(np.random.randn(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])])
     arr[:, :1]
     # this resembles how you would use np.concatenate
-    xr.concat([arr[:, :1], arr[:, 1:]], dim='y')
+    xr.concat([arr[:, :1], arr[:, 1:]], dim="y")
 
 In addition to combining along an existing dimension, ``concat`` can create a
 new dimension by stacking lower dimensional arrays together:
@@ -41,7 +41,7 @@ new dimension by stacking lower dimensional arrays together:
 
     arr[0]
     # to combine these 1d arrays into a 2d array in numpy, you would use np.array
-    xr.concat([arr[0], arr[1]], 'x')
+    xr.concat([arr[0], arr[1]], "x")
 
 If the second argument to ``concat`` is a new dimension name, the arrays will
 be concatenated along that new dimension, which is always inserted as the first
@@ -49,7 +49,7 @@ dimension:
 
 .. ipython:: python
 
-    xr.concat([arr[0], arr[1]], 'new_dim')
+    xr.concat([arr[0], arr[1]], "new_dim")
 
 The second argument to ``concat`` can also be an :py:class:`~pandas.Index` or
 :py:class:`~xarray.DataArray` object as well as a string, in which case it is
@@ -57,14 +57,14 @@ used to label the values along the new dimension:
 
 .. ipython:: python
 
-    xr.concat([arr[0], arr[1]], pd.Index([-90, -100], name='new_dim'))
+    xr.concat([arr[0], arr[1]], pd.Index([-90, -100], name="new_dim"))
 
 Of course, ``concat`` also works on ``Dataset`` objects:
 
 .. ipython:: python
 
-    ds = arr.to_dataset(name='foo')
-    xr.concat([ds.sel(x='a'), ds.sel(x='b')], 'x')
+    ds = arr.to_dataset(name="foo")
+    xr.concat([ds.sel(x="a"), ds.sel(x="b")], "x")
 
 :py:func:`~xarray.concat` has a number of options which provide deeper control
 over which variables are concatenated and how it handles conflicting variables
@@ -84,8 +84,8 @@ To combine variables and coordinates between multiple ``DataArray`` and/or
 
 .. ipython:: python
 
-    xr.merge([ds, ds.rename({'foo': 'bar'})])
-    xr.merge([xr.DataArray(n, name='var%d' % n) for n in range(5)])
+    xr.merge([ds, ds.rename({"foo": "bar"})])
+    xr.merge([xr.DataArray(n, name="var%d" % n) for n in range(5)])
 
 If you merge another dataset (or a dictionary including data array objects), by
 default the resulting dataset will be aligned on the **union** of all index
@@ -93,7 +93,7 @@ coordinates:
 
 .. ipython:: python
 
-    other = xr.Dataset({'bar': ('x', [1, 2, 3, 4]), 'x': list('abcd')})
+    other = xr.Dataset({"bar": ("x", [1, 2, 3, 4]), "x": list("abcd")})
     xr.merge([ds, other])
 
 This ensures that ``merge`` is non-destructive. ``xarray.MergeError`` is raised
@@ -116,7 +116,7 @@ used in the :py:class:`~xarray.Dataset` constructor:
 
 .. ipython:: python
 
-    xr.Dataset({'a': arr[:-1], 'b': arr[1:]})
+    xr.Dataset({"a": arr[:-1], "b": arr[1:]})
 
 .. _combine:
 
@@ -131,8 +131,8 @@ are filled with ``NaN``. For example:
 
 .. ipython:: python
 
-    ar0 = xr.DataArray([[0, 0], [0, 0]], [('x', ['a', 'b']), ('y', [-1, 0])])
-    ar1 = xr.DataArray([[1, 1], [1, 1]], [('x', ['b', 'c']), ('y', [0, 1])])
+    ar0 = xr.DataArray([[0, 0], [0, 0]], [("x", ["a", "b"]), ("y", [-1, 0])])
+    ar1 = xr.DataArray([[1, 1], [1, 1]], [("x", ["b", "c"]), ("y", [0, 1])])
     ar0.combine_first(ar1)
     ar1.combine_first(ar0)
 
@@ -152,7 +152,7 @@ variables with new values:
 
 .. ipython:: python
 
-    ds.update({'space': ('space', [10.2, 9.4, 3.9])})
+    ds.update({"space": ("space", [10.2, 9.4, 3.9])})
 
 However, dimensions are still required to be consistent between different
 Dataset variables, so you cannot change the size of a dimension unless you
@@ -170,7 +170,7 @@ syntax:
 
 .. ipython:: python
 
-    ds['baz'] = xr.DataArray([9, 9, 9, 9, 9], coords=[('x', list('abcde'))])
+    ds["baz"] = xr.DataArray([9, 9, 9, 9, 9], coords=[("x", list("abcde"))])
     ds.baz
 
 Equals and identical
@@ -193,7 +193,7 @@ object:
 
 .. ipython:: python
 
-    arr.identical(arr.rename('bar'))
+    arr.identical(arr.rename("bar"))
 
 :py:attr:`~xarray.Dataset.broadcast_equals` does a more relaxed form of equality
 check that allows variables to have different dimensions, as long as values
@@ -201,8 +201,8 @@ are constant along those new dimensions:
 
 .. ipython:: python
 
-    left = xr.Dataset(coords={'x': 0})
-    right = xr.Dataset({'x': [0, 0, 0]})
+    left = xr.Dataset(coords={"x": 0})
+    right = xr.Dataset({"x": [0, 0, 0]})
     left.broadcast_equals(right)
 
 Like pandas objects, two xarray objects are still equal or identical if they have
@@ -231,9 +231,9 @@ coordinates as long as any non-missing values agree or are disjoint:
 
 .. ipython:: python
 
-    ds1 = xr.Dataset({'a': ('x', [10, 20, 30, np.nan])}, {'x': [1, 2, 3, 4]})
-    ds2 = xr.Dataset({'a': ('x', [np.nan, 30, 40, 50])}, {'x': [2, 3, 4, 5]})
-    xr.merge([ds1, ds2], compat='no_conflicts')
+    ds1 = xr.Dataset({"a": ("x", [10, 20, 30, np.nan])}, {"x": [1, 2, 3, 4]})
+    ds2 = xr.Dataset({"a": ("x", [np.nan, 30, 40, 50])}, {"x": [2, 3, 4, 5]})
+    xr.merge([ds1, ds2], compat="no_conflicts")
 
 Note that due to the underlying representation of missing values as floating
 point numbers (``NaN``), variable data type is not always preserved when merging
@@ -273,10 +273,12 @@ datasets into a doubly-nested list, e.g:
 
 .. ipython:: python
 
-    arr = xr.DataArray(name='temperature', data=np.random.randint(5, size=(2, 2)), dims=['x', 'y'])
+    arr = xr.DataArray(
+        name="temperature", data=np.random.randint(5, size=(2, 2)), dims=["x", "y"]
+    )
     arr
     ds_grid = [[arr, arr], [arr, arr]]
-    xr.combine_nested(ds_grid, concat_dim=['x', 'y'])
+    xr.combine_nested(ds_grid, concat_dim=["x", "y"])
 
 :py:func:`~xarray.combine_nested` can also be used to explicitly merge datasets
 with different variables. For example if we have 4 datasets, which are divided
@@ -286,10 +288,10 @@ we wish to use ``merge`` instead of ``concat``:
 
 .. ipython:: python
 
-    temp = xr.DataArray(name='temperature', data=np.random.randn(2), dims=['t'])
-    precip = xr.DataArray(name='precipitation', data=np.random.randn(2), dims=['t'])
+    temp = xr.DataArray(name="temperature", data=np.random.randn(2), dims=["t"])
+    precip = xr.DataArray(name="precipitation", data=np.random.randn(2), dims=["t"])
     ds_grid = [[temp, precip], [temp, precip]]
-    xr.combine_nested(ds_grid, concat_dim=['t', None])
+    xr.combine_nested(ds_grid, concat_dim=["t", None])
 
 :py:func:`~xarray.combine_by_coords` is for combining objects which have dimension
 coordinates which specify their relationship to and order relative to one
@@ -302,8 +304,8 @@ coordinates, not on their position in the list passed to ``combine_by_coords``.
 .. ipython:: python
     :okwarning:
 
-    x1 = xr.DataArray(name='foo', data=np.random.randn(3), coords=[('x', [0, 1, 2])])
-    x2 = xr.DataArray(name='foo', data=np.random.randn(3), coords=[('x', [3, 4, 5])])
+    x1 = xr.DataArray(name="foo", data=np.random.randn(3), coords=[("x", [0, 1, 2])])
+    x2 = xr.DataArray(name="foo", data=np.random.randn(3), coords=[("x", [3, 4, 5])])
     xr.combine_by_coords([x2, x1])
 
 These functions can be used by :py:func:`~xarray.open_mfdataset` to open many

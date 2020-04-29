@@ -10,11 +10,12 @@ data in pandas such a joy to xarray. In most cases, we rely on pandas for the
 core functionality.
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 Creating datetime64 data
@@ -29,8 +30,8 @@ using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
 
 .. ipython:: python
 
-    pd.to_datetime(['2000-01-01', '2000-02-02'])
-    pd.date_range('2000-01-01', periods=365)
+    pd.to_datetime(["2000-01-01", "2000-02-02"])
+    pd.date_range("2000-01-01", periods=365)
 
 Alternatively, you can supply arrays of Python ``datetime`` objects. These get
 converted automatically when used as arguments in xarray objects:
@@ -38,7 +39,8 @@ converted automatically when used as arguments in xarray objects:
 .. ipython:: python
 
     import datetime
-    xr.Dataset({'time': datetime.datetime(2000, 1, 1)})
+
+    xr.Dataset({"time": datetime.datetime(2000, 1, 1)})
 
 When reading or writing netCDF files, xarray automatically decodes datetime and
 timedelta arrays using `CF conventions`_ (that is, by using a ``units``
@@ -62,8 +64,8 @@ You can manual decode arrays in this form by passing a dataset to
 
 .. ipython:: python
 
-    attrs = {'units': 'hours since 2000-01-01'}
-    ds = xr.Dataset({'time': ('time', [0, 1, 2, 3], attrs)})
+    attrs = {"units": "hours since 2000-01-01"}
+    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
     xr.decode_cf(ds)
 
 One unfortunate limitation of using ``datetime64[ns]`` is that it limits the
@@ -87,10 +89,10 @@ items and with the `slice` object:
 
 .. ipython:: python
 
-    time = pd.date_range('2000-01-01', freq='H', periods=365 * 24)
-    ds = xr.Dataset({'foo': ('time', np.arange(365 * 24)), 'time': time})
-    ds.sel(time='2000-01')
-    ds.sel(time=slice('2000-06-01', '2000-06-10'))
+    time = pd.date_range("2000-01-01", freq="H", periods=365 * 24)
+    ds = xr.Dataset({"foo": ("time", np.arange(365 * 24)), "time": time})
+    ds.sel(time="2000-01")
+    ds.sel(time=slice("2000-06-01", "2000-06-10"))
 
 You can also select a particular time by indexing with a
 :py:class:`datetime.time` object:
@@ -113,8 +115,8 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
 .. ipython:: python
 
-    time = pd.date_range('2000-01-01', freq='6H', periods=365 * 4)
-    ds = xr.Dataset({'foo': ('time', np.arange(365 * 4)), 'time': time})
+    time = pd.date_range("2000-01-01", freq="6H", periods=365 * 4)
+    ds = xr.Dataset({"foo": ("time", np.arange(365 * 4)), "time": time})
     ds.time.dt.hour
     ds.time.dt.dayofweek
 
@@ -130,16 +132,16 @@ __ http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
 
 .. ipython:: python
 
-    ds['time.month']
-    ds['time.dayofyear']
+    ds["time.month"]
+    ds["time.dayofyear"]
 
 For use as a derived coordinate, xarray adds ``'season'`` to the list of
 datetime components supported by pandas:
 
 .. ipython:: python
 
-    ds['time.season']
-    ds['time'].dt.season
+    ds["time.season"]
+    ds["time"].dt.season
 
 The set of valid seasons consists of 'DJF', 'MAM', 'JJA' and 'SON', labeled by
 the first letters of the corresponding months.
@@ -152,7 +154,7 @@ __ http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 
 .. ipython:: python
 
-    ds['time'].dt.floor('D')
+    ds["time"].dt.floor("D")
 
 The ``.dt`` accessor can also be used to generate formatted datetime strings
 for arrays utilising the same formatting as the standard `datetime.strftime`_.
@@ -161,7 +163,7 @@ for arrays utilising the same formatting as the standard `datetime.strftime`_.
 
 .. ipython:: python
 
-    ds['time'].dt.strftime('%a, %b %d %H:%M')
+    ds["time"].dt.strftime("%a, %b %d %H:%M")
 
 .. _resampling:
 
@@ -173,9 +175,9 @@ Datetime components couple particularly well with grouped operations (see
 calculate the mean by time of day:
 
 .. ipython:: python
-   :okwarning:
+    :okwarning:
 
-    ds.groupby('time.hour').mean()
+    ds.groupby("time.hour").mean()
 
 For upsampling or downsampling temporal resolutions, xarray offers a
 :py:meth:`~xarray.Dataset.resample` method building on the core functionality
@@ -187,25 +189,25 @@ same api as ``resample`` `in pandas`_.
 For example, we can downsample our dataset from hourly to 6-hourly:
 
 .. ipython:: python
-   :okwarning:
+    :okwarning:
 
-    ds.resample(time='6H')
+    ds.resample(time="6H")
 
 This will create a specialized ``Resample`` object which saves information
 necessary for resampling. All of the reduction methods which work with
 ``Resample`` objects can also be used for resampling:
 
 .. ipython:: python
-   :okwarning:
+    :okwarning:
 
-   ds.resample(time='6H').mean()
+    ds.resample(time="6H").mean()
 
 You can also supply an arbitrary reduction function to aggregate over each
 resampling group:
 
 .. ipython:: python
 
-   ds.resample(time='6H').reduce(np.mean)
+    ds.resample(time="6H").reduce(np.mean)
 
 For upsampling, xarray provides six methods: ``asfreq``, ``ffill``, ``bfill``, ``pad``,
 ``nearest`` and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d``
@@ -218,7 +220,7 @@ Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
 .. ipython:: python
 
-    ds.resample(time='1H').nearest(tolerance='1H')
+    ds.resample(time="1H").nearest(tolerance="1H")
 
 
 For more examples of using grouped operations on a time dimension, see
