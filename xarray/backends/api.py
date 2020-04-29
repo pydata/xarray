@@ -303,6 +303,7 @@ def open_dataset(
     drop_variables=None,
     backend_kwargs=None,
     use_cftime=None,
+    overwrite_encoded_chunks=False,
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -383,6 +384,10 @@ def open_dataset(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    overwrite_encoded_chunks: bool, optional
+        Whether to drop the zarr chunks encoded for each variable when a
+        dataset is loaded with specified chunk sizes (default: False)
+
 
     Returns
     -------
