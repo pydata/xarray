@@ -5,6 +5,7 @@ from io import BytesIO
 from numbers import Number
 from pathlib import Path
 from textwrap import dedent
+from collections.abc import MutableMapping
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -470,6 +471,9 @@ def open_dataset(
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
 
+    elif isinstance(filename_or_obj, MutableMapping):
+        store = filename_or_obj
+
     elif isinstance(filename_or_obj, str):
         filename_or_obj = _normalize_path(filename_or_obj)
 
@@ -501,7 +505,7 @@ def open_dataset(
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
             store = backends.ZarrStore.open_group(
-                filename_or_obj,
+                store,
                 group=group,
                 **backend_kwargs
             )
