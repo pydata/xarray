@@ -79,6 +79,9 @@ Bug fixes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fix ``RasterioDeprecationWarning`` when using a ``vrt`` in ``open_rasterio``. (:issue:`3964`)
   By `Taher Chegini <https://github.com/cheginit>`_.
+- Fix ``AttributeError`` on displaying a :py:class:`Variable`
+  in a notebook context. (:issue:`3972`, :pull:`3973`)
+  By `Ian Castleden <https://github.com/arabidopsis>`_.
 - Fix bug causing :py:meth:`DataArray.interpolate_na` to always drop attributes,
   and added `keep_attrs` argument. (:issue:`3968`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
