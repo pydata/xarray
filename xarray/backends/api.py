@@ -411,6 +411,7 @@ def open_dataset(
         "pseudonetcdf",
         "zarr",
     ]
+
     if engine not in engines:
         raise ValueError(
             "unrecognized engine for open_dataset: {}\n"
@@ -525,7 +526,7 @@ def open_dataset(
                                         % (chunks[dim], chunk_spec[dim], dim),
                                         stacklevel=2,
                                     )
-                            chunk_spec[dim] = chunks[dim]
+                            chunk_spec[dim] = _chunks[dim]
                     return chunk_spec
 
                 def maybe_chunk(name, var, chunks):
@@ -544,6 +545,7 @@ def open_dataset(
 
                 variables = {k: maybe_chunk(k, v, chunks) for k, v in ds.variables.items()}
                 ds2 = ds._replace_vars_and_dims(variables)
+            return ds2
         else:
             ds2 = ds
         return ds2
