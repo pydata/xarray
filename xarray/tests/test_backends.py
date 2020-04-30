@@ -2652,6 +2652,36 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
                 assert_identical(ds, ds_expect)
 
+    def test_open_mfdataset_dataset_attr_by_coords(self):
+        """
+        Case when an attribute of type list differs across the multiple files
+        """
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # Give the files an inconsistent attribute
+            for i, f in enumerate(files):
+                ds = open_dataset(f).load()
+                ds.attrs["test_dataset_attr"] = 10 + i
+                ds.close()
+                ds.to_netcdf(f)
+
+            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+                assert ds.test_dataset_attr == 10
+
+    def test_open_mfdataset_dataarray_attr_by_coords(self):
+        """
+        Case when an attribute of type list differs across the multiple files
+        """
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # Give the files an inconsistent attribute
+            for i, f in enumerate(files):
+                ds = open_dataset(f).load()
+                ds["v1"].attrs["test_dataarray_attr"] = i
+                ds.close()
+                ds.to_netcdf(f)
+
+            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+                assert ds["v1"].test_dataarray_attr == 0
+
     @pytest.mark.parametrize("combine", ["nested", "by_coords"])
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
     def test_open_mfdataset_exact_join_raises_error(self, combine, opt):

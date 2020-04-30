@@ -278,6 +278,35 @@ class TestConcatDataset:
             actual = concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
             assert_identical(actual, expected[combine_attrs])
 
+    def test_concat_combine_attrs_kwarg_member_attrs(self):
+        ds1 = Dataset({"a": ("x", [0])}, coords={"x": [0]})
+        ds1["a"].attrs = {"b": 42}
+
+        ds2 = Dataset({"a": ("x", [0])}, coords={"x": [1]})
+        ds2["a"].attrs = {"b": 42, "c": 43}
+
+        expected = {}
+
+        expected["drop"] = Dataset({"a": ("x", [0, 0])}, {"x": [0, 1]})
+
+        expected["no_conflicts"] = Dataset({"a": ("x", [0, 0])}, {"x": [0, 1]})
+        expected["no_conflicts"]["a"].attrs = {"b": 42, "c": 43}
+
+        expected["override"] = Dataset({"a": ("x", [0, 0])}, {"x": [0, 1]})
+        expected["override"]["a"].attrs = {"b": 42}
+
+        with raises_regex(ValueError, "combine_attrs='identical'"):
+            actual = concat([ds1, ds2], dim="x", combine_attrs="identical")
+        with raises_regex(ValueError, "combine_attrs='no_conflicts'"):
+            ds3 = ds2.copy(deep=True)
+            ds3["a"].attrs["b"] = 44
+            actual = concat([ds1, ds3], dim="x", combine_attrs="no_conflicts")
+
+        for combine_attrs in expected:
+            actual = concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+            assert_identical(actual, expected[combine_attrs])
+            assert_identical(actual["a"], expected[combine_attrs]["a"])
+
     def test_concat_promote_shape(self):
         # mixed dims within variables
         objs = [Dataset({}, {"x": 0}), Dataset({"x": [1]})]
