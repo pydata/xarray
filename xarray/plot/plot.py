@@ -30,7 +30,7 @@ from .utils import (
 
 def _infer_line_data(darray, x, y, hue):
     error_msg = "must be either None or one of ({:s})".format(
-        ", ".join([repr(dd) for dd in darray.dims])
+        ", ".join(repr(dd) for dd in darray.dims)
     )
     ndims = len(darray.dims)
 
@@ -693,7 +693,10 @@ def _plot2d(plotfunc):
         _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, zval.data, **locals()
+            plotfunc,
+            zval.data,
+            **locals(),
+            _is_facetgrid=kwargs.pop("_is_facetgrid", False),
         )
 
         if "contour" in plotfunc.__name__:

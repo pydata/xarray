@@ -18,6 +18,8 @@
    Dataset.any
    Dataset.argmax
    Dataset.argmin
+   Dataset.idxmax
+   Dataset.idxmin
    Dataset.max
    Dataset.min
    Dataset.mean
@@ -160,6 +162,8 @@
    DataArray.any
    DataArray.argmax
    DataArray.argmin
+   DataArray.idxmax
+   DataArray.idxmin
    DataArray.max
    DataArray.min
    DataArray.mean
