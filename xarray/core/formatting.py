@@ -298,12 +298,10 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 
 def _summarize_coord_levels(coord, col_width, marker="-"):
     return "\n".join(
-        [
-            summarize_variable(
-                lname, coord.get_level_variable(lname), col_width, marker=marker
-            )
-            for lname in coord.level_names
-        ]
+        summarize_variable(
+            lname, coord.get_level_variable(lname), col_width, marker=marker
+        )
+        for lname in coord.level_names
     )
 
 
@@ -562,7 +560,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
 
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
-                        [summarize_attr(ak, av) for ak, av in m[k].attrs.items()]
+                        summarize_attr(ak, av) for ak, av in m[k].attrs.items()
                     )
                     attrs_summary.append(attr_s)
 

@@ -139,6 +139,12 @@ class TestPlot(PlotTestCase):
         with raises_regex(ValueError, "None"):
             self.darray[:, 0, 0].plot(x="dim_1")
 
+        with raises_regex(TypeError, "complex128"):
+            (self.darray[:, 0, 0] + 1j).plot()
+
+    def test_1d_bool(self):
+        xr.ones_like(self.darray[:, 0, 0], dtype=np.bool).plot()
+
     def test_1d_x_y_kw(self):
         z = np.arange(10)
         da = DataArray(np.cos(z), dims=["z"], coords=[z], name="f")
@@ -250,6 +256,17 @@ class TestPlot(PlotTestCase):
 
         with pytest.raises(ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x="lon", hue="lat")
+
+    def test_2d_coord_line_plot_coords_transpose_invariant(self):
+        # checks for bug reported in GH #3933
+        x = np.arange(10)
+        y = np.arange(20)
+        ds = xr.Dataset(coords={"x": x, "y": y})
+
+        for z in [ds.y + ds.x, ds.x + ds.y]:
+            ds = ds.assign_coords(z=z)
+            ds["v"] = ds.x + ds.y
+            ds["v"].plot.line(y="z", hue="x")
 
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
@@ -827,16 +844,22 @@ class TestDetermineCmapParams:
         assert cmap_params["vmax"] == 0.6
         assert cmap_params["cmap"] == "viridis"
 
+        # regression test for GH3524
+        # infer diverging colormap from divergent levels
+        cmap_params = _determine_cmap_params(pos, levels=[-0.1, 0, 1])
+        # specifying levels makes cmap a Colormap object
+        assert cmap_params["cmap"].name == "RdBu_r"
+
     def test_norm_sets_vmin_vmax(self):
         vmin = self.data.min()
         vmax = self.data.max()
 
         for norm, extend in zip(
             [
-                mpl.colors.LogNorm(),
-                mpl.colors.LogNorm(vmin + 1, vmax - 1),
-                mpl.colors.LogNorm(None, vmax - 1),
-                mpl.colors.LogNorm(vmin + 1, None),
+                mpl.colors.Normalize(),
+                mpl.colors.Normalize(vmin + 0.1, vmax - 0.1),
+                mpl.colors.Normalize(None, vmax - 0.1),
+                mpl.colors.Normalize(vmin + 0.1, None),
             ],
             ["neither", "both", "max", "min"],
         ):
@@ -988,6 +1011,13 @@ class Common2dMixin:
     def test_1d_raises_valueerror(self):
         with raises_regex(ValueError, r"DataArray must be 2d"):
             self.plotfunc(self.darray[0, :])
+
+    def test_bool(self):
+        xr.ones_like(self.darray, dtype=np.bool).plot()
+
+    def test_complex_raises_typeerror(self):
+        with raises_regex(TypeError, "complex128"):
+            (self.darray + 1j).plot()
 
     def test_3d_raises_valueerror(self):
         a = DataArray(easy_array((2, 3, 4)))
@@ -1753,6 +1783,13 @@ class TestFacetGrid(PlotTestCase):
             assert np.allclose(expected, clim)
 
     @pytest.mark.slow
+    def test_vmin_vmax_equal(self):
+        # regression test for GH3734
+        fg = self.g.map_dataarray(xplt.imshow, "x", "y", vmin=50, vmax=50)
+        for mappable in fg._mappables:
+            assert mappable.norm.vmin != mappable.norm.vmax
+
+    @pytest.mark.slow
     @pytest.mark.filterwarnings("ignore")
     def test_can_set_norm(self):
         norm = mpl.colors.SymLogNorm(0.1)
@@ -2282,3 +2319,15 @@ def test_plot_transposes_properly(plotfunc):
     # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
     # to ravel() on the LHS
     assert np.all(hdl.get_array().ravel() == da.to_masked_array().ravel())
+
+
+@requires_matplotlib
+def test_facetgrid_single_contour():
+    # regression test for GH3569
+    x, y = np.meshgrid(np.arange(12), np.arange(12))
+    z = xr.DataArray(np.sqrt(x ** 2 + y ** 2))
+    z2 = xr.DataArray(np.sqrt(x ** 2 + y ** 2) + 1)
+    ds = xr.concat([z, z2], dim="time")
+    ds["time"] = [0, 1]
+
+    ds.plot.contour(col="time", levels=[4], colors=["k"])

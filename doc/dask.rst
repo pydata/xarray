@@ -56,19 +56,26 @@ argument to :py:func:`~xarray.open_dataset` or using the
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
     np.set_printoptions(precision=3, linewidth=100, threshold=100, edgeitems=3)
 
-    ds = xr.Dataset({'temperature': (('time', 'latitude', 'longitude'),
-                                     np.random.randn(30, 180, 180)),
-                     'time': pd.date_range('2015-01-01', periods=30),
-                     'longitude': np.arange(180),
-                     'latitude': np.arange(89.5, -90.5, -1)})
-    ds.to_netcdf('example-data.nc')
+    ds = xr.Dataset(
+        {
+            "temperature": (
+                ("time", "latitude", "longitude"),
+                np.random.randn(30, 180, 180),
+            ),
+            "time": pd.date_range("2015-01-01", periods=30),
+            "longitude": np.arange(180),
+            "latitude": np.arange(89.5, -90.5, -1),
+        }
+    )
+    ds.to_netcdf("example-data.nc")
 
 .. ipython:: python
 
-    ds = xr.open_dataset('example-data.nc', chunks={'time': 10})
+    ds = xr.open_dataset("example-data.nc", chunks={"time": 10})
     ds
 
 In this example ``latitude`` and ``longitude`` do not appear in the ``chunks``
@@ -106,7 +113,7 @@ usual way.
 
 .. ipython:: python
 
-    ds.to_netcdf('manipulated-example-data.nc')
+    ds.to_netcdf("manipulated-example-data.nc")
 
 By setting the ``compute`` argument to ``False``, :py:meth:`~xarray.Dataset.to_netcdf`
 will return a ``dask.delayed`` object that can be computed later.
@@ -114,8 +121,9 @@ will return a ``dask.delayed`` object that can be computed later.
 .. ipython:: python
 
     from dask.diagnostics import ProgressBar
+
     # or distributed.progress when using the distributed scheduler
-    delayed_obj = ds.to_netcdf('manipulated-example-data.nc', compute=False)
+    delayed_obj = ds.to_netcdf("manipulated-example-data.nc", compute=False)
     with ProgressBar():
         results = delayed_obj.compute()
 
@@ -141,8 +149,9 @@ Dask DataFrames do not support multi-indexes so the coordinate variables from th
     :suppress:
 
     import os
-    os.remove('example-data.nc')
-    os.remove('manipulated-example-data.nc')
+
+    os.remove("example-data.nc")
+    os.remove("manipulated-example-data.nc")
 
 Using Dask with xarray
 ----------------------
@@ -199,7 +208,7 @@ Dask arrays using the :py:meth:`~xarray.Dataset.persist` method:
 
 .. ipython:: python
 
-   ds = ds.persist()
+    ds = ds.persist()
 
 :py:meth:`~xarray.Dataset.persist` is particularly useful when using a
 distributed cluster because the data will be loaded into distributed memory
@@ -224,11 +233,11 @@ sizes of Dask arrays is done with the :py:meth:`~xarray.Dataset.chunk` method:
 .. ipython:: python
     :suppress:
 
-    ds = ds.chunk({'time': 10})
+    ds = ds.chunk({"time": 10})
 
 .. ipython:: python
 
-    rechunked = ds.chunk({'latitude': 100, 'longitude': 100})
+    rechunked = ds.chunk({"latitude": 100, "longitude": 100})
 
 You can view the size of existing chunks on an array by viewing the
 :py:attr:`~xarray.Dataset.chunks` attribute:
@@ -256,6 +265,7 @@ lazy Dask arrays, in the :ref:`xarray.ufuncs <api.ufuncs>` module:
 .. ipython:: python
 
     import xarray.ufuncs as xu
+
     xu.sin(rechunked)
 
 To access Dask arrays directly, use the new
@@ -311,24 +321,32 @@ we use to calculate `Spearman's rank-correlation coefficient <https://en.wikiped
     import xarray as xr
     import bottleneck
 
+
     def covariance_gufunc(x, y):
-        return ((x - x.mean(axis=-1, keepdims=True))
-                * (y - y.mean(axis=-1, keepdims=True))).mean(axis=-1)
+        return (
+            (x - x.mean(axis=-1, keepdims=True)) * (y - y.mean(axis=-1, keepdims=True))
+        ).mean(axis=-1)
+
 
     def pearson_correlation_gufunc(x, y):
         return covariance_gufunc(x, y) / (x.std(axis=-1) * y.std(axis=-1))
+
 
     def spearman_correlation_gufunc(x, y):
         x_ranks = bottleneck.rankdata(x, axis=-1)
         y_ranks = bottleneck.rankdata(y, axis=-1)
         return pearson_correlation_gufunc(x_ranks, y_ranks)
 
+
     def spearman_correlation(x, y, dim):
         return xr.apply_ufunc(
-            spearman_correlation_gufunc, x, y,
+            spearman_correlation_gufunc,
+            x,
+            y,
             input_core_dims=[[dim], [dim]],
-            dask='parallelized',
-            output_dtypes=[float])
+            dask="parallelized",
+            output_dtypes=[float],
+        )
 
 The only aspect of this example that is different from standard usage of
 ``apply_ufunc()`` is that we needed to supply the ``output_dtypes`` arguments.
@@ -344,7 +362,7 @@ work as a streaming operation, when run on arrays loaded from disk:
 
     In [56]: rs = np.random.RandomState(0)
 
-    In [57]: array1 = xr.DataArray(rs.randn(1000, 100000), dims=['place', 'time'])  # 800MB
+    In [57]: array1 = xr.DataArray(rs.randn(1000, 100000), dims=["place", "time"])  # 800MB
 
     In [58]: array2 = array1 + 0.5 * rs.randn(1000, 100000)
 
@@ -353,12 +371,12 @@ work as a streaming operation, when run on arrays loaded from disk:
     CPU times: user 21.6 s, sys: 2.84 s, total: 24.5 s
     Wall time: 24.9 s
 
-    In [8]: chunked1 = array1.chunk({'place': 10})
+    In [8]: chunked1 = array1.chunk({"place": 10})
 
-    In [9]: chunked2 = array2.chunk({'place': 10})
+    In [9]: chunked2 = array2.chunk({"place": 10})
 
     # using all my laptop's cores, with Dask
-    In [63]: r = spearman_correlation(chunked1, chunked2, 'time').compute()
+    In [63]: r = spearman_correlation(chunked1, chunked2, "time").compute()
 
     In [64]: %time _ = r.compute()
     CPU times: user 30.9 s, sys: 1.74 s, total: 32.6 s
@@ -370,7 +388,7 @@ multiple chunks along a core dimension:
 .. ipython::
     :verbatim:
 
-    In [63]: spearman_correlation(chunked1, chunked2, 'place')
+    In [63]: spearman_correlation(chunked1, chunked2, "place")
     ValueError: dimension 'place' on 0th function argument to apply_ufunc with
     dask='parallelized' consists of multiple chunks, but is also a core
     dimension. To fix, rechunk into a single Dask array chunk along this
