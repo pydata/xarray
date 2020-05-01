@@ -127,6 +127,18 @@ def make_dict(x: Union[DataArray, Dataset]) -> Dict[Hashable, Any]:
     return {k: v.data for k, v in x.variables.items()}
 
 
+def _get_chunk_slicer(
+    dim: Hashable, input_chunk_index: Mapping, chunk_index_bounds: Mapping
+):
+    if dim in input_chunk_index:
+        which_chunk = input_chunk_index[dim]
+        return slice(
+            chunk_index_bounds[dim][which_chunk],
+            chunk_index_bounds[dim][which_chunk + 1],
+        )
+    return slice(None)
+
+
 def map_blocks(
     func: Callable[..., T_DSorDA],
     obj: Union[DataArray, Dataset],
@@ -370,15 +382,10 @@ def map_blocks(
             else:
                 # non-dask array with possibly chunked dimensions
                 # index into variable appropriately
-                subsetter = {}
-                for dim in variable.dims:
-                    if dim in input_chunk_index:
-                        which_chunk = input_chunk_index[dim]
-                        subsetter[dim] = slice(
-                            chunk_index_bounds[dim][which_chunk],
-                            chunk_index_bounds[dim][which_chunk + 1],
-                        )
-
+                subsetter = {
+                    dim: _get_chunk_slicer(dim, input_chunk_index, chunk_index_bounds)
+                    for dim in variable.dims
+                }
                 subset = variable.isel(subsetter)
                 chunk_variable_task = (
                     "{}-{}".format(gname, dask.base.tokenize(subset)),
