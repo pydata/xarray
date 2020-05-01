@@ -333,6 +333,14 @@ def map_blocks(
         else:
             output_chunks = template.chunks  # type: ignore
 
+    for dim in output_chunks:
+        if len(input_chunks[dim]) != len(output_chunks[dim]):
+            raise ValueError(
+                "map_blocks requires that one block of the input maps to one block of output. "
+                f"Expected number of output chunks along dimension {dim!r} to be {len(input_chunks[dim])}. "
+                f"Received {len(output_chunks[dim])} instead. Please provide template (if not provided), or "
+                "fix the provided template."
+            )
     if isinstance(template, DataArray):
         result_is_array = True
         template_name = template.name
