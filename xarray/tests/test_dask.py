@@ -1193,6 +1193,22 @@ def test_map_blocks_da_ds_with_template(obj):
     assert_identical(actual, template)
 
 
+def test_map_blocks_template_convert_object():
+    da = make_da()
+    func = lambda x: x.to_dataset().isel(x=[1])
+    template = da.to_dataset().isel(x=[1, 5, 9])
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, da, template=template)
+    assert_identical(actual, template)
+
+    ds = da.to_dataset()
+    func = lambda x: x.to_array().isel(x=[1])
+    template = ds.to_array().isel(x=[1, 5, 9])
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, ds, template=template)
+    assert_identical(actual, template)
+
+
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_errors_bad_template(obj):
     with raises_regex(ValueError, "unexpected coordinate variables"):

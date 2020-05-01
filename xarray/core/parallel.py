@@ -334,13 +334,14 @@ def map_blocks(
             output_chunks = template.chunks  # type: ignore
 
     for dim in output_chunks:
-        if len(input_chunks[dim]) != len(output_chunks[dim]):
+        if dim in input_chunks and len(input_chunks[dim]) != len(output_chunks[dim]):
             raise ValueError(
                 "map_blocks requires that one block of the input maps to one block of output. "
                 f"Expected number of output chunks along dimension {dim!r} to be {len(input_chunks[dim])}. "
-                f"Received {len(output_chunks[dim])} instead. Please provide template (if not provided), or "
+                f"Received {len(output_chunks[dim])} instead. Please provide template if not provided, or "
                 "fix the provided template."
             )
+
     if isinstance(template, DataArray):
         result_is_array = True
         template_name = template.name
@@ -455,12 +456,9 @@ def map_blocks(
             for dim in variable.dims:
                 if dim in chunk_index:
                     key += (chunk_index[dim],)
-                elif dim in output_chunks:
-                    raise ValueError(
-                        f"Function is attempting to add a new chunked dimension {dim}. This is not allowed."
-                    )
                 else:
                     # unchunked dimensions in the input have one chunk in the result
+                    # output can have new dimensions with exactly one chunk
                     key += (0,)
 
             # We're adding multiple new layers to the graph:
