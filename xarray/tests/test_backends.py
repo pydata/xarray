@@ -30,6 +30,7 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
+from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.coding.variables import SerializationWarning
@@ -296,9 +297,14 @@ class DatasetIOBase:
     def check_dtypes_roundtripped(self, expected, actual):
         for k in expected.variables:
             expected_dtype = expected.variables[k].dtype
-            if isinstance(self, NetCDF3Only) and expected_dtype == "int64":
-                # downcast
-                expected_dtype = np.dtype("int32")
+
+            # For NetCDF3, the backend should perform dtype coercion
+            if (
+                isinstance(self, NetCDF3Only)
+                and str(expected_dtype) in _nc3_dtype_coercions
+            ):
+                expected_dtype = np.dtype(_nc3_dtype_coercions[str(expected_dtype)])
+
             actual_dtype = actual.variables[k].dtype
             # TODO: check expected behavior for string dtypes more carefully
             string_kinds = {"O", "S", "U"}
