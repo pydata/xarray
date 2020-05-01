@@ -32,7 +32,7 @@ T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
 
 def check_result_variables(
-    result: Union[DataArray, Dataset], expected: dict, kind: str
+    result: Union[DataArray, Dataset], expected: Mapping[str, Any], kind: str
 ):
 
     if kind == "coords":
@@ -127,15 +127,10 @@ def make_dict(x: Union[DataArray, Dataset]) -> Dict[Hashable, Any]:
     return {k: v.data for k, v in x.variables.items()}
 
 
-def _get_chunk_slicer(
-    dim: Hashable, input_chunk_index: Mapping, chunk_index_bounds: Mapping
-):
-    if dim in input_chunk_index:
-        which_chunk = input_chunk_index[dim]
-        return slice(
-            chunk_index_bounds[dim][which_chunk],
-            chunk_index_bounds[dim][which_chunk + 1],
-        )
+def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping):
+    if dim in chunk_index:
+        which_chunk = chunk_index[dim]
+        return slice(chunk_bounds[dim][which_chunk], chunk_bounds[dim][which_chunk + 1])
     return slice(None)
 
 
@@ -259,20 +254,31 @@ def map_blocks(
                 f"Dimensions {missing_dimensions} missing on returned object."
             )
 
-        # check that index lengths are as expected
+        # check that index lengths and values are as expected
         for name, index in result.indexes.items():
             if name in check_shapes:
                 if len(index) != check_shapes[name]:
                     raise ValueError(
                         f"Received dimension {name!r} of length {len(index)}. Expected length {check_shapes[name]}."
                     )
+            if name in expected["indexes"]:
+                expected_index = expected["indexes"][name]
+                if not index.equals(expected_index):
+                    raise ValueError(
+                        f"Expected index {name!r} to be {expected_index!r}. Received {index!r} instead."
+                    )
 
+        # check that all expected variables were returned
         check_result_variables(result, expected, "coords")
         if isinstance(result, Dataset):
             check_result_variables(result, expected, "data_vars")
 
         return make_dict(result)
 
+    if template is not None and not isinstance(template, (DataArray, Dataset)):
+        raise TypeError(
+            f"template must be a DataArray or Dataset. Received {type(template).__name__} instead."
+        )
     if not isinstance(args, Sequence):
         raise TypeError("args must be a sequence (for example, a list or tuple).")
     if kwargs is None:
@@ -351,13 +357,16 @@ def map_blocks(
     # map dims to list of chunk indexes
     ichunk = {dim: range(len(chunks_v)) for dim, chunks_v in input_chunks.items()}
     # mapping from chunk index to slice bounds
-    chunk_index_bounds = {
+    input_chunk_bounds = {
         dim: np.cumsum((0,) + chunks_v) for dim, chunks_v in input_chunks.items()
+    }
+    output_chunk_bounds = {
+        dim: np.cumsum((0,) + chunks_v) for dim, chunks_v in output_chunks.items()
     }
 
     # iterate over all possible chunk combinations
     for v in itertools.product(*ichunk.values()):
-        input_chunk_index = dict(zip(dataset.dims, v))
+        chunk_index = dict(zip(dataset.dims, v))
 
         # this will become [[name1, variable1],
         #                   [name2, variable2],
@@ -372,7 +381,7 @@ def map_blocks(
                 # recursively index into dask_keys nested list to get chunk
                 chunk = variable.__dask_keys__()
                 for dim in variable.dims:
-                    chunk = chunk[input_chunk_index[dim]]
+                    chunk = chunk[chunk_index[dim]]
 
                 chunk_variable_task = (f"{gname}-{name}-{chunk[0]}",) + v
                 graph[chunk_variable_task] = (
@@ -383,7 +392,7 @@ def map_blocks(
                 # non-dask array with possibly chunked dimensions
                 # index into variable appropriately
                 subsetter = {
-                    dim: _get_chunk_slicer(dim, input_chunk_index, chunk_index_bounds)
+                    dim: _get_chunk_slicer(dim, chunk_index, input_chunk_bounds)
                     for dim in variable.dims
                 }
                 subset = variable.isel(subsetter)
@@ -401,17 +410,19 @@ def map_blocks(
             else:
                 data_vars.append([name, chunk_variable_task])
 
-        # expected["shapes", "coords", "data_vars"] are used to raise nice error messages in _wrapper
+        # expected["shapes", "coords", "data_vars", "indexes"] are used to raise nice error messages in _wrapper
         expected = {}
         # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
         # even if length of dimension is changed by the applied function
         expected["shapes"] = {
-            k: output_chunks[k][v]
-            for k, v in input_chunk_index.items()
-            if k in output_chunks
+            k: output_chunks[k][v] for k, v in chunk_index.items() if k in output_chunks
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore
         expected["coords"] = set(template.coords.keys())  # type: ignore
+        expected["indexes"] = {
+            dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
+            for dim in indexes
+        }
 
         from_wrapper = (gname,) + v
         graph[from_wrapper] = (
@@ -434,8 +445,8 @@ def map_blocks(
 
             key: Tuple[Any, ...] = (gname_l,)
             for dim in variable.dims:
-                if dim in input_chunk_index:
-                    key += (input_chunk_index[dim],)
+                if dim in chunk_index:
+                    key += (chunk_index[dim],)
                 elif dim in output_chunks:
                     raise ValueError(
                         f"Function is attempting to add a new chunked dimension {dim}. This is not allowed."

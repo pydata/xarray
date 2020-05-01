@@ -1203,6 +1203,18 @@ def test_map_blocks_errors_bad_template(obj):
         xr.map_blocks(lambda x: x.isel(x=1), obj, template=obj).compute()
     with raises_regex(ValueError, "Received dimension 'x' of length 1"):
         xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=obj).compute()
+    with raises_regex(TypeError, "must be a DataArray"):
+        xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=(obj,)).compute()
+    with raises_regex(ValueError, "map_blocks requires that one block"):
+        xr.map_blocks(
+            lambda x: x.isel(x=[1]).assign_coords(x=10), obj, template=obj.isel(x=[1])
+        ).compute()
+    with raises_regex(ValueError, "Expected index 'x' to be"):
+        xr.map_blocks(
+            lambda a: a.isel(x=[1]).assign_coords(x=[120]),  # assign bad index values
+            obj,
+            template=obj.isel(x=[1, 5, 9]),
+        ).compute()
 
 
 def test_map_blocks_errors_bad_template_2(map_ds):
