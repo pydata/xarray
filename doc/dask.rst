@@ -413,15 +413,17 @@ application.
 ``map_blocks``
 ~~~~~~~~~~~~~~
 
-Functions that consume and return xarray objects can be easily applied in parallel using :py:func:`map_blocks`. Your function will receive an xarray Dataset or DataArray subset to one chunk
+Functions that consume and return xarray objects can be easily applied in parallel using :py:func:`map_blocks`.
+Your function will receive an xarray Dataset or DataArray subset to one chunk
 along each chunked dimension.
 
 .. ipython:: python
 
     ds.temperature
 
-This DataArray has 3 chunks each with length 10 along the time dimension. A function applied with :py:func:`map_blocks` will receive a DataArray corresponding to a single block of shape 10x180x180
-(time x latitude x longitude). The following snippet illustrates how to check the shape of the object
+This DataArray has 3 chunks each with length 10 along the time dimension.
+At compute time, a function applied with :py:func:`map_blocks` will receive a DataArray corresponding to a single block of shape 10x180x180
+(time x latitude x longitude) with values loaded. The following snippet illustrates how to check the shape of the object
 received by the applied function.
 
 .. ipython:: python
@@ -444,10 +446,10 @@ In this case, automatic inference has worked so let's check that the result is a
 
 .. ipython:: python
 
-    mapped.compute(scheduler="single-threaded")
+    mapped.load(scheduler="single-threaded")
     mapped.identical(ds.time)
 
-Note that we use ``.compute(scheduler="single-threaded")``.
+Note that we use ``.load(scheduler="single-threaded")`` to execute the computation.
 This executes the Dask graph in `serial` using a for loop, but allows for printing to screen and other
 debugging techniques. We can easily see that our function is receiving blocks of shape 10x180x180 and
 the returned result is identical to ``ds.time`` as expected.
