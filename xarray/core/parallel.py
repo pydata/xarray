@@ -170,7 +170,7 @@ def map_blocks(
         xarray object representing the final result after compute is called. If not provided,
         the function will be first run on mocked-up data, that looks like 'obj' but
         has sizes 0, to determine properties of the returned object such as dtype,
-        variable names, new dimensions and new indexes (if any).
+        variable names, attributes, new dimensions and new indexes (if any).
         'template' must be provided if the function changes the size of existing dimensions.
 
     Returns

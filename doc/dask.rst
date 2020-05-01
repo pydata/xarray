@@ -469,7 +469,7 @@ Here is a common example where automated inference will not work.
 ``func`` cannot be run on 0-shaped inputs because it is not possible to extract element 1 along a
 dimension of size 0. In this case we need to tell :py:func:`map_blocks` what the returned result looks
 like using the ``template`` kwarg. ``template`` must be an xarray Dataset or DataArray (depending on
-what the function returns) with dimensions, shapes, chunk sizes, coordinate variables *and* data
+what the function returns) with dimensions, shapes, chunk sizes, attributes, coordinate variables *and* data
 variables that look exactly like the expected result. The variables should be dask-backed and hence not
 incur much memory cost.
 
