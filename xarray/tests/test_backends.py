@@ -319,6 +319,26 @@ class DatasetIOBase:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
+    @requires_scipy
+    def test_dtype_coercion_error(self):
+        """Failing dtype coercion should lead to an error"""
+        formats = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
+
+        for dtype, format in itertools.product(_nc3_dtype_coercions, formats):
+            if dtype == "bool":
+                # coerced upcast (bool to int8) ==> can never fail
+                continue
+
+            # Using the largest representable value, create some data that will
+            # no longer compare equal after the coerced downcast
+            maxval = np.iinfo(dtype).max
+            x = np.array([0, 1, 2, maxval], dtype=dtype)
+            ds = Dataset({"x": ("t", x, {})})
+
+            with create_tmp_file(allow_cleanup_failure=False) as path:
+                with pytest.raises(ValueError, match="could not safely cast"):
+                    ds.to_netcdf(path, format=format)
+
     def test_load(self):
         expected = create_test_data()
 
