@@ -907,6 +907,9 @@ def contour(x, y, z, ax, **kwargs):
 
     Wraps :func:`matplotlib:matplotlib.pyplot.contour`
     """
+    if 'facecolor' in kwargs:
+        ax.set_facecolor(kwargs['facecolor'])
+
     primitive = ax.contour(x, y, z, **kwargs)
     return primitive
 
@@ -918,6 +921,9 @@ def contourf(x, y, z, ax, **kwargs):
 
     Wraps :func:`matplotlib:matplotlib.pyplot.contourf`
     """
+    if 'facecolor' in kwargs:
+        ax.set_facecolor(kwargs['facecolor'])
+
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
 
@@ -959,6 +965,9 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
             # we have to infer the intervals on both axes
             y = _infer_interval_breaks(y, axis=1)
             y = _infer_interval_breaks(y, axis=0)
+
+    if 'facecolor' in kwargs:
+        ax.set_facecolor(kwargs['facecolor'])
 
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 
