@@ -59,6 +59,9 @@ New Features
   the :py:class:`~core.accessor_dt.DatetimeAccessor` (:pull:`3935`).  This
   feature requires cftime version 1.1.0 or greater.  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- For the netCDF3 backend, added dtype coercions for unsigned integer types.
+  (:issue:`4014`, :pull:`4018`)
+  By `Yunus Sevinchan <https://github.com/blsqr>`_
 
 Bug fixes
 ~~~~~~~~~
