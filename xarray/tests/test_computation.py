@@ -818,6 +818,58 @@ def test_vectorize_dask():
 
 
 @requires_dask
+def test_vectorize_dask_dtype():
+    # ensure output_dtypes is preserved with vectorize=True
+    # GH4015
+
+    # integer
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    expected = xr.DataArray([1, 2], dims=["x"])
+    actual = apply_ufunc(
+        pandas_median,
+        data_array.chunk({"x": 1}),
+        input_core_dims=[["y"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[int],
+    )
+    assert_identical(expected, actual)
+    assert expected.dtype == actual.dtype
+
+    # complex
+    data_array = xr.DataArray([[0 + 0j, 1 + 2j, 2 + 1j]], dims=("x", "y"))
+    expected = data_array.copy()
+    actual = apply_ufunc(
+        identity,
+        data_array.chunk({"x": 1}),
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[complex],
+    )
+    assert_identical(expected, actual)
+    assert expected.dtype == actual.dtype
+
+
+@requires_dask
+def test_vectorize_dask_dtype_meta():
+    # meta dtype takes precedence
+
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    expected = xr.DataArray([1, 2], dims=["x"])
+    actual = apply_ufunc(
+        pandas_median,
+        data_array.chunk({"x": 1}),
+        input_core_dims=[["y"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[int],
+        meta=np.ndarray((0, 0), dtype=np.float),
+    )
+    assert_identical(expected, actual)
+    assert np.float == actual.dtype
+
+
+@requires_dask
 def test_vectorize_dask_new_output_dims():
     # regression test for GH3574
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
