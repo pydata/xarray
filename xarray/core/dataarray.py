@@ -3495,17 +3495,18 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0,1,2])])
-        >>> arr.pad(x=(1,2), constant_values=0)
+        >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0, 1, 2])])
+        >>> arr.pad(x=(1, 2), constant_values=0)
         <xarray.DataArray (x: 6)>
         array([0, 5, 6, 7, 0, 0])
         Coordinates:
           * x        (x) float64 nan 0.0 1.0 2.0 nan nan
 
-        >>> da = xr.DataArray([[0,1,2,3], [10,11,12,13]],
-                              dims=["x", "y"],
-                              coords={"x": [0,1], "y": [10, 20 ,30, 40], "z": ("x", [100, 200])}
-            )
+        >>> da = xr.DataArray(
+        ...     [[0, 1, 2, 3], [10, 11, 12, 13]],
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 1], "y": [10, 20, 30, 40], "z": ("x", [100, 200])},
+        ... )
         >>> da.pad(x=1)
         <xarray.DataArray (x: 4, y: 4)>
         array([[nan, nan, nan, nan],
@@ -3592,8 +3593,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> array = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                      coords={"x": ['a', 'b', 'c', 'd', 'e']})
+        >>> array = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
         >>> array.min()
         <xarray.DataArray ()>
         array(-2)
@@ -3604,13 +3606,15 @@ class DataArray(AbstractArray, DataWithCoords):
         <xarray.DataArray 'x' ()>
         array('e', dtype='<U1')
 
-        >>> array = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                       [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                       [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                      dims=["y", "x"],
-        ...                      coords={"y": [-1, 0, 1],
-        ...                              "x": np.arange(5.)**2}
-        ...                      )
+        >>> array = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
+        ... )
         >>> array.min(dim="x")
         <xarray.DataArray (y: 3)>
         array([-2., -4.,  1.])
@@ -3686,8 +3690,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> array = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                      coords={"x": ['a', 'b', 'c', 'd', 'e']})
+        >>> array = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
         >>> array.max()
         <xarray.DataArray ()>
         array(2)
@@ -3698,13 +3703,15 @@ class DataArray(AbstractArray, DataWithCoords):
         <xarray.DataArray 'x' ()>
         array('b', dtype='<U1')
 
-        >>> array = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                       [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                       [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                      dims=["y", "x"],
-        ...                      coords={"y": [-1, 0, 1],
-        ...                              "x": np.arange(5.)**2}
-        ...                      )
+        >>> array = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
+        ... )
         >>> array.max(dim="x")
         <xarray.DataArray (y: 3)>
         array([2., 2., 1.])

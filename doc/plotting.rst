@@ -56,6 +56,7 @@ Imports
 
     # Use defaults so we don't get gridlines in generated docs
     import matplotlib as mpl
+
     mpl.rcdefaults()
 
 The following imports are necessary for all of the examples.
@@ -71,7 +72,7 @@ For these examples we'll use the North American air temperature dataset.
 
 .. ipython:: python
 
-    airtemps = xr.tutorial.open_dataset('air_temperature')
+    airtemps = xr.tutorial.open_dataset("air_temperature")
     airtemps
 
     # Convert to celsius
@@ -79,7 +80,7 @@ For these examples we'll use the North American air temperature dataset.
 
     # copy attributes to get nice figure labels and change Kelvin to Celsius
     air.attrs = airtemps.air.attrs
-    air.attrs['units'] = 'deg C'
+    air.attrs["units"] = "deg C"
 
 .. note::
    Until :issue:`1614` is solved, you might need to copy over the metadata in ``attrs`` to get informative figure labels (as was done above).
@@ -126,7 +127,7 @@ can be used:
 .. ipython:: python
 
     @savefig plotting_1d_additional_args.png width=4in
-    air1d[:200].plot.line('b-^')
+    air1d[:200].plot.line("b-^")
 
 .. note::
     Not all xarray plotting methods support passing positional arguments
@@ -138,7 +139,7 @@ Keyword arguments work the same way, and are more explicit.
 .. ipython:: python
 
     @savefig plotting_example_sin3.png width=4in
-    air1d[:200].plot.line(color='purple', marker='o')
+    air1d[:200].plot.line(color="purple", marker="o")
 
 =========================
  Adding to Existing Axis
@@ -257,7 +258,7 @@ plots to check the variation of air temperature at three different latitudes alo
 .. ipython:: python
 
     @savefig plotting_example_multiple_lines_x_kwarg.png
-    air.isel(lon=10, lat=[19,21,22]).plot.line(x='time')
+    air.isel(lon=10, lat=[19, 21, 22]).plot.line(x="time")
 
 It is required to explicitly specify either
 
@@ -278,7 +279,7 @@ It is also possible to make line plots such that the data are on the x-axis and 
 .. ipython:: python
 
     @savefig plotting_example_xy_kwarg.png
-    air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
+    air.isel(time=10, lon=[10, 11]).plot(y="lat", hue="lon")
 
 ============
  Step plots
@@ -291,7 +292,7 @@ made using 1D data.
     :okwarning:
 
     @savefig plotting_example_step.png width=4in
-    air1d[:20].plot.step(where='mid')
+    air1d[:20].plot.step(where="mid")
 
 The argument ``where`` defines where the steps should be placed, options are
 ``'pre'`` (default), ``'post'``, and ``'mid'``. This is particularly handy
@@ -299,15 +300,15 @@ when plotting data grouped with :py:meth:`Dataset.groupby_bins`.
 
 .. ipython:: python
 
-    air_grp = air.mean(['time','lon']).groupby_bins('lat',[0,23.5,66.5,90])
+    air_grp = air.mean(["time", "lon"]).groupby_bins("lat", [0, 23.5, 66.5, 90])
     air_mean = air_grp.mean()
     air_std = air_grp.std()
     air_mean.plot.step()
-    (air_mean + air_std).plot.step(ls=':')
-    (air_mean - air_std).plot.step(ls=':')
-    plt.ylim(-20,30)
+    (air_mean + air_std).plot.step(ls=":")
+    (air_mean - air_std).plot.step(ls=":")
+    plt.ylim(-20, 30)
     @savefig plotting_example_step_groupby.png width=4in
-    plt.title('Zonal mean temperature')
+    plt.title("Zonal mean temperature")
 
 In this case, the actual boundaries of the bins are used and the ``where`` argument
 is ignored.
@@ -322,7 +323,9 @@ The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes d
 .. ipython:: python
 
     @savefig plotting_example_xincrease_yincrease_kwarg.png
-    air.isel(time=10, lon=[10, 11]).plot.line(y='lat', hue='lon', xincrease=False, yincrease=False)
+    air.isel(time=10, lon=[10, 11]).plot.line(
+        y="lat", hue="lon", xincrease=False, yincrease=False
+    )
 
 In addition, one can use ``xscale, yscale`` to set axes scaling; ``xticks, yticks`` to set axes ticks and ``xlim, ylim`` to set axes limits. These accept the same values as the matplotlib methods ``Axes.set_(x,y)scale()``, ``Axes.set_(x,y)ticks()``, ``Axes.set_(x,y)lim()`` respectively.
 
@@ -386,7 +389,7 @@ produce plots with nonuniform coordinates.
 
     b = air2d.copy()
     # Apply a nonlinear transformation to one of the coords
-    b.coords['lat'] = np.log(b.coords['lat'])
+    b.coords["lat"] = np.log(b.coords["lat"])
 
     @savefig plotting_nonuniform_coords.png width=4in
     b.plot()
@@ -401,9 +404,9 @@ matplotlib is available.
 .. ipython:: python
 
     air2d.plot(cmap=plt.cm.Blues)
-    plt.title('These colors prove North America\nhas fallen in the ocean')
-    plt.ylabel('latitude')
-    plt.xlabel('longitude')
+    plt.title("These colors prove North America\nhas fallen in the ocean")
+    plt.ylabel("latitude")
+    plt.xlabel("longitude")
     plt.tight_layout()
 
     @savefig plotting_2d_call_matplotlib.png width=4in
@@ -419,7 +422,7 @@ matplotlib is available.
 
     .. ipython:: python
 
-        plt.xlabel('Never gonna see this.')
+        plt.xlabel("Never gonna see this.")
         air2d.plot()
 
         @savefig plotting_2d_call_matplotlib2.png width=4in
@@ -511,10 +514,10 @@ if using ``imshow`` or ``pcolormesh`` (but not with ``contour`` or ``contourf``,
 since levels are chosen automatically).
 
 .. ipython:: python
-   :okwarning:
+    :okwarning:
 
     @savefig plotting_seaborn_palette.png width=4in
-    air2d.plot(levels=10, cmap='husl')
+    air2d.plot(levels=10, cmap="husl")
     plt.draw()
 
 .. _plotting.faceting:
@@ -558,14 +561,16 @@ arguments to the xarray plotting methods/functions. This returns a
 .. ipython:: python
 
     @savefig plot_facet_dataarray.png
-    g_simple = t.plot(x='lon', y='lat', col='time', col_wrap=3)
+    g_simple = t.plot(x="lon", y="lat", col="time", col_wrap=3)
 
 Faceting also works for line plots.
 
 .. ipython:: python
 
     @savefig plot_facet_dataarray_line.png
-    g_simple_line = t.isel(lat=slice(0,None,4)).plot(x='lon', hue='lat', col='time', col_wrap=3)
+    g_simple_line = t.isel(lat=slice(0, None, 4)).plot(
+        x="lon", hue="lat", col="time", col_wrap=3
+    )
 
 ===============
  4 dimensional
@@ -579,12 +584,12 @@ one were much hotter.
 .. ipython:: python
 
     t2 = t.isel(time=slice(0, 2))
-    t4d = xr.concat([t2, t2 + 40], pd.Index(['normal', 'hot'], name='fourth_dim'))
+    t4d = xr.concat([t2, t2 + 40], pd.Index(["normal", "hot"], name="fourth_dim"))
     # This is a 4d array
     t4d.coords
 
     @savefig plot_facet_4d.png
-    t4d.plot(x='lon', y='lat', col='time', row='fourth_dim')
+    t4d.plot(x="lon", y="lat", col="time", row="fourth_dim")
 
 ================
  Other features
@@ -593,9 +598,9 @@ one were much hotter.
 Faceted plotting supports other arguments common to xarray 2d plots.
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
-      plt.close('all')
+    plt.close("all")
 
 .. ipython:: python
 
@@ -604,9 +609,15 @@ Faceted plotting supports other arguments common to xarray 2d plots.
     hasoutliers[-1, -1, -1] = 400
 
     @savefig plot_facet_robust.png
-    g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
-                                    robust=True, cmap='viridis',
-				    cbar_kwargs={'label': 'this has outliers'})
+    g = hasoutliers.plot.pcolormesh(
+        "lon",
+        "lat",
+        col="time",
+        col_wrap=3,
+        robust=True,
+        cmap="viridis",
+        cbar_kwargs={"label": "this has outliers"},
+    )
 
 ===================
  FacetGrid Objects
@@ -632,20 +643,20 @@ It's possible to select the :py:class:`xarray.DataArray` or
 
 .. ipython:: python
 
-   g.data.loc[g.name_dicts[0, 0]]
+    g.data.loc[g.name_dicts[0, 0]]
 
 Here is an example of using the lower level API and then modifying the axes after
 they have been plotted.
 
 .. ipython:: python
 
-    g = t.plot.imshow('lon', 'lat', col='time', col_wrap=3, robust=True)
+    g = t.plot.imshow("lon", "lat", col="time", col_wrap=3, robust=True)
 
     for i, ax in enumerate(g.axes.flat):
-        ax.set_title('Air Temperature %d' % i)
+        ax.set_title("Air Temperature %d" % i)
 
     bottomright = g.axes[-1, -1]
-    bottomright.annotate('bottom right', (240, 40))
+    bottomright.annotate("bottom right", (240, 40))
 
     @savefig plot_facet_iterator.png
     plt.draw()
@@ -670,8 +681,8 @@ Consider this dataset
 
 .. ipython:: python
 
-   ds = xr.tutorial.scatter_example_dataset()
-   ds
+    ds = xr.tutorial.scatter_example_dataset()
+    ds
 
 
 Suppose we want to scatter ``A`` against ``B``
@@ -679,14 +690,14 @@ Suppose we want to scatter ``A`` against ``B``
 .. ipython:: python
 
     @savefig ds_simple_scatter.png
-    ds.plot.scatter(x='A', y='B')
+    ds.plot.scatter(x="A", y="B")
 
 The ``hue`` kwarg lets you vary the color by variable value
 
 .. ipython:: python
 
     @savefig ds_hue_scatter.png
-    ds.plot.scatter(x='A', y='B', hue='w')
+    ds.plot.scatter(x="A", y="B", hue="w")
 
 When ``hue`` is specified, a colorbar is added for numeric ``hue`` DataArrays by
 default and a legend is added for non-numeric ``hue`` DataArrays (as above).
@@ -697,21 +708,21 @@ Additionally, the boolean kwarg ``add_guide`` can be used to prevent the display
 
     ds = ds.assign(w=[1, 2, 3, 5])
     @savefig ds_discrete_legend_hue_scatter.png
-    ds.plot.scatter(x='A', y='B', hue='w', hue_style='discrete')
+    ds.plot.scatter(x="A", y="B", hue="w", hue_style="discrete")
 
 The ``markersize`` kwarg lets you vary the point's size by variable value. You can additionally pass ``size_norm`` to control how the variable's values are mapped to point sizes.
 
 .. ipython:: python
 
     @savefig ds_hue_size_scatter.png
-    ds.plot.scatter(x='A', y='B', hue='z', hue_style='discrete', markersize='z')
+    ds.plot.scatter(x="A", y="B", hue="z", hue_style="discrete", markersize="z")
 
 Faceting is also possible
 
 .. ipython:: python
 
     @savefig ds_facet_scatter.png
-    ds.plot.scatter(x='A', y='B', col='x', row='z', hue='w', hue_style='discrete')
+    ds.plot.scatter(x="A", y="B", col="x", row="z", hue="w", hue_style="discrete")
 
 
 For more advanced scatter plots, we recommend converting the relevant data variables to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
@@ -729,11 +740,15 @@ This script will plot the air temperature on a map.
 .. ipython:: python
 
     import cartopy.crs as ccrs
-    air = xr.tutorial.open_dataset('air_temperature').air
+
+    air = xr.tutorial.open_dataset("air_temperature").air
+
     ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
-    air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree());
+    air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree())
+    ax.set_global()
+
     @savefig plotting_maps_cartopy.png width=100%
-    ax.set_global(); ax.coastlines();
+    ax.coastlines()
 
 When faceting on maps, the projection can be transferred to the ``plot``
 function using the ``subplot_kws`` keyword. The axes for the subplots created
@@ -741,13 +756,16 @@ by faceting are accessible in the object returned by ``plot``:
 
 .. ipython:: python
 
-    p = air.isel(time=[0, 4]).plot(transform=ccrs.PlateCarree(), col='time',
-                                   subplot_kws={'projection': ccrs.Orthographic(-80, 35)})
+    p = air.isel(time=[0, 4]).plot(
+        transform=ccrs.PlateCarree(),
+        col="time",
+        subplot_kws={"projection": ccrs.Orthographic(-80, 35)},
+    )
     for ax in p.axes.flat:
         ax.coastlines()
         ax.gridlines()
     @savefig plotting_maps_cartopy_facetting.png width=100%
-    plt.draw();
+    plt.draw()
 
 
 Details
@@ -770,6 +788,7 @@ These are provided for user convenience; they all call the same code.
 .. ipython:: python
 
     import xarray.plot as xplt
+
     da = xr.DataArray(range(5))
     fig, axes = plt.subplots(ncols=2, nrows=2)
     da.plot(ax=axes[0, 0])
@@ -804,8 +823,7 @@ read on.
 
 .. ipython:: python
 
-    a0 = xr.DataArray(np.zeros((4, 3, 2)), dims=('y', 'x', 'z'),
-                      name='temperature')
+    a0 = xr.DataArray(np.zeros((4, 3, 2)), dims=("y", "x", "z"), name="temperature")
     a0[0, 0, 0] = 1
     a = a0.isel(z=0)
     a
@@ -839,14 +857,16 @@ instead of the default ones:
 .. ipython:: python
 
     lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
-    lon += lat/10
-    lat += lon/10
-    da = xr.DataArray(np.arange(20).reshape(4, 5), dims=['y', 'x'],
-                      coords = {'lat': (('y', 'x'), lat),
-                                'lon': (('y', 'x'), lon)})
+    lon += lat / 10
+    lat += lon / 10
+    da = xr.DataArray(
+        np.arange(20).reshape(4, 5),
+        dims=["y", "x"],
+        coords={"lat": (("y", "x"), lat), "lon": (("y", "x"), lon)},
+    )
 
     @savefig plotting_example_2d_irreg.png width=4in
-    da.plot.pcolormesh('lon', 'lat');
+    da.plot.pcolormesh("lon", "lat")
 
 Note that in this case, xarray still follows the pixel centered convention.
 This might be undesirable in some cases, for example when your data is defined
@@ -856,22 +876,25 @@ this convention when plotting on a map:
 .. ipython:: python
 
     import cartopy.crs as ccrs
-    ax = plt.subplot(projection=ccrs.PlateCarree());
-    da.plot.pcolormesh('lon', 'lat', ax=ax);
-    ax.scatter(lon, lat, transform=ccrs.PlateCarree());
+
+    ax = plt.subplot(projection=ccrs.PlateCarree())
+    da.plot.pcolormesh("lon", "lat", ax=ax)
+    ax.scatter(lon, lat, transform=ccrs.PlateCarree())
+    ax.coastlines()
     @savefig plotting_example_2d_irreg_map.png width=4in
-    ax.coastlines(); ax.gridlines(draw_labels=True);
+    ax.gridlines(draw_labels=True)
 
 You can however decide to infer the cell boundaries and use the
 ``infer_intervals`` keyword:
 
 .. ipython:: python
 
-    ax = plt.subplot(projection=ccrs.PlateCarree());
-    da.plot.pcolormesh('lon', 'lat', ax=ax, infer_intervals=True);
-    ax.scatter(lon, lat, transform=ccrs.PlateCarree());
+    ax = plt.subplot(projection=ccrs.PlateCarree())
+    da.plot.pcolormesh("lon", "lat", ax=ax, infer_intervals=True)
+    ax.scatter(lon, lat, transform=ccrs.PlateCarree())
+    ax.coastlines()
     @savefig plotting_example_2d_irreg_map_infer.png width=4in
-    ax.coastlines(); ax.gridlines(draw_labels=True);
+    ax.gridlines(draw_labels=True)
 
 .. note::
     The data model of xarray does not support datasets with `cell boundaries`_
@@ -885,6 +908,6 @@ One can also make line plots with multidimensional coordinates. In this case, ``
 .. ipython:: python
 
     f, ax = plt.subplots(2, 1)
-    da.plot.line(x='lon', hue='y', ax=ax[0]);
+    da.plot.line(x="lon", hue="y", ax=ax[0])
     @savefig plotting_example_2d_hue_xy.png
-    da.plot.line(x='lon', hue='x', ax=ax[1]);
+    da.plot.line(x="lon", hue="x", ax=ax[1])

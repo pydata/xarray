@@ -30,6 +30,7 @@ from .utils import (
 
 
 def _infer_line_data(darray, x, y, hue):
+
     ndims = len(darray.dims)
 
     if x is not None and y is not None:

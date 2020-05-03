@@ -1192,10 +1192,10 @@ def dot(*arrays, dims=None, **kwargs):
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position
     subscripts_list = [
-        "..." + "".join([dim_map[d] for d in ds]) for ds in input_core_dims
+        "..." + "".join(dim_map[d] for d in ds) for ds in input_core_dims
     ]
     subscripts = ",".join(subscripts_list)
-    subscripts += "->..." + "".join([dim_map[d] for d in output_core_dims[0]])
+    subscripts += "->..." + "".join(dim_map[d] for d in output_core_dims[0])
 
     join = OPTIONS["arithmetic_join"]
     # using "inner" emulates `(a * b).sum()` for all joins (except "exact")
