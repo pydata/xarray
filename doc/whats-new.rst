@@ -92,6 +92,9 @@ Bug fixes
 - Fix bug in time parsing failing to fall back to cftime. This was causing time
   variables with a time unit of `'msecs'` to fail to parse. (:pull:`3998`)
   By `Ryan May <https://github.com/dopplershift>`_.
+- Ensure ``output_dtypes`` is preserved when using :py:func:`apply_ufunc` with
+  ``vectorize=True`` and ``dask="parallelized"`` (:issue:`4015`), by
+  `Mathias Hauser <https://github.com/mathause>`_
 
 Documentation
 ~~~~~~~~~~~~~
