@@ -864,7 +864,9 @@ def apply_ufunc(
           inputs are a dask array. If used, the ``output_dtypes`` argument must
           also be provided. Multiple output arguments are not yet supported.
     output_dtypes : list of dtypes, optional
-        Optional list of output dtypes. Only used if dask='parallelized'.
+        Optional list of output dtypes. Used in ``np.vectorize`` and required if
+        dask='parallelized'. Note that the dtype of meta takes precedence over
+        output_dtypes in ``dask.array.blockwise``.
     output_sizes : dict, optional
         Optional mapping from dimension names to sizes for outputs. Only used
         if dask='parallelized' and new dimensions (not found on inputs) appear
@@ -1005,10 +1007,12 @@ def apply_ufunc(
         func = functools.partial(func, **kwargs)
 
     if vectorize:
-        if meta is None:
-            # set meta=np.ndarray by default for numpy vectorized functions
-            # work around dask bug computing meta with vectorized functions: GH5642
-            meta = np.ndarray
+        if dask == "parallelized" and meta is None:
+            # only basic checks: _apply_blockwise will raise the appropriate errors
+            if output_dtypes is not None and isinstance(output_dtypes, list):
+                # set meta=np.ndarray by default for numpy vectorized functions
+                # work around dask bug computing meta with vectorized functions: GH5642
+                meta = np.ndarray((0, 0), dtype=output_dtypes[0])
 
         if signature.all_core_dims:
             func = np.vectorize(
