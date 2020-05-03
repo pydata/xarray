@@ -1055,9 +1055,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         structure of the original object, but with the new data. Original
         object is unaffected.
 
-        >>> ds.copy(
-        ...     data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]}
-        ... )
+        >>> ds.copy(data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]})
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
@@ -1537,7 +1535,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``dask.delayed.Delayed`` object that can be computed later.
         invalid_netcdf: boolean
             Only valid along with engine='h5netcdf'. If True, allow writing
-            hdf5 files which are valid netcdf as described in
+            hdf5 files which are invalid netcdf as described in
             https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
@@ -4598,6 +4596,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See also
         --------
         xarray.DataArray.from_series
+        pandas.DataFrame.to_xarray
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
@@ -6051,8 +6050,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> ds = xr.Dataset({'foo': ('x', range(5))})
-        >>> ds.pad(x=(1,2))
+        >>> ds = xr.Dataset({"foo": ("x", range(5))})
+        >>> ds.pad(x=(1, 2))
         <xarray.Dataset>
         Dimensions:  (x: 8)
         Dimensions without coordinates: x
@@ -6146,17 +6145,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> array1 = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                       coords={"x": ['a', 'b', 'c', 'd', 'e']})
-        >>> array2 = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                        [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                        [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                       dims=["y", "x"],
-        ...                       coords={"y": [-1, 0, 1],
-        ...                               "x": ['a', 'b', 'c', 'd', 'e']}
-        ...                       )
-        >>> ds = xr.Dataset({'int': array1, 'float': array2})
-        >>> ds.min(dim='x')
+        >>> array1 = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
+        >>> array2 = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
+        ... )
+        >>> ds = xr.Dataset({"int": array1, "float": array2})
+        >>> ds.min(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6164,7 +6166,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 -2
             float    (y) float64 -2.0 -4.0 1.0
-        >>> ds.argmin(dim='x')
+        >>> ds.argmin(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6172,7 +6174,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 4
             float    (y) int64 4 0 2
-        >>> ds.idxmin(dim='x')
+        >>> ds.idxmin(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6241,17 +6243,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> array1 = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                       coords={"x": ['a', 'b', 'c', 'd', 'e']})
-        >>> array2 = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                        [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                        [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                       dims=["y", "x"],
-        ...                       coords={"y": [-1, 0, 1],
-        ...                               "x": ['a', 'b', 'c', 'd', 'e']}
-        ...                       )
-        >>> ds = xr.Dataset({'int': array1, 'float': array2})
-        >>> ds.max(dim='x')
+        >>> array1 = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
+        >>> array2 = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
+        ... )
+        >>> ds = xr.Dataset({"int": array1, "float": array2})
+        >>> ds.max(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6259,7 +6264,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 2
             float    (y) float64 2.0 2.0 1.0
-        >>> ds.argmax(dim='x')
+        >>> ds.argmax(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6267,7 +6272,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 1
             float    (y) int64 0 2 2
-        >>> ds.idxmax(dim='x')
+        >>> ds.idxmax(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
