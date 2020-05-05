@@ -1016,12 +1016,16 @@ def apply_ufunc(
         func = functools.partial(func, **kwargs)
 
     if vectorize:
-        if dask == "parallelized" and meta is None:
-            # only basic checks: _apply_blockwise will raise the appropriate errors
-            if output_dtypes is not None and isinstance(output_dtypes, list):
-                # set meta=np.ndarray by default for numpy vectorized functions
-                # work around dask bug computing meta with vectorized functions: GH5642
-                meta = np.ndarray((0, 0), dtype=output_dtypes[0])
+        if (
+            dask == "parallelized"
+            and meta is None
+            and output_dtypes is not None
+            and isinstance(output_dtypes, list)
+        ):
+            # set meta=np.ndarray by default for numpy vectorized functions
+            # work around dask bug computing meta with vectorized functions: GH5642
+            # defer raising errors to _apply_blockwise (e.g. if output_dtypes is None)
+            meta = np.ndarray((0, 0), dtype=output_dtypes[0])
 
         if signature.all_core_dims:
             func = np.vectorize(
