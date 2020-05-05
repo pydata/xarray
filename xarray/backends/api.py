@@ -1279,18 +1279,35 @@ def _validate_append_dim_and_encoding(
         return
     if append_dim:
         if append_dim not in ds.dims:
-            raise ValueError(f"{append_dim} not a valid dimension in the Dataset")
-    for data_var in ds_to_append:
-        if data_var in ds:
-            if append_dim is None:
+            raise ValueError(
+                f"append_dim={append_dim!r} does not match any existing "
+                f"dataset dimensions {ds.dims}"
+            )
+    for var_name in ds_to_append:
+        if var_name in ds:
+            if ds_to_append[var_name].dims != ds[var_name].dims:
                 raise ValueError(
-                    "variable '{}' already exists, but append_dim "
-                    "was not set".format(data_var)
+                    f"variable {var_name!r} already exists with different "
+                    f"dimension names {ds[var_name].dims} != "
+                    f"{ds_to_append[var_name].dims}, but changing variable "
+                    "dimensions is not supported by to_zarr()."
                 )
-            if data_var in encoding.keys():
+            existing_sizes = {
+                k: v for k, v in ds[var_name].sizes.items() if k != append_dim
+            }
+            new_sizes = {
+                k: v for k, v in ds_to_append[var_name].sizes.items() if k != append_dim
+            }
+            if existing_sizes != new_sizes:
                 raise ValueError(
-                    "variable '{}' already exists, but encoding was"
-                    "provided".format(data_var)
+                    f"variable {var_name!r} already exists with different "
+                    "dimension sizes: {existing_sizes} != {new_sizes}. "
+                    "to_zarr() only supports changing dimension sizes when "
+                    f"explicitly appending, but append_dim={append_dim!r}."
+                )
+            if var_name in encoding.keys():
+                raise ValueError(
+                    f"variable {var_name!r} already exists, but encoding was provided"
                 )
 
 
