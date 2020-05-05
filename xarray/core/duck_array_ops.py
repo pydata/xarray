@@ -303,19 +303,15 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
         try:
             return func(values, axis=axis, **kwargs)
         except AttributeError:
-            if isinstance(values, dask_array_type):
-                try:  # dask/dask#3133 dask sometimes needs dtype argument
-                    # if func does not accept dtype, then raises TypeError
-                    return func(values, axis=axis, dtype=values.dtype, **kwargs)
-                except (AttributeError, TypeError):
-                    msg = "%s is not yet implemented on dask arrays" % name
-            else:
-                msg = (
-                    "%s is not available with skipna=False with the "
-                    "installed version of numpy; upgrade to numpy 1.12 "
-                    "or newer to use skipna=True or skipna=None" % name
+            if not isinstance(values, dask_array_type):
+                raise
+            try:  # dask/dask#3133 dask sometimes needs dtype argument
+                # if func does not accept dtype, then raises TypeError
+                return func(values, axis=axis, dtype=values.dtype, **kwargs)
+            except (AttributeError, TypeError):
+                raise NotImplementedError(
+                    f"{name} is not yet implemented on dask arrays"
                 )
-            raise NotImplementedError(msg)
 
     f.__name__ = name
     return f

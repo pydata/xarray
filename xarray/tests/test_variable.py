@@ -1254,8 +1254,19 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.isel(x=0), v[:, 0])
         assert_identical(v.isel(x=[0, 2]), v[:, [0, 2]])
         assert_identical(v.isel(time=[]), v[[]])
-        with raises_regex(ValueError, "do not exist"):
+        with raises_regex(
+            ValueError,
+            r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            r"\('time', 'x'\)",
+        ):
             v.isel(not_a_dim=0)
+        with pytest.warns(
+            UserWarning,
+            match=r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            r"\('time', 'x'\)",
+        ):
+            v.isel(not_a_dim=0, missing_dims="warn")
+        assert_identical(v, v.isel(not_a_dim=0, missing_dims="ignore"))
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings
@@ -2201,6 +2212,10 @@ class TestAsCompatibleData:
         expect.values = [[True, True], [True, True]]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
+
+        # raise error on non-scalar fill_value
+        with raises_regex(ValueError, "must be scalar"):
+            full_like(orig, [1.0, 2.0])
 
     @requires_dask
     def test_full_like_dask(self):

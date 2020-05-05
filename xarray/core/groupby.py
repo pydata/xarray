@@ -29,7 +29,7 @@ def check_reduce_dims(reduce_dims, dimensions):
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
-        if any([dim not in dimensions for dim in reduce_dims]):
+        if any(dim not in dimensions for dim in reduce_dims):
             raise ValueError(
                 "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
                 % (reduce_dims, dimensions)
@@ -273,7 +273,7 @@ class GroupBy(SupportsArithmetic):
         grouper=None,
         bins=None,
         restore_coord_dims=True,
-        cut_kwargs={},
+        cut_kwargs=None,
     ):
         """Create a GroupBy object
 
@@ -299,6 +299,8 @@ class GroupBy(SupportsArithmetic):
             Extra keyword arguments to pass to `pandas.cut`
 
         """
+        if cut_kwargs is None:
+            cut_kwargs = {}
         from .dataarray import DataArray
 
         if grouper is not None and bins is not None:
@@ -370,8 +372,10 @@ class GroupBy(SupportsArithmetic):
                 group = group.dropna(group_dim)
 
             # look through group to find the unique values
+            group_as_index = safe_cast_to_index(group)
+            sort = bins is None and (not isinstance(group_as_index, pd.MultiIndex))
             unique_values, group_indices = unique_value_groups(
-                safe_cast_to_index(group), sort=(bins is None)
+                group_as_index, sort=sort
             )
             unique_coord = IndexVariable(group.name, unique_values)
 
