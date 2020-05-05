@@ -1579,7 +1579,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         mode : {'w', 'w-', 'a', None}
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
-            'a' means append (create if does not exist).
+            'a' means override existing variables (create if does not exist).
             If ``append_dim`` is set, ``mode`` can be omitted as it is
             internally set to ``'a'``. Otherwise, ``mode`` will default to
             `w-` if not set.
@@ -1598,7 +1598,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
         append_dim: hashable, optional
-            If set, the dimension on which the data will be appended.
+            If set, the dimension along which the data will be appended. All
+            other dimensions on overriden variables must remain the same size.
 
         References
         ----------
@@ -1766,7 +1767,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise",
+        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise"
     ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
@@ -5933,7 +5934,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
                     fac = residuals / (x.shape[0] - order)
-                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j"),) * fac
+                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
         return Dataset(data_vars=variables, attrs=self.attrs.copy())
@@ -6199,7 +6200,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 skipna=skipna,
                 fill_value=fill_value,
                 keep_attrs=keep_attrs,
-            ),
+            )
         )
 
     def idxmax(
@@ -6297,7 +6298,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 skipna=skipna,
                 fill_value=fill_value,
                 keep_attrs=keep_attrs,
-            ),
+            )
         )
 
 

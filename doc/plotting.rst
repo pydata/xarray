@@ -717,6 +717,7 @@ function using the ``subplot_kws`` keyword. The axes for the subplots created
 by faceting are accessible in the object returned by ``plot``:
 
 .. ipython:: python
+    :okwarning:
 
     p = air.isel(time=[0, 4]).plot(
         transform=ccrs.PlateCarree(),
