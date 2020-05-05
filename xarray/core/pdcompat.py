@@ -55,4 +55,4 @@ def count_not_none(*args) -> int:
 
     Copied from pandas.core.common.count_not_none (not part of the public API)
     """
-    return sum([arg is not None for arg in args])
+    return sum(arg is not None for arg in args)
