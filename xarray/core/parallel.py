@@ -172,6 +172,9 @@ def map_blocks(
         has sizes 0, to determine properties of the returned object such as dtype,
         variable names, attributes, new dimensions and new indexes (if any).
         'template' must be provided if the function changes the size of existing dimensions.
+        When provided, `attrs` on variables in `template` are copied over to the result. Any
+        `attrs` set by `func` will be ignored.
+
 
     Returns
     -------

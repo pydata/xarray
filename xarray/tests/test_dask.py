@@ -1109,6 +1109,11 @@ def test_map_blocks_add_attrs(obj):
 
     assert_identical(actual, expected)
 
+    # when template is specified, attrs are copied from template, not set by function
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(add_attrs, obj, template=obj)
+    assert_identical(actual, obj)
+
 
 def test_map_blocks_change_name(map_da):
     def change_name(obj):

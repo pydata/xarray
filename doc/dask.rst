@@ -473,6 +473,12 @@ what the function returns) with dimensions, shapes, chunk sizes, attributes, coo
 variables that look exactly like the expected result. The variables should be dask-backed and hence not
 incur much memory cost.
 
+.. note::
+
+    Note that when ``template`` is provided, ``attrs`` from ``template`` are copied over to the result. Any
+    ``attrs`` set in ``func`` will be ignored.
+
+
 .. ipython:: python
 
     template = ds.temperature.isel(time=[1, 11, 21])
