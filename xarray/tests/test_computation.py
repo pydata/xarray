@@ -856,15 +856,19 @@ def test_vectorize_dask_dtype_meta():
 
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
-    actual = apply_ufunc(
-        pandas_median,
-        data_array.chunk({"x": 1}),
-        input_core_dims=[["y"]],
-        vectorize=True,
-        dask="parallelized",
-        output_dtypes=[int],
-        meta=np.ndarray((0, 0), dtype=np.float),
-    )
+
+    with pytest.warns(
+        UserWarning, match=r"dtype of meta \(float64\) takes precedence",
+    ):
+        actual = apply_ufunc(
+            pandas_median,
+            data_array.chunk({"x": 1}),
+            input_core_dims=[["y"]],
+            vectorize=True,
+            dask="parallelized",
+            output_dtypes=[int],
+            meta=np.ndarray((0, 0), dtype=np.float),
+        )
     assert_identical(expected, actual)
     assert np.float == actual.dtype
 

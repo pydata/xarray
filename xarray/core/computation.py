@@ -4,6 +4,7 @@ Functions for applying functions that act on arrays to xarray's labeled data.
 import functools
 import itertools
 import operator
+import warnings
 from collections import Counter
 from typing import (
     TYPE_CHECKING,
@@ -686,6 +687,14 @@ def _apply_blockwise(
             )
         )
     (dtype,) = output_dtypes
+
+    if (meta is not None) and hasattr(meta, "dtype") and (meta.dtype != dtype):
+        warnings.warn(
+            f"dtype of meta ({meta.dtype}) takes precedence over"
+            f" output_dtypes ({dtype})",
+            UserWarning,
+            stacklevel=3,
+        )
 
     if output_sizes is None:
         output_sizes = {}
