@@ -48,8 +48,15 @@ import numpy as np
 import pandas as pd
 
 from xarray.core.utils import is_scalar
+
 from ..core.common import _contains_cftime_datetimes
-from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name, build_field_sarray, month_position_check
+from .times import (
+    _STANDARD_CALENDARS,
+    build_field_sarray,
+    cftime_to_nptime,
+    infer_calendar_name,
+    month_position_check,
+)
 
 
 def named(name, pattern):
@@ -230,6 +237,7 @@ class CFTimeIndex(pd.Index):
     --------
     cftime_range
     """
+
     # Compat for frequency inference, see pandas-dev/pandas#23789
     _is_monotonic_increasing = pd.Index.is_monotonic_increasing
     _is_monotonic_decreasing = pd.Index.is_monotonic_decreasing
@@ -580,7 +588,7 @@ class CFTimeIndex(pd.Index):
                 _total_microseconds(exact_cftime_datetime_difference(epoch, date))
                 for date in self.values
             ],
-            dtype=np.int64
+            dtype=np.int64,
         )
 
     def _round_via_method(self, freq, method):
@@ -740,17 +748,20 @@ def _round_to_nearest_half_even(values, unit):
 
 
 class _CFTimeFrequencyInferer(pd.tseries.frequencies._FrequencyInferer):
-
     def __init__(self, index, warn: bool = True):
         super().__init__(index, warn=warn)
+        # Double attribute setting : pandas 1.1 will use i8values
         self.i8values = self.values = 1000 * index.asi8
 
     @pd.util._decorators.cache_readonly
     def fields(self):
+        # Pandas `build_field_sarray` is using the integer values with an hardcoded calendar
         return build_field_sarray(self.index)
 
     @pd.util._decorators.cache_readonly
     def rep_stamp(self):
+        # Pandas  rep_stamp` passes a Timestamp, which has no calendar info
+        # We could transform index[0] to a gregorian Timestamp, but that would cause trouble for 'all_leap' and '360_day' calendars.
         return self.index[0]
 
     def month_position_check(self):

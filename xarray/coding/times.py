@@ -470,13 +470,13 @@ def build_field_sarray(dates):
 
     out = np.empty(len(dates), dtype=sa_dtype)
 
-    out['Y'] = dates.year
-    out['M'] = dates.month
-    out['D'] = dates.day
-    out['h'] = dates.hour
-    out['m'] = dates.minute
-    out['s'] = dates.second
-    out['u'] = dates.microsecond
+    out["Y"] = dates.year
+    out["M"] = dates.month
+    out["D"] = dates.day
+    out["h"] = dates.hour
+    out["m"] = dates.minute
+    out["s"] = dates.second
+    out["u"] = dates.microsecond
 
     return out
 
@@ -498,17 +498,19 @@ def month_position_check(dates):
             if calendar_end:
                 calendar_end &= cal
             if business_end:
-                business_end &= cal or (date.daysinmonth - date.day < 3 and date.dayofwk == 4)
+                business_end &= cal or (
+                    date.daysinmonth - date.day < 3 and date.dayofwk == 4
+                )
         elif not calendar_start and not business_start:
             break
 
     if calendar_end:
-        return 'ce'
+        return "ce"
     elif business_end:
-        return 'be'
+        return "be"
     elif calendar_start:
-        return 'cs'
+        return "cs"
     elif business_start:
-        return 'bs'
+        return "bs"
     else:
         return None
