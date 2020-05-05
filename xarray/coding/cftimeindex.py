@@ -255,6 +255,10 @@ class CFTimeIndex(pd.Index):
     )
     dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
     weekday = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
+    days_in_month = _field_accessor(
+        "daysinmonth", "The number of days in the month of the datetime", "1.1.0.0"
+    )
+
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):

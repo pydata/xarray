@@ -224,7 +224,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             crs=vrt.crs.to_string(),
             resampling=vrt.resampling,
             src_nodata=vrt.src_nodata,
-            dst_nodata=vrt.dst_nodata,
+            nodata=vrt.nodata,
             tolerance=vrt.tolerance,
             transform=vrt.transform,
             width=vrt.width,
