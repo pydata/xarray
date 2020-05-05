@@ -32,7 +32,6 @@ from xarray.core.utils import is_scalar
 
 from . import (
     InaccessibleArray,
-    LooseVersion,
     UnexpectedDataAccess,
     assert_allclose,
     assert_array_equal,
