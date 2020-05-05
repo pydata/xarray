@@ -261,13 +261,13 @@ Some other important things to know about the docs:
       .. ipython:: python
 
           x = 2
-          x**3
+          x ** 3
 
   will be rendered as::
 
       In [1]: x = 2
 
-      In [2]: x**3
+      In [2]: x ** 3
       Out[2]: 8
 
   Almost all code examples in the docs are run (and the output saved) during the
@@ -467,7 +467,7 @@ typically find tests wrapped in a class.
 .. code-block:: python
 
     class TestReallyCoolFeature:
-        ....
+        ...
 
 Going forward, we are moving to a more *functional* style using the
 `pytest <http://doc.pytest.org/en/latest/>`__ framework, which offers a richer
@@ -477,7 +477,7 @@ writing test classes, we will write test functions like this:
 .. code-block:: python
 
     def test_really_cool_feature():
-        ....
+        ...
 
 Using ``pytest``
 ~~~~~~~~~~~~~~~~
@@ -508,17 +508,23 @@ We would name this file ``test_cool_feature.py`` and put in an appropriate place
     from xarray.testing import assert_equal
 
 
-    @pytest.mark.parametrize('dtype', ['int8', 'int16', 'int32', 'int64'])
+    @pytest.mark.parametrize("dtype", ["int8", "int16", "int32", "int64"])
     def test_dtypes(dtype):
         assert str(np.dtype(dtype)) == dtype
 
 
-    @pytest.mark.parametrize('dtype', ['float32',
-                             pytest.param('int16', marks=pytest.mark.skip),
-                             pytest.param('int32', marks=pytest.mark.xfail(
-                                reason='to show how it works'))])
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            "float32",
+            pytest.param("int16", marks=pytest.mark.skip),
+            pytest.param(
+                "int32", marks=pytest.mark.xfail(reason="to show how it works")
+            ),
+        ],
+    )
     def test_mark(dtype):
-        assert str(np.dtype(dtype)) == 'float32'
+        assert str(np.dtype(dtype)) == "float32"
 
 
     @pytest.fixture
@@ -526,7 +532,7 @@ We would name this file ``test_cool_feature.py`` and put in an appropriate place
         return xr.DataArray([1, 2, 3])
 
 
-    @pytest.fixture(params=['int8', 'int16', 'int32', 'int64'])
+    @pytest.fixture(params=["int8", "int16", "int32", "int64"])
     def dtype(request):
         return request.param
 

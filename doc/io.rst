@@ -9,11 +9,12 @@ simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
 format (recommended).
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 .. _io.netcdf:
@@ -52,12 +53,16 @@ We can save a Dataset to disk using the
 
 .. ipython:: python
 
-    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
-                    coords={'x': [10, 20, 30, 40],
-                            'y': pd.date_range('2000-01-01', periods=5),
-                            'z': ('x', list('abcd'))})
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 5))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": pd.date_range("2000-01-01", periods=5),
+            "z": ("x", list("abcd")),
+        },
+    )
 
-    ds.to_netcdf('saved_on_disk.nc')
+    ds.to_netcdf("saved_on_disk.nc")
 
 By default, the file is saved as netCDF4 (assuming netCDF4-Python is
 installed). You can control the format and engine used to write the file with
@@ -76,7 +81,7 @@ We can load netCDF files to create a new Dataset using
 
 .. ipython:: python
 
-    ds_disk = xr.open_dataset('saved_on_disk.nc')
+    ds_disk = xr.open_dataset("saved_on_disk.nc")
     ds_disk
 
 Similarly, a DataArray can be saved to disk using the
@@ -117,7 +122,7 @@ netCDF file. However, it's often cleaner to use a ``with`` statement:
 .. ipython:: python
 
     # this automatically closes the dataset after use
-    with xr.open_dataset('saved_on_disk.nc') as ds:
+    with xr.open_dataset("saved_on_disk.nc") as ds:
         print(ds.keys())
 
 Although xarray provides reasonable support for incremental reads of files on
@@ -171,7 +176,7 @@ You can view this encoding information (among others) in the
 .. ipython::
     :verbatim:
 
-    In [1]: ds_disk['y'].encoding
+    In [1]: ds_disk["y"].encoding
     Out[1]:
     {'zlib': False,
      'shuffle': False,
@@ -281,7 +286,7 @@ library::
         # glob expands paths with * to a list of files, like the unix shell
         paths = sorted(glob(files))
         datasets = [xr.open_dataset(p) for p in paths]
-        combined = xr.concat(dataset, dim)
+        combined = xr.concat(datasets, dim)
         return combined
 
     combined = read_netcdfs('/all/my/files/*.nc', dim='time')
@@ -469,7 +474,7 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
     :okwarning:
 
     # Writing complex valued data
-    da = xr.DataArray([1.+1.j, 2.+2.j, 3.+3.j])
+    da = xr.DataArray([1.0 + 1.0j, 2.0 + 2.0j, 3.0 + 3.0j])
     da.to_netcdf("complex.nc", engine="h5netcdf", invalid_netcdf=True)
 
     # Reading it back
@@ -479,7 +484,8 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
     :suppress:
 
     import os
-    os.remove('complex.nc')
+
+    os.remove("complex.nc")
 
 .. warning::
 
@@ -499,9 +505,11 @@ installed xarray can convert a ``DataArray`` into a ``Cube`` using
 
 .. ipython:: python
 
-    da = xr.DataArray(np.random.rand(4, 5), dims=['x', 'y'],
-                      coords=dict(x=[10, 20, 30, 40],
-                                  y=pd.date_range('2000-01-01', periods=5)))
+    da = xr.DataArray(
+        np.random.rand(4, 5),
+        dims=["x", "y"],
+        coords=dict(x=[10, 20, 30, 40], y=pd.date_range("2000-01-01", periods=5)),
+    )
 
     cube = da.to_iris()
     cube
@@ -548,8 +556,9 @@ __ http://iri.columbia.edu/
     :verbatim:
 
     In [3]: remote_data = xr.open_dataset(
-       ...:     'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods',
-       ...:     decode_times=False)
+       ...:     "http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
+       ...:     decode_times=False,
+       ...: )
 
     In [4]: remote_data
     Out[4]:
@@ -587,7 +596,7 @@ over the network until we look at particular values:
 .. ipython::
     :verbatim:
 
-    In [4]: tmax = remote_data['tmax'][:500, ::3, ::3]
+    In [4]: tmax = remote_data["tmax"][:500, ::3, ::3]
 
     In [5]: tmax
     Out[5]:
@@ -715,7 +724,8 @@ search indices or other automated data discovery tools.
     :suppress:
 
     import os
-    os.remove('saved_on_disk.nc')
+
+    os.remove("saved_on_disk.nc")
 
 .. _io.rasterio:
 
@@ -729,7 +739,7 @@ rasterio is installed. Here is an example of how to use
 .. ipython::
     :verbatim:
 
-    In [7]: rio = xr.open_rasterio('RGB.byte.tif')
+    In [7]: rio = xr.open_rasterio("RGB.byte.tif")
 
     In [8]: rio
     Out[8]:
@@ -769,7 +779,7 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
 
     In [1]: import rioxarray
 
-    In [2]: rds = rioxarray.open_rasterio('RGB.byte.tif')
+    In [2]: rds = rioxarray.open_rasterio("RGB.byte.tif")
 
     In [3]: rds
     Out[3]:
@@ -799,7 +809,7 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
     In [6]: rds4326.rio.crs
     Out[6]: CRS.from_epsg(4326)
 
-    In [7]: rds4326.rio.to_raster('RGB.byte.4326.tif')
+    In [7]: rds4326.rio.to_raster("RGB.byte.4326.tif")
 
 
 .. _rasterio: https://rasterio.readthedocs.io/en/latest/
@@ -831,17 +841,21 @@ xarray. To write a dataset with zarr, we use the :py:attr:`Dataset.to_zarr` meth
 To write to a local directory, we pass a path to a directory
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
 
-    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
-                    coords={'x': [10, 20, 30, 40],
-                            'y': pd.date_range('2000-01-01', periods=5),
-                            'z': ('x', list('abcd'))})
-    ds.to_zarr('path/to/directory.zarr')
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 5))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": pd.date_range("2000-01-01", periods=5),
+            "z": ("x", list("abcd")),
+        },
+    )
+    ds.to_zarr("path/to/directory.zarr")
 
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
 there.) If the directory does not exist, it will be created. If a zarr
@@ -854,22 +868,30 @@ It is also possible to append to an existing store. For that, set
 can be omitted as it will internally be set to ``'a'``.
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
 
-    ds1 = xr.Dataset({'foo': (('x', 'y', 't'), np.random.rand(4, 5, 2))},
-                     coords={'x': [10, 20, 30, 40],
-                             'y': [1,2,3,4,5],
-                             't': pd.date_range('2001-01-01', periods=2)})
-    ds1.to_zarr('path/to/directory.zarr')
-    ds2 = xr.Dataset({'foo': (('x', 'y', 't'), np.random.rand(4, 5, 2))},
-                     coords={'x': [10, 20, 30, 40],
-                             'y': [1,2,3,4,5],
-                             't': pd.date_range('2001-01-03', periods=2)})
-    ds2.to_zarr('path/to/directory.zarr', append_dim='t')
+    ds1 = xr.Dataset(
+        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": [1, 2, 3, 4, 5],
+            "t": pd.date_range("2001-01-01", periods=2),
+        },
+    )
+    ds1.to_zarr("path/to/directory.zarr")
+    ds2 = xr.Dataset(
+        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": [1, 2, 3, 4, 5],
+            "t": pd.date_range("2001-01-03", periods=2),
+        },
+    )
+    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
 
 To store variable length strings use ``dtype=object``.
 
@@ -878,7 +900,7 @@ To read back a zarr dataset that has been created this way, we use the
 
 .. ipython:: python
 
-    ds_zarr = xr.open_zarr('path/to/directory.zarr')
+    ds_zarr = xr.open_zarr("path/to/directory.zarr")
     ds_zarr
 
 Cloud Storage Buckets
@@ -912,15 +934,16 @@ These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     ! rm -rf foo.zarr
 
 .. ipython:: python
 
     import zarr
-    compressor = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
-    ds.to_zarr('foo.zarr', encoding={'foo': {'compressor': compressor}})
+
+    compressor = zarr.Blosc(cname="zstd", clevel=3, shuffle=2)
+    ds.to_zarr("foo.zarr", encoding={"foo": {"compressor": compressor}})
 
 .. note::
 
@@ -959,11 +982,12 @@ be done directly from zarr, as described in the
 .. _io.cfgrib:
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import shutil
-    shutil.rmtree('foo.zarr')
-    shutil.rmtree('path/to/directory.zarr')
+
+    shutil.rmtree("foo.zarr")
+    shutil.rmtree("path/to/directory.zarr")
 
 GRIB format via cfgrib
 ----------------------
@@ -975,7 +999,7 @@ to :py:func:`open_dataset`:
 .. ipython::
     :verbatim:
 
-    In [1]: ds_grib = xr.open_dataset('example.grib', engine='cfgrib')
+    In [1]: ds_grib = xr.open_dataset("example.grib", engine="cfgrib")
 
 We recommend installing ecCodes via conda::
 

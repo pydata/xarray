@@ -6,6 +6,7 @@ import warnings
 from collections import defaultdict
 from html import escape
 from numbers import Number
+from operator import methodcaller
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -86,6 +87,7 @@ from .utils import (
     _check_inplace,
     _default,
     decode_numpy_dict_values,
+    drop_dims_from_indexers,
     either_dict_or_kwargs,
     hashable,
     infix_dims,
@@ -1053,9 +1055,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         structure of the original object, but with the new data. Original
         object is unaffected.
 
-        >>> ds.copy(
-        ...     data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]}
-        ... )
+        >>> ds.copy(data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]})
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
@@ -1535,7 +1535,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``dask.delayed.Delayed`` object that can be computed later.
         invalid_netcdf: boolean
             Only valid along with engine='h5netcdf'. If True, allow writing
-            hdf5 files which are valid netcdf as described in
+            hdf5 files which are invalid netcdf as described in
             https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
@@ -1579,7 +1579,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         mode : {'w', 'w-', 'a', None}
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
-            'a' means append (create if does not exist).
+            'a' means override existing variables (create if does not exist).
             If ``append_dim`` is set, ``mode`` can be omitted as it is
             internally set to ``'a'``. Otherwise, ``mode`` will default to
             `w-` if not set.
@@ -1598,7 +1598,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
         append_dim: hashable, optional
-            If set, the dimension on which the data will be appended.
+            If set, the dimension along which the data will be appended. All
+            other dimensions on overriden variables must remain the same size.
 
         References
         ----------
@@ -1766,7 +1767,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Hashable, Any]
+        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise"
     ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
@@ -1776,9 +1777,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from .dataarray import DataArray
 
-        invalid = indexers.keys() - self.dims.keys()
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+        indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
@@ -1874,6 +1873,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         indexers: Mapping[Hashable, Any] = None,
         drop: bool = False,
+        missing_dims: str = "raise",
         **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along the specified
@@ -1895,6 +1895,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
+        missing_dims : {"raise", "warn", "ignore"}, default "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "exception": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -1917,13 +1923,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
-            return self._isel_fancy(indexers, drop=drop)
+            return self._isel_fancy(indexers, drop=drop, missing_dims=missing_dims)
 
         # Much faster algorithm for when all indexers are ints, slices, one-dimensional
         # lists, or zero or one-dimensional np.ndarray's
-        invalid = indexers.keys() - self.dims.keys()
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+        indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         variables = {}
         dims: Dict[Hashable, Tuple[int, ...]] = {}
@@ -1957,10 +1961,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             file_obj=self._file_obj,
         )
 
-    def _isel_fancy(self, indexers: Mapping[Hashable, Any], *, drop: bool) -> "Dataset":
+    def _isel_fancy(
+        self,
+        indexers: Mapping[Hashable, Any],
+        *,
+        drop: bool,
+        missing_dims: str = "raise",
+    ) -> "Dataset":
         # Note: we need to preserve the original indexers variable in order to merge the
         # coords below
-        indexers_list = list(self._validate_indexers(indexers))
+        indexers_list = list(self._validate_indexers(indexers, missing_dims))
 
         variables: Dict[Hashable, Variable] = {}
         indexes: Dict[Hashable, pd.Index] = {}
@@ -2559,7 +2569,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coordinates are assumed to be an array of monotonically increasing
             values.
         kwargs: dictionary, optional
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to scipy's interpolator. Valid
+            options and their behavior depend on if 1-dimensional or
+            multi-dimensional interpolation is used.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
@@ -4585,6 +4597,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See also
         --------
         xarray.DataArray.from_series
+        pandas.DataFrame.to_xarray
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
@@ -4593,8 +4606,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx = remove_unused_levels_categories(dataframe.index)
-        dataframe = dataframe.set_index(idx)
+        idx, dataframe = remove_unused_levels_categories(dataframe.index, dataframe)
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
@@ -4901,7 +4913,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dim : str, optional
+        dim : str
             Dimension over which to calculate the finite difference.
         n : int, optional
             The number of times values are differenced.
@@ -5922,7 +5934,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
                     fac = residuals / (x.shape[0] - order)
-                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j"),) * fac
+                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
         return Dataset(data_vars=variables, attrs=self.attrs.copy())
@@ -6048,8 +6060,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> ds = xr.Dataset({'foo': ('x', range(5))})
-        >>> ds.pad(x=(1,2))
+        >>> ds = xr.Dataset({"foo": ("x", range(5))})
+        >>> ds.pad(x=(1, 2))
         <xarray.Dataset>
         Dimensions:  (x: 8)
         Dimensions without coordinates: x
@@ -6092,6 +6104,202 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
 
         return self._replace_vars_and_dims(variables)
+
+    def idxmin(
+        self,
+        dim: Hashable = None,
+        skipna: bool = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool = None,
+    ) -> "Dataset":
+        """Return the coordinate label of the minimum value along a dimension.
+
+        Returns a new `Dataset` named after the dimension with the values of
+        the coordinate labels along that dimension corresponding to minimum
+        values along that dimension.
+
+        In comparison to :py:meth:`~Dataset.argmin`, this returns the
+        coordinate label while :py:meth:`~Dataset.argmin` returns the index.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension over which to apply `idxmin`.  This is optional for 1D
+            variables, but required for variables with 2 or more dimensions.
+        skipna : bool or None, default None
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for ``float``, ``complex``, and ``object``
+            dtypes; other dtypes either do not have a sentinel missing value
+            (``int``) or ``skipna=True`` has not been implemented
+            (``datetime64`` or ``timedelta64``).
+        fill_value : Any, default NaN
+            Value to be filled in case all of the values along a dimension are
+            null.  By default this is NaN.  The fill value and result are
+            automatically converted to a compatible dtype if possible.
+            Ignored if ``skipna`` is False.
+        keep_attrs : bool, default False
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one.  If False (default), the new object
+            will be returned without attributes.
+
+        Returns
+        -------
+        reduced : Dataset
+            New `Dataset` object with `idxmin` applied to its data and the
+            indicated dimension removed.
+
+        See also
+        --------
+        DataArray.idxmin, Dataset.idxmax, Dataset.min, Dataset.argmin
+
+        Examples
+        --------
+
+        >>> array1 = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
+        >>> array2 = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
+        ... )
+        >>> ds = xr.Dataset({"int": array1, "float": array2})
+        >>> ds.min(dim="x")
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      int64 -2
+            float    (y) float64 -2.0 -4.0 1.0
+        >>> ds.argmin(dim="x")
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      int64 4
+            float    (y) int64 4 0 2
+        >>> ds.idxmin(dim="x")
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      <U1 'e'
+            float    (y) <U1 'e' 'a' 'c'
+        """
+        return self.map(
+            methodcaller(
+                "idxmin",
+                dim=dim,
+                skipna=skipna,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+            )
+        )
+
+    def idxmax(
+        self,
+        dim: Hashable = None,
+        skipna: bool = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool = None,
+    ) -> "Dataset":
+        """Return the coordinate label of the maximum value along a dimension.
+
+        Returns a new `Dataset` named after the dimension with the values of
+        the coordinate labels along that dimension corresponding to maximum
+        values along that dimension.
+
+        In comparison to :py:meth:`~Dataset.argmax`, this returns the
+        coordinate label while :py:meth:`~Dataset.argmax` returns the index.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension over which to apply `idxmax`.  This is optional for 1D
+            variables, but required for variables with 2 or more dimensions.
+        skipna : bool or None, default None
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for ``float``, ``complex``, and ``object``
+            dtypes; other dtypes either do not have a sentinel missing value
+            (``int``) or ``skipna=True`` has not been implemented
+            (``datetime64`` or ``timedelta64``).
+        fill_value : Any, default NaN
+            Value to be filled in case all of the values along a dimension are
+            null.  By default this is NaN.  The fill value and result are
+            automatically converted to a compatible dtype if possible.
+            Ignored if ``skipna`` is False.
+        keep_attrs : bool, default False
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one.  If False (default), the new object
+            will be returned without attributes.
+
+        Returns
+        -------
+        reduced : Dataset
+            New `Dataset` object with `idxmax` applied to its data and the
+            indicated dimension removed.
+
+        See also
+        --------
+        DataArray.idxmax, Dataset.idxmin, Dataset.max, Dataset.argmax
+
+        Examples
+        --------
+
+        >>> array1 = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
+        >>> array2 = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
+        ... )
+        >>> ds = xr.Dataset({"int": array1, "float": array2})
+        >>> ds.max(dim="x")
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      int64 2
+            float    (y) float64 2.0 2.0 1.0
+        >>> ds.argmax(dim="x")
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      int64 1
+            float    (y) int64 0 2 2
+        >>> ds.idxmax(dim="x")
+        <xarray.Dataset>
+        Dimensions:  (y: 3)
+        Coordinates:
+          * y        (y) int64 -1 0 1
+        Data variables:
+            int      <U1 'b'
+            float    (y) object 'a' 'c' 'c'
+        """
+        return self.map(
+            methodcaller(
+                "idxmax",
+                dim=dim,
+                skipna=skipna,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+            )
+        )
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
