@@ -48,9 +48,8 @@ import numpy as np
 import pandas as pd
 
 from xarray.core.utils import is_scalar
-
 from ..core.common import _contains_cftime_datetimes
-from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
+from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name, build_field_sarray, month_position_check
 
 
 def named(name, pattern):
@@ -231,6 +230,10 @@ class CFTimeIndex(pd.Index):
     --------
     cftime_range
     """
+    # Compat for frequency inference, see pandas-dev/pandas#23789
+    _is_monotonic_increasing = pd.Index.is_monotonic_increasing
+    _is_monotonic_decreasing = pd.Index.is_monotonic_decreasing
+    _is_unique = pd.Index.is_unique
 
     year = _field_accessor("year", "The year of the datetime")
     month = _field_accessor("month", "The month of the datetime")
@@ -243,6 +246,7 @@ class CFTimeIndex(pd.Index):
         "dayofyr", "The ordinal day of year of the datetime", "1.0.2.1"
     )
     dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
+    weekday = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):
@@ -575,7 +579,8 @@ class CFTimeIndex(pd.Index):
             [
                 _total_microseconds(exact_cftime_datetime_difference(epoch, date))
                 for date in self.values
-            ]
+            ],
+            dtype=np.int64
         )
 
     def _round_via_method(self, freq, method):
@@ -732,3 +737,62 @@ def _round_to_nearest_half_even(values, unit):
     )
     quotient[mask] += 1
     return quotient * unit
+
+
+class _CFTimeFrequencyInferer(pd.tseries.frequencies._FrequencyInferer):
+
+    def __init__(self, index, warn: bool = True):
+        super().__init__(index, warn=warn)
+        self.i8values = self.values = 1000 * index.asi8
+
+    @pd.util._decorators.cache_readonly
+    def fields(self):
+        return build_field_sarray(self.index)
+
+    @pd.util._decorators.cache_readonly
+    def rep_stamp(self):
+        return self.index[0]
+
+    def month_position_check(self):
+        return month_position_check(self.index)
+
+
+def infer_freq(index, warn: bool = True):
+    """
+    Infer the most likely frequency given the input index. If the frequency is
+    uncertain, a warning will be printed.
+
+    Parameters
+    ----------
+    index : CFTimeIndex, DataArray, pd.DatetimeIndex or pd.TimedeltaIndex
+      If not passed a CFTimeIndex, this simply calls `pandas.infer_freq`.
+      If passed a Series or a DataArray will use the values of the series (NOT THE INDEX).
+    warn : bool, default True
+
+    Returns
+    -------
+    str or None
+        None if no discernible frequency.
+
+    Raises
+    ------
+    TypeError
+        If the index is not datetime-like.
+    ValueError
+        If there are fewer than three values.
+    """
+    from xarray.core.dataarray import DataArray
+
+    if isinstance(index, DataArray):
+        if index.ndim > 1:
+            raise ValueError("'index' must be 1D")
+        if np.asarray(index).dtype == "datetime64[ns]":
+            index = pd.DatetimeIndex(index)
+        else:
+            index = CFTimeIndex(index)
+
+    if isinstance(index, CFTimeIndex):
+        inferer = _CFTimeFrequencyInferer(index, warn=warn)
+        return inferer.get_freq()
+
+    return pd.infer_freq(index, warn=warn)

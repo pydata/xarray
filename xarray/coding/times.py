@@ -455,3 +455,60 @@ class CFTimedeltaCoder(VariableCoder):
             data = lazy_elemwise_func(data, transform, dtype=dtype)
 
         return Variable(dims, data, attrs, encoding)
+
+
+def build_field_sarray(dates):
+    sa_dtype = [
+        ("Y", "i4"),  # year
+        ("M", "i4"),  # month
+        ("D", "i4"),  # day
+        ("h", "i4"),  # hour
+        ("m", "i4"),  # min
+        ("s", "i4"),  # second
+        ("u", "i4"),  # microsecond
+    ]
+
+    out = np.empty(len(dates), dtype=sa_dtype)
+
+    out['Y'] = dates.year
+    out['M'] = dates.month
+    out['D'] = dates.day
+    out['h'] = dates.hour
+    out['m'] = dates.minute
+    out['s'] = dates.second
+    out['u'] = dates.microsecond
+
+    return out
+
+
+def month_position_check(dates):
+    calendar_end = True
+    business_end = True
+    calendar_start = True
+    business_start = True
+
+    for date in dates:
+        if calendar_start:
+            calendar_start &= date.day == 1
+        if business_start:
+            business_start &= date.day == 1 or (date.day <= 3 and date.dayofwk == 0)
+
+        if calendar_end or business_end:
+            cal = date.day == date.daysinmonth
+            if calendar_end:
+                calendar_end &= cal
+            if business_end:
+                business_end &= cal or (date.daysinmonth - date.day < 3 and date.dayofwk == 4)
+        elif not calendar_start and not business_start:
+            break
+
+    if calendar_end:
+        return 'ce'
+    elif business_end:
+        return 'be'
+    elif calendar_start:
+        return 'cs'
+    elif business_start:
+        return 'bs'
+    else:
+        return None
