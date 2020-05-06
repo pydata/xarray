@@ -219,6 +219,55 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
     return slice(None)
 
 
+def _wrapper(
+    func: Callable,
+    args: List,
+    kwargs: dict,
+    arg_is_array: Iterable[bool],
+    expected: dict,
+):
+    """
+    Wrapper function that receives datasets in args; converts to dataarrays when necessary;
+    passes these to the user function `func` and checks returned objects for expected shapes/sizes/etc.
+    """
+
+    check_shapes = dict(args[0].dims)
+    check_shapes.update(expected["shapes"])
+
+    converted_args = [
+        dataset_to_dataarray(arg) if is_array else arg
+        for is_array, arg in zip(arg_is_array, args)
+    ]
+
+    result = func(*converted_args, **kwargs)
+
+    # check all dims are present
+    missing_dimensions = set(expected["shapes"]) - set(result.sizes)
+    if missing_dimensions:
+        raise ValueError(f"Dimensions {missing_dimensions} missing on returned object.")
+
+    # check that index lengths and values are as expected
+    for name, index in get_index_vars(result).items():
+        if name in check_shapes:
+            if len(index) != check_shapes[name]:
+                raise ValueError(
+                    f"Received dimension {name!r} of length {len(index)}. Expected length {check_shapes[name]}."
+                )
+        if name in expected["indexes"]:
+            expected_index = expected["indexes"][name]
+            if not index.equals(expected_index):
+                raise ValueError(
+                    f"Expected index {name!r} to be {expected_index!r}. Received {index!r} instead."
+                )
+
+    # check that all expected variables were returned
+    check_result_variables(result, expected, "coords")
+    if isinstance(result, Dataset):
+        check_result_variables(result, expected, "data_vars")
+
+    return make_dict(result)
+
+
 def map_blocks(
     func: Callable[..., T_DSorDA],
     obj: Union[DataArray, Dataset],
@@ -325,51 +374,6 @@ def map_blocks(
     Coordinates:
         * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
     """
-
-    def _wrapper(
-        func: Callable,
-        args: List,
-        kwargs: dict,
-        arg_is_array: Iterable[bool],
-        expected: dict,
-    ):
-        check_shapes = dict(args[0].dims)
-        check_shapes.update(expected["shapes"])
-
-        converted_args = [
-            dataset_to_dataarray(arg) if is_array else arg
-            for is_array, arg in zip(arg_is_array, args)
-        ]
-
-        result = func(*converted_args, **kwargs)
-
-        # check all dims are present
-        missing_dimensions = set(expected["shapes"]) - set(result.sizes)
-        if missing_dimensions:
-            raise ValueError(
-                f"Dimensions {missing_dimensions} missing on returned object."
-            )
-
-        # check that index lengths and values are as expected
-        for name, index in get_index_vars(result).items():
-            if name in check_shapes:
-                if len(index) != check_shapes[name]:
-                    raise ValueError(
-                        f"Received dimension {name!r} of length {len(index)}. Expected length {check_shapes[name]}."
-                    )
-            if name in expected["indexes"]:
-                expected_index = expected["indexes"][name]
-                if not index.equals(expected_index):
-                    raise ValueError(
-                        f"Expected index {name!r} to be {expected_index!r}. Received {index!r} instead."
-                    )
-
-        # check that all expected variables were returned
-        check_result_variables(result, expected, "coords")
-        if isinstance(result, Dataset):
-            check_result_variables(result, expected, "data_vars")
-
-        return make_dict(result)
 
     if template is not None and not isinstance(template, (DataArray, Dataset)):
         raise TypeError(
