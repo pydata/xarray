@@ -142,13 +142,7 @@ Internal Changes
 - Use ``async`` / ``await`` for the asynchronous distributed
   tests. (:issue:`3987`, :pull:`3989`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Remove unnecessary comprehensions becuase the built-in functions like
-  ``all``, ``any``, ``enumerate``, ``sum``, ``tuple`` etc. can work directly with a
-  generator expression. (:pull:`4026`)
-  By `Prajjwal Nijhara <https://github.com/pnijhara>`_.
-- Use literal syntax instead of function calls to create the data structure
-  It is slower to call e.g. list() than using the empty literal, because the name list
-  must be looked up in the global scope in case it has been rebound. (:pull:`4038`)
+- Various internal code clean-ups (:pull:`4026`,  :pull:`4038`).
   By `Prajjwal Nijhara <https://github.com/pnijhara>`_.
 
 .. _whats-new.0.15.1:
