@@ -1964,7 +1964,7 @@ class ZarrBase(CFEncodedBase):
     @pytest.mark.parametrize("compute", [False, True])
     @pytest.mark.parametrize("use_dask", [False, True])
     def test_write_region(self, consolidated, compute, use_dask):
-        if use_dask and not has_dask:
+        if (use_dask or not compute) and not has_dask:
             pytest.skip("requires dask")
 
         zeros = Dataset({"u": (("x",), np.ones(10))})
