@@ -2,7 +2,7 @@
  *
  */
 
-:root {
+ :root {
   --xr-font-color0: var(--jp-content-font-color0, rgba(0, 0, 0, 1));
   --xr-font-color2: var(--jp-content-font-color2, rgba(0, 0, 0, 0.54));
   --xr-font-color3: var(--jp-content-font-color3, rgba(0, 0, 0, 0.38));
@@ -11,6 +11,17 @@
   --xr-background-color: var(--jp-layout-color0, white);
   --xr-background-color-row-even: var(--jp-layout-color1, white);
   --xr-background-color-row-odd: var(--jp-layout-color2, #eeeeee);
+}
+
+body.vscode-dark {
+  --xr-font-color0: rgba(255, 255, 255, 1);
+  --xr-font-color2: rgba(255, 255, 255, 0.54);
+  --xr-font-color3: rgba(255, 255, 255, 0.38);
+  --xr-border-color: #1F1F1F;
+  --xr-disabled-color: #515151;
+  --xr-background-color: #111111;
+  --xr-background-color-row-even: #111111;
+  --xr-background-color-row-odd: #313131;
 }
 
 .xr-wrap {
