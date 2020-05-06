@@ -79,16 +79,16 @@ def check_result_variables(
 
 
 def subset_dataset_to_block(
-    graph: dict, gname: str, dataset: Dataset, input_chunks: dict, chunk_tuple: tuple
+    graph: dict,
+    gname: str,
+    dataset: Dataset,
+    input_chunks: dict,
+    input_chunk_bounds,
+    chunk_tuple: tuple,
 ):
 
     # mapping from dimension name to chunk index
-    input_chunk_index = dict(zip(input_chunks.keys(), chunk_tuple))
-
-    # mapping from chunk index to slice bounds
-    chunk_index_bounds = {
-        dim: np.cumsum((0,) + chunks_v) for dim, chunks_v in input_chunks.items()
-    }
+    chunk_index = dict(zip(dataset.dims, chunk_tuple))
 
     # this will become [[name1, variable1],
     #                   [name2, variable2],
@@ -105,11 +105,8 @@ def subset_dataset_to_block(
             for dim in variable.dims:
                 chunk = chunk[chunk_index[dim]]
 
-            chunk_variable_task = (f"{gname}-{name}-{chunk[0]}",) + v
-            graph[chunk_variable_task] = (
-                tuple,
-                [variable.dims, chunk, variable.attrs],
-            )
+            chunk_variable_task = (f"{gname}-{name}-{chunk[0]}",) + chunk_tuple
+            graph[chunk_variable_task] = (tuple, [variable.dims, chunk, variable.attrs])
         else:
             # non-dask array with possibly chunked dimensions
             # index into variable appropriately
@@ -120,11 +117,8 @@ def subset_dataset_to_block(
             subset = variable.isel(subsetter)
             chunk_variable_task = (
                 "{}-{}".format(gname, dask.base.tokenize(subset)),
-            ) + v
-            graph[chunk_variable_task] = (
-                tuple,
-                [subset.dims, subset, subset.attrs],
-            )
+            ) + chunk_tuple
+            graph[chunk_variable_task] = (tuple, [subset.dims, subset, subset.attrs])
 
         # this task creates dict mapping variable name to above tuple
         if name in dataset._coord_names:
@@ -357,7 +351,7 @@ def map_blocks(
             )
 
         # check that index lengths and values are as expected
-        for name, index in result.indexes.items():
+        for name, index in get_index_vars(result).items():
             if name in check_shapes:
                 if len(index) != check_shapes[name]:
                     raise ValueError(
@@ -483,10 +477,12 @@ def map_blocks(
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
-        input_chunk_index = dict(zip(input_chunks.keys(), chunk_tuple))
+        chunk_index = dict(zip(input_chunks.keys(), chunk_tuple))
 
         blocked_args = [
-            subset_dataset_to_block(graph, gname, arg, input_chunks, chunk_tuple)
+            subset_dataset_to_block(
+                graph, gname, arg, input_chunks, input_chunk_bounds, chunk_tuple
+            )
             if isxr
             else arg
             for isxr, arg in zip(is_xarray, npargs)
