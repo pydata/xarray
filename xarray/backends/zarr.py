@@ -261,7 +261,7 @@ class ZarrStore(AbstractWritableDataStore):
     __slots__ = (
         "ds",
         "_append_dim",
-        "_write_consolidated",
+        "_save_consolidated",
         "_group",
         "_read_only",
         "_synchronizer",
@@ -276,7 +276,7 @@ class ZarrStore(AbstractWritableDataStore):
         synchronizer=None,
         group=None,
         open_consolidated=False,
-        write_consolidated=False,
+        save_consolidated=False,
         append_dim=None,
         write_region=None,
     ):
@@ -288,10 +288,10 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
-        return cls(zarr_group, write_consolidated, append_dim, write_region)
+        return cls(zarr_group, save_consolidated, append_dim, write_region)
 
     def __init__(
-        self, zarr_group, write_consolidated=False, append_dim=None, write_region=None
+        self, zarr_group, save_consolidated=False, append_dim=None, write_region=None
     ):
         if write_region is None:
             write_region = {}
@@ -299,7 +299,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._read_only = self.ds.read_only
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
-        self._write_consolidated = write_consolidated
+        self._save_consolidated = save_consolidated
         self._append_dim = append_dim
         self._write_region = write_region
 
@@ -421,7 +421,7 @@ class ZarrStore(AbstractWritableDataStore):
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
-        if self._write_consolidated:
+        if self._save_consolidated:
             zarr.consolidate_metadata(self.ds.store)
 
     def sync(self):
