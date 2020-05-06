@@ -1960,6 +1960,36 @@ class ZarrBase(CFEncodedBase):
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
 
+    @pytest.mark.parametrize("consolidated", [False, True])
+    @pytest.mark.parametrize("compute", [False, True])
+    @pytest.mark.parametrize("use_dask", [False, True])
+    def test_write_region(self, consolidated, compute, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        zeros = Dataset({"u": (("x",), np.ones(10))})
+        nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
+
+        if use_dask:
+            zeros = zeros.chunk(2)
+            nonzeros = nonzeros.chunk(2)
+
+        with self.create_zarr_target() as store:
+            zeros.to_zarr(
+                store,
+                consolidated=consolidated,
+                compute=compute,
+                encoding={"u": dict(chunks=2)},
+            )
+            if compute:
+                with self.open(store, consolidated=consolidated) as actual:
+                    assert_identical(actual, zeros)
+            for i in range(0, 10, 2):
+                region = {"x": slice(i, i + 2)}
+                nonzeros.isel(region).to_zarr(store, region=region)
+            with self.open(store, consolidated=consolidated) as actual:
+                assert_identical(actual, nonzeros)
+
     @requires_dask
     def test_encoding_chunksizes(self):
         # regression test for GH2278
