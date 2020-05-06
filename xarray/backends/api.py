@@ -12,6 +12,7 @@ from typing import (
     Hashable,
     Iterable,
     Mapping,
+    MutableMapping,
     Tuple,
     Union,
 )
@@ -1271,18 +1272,25 @@ def _validate_datatypes_for_zarr_append(dataset):
 
 
 def _validate_append_dim_and_encoding(
-    ds_to_append, store, append_dim, encoding, **open_kwargs
+    ds_to_append, store, append_dim, region, encoding, **open_kwargs
 ):
     try:
         ds = backends.zarr.open_zarr(store, **open_kwargs)
     except ValueError:  # store empty
         return
+
     if append_dim:
         if append_dim not in ds.dims:
             raise ValueError(
                 f"append_dim={append_dim!r} does not match any existing "
                 f"dataset dimensions {ds.dims}"
             )
+        if append_dim in region:
+            raise ValueError(
+                "cannot list the same dimension in both ``append_dim`` and "
+                f"``region`` with to_zarr({append_dim}): "
+            )
+
     for var_name in ds_to_append:
         if var_name in ds:
             if ds_to_append[var_name].dims != ds[var_name].dims:
@@ -1292,16 +1300,29 @@ def _validate_append_dim_and_encoding(
                     f"{ds_to_append[var_name].dims}, but changing variable "
                     "dimensions is not supported by to_zarr()."
                 )
-            existing_sizes = {
-                k: v for k, v in ds[var_name].sizes.items() if k != append_dim
-            }
+
+            existing_sizes = {}
+            for dim, size in ds[var_name].sizes.items():
+                if dim in region:
+                    start, stop, stride = region[dim].indices(size)
+                    if stride != 1:
+                        raise ValueError(
+                            "only stride=1 supported for limited region writes "
+                            "in to_zarr()."
+                        )
+                    size = stop - start
+                if dim != append_dim:
+                    existing_sizes[dim] = size
+
             new_sizes = {
-                k: v for k, v in ds_to_append[var_name].sizes.items() if k != append_dim
+                dim: size
+                for dim, size in ds_to_append[var_name].sizes.items()
+                if dim != append_dim
             }
             if existing_sizes != new_sizes:
                 raise ValueError(
                     f"variable {var_name!r} already exists with different "
-                    "dimension sizes: {existing_sizes} != {new_sizes}. "
+                    f"dimension sizes: {existing_sizes} != {new_sizes}. "
                     "to_zarr() only supports changing dimension sizes when "
                     f"explicitly appending, but append_dim={append_dim!r}."
                 )
@@ -1312,25 +1333,49 @@ def _validate_append_dim_and_encoding(
 
 
 def to_zarr(
-    dataset,
-    store=None,
-    mode=None,
+    dataset: Dataset,
+    store: Union[MutableMapping, str, Path] = None,
+    mode: str = None,
     synchronizer=None,
-    group=None,
-    encoding=None,
-    compute=True,
-    consolidated=False,
-    append_dim=None,
+    group: str = None,
+    encoding: Mapping = None,
+    compute: bool = True,
+    consolidated: bool = False,
+    append_dim: Hashable = None,
+    region: Mapping[str, slice] = None,
 ):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
     See `Dataset.to_zarr` for full API docs.
     """
-    if isinstance(store, Path):
-        store = str(store)
     if encoding is None:
         encoding = {}
+
+    if mode is None:
+        if append_dim is not None or region is not None:
+            mode = "a"
+        else:
+            mode = "w-"
+
+    if mode != "a" and append_dim is not None:
+        raise ValueError("cannot set append_dim unless mode='a' or mode=None")
+
+    if mode != "a" and region is not None:
+        raise ValueError("cannot set region unless mode='a' or mode=None")
+
+    if region is None:
+        region = {}
+
+    if mode not in ["w", "w-", "a"]:
+        # TODO: figure out how to handle 'r+'
+        raise ValueError(
+            "The only supported options for mode are 'w', "
+            f"'w-' and 'a', but mode={mode!r}"
+        )
+
+    if isinstance(store, Path):
+        store = str(store)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -1344,6 +1389,7 @@ def to_zarr(
             append_dim,
             group=group,
             consolidated=consolidated,
+            region=region,
             encoding=encoding,
         )
 
@@ -1353,8 +1399,9 @@ def to_zarr(
         synchronizer=synchronizer,
         group=group,
         consolidate_on_close=consolidated,
+        append_dim=append_dim,
+        write_region=region,
     )
-    zstore.append_dim = append_dim
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)

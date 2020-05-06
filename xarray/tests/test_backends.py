@@ -1856,9 +1856,7 @@ class ZarrBase(CFEncodedBase):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w")
-            with pytest.raises(
-                ValueError, match="append_dim was set along with mode='w'"
-            ):
+            with pytest.raises(ValueError, match="cannot set append_dim unless"):
                 ds_to_append.to_zarr(store_target, mode="w", append_dim="time")
 
     def test_append_with_existing_encoding_raises(self):

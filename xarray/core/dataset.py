@@ -1565,6 +1565,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compute: bool = True,
         consolidated: bool = False,
         append_dim: Hashable = None,
+        region: Mapping[str, slice] = None,
     ) -> "ZarrStore":
         """Write dataset contents to a zarr group.
 
@@ -1605,23 +1606,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         https://zarr.readthedocs.io/
         """
-        if encoding is None:
-            encoding = {}
-        if (mode == "a") or (append_dim is not None):
-            if mode is None:
-                mode = "a"
-            elif mode != "a":
-                raise ValueError(
-                    "append_dim was set along with mode='{}', either set "
-                    "mode='a' or don't set it.".format(mode)
-                )
-        elif mode is None:
-            mode = "w-"
-        if mode not in ["w", "w-", "a"]:
-            # TODO: figure out how to handle 'r+'
-            raise ValueError(
-                "The only supported options for mode are 'w'," "'w-' and 'a'."
-            )
         from ..backends.api import to_zarr
 
         return to_zarr(
@@ -1634,6 +1618,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             compute=compute,
             consolidated=consolidated,
             append_dim=append_dim,
+            region=region,
         )
 
     def __repr__(self) -> str:
