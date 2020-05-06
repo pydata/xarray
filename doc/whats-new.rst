@@ -23,7 +23,9 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - ``groupby`` operations will restore coord dimension order. Pass ``restore_coord_dims=False``
-  to maintain existing behavior.
+  to revert to previous behavior.
+  :meth:`DataArray.transpose` will now transpose coordinates by default.
+  Pass ``transpose_coords=False`` to revert to previous behaviour.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - Alternate draw styles for :py:meth:`plot.step` must be passed using the
   ``drawstyle`` (or ``ds``) keyword argument, instead of the ``linestyle`` (or
