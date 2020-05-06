@@ -13,6 +13,7 @@
   --xr-background-color-row-odd: var(--jp-layout-color2, #eeeeee);
 }
 
+html[theme=dark],
 body.vscode-dark {
   --xr-font-color0: rgba(255, 255, 255, 1);
   --xr-font-color2: rgba(255, 255, 255, 0.54);
