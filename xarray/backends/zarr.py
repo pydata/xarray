@@ -261,7 +261,7 @@ class ZarrStore(AbstractWritableDataStore):
     __slots__ = (
         "ds",
         "_append_dim",
-        "_consolidate_on_close",
+        "_write_consolidated",
         "_group",
         "_read_only",
         "_synchronizer",
@@ -275,23 +275,23 @@ class ZarrStore(AbstractWritableDataStore):
         mode="r",
         synchronizer=None,
         group=None,
-        consolidated=False,
-        consolidate_on_close=False,
+        open_consolidated=False,
+        write_consolidated=False,
         append_dim=None,
         write_region=None,
     ):
         import zarr
 
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
-        if consolidated:
+        if open_consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
-        return cls(zarr_group, consolidate_on_close, append_dim, write_region)
+        return cls(zarr_group, write_consolidated, append_dim, write_region)
 
     def __init__(
-        self, zarr_group, consolidate_on_close=False, append_dim=None, write_region=None
+        self, zarr_group, write_consolidated=False, append_dim=None, write_region=None
     ):
         if write_region is None:
             write_region = {}
@@ -299,7 +299,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._read_only = self.ds.read_only
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
-        self._consolidate_on_close = consolidate_on_close
+        self._write_consolidated = write_consolidated
         self._append_dim = append_dim
         self._write_region = write_region
 
@@ -394,6 +394,7 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
+        import zarr
 
         existing_variables = {
             vn for vn in variables if _encode_variable_name(vn) in self.ds
@@ -420,6 +421,8 @@ class ZarrStore(AbstractWritableDataStore):
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
+        if self._write_consolidated:
+            zarr.consolidate_metadata(self.ds.store)
 
     def sync(self):
         pass
@@ -495,10 +498,7 @@ class ZarrStore(AbstractWritableDataStore):
             writer.add(v.data, zarr_array, region)
 
     def close(self):
-        if self._consolidate_on_close:
-            import zarr
-
-            zarr.consolidate_metadata(self.ds.store)
+        pass
 
 
 def open_zarr(
@@ -646,7 +646,7 @@ def open_zarr(
         mode=mode,
         synchronizer=synchronizer,
         group=group,
-        consolidated=consolidated,
+        open_consolidated=consolidated,
     )
     ds = maybe_decode_store(zarr_store)
 

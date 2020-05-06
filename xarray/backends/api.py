@@ -1398,7 +1398,7 @@ def to_zarr(
         mode=mode,
         synchronizer=synchronizer,
         group=group,
-        consolidate_on_close=consolidated,
+        write_consolidated=consolidated,
         append_dim=append_dim,
         write_region=region,
     )
