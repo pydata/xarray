@@ -5709,27 +5709,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         func: "Callable[..., T_DSorDA]",
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
+        template: Union["DataArray", "Dataset"] = None,
     ) -> "T_DSorDA":
         """
-        Apply a function to each chunk of this Dataset. This method is experimental and
-        its signature may change.
+        Apply a function to each block of this Dataset.
+
+        .. warning::
+            This method is experimental and its signature may change.
 
         Parameters
         ----------
         func: callable
-            User-provided function that accepts a Dataset as its first parameter. The
-            function will receive a subset of this Dataset, corresponding to one chunk
-            along each chunked dimension. ``func`` will be executed as
-            ``func(obj_subset, *args, **kwargs)``.
-
-            The function will be first run on mocked-up data, that looks like this
-            Dataset but has sizes 0, to determine properties of the returned object such
-            as dtype, variable names, new dimensions and new indexes (if any).
+            User-provided function that accepts a Dataset as its first
+            parameter. The function will receive a subset, i.e. one block, of this Dataset
+            (see below), corresponding to one chunk along each chunked dimension. ``func`` will be
+            executed as ``func(block_subset, *args, **kwargs)``.
 
             This function must return either a single DataArray or a single Dataset.
 
-            This function cannot change size of existing dimensions, or add new chunked
-            dimensions.
+            This function cannot add a new chunked dimension.
         args: Sequence
             Passed verbatim to func after unpacking, after the sliced DataArray. xarray
             objects, if any, will not be split by chunks. Passing dask collections is
@@ -5737,6 +5735,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         kwargs: Mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             split by chunks. Passing dask collections is not allowed.
+        template: (optional) DataArray, Dataset
+            xarray object representing the final result after compute is called. If not provided,
+            the function will be first run on mocked-up data, that looks like 'obj' but
+            has sizes 0, to determine properties of the returned object such as dtype,
+            variable names, new dimensions and new indexes (if any).
+            'template' must be provided if the function changes the size of existing dimensions.
 
         Returns
         -------
@@ -5759,7 +5763,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from .parallel import map_blocks
 
-        return map_blocks(func, self, args, kwargs)
+        return map_blocks(func, self, args, kwargs, template)
 
     def polyfit(
         self,
