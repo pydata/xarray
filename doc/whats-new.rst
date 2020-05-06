@@ -146,6 +146,10 @@ Internal Changes
   ``all``, ``any``, ``enumerate``, ``sum``, ``tuple`` etc. can work directly with a
   generator expression. (:pull:`4026`)
   By `Prajjwal Nijhara <https://github.com/pnijhara>`_.
+- Use literal syntax instead of function calls to create the data structure
+  It is slower to call e.g. list() than using the empty literal, because the name list
+  must be looked up in the global scope in case it has been rebound. (:pull:`4038`)
+  By `Prajjwal Nijhara <https://github.com/pnijhara>`_.
 
 .. _whats-new.0.15.1:
 
