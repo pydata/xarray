@@ -129,7 +129,7 @@ def show_versions(file=sys.stdout):
         ("sphinx", lambda mod: mod.__version__),
     ]
 
-    deps_blob = list()
+    deps_blob = []
     for (modname, ver_f) in deps:
         try:
             if modname in sys.modules:
