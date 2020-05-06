@@ -972,6 +972,7 @@ def make_da():
         coords={"x": np.arange(10), "y": np.arange(100, 120)},
         name="a",
     ).chunk({"x": 4, "y": 5})
+    da.x.attrs["long_name"] = "x"
     da.attrs["test"] = "test"
     da.coords["c2"] = 0.5
     da.coords["ndcoord"] = da.x * 2
@@ -994,6 +995,9 @@ def make_ds():
     map_ds.coords["cx"].attrs["test2"] = "test2"
     map_ds.attrs["test"] = "test"
     map_ds.coords["xx"] = map_ds["a"] * map_ds.y
+
+    map_ds.x.attrs["long_name"] = "x"
+    map_ds.y.attrs["long_name"] = "y"
 
     return map_ds
 

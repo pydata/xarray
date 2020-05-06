@@ -541,6 +541,9 @@ def map_blocks(
         hlg.layers[gname_l] = layer
 
     result = Dataset(coords=indexes, attrs=template.attrs)
+    for index in result.indexes:
+        result[index].attrs = template[index].attrs
+
     for name, gname_l in var_key_map.items():
         dims = template[name].dims
         var_chunks = []
