@@ -708,7 +708,7 @@ class _MultiFileCloser:
 def open_mfdataset(
     paths,
     chunks=None,
-    concat_dim="_not_supplied",
+    concat_dim=None,
     compat="no_conflicts",
     preprocess=None,
     engine=None,

@@ -3001,6 +3001,17 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(data, actual)
 
+    def test_open_mfdataset_concat_dim_default_none(self):
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                data = Dataset({"x": 0})
+                data.to_netcdf(tmp1)
+                Dataset({"x": np.nan}).to_netcdf(tmp2)
+                with open_mfdataset(
+                    [tmp1, tmp2], combine="nested"
+                ) as actual:
+                    assert_identical(data, actual)
+
     def test_open_dataset(self):
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp:
