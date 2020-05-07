@@ -21,6 +21,12 @@ v0.16.0 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- ``groupby`` operations will restore coord dimension order. Pass ``restore_coord_dims=False``
+  to revert to previous behavior.
+- :meth:`DataArray.transpose` will now transpose coordinates by default.
+  Pass ``transpose_coords=False`` to revert to previous behaviour.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Alternate draw styles for :py:meth:`plot.step` must be passed using the
   ``drawstyle`` (or ``ds``) keyword argument, instead of the ``linestyle`` (or
   ``ls``) keyword argument, in line with the `upstream change in Matplotlib
@@ -49,7 +55,9 @@ New Features
   By `Todd Jennings <https://github.com/toddrjen>`_
 - More support for unit aware arrays with pint (:pull:`3643`)
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Support overriding existing variables in ``to_zarr()`` with ``mode='a'`` even
+  without ``append_dim``, as long as dimension sizes do not change.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
 - A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
@@ -59,10 +67,15 @@ New Features
   the :py:class:`~core.accessor_dt.DatetimeAccessor` (:pull:`3935`).  This
   feature requires cftime version 1.1.0 or greater.  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`map_blocks` now accepts a ``template`` kwarg. This allows use cases
+  where the result of a computation could not be inferred automatically.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 Bug fixes
 ~~~~~~~~~
-- ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue`3977`)
+- Support dark mode in VS code (:issue:`4024`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue:`3977`)
   By `Huite Bootsma <https://github.com/huite>`_.
 - Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``. (:issue:`3951`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -115,6 +128,8 @@ Documentation
   By `Matthias Riße <https://github.com/risebell>`_.
 - Apply ``black`` to all the code in the documentation (:pull:`4012`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Narrative documentation now describes :py:meth:`map_blocks`. :ref:`dask.automatic-parallelization`.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -129,6 +144,8 @@ Internal Changes
 - Use ``async`` / ``await`` for the asynchronous distributed
   tests. (:issue:`3987`, :pull:`3989`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Various internal code clean-ups (:pull:`4026`,  :pull:`4038`).
+  By `Prajjwal Nijhara <https://github.com/pnijhara>`_.
 
 .. _whats-new.0.15.1:
 

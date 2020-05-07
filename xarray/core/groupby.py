@@ -29,7 +29,7 @@ def check_reduce_dims(reduce_dims, dimensions):
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
-        if any([dim not in dimensions for dim in reduce_dims]):
+        if any(dim not in dimensions for dim in reduce_dims):
             raise ValueError(
                 "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
                 % (reduce_dims, dimensions)
@@ -272,7 +272,7 @@ class GroupBy(SupportsArithmetic):
         squeeze=False,
         grouper=None,
         bins=None,
-        restore_coord_dims=None,
+        restore_coord_dims=True,
         cut_kwargs=None,
     ):
         """Create a GroupBy object
@@ -292,7 +292,7 @@ class GroupBy(SupportsArithmetic):
         bins : array-like, optional
             If `bins` is specified, the groups will be discretized into the
             specified bins by `pandas.cut`.
-        restore_coord_dims : bool, optional
+        restore_coord_dims : bool, default True
             If True, also restore the dimension order of multi-dimensional
             coordinates.
         cut_kwargs : dict, optional
@@ -388,21 +388,6 @@ class GroupBy(SupportsArithmetic):
                 raise ValueError(
                     "Failed to group data. Are you grouping by a variable that is all NaN?"
                 )
-
-        if (
-            isinstance(obj, DataArray)
-            and restore_coord_dims is None
-            and any(obj[c].ndim > 1 for c in obj.coords)
-        ):
-            warnings.warn(
-                "This DataArray contains multi-dimensional "
-                "coordinates. In the future, the dimension order "
-                "of these coordinates will be restored as well "
-                "unless you specify restore_coord_dims=False.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            restore_coord_dims = False
 
         # specification for the groupby operation
         self._obj = obj
