@@ -673,12 +673,6 @@ Plotting
 
 .. autosummary::
    :toctree: generated/
-   :template: autosummary/accessor_callable.rst
-
-   DataArray.plot
-
-.. autosummary::
-   :toctree: generated/
    :template: autosummary/accessor_method.rst
 
    Dataset.plot.scatter
