@@ -32,7 +32,6 @@ from xarray.core.utils import is_scalar
 
 from . import (
     InaccessibleArray,
-    LooseVersion,
     UnexpectedDataAccess,
     assert_allclose,
     assert_array_equal,
@@ -496,16 +495,11 @@ class TestDataset:
             DataArray(np.random.rand(4, 3), dims=["a", "b"]),  # df
         ]
 
-        if LooseVersion(pd.__version__) < "0.25.0":
-            das.append(DataArray(np.random.rand(4, 3, 2), dims=["a", "b", "c"]))
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", r"\W*Panel is deprecated")
-            for a in das:
-                pandas_obj = a.to_pandas()
-                ds_based_on_pandas = Dataset(pandas_obj)
-                for dim in ds_based_on_pandas.data_vars:
-                    assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
+        for a in das:
+            pandas_obj = a.to_pandas()
+            ds_based_on_pandas = Dataset(pandas_obj)
+            for dim in ds_based_on_pandas.data_vars:
+                assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self):
         data = {"x": DataArray(0, coords={"y": 1}), "y": ("z", [1, 1, 1])}
@@ -1023,6 +1017,21 @@ class TestDataset:
 
         with pytest.raises(ValueError):
             data.isel(not_a_dim=slice(0, 2))
+        with raises_regex(
+            ValueError,
+            r"dimensions {'not_a_dim'} do not exist. Expected "
+            r"one or more of "
+            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+        ):
+            data.isel(not_a_dim=slice(0, 2))
+        with pytest.warns(
+            UserWarning,
+            match=r"dimensions {'not_a_dim'} do not exist. "
+            r"Expected one or more of "
+            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+        ):
+            data.isel(not_a_dim=slice(0, 2), missing_dims="warn")
+        assert_identical(data, data.isel(not_a_dim=slice(0, 2), missing_dims="ignore"))
 
         ret = data.isel(dim1=0)
         assert {"time": 20, "dim2": 9, "dim3": 10} == ret.dims
@@ -4584,6 +4593,7 @@ class TestDataset:
     def test_reduce_strings(self):
         expected = Dataset({"x": "a"})
         ds = Dataset({"x": ("y", ["a", "b"])})
+        ds.coords["y"] = [-10, 10]
         actual = ds.min()
         assert_identical(expected, actual)
 
@@ -4597,6 +4607,14 @@ class TestDataset:
 
         expected = Dataset({"x": 1})
         actual = ds.argmax()
+        assert_identical(expected, actual)
+
+        expected = Dataset({"x": -10})
+        actual = ds.idxmin()
+        assert_identical(expected, actual)
+
+        expected = Dataset({"x": 10})
+        actual = ds.idxmax()
         assert_identical(expected, actual)
 
         expected = Dataset({"x": b"a"})

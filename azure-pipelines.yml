@@ -20,6 +20,8 @@ jobs:
         conda_env: py37
       py38:
         conda_env: py38
+      py38-all-but-dask:
+        conda_env: py38-all-but-dask
       py38-upstream-dev:
         conda_env: py38
         upstream_dev: true
@@ -32,16 +34,15 @@ jobs:
   steps:
   - template: ci/azure/unit-tests.yml
 
-# excluded while waiting for https://github.com/conda-forge/libwebp-feedstock/issues/26
-# - job: MacOSX
-#   strategy:
-#     matrix:
-#       py38:
-#         conda_env: py38
-#   pool:
-#     vmImage: 'macOS-10.15'
-#   steps:
-#   - template: ci/azure/unit-tests.yml
+- job: MacOSX
+  strategy:
+    matrix:
+      py38:
+        conda_env: py38
+  pool:
+    vmImage: 'macOS-10.15'
+  steps:
+  - template: ci/azure/unit-tests.yml
 
 - job: Windows
   strategy:

@@ -173,6 +173,7 @@ Computation
    Dataset.quantile
    Dataset.differentiate
    Dataset.integrate
+   Dataset.map_blocks
    Dataset.polyfit
 
 **Aggregation**:
@@ -180,6 +181,8 @@ Computation
 :py:attr:`~Dataset.any`
 :py:attr:`~Dataset.argmax`
 :py:attr:`~Dataset.argmin`
+:py:attr:`~Dataset.idxmax`
+:py:attr:`~Dataset.idxmin`
 :py:attr:`~Dataset.max`
 :py:attr:`~Dataset.mean`
 :py:attr:`~Dataset.median`
@@ -356,12 +359,16 @@ Computation
    DataArray.integrate
    DataArray.polyfit
    DataArray.str
+   DataArray.map_blocks
+
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
 :py:attr:`~DataArray.any`
 :py:attr:`~DataArray.argmax`
 :py:attr:`~DataArray.argmin`
+:py:attr:`~DataArray.idxmax`
+:py:attr:`~DataArray.idxmin`
 :py:attr:`~DataArray.max`
 :py:attr:`~DataArray.mean`
 :py:attr:`~DataArray.median`
@@ -514,7 +521,6 @@ Dataset methods
    Dataset.load
    Dataset.chunk
    Dataset.unify_chunks
-   Dataset.map_blocks
    Dataset.filter_by_attrs
    Dataset.info
 
@@ -546,7 +552,6 @@ DataArray methods
    DataArray.load
    DataArray.chunk
    DataArray.unify_chunks
-   DataArray.map_blocks
 
 Coordinates objects
 ===================
