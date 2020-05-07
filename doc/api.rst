@@ -665,11 +665,22 @@ Plotting
 
 .. autosummary::
    :toctree: generated/
+   :template: autosummary/accessor.rst
 
-   Dataset.plot
-   Dataset.plot.scatter
-   plot.plot
    DataArray.plot
+   Dataset.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_callable.rst
+
+   DataArray.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   Dataset.plot.scatter
    DataArray.plot.contourf
    DataArray.plot.contour
    DataArray.plot.hist
