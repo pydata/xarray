@@ -1055,9 +1055,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         structure of the original object, but with the new data. Original
         object is unaffected.
 
-        >>> ds.copy(
-        ...     data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]}
-        ... )
+        >>> ds.copy(data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]})
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
@@ -1537,7 +1535,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``dask.delayed.Delayed`` object that can be computed later.
         invalid_netcdf: boolean
             Only valid along with engine='h5netcdf'. If True, allow writing
-            hdf5 files which are valid netcdf as described in
+            hdf5 files which are invalid netcdf as described in
             https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
@@ -1581,7 +1579,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         mode : {'w', 'w-', 'a', None}
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
-            'a' means append (create if does not exist).
+            'a' means override existing variables (create if does not exist).
             If ``append_dim`` is set, ``mode`` can be omitted as it is
             internally set to ``'a'``. Otherwise, ``mode`` will default to
             `w-` if not set.
@@ -1600,7 +1598,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
         append_dim: hashable, optional
-            If set, the dimension on which the data will be appended.
+            If set, the dimension along which the data will be appended. All
+            other dimensions on overriden variables must remain the same size.
 
         References
         ----------
@@ -1768,7 +1767,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise",
+        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise"
     ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
@@ -2570,7 +2569,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coordinates are assumed to be an array of monotonically increasing
             values.
         kwargs: dictionary, optional
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to scipy's interpolator. Valid
+            options and their behavior depend on if 1-dimensional or
+            multi-dimensional interpolation is used.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
@@ -4596,6 +4597,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See also
         --------
         xarray.DataArray.from_series
+        pandas.DataFrame.to_xarray
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
@@ -5707,27 +5709,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         func: "Callable[..., T_DSorDA]",
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
+        template: Union["DataArray", "Dataset"] = None,
     ) -> "T_DSorDA":
         """
-        Apply a function to each chunk of this Dataset. This method is experimental and
-        its signature may change.
+        Apply a function to each block of this Dataset.
+
+        .. warning::
+            This method is experimental and its signature may change.
 
         Parameters
         ----------
         func: callable
-            User-provided function that accepts a Dataset as its first parameter. The
-            function will receive a subset of this Dataset, corresponding to one chunk
-            along each chunked dimension. ``func`` will be executed as
-            ``func(obj_subset, *args, **kwargs)``.
-
-            The function will be first run on mocked-up data, that looks like this
-            Dataset but has sizes 0, to determine properties of the returned object such
-            as dtype, variable names, new dimensions and new indexes (if any).
+            User-provided function that accepts a Dataset as its first
+            parameter. The function will receive a subset, i.e. one block, of this Dataset
+            (see below), corresponding to one chunk along each chunked dimension. ``func`` will be
+            executed as ``func(block_subset, *args, **kwargs)``.
 
             This function must return either a single DataArray or a single Dataset.
 
-            This function cannot change size of existing dimensions, or add new chunked
-            dimensions.
+            This function cannot add a new chunked dimension.
         args: Sequence
             Passed verbatim to func after unpacking, after the sliced DataArray. xarray
             objects, if any, will not be split by chunks. Passing dask collections is
@@ -5735,6 +5735,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         kwargs: Mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             split by chunks. Passing dask collections is not allowed.
+        template: (optional) DataArray, Dataset
+            xarray object representing the final result after compute is called. If not provided,
+            the function will be first run on mocked-up data, that looks like 'obj' but
+            has sizes 0, to determine properties of the returned object such as dtype,
+            variable names, new dimensions and new indexes (if any).
+            'template' must be provided if the function changes the size of existing dimensions.
 
         Returns
         -------
@@ -5757,7 +5763,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from .parallel import map_blocks
 
-        return map_blocks(func, self, args, kwargs)
+        return map_blocks(func, self, args, kwargs, template)
 
     def polyfit(
         self,
@@ -5932,7 +5938,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
                     fac = residuals / (x.shape[0] - order)
-                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j"),) * fac
+                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
         return Dataset(data_vars=variables, attrs=self.attrs.copy())
@@ -6058,8 +6064,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> ds = xr.Dataset({'foo': ('x', range(5))})
-        >>> ds.pad(x=(1,2))
+        >>> ds = xr.Dataset({"foo": ("x", range(5))})
+        >>> ds.pad(x=(1, 2))
         <xarray.Dataset>
         Dimensions:  (x: 8)
         Dimensions without coordinates: x
@@ -6153,17 +6159,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> array1 = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                       coords={"x": ['a', 'b', 'c', 'd', 'e']})
-        >>> array2 = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                        [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                        [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                       dims=["y", "x"],
-        ...                       coords={"y": [-1, 0, 1],
-        ...                               "x": ['a', 'b', 'c', 'd', 'e']}
-        ...                       )
-        >>> ds = xr.Dataset({'int': array1, 'float': array2})
-        >>> ds.min(dim='x')
+        >>> array1 = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
+        >>> array2 = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
+        ... )
+        >>> ds = xr.Dataset({"int": array1, "float": array2})
+        >>> ds.min(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6171,7 +6180,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 -2
             float    (y) float64 -2.0 -4.0 1.0
-        >>> ds.argmin(dim='x')
+        >>> ds.argmin(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6179,7 +6188,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 4
             float    (y) int64 4 0 2
-        >>> ds.idxmin(dim='x')
+        >>> ds.idxmin(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6195,7 +6204,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 skipna=skipna,
                 fill_value=fill_value,
                 keep_attrs=keep_attrs,
-            ),
+            )
         )
 
     def idxmax(
@@ -6248,17 +6257,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> array1 = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                       coords={"x": ['a', 'b', 'c', 'd', 'e']})
-        >>> array2 = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                        [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                        [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                       dims=["y", "x"],
-        ...                       coords={"y": [-1, 0, 1],
-        ...                               "x": ['a', 'b', 'c', 'd', 'e']}
-        ...                       )
-        >>> ds = xr.Dataset({'int': array1, 'float': array2})
-        >>> ds.max(dim='x')
+        >>> array1 = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
+        >>> array2 = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
+        ... )
+        >>> ds = xr.Dataset({"int": array1, "float": array2})
+        >>> ds.max(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6266,7 +6278,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 2
             float    (y) float64 2.0 2.0 1.0
-        >>> ds.argmax(dim='x')
+        >>> ds.argmax(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6274,7 +6286,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 1
             float    (y) int64 0 2 2
-        >>> ds.idxmax(dim='x')
+        >>> ds.idxmax(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6290,7 +6302,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 skipna=skipna,
                 fill_value=fill_value,
                 keep_attrs=keep_attrs,
-            ),
+            )
         )
 
 
