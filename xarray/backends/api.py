@@ -951,12 +951,18 @@ def open_mfdataset(
                 coords=coords,
                 ids=ids,
                 join=join,
+                combine_attrs="drop",
             )
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered
             # previously
             combined = combine_by_coords(
-                datasets, compat=compat, data_vars=data_vars, coords=coords, join=join
+                datasets,
+                compat=compat,
+                data_vars=data_vars,
+                coords=coords,
+                join=join,
+                combine_attrs="drop",
             )
         else:
             raise ValueError(
