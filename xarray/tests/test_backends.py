@@ -2664,7 +2664,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
     def test_open_mfdataset_dataset_attr_by_coords(self):
         """
-        Case when an attribute of type list differs across the multiple files
+        Case when an attribute differs across the multiple files
         """
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # Give the files an inconsistent attribute
@@ -2679,7 +2679,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
     def test_open_mfdataset_dataarray_attr_by_coords(self):
         """
-        Case when an attribute of type list differs across the multiple files
+        Case when an attribute of a member DataArray differs across the multiple files
         """
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # Give the files an inconsistent attribute
