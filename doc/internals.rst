@@ -138,3 +138,49 @@ To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
 for an open source library. In the future, we will maintain a list of accessors
 and the libraries that implement them on this page.
+
+.. _zarr_encoding:
+
+Zarr Encoding Specification
+---------------------------
+
+In implementing support for the `Zarr <https://zarr.readthedocs.io/>`_ storage
+format, Xarray developers made some *ad hoc* choices about how to store
+NetCDF data in Zarr.
+
+First, Xarray can only read and write Zarr groups. There is currently no support
+for reading / writting individual Zarr arrays. Zarr groups are mapped to
+Xarray ``Dataset`` objects.
+
+Second, from Xarray's point of view, the key difference between
+NetCDF and Zarr is that all NetCDF arrays have *dimension names* while Zarr
+arrays do not. Therefore, in order to store NetCDF data in Zarr, Xarray must
+somehow encode and decode the name of each array's dimensions.
+
+To accomplish this, Xarray developers decided to define a special Zarr array
+attribute: ``_ARRAY_DIMENSIONS``. The value of this attribute is a list of
+dimension names (strings), for example ``["time", "lon", "lat"]``. When writing
+data to Zarr, Xarray sets this attribute on all variables based on the variable
+dimensions. When reading a Zarr group, Xarray looks for this attribute on all
+arrays, raising an error if it can't be found. The attribute is used to define
+the variable dimension names and then removed from the attributes dictionary
+returned to the user.
+
+Because of these choices, Xarray cannot read arbitrary array data, but only
+Zarr data with valid ``_ARRAY_DIMENSIONS`` attributes on each array.
+
+After decoding the ``_ARRAY_DIMENSIONS`` attribute and assigning the variable
+dimensions, Xarray proceeds to [optionally] decode each variable using its
+standard CF decoding machinery used for NetCDF data (see :py:func:`decode_cf`).
+
+As a concrete example, here we write a tutorial dataset to Zarr and then
+re-open it directly with Zarr
+
+.. ipython:: python
+
+    ds = xr.tutorial.load_dataset('rasm')
+    ds.to_zarr('rasm.zarr', mode='w')
+    import zarr
+    zgroup = zarr.open('rasm.zarr')
+    print(zgroup.tree())
+    dict(zgroup['Tair'].attrs)
