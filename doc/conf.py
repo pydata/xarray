@@ -20,6 +20,12 @@ import subprocess
 import sys
 from contextlib import suppress
 
+# --------- autosummary templates ------------------
+# TODO: eventually replace this with a sphinx.ext.auto_accessor module
+import sphinx
+from sphinx.ext.autodoc import AttributeDocumenter, Documenter, MethodDocumenter
+from sphinx.util import rpartition
+
 # make sure the source version is preferred (#3567)
 root = pathlib.Path(__file__).absolute().parent.parent
 os.environ["PYTHONPATH"] = str(root)
@@ -360,13 +366,9 @@ intersphinx_mapping = {
     "cftime": ("https://unidata.github.io/cftime", None),
 }
 
+
 # --------- autosummary templates ------------------
 # TODO: eventually replace this with a sphinx.ext.auto_accessor module
-import sphinx
-from sphinx.util import rpartition
-from sphinx.ext.autodoc import Documenter, MethodDocumenter, AttributeDocumenter
-
-
 class AccessorDocumenter(MethodDocumenter):
     """
     Specialized Documenter subclass for accessors.
