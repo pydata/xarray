@@ -5103,6 +5103,8 @@ class TestReduce2D(TestReduce):
             pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
+        if x.dtype.kind == "O":
+            pytest.xfail("idxmax, idxmin not implemented for object arrays yet.")
         ar0_raw = xr.DataArray(
             x,
             dims=["y", "x"],

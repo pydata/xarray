@@ -1371,6 +1371,9 @@ def _calc_idxminmax(
     # These are dtypes with NaN values argmin and argmax can handle
     na_dtypes = "cfO"
 
+    if array.dtype.kind == "O":
+        raise ValueError("idxmin, idxmax do not support object arrays yet.")
+
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Need to skip NaN values since argmin and argmax can't handle them
         allna = array.isnull().all(dim)
