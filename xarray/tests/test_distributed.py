@@ -186,7 +186,7 @@ def test_dask_distributed_cfgrib_integration_test(loop):
     reason="Need recent distributed version to clean up get",
 )
 @gen_cluster(client=True, timeout=None)
-def test_async(c, s, a, b):
+async def test_async(c, s, a, b):
     x = create_test_data()
     assert not dask.is_dask_collection(x)
     y = x.chunk({"dim2": 4}) + 10
@@ -206,7 +206,7 @@ def test_async(c, s, a, b):
     assert futures_of(z)
 
     future = c.compute(z)
-    w = yield future
+    w = await future
     assert not dask.is_dask_collection(w)
     assert_allclose(x + 10, w)
 
@@ -218,7 +218,7 @@ def test_hdf5_lock():
 
 
 @gen_cluster(client=True)
-def test_serializable_locks(c, s, a, b):
+async def test_serializable_locks(c, s, a, b):
     def f(x, lock=None):
         with lock:
             return x + 1
@@ -233,7 +233,7 @@ def test_serializable_locks(c, s, a, b):
     ]:
 
         futures = c.map(f, list(range(10)), lock=lock)
-        yield c.gather(futures)
+        await c.gather(futures)
 
         lock2 = pickle.loads(pickle.dumps(lock))
         assert type(lock) == type(lock2)

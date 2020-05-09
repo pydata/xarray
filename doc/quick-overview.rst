@@ -22,16 +22,14 @@ array or list, with optional *dimensions* and *coordinates*:
 
 .. ipython:: python
 
-    data = xr.DataArray(np.random.randn(2, 3),
-                        dims=('x', 'y'),
-                        coords={'x': [10, 20]})
+    data = xr.DataArray(np.random.randn(2, 3), dims=("x", "y"), coords={"x": [10, 20]})
     data
 
 In this case, we have generated a 2D array, assigned the names *x* and *y* to the two dimensions respectively and associated two *coordinate labels* '10' and '20' with the two locations along the x dimension. If you supply a pandas :py:class:`~pandas.Series` or :py:class:`~pandas.DataFrame`, metadata is copied directly:
 
 .. ipython:: python
 
-    xr.DataArray(pd.Series(range(3), index=list('abc'), name='foo'))
+    xr.DataArray(pd.Series(range(3), index=list("abc"), name="foo"))
 
 Here are the key properties for a ``DataArray``:
 
@@ -75,13 +73,13 @@ While you're setting up your DataArray, it's often a good idea to set metadata a
 
 .. ipython:: python
 
-    data.attrs['long_name'] = 'random velocity'
-    data.attrs['units'] = 'metres/sec'
-    data.attrs['description'] = 'A random variable created as an example.'
-    data.attrs['random_attribute'] = 123
+    data.attrs["long_name"] = "random velocity"
+    data.attrs["units"] = "metres/sec"
+    data.attrs["description"] = "A random variable created as an example."
+    data.attrs["random_attribute"] = 123
     data.attrs
     # you can add metadata to coordinates too
-    data.x.attrs['units'] = 'x units'
+    data.x.attrs["units"] = "x units"
 
 
 Computation
@@ -102,15 +100,15 @@ numbers:
 
 .. ipython:: python
 
-    data.mean(dim='x')
+    data.mean(dim="x")
 
 Arithmetic operations broadcast based on dimension name. This means you don't
 need to insert dummy dimensions for alignment:
 
 .. ipython:: python
 
-    a = xr.DataArray(np.random.randn(3), [data.coords['y']])
-    b = xr.DataArray(np.random.randn(4), dims='z')
+    a = xr.DataArray(np.random.randn(3), [data.coords["y"]])
+    b = xr.DataArray(np.random.randn(4), dims="z")
 
     a
     b
@@ -139,9 +137,9 @@ xarray supports grouped operations using a very similar API to pandas (see :ref:
 
 .. ipython:: python
 
-    labels = xr.DataArray(['E', 'F', 'E'], [data.coords['y']], name='labels')
+    labels = xr.DataArray(["E", "F", "E"], [data.coords["y"]], name="labels")
     labels
-    data.groupby(labels).mean('y')
+    data.groupby(labels).mean("y")
     data.groupby(labels).map(lambda x: x - x.min())
 
 Plotting
@@ -178,7 +176,7 @@ objects. You can think of it as a multi-dimensional generalization of the
 
 .. ipython:: python
 
-    ds = xr.Dataset({'foo': data, 'bar': ('x', [1, 2]), 'baz': np.pi})
+    ds = xr.Dataset({"foo": data, "bar": ("x", [1, 2]), "baz": np.pi})
     ds
 
 
@@ -186,7 +184,7 @@ This creates a dataset with three DataArrays named ``foo``, ``bar`` and ``baz``.
 
 .. ipython:: python
 
-    ds['foo']
+    ds["foo"]
     ds.foo
 
 
@@ -216,14 +214,15 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 
 .. ipython:: python
 
-    ds.to_netcdf('example.nc')
-    xr.open_dataset('example.nc')
+    ds.to_netcdf("example.nc")
+    xr.open_dataset("example.nc")
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import os
-    os.remove('example.nc')
+
+    os.remove("example.nc")
 
 
 It is common for datasets to be distributed across multiple files (commonly one file per timestep). xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods. For more, see :ref:`io`.

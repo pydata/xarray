@@ -1,6 +1,5 @@
 import datetime
 import functools
-import warnings
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -1366,7 +1365,9 @@ class DataArray(AbstractArray, DataWithCoords):
             first. If True, x has to be an array of monotonically increasing
             values.
         kwargs: dictionary
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to scipy's interpolator. Valid
+            options and their behavior depend on if 1-dimensional or
+            multi-dimensional interpolation is used.
         ``**coords_kwargs`` : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
@@ -1913,7 +1914,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # unstacked dataset
         return Dataset(data_dict)
 
-    def transpose(self, *dims: Hashable, transpose_coords: bool = None) -> "DataArray":
+    def transpose(self, *dims: Hashable, transpose_coords: bool = True) -> "DataArray":
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1921,7 +1922,7 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
-        transpose_coords : boolean, optional
+        transpose_coords : boolean, default True
             If True, also transpose the coordinates of this DataArray.
 
         Returns
@@ -1950,15 +1951,6 @@ class DataArray(AbstractArray, DataWithCoords):
                 coords[name] = coord.variable.transpose(*coord_dims)
             return self._replace(variable, coords)
         else:
-            if transpose_coords is None and any(self[c].ndim > 1 for c in self.coords):
-                warnings.warn(
-                    "This DataArray contains multi-dimensional "
-                    "coordinates. In the future, these coordinates "
-                    "will be transposed as well unless you specify "
-                    "transpose_coords=False.",
-                    FutureWarning,
-                    stacklevel=2,
-                )
             return self._replace(variable)
 
     @property
@@ -2098,6 +2090,7 @@ class DataArray(AbstractArray, DataWithCoords):
         max_gap: Union[
             int, float, str, pd.Timedelta, np.timedelta64, datetime.timedelta
         ] = None,
+        keep_attrs: bool = None,
         **kwargs: Any,
     ) -> "DataArray":
         """Fill in NaNs by interpolating according to different methods.
@@ -2152,6 +2145,10 @@ class DataArray(AbstractArray, DataWithCoords):
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
+        keep_attrs : bool, default True
+            If True, the dataarray's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
+            object will be returned without attributes.
         kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
@@ -2174,6 +2171,7 @@ class DataArray(AbstractArray, DataWithCoords):
             limit=limit,
             use_coordinate=use_coordinate,
             max_gap=max_gap,
+            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -3252,27 +3250,25 @@ class DataArray(AbstractArray, DataWithCoords):
         func: "Callable[..., T_DSorDA]",
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
+        template: Union["DataArray", "Dataset"] = None,
     ) -> "T_DSorDA":
         """
-        Apply a function to each chunk of this DataArray. This method is experimental
-        and its signature may change.
+        Apply a function to each block of this DataArray.
+
+        .. warning::
+            This method is experimental and its signature may change.
 
         Parameters
         ----------
         func: callable
-            User-provided function that accepts a DataArray as its first parameter. The
-            function will receive a subset of this DataArray, corresponding to one chunk
-            along each chunked dimension. ``func`` will be executed as
-            ``func(obj_subset, *args, **kwargs)``.
-
-            The function will be first run on mocked-up data, that looks like this array
-            but has sizes 0, to determine properties of the returned object such as
-            dtype, variable names, new dimensions and new indexes (if any).
+            User-provided function that accepts a DataArray as its first
+            parameter. The function will receive a subset, i.e. one block, of this DataArray
+            (see below), corresponding to one chunk along each chunked dimension. ``func`` will be
+            executed as ``func(block_subset, *args, **kwargs)``.
 
             This function must return either a single DataArray or a single Dataset.
 
-            This function cannot change size of existing dimensions, or add new chunked
-            dimensions.
+            This function cannot add a new chunked dimension.
         args: Sequence
             Passed verbatim to func after unpacking, after the sliced DataArray. xarray
             objects, if any, will not be split by chunks. Passing dask collections is
@@ -3280,6 +3276,12 @@ class DataArray(AbstractArray, DataWithCoords):
         kwargs: Mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             split by chunks. Passing dask collections is not allowed.
+        template: (optional) DataArray, Dataset
+            xarray object representing the final result after compute is called. If not provided,
+            the function will be first run on mocked-up data, that looks like 'obj' but
+            has sizes 0, to determine properties of the returned object such as dtype,
+            variable names, new dimensions and new indexes (if any).
+            'template' must be provided if the function changes the size of existing dimensions.
 
         Returns
         -------
@@ -3302,7 +3304,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         from .parallel import map_blocks
 
-        return map_blocks(func, self, args, kwargs)
+        return map_blocks(func, self, args, kwargs, template)
 
     def polyfit(
         self,
@@ -3487,17 +3489,18 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0,1,2])])
-        >>> arr.pad(x=(1,2), constant_values=0)
+        >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0, 1, 2])])
+        >>> arr.pad(x=(1, 2), constant_values=0)
         <xarray.DataArray (x: 6)>
         array([0, 5, 6, 7, 0, 0])
         Coordinates:
           * x        (x) float64 nan 0.0 1.0 2.0 nan nan
 
-        >>> da = xr.DataArray([[0,1,2,3], [10,11,12,13]],
-                              dims=["x", "y"],
-                              coords={"x": [0,1], "y": [10, 20 ,30, 40], "z": ("x", [100, 200])}
-            )
+        >>> da = xr.DataArray(
+        ...     [[0, 1, 2, 3], [10, 11, 12, 13]],
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 1], "y": [10, 20, 30, 40], "z": ("x", [100, 200])},
+        ... )
         >>> da.pad(x=1)
         <xarray.DataArray (x: 4, y: 4)>
         array([[nan, nan, nan, nan],
@@ -3584,8 +3587,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> array = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                      coords={"x": ['a', 'b', 'c', 'd', 'e']})
+        >>> array = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
         >>> array.min()
         <xarray.DataArray ()>
         array(-2)
@@ -3596,13 +3600,15 @@ class DataArray(AbstractArray, DataWithCoords):
         <xarray.DataArray 'x' ()>
         array('e', dtype='<U1')
 
-        >>> array = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                       [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                       [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                      dims=["y", "x"],
-        ...                      coords={"y": [-1, 0, 1],
-        ...                              "x": np.arange(5.)**2}
-        ...                      )
+        >>> array = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
+        ... )
         >>> array.min(dim="x")
         <xarray.DataArray (y: 3)>
         array([-2., -4.,  1.])
@@ -3678,8 +3684,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
 
-        >>> array = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                      coords={"x": ['a', 'b', 'c', 'd', 'e']})
+        >>> array = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
         >>> array.max()
         <xarray.DataArray ()>
         array(2)
@@ -3690,13 +3697,15 @@ class DataArray(AbstractArray, DataWithCoords):
         <xarray.DataArray 'x' ()>
         array('b', dtype='<U1')
 
-        >>> array = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                       [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                       [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                      dims=["y", "x"],
-        ...                      coords={"y": [-1, 0, 1],
-        ...                              "x": np.arange(5.)**2}
-        ...                      )
+        >>> array = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
+        ... )
         >>> array.max(dim="x")
         <xarray.DataArray (y: 3)>
         array([2., 2., 1.])

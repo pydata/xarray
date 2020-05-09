@@ -2163,9 +2163,6 @@ class TestDataArray:
         with pytest.raises(ValueError):
             da.transpose("x", "y")
 
-        with pytest.warns(FutureWarning):
-            da.transpose()
-
     def test_squeeze(self):
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
 
@@ -2754,9 +2751,6 @@ class TestDataArray:
                 lambda x: x.squeeze()
             )["c"]
             assert result.dims == expected_dims
-
-        with pytest.warns(FutureWarning):
-            array.groupby("x").map(lambda x: x.squeeze())
 
     def test_groupby_first_and_last(self):
         array = DataArray([1, 2, 3, 4, 5], dims="x")

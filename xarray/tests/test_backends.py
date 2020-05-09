@@ -1526,12 +1526,6 @@ class ZarrBase(CFEncodedBase):
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
-    @contextlib.contextmanager
-    def roundtrip_append(
-        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
-    ):
-        pytest.skip("zarr backend does not support appending")
-
     def test_roundtrip_consolidated(self):
         pytest.importorskip("zarr", minversion="2.2.1.dev2")
         expected = create_test_data()
@@ -1685,11 +1679,27 @@ class ZarrBase(CFEncodedBase):
 
         # should fail if dask_chunks are irregular...
         ds_chunk_irreg = ds.chunk({"x": (5, 4, 3)})
-        with pytest.raises(ValueError) as e_info:
+        with raises_regex(ValueError, "uniform chunk sizes."):
             with self.roundtrip(ds_chunk_irreg) as actual:
                 pass
-        # make sure this error message is correct and not some other error
-        assert e_info.match("chunks")
+
+        # should fail if encoding["chunks"] clashes with dask_chunks
+        badenc = ds.chunk({"x": 4})
+        badenc.var1.encoding["chunks"] = (6,)
+        with raises_regex(NotImplementedError, "named 'var1' would overlap"):
+            with self.roundtrip(badenc) as actual:
+                pass
+
+        badenc.var1.encoding["chunks"] = (2,)
+        with raises_regex(ValueError, "Specified Zarr chunk encoding"):
+            with self.roundtrip(badenc) as actual:
+                pass
+
+        badenc = badenc.chunk({"x": (3, 3, 6)})
+        badenc.var1.encoding["chunks"] = (3,)
+        with raises_regex(ValueError, "incompatible with this encoding"):
+            with self.roundtrip(badenc) as actual:
+                pass
 
         # ... except if the last chunk is smaller than the first
         ds_chunk_irreg = ds.chunk({"x": (5, 5, 2)})
@@ -1810,7 +1820,7 @@ class ZarrBase(CFEncodedBase):
         # not relevant for zarr, since we don't use EncodedStringCoder
         pass
 
-    # TODO: someone who understand caching figure out whether chaching
+    # TODO: someone who understand caching figure out whether caching
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
@@ -1818,55 +1828,44 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_write(self):
+        super().test_append_write()
+
+    def test_append_with_invalid_dim_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w")
-            ds_to_append.to_zarr(store_target, append_dim="time")
-            original = xr.concat([ds, ds_to_append], dim="time")
-            assert_identical(original, xr.open_zarr(store_target))
-
-    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
-    def test_append_overwrite_values(self):
-        super().test_append_overwrite_values()
-
-    def test_append_with_invalid_dim_raises(self):
-
-        ds, ds_to_append, _ = create_append_test_data()
-
-        # check failure when append_dim not valid
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode="w")
+            with pytest.raises(
+                ValueError, match="does not match any existing dataset dimensions"
+            ):
                 ds_to_append.to_zarr(store_target, append_dim="notvalid")
 
+    def test_append_with_no_dims_raises(self):
+        with self.create_zarr_target() as store_target:
+            Dataset({"foo": ("x", [1])}).to_zarr(store_target, mode="w")
+            with pytest.raises(ValueError, match="different dimension names"):
+                Dataset({"foo": ("y", [2])}).to_zarr(store_target, mode="a")
+
     def test_append_with_append_dim_not_set_raises(self):
-
         ds, ds_to_append, _ = create_append_test_data()
-
-        # check failure when append_dim not set
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode="w")
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w")
+            with pytest.raises(ValueError, match="different dimension sizes"):
                 ds_to_append.to_zarr(store_target, mode="a")
 
     def test_append_with_mode_not_a_raises(self):
-
         ds, ds_to_append, _ = create_append_test_data()
-
-        # check failure when append_dim is set and mode != 'a'
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode="w")
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w")
+            with pytest.raises(
+                ValueError, match="append_dim was set along with mode='w'"
+            ):
                 ds_to_append.to_zarr(store_target, mode="w", append_dim="time")
 
     def test_append_with_existing_encoding_raises(self):
-
         ds, ds_to_append, _ = create_append_test_data()
-
-        # check failure when providing encoding to existing variable
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode="w")
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w")
+            with pytest.raises(ValueError, match="but encoding was provided"):
                 ds_to_append.to_zarr(
                     store_target,
                     append_dim="time",
