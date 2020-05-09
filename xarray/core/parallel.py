@@ -543,6 +543,7 @@ def map_blocks(
     result = Dataset(coords=indexes, attrs=template.attrs)
     for index in result.indexes:
         result[index].attrs = template[index].attrs
+        result[index].encoding = template[index].encoding
 
     for name, gname_l in var_key_map.items():
         dims = template[name].dims
