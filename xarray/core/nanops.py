@@ -47,17 +47,12 @@ def _maybe_null_out(result, axis, mask, min_count=1):
 
 def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
     """ In house nanargmin, nanargmax for object arrays. Always return integer
-    type
+    type. Returns -1 for all NaN values along axis.
     """
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
-
-    # TODO This will evaluate dask arrays and might be costly.
-    if (valid_count == 0).any():
-        raise ValueError("All-NaN slice encountered")
-
-    return data
+    return where_method(data, valid_count > 0, -1)
 
 
 def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
