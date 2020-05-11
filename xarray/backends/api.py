@@ -1285,25 +1285,43 @@ def _validate_append_dim_and_encoding(
                 f"append_dim={append_dim!r} does not match any existing "
                 f"dataset dimensions {ds.dims}"
             )
-        if append_dim in region:
+        if region is not None and append_dim in region:
             raise ValueError(
-                "cannot list the same dimension in both ``append_dim`` and "
+                f"cannot list the same dimension in both ``append_dim`` and "
                 f"``region`` with to_zarr({append_dim}): "
             )
 
-    for var_name in ds_to_append:
-        if var_name in ds:
-            if ds_to_append[var_name].dims != ds[var_name].dims:
+    if region is not None:
+        non_matching_vars = [
+            k
+            for k, v in ds_to_append.variables.items()
+            if not set(region).intersection(v.dims)
+        ]
+        if non_matching_vars:
+            raise ValueError(
+                f"when setting `region` explicitly in to_zarr(), all "
+                f"variables in the dataset to write must have at least "
+                f"one dimension in common with the region's dimensions "
+                f"{list(region.keys())}, but that is not "
+                f"the case for some variables here. To drop these variables "
+                f"from this dataset before exporting to zarr, write: "
+                f".drop({non_matching_vars!r})"
+            )
+
+    for var_name, new_var in ds_to_append.variables.items():
+        if var_name in ds.variables:
+            existing_var = ds.variables[var_name]
+            if new_var.dims != existing_var.dims:
                 raise ValueError(
                     f"variable {var_name!r} already exists with different "
-                    f"dimension names {ds[var_name].dims} != "
-                    f"{ds_to_append[var_name].dims}, but changing variable "
-                    "dimensions is not supported by to_zarr()."
+                    f"dimension names {existing_var.dims} != "
+                    f"{new_var.dims}, but changing variable "
+                    f"dimensions is not supported by to_zarr()."
                 )
 
             existing_sizes = {}
-            for dim, size in ds[var_name].sizes.items():
-                if dim in region:
+            for dim, size in existing_var.sizes.items():
+                if region is not None and dim in region:
                     start, stop, stride = region[dim].indices(size)
                     if stride != 1:
                         raise ValueError(
@@ -1315,15 +1333,13 @@ def _validate_append_dim_and_encoding(
                     existing_sizes[dim] = size
 
             new_sizes = {
-                dim: size
-                for dim, size in ds_to_append[var_name].sizes.items()
-                if dim != append_dim
+                dim: size for dim, size in new_var.sizes.items() if dim != append_dim
             }
             if existing_sizes != new_sizes:
                 raise ValueError(
                     f"variable {var_name!r} already exists with different "
                     f"dimension sizes: {existing_sizes} != {new_sizes}. "
-                    "to_zarr() only supports changing dimension sizes when "
+                    f"to_zarr() only supports changing dimension sizes when "
                     f"explicitly appending, but append_dim={append_dim!r}."
                 )
             if var_name in encoding.keys():
@@ -1363,9 +1379,6 @@ def to_zarr(
 
     if mode != "a" and region is not None:
         raise ValueError("cannot set region unless mode='a' or mode=None")
-
-    if region is None:
-        region = {}
 
     if mode not in ["w", "w-", "a"]:
         # TODO: figure out how to handle 'r+'
