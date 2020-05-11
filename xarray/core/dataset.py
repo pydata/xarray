@@ -1585,7 +1585,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             internally set to ``'a'``. Otherwise, ``mode`` will default to
             `w-` if not set.
         synchronizer : object, optional
-            Array synchronizer
+            Zarr array synchronizer.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
@@ -1593,14 +1593,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
         compute: bool, optional
-            If True compute immediately, otherwise return a
-            ``dask.delayed.Delayed`` object that can be computed later.
+            If True compute writing array values to disk immediately, otherwise
+            return a ``dask.delayed.Delayed`` object that can be computed to
+            write array values at a later. New arrays and metadata are always
+            created eagerly.
         consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
-            after writing.
+            after writing metadata.
         append_dim: hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overriden variables must remain the same size.
+        region: dict, optional
+            If 
 
         References
         ----------
