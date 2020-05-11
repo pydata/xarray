@@ -1593,10 +1593,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
         compute: bool, optional
-            If True compute writing array values to disk immediately, otherwise
-            return a ``dask.delayed.Delayed`` object that can be computed to
-            write array values at a later. New arrays and metadata are always
-            created eagerly.
+            If True write array data immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed to write
+            array data later. Metadata is always updated eagerly.
         consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing metadata.
@@ -1604,7 +1603,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If set, the dimension along which the data will be appended. All
             other dimensions on overriden variables must remain the same size.
         region: dict, optional
-            If 
+            Optional mapping from dimension names to integer slices along
+            dataset dimensions to indicate the region of existing zarr array(s)
+            in which to write this dataset's data. For example,
+            ``{'x': slice(0, 1000), 'y': slice(10000, 11000)}`` would indicate
+            that values should be written to the region ``0:1000`` along ``x``
+            and ``10000:11000`` along ``y``.
+
+            Two restrictions apply to the use of ``region``:
+
+            - If ``region`` is set, _all_ variables in a dataset must have at
+              least one dimension in common with the region. Other variables
+              should be written in a separate call to ``to_zarr()``.
+            - Dimensions cannot be included in both ``region`` and
+              ``append_dim`` at the same time. To create empty arrays to fill
+              in with ``region``, use a separate call to ``to_zarr()`` with
+              ``compute=False``.
 
         References
         ----------
