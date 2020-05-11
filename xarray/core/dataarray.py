@@ -1,6 +1,5 @@
 import datetime
 import functools
-import warnings
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -1915,7 +1914,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # unstacked dataset
         return Dataset(data_dict)
 
-    def transpose(self, *dims: Hashable, transpose_coords: bool = None) -> "DataArray":
+    def transpose(self, *dims: Hashable, transpose_coords: bool = True) -> "DataArray":
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1923,7 +1922,7 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
-        transpose_coords : boolean, optional
+        transpose_coords : boolean, default True
             If True, also transpose the coordinates of this DataArray.
 
         Returns
@@ -1952,15 +1951,6 @@ class DataArray(AbstractArray, DataWithCoords):
                 coords[name] = coord.variable.transpose(*coord_dims)
             return self._replace(variable, coords)
         else:
-            if transpose_coords is None and any(self[c].ndim > 1 for c in self.coords):
-                warnings.warn(
-                    "This DataArray contains multi-dimensional "
-                    "coordinates. In the future, these coordinates "
-                    "will be transposed as well unless you specify "
-                    "transpose_coords=False.",
-                    FutureWarning,
-                    stacklevel=2,
-                )
             return self._replace(variable)
 
     @property
@@ -3260,27 +3250,25 @@ class DataArray(AbstractArray, DataWithCoords):
         func: "Callable[..., T_DSorDA]",
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
+        template: Union["DataArray", "Dataset"] = None,
     ) -> "T_DSorDA":
         """
-        Apply a function to each chunk of this DataArray. This method is experimental
-        and its signature may change.
+        Apply a function to each block of this DataArray.
+
+        .. warning::
+            This method is experimental and its signature may change.
 
         Parameters
         ----------
         func: callable
-            User-provided function that accepts a DataArray as its first parameter. The
-            function will receive a subset of this DataArray, corresponding to one chunk
-            along each chunked dimension. ``func`` will be executed as
-            ``func(obj_subset, *args, **kwargs)``.
-
-            The function will be first run on mocked-up data, that looks like this array
-            but has sizes 0, to determine properties of the returned object such as
-            dtype, variable names, new dimensions and new indexes (if any).
+            User-provided function that accepts a DataArray as its first
+            parameter. The function will receive a subset, i.e. one block, of this DataArray
+            (see below), corresponding to one chunk along each chunked dimension. ``func`` will be
+            executed as ``func(block_subset, *args, **kwargs)``.
 
             This function must return either a single DataArray or a single Dataset.
 
-            This function cannot change size of existing dimensions, or add new chunked
-            dimensions.
+            This function cannot add a new chunked dimension.
         args: Sequence
             Passed verbatim to func after unpacking, after the sliced DataArray. xarray
             objects, if any, will not be split by chunks. Passing dask collections is
@@ -3288,6 +3276,12 @@ class DataArray(AbstractArray, DataWithCoords):
         kwargs: Mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             split by chunks. Passing dask collections is not allowed.
+        template: (optional) DataArray, Dataset
+            xarray object representing the final result after compute is called. If not provided,
+            the function will be first run on mocked-up data, that looks like 'obj' but
+            has sizes 0, to determine properties of the returned object such as dtype,
+            variable names, new dimensions and new indexes (if any).
+            'template' must be provided if the function changes the size of existing dimensions.
 
         Returns
         -------
@@ -3310,7 +3304,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         from .parallel import map_blocks
 
-        return map_blocks(func, self, args, kwargs)
+        return map_blocks(func, self, args, kwargs, template)
 
     def polyfit(
         self,
