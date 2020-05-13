@@ -3329,6 +3329,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize("variant", ("data", "coords"))
     @pytest.mark.parametrize(
         "func",
@@ -3402,6 +3406,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize("variant", ("data", "coords"))
     @pytest.mark.parametrize(
         "func",
@@ -3604,6 +3612,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize(
         "func",
         (
