@@ -26,7 +26,6 @@ import numpy as np
 from . import dtypes, duck_array_ops, utils
 from .alignment import deep_align
 from .merge import merge_coordinates_without_align
-from .nanops import dask_array
 from .options import OPTIONS
 from .pycompat import dask_array_type
 from .utils import is_dict_like
@@ -1380,23 +1379,23 @@ def _calc_idxminmax(
     # This will run argmin or argmax.
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
-    # Get the coordinate we want.
-    coordarray = array[dim]
-
     # Handle dask arrays.
-    if isinstance(array, dask_array_type):
-        res = dask_array.map_blocks(coordarray, indx, dtype=indx.dtype)
+    if isinstance(array.data, dask_array_type):
+        import dask.array
+
+        chunks = dict(zip(array.dims, array.chunks))
+        dask_coord = dask.array.from_array(array[dim].data, chunks=chunks[dim])
+        res = indx.copy(data=dask_coord[(indx.data,)])
+        # we need to attach back the dim name
+        res.name = dim
     else:
-        res = coordarray[
-            indx,
-        ]
+        res = array[dim][(indx,)]
+        # The dim is gone but we need to remove the corresponding coordinate.
+        del res.coords[dim]
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
         res = res.where(~allna, fill_value)
-
-    # The dim is gone but we need to remove the corresponding coordinate.
-    del res.coords[dim]
 
     # Copy attributes from argmin/argmax, if any
     res.attrs = indx.attrs
