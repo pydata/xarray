@@ -1021,6 +1021,142 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(ds):
                 pass
 
+    @requires_netCDF4
+    def test_open_dataset_decode_cf_mask_and_scale_conflicts(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("t", 5)
+                nc.createVariable("x", "int16", ("t",), fill_value=-1)
+                v = nc.variables["x"]
+                v.set_auto_maskandscale(False)
+                v.add_offset = 10
+                v.scale_factor = 0.1
+                v[:] = np.array([-1, -1, 0, 1, 2])
+
+            expected_decoded = create_masked_and_scaled_data()
+            expected_encoded = np.array([-1, -1, 0, 1, 2])
+
+            with open_dataset(tmp_file, decode_cf=True) as ds:
+                assert_identical(expected_decoded, ds)
+
+            with open_dataset(tmp_file, decode_cf=False) as ds:
+                assert_array_equal(expected_encoded, ds.x.values)
+
+            with open_dataset(tmp_file, decode_cf=None, mask_and_scale=True) as ds:
+                assert_identical(expected_decoded, ds)
+
+            with open_dataset(tmp_file, decode_cf=True, mask_and_scale=True) as ds:
+                assert_identical(expected_decoded, ds)
+
+            with open_dataset(tmp_file, decode_cf=False, mask_and_scale=False) as ds:
+                assert_array_equal(expected_encoded, ds.x.values)
+
+            with raises_regex(
+                ValueError, "cannot use mask_and_scale if decode_cf=False"
+            ):
+                open_dataset(tmp_file, decode_cf=False, mask_and_scale=True)
+
+            with raises_regex(
+                ValueError, "cannot deactivate mask_and_scale if decode_cf=True"
+            ):
+                open_dataset(tmp_file, decode_cf=True, mask_and_scale=False)
+
+    @requires_netCDF4
+    def test_open_dataset_decode_cf_decode_time_conflicts(self):
+        expected_decoded = np.dtype("<M8[ns]")
+        expected_encoded = np.dtype("int16")
+
+        with open_example_dataset("example_1.nc", decode_cf=True) as ds:
+            assert ds.time.dtype == np.dtype(expected_decoded)
+
+        with open_example_dataset("example_1.nc", decode_cf=False) as ds:
+            assert ds.time.dtype == expected_encoded
+
+        with open_example_dataset(
+            "example_1.nc", decode_cf=None, decode_times=True
+        ) as ds:
+            assert ds.time.dtype == expected_decoded
+
+        with open_example_dataset(
+            "example_1.nc", decode_cf=True, decode_times=True
+        ) as ds:
+            assert ds.time.dtype == expected_decoded
+
+        with open_example_dataset(
+            "example_1.nc", decode_cf=False, decode_times=False
+        ) as ds:
+            assert ds.time.dtype == expected_encoded
+
+        with raises_regex(ValueError, "cannot use decode_times if decode_cf=False"):
+            open_example_dataset("example_1.nc", decode_cf=False, decode_times=True)
+
+        with raises_regex(
+            ValueError, "cannot deactivate decode_times if decode_cf=True"
+        ):
+            open_example_dataset("example_1.nc", decode_cf=True, decode_times=False)
+
+    @requires_netCDF4
+    def test_open_dataset_decode_cf_concat_characters_conflicts(self):
+        expected_decoded = np.dtype("|S4")
+        expected_encoded = np.dtype("|S1")
+
+        with open_example_dataset("bears.nc", decode_cf=True) as ds:
+            assert ds.bears.dtype == np.dtype(expected_decoded)
+
+        with open_example_dataset("bears.nc", decode_cf=False) as ds:
+            assert ds.bears.dtype == expected_encoded
+
+        with open_example_dataset(
+            "bears.nc", decode_cf=None, concat_characters=True
+        ) as ds:
+            assert ds.bears.dtype == expected_decoded
+
+        with open_example_dataset(
+            "bears.nc", decode_cf=True, concat_characters=True
+        ) as ds:
+            assert ds.bears.dtype == expected_decoded
+
+        with open_example_dataset(
+            "bears.nc", decode_cf=False, concat_characters=False
+        ) as ds:
+            assert ds.bears.dtype == expected_encoded
+
+        with raises_regex(
+            ValueError, "cannot use concat_characters if decode_cf=False"
+        ):
+            open_example_dataset("bears.nc", decode_cf=False, concat_characters=True)
+
+        with raises_regex(
+            ValueError, "cannot deactivate concat_characters if decode_cf=True"
+        ):
+            open_example_dataset("bears.nc", decode_cf=True, concat_characters=False)
+
+    @requires_netCDF4
+    def test_open_dataset_decodeing_conflicts(self):
+        expected_decoded = np.dtype("|S4")
+        expected_encoded = np.dtype("|S1")
+
+        # individual decodings can be (de)activated without ValueError
+        with open_example_dataset(
+            "bears.nc", concat_characters=True, decode_times=False
+        ) as ds:
+            assert ds.bears.dtype == expected_decoded
+
+        with open_example_dataset(
+            "bears.nc", concat_characters=True, decode_times=True
+        ) as ds:
+            assert ds.bears.dtype == expected_decoded
+
+        with open_example_dataset(
+            "bears.nc", concat_characters=False, decode_times=True
+        ) as ds:
+            assert ds.bears.dtype == expected_encoded
+
+        with open_example_dataset(
+            "bears.nc", concat_characters=False, decode_times=False
+        ) as ds:
+            assert ds.bears.dtype == expected_encoded
+
 
 _counter = itertools.count()
 

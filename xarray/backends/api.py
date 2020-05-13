@@ -290,12 +290,12 @@ def load_dataarray(filename_or_obj, **kwargs):
 def open_dataset(
     filename_or_obj,
     group=None,
-    decode_cf=True,
+    decode_cf=None,
     mask_and_scale=None,
-    decode_times=True,
+    decode_times=None,
     autoclose=None,
-    concat_characters=True,
-    decode_coords=True,
+    concat_characters=None,
+    decode_coords=None,
     engine=None,
     chunks=None,
     lock=None,
@@ -319,7 +319,13 @@ def open_dataset(
         netCDF4 files).
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
-        to CF conventions.
+        to CF conventions. Defaults to None which means decode variables while
+        allowing any of the arguments mask_and_scale, decode_times,
+        concat_characters, or decode_coords being deactivated. If decode_cf is
+        explicitly set True or False, the four options mask_and_scale,
+        decode_times, concat_characters, and decode_coords are set likewise.
+        A ValueError is raised if decode_cf conflicts with any of the four
+        mentioned options set explicitly.
     mask_and_scale : bool, optional
         If True, replace array values equal to `_FillValue` with NA and scale
         values according to the formula `original_values * scale_factor +
@@ -327,11 +333,13 @@ def open_dataset(
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA. mask_and_scale defaults to True except for the
-        pseudonetcdf backend.
+        be replaced by NA. mask_and_scale defaults to None which means True
+        except for the pseudonetcdf backend.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
+        Defaults to None which means decoding unless decode_cf is False in
+        which case the time is not decoded.
     autoclose : bool, optional
         If True, automatically close files to avoid OS Error of too many files
         being open.  However, this option doesn't work with streams, e.g.,
@@ -340,10 +348,13 @@ def open_dataset(
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
+        used as the last dimension of character arrays. Defaults to None which
+        means concatenating unless decode_cf is False in which case characters
+        are not concatenated.
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
+        the resulting dataset.  Defaults to None which means decoding unless
+        decode_cf is False in which case coordinates are not decoded.
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib', \
         'pseudonetcdf'}, optional
         Engine to use when reading files. If not provided, the default engine
@@ -427,14 +438,52 @@ def open_dataset(
             stacklevel=2,
         )
 
+    if decode_cf:
+        if mask_and_scale is not None and not mask_and_scale:
+            raise ValueError(
+                "cannot deactivate mask_and_scale if decode_cf=True is explicitly set"
+            )
+        if decode_times is not None and not decode_times:
+            raise ValueError(
+                "cannot deactivate decode_times if decode_cf=True is explicitly set"
+            )
+        if concat_characters is not None and not concat_characters:
+            raise ValueError(
+                "cannot deactivate concat_characters if "
+                "decode_cf=True is explicitly set"
+            )
+        if decode_coords is not None and not decode_coords:
+            raise ValueError(
+                "cannot deactivate decode_coords if decode_cf=True is explicitly set"
+            )
+    elif decode_cf is None:
+        # by default decode in general unless specific options are turned off
+        decode_cf = True
+    elif not decode_cf:
+        if mask_and_scale:
+            raise ValueError("cannot use mask_and_scale if decode_cf=False")
+        mask_and_scale = False
+        if decode_times:
+            raise ValueError("cannot use decode_times if decode_cf=False")
+        decode_times = False
+        if concat_characters:
+            raise ValueError("cannot use concat_characters if decode_cf=False")
+        concat_characters = False
+        if decode_coords:
+            raise ValueError("cannot use decode_coords if decode_cf=False")
+        decode_coords = False
+
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"
 
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
+    if decode_times is None:
+        decode_times = True
+
+    if concat_characters is None:
+        concat_characters = True
+
+    if decode_coords is None:
+        decode_coords = True
 
     if cache is None:
         cache = chunks is None
