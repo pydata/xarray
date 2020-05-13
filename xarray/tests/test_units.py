@@ -2266,6 +2266,10 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2277,7 +2281,7 @@ class TestDataArray:
             function("mean"),
             pytest.param(
                 function("median"),
-                marks=pytest.mark.xfail(
+                marks=pytest.mark.skip(
                     reason="median does not work with dataarrays yet"
                 ),
             ),
