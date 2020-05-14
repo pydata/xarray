@@ -123,10 +123,10 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         if monthly_rule:
             return _maybe_add_count(monthly_rule, self.month_deltas[0])
 
-        if self.is_unique:
+        if len(self.deltas) == 1:
             # Daily as there is no "Weekly" offsets with CFTime
             days = self.deltas[0] / _ONE_DAY
-            _maybe_add_count("D", days)
+            return _maybe_add_count("D", days)
 
         # CFTime has no business freq and no "week of month" (WOM)
         return None
@@ -173,7 +173,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
     def month_deltas(self):
         """Sorted unique month deltas."""
         if self._month_deltas is None:
-            self._month_deltas = _unique_deltas(self.index.month)
+            self._month_deltas = _unique_deltas(self.index.year * 12 + self.index.month)
         return self._month_deltas
 
 

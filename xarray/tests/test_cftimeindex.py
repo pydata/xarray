@@ -1056,7 +1056,7 @@ def test_asi8_distant_date():
         "AS-JUL",
         "2AS-FEB",
         "Q-NOV",
-        "3QS-MAR",
+        "3QS-DEC",
         "MS",
         "4M",
         "7D",
@@ -1064,8 +1064,6 @@ def test_asi8_distant_date():
         "30H",
         "5T",
         "40S",
-        "1001L",
-        "60931U",
     ],
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
