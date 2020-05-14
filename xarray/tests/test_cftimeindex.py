@@ -1048,7 +1048,7 @@ def test_asi8_distant_date():
     np.testing.assert_array_equal(result, expected)
 
 
-@requires_cftime
+@requires_cftime_1_1_0
 @pytest.mark.parametrize(
     "freq",
     [
