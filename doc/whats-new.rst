@@ -36,6 +36,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using `dask='parallelized'`. (:issue:`1815`, :pull:`4060`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
