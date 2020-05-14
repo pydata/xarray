@@ -804,7 +804,7 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
     In [4]: rds.rio.crs
     Out[4]: CRS.from_epsg(32618)
 
-    In [5]: rds4326 = rio.rio.reproject("epsg:4326")
+    In [5]: rds4326 = rds.rio.reproject("epsg:4326")
 
     In [6]: rds4326.rio.crs
     Out[6]: CRS.from_epsg(4326)
