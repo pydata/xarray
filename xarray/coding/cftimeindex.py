@@ -50,11 +50,7 @@ import pandas as pd
 from xarray.core.utils import is_scalar
 
 from ..core.common import _contains_cftime_datetimes
-from .times import (
-    _STANDARD_CALENDARS,
-    cftime_to_nptime,
-    infer_calendar_name,
-)
+from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
 def named(name, pattern):
@@ -235,6 +231,7 @@ class CFTimeIndex(pd.Index):
     --------
     cftime_range
     """
+
     year = _field_accessor("year", "The year of the datetime")
     month = _field_accessor("month", "The month of the datetime")
     day = _field_accessor("day", "The days of the datetime")

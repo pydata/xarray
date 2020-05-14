@@ -1050,12 +1050,25 @@ def test_asi8_distant_date():
 
 @requires_cftime
 @pytest.mark.parametrize(
-    "freq", ["A-DEC", "AS-JUL", "2AS-FEB", "Q-NOV", "3QS-MAR", "MS", "4M", "7D", "D",
-             "30H", "5T", "40S", "1001L", "60931U"]
+    "freq",
+    [
+        "A-DEC",
+        "AS-JUL",
+        "2AS-FEB",
+        "Q-NOV",
+        "3QS-MAR",
+        "MS",
+        "4M",
+        "7D",
+        "D",
+        "30H",
+        "5T",
+        "40S",
+        "1001L",
+        "60931U",
+    ],
 )
-@pytest.mark.parametrize(
-    "calendar", _CFTIME_CALENDARS
-)
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_infer_freq(freq, calendar):
     indx = xr.cftime_range("2000-01-01", periods=50, freq=freq, calendar=calendar)
     out = xr.infer_freq(indx)
