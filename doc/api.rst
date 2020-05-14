@@ -400,6 +400,56 @@ Computation
 :py:attr:`~core.groupby.DataArrayGroupBy.where`
 :py:attr:`~core.groupby.DataArrayGroupBy.quantile`
 
+
+String manipulation
+-------------------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.str.capitalize
+   DataArray.str.center
+   DataArray.str.contains
+   DataArray.str.count
+   DataArray.str.decode
+   DataArray.str.encode
+   DataArray.str.endswith
+   DataArray.str.find
+   DataArray.str.get
+   DataArray.str.index
+   DataArray.str.isalnum
+   DataArray.str.isalpha
+   DataArray.str.isdecimal
+   DataArray.str.isdigit
+   DataArray.str.isnumeric
+   DataArray.str.isspace
+   DataArray.str.istitle
+   DataArray.str.isupper
+   DataArray.str.len
+   DataArray.str.ljust
+   DataArray.str.lower
+   DataArray.str.lstrip
+   DataArray.str.match
+   DataArray.str.pad
+   DataArray.str.repeat
+   DataArray.str.replace
+   DataArray.str.rfind
+   DataArray.str.rindex
+   DataArray.str.rjust
+   DataArray.str.rstrip
+   DataArray.str.slice
+   DataArray.str.slice_replace
+   DataArray.str.startswith
+   DataArray.str.strip
+   DataArray.str.swapcase
+   DataArray.str.title
+   DataArray.str.translate
+   DataArray.str.upper
+   DataArray.str.wrap
+   DataArray.str.zfill
+
+
 Reshaping and reorganizing
 --------------------------
 

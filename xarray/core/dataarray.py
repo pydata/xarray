@@ -3716,7 +3716,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
-    str = property(StringAccessor)
+    str = utils.UncachedAccessor(StringAccessor)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
