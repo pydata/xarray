@@ -662,10 +662,16 @@ def _apply_blockwise(
     import dask.array
 
     if signature.num_outputs > 1:
-        raise NotImplementedError(
-            "multiple outputs from apply_ufunc not yet "
-            "supported with dask='parallelized'"
+        res = dask.array.apply_gufunc(
+            func,
+            signature.to_gufunc_string(),
+            *args,
+            output_dtypes=output_dtypes,
+            output_sizes=output_sizes,
         )
+        # todo: remove *tuplify* when fixed in dask
+        # see https://github.com/dask/dask/issues/6206
+        return (*res,)
 
     if output_dtypes is None:
         raise ValueError(

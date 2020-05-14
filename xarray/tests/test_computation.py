@@ -244,6 +244,21 @@ def test_apply_two_outputs():
     assert_identical(out1, dataset)
 
 
+@requires_dask
+def test_apply_dask_two_outputs():
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+
+    def twice(obj):
+        def func(x):
+            return (x, x)
+
+        return apply_ufunc(func, obj, output_core_dims=[[], []], dask="parallelized")
+
+    out0, out1 = twice(data_array.chunk({"x": 1}))
+    assert_identical(data_array, out0)
+    assert_identical(data_array, out1)
+
+
 def test_apply_input_core_dimension():
     def first_element(obj, dim):
         def func(x):
@@ -680,10 +695,6 @@ def test_apply_dask_parallelized_errors():
     array = da.ones((2, 2), chunks=(1, 1))
     data_array = xr.DataArray(array, dims=("x", "y"))
 
-    with pytest.raises(NotImplementedError):
-        apply_ufunc(
-            identity, data_array, output_core_dims=[["z"], ["z"]], dask="parallelized"
-        )
     with raises_regex(ValueError, "dtypes"):
         apply_ufunc(identity, data_array, dask="parallelized")
     with raises_regex(TypeError, "list"):
