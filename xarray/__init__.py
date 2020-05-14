@@ -12,7 +12,8 @@ from .backends.api import (
 from .backends.rasterio_ import open_rasterio
 from .backends.zarr import open_zarr
 from .coding.cftime_offsets import cftime_range
-from .coding.cftimeindex import CFTimeIndex, infer_freq
+from .coding.cftimeindex import CFTimeIndex
+from .coding.frequencies import infer_freq
 from .conventions import SerializationWarning, decode_cf
 from .core.alignment import align, broadcast
 from .core.combine import auto_combine, combine_by_coords, combine_nested
