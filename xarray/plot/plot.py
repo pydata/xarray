@@ -156,8 +156,7 @@ def plot(
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for matplotlib subplots.
     **kwargs : optional
         Additional keyword arguments to matplotlib
 
@@ -177,11 +176,11 @@ def plot(
     )
 
     if ndims in [1, 2]:
+        kwargs["subplot_kws"] = subplot_kws
         if row or col:
             kwargs["row"] = row
             kwargs["col"] = col
             kwargs["col_wrap"] = col_wrap
-            kwargs["subplot_kws"] = subplot_kws
         if ndims == 1:
             plotfunc = line
             kwargs["hue"] = hue
@@ -549,8 +548,7 @@ def _plot2d(plotfunc):
         always infer intervals, unless the mesh is irregular and plotted on
         a map projection.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for matplotlib subplots.
     cbar_ax : matplotlib Axes, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
@@ -721,6 +719,16 @@ def _plot2d(plotfunc):
             )
 
         ax = get_axis(figsize, size, aspect, ax)
+
+        # if ax is a projection given in subplot_kws, override value
+        if subplot_kws is not None:
+            if 'projection' in subplot_kws:
+                ax = get_axis(figsize, size, aspect, ax, projection=subplot_kws['projection'])
+
+        if kwargs is not None:
+            if 'facecolor' in kwargs:
+                ax.set_facecolor(kwargs['facecolor'])
+
         primitive = plotfunc(
             xplt,
             yplt,
@@ -907,9 +915,6 @@ def contour(x, y, z, ax, **kwargs):
 
     Wraps :func:`matplotlib:matplotlib.pyplot.contour`
     """
-    if 'facecolor' in kwargs:
-        ax.set_facecolor(kwargs['facecolor'])
-
     primitive = ax.contour(x, y, z, **kwargs)
     return primitive
 
@@ -921,9 +926,6 @@ def contourf(x, y, z, ax, **kwargs):
 
     Wraps :func:`matplotlib:matplotlib.pyplot.contourf`
     """
-    if 'facecolor' in kwargs:
-        ax.set_facecolor(kwargs['facecolor'])
-
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
 
@@ -965,9 +967,6 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
             # we have to infer the intervals on both axes
             y = _infer_interval_breaks(y, axis=1)
             y = _infer_interval_breaks(y, axis=0)
-
-    if 'facecolor' in kwargs:
-        ax.set_facecolor(kwargs['facecolor'])
 
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 
