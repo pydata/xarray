@@ -36,6 +36,7 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- 'wrap_amount' argument added to :py:func:'label_from_attrs' to specify text wrap amount for labels
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
