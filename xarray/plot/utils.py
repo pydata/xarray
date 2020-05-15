@@ -408,7 +408,7 @@ def get_axis(figsize, size, aspect, ax):
     return ax
 
 
-def label_from_attrs(da, extra=""):
+def label_from_attrs(da, extra="", wrap_width=30):
     """ Makes informative labels if variable metadata (attrs) follows
         CF conventions. """
 
@@ -426,7 +426,7 @@ def label_from_attrs(da, extra=""):
     else:
         units = ""
 
-    return "\n".join(textwrap.wrap(name + extra + units, 30))
+    return "\n".join(textwrap.wrap(name + extra + units, wrap_width))
 
 
 def _interval_to_mid_points(array):
