@@ -1733,7 +1733,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from dask.base import tokenize
 
-        if is_scalar(chunks) and chunks!=None:
+        if is_scalar(chunks) and chunks is not None:
             chunks = dict.fromkeys(self.dims, chunks)
 
         if chunks is not None:
