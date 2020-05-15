@@ -1716,7 +1716,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        chunks : int or mapping, optional
+        chunks : int, 'auto' or mapping, optional
             Chunk sizes along each dimension, e.g., ``5`` or
             ``{'x': 5, 'y': 5}``.
         name_prefix : str, optional
@@ -1733,7 +1733,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from dask.base import tokenize
 
-        if isinstance(chunks, Number):
+        if is_scalar(chunks):
             chunks = dict.fromkeys(self.dims, chunks)
 
         if chunks is not None:
