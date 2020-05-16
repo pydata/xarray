@@ -64,6 +64,7 @@ New Features
   (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
   :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
   independently of time decoding (:issue:`1621`)
+  `Aureliana Barghini <https://github.com/aurghs>`
 
 Bug fixes
 ~~~~~~~~~
