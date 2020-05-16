@@ -34,6 +34,11 @@ Breaking changes
   (:pull:`3274`)
   By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
 
+Enhancements
+~~~~~~~~~~~~
+- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp` (:issue:`2223`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
