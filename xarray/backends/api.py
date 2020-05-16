@@ -449,9 +449,6 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
-    if decode_timedelta is None:
-        decode_timedelta = decode_times
-
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
             store,
