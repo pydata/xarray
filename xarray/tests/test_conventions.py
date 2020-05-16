@@ -316,12 +316,12 @@ class TestDecodeCF:
             {
                 "coords": {
                     "timedelta": {
-                        "data": [1, 2, 3],
+                        "data": np.array([1, 2, 3], dtype="int64"),
                         "dims": "timedelta",
                         "attrs": {"units": "days"},
                     },
                     "time": {
-                        "data": [1, 2, 3],
+                        "data": np.array([1, 2, 3], dtype="int64"),
                         "dims": "time",
                         "attrs": {"units": "days since 2000-01-01"},
                     },
