@@ -556,7 +556,7 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
-   decode_timedelta : bool, optional
+    decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
