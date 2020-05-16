@@ -2375,6 +2375,6 @@ def test_get_axis(figsize, aspect, size, ax):
         kwargs = {"projection": ctpy.crs.PlateCarree()}
         ax = get_axis(None, None, None, None, **kwargs)
         assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
-    except:
+    except ImportError:
         print("not testing cartopy")
         pass
