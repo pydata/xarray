@@ -405,11 +405,11 @@ def get_axis(figsize, size, aspect, ax, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    if 'projection' in kwargs:
-        ax = plt.axes(projection=kwargs['projection'])
+    if "projection" in kwargs:
+        ax = plt.axes(projection=kwargs["projection"])
 
-    if 'facecolor' in kwargs:
-        ax.set_facecolor(kwargs['facecolor'])
+    if "facecolor" in kwargs:
+        ax.set_facecolor(kwargs["facecolor"])
 
     return ax
 
