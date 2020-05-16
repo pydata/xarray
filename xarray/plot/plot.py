@@ -719,11 +719,17 @@ def _plot2d(plotfunc):
                 "plt.imshow's `aspect` kwarg is not available " "in xarray"
             )
 
+        # merge subplot_kws with kwargs and pass to get_axis
         axis_kwargs = kwargs.copy()
         if subplot_kws is not None:
             axis_kwargs.update(subplot_kws)
 
         ax = get_axis(figsize, size, aspect, ax, **axis_kwargs)
+
+        # after we get ax, cartopy's projection kwarg is not used
+        # anymore and is not a kwarg of matplotlib ploting func
+        if 'projection' in kwargs:
+            kwargs.pop('projection')
 
         primitive = plotfunc(
             xplt,
