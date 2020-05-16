@@ -1698,7 +1698,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None, Number, Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]]
+            None, Number, str, Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]]
         ] = None,
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1733,7 +1733,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from dask.base import tokenize
 
-        if is_scalar(chunks) and chunks is not None:
+        if isinstance(chunks, (Number, str)):
             chunks = dict.fromkeys(self.dims, chunks)
 
         if chunks is not None:
