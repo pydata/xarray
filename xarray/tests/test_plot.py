@@ -15,8 +15,8 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
-    label_from_attrs,
     get_axis,
+    label_from_attrs,
 )
 
 from . import (
@@ -2383,7 +2383,7 @@ def test_get_axis(figsize, aspect, size):
         pass
 
     try:
-        import cartopy as ctpy
+        import cartopy as ctpy  # test: ignore
 
         kwargs = {"projection": ctpy.crs.PlateCarree()}
         ax = get_axis(None, None, None, None, **kwargs)
