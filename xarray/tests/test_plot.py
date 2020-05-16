@@ -2340,6 +2340,14 @@ def test_facetgrid_single_contour():
 def test_get_axis(figsize, aspect, size):
     # test get_axis works with different args combinations
     # and return the right type
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        with pytest.raises(ValueError):
+            ax = get_axis(figsize, size, aspect, None)
+        print("matplotlib not available")
+        return None
+
     ax = "something"
     if figsize is not None:
         # cannot provide both ax and figsize
@@ -2363,6 +2371,8 @@ def test_get_axis(figsize, aspect, size):
                 ax = get_axis(figsize, size, aspect, ax)
 
     try:
+        import matplotlib.pyplot as plt
+
         ax = plt.axes()
         axtype = type(ax)
         ax = get_axis(None, None, None, ax)

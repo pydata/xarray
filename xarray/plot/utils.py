@@ -382,8 +382,11 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
 
 
 def get_axis(figsize, size, aspect, ax, **kwargs):
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ImportError('matplotlib is required for plot.utils.get_axis')
 
     if figsize is not None:
         if ax is not None:
