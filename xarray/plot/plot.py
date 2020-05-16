@@ -176,8 +176,8 @@ def plot(
     )
 
     if ndims in [1, 2]:
-        kwargs["subplot_kws"] = subplot_kws
         if row or col:
+            kwargs["subplot_kws"] = subplot_kws
             kwargs["row"] = row
             kwargs["col"] = col
             kwargs["col_wrap"] = col_wrap
@@ -190,6 +190,7 @@ def plot(
                 kwargs["hue"] = hue
             else:
                 plotfunc = pcolormesh
+                kwargs["subplot_kws"] = subplot_kws
     else:
         if row or col or hue:
             raise ValueError(error_msg)
@@ -718,16 +719,11 @@ def _plot2d(plotfunc):
                 "plt.imshow's `aspect` kwarg is not available " "in xarray"
             )
 
-        ax = get_axis(figsize, size, aspect, ax)
-
-        # if ax is a projection given in subplot_kws, override value
+        axis_kwargs = kwargs.copy()
         if subplot_kws is not None:
-            if 'projection' in subplot_kws:
-                ax = get_axis(figsize, size, aspect, ax, projection=subplot_kws['projection'])
+            axis_kwargs.update(subplot_kws)
 
-        if kwargs is not None:
-            if 'facecolor' in kwargs:
-                ax.set_facecolor(kwargs['facecolor'])
+        ax = get_axis(figsize, size, aspect, ax, **axis_kwargs)
 
         primitive = plotfunc(
             xplt,

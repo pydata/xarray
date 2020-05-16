@@ -381,7 +381,7 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     return x, y
 
 
-def get_axis(figsize, size, aspect, ax, projection=None):
+def get_axis(figsize, size, aspect, ax, **kwargs):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
 
@@ -405,8 +405,11 @@ def get_axis(figsize, size, aspect, ax, projection=None):
     if ax is None:
         ax = plt.gca()
 
-    if projection is not None:
-        ax = plt.axes(projection=projection)
+    if 'projection' in kwargs:
+        ax = plt.axes(projection=kwargs['projection'])
+
+    if 'facecolor' in kwargs:
+        ax.set_facecolor(kwargs['facecolor'])
 
     return ax
 
