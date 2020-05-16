@@ -2343,7 +2343,7 @@ def test_get_axis(figsize, aspect, size):
     try:
         import matplotlib.pyplot as plt
     except ImportError:
-        with pytest.raises(ValueError):
+        with pytest.raises(ImportError):
             ax = get_axis(figsize, size, aspect, None)
         print("matplotlib not available")
         return None
@@ -2371,8 +2371,6 @@ def test_get_axis(figsize, aspect, size):
                 ax = get_axis(figsize, size, aspect, ax)
 
     try:
-        import matplotlib.pyplot as plt
-
         ax = plt.axes()
         axtype = type(ax)
         ax = get_axis(None, None, None, ax)
