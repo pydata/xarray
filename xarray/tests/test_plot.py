@@ -2337,24 +2337,25 @@ def test_facetgrid_single_contour():
 @pytest.mark.parametrize("figsize", [[4, 4], None])
 @pytest.mark.parametrize("aspect", [4 / 3, None])
 @pytest.mark.parametrize("size", [200, None])
-@pytest.mark.parametrize("ax", [plt.axes(), None])
-def test_get_axis(figsize, aspect, size, ax):
+def test_get_axis(figsize, aspect, size):
     # test get_axis works with different args combinations
     # and return the right type
-    if ax is not None:
-        if figsize is not None:
-            # cannot provide both ax and figsize
-            with pytest.raises(ValueError):
-                ax = get_axis(figsize, size, aspect, ax)
-        if size is not None:
-            # cannot provide both ax and size
-            with pytest.raises(ValueError):
-                ax = get_axis(figsize, size, aspect, ax)
-    else:
-        if figsize is not None and size is not None:
-            # cannot provide both size and figsize
-            with pytest.raises(ValueError):
-                ax = get_axis(figsize, size, aspect, ax)
+    ax = plt.axes()
+    if figsize is not None:
+        # cannot provide both ax and figsize
+        with pytest.raises(ValueError):
+            ax = get_axis(figsize, size, aspect, ax)
+    if size is not None:
+        # cannot provide both ax and size
+        with pytest.raises(ValueError):
+            ax = get_axis(figsize, size, aspect, ax)
+
+    ax = None
+    if figsize is not None and size is not None:
+        # cannot provide both size and figsize
+        with pytest.raises(ValueError):
+            ax = get_axis(figsize, size, aspect, ax)
+
     if figsize is None:
         if aspect is not None and size is None:
             # cannot provide aspect and size
