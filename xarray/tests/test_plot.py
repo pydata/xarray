@@ -2383,7 +2383,7 @@ def test_get_axis(figsize, aspect, size):
         pass
 
     try:
-        import cartopy as ctpy  # test: ignore
+        import cartopy as ctpy  # type: ignore
 
         kwargs = {"projection": ctpy.crs.PlateCarree()}
         ax = get_axis(None, None, None, None, **kwargs)
