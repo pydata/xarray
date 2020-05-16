@@ -2340,7 +2340,7 @@ def test_facetgrid_single_contour():
 def test_get_axis(figsize, aspect, size):
     # test get_axis works with different args combinations
     # and return the right type
-    ax = 'something'
+    ax = "something"
     if figsize is not None:
         # cannot provide both ax and figsize
         with pytest.raises(ValueError):
