@@ -60,6 +60,11 @@ New Features
   feature requires cftime version 1.1.0 or greater.  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
 
+- Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
+  (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
+  :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
+  independently of time decoding (:issue:`1621`)
+
 Bug fixes
 ~~~~~~~~~
 - ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue`3977`)
