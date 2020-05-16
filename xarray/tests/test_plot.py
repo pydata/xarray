@@ -16,6 +16,7 @@ from xarray.plot.utils import (
     _color_palette,
     _determine_cmap_params,
     label_from_attrs,
+    get_axis,
 )
 
 from . import (
@@ -2331,3 +2332,49 @@ def test_facetgrid_single_contour():
     ds["time"] = [0, 1]
 
     ds.plot.contour(col="time", levels=[4], colors=["k"])
+
+
+@pytest.mark.parametrize("figsize", [[4, 4], None])
+@pytest.mark.parametrize("aspect", [4 / 3, None])
+@pytest.mark.parametrize("size", [200, None])
+@pytest.mark.parametrize("ax", [plt.axes(), None])
+def test_get_axis(figsize, aspect, size, ax):
+    # test get_axis works with different args combinations
+    # and return the right type
+    if ax is not None:
+        if figsize is not None:
+            # cannot provide both ax and figsize
+            with pytest.raises(ValueError):
+                ax = get_axis(figsize, size, aspect, ax)
+        if size is not None:
+            # cannot provide both ax and size
+            with pytest.raises(ValueError):
+                ax = get_axis(figsize, size, aspect, ax)
+    else:
+        if figsize is not None and size is not None:
+            # cannot provide both size and figsize
+            with pytest.raises(ValueError):
+                ax = get_axis(figsize, size, aspect, ax)
+    if figsize is None:
+        if aspect is not None and size is None:
+            # cannot provide aspect and size
+            with pytest.raises(ValueError):
+                ax = get_axis(figsize, size, aspect, ax)
+
+    ax = plt.axes()
+    axtype = type(ax)
+    ax = get_axis(None, None, None, ax)
+    assert isinstance(ax, axtype)
+
+    ax = get_axis(None, None, None, None)
+    assert isinstance(ax, axtype)
+
+    try:
+        import cartopy as ctpy
+
+        kwargs = {"projection": ctpy.crs.PlateCarree()}
+        ax = get_axis(None, None, None, None, **kwargs)
+        assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
+    except:
+        print("not testing cartopy")
+        pass
