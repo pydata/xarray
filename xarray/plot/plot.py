@@ -728,8 +728,8 @@ def _plot2d(plotfunc):
 
         # after we get ax, cartopy's projection kwarg is not used
         # anymore and is not a kwarg of matplotlib ploting func
-        if 'projection' in kwargs:
-            kwargs.pop('projection')
+        if "projection" in kwargs:
+            kwargs.pop("projection")
 
         primitive = plotfunc(
             xplt,
