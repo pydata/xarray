@@ -1698,7 +1698,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None, Number, str, Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]]
+            None,
+            Number,
+            str,
+            Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
         ] = None,
         name_prefix: str = "xarray-",
         token: str = None,
