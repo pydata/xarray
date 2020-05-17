@@ -701,6 +701,7 @@ def test_3641():
     da.interp(time=["0002-05-01"])
 
 
+@requires_scipy
 def test_decompose():
     da = xr.DataArray(
         np.arange(6).reshape(3, 2),
