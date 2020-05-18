@@ -110,6 +110,8 @@ Bug fixes
 - Fix bug in time parsing failing to fall back to cftime. This was causing time
   variables with a time unit of `'msecs'` to fail to parse. (:pull:`3998`)
   By `Ryan May <https://github.com/dopplershift>`_.
+- Fix weighted mean when passing boolean weights (:issue:`4074`).
+  By `Mathias Hauser <https://github.com/mathause>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -175,7 +177,7 @@ New Features
 
 - Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
   and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
-  By `Mathias Hauser <https://github.com/mathause>`_
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - The new jupyter notebook repr (``Dataset._repr_html_`` and
   ``DataArray._repr_html_``) (introduced in 0.14.1) is now on by default. To
   disable, use ``xarray.set_options(display_style="text")``.
