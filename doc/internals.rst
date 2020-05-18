@@ -147,6 +147,10 @@ Zarr Encoding Specification
 In implementing support for the `Zarr <https://zarr.readthedocs.io/>`_ storage
 format, Xarray developers made some *ad hoc* choices about how to store
 NetCDF data in Zarr.
+A future versions of the Zarr spec will likely include a more formal convention
+for the storage of the NetCDF data model in Zarr; see
+`Zarr spec repo <https://github.com/zarr-developers/zarr-specs>`_ for ongoing
+discussion.
 
 First, Xarray can only read and write Zarr groups. There is currently no support
 for reading / writting individual Zarr arrays. Zarr groups are mapped to
@@ -174,7 +178,7 @@ dimensions, Xarray proceeds to [optionally] decode each variable using its
 standard CF decoding machinery used for NetCDF data (see :py:func:`decode_cf`).
 
 As a concrete example, here we write a tutorial dataset to Zarr and then
-re-open it directly with Zarr
+re-open it directly with Zarr:
 
 .. ipython:: python
 
