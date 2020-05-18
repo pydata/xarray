@@ -144,7 +144,7 @@ class Weighted:
 
         weights = self.weights
         # bool -> int, because ``xr.dot([True, True], [True, True])`` -> True
-        # (and not 2) GH4074
+        # (and not 2); GH4074
         if weights.dtype == bool:
             weights = weights.astype(int)
 

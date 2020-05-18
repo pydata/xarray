@@ -111,7 +111,7 @@ Bug fixes
   variables with a time unit of `'msecs'` to fail to parse. (:pull:`3998`)
   By `Ryan May <https://github.com/dopplershift>`_.
 - Fix weighted mean when passing boolean weights (:issue:`4074`).
-  By `Mathias Hauser <https://github.com/mathause>`_
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
