@@ -147,7 +147,7 @@ Zarr Encoding Specification
 In implementing support for the `Zarr <https://zarr.readthedocs.io/>`_ storage
 format, Xarray developers made some *ad hoc* choices about how to store
 NetCDF data in Zarr.
-A future versions of the Zarr spec will likely include a more formal convention
+Future versions of the Zarr spec will likely include a more formal convention
 for the storage of the NetCDF data model in Zarr; see
 `Zarr spec repo <https://github.com/zarr-developers/zarr-specs>`_ for ongoing
 discussion.
