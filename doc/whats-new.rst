@@ -74,6 +74,12 @@ New Features
   where the result of a computation could not be inferred automatically.
   By `Deepak Cherian <https://github.com/dcherian>`_
 
+- Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
+  (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
+  :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
+  independently of time decoding (:issue:`1621`)
+  `Aureliana Barghini <https://github.com/aurghs>`
+
 Bug fixes
 ~~~~~~~~~
 - Support dark mode in VS code (:issue:`4024`)

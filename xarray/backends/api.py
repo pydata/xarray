@@ -303,6 +303,7 @@ def open_dataset(
     drop_variables=None,
     backend_kwargs=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -383,6 +384,11 @@ def open_dataset(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Returns
     -------
@@ -435,6 +441,7 @@ def open_dataset(
         decode_times = False
         concat_characters = False
         decode_coords = False
+        decode_timedelta = False
 
     if cache is None:
         cache = chunks is None
@@ -451,6 +458,7 @@ def open_dataset(
             decode_coords=decode_coords,
             drop_variables=drop_variables,
             use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
         )
 
         _protect_dataset_variables_inplace(ds, cache)
@@ -477,6 +485,7 @@ def open_dataset(
                 chunks,
                 drop_variables,
                 use_cftime,
+                decode_timedelta,
             )
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
@@ -561,6 +570,7 @@ def open_dataarray(
     drop_variables=None,
     backend_kwargs=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """Open an DataArray from a file or file-like object containing a single
     data variable.
@@ -640,6 +650,11 @@ def open_dataarray(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Notes
     -----
@@ -671,6 +686,7 @@ def open_dataarray(
         drop_variables=drop_variables,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
     )
 
     if len(dataset.data_vars) != 1:
