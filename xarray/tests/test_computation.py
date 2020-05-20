@@ -699,33 +699,14 @@ def test_apply_dask_parallelized_errors():
     array = da.ones((2, 2), chunks=(1, 1))
     data_array = xr.DataArray(array, dims=("x", "y"))
 
-    # errors from _apply_blockwise
-    #with raises_regex(ValueError, "dtypes"):
-    #    apply_ufunc(identity, data_array, dask="parallelized")
-    #with raises_regex(TypeError, "list"):
-    #    apply_ufunc(identity, data_array, dask="parallelized", output_dtypes=float)
-    #with raises_regex(ValueError, "must have the same length"):
-    #    apply_ufunc(
-    #        identity, data_array, dask="parallelized", output_dtypes=[float, float]
-    #    )
-    #with raises_regex(ValueError, "output_sizes"):
-    #    apply_ufunc(
-    #        identity,
-    #        data_array,
-    #        output_core_dims=[["z"]],
-    #        output_dtypes=[float],
-    #        dask="parallelized",
-    #    )
-
     # from apply_array_ufunc
     with raises_regex(ValueError, "at least one input is an xarray object"):
         apply_ufunc(identity, array, dask="parallelized")
 
-
     # formerly from _apply_blockwise
     # now from dask.apply_gufunc
     # todo: Do we need to test for this?
-    with raises_regex(ValueError, "consists of multiple chunks"):
+    with raises_regex(ValueError, "Core dimension `'y'` consists of multiple chunks"):
         apply_ufunc(
             identity,
             data_array,
@@ -826,6 +807,7 @@ def test_vectorize():
 
 @requires_dask
 def test_vectorize_dask():
+    # run vectorization in dask.array.gufunc by using `dask='parallelized'`
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
     actual = apply_ufunc(
@@ -833,7 +815,7 @@ def test_vectorize_dask():
         data_array.chunk({"x": 1}),
         input_core_dims=[["y"]],
         vectorize=True,
-        dask="allowed",
+        dask="parallelized",
         output_dtypes=[float],
     )
     assert_identical(expected, actual)
@@ -842,6 +824,7 @@ def test_vectorize_dask():
 @requires_dask
 def test_vectorize_dask_new_output_dims():
     # regression test for GH3574
+    # run vectorization in dask.array.gufunc by using `dask='parallelized'`
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     func = lambda x: x[np.newaxis, ...]
     expected = data_array.expand_dims("z")
@@ -850,7 +833,7 @@ def test_vectorize_dask_new_output_dims():
         data_array.chunk({"x": 1}),
         output_core_dims=[["z"]],
         vectorize=True,
-        dask="allowed",
+        dask="parallelized",
         output_dtypes=[float],
         output_sizes={"z": 1},
     ).transpose(*expected.dims)

@@ -1588,7 +1588,10 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        with raises_regex(ValueError, "dimension 'x'"):
+        # this checks for ValueError in dask.array.apply_gufunc
+        with raises_regex(
+            ValueError, "Core dimension `'x'` consists of multiple chunks"
+        ):
             v.quantile(0.5, dim="x")
 
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])

@@ -579,24 +579,29 @@ def apply_variable_ufunc(
                 "or load your data into memory first with "
                 "``.load()`` or ``.compute()``"
             )
-        elif dask == "parallelized" or dask == "allowed":
+        elif dask == "parallelized":
             # input_dims not needed for da.apply_gufunc?
             input_dims = [broadcast_dims + dims for dims in signature.input_core_dims]
             numpy_func = func
 
             def func(*arrays):
                 import dask.array as da
-                res = da.apply_gufunc(numpy_func,
-                                      str(signature),
-                                      *arrays,
-                                      output_dtypes=output_dtypes,
-                                      output_sizes=output_sizes,
-                                      vectorize=vectorize,
-                                      )
+
+                res = da.apply_gufunc(
+                    numpy_func,
+                    str(signature),
+                    *arrays,
+                    output_dtypes=output_dtypes,
+                    output_sizes=output_sizes,
+                    vectorize=vectorize,
+                )
+                # keep until https://github.com/dask/dask/pull/6207 is available
                 if signature.num_outputs > 1:
                     res = (*res,)
                 return res
 
+        elif dask == "allowed":
+            pass
         else:
             raise ValueError(
                 "unknown setting for dask array handling in "
@@ -680,9 +685,7 @@ def apply_array_ufunc(func, *args, dask="forbidden"):
 
 def _vectorize(func, signature, output_dtypes):
     if signature.all_core_dims:
-        func = np.vectorize(
-            func, otypes=output_dtypes, signature=str(signature)
-        )
+        func = np.vectorize(func, otypes=output_dtypes, signature=str(signature))
     else:
         func = np.vectorize(func, otypes=output_dtypes)
 
@@ -701,7 +704,7 @@ def apply_ufunc(
     dataset_fill_value: object = _NO_FILL_VALUE,
     keep_attrs: bool = False,
     kwargs: Mapping = None,
-    dask: str = 'forbidden',
+    dask: str = "forbidden",
     output_dtypes: Sequence = None,
     output_sizes: Mapping[Any, int] = None,
     # meta: Any = None,
@@ -989,7 +992,7 @@ def apply_ufunc(
     elif any(isinstance(a, Variable) for a in args):
         return variables_vfunc(*args)
     else:
-    # feed anything else through apply_array_ufunc
+        # feed anything else through apply_array_ufunc
         return apply_array_ufunc(func, *args, dask=dask)
 
 

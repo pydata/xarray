@@ -365,7 +365,10 @@ def test_interpolate_dask():
 def test_interpolate_dask_raises_for_invalid_chunk_dim():
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"time": 5})
-    with raises_regex(ValueError, "dask='parallelized' consists of multiple"):
+    # this checks for ValueError in dask.array.apply_gufunc
+    with raises_regex(
+        ValueError, "Core dimension `'time'` consists of multiple chunks"
+    ):
         da.interpolate_na("time")
 
 
