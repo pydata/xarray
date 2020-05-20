@@ -30,6 +30,7 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
+from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.coding.variables import SerializationWarning
@@ -227,7 +228,27 @@ class TestCommon:
 
 
 class NetCDF3Only:
-    pass
+    netcdf3_formats = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
+
+    @requires_scipy
+    def test_dtype_coercion_error(self):
+        """Failing dtype coercion should lead to an error"""
+        for dtype, format in itertools.product(
+            _nc3_dtype_coercions, self.netcdf3_formats
+        ):
+            if dtype == "bool":
+                # coerced upcast (bool to int8) ==> can never fail
+                continue
+
+            # Using the largest representable value, create some data that will
+            # no longer compare equal after the coerced downcast
+            maxval = np.iinfo(dtype).max
+            x = np.array([0, 1, 2, maxval], dtype=dtype)
+            ds = Dataset({"x": ("t", x, {})})
+
+            with create_tmp_file(allow_cleanup_failure=False) as path:
+                with pytest.raises(ValueError, match="could not safely cast"):
+                    ds.to_netcdf(path, format=format)
 
 
 class DatasetIOBase:
@@ -296,9 +317,14 @@ class DatasetIOBase:
     def check_dtypes_roundtripped(self, expected, actual):
         for k in expected.variables:
             expected_dtype = expected.variables[k].dtype
-            if isinstance(self, NetCDF3Only) and expected_dtype == "int64":
-                # downcast
-                expected_dtype = np.dtype("int32")
+
+            # For NetCDF3, the backend should perform dtype coercion
+            if (
+                isinstance(self, NetCDF3Only)
+                and str(expected_dtype) in _nc3_dtype_coercions
+            ):
+                expected_dtype = np.dtype(_nc3_dtype_coercions[str(expected_dtype)])
+
             actual_dtype = actual.variables[k].dtype
             # TODO: check expected behavior for string dtypes more carefully
             string_kinds = {"O", "S", "U"}
@@ -2156,7 +2182,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
             valid_engines.add("scipy")
 
         for write_engine in valid_engines:
-            for format in ["NETCDF3_CLASSIC", "NETCDF3_64BIT"]:
+            for format in self.netcdf3_formats:
                 with create_tmp_file() as tmp_file:
                     data.to_netcdf(tmp_file, format=format, engine=write_engine)
                     for read_engine in valid_engines:
