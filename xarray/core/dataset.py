@@ -1604,6 +1604,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         References
         ----------
         https://zarr.readthedocs.io/
+
+        Notes
+        -----
+        Zarr chunking behavior:
+            If chunks are found in the encoding argument or attribute
+            corresponding to any DataArray, those chunks are used.
+            If a DataArray is a dask array, it is written with those chunks.
+            If not other chunks are found, Zarr uses its own heuristics to
+            choose automatic chunk sizes.
         """
         if encoding is None:
             encoding = {}
