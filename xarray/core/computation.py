@@ -424,7 +424,7 @@ def apply_groupby_func(func, *args):
     if any(not first_groupby._group.equals(gb._group) for gb in groupbys[1:]):
         raise ValueError(
             "apply_ufunc can only perform operations over "
-            "multiple GroupBy objets at once if they are all "
+            "multiple GroupBy objects at once if they are all "
             "grouped the same way"
         )
 
@@ -545,10 +545,10 @@ def apply_variable_ufunc(
     signature,
     exclude_dims=frozenset(),
     dask="forbidden",
+    vectorize=False,
     output_dtypes=None,
     output_sizes=None,
     keep_attrs=False,
-    meta=None,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects.
     """
@@ -570,6 +570,7 @@ def apply_variable_ufunc(
     ]
 
     if any(isinstance(array, dask_array_type) for array in input_data):
+        # let dask stuff be handled by dask apply_gufunc
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -578,31 +579,35 @@ def apply_variable_ufunc(
                 "or load your data into memory first with "
                 "``.load()`` or ``.compute()``"
             )
-        elif dask == "parallelized":
+        elif dask == "parallelized" or dask == "allowed":
+            # input_dims not needed for da.apply_gufunc?
             input_dims = [broadcast_dims + dims for dims in signature.input_core_dims]
             numpy_func = func
 
             def func(*arrays):
-                return _apply_blockwise(
-                    numpy_func,
-                    arrays,
-                    input_dims,
-                    output_dims,
-                    signature,
-                    output_dtypes,
-                    output_sizes,
-                    meta,
-                )
+                import dask.array as da
+                res = da.apply_gufunc(numpy_func,
+                                      str(signature),
+                                      *arrays,
+                                      output_dtypes=output_dtypes,
+                                      output_sizes=output_sizes,
+                                      vectorize=vectorize,
+                                      )
+                if signature.num_outputs > 1:
+                    res = (*res,)
+                return res
 
-        elif dask == "allowed":
-            pass
         else:
             raise ValueError(
                 "unknown setting for dask array handling in "
                 "apply_ufunc: {}".format(dask)
             )
-    result_data = func(*input_data)
+    else:
+        # vectorize non-dask
+        if vectorize:
+            func = _vectorize(func, signature, output_dtypes)
 
+    result_data = func(*input_data)
     if signature.num_outputs == 1:
         result_data = (result_data,)
     elif (
@@ -649,96 +654,6 @@ def apply_variable_ufunc(
         return tuple(output)
 
 
-def _apply_blockwise(
-    func,
-    args,
-    input_dims,
-    output_dims,
-    signature,
-    output_dtypes,
-    output_sizes=None,
-    meta=None,
-):
-    import dask.array
-
-    if signature.num_outputs > 1:
-        res = dask.array.apply_gufunc(
-            func,
-            signature.to_gufunc_string(),
-            *args,
-            output_dtypes=output_dtypes,
-            output_sizes=output_sizes,
-        )
-        # todo: remove *tuplify* when fixed in dask
-        # see https://github.com/dask/dask/issues/6206
-        return (*res,)
-
-    if output_dtypes is None:
-        raise ValueError(
-            "output dtypes (output_dtypes) must be supplied to "
-            "apply_func when using dask='parallelized'"
-        )
-    if not isinstance(output_dtypes, list):
-        raise TypeError(
-            "output_dtypes must be a list of objects coercible to "
-            "numpy dtypes, got {}".format(output_dtypes)
-        )
-    if len(output_dtypes) != signature.num_outputs:
-        raise ValueError(
-            "apply_ufunc arguments output_dtypes and "
-            "output_core_dims must have the same length: {} vs {}".format(
-                len(output_dtypes), signature.num_outputs
-            )
-        )
-    (dtype,) = output_dtypes
-
-    if output_sizes is None:
-        output_sizes = {}
-
-    new_dims = signature.all_output_core_dims - signature.all_input_core_dims
-    if any(dim not in output_sizes for dim in new_dims):
-        raise ValueError(
-            "when using dask='parallelized' with apply_ufunc, "
-            "output core dimensions not found on inputs must "
-            "have explicitly set sizes with ``output_sizes``: {}".format(new_dims)
-        )
-
-    for n, (data, core_dims) in enumerate(zip(args, signature.input_core_dims)):
-        if isinstance(data, dask_array_type):
-            # core dimensions cannot span multiple chunks
-            for axis, dim in enumerate(core_dims, start=-len(core_dims)):
-                if len(data.chunks[axis]) != 1:
-                    raise ValueError(
-                        "dimension {!r} on {}th function argument to "
-                        "apply_ufunc with dask='parallelized' consists of "
-                        "multiple chunks, but is also a core dimension. To "
-                        "fix, rechunk into a single dask array chunk along "
-                        "this dimension, i.e., ``.chunk({})``, but beware "
-                        "that this may significantly increase memory usage.".format(
-                            dim, n, {dim: -1}
-                        )
-                    )
-
-    (out_ind,) = output_dims
-
-    blockwise_args = []
-    for arg, dims in zip(args, input_dims):
-        # skip leading dimensions that are implicitly added by broadcasting
-        ndim = getattr(arg, "ndim", 0)
-        trimmed_dims = dims[-ndim:] if ndim else ()
-        blockwise_args.extend([arg, trimmed_dims])
-
-    return dask.array.blockwise(
-        func,
-        out_ind,
-        *blockwise_args,
-        dtype=dtype,
-        concatenate=True,
-        new_axes=output_sizes,
-        meta=meta,
-    )
-
-
 def apply_array_ufunc(func, *args, dask="forbidden"):
     """Apply a ndarray level function over ndarray objects."""
     if any(isinstance(arg, dask_array_type) for arg in args):
@@ -759,7 +674,19 @@ def apply_array_ufunc(func, *args, dask="forbidden"):
             pass
         else:
             raise ValueError(f"unknown setting for dask array handling: {dask}")
+    # maybe vectorizing??
     return func(*args)
+
+
+def _vectorize(func, signature, output_dtypes):
+    if signature.all_core_dims:
+        func = np.vectorize(
+            func, otypes=output_dtypes, signature=str(signature)
+        )
+    else:
+        func = np.vectorize(func, otypes=output_dtypes)
+
+    return func
 
 
 def apply_ufunc(
@@ -774,10 +701,10 @@ def apply_ufunc(
     dataset_fill_value: object = _NO_FILL_VALUE,
     keep_attrs: bool = False,
     kwargs: Mapping = None,
-    dask: str = "forbidden",
+    dask: str = 'forbidden',
     output_dtypes: Sequence = None,
     output_sizes: Mapping[Any, int] = None,
-    meta: Any = None,
+    # meta: Any = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -997,7 +924,6 @@ def apply_ufunc(
 
     if kwargs is None:
         kwargs = {}
-
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 
     if exclude_dims and not exclude_dims <= signature.all_core_dims:
@@ -1009,19 +935,6 @@ def apply_ufunc(
     if kwargs:
         func = functools.partial(func, **kwargs)
 
-    if vectorize:
-        if meta is None:
-            # set meta=np.ndarray by default for numpy vectorized functions
-            # work around dask bug computing meta with vectorized functions: GH5642
-            meta = np.ndarray
-
-        if signature.all_core_dims:
-            func = np.vectorize(
-                func, otypes=output_dtypes, signature=signature.to_gufunc_string()
-            )
-        else:
-            func = np.vectorize(func, otypes=output_dtypes)
-
     variables_vfunc = functools.partial(
         apply_variable_ufunc,
         func,
@@ -1029,11 +942,12 @@ def apply_ufunc(
         exclude_dims=exclude_dims,
         keep_attrs=keep_attrs,
         dask=dask,
+        vectorize=vectorize,
         output_dtypes=output_dtypes,
         output_sizes=output_sizes,
-        meta=meta,
     )
 
+    # feed groupby-apply_ufunc through apply_groupby_func
     if any(isinstance(a, GroupBy) for a in args):
         this_apply = functools.partial(
             apply_ufunc,
@@ -1046,9 +960,10 @@ def apply_ufunc(
             dataset_fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
             dask=dask,
-            meta=meta,
+            vectorize=vectorize,
         )
         return apply_groupby_func(this_apply, *args)
+    # feed datasets apply_variable_ufunc trough apply_dataset_vfunc
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_vfunc(
             variables_vfunc,
@@ -1060,6 +975,7 @@ def apply_ufunc(
             fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
         )
+    # feed DataArray apply_variable_ufunc through apply_dataarray_vfunc
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_vfunc(
             variables_vfunc,
@@ -1069,9 +985,11 @@ def apply_ufunc(
             exclude_dims=exclude_dims,
             keep_attrs=keep_attrs,
         )
+    # feed Variables directly through apply_variable_ufunc
     elif any(isinstance(a, Variable) for a in args):
         return variables_vfunc(*args)
     else:
+    # feed anything else through apply_array_ufunc
         return apply_array_ufunc(func, *args, dask=dask)
 
 
