@@ -820,6 +820,20 @@ def test_vectorize_dask():
     )
     assert_identical(expected, actual)
 
+    # test for GH 4015
+    def func(x):
+        return np.sum(x ** 2)
+
+    da = xr.DataArray(np.arange(2 * 3 * 4).reshape(2, 3, 4))
+    da = da + 1j * da
+    da = da.chunk(dict(dim_1=1))
+
+    da2 = apply_ufunc(
+        func, da, vectorize=True, dask="parallelized", output_dtypes=[da.dtype],
+    )
+
+    assert da2.dtype == da.dtype, "wrong dtype"
+
 
 @requires_dask
 def test_vectorize_dask_new_output_dims():

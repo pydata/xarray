@@ -877,13 +877,13 @@ def test_dask_token():
 
 
 @requires_dask
-def test_apply_ufunc_meta_to_blockwise():
-    da = xr.DataArray(np.zeros((2, 3)), dims=["x", "y"]).chunk({"x": 2, "y": 1})
-    sparse_meta = sparse.COO.from_numpy(np.zeros((0, 0)))
+def test_apply_ufunc_check_meta_coherence():
+    s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
+    a = DataArray(s)
+    ac = a.chunk(2)
+    sparse_meta = ac.data._meta
 
     # if dask computed meta, it would be np.ndarray
-    expected = xr.apply_ufunc(
-        lambda x: x, da, dask="parallelized", output_dtypes=[da.dtype], meta=sparse_meta
-    ).data._meta
+    expected = xr.apply_ufunc(lambda x: x, ac, dask="parallelized").data._meta
 
     assert_sparse_equal(expected, sparse_meta)
