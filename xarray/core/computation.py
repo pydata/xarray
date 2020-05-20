@@ -580,8 +580,6 @@ def apply_variable_ufunc(
                 "``.load()`` or ``.compute()``"
             )
         elif dask == "parallelized":
-            # input_dims not needed for da.apply_gufunc?
-            input_dims = [broadcast_dims + dims for dims in signature.input_core_dims]
             numpy_func = func
 
             def func(*arrays):
