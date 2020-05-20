@@ -139,6 +139,13 @@ def test_repr_of_dataset(dataset):
     assert "&lt;IA&gt;" in formatted
 
 
+def test_repr_text_fallback(dataset):
+    formatted = fh.dataset_repr(dataset)
+
+    # Just test that the "pre" block used for fallback to plain text is present.
+    assert "<pre class='xr-text-repr-fallback'>" in formatted
+
+
 def test_variable_repr_html():
     v = xr.Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
     assert hasattr(v, "_repr_html_")
