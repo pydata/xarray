@@ -28,7 +28,14 @@ _reserved_names = {
 
 # These data-types aren't supported by netCDF3, so they are automatically
 # coerced instead as indicated by the "coerce_nc3_dtype" function
-_nc3_dtype_coercions = {"int64": "int32", "bool": "int8"}
+_nc3_dtype_coercions = {
+    "int64": "int32",
+    "uint64": "int32",
+    "uint32": "int32",
+    "uint16": "int16",
+    "uint8": "int8",
+    "bool": "int8",
+}
 
 # encode all strings as UTF-8
 STRING_ENCODING = "utf-8"
@@ -37,12 +44,17 @@ STRING_ENCODING = "utf-8"
 def coerce_nc3_dtype(arr):
     """Coerce an array to a data type that can be stored in a netCDF-3 file
 
-    This function performs the following dtype conversions:
-        int64 -> int32
-        bool -> int8
+    This function performs the dtype conversions as specified by the
+    ``_nc3_dtype_coercions`` mapping:
+        int64  -> int32
+        uint64 -> int32
+        uint32 -> int32
+        uint16 -> int16
+        uint8  -> int8
+        bool   -> int8
 
-    Data is checked for equality, or equivalence (non-NaN values) with
-    `np.allclose` with the default keyword arguments.
+    Data is checked for equality, or equivalence (non-NaN values) using the
+    ``(cast_array == original_array).all()``.
     """
     dtype = str(arr.dtype)
     if dtype in _nc3_dtype_coercions:
