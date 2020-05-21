@@ -1037,9 +1037,10 @@ def test_unify_chunks_shallow_copy(obj, transform):
 
 @pytest.mark.parametrize("obj", [make_da()])
 def test_auto_chunk_da(obj):
-    expected = obj.chunk("auto").data
-    actual = obj.data.rechunk("auto")
+    actual = obj.chunk("auto").data
+    expected = obj.data.rechunk("auto")
     np.testing.assert_array_equal(actual, expected)
+    assert actual.chunks == expected.chunks
 
 
 def test_map_blocks_error(map_da, map_ds):
