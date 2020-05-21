@@ -428,8 +428,7 @@ def map_blocks(
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
-        indexes = input_indexes
-        indexes.update(template.indexes)
+        indexes = dict(template.indexes)
         if isinstance(template, DataArray):
             output_chunks = dict(zip(template.dims, template.chunks))  # type: ignore
         else:
@@ -498,7 +497,8 @@ def map_blocks(
         expected["coords"] = set(template.coords.keys())  # type: ignore
         expected["indexes"] = {
             dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
-            for dim in indexes
+            for dim in output_chunks
+            if dim in indexes
         }
 
         from_wrapper = (gname,) + chunk_tuple

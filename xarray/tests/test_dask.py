@@ -1132,6 +1132,22 @@ def test_map_blocks_dask_args():
         mapped = xr.map_blocks(operator.add, da1, args=[da1.reindex(x=np.arange(20))])
     xr.testing.assert_equal(da1 + da1, mapped)
 
+    # reduction
+    da1 = da1.chunk({"x": -1})
+    da2 = da1 + 1
+    with raise_if_dask_computes():
+        mapped = xr.map_blocks(lambda a, b: (a + b).sum("x"), da1, args=[da2])
+    xr.testing.assert_equal((da1 + da2).sum("x"), mapped)
+
+    # reduction with template
+    da1 = da1.chunk({"x": -1})
+    da2 = da1 + 1
+    with raise_if_dask_computes():
+        mapped = xr.map_blocks(
+            lambda a, b: (a + b).sum("x"), da1, args=[da2], template=da1.sum("x")
+        )
+    xr.testing.assert_equal((da1 + da2).sum("x"), mapped)
+
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_add_attrs(obj):
