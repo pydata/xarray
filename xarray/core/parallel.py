@@ -497,8 +497,7 @@ def map_blocks(
         expected["coords"] = set(template.coords.keys())  # type: ignore
         expected["indexes"] = {
             dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
-            for dim in output_chunks
-            if dim in indexes
+            for dim in indexes
         }
 
         from_wrapper = (gname,) + chunk_tuple
