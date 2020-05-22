@@ -358,6 +358,48 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return encode_zarr_attr_value(a)
 
+
+    def get_chunk(name, var, chunks):
+        chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
+
+        # Coordinate labels aren't chunked
+        if var.ndim == 1 and var.dims[0] == name:
+            return chunk_spec
+
+        if chunks == "auto":
+            return chunk_spec
+
+        for dim in var.dims:
+            if dim in chunks:
+                spec = chunks[dim]
+                if isinstance(spec, int):
+                    spec = (spec,)
+                if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
+                    if any(s % chunk_spec[dim] for s in spec):
+                        warnings.warn(
+                            "Specified Dask chunks %r would "
+                            "separate Zarr chunk shape %r for "
+                            "dimension %r. This significantly "
+                            "degrades performance. Consider "
+                            "rechunking after loading instead."
+                            % (chunks[dim], chunk_spec[dim], dim),
+                            stacklevel=2,
+                        )
+                chunk_spec[dim] = chunks[dim]
+        return chunk_spec
+
+    def maybe_chunk(name, var, chunks):
+        chunk_spec = get_chunk(name, var, chunks)
+
+        if (var.ndim > 0) and (chunk_spec is not None):
+            # does this cause any data to be read?
+            token2 = tokenize(name, var._data)
+            name2 = "zarr-%s" % token2
+            var = var.chunk(chunk_spec, name=name2, lock=None)
+            if overwrite_encoded_chunks and var.chunks is not None:
+                var.encoding["chunks"] = tuple(x[0] for x in var.chunk)
+        return var
+
     def store(
         self,
         variables,
