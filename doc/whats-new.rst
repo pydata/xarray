@@ -87,7 +87,6 @@ Bug fixes
 ~~~~~~~~~
 - Support dark mode in VS code (:issue:`4024`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue:`3977`)
 - Fix bug when converting multiindexed Pandas objects to sparse xarray objects. (:issue:`4019`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue`3977`)
