@@ -3532,6 +3532,26 @@ class TestDataArray:
         actual_sparse.data = actual_sparse.data.todense()
         assert_identical(actual_sparse, actual_dense)
 
+    @requires_sparse
+    def test_from_multiindex_series_sparse(self):
+        # regression test for GH4019
+        import sparse
+
+        idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
+        series = pd.Series(np.random.RandomState(0).random(len(idx)), index=idx).sample(
+            n=5, random_state=3
+        )
+
+        actual_dense = DataArray.from_series(series, sparse=False)
+        actual_sparse = xr.DataArray.from_series(series, sparse=True)
+        actual_coords = actual_sparse.data.coords
+
+        np.testing.assert_equal(actual_sparse.data.todense(), actual_dense.values)
+        expected_coords = np.stack(
+            [np.asarray(code) for code in series.index.codes], axis=0
+        )
+        np.testing.assert_equal(actual_coords, expected_coords)
+
     def test_to_and_from_empty_series(self):
         # GH697
         expected = pd.Series([], dtype=np.float64)
