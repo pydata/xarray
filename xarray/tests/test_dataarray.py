@@ -3535,8 +3535,6 @@ class TestDataArray:
     @requires_sparse
     def test_from_multiindex_series_sparse(self):
         # regression test for GH4019
-        import sparse
-
         idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
         series = pd.Series(np.random.RandomState(0).random(len(idx)), index=idx).sample(
             n=5, random_state=3
