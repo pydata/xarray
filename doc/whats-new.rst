@@ -70,9 +70,18 @@ New Features
   the :py:class:`~core.accessor_dt.DatetimeAccessor` (:pull:`3935`).  This
   feature requires cftime version 1.1.0 or greater.  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- For the netCDF3 backend, added dtype coercions for unsigned integer types.
+  (:issue:`4014`, :pull:`4018`)
+  By `Yunus Sevinchan <https://github.com/blsqr>`_
 - :py:meth:`map_blocks` now accepts a ``template`` kwarg. This allows use cases
   where the result of a computation could not be inferred automatically.
   By `Deepak Cherian <https://github.com/dcherian>`_
+
+- Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
+  (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
+  :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
+  independently of time decoding (:issue:`1621`)
+  `Aureliana Barghini <https://github.com/aurghs>`
 
 Bug fixes
 ~~~~~~~~~
@@ -112,6 +121,8 @@ Bug fixes
   By `Ryan May <https://github.com/dopplershift>`_.
 - Fix weighted mean when passing boolean weights (:issue:`4074`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix html repr in untrusted notebooks: fallback to plain text repr. (:pull:`4053`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
