@@ -1122,7 +1122,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     Coordinates:
     * space    (space) <U2 'IA' 'IL' 'IN'
     """
-
+    from .dataarray import DataArray
     # 1. Broadcast the two arrays
     da_a, da_b = broadcast(da_a, da_b)
 
@@ -1145,7 +1145,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     # 4. Compute covariance along the given dim
     cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim) / (valid_count)
 
-    return xr.DataArray(cov)
+    return DataArray(cov)
 
 
 def corr(da_a, da_b, dim=None, ddof=0):
@@ -1215,8 +1215,8 @@ def corr(da_a, da_b, dim=None, ddof=0):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-    # TODO: avoid drop  https://github.com/pydata/xarray/pull/2652#discussion_r245492002
-    # FIX: I think @shoyer convinced that you can just remove drop=True from all the
+    # TODO: avoid drop https://github.com/pydata/xarray/pull/2652#discussion_r245492002
+    # FIXED?: I think @shoyer convinced that you can just remove drop=True
     da_a = da_a.where(valid_values)
     da_b = da_b.where(valid_values)
 
@@ -1226,7 +1226,7 @@ def corr(da_a, da_b, dim=None, ddof=0):
 
     corr = cov(da_a, da_b, dim=dim, ddof=ddof) / (da_a_std * da_b_std)
 
-    return xr.DataArray(corr)
+    return DataArray(corr)
 
 
 def dot(*arrays, dims=None, **kwargs):
