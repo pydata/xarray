@@ -846,9 +846,10 @@ def array_tuples():
 
     return array_tuples
 
-@pytest.mark.parametrize("da_a, da_b", array_tuples)
+# TODO: https://github.com/pydata/xarray/pull/3550#discussion_r349935731
+#@pytest.mark.parametrize("da_a, da_b", array_tuples)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
-def test_cov(da_a, da_b, dim):
+def test_cov(array_tuples, dim):
     def pandas_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
