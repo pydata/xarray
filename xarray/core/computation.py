@@ -1070,7 +1070,8 @@ def apply_ufunc(
 
 
 def cov(da_a, da_b, dim=None, ddof=1):
-    """Compute covariance between two DataArray objects along a shared dimension.
+    """
+    Compute covariance between two DataArray objects along a shared dimension.
     Parameters
     ----------
     da_a: DataArray (or Variable) object
@@ -1128,8 +1129,8 @@ def cov(da_a, da_b, dim=None, ddof=1):
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
     # TODO: avoid drop
-    da_a = da_a.where(valid_values, drop=True)
-    da_b = da_b.where(valid_values, drop=True)
+    da_a = da_a.where(valid_values)
+    da_b = da_b.where(valid_values)
     valid_count = valid_values.sum(dim) - ddof
 
     # if dim is not None:
@@ -1148,7 +1149,9 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
 
 def corr(da_a, da_b, dim=None, ddof=0):
-    """Compute the Pearson correlation coefficient between two DataArray objects along a shared dimension.
+    """
+    Compute the Pearson correlation coefficient between
+    two DataArray objects along a shared dimension.
     Parameters
     ----------
     da_a: DataArray (or Variable) object
@@ -1169,7 +1172,7 @@ def corr(da_a, da_b, dim=None, ddof=0):
     >>> da_a = DataArray(np.random.random((3, 5)),
     ...                  dims=("space", "time"),
     ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    ...                  ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
     >>> da_a
     <xarray.DataArray (space: 3, time: 5)>
     array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
@@ -1179,9 +1182,9 @@ def corr(da_a, da_b, dim=None, ddof=0):
     * space    (space) <U2 'IA' 'IL' 'IN'
     * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
     >>> da_b = DataArray(np.random.random((3, 5)),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    ...              dims=("space", "time"),
+    ...              coords=[('space', ['IA', 'IL', 'IN']),
+    ...              ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
     >>> da_b
     <xarray.DataArray (space: 3, time: 5)>
     array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
@@ -1212,10 +1215,10 @@ def corr(da_a, da_b, dim=None, ddof=0):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-    da_a = da_a.where(valid_values, drop=True)
-    da_b = da_b.where(
-        valid_values, drop=True
-    )  # TODO: avoid drop as explained in https://github.com/pydata/xarray/pull/2652#discussion_r245492002
+    # TODO: avoid drop  https://github.com/pydata/xarray/pull/2652#discussion_r245492002
+    # FIX: I think @shoyer convinced that you can just remove drop=True from all the
+    da_a = da_a.where(valid_values)
+    da_b = da_b.where(valid_values)
 
     # 3. Compute correlation based on standard deviations and cov()
     da_a_std = da_a.std(dim=dim)

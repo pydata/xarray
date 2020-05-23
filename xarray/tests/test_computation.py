@@ -855,8 +855,8 @@ def test_cov(array_tuples, dim):
         ts1, ts2 = xr.align(ts1, ts2)
         valid_values = ts1.notnull() & ts2.notnull()
 
-        ts1 = ts1.where(valid_values, drop=True)
-        ts2 = ts2.where(valid_values, drop=True)
+        ts1 = ts1.where(valid_values)
+        ts2 = ts2.where(valid_values)
 
         return ts1.to_series().cov(ts2.to_series())
 
@@ -874,8 +874,8 @@ def test_corr(da_a, da_b, dim):
         ts1, ts2 = xr.align(ts1, ts2)
         valid_values = ts1.notnull() & ts2.notnull()
 
-        ts1 = ts1.where(valid_values, drop=True)
-        ts2 = ts2.where(valid_values, drop=True)
+        ts1 = ts1.where(valid_values)
+        ts2 = ts2.where(valid_values)
 
         return ts1.to_series().corr(ts2.to_series())
 
