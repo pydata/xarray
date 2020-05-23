@@ -1069,6 +1069,163 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
+def cov(da_a, da_b, dim=None, ddof=1):
+    """Compute covariance between two DataArray objects along a shared dimension.
+    Parameters
+    ----------
+    da_a: DataArray (or Variable) object
+        Array to compute.
+    da_b: DataArray (or Variable) object
+        Array to compute.
+    dim : str, optional
+        The dimension along which the covariance will be computed
+    Returns
+    -------
+    covariance: DataArray
+    See also
+    --------
+    pandas.Series.cov: corresponding pandas function
+    xr.corr: respective function to calculate correlation
+    Examples
+    --------
+    >>> da_a = DataArray(np.random.random((3, 5)),
+    ...                  dims=("space", "time"),
+    ...                  coords=[('space', ['IA', 'IL', 'IN']),
+    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    >>> da_a
+    <xarray.DataArray (space: 3, time: 5)>
+    array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
+            [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
+            [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+    >>> da_b = DataArray(np.random.random((3, 5)),
+    ...                  dims=("space", "time"),
+    ...                  coords=[('space', ['IA', 'IL', 'IN']),
+    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    >>> da_b
+    <xarray.DataArray (space: 3, time: 5)>
+    array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
+            [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
+            [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+    >>> xr.cov(da_a, da_b)
+    <xarray.DataArray ()>
+    array(0.03823054)
+    >>> xr.cov(da_a, da_b, dim='time')
+    <xarray.DataArray (space: 3)>
+    array([0.00207952, 0.01024296, 0.08214707])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    """
+
+    # 1. Broadcast the two arrays
+    da_a, da_b = broadcast(da_a, da_b)
+
+    # 2. Ignore the nans
+    valid_values = da_a.notnull() & da_b.notnull()
+    # TODO: avoid drop
+    da_a = da_a.where(valid_values, drop=True)
+    da_b = da_b.where(valid_values, drop=True)
+    valid_count = valid_values.sum(dim) - ddof
+
+    # if dim is not None:
+    #     valid_count = da_a[dim].size - ddof
+    # else:
+    #     valid_count = da_a.size
+
+    # 3. Compute mean and standard deviation along the given dim
+    demeaned_da_a = da_a - da_a.mean(dim=dim)
+    demeaned_da_b = da_b - da_b.mean(dim=dim)
+
+    # 4. Compute covariance along the given dim
+    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim) / (valid_count)
+
+    return xr.DataArray(cov)
+
+
+def corr(da_a, da_b, dim=None, ddof=0):
+    """Compute the Pearson correlation coefficient between two DataArray objects along a shared dimension.
+    Parameters
+    ----------
+    da_a: DataArray (or Variable) object
+        Array to compute.
+    da_b: DataArray (or Variable) object
+        Array to compute.
+    dim: str, optional
+        The dimension along which the correlation will be computed
+    Returns
+    -------
+    correlation: DataArray
+    See also
+    --------
+    pandas.Series.corr: corresponding pandas function
+    xr.cov: underlying covariance function
+    Examples
+    --------
+    >>> da_a = DataArray(np.random.random((3, 5)),
+    ...                  dims=("space", "time"),
+    ...                  coords=[('space', ['IA', 'IL', 'IN']),
+    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    >>> da_a
+    <xarray.DataArray (space: 3, time: 5)>
+    array([[0.04356841, 0.11479286, 0.70359101, 0.59072561, 0.16601438],
+            [0.81552383, 0.72304926, 0.77644406, 0.05788198, 0.74065536],
+            [0.96252519, 0.36877741, 0.22248412, 0.55185954, 0.23547536]])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+    >>> da_b = DataArray(np.random.random((3, 5)),
+    ...                  dims=("space", "time"),
+    ...                  coords=[('space', ['IA', 'IL', 'IN']),
+    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=5))])
+    >>> da_b
+    <xarray.DataArray (space: 3, time: 5)>
+    array([[0.41505599, 0.43002193, 0.45250454, 0.57701084, 0.5327754 ],
+            [0.0998048 , 0.67225522, 0.4234324 , 0.13514615, 0.4399088 ],
+            [0.24675048, 0.58555283, 0.1942955 , 0.86128908, 0.05068975]])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+    >>> xr.corr(da_a, da_b)
+    <xarray.DataArray ()>
+    array(0.67407116)
+    >>> xr.corr(da_a, da_b, dim='time')
+    <xarray.DataArray (space: 3)>
+    array([0.23150267, 0.24900968, 0.9061562 ])
+    Coordinates:
+    * space    (space) <U2 'IA' 'IL' 'IN'
+    """
+    from .dataarray import DataArray
+
+    if any(not isinstance(arr, (Variable, DataArray)) for arr in [da_a, da_b]):
+        raise TypeError(
+            "Only xr.DataArray and xr.Variable are supported."
+            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+        )
+
+    # 1. Broadcast the two arrays
+    da_a, da_b = broadcast(da_a, da_b)
+
+    # 2. Ignore the nans
+    valid_values = da_a.notnull() & da_b.notnull()
+    da_a = da_a.where(valid_values, drop=True)
+    da_b = da_b.where(
+        valid_values, drop=True
+    )  # TODO: avoid drop as explained in https://github.com/pydata/xarray/pull/2652#discussion_r245492002
+
+    # 3. Compute correlation based on standard deviations and cov()
+    da_a_std = da_a.std(dim=dim)
+    da_b_std = da_b.std(dim=dim)
+
+    corr = cov(da_a, da_b, dim=dim, ddof=ddof) / (da_a_std * da_b_std)
+
+    return xr.DataArray(corr)
+
+
 def dot(*arrays, dims=None, **kwargs):
     """Generalized dot product for xarray objects. Like np.einsum, but
     provides a simpler interface based on array dimensions.
