@@ -1048,7 +1048,7 @@ def test_map_blocks_error(map_da, map_ds):
     with raises_regex(TypeError, "Function must return an xarray DataArray"):
         xr.map_blocks(returns_numpy, map_da)
 
-    with raises_regex(TypeError, "args must be"): 
+    with raises_regex(TypeError, "args must be"):
         xr.map_blocks(operator.add, map_da, args=10)
 
     with raises_regex(TypeError, "kwargs must be"):
