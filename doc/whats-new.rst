@@ -36,6 +36,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:func:`xarray.cov` and :py:func:`xarray.corr` (:issue:`3784`, :pull:``).
+  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ and `Robin Beer <https://github.com/r-beer>`_.
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
