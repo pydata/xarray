@@ -24,7 +24,7 @@ from typing import (
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
-from .alignment import deep_align
+from .alignment import broadcast, deep_align
 from .merge import merge_coordinates_without_align
 from .options import OPTIONS
 from .pycompat import dask_array_type
