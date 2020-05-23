@@ -817,7 +817,7 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
-#@pytest.fixture()
+# @pytest.fixture()
 def array_tuples():
     da = xr.DataArray(
         np.random.random((3, 21, 4)),
@@ -854,8 +854,10 @@ def array_tuples():
 # [array_tuples()[0], array_tuples()[1], array_tuples()[2], array_tuples()[3],
 # array_tuples()[4], array_tuples()[5], array_tuples()[6], array_tuples()[7],
 # array_tuples()[8]])
-@pytest.mark.parametrize("da_a, da_b",
-[array_tuples()[0], array_tuples()[1]])
+@pytest.mark.parametrize(
+"da_a, da_b",
+[array_tuples()[0], array_tuples()[1]]
+)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_cov(da_a, da_b, dim):
 
@@ -874,8 +876,10 @@ def test_cov(da_a, da_b, dim):
     assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize("da_a, da_b",
-[array_tuples()[0], array_tuples()[1]])
+@pytest.mark.parametrize(
+"da_a, da_b",
+[array_tuples()[0], array_tuples()[1]]
+)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_corr(da_a, da_b, dim):
 
