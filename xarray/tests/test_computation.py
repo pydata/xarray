@@ -817,6 +817,71 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
+@pytest.fixture()
+def array_tuples():
+    da = xr.DataArray(np.random.random((3, 21, 4)),
+                      coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+                      dims=("a", "time", "x"),)
+
+    arrays = [
+        da.isel(time=range(0, 18)),
+        da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time"),
+        xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"),
+        xr.DataArray([1, 1, np.nan, 2, np.nan, 3, 5, 4, 6, np.nan, 7], dims="time"),
+        xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
+        xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
+    ]
+
+    array_tuples = [
+        (arrays[0], arrays[0]),
+        (arrays[0], arrays[1]),
+        (arrays[1], arrays[1]),
+        (arrays[2], arrays[2]),
+        (arrays[2], arrays[3]),
+        (arrays[3], arrays[3]),
+        (arrays[4], arrays[4]),
+        (arrays[4], arrays[5]),
+        (arrays[5], arrays[5]),
+    ]
+
+    return array_tuples
+
+@pytest.mark.parametrize("da_a, da_b", array_tuples)
+@pytest.mark.parametrize("dim", [None, "time", "x"])
+def test_cov(da_a, da_b, dim):
+    def pandas_cov(ts1, ts2):
+        """Ensure the ts are aligned and missing values ignored"""
+        ts1, ts2 = xr.align(ts1, ts2)
+        valid_values = ts1.notnull() & ts2.notnull()
+
+        ts1 = ts1.where(valid_values, drop=True)
+        ts2 = ts2.where(valid_values, drop=True)
+
+        return ts1.to_series().cov(ts2.to_series())
+
+    expected = pandas_cov(da_a, da_b)
+    actual = xr.cov(da_a, da_b, dim)
+
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("da_a, da_b", array_tuples)
+@pytest.mark.parametrize("dim", [None, "time", "x"])
+def test_corr(da_a, da_b, dim):
+    def pandas_corr(ts1, ts2):
+        """Ensure the ts are aligned and missing values ignored"""
+        ts1, ts2 = xr.align(ts1, ts2)
+        valid_values = ts1.notnull() & ts2.notnull()
+
+        ts1 = ts1.where(valid_values, drop=True)
+        ts2 = ts2.where(valid_values, drop=True)
+
+        return ts1.to_series().corr(ts2.to_series())
+
+    expected = pandas_corr(da_a, da_b)
+    actual = xr.corr(da_a, da_b, dim)
+    assert_allclose(actual, expected)
+
 @requires_dask
 def test_vectorize_dask_new_output_dims():
     # regression test for GH3574
