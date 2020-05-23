@@ -79,7 +79,6 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "numpydoc",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",

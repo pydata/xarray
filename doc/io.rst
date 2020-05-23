@@ -463,7 +463,7 @@ This is not CF-compliant but again facilitates roundtripping of xarray datasets.
 Invalid netCDF files
 ~~~~~~~~~~~~~~~~~~~~
 
-The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't 
+The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't
 allowed in netCDF4 (see
 `h5netcdf documentation <https://github.com/shoyer/h5netcdf#invalid-netcdf-files>`_).
 This feature is availabe through :py:meth:`DataArray.to_netcdf` and
@@ -804,7 +804,7 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
     In [4]: rds.rio.crs
     Out[4]: CRS.from_epsg(32618)
 
-    In [5]: rds4326 = rio.rio.reproject("epsg:4326")
+    In [5]: rds4326 = rds.rio.reproject("epsg:4326")
 
     In [6]: rds4326.rio.crs
     Out[6]: CRS.from_epsg(4326)
@@ -837,7 +837,9 @@ Xarray's Zarr backend allows xarray to leverage these capabilities.
 Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.
 At this time, xarray can only open zarr datasets that have been written by
-xarray. To write a dataset with zarr, we use the :py:attr:`Dataset.to_zarr` method.
+xarray. For implementation details, see :ref:`zarr_encoding`.
+
+To write a dataset with zarr, we use the :py:attr:`Dataset.to_zarr` method.
 To write to a local directory, we pass a path to a directory
 
 .. ipython:: python

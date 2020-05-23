@@ -53,6 +53,9 @@ New Features
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
+- Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
+  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - More support for unit aware arrays with pint (:pull:`3643`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Support overriding existing variables in ``to_zarr()`` with ``mode='a'`` even
@@ -67,9 +70,18 @@ New Features
   the :py:class:`~core.accessor_dt.DatetimeAccessor` (:pull:`3935`).  This
   feature requires cftime version 1.1.0 or greater.  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- For the netCDF3 backend, added dtype coercions for unsigned integer types.
+  (:issue:`4014`, :pull:`4018`)
+  By `Yunus Sevinchan <https://github.com/blsqr>`_
 - :py:meth:`map_blocks` now accepts a ``template`` kwarg. This allows use cases
   where the result of a computation could not be inferred automatically.
   By `Deepak Cherian <https://github.com/dcherian>`_
+
+- Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
+  (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
+  :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
+  independently of time decoding (:issue:`1621`)
+  `Aureliana Barghini <https://github.com/aurghs>`
 
 Bug fixes
 ~~~~~~~~~
@@ -107,6 +119,8 @@ Bug fixes
 - Fix bug in time parsing failing to fall back to cftime. This was causing time
   variables with a time unit of `'msecs'` to fail to parse. (:pull:`3998`)
   By `Ryan May <https://github.com/dopplershift>`_.
+- Fix html repr in untrusted notebooks: fallback to plain text repr. (:pull:`4053`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
