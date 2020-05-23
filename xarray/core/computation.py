@@ -1123,6 +1123,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     * space    (space) <U2 'IA' 'IL' 'IN'
     """
     from .dataarray import DataArray
+
     # 1. Broadcast the two arrays
     da_a, da_b = broadcast(da_a, da_b)
 

@@ -819,9 +819,11 @@ def test_vectorize_dask():
 
 @pytest.fixture()
 def array_tuples():
-    da = xr.DataArray(np.random.random((3, 21, 4)),
-                      coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
-                      dims=("a", "time", "x"),)
+    da = xr.DataArray(
+        np.random.random((3, 21, 4)),
+        coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+        dims=("a", "time", "x"),
+    )
 
     arrays = [
         da.isel(time=range(0, 18)),
@@ -848,11 +850,9 @@ def array_tuples():
 
 
 # TODO: https://github.com/pydata/xarray/pull/3550#discussion_r349935731
-# @pytest.mark.parametrize("da_a, da_b", array_tuples)
+@pytest.mark.parametrize("da_a, da_b", array_tuples)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
-def test_cov(array_tuples, dim):
-    da_a, da_b = array_tuples
-
+def test_cov(da_a, da_b, dim):
     def pandas_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
@@ -869,11 +869,9 @@ def test_cov(array_tuples, dim):
     assert_allclose(actual, expected)
 
 
-#@pytest.mark.parametrize("da_a, da_b", array_tuples)
+@pytest.mark.parametrize("da_a, da_b", array_tuples)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_corr(da_a, da_b, dim):
-    da_a, da_b = array_tuples
-
     def pandas_corr(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
