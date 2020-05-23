@@ -54,6 +54,8 @@ __all__ = (
     "concat",
     "decode_cf",
     "dot",
+    "cov",
+    "corr",
     "full_like",
     "load_dataarray",
     "load_dataset",

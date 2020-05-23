@@ -846,10 +846,13 @@ def array_tuples():
 
     return array_tuples
 
+
 # TODO: https://github.com/pydata/xarray/pull/3550#discussion_r349935731
-#@pytest.mark.parametrize("da_a, da_b", array_tuples)
+# @pytest.mark.parametrize("da_a, da_b", array_tuples)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_cov(array_tuples, dim):
+    da_a, da_b = array_tuples
+
     def pandas_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
@@ -866,9 +869,11 @@ def test_cov(array_tuples, dim):
     assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize("da_a, da_b", array_tuples)
+#@pytest.mark.parametrize("da_a, da_b", array_tuples)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_corr(da_a, da_b, dim):
+    da_a, da_b = array_tuples
+
     def pandas_corr(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
@@ -882,6 +887,7 @@ def test_corr(da_a, da_b, dim):
     expected = pandas_corr(da_a, da_b)
     actual = xr.corr(da_a, da_b, dim)
     assert_allclose(actual, expected)
+
 
 @requires_dask
 def test_vectorize_dask_new_output_dims():
