@@ -363,8 +363,12 @@ class TestCFEncodedDataStore(CFEncodedBase):
 
     @contextlib.contextmanager
     def roundtrip(
-        self, data, save_kwargs={}, open_kwargs={}, allow_cleanup_failure=False
+        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
     ):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         store = CFEncodedInMemoryStore()
         data.dump_to_store(store, **save_kwargs)
         yield open_dataset(store, **open_kwargs)
