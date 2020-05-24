@@ -20,6 +20,7 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 
+from xarray.core.alignment import broadcast
 from . import has_dask, raises_regex, requires_dask
 
 
@@ -854,11 +855,9 @@ def array_tuples():
 # [array_tuples()[0], array_tuples()[1], array_tuples()[2], array_tuples()[3],
 # array_tuples()[4], array_tuples()[5], array_tuples()[6], array_tuples()[7],
 # array_tuples()[8]])
-@pytest.mark.parametrize("da_a, da_b",
-                         [array_tuples()[0], array_tuples()[1]])
+@pytest.mark.parametrize("da_a, da_b", [array_tuples()[0], array_tuples()[1]])
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_cov(da_a, da_b, dim):
-
     def pandas_cov(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
@@ -874,11 +873,9 @@ def test_cov(da_a, da_b, dim):
     assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize("da_a, da_b",
-                         [array_tuples()[0], array_tuples()[1]])
+@pytest.mark.parametrize("da_a, da_b", [array_tuples()[0], array_tuples()[1]])
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_corr(da_a, da_b, dim):
-
     def pandas_corr(ts1, ts2):
         """Ensure the ts are aligned and missing values ignored"""
         ts1, ts2 = xr.align(ts1, ts2)
@@ -891,6 +888,23 @@ def test_corr(da_a, da_b, dim):
 
     expected = pandas_corr(da_a, da_b)
     actual = xr.corr(da_a, da_b, dim)
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("da_a, da_b", [array_tuples()[0], array_tuples()[1]])
+@pytest.mark.parametrize("dim", [None, "time", "x"])
+def test_covcorr_consistency(da_a, da_b, dim):
+    # Testing that xr.corr and xr.cov are consistent with each other
+    # 1. Broadcast the two arrays
+    da_a, da_b = broadcast(da_a, da_b)
+
+    # 2. Ignore the nans
+    valid_values = da_a.notnull() & da_b.notnull()
+    da_a = da_a.where(valid_values)
+    da_b = da_b.where(valid_values)
+
+    expected = xr.cov(da_a, da_b, dim=dim, ddof=0) / (da_a.std(dim=dim) * da_b.std(dim=dim))
+    actual = xr.corr(da_a, da_b, dim=dim)
     assert_allclose(actual, expected)
 
 
