@@ -8,6 +8,7 @@ import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 
 import xarray as xr
+from xarray.core.alignment import broadcast
 from xarray.core.computation import (
     _UFuncSignature,
     apply_ufunc,
@@ -20,7 +21,6 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 
-from xarray.core.alignment import broadcast
 from . import has_dask, raises_regex, requires_dask
 
 
@@ -887,9 +887,17 @@ def test_corr(da_a, da_b, dim):
     assert_allclose(actual, expected)
 """
 
-@pytest.mark.parametrize("da_a, da_b",
-[arrays_w_tuples()[1][0], arrays_w_tuples()[1][1],
- arrays_w_tuples()[1][2], arrays_w_tuples()[1][7], arrays_w_tuples()[1][8]])
+
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    [
+        arrays_w_tuples()[1][0],
+        arrays_w_tuples()[1][1],
+        arrays_w_tuples()[1][2],
+        arrays_w_tuples()[1][7],
+        arrays_w_tuples()[1][8],
+    ],
+)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_covcorr_consistency(da_a, da_b, dim):
     # Testing that xr.corr and xr.cov are consistent with each other
@@ -900,20 +908,29 @@ def test_covcorr_consistency(da_a, da_b, dim):
     da_a = da_a.where(valid_values)
     da_b = da_b.where(valid_values)
 
-    expected = xr.cov(da_a, da_b, dim=dim, ddof=0) / (da_a.std(dim=dim) * da_b.std(dim=dim))
+    expected = xr.cov(da_a, da_b, dim=dim, ddof=0) / (
+        da_a.std(dim=dim) * da_b.std(dim=dim)
+    )
     actual = xr.corr(da_a, da_b, dim=dim)
     assert_allclose(actual, expected)
 
-@pytest.mark.parametrize("da_a",
-[arrays_w_tuples()[0][0], arrays_w_tuples()[0][1],
- arrays_w_tuples()[0][4], arrays_w_tuples()[0][5]])
+
+@pytest.mark.parametrize(
+    "da_a",
+    [
+        arrays_w_tuples()[0][0],
+        arrays_w_tuples()[0][1],
+        arrays_w_tuples()[0][4],
+        arrays_w_tuples()[0][5],
+    ],
+)
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_autocov(da_a, dim):
     # Testing that the autocovariance*(N-1) is ~=~ to the variance matrix
     # 1. Ignore the nans
     valid_values = da_a.notnull()
     da_a = da_a.where(valid_values)
-    expected = ((da_a - da_a.mean(dim=dim))**2).sum(dim=dim, skipna=False)
+    expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=False)
     actual = xr.cov(da_a, da_a, dim=dim) * (valid_values.sum(dim) - 1)
     print(da_a, actual, expected)
     assert_allclose(actual, expected)

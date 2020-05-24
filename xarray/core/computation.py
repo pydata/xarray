@@ -1138,7 +1138,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    # N.B. `skipna=False` is required or there is a bug when computing
+    # N.B. `skipna=False` is required or there is a bug when computing
     # auto-covariance. E.g. Try xr.cov(da,da) for
     # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
     cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=False) / (valid_count)
