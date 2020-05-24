@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 
 import xarray as xr
 from xarray.core.computation import (
