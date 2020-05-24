@@ -818,8 +818,7 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
-# @pytest.fixture()
-def array_tuples():
+def arrays_w_tuples():
     da = xr.DataArray(
         np.random.random((3, 21, 4)),
         coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
@@ -828,7 +827,7 @@ def array_tuples():
 
     arrays = [
         da.isel(time=range(0, 18)),
-        da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(dim="time"),
+        da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
         xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"),
         xr.DataArray([1, 1, np.nan, 2, np.nan, 3, 5, 4, 6, np.nan, 7], dims="time"),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
@@ -847,19 +846,16 @@ def array_tuples():
         (arrays[5], arrays[5]),
     ]
 
-    return array_tuples
+    return arrays, array_tuples
 
 
-# TODO: https://github.com/pydata/xarray/pull/3550#discussion_r349935731
-# @pytest.mark.parametrize("da_a, da_b",
-# [array_tuples()[0], array_tuples()[1], array_tuples()[2], array_tuples()[3],
-# array_tuples()[4], array_tuples()[5], array_tuples()[6], array_tuples()[7],
-# array_tuples()[8]])
-@pytest.mark.parametrize("da_a, da_b", [array_tuples()[0], array_tuples()[1]])
+# TODO: Loop over `a` and `x` to test specific values
+"""
+@pytest.mark.parametrize("da_a, da_b", [array_w_tuples()[1][0], array_w_tuples()[1][1]])
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_cov(da_a, da_b, dim):
     def pandas_cov(ts1, ts2):
-        """Ensure the ts are aligned and missing values ignored"""
+        #Ensure the ts are aligned and missing values ignored
         ts1, ts2 = xr.align(ts1, ts2)
         valid_values = ts1.notnull() & ts2.notnull()
 
@@ -873,11 +869,11 @@ def test_cov(da_a, da_b, dim):
     assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize("da_a, da_b", [array_tuples()[0], array_tuples()[1]])
+@pytest.mark.parametrize("da_a, da_b", [array_w_tuples()[1][0], array_w_tuples()[1][1]])
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_corr(da_a, da_b, dim):
     def pandas_corr(ts1, ts2):
-        """Ensure the ts are aligned and missing values ignored"""
+        #Ensure the ts are aligned and missing values ignored
         ts1, ts2 = xr.align(ts1, ts2)
         valid_values = ts1.notnull() & ts2.notnull()
 
@@ -889,15 +885,16 @@ def test_corr(da_a, da_b, dim):
     expected = pandas_corr(da_a, da_b)
     actual = xr.corr(da_a, da_b, dim)
     assert_allclose(actual, expected)
+"""
 
-
-@pytest.mark.parametrize("da_a, da_b", [array_tuples()[0], array_tuples()[1]])
+@pytest.mark.parametrize("da_a, da_b",
+[arrays_w_tuples()[1][0], arrays_w_tuples()[1][1],
+ arrays_w_tuples()[1][2], arrays_w_tuples()[1][7], arrays_w_tuples()[1][8]])
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_covcorr_consistency(da_a, da_b, dim):
     # Testing that xr.corr and xr.cov are consistent with each other
     # 1. Broadcast the two arrays
     da_a, da_b = broadcast(da_a, da_b)
-
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
     da_a = da_a.where(valid_values)
@@ -905,6 +902,20 @@ def test_covcorr_consistency(da_a, da_b, dim):
 
     expected = xr.cov(da_a, da_b, dim=dim, ddof=0) / (da_a.std(dim=dim) * da_b.std(dim=dim))
     actual = xr.corr(da_a, da_b, dim=dim)
+    assert_allclose(actual, expected)
+
+@pytest.mark.parametrize("da_a",
+[arrays_w_tuples()[0][0], arrays_w_tuples()[0][1],
+ arrays_w_tuples()[0][4], arrays_w_tuples()[0][5]])
+@pytest.mark.parametrize("dim", [None, "time", "x"])
+def test_autocov(da_a, dim):
+    # Testing that the autocovariance*(N-1) is ~=~ to the variance matrix
+    # 1. Ignore the nans
+    valid_values = da_a.notnull()
+    da_a = da_a.where(valid_values)
+    expected = ((da_a - da_a.mean(dim=dim))**2).sum(dim=dim, skipna=False)
+    actual = xr.cov(da_a, da_a, dim=dim) * (valid_values.sum(dim) - 1)
+    print(da_a, actual, expected)
     assert_allclose(actual, expected)
 
 

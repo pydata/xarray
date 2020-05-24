@@ -1130,7 +1130,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
     da_a = da_a.where(valid_values)
-    da_b = da_b.where(valid_values)
+    da_b = da_a.where(valid_values)
     valid_count = valid_values.sum(dim) - ddof
 
     # 3. Compute mean and standard deviation along the given dim
@@ -1138,7 +1138,10 @@ def cov(da_a, da_b, dim=None, ddof=1):
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim) / (valid_count)
+    # N.B. `skipna=False` is required or there is a bug when computing
+    # auto-covariance. E.g. Try xr.cov(da,da) for
+    # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
+    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=False) / (valid_count)
 
     return DataArray(cov)
 
