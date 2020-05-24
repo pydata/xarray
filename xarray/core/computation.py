@@ -1129,7 +1129,6 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-    # TODO: avoid drop
     da_a = da_a.where(valid_values)
     da_b = da_b.where(valid_values)
     valid_count = valid_values.sum(dim) - ddof
@@ -1211,8 +1210,6 @@ def corr(da_a, da_b, dim=None, ddof=0):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-    # TODO: avoid drop https://github.com/pydata/xarray/pull/2652#discussion_r245492002
-    # FIXED?: I think @shoyer convinced that you can just remove drop=True
     da_a = da_a.where(valid_values)
     da_b = da_b.where(valid_values)
 
