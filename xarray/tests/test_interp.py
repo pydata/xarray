@@ -702,7 +702,8 @@ def test_3641():
 
 
 @requires_scipy
-def test_decompose():
+@pytest.mark.parametrize("method", ["nearest", "linear"])
+def test_decompose(method):
     da = xr.DataArray(
         np.arange(6).reshape(3, 2),
         dims=["x", "y"],
@@ -713,6 +714,6 @@ def test_decompose():
     x_broadcast, y_broadcast = xr.broadcast(x_new, y_new)
     assert x_broadcast.ndim == 2
 
-    actual = da.interp(x=x_new, y=y_new).drop(("x", "y"))
-    expected = da.interp(x=x_broadcast, y=y_broadcast).drop(("x", "y"))
+    actual = da.interp(x=x_new, y=y_new, method=method).drop(("x", "y"))
+    expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop(("x", "y"))
     assert_allclose(actual, expected)
