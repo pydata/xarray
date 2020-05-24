@@ -851,7 +851,7 @@ def arrays_w_tuples():
 
 @pytest.mark.parametrize(
     "da_a, da_b",
-    [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2], ],
+    [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2]],
 )
 @pytest.mark.parametrize("dim", [None, "time"])
 def test_cov(da_a, da_b, dim):
@@ -897,7 +897,7 @@ def test_cov(da_a, da_b, dim):
 
 @pytest.mark.parametrize(
     "da_a, da_b",
-    [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2], ],
+    [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2]],
 )
 @pytest.mark.parametrize("dim", [None, "time"])
 def test_corr(da_a, da_b, dim):
