@@ -849,43 +849,94 @@ def arrays_w_tuples():
     return arrays, array_tuples
 
 
-# TODO: Loop over `a` and `x` to test specific values
-"""
-@pytest.mark.parametrize("da_a, da_b", [array_w_tuples()[1][0], array_w_tuples()[1][1]])
-@pytest.mark.parametrize("dim", [None, "time", "x"])
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2],],
+)
+@pytest.mark.parametrize("dim", [None, "time"])
 def test_cov(da_a, da_b, dim):
-    def pandas_cov(ts1, ts2):
-        #Ensure the ts are aligned and missing values ignored
-        ts1, ts2 = xr.align(ts1, ts2)
-        valid_values = ts1.notnull() & ts2.notnull()
+    if dim is not None:
 
-        ts1 = ts1.where(valid_values)
-        ts2 = ts2.where(valid_values)
+        def np_cov_ind(ts1, ts2, a, x):
+            # Ensure the ts are aligned and missing values ignored
+            ts1, ts2 = broadcast(ts1, ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
 
-        return ts1.to_series().cov(ts2.to_series())
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
 
-    expected = pandas_cov(da_a, da_b)
-    actual = xr.cov(da_a, da_b, dim)
-    assert_allclose(actual, expected)
+            return np.cov(
+                ts1.sel(a=a, x=x).data.flatten(),
+                ts2.sel(a=a, x=x).data.flatten(),
+                ddof=1,
+            )[0, 1]
+
+        expected = np.zeros((3, 4))
+        for a in [0, 1, 2]:
+            for x in [0, 1, 2, 3]:
+                expected[a, x] = np_cov_ind(da_a, da_b, a=a, x=x)
+        actual = xr.cov(da_a, da_b, dim)
+        assert_allclose(actual, expected)
+
+    else:
+
+        def np_cov(ts1, ts2):
+            # Ensure the ts are aligned and missing values ignored
+            ts1, ts2 = broadcast(ts1, ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
+
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
+
+            return np.cov(ts1.data.flatten(), ts2.data.flatten(), ddof=1)[0, 1]
+
+        expected = np_cov(da_a, da_b)
+        actual = xr.cov(da_a, da_b, dim)
+        assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize("da_a, da_b", [array_w_tuples()[1][0], array_w_tuples()[1][1]])
-@pytest.mark.parametrize("dim", [None, "time", "x"])
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2],],
+)
+@pytest.mark.parametrize("dim", [None, "time"])
 def test_corr(da_a, da_b, dim):
-    def pandas_corr(ts1, ts2):
-        #Ensure the ts are aligned and missing values ignored
-        ts1, ts2 = xr.align(ts1, ts2)
-        valid_values = ts1.notnull() & ts2.notnull()
+    if dim is not None:
 
-        ts1 = ts1.where(valid_values)
-        ts2 = ts2.where(valid_values)
+        def np_corr_ind(ts1, ts2, a, x):
+            # Ensure the ts are aligned and missing values ignored
+            ts1, ts2 = broadcast(ts1, ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
 
-        return ts1.to_series().corr(ts2.to_series())
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
 
-    expected = pandas_corr(da_a, da_b)
-    actual = xr.corr(da_a, da_b, dim)
-    assert_allclose(actual, expected)
-"""
+            return np.corrcoef(
+                ts1.sel(a=a, x=x).data.flatten(), ts2.sel(a=a, x=x).data.flatten()
+            )[0, 1]
+
+        expected = np.zeros((3, 4))
+        for a in [0, 1, 2]:
+            for x in [0, 1, 2, 3]:
+                expected[a, x] = np_corr_ind(da_a, da_b, a=a, x=x)
+        actual = xr.corr(da_a, da_b, dim)
+        assert_allclose(actual, expected)
+
+    else:
+
+        def np_corr(ts1, ts2):
+            # Ensure the ts are aligned and missing values ignored
+            ts1, ts2 = broadcast(ts1, ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
+
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
+
+            return np.corrcoef(ts1.data.flatten(), ts2.data.flatten())[0, 1]
+
+        expected = np_corr(da_a, da_b)
+        actual = xr.corr(da_a, da_b, dim)
+        assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize(
@@ -932,7 +983,6 @@ def test_autocov(da_a, dim):
     da_a = da_a.where(valid_values)
     expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=False)
     actual = xr.cov(da_a, da_a, dim=dim) * (valid_values.sum(dim) - 1)
-    print(da_a, actual, expected)
     assert_allclose(actual, expected)
 
 
