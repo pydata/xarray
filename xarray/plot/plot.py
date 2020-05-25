@@ -14,6 +14,7 @@ import pandas as pd
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
+    _assert_valid_xy,
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
@@ -29,19 +30,17 @@ from .utils import (
 
 
 def _infer_line_data(darray, x, y, hue):
-    error_msg = "must be either None or one of ({:s})".format(
-        ", ".join([repr(dd) for dd in darray.dims])
-    )
+
     ndims = len(darray.dims)
 
-    if x is not None and x not in darray.dims and x not in darray.coords:
-        raise ValueError("x " + error_msg)
-
-    if y is not None and y not in darray.dims and y not in darray.coords:
-        raise ValueError("y " + error_msg)
-
     if x is not None and y is not None:
-        raise ValueError("You cannot specify both x and y kwargs" "for line plots.")
+        raise ValueError("Cannot specify both x and y kwargs for line plots.")
+
+    if x is not None:
+        _assert_valid_xy(darray, x, "x")
+
+    if y is not None:
+        _assert_valid_xy(darray, y, "y")
 
     if ndims == 1:
         huename = None
@@ -93,6 +92,7 @@ def _infer_line_data(darray, x, y, hue):
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     otherdim = darray.dims[otherindex]
                     xplt = darray.transpose(otherdim, huename, transpose_coords=False)
+                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError(
                         "For 2D inputs, hue must be a dimension"
@@ -251,7 +251,7 @@ def line(
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
-        Dimensions or coordinates for x, y axis.
+        Dimension, coordinate or MultiIndex level for x, y axis.
         Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
@@ -689,10 +689,13 @@ def _plot2d(plotfunc):
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
         yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
 
-        _ensure_plottable(xplt, yplt)
+        _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, zval.data, **locals()
+            plotfunc,
+            zval.data,
+            **locals(),
+            _is_facetgrid=kwargs.pop("_is_facetgrid", False),
         )
 
         if "contour" in plotfunc.__name__:

@@ -303,6 +303,7 @@ def open_dataset(
     drop_variables=None,
     backend_kwargs=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -383,6 +384,11 @@ def open_dataset(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Returns
     -------
@@ -435,6 +441,7 @@ def open_dataset(
         decode_times = False
         concat_characters = False
         decode_coords = False
+        decode_timedelta = False
 
     if cache is None:
         cache = chunks is None
@@ -451,6 +458,7 @@ def open_dataset(
             decode_coords=decode_coords,
             drop_variables=drop_variables,
             use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
         )
 
         _protect_dataset_variables_inplace(ds, cache)
@@ -477,6 +485,7 @@ def open_dataset(
                 chunks,
                 drop_variables,
                 use_cftime,
+                decode_timedelta,
             )
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
@@ -561,6 +570,7 @@ def open_dataarray(
     drop_variables=None,
     backend_kwargs=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """Open an DataArray from a file or file-like object containing a single
     data variable.
@@ -640,6 +650,11 @@ def open_dataarray(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Notes
     -----
@@ -671,6 +686,7 @@ def open_dataarray(
         drop_variables=drop_variables,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
     )
 
     if len(dataset.data_vars) != 1:
@@ -1279,18 +1295,35 @@ def _validate_append_dim_and_encoding(
         return
     if append_dim:
         if append_dim not in ds.dims:
-            raise ValueError(f"{append_dim} not a valid dimension in the Dataset")
-    for data_var in ds_to_append:
-        if data_var in ds:
-            if append_dim is None:
+            raise ValueError(
+                f"append_dim={append_dim!r} does not match any existing "
+                f"dataset dimensions {ds.dims}"
+            )
+    for var_name in ds_to_append:
+        if var_name in ds:
+            if ds_to_append[var_name].dims != ds[var_name].dims:
                 raise ValueError(
-                    "variable '{}' already exists, but append_dim "
-                    "was not set".format(data_var)
+                    f"variable {var_name!r} already exists with different "
+                    f"dimension names {ds[var_name].dims} != "
+                    f"{ds_to_append[var_name].dims}, but changing variable "
+                    "dimensions is not supported by to_zarr()."
                 )
-            if data_var in encoding.keys():
+            existing_sizes = {
+                k: v for k, v in ds[var_name].sizes.items() if k != append_dim
+            }
+            new_sizes = {
+                k: v for k, v in ds_to_append[var_name].sizes.items() if k != append_dim
+            }
+            if existing_sizes != new_sizes:
                 raise ValueError(
-                    "variable '{}' already exists, but encoding was"
-                    "provided".format(data_var)
+                    f"variable {var_name!r} already exists with different "
+                    "dimension sizes: {existing_sizes} != {new_sizes}. "
+                    "to_zarr() only supports changing dimension sizes when "
+                    f"explicitly appending, but append_dim={append_dim!r}."
+                )
+            if var_name in encoding.keys():
+                raise ValueError(
+                    f"variable {var_name!r} already exists, but encoding was provided"
                 )
 
 

@@ -241,7 +241,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         """encode one attribute"""
         return a
 
-    def set_dimension(self, d, l):  # pragma: no cover
+    def set_dimension(self, dim, length):  # pragma: no cover
         raise NotImplementedError()
 
     def set_attribute(self, k, v):  # pragma: no cover
