@@ -3270,9 +3270,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
             This function cannot add a new chunked dimension.
         args: Sequence
-            Passed verbatim to func after unpacking, after the sliced DataArray. xarray
-            objects, if any, will not be split by chunks. Passing dask collections is
-            not allowed.
+            Passed verbatim to func after unpacking, after the sliced obj.
+            Any xarray objects will also be split by blocks and then passed on.
         kwargs: Mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             split by chunks. Passing dask collections is not allowed.

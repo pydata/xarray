@@ -192,7 +192,7 @@ def map_blocks(
         Passed to the function as its first argument, one dask chunk at a time.
     args: Sequence
         Passed verbatim to func after unpacking, after the sliced obj.
-        Any xarray objects will also be split by chunks and then passed on.
+        Any xarray objects will also be split by blocks and then passed on.
     kwargs: Mapping
         Passed verbatim to func after unpacking. xarray objects, if any, will not be
         split by chunks. Passing dask collections is not allowed.
@@ -431,8 +431,6 @@ def map_blocks(
         Creates a task that creates a subsets xarray dataset to a block determined by chunk_index;
         whose extents are determined by input_chunk_bounds.
         There are subtasks that create subsets of constituent variables.
-
-        TODO: This is modifying graph in-place!
         """
 
         # this will become [[name1, variable1],
@@ -457,7 +455,7 @@ def map_blocks(
                     [variable.dims, chunk, variable.attrs],
                 )
             else:
-                # non-dask array with possibly chunked dimensions
+                # non-dask array possibly with dimensions chunked on other variables
                 # index into variable appropriately
                 subsetter = {
                     dim: _get_chunk_slicer(dim, chunk_index, input_chunk_bounds)
@@ -492,7 +490,8 @@ def map_blocks(
             for isxr, arg in zip(is_xarray, npargs)
         ]
 
-        # expected["shapes", "coords", "data_vars", "indexes"] are used to raise nice error messages in _wrapper
+        # expected["shapes", "coords", "data_vars", "indexes"] are used to
+        # raise nice error messages in _wrapper
         expected = {}
         # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
         # even if length of dimension is changed by the applied function
@@ -566,6 +565,7 @@ def map_blocks(
             hlg, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
         )
         result[name] = (dims, data, template[name].attrs)
+        result[name].encoding = template[name].encoding
 
     result = result.set_coords(template._coord_names)
 
