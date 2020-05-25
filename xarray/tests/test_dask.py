@@ -1035,6 +1035,14 @@ def test_unify_chunks_shallow_copy(obj, transform):
     assert_identical(obj, unified) and obj is not obj.unify_chunks()
 
 
+@pytest.mark.parametrize("obj", [make_da()])
+def test_auto_chunk_da(obj):
+    actual = obj.chunk("auto").data
+    expected = obj.data.rechunk("auto")
+    np.testing.assert_array_equal(actual, expected)
+    assert actual.chunks == expected.chunks
+
+
 def test_map_blocks_error(map_da, map_ds):
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]

@@ -36,6 +36,10 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+
+- ``chunks='auto'`` is now supported in the ``chunks`` argument of
+  :py:meth:`Dataset.chunk`. (:issue:`4055`)
+  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ 
 - Added :py:func:`xarray.cov` and :py:func:`xarray.corr` (:issue:`3784`, :pull:`3550`, :pull:`4089`).
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ and `Robin Beer <https://github.com/r-beer>`_.
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
