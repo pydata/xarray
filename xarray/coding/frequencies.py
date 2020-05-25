@@ -37,7 +37,7 @@ def infer_freq(index):
     from xarray.core.dataarray import DataArray
 
     if isinstance(index, DataArray):
-        if index.ndim > 1:
+        if index.ndim != 1:
             raise ValueError("'index' must be 1D")
         if np.asarray(index).dtype == "datetime64[ns]":
             index = pd.DatetimeIndex(index)

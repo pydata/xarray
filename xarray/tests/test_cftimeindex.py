@@ -1068,6 +1068,6 @@ def test_asi8_distant_date():
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_infer_freq(freq, calendar):
-    indx = xr.cftime_range("2000-01-01", periods=50, freq=freq, calendar=calendar)
+    indx = xr.cftime_range("2000-01-01", periods=3, freq=freq, calendar=calendar)
     out = xr.infer_freq(indx)
     assert out == freq
