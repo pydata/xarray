@@ -34,6 +34,13 @@ Breaking changes
   (:pull:`3274`)
   By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
 
+Enhancements
+~~~~~~~~~~~~
+- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp` 
+  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially 
+  rather than interpolating in multidimensional space. (:issue:`2223`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 New Features
 ~~~~~~~~~~~~
 

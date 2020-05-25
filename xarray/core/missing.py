@@ -619,6 +619,19 @@ def interp(var, indexes_coords, method, **kwargs):
     # default behavior
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
+    # check if the interpolation can be done in orthogonal manner
+    if (
+        len(indexes_coords) > 1
+        and method in ["linear", "nearest"]
+        and all(dest[1].ndim == 1 for dest in indexes_coords.values())
+        and len(set([d[1].dims[0] for d in indexes_coords.values()]))
+        == len(indexes_coords)
+    ):
+        # interpolate sequentially
+        for dim, dest in indexes_coords.items():
+            var = interp(var, {dim: dest}, method, **kwargs)
+        return var
+
     # target dimensions
     dims = list(indexes_coords)
     x, new_x = zip(*[indexes_coords[d] for d in dims])
@@ -659,7 +672,7 @@ def interp_func(var, x, new_x, method, kwargs):
         New coordinates. Should not contain NaN.
     method: string
         {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for
-        1-dimensional itnterpolation.
+        1-dimensional interpolation.
         {'linear', 'nearest'} for multidimensional interpolation
     **kwargs:
         Optional keyword arguments to be passed to scipy.interpolator
