@@ -409,7 +409,7 @@ def test_short_numpy_repr():
     ]
     # number of lines:
     # for default numpy repr: 167, 140, 254, 248, 599
-    # for short_numpy_repr: 1, 7, 24, 19, 30
+    # for short_numpy_repr: 1, 7, 24, 19, 25
     for array in cases:
         num_lines = formatting.short_numpy_repr(array).count("\n") + 1
         assert num_lines < 30
