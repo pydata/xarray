@@ -36,6 +36,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Added :py:meth:`xr.infer_freq` for extending frequency inferring to CFTime indexes and data.
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
