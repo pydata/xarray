@@ -1604,6 +1604,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         References
         ----------
         https://zarr.readthedocs.io/
+
+        Notes
+        -----
+        Zarr chunking behavior:
+            If chunks are found in the encoding argument or attribute
+            corresponding to any DataArray, those chunks are used.
+            If a DataArray is a dask array, it is written with those chunks.
+            If not other chunks are found, Zarr uses its own heuristics to
+            choose automatic chunk sizes.
         """
         if encoding is None:
             encoding = {}
@@ -1698,7 +1707,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None, Number, Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]]
+            None,
+            Number,
+            str,
+            Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
         ] = None,
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1716,7 +1728,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        chunks : int or mapping, optional
+        chunks : int, 'auto' or mapping, optional
             Chunk sizes along each dimension, e.g., ``5`` or
             ``{'x': 5, 'y': 5}``.
         name_prefix : str, optional
@@ -1733,7 +1745,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from dask.base import tokenize
 
-        if isinstance(chunks, Number):
+        if isinstance(chunks, (Number, str)):
             chunks = dict.fromkeys(self.dims, chunks)
 
         if chunks is not None:
