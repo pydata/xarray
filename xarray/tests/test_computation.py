@@ -843,6 +843,7 @@ def arrays_w_tuples():
 
     return arrays, array_tuples
 
+
 @pytest.mark.parametrize("ddof", [0, 1])
 @pytest.mark.parametrize(
     "da_a, da_b",
@@ -935,8 +936,7 @@ def test_corr(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize(
-    "da_a, da_b",
-    arrays_w_tuples()[1],
+    "da_a, da_b", arrays_w_tuples()[1],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_covcorr_consistency(da_a, da_b, dim):
@@ -956,8 +956,7 @@ def test_covcorr_consistency(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize(
-    "da_a",
-    arrays_w_tuples()[0],
+    "da_a", arrays_w_tuples()[0],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_autocov(da_a, dim):
