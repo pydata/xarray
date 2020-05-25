@@ -581,6 +581,12 @@ class CFTimeIndex(pd.Index):
             ]
         )
 
+    @property
+    def calendar(self):
+        from .times import infer_calendar_name
+
+        return infer_calendar_name(self)
+
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
         from .cftime_offsets import CFTIME_TICKS, to_offset

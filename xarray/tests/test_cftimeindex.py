@@ -885,6 +885,18 @@ def test_cftimeindex_shift_invalid_freq():
 
 
 @requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_calendar_property(calendar):
+    index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
+    # is this awkward here in a test?
+    if calendar == "365_day":
+        calendar = "noleap"
+    elif calendar == "366_day":
+        calendar = "all_leap"
+    assert index.calendar == calendar
+
+
+@requires_cftime
 def test_parse_array_of_cftime_strings():
     from cftime import DatetimeNoLeap
 
