@@ -1075,15 +1075,15 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Parameters
     ----------
-    da_a: DataArray (or Variable) object
+    da_a: DataArray object
         Array to compute.
-    da_b: DataArray (or Variable) object
+    da_b: DataArray object
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
     ddof: int
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate.
-        
+
     Returns
     -------
     covariance: DataArray
@@ -1145,9 +1145,9 @@ def corr(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    da_a: DataArray (or Variable) object
+    da_a: DataArray object
         Array to compute.
-    da_b: DataArray (or Variable) object
+    da_b: DataArray object
         Array to compute.
     dim: str, optional
         The dimension along which the correlation will be computed
@@ -1203,15 +1203,14 @@ def corr(da_a, da_b, dim=None):
             "Given {}.".format([type(arr) for arr in [da_a, da_b]])
         )
 
-    return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="corr")
+    return _cov_corr(da_a, da_b, dim=dim, method="corr")
 
 
 def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     """
     Internal method for xr.cov() and xr.corr() so only have to
-    sanitize the input arrays once.
+    sanitize the input arrays once and we don't repeat code.
     """
-    from .dataarray import DataArray
 
     # 1. Broadcast the two arrays
     da_a, da_b = align(da_a, da_b, join="inner", copy=False)
