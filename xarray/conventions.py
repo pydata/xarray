@@ -266,6 +266,7 @@ def decode_cf_variable(
     decode_endianness=True,
     stack_char_dim=True,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """
     Decodes a variable which may hold CF encoded information.
@@ -315,6 +316,9 @@ def decode_cf_variable(
     var = as_variable(var)
     original_dtype = var.dtype
 
+    if decode_timedelta is None:
+        decode_timedelta = decode_times
+
     if concat_characters:
         if stack_char_dim:
             var = strings.CharacterArrayCoder().decode(var, name=name)
@@ -328,12 +332,10 @@ def decode_cf_variable(
         ]:
             var = coder.decode(var, name=name)
 
+    if decode_timedelta:
+        var = times.CFTimedeltaCoder().decode(var, name=name)
     if decode_times:
-        for coder in [
-            times.CFTimedeltaCoder(),
-            times.CFDatetimeCoder(use_cftime=use_cftime),
-        ]:
-            var = coder.decode(var, name=name)
+        var = times.CFDatetimeCoder(use_cftime=use_cftime).decode(var, name=name)
 
     dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
     # TODO(shoyer): convert everything below to use coders
@@ -442,6 +444,7 @@ def decode_cf_variables(
     decode_coords=True,
     drop_variables=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """
     Decode several CF encoded variables.
@@ -492,6 +495,7 @@ def decode_cf_variables(
             decode_times=decode_times,
             stack_char_dim=stack_char_dim,
             use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
         )
         if decode_coords:
             var_attrs = new_vars[k].attrs
@@ -518,6 +522,7 @@ def decode_cf(
     decode_coords=True,
     drop_variables=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
@@ -552,6 +557,11 @@ def decode_cf(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Returns
     -------
@@ -583,6 +593,7 @@ def decode_cf(
         decode_coords,
         drop_variables=drop_variables,
         use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
     )
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))

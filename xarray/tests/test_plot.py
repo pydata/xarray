@@ -871,21 +871,22 @@ class TestDetermineCmapParams:
         vmin = self.data.min()
         vmax = self.data.max()
 
-        for norm, extend in zip(
+        for norm, extend, levels in zip(
             [
+                mpl.colors.Normalize(),
                 mpl.colors.Normalize(),
                 mpl.colors.Normalize(vmin + 0.1, vmax - 0.1),
                 mpl.colors.Normalize(None, vmax - 0.1),
                 mpl.colors.Normalize(vmin + 0.1, None),
             ],
-            ["neither", "both", "max", "min"],
+            ["neither", "neither", "both", "max", "min"],
+            [7, None, None, None, None],
         ):
 
             test_min = vmin if norm.vmin is None else norm.vmin
             test_max = vmax if norm.vmax is None else norm.vmax
 
-            cmap_params = _determine_cmap_params(self.data, norm=norm)
-
+            cmap_params = _determine_cmap_params(self.data, norm=norm, levels=levels)
             assert cmap_params["vmin"] == test_min
             assert cmap_params["vmax"] == test_max
             assert cmap_params["extend"] == extend

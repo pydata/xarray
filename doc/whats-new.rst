@@ -53,6 +53,9 @@ New Features
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
+- Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
+  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - More support for unit aware arrays with pint (:pull:`3643`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Support overriding existing variables in ``to_zarr()`` with ``mode='a'`` even
@@ -69,9 +72,18 @@ New Features
   the :py:class:`~core.accessor_dt.DatetimeAccessor` (:pull:`3935`).  This
   feature requires cftime version 1.1.0 or greater.  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- For the netCDF3 backend, added dtype coercions for unsigned integer types.
+  (:issue:`4014`, :pull:`4018`)
+  By `Yunus Sevinchan <https://github.com/blsqr>`_
 - :py:meth:`map_blocks` now accepts a ``template`` kwarg. This allows use cases
   where the result of a computation could not be inferred automatically.
   By `Deepak Cherian <https://github.com/dcherian>`_
+
+- Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
+  (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
+  :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
+  independently of time decoding (:issue:`1621`)
+  `Aureliana Barghini <https://github.com/aurghs>`
 
 Bug fixes
 ~~~~~~~~~
@@ -93,6 +105,8 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Fix :py:class:`~xarray.plot.FacetGrid` when ``vmin == vmax``. (:issue:`3734`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Fix plotting when ``levels`` is a scalar and ``norm`` is provided. (:issue:`3735`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - Fix bug where plotting line plots with 2D coordinates depended on dimension
   order. (:issue:`3933`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -107,6 +121,10 @@ Bug fixes
 - Fix bug in time parsing failing to fall back to cftime. This was causing time
   variables with a time unit of `'msecs'` to fail to parse. (:pull:`3998`)
   By `Ryan May <https://github.com/dopplershift>`_.
+- Fix weighted mean when passing boolean weights (:issue:`4074`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix html repr in untrusted notebooks: fallback to plain text repr. (:pull:`4053`)
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -172,7 +190,7 @@ New Features
 
 - Weighted array reductions are now supported via the new :py:meth:`DataArray.weighted`
   and :py:meth:`Dataset.weighted` methods. See :ref:`comput.weighted`. (:issue:`422`, :pull:`2922`).
-  By `Mathias Hauser <https://github.com/mathause>`_
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - The new jupyter notebook repr (``Dataset._repr_html_`` and
   ``DataArray._repr_html_``) (introduced in 0.14.1) is now on by default. To
   disable, use ``xarray.set_options(display_style="text")``.
