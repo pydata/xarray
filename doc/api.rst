@@ -29,6 +29,8 @@ Top-level functions
    full_like
    zeros_like
    ones_like
+   cov
+   corr
    dot
    polyval
    map_blocks
