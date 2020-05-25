@@ -1,8 +1,51 @@
+"""FrequencyInferer analog for cftime.datetime objects"""
+# The infer_freq method and the _CFTimeFrequencyInferer
+# subclass defined here were copied and adapted for
+# use with cftime.datetime objects based on the source code in
+# pandas.tseries.Frequencies._FrequencyInferer
+
+# For reference, here is a copy of the pandas copyright notice:
+
+# (c) 2011-2012, Lambda Foundry, Inc. and PyData Development Team
+# All rights reserved.
+
+# Copyright (c) 2008-2011 AQR Capital Management, LLC
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+
+#     * Redistributions of source code must retain the above copyright
+#        notice, this list of conditions and the following disclaimer.
+
+#     * Redistributions in binary form must reproduce the above
+#        copyright notice, this list of conditions and the following
+#        disclaimer in the documentation and/or other materials provided
+#        with the distribution.
+
+#     * Neither the name of the copyright holder nor the names of any
+#        contributors may be used to endorse or promote products derived
+#        from this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import numpy as np
 import pandas as pd
 
 from .cftime_offsets import _MONTH_ABBREVIATIONS
 from .cftimeindex import CFTimeIndex
+from ..core.common import _contains_datetime_like_objects
 
 _ONE_MICRO = 1
 _ONE_MILLI = _ONE_MICRO * 1000
@@ -18,7 +61,7 @@ def infer_freq(index):
 
     Parameters
     ----------
-    index : CFTimeIndex, DataArray, pd.DatetimeIndex or pd.TimedeltaIndex
+    index : CFTimeIndex, DataArray, pd.DatetimeIndex, pd.TimedeltaIndex, pd.Series
       If not passed a CFTimeIndex, this simply calls `pandas.infer_freq`.
       If passed a Series or a DataArray will use the values of the series (NOT THE INDEX).
 
@@ -36,13 +79,18 @@ def infer_freq(index):
     """
     from xarray.core.dataarray import DataArray
 
-    if isinstance(index, DataArray):
+    if isinstance(index, (DataArray, pd.Series)):
         if index.ndim != 1:
             raise ValueError("'index' must be 1D")
-        if np.asarray(index).dtype == "datetime64[ns]":
-            index = pd.DatetimeIndex(index)
+        elif not _contains_datetime_like_objects(DataArray(index)):
+            raise ValueError("'index' must contain datetime-like objects")
+        dtype = np.asarray(index).dtype
+        if dtype == "datetime64[ns]":
+            index = pd.DatetimeIndex(index.values)
+        elif dtype == "timedelta64[ns]":
+            index = pd.TimedeltaIndex(index.values)
         else:
-            index = CFTimeIndex(index)
+            index = CFTimeIndex(index.values)
 
     if isinstance(index, CFTimeIndex):
         inferer = _CFTimeFrequencyInferer(index)
@@ -82,25 +130,20 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         delta = self.deltas[0]  # Smallest delta
         if _is_multiple(delta, _ONE_DAY):
             return self._infer_daily_rule()
-        # There is not other possible intraday frequency
+        # There is no possible intraday frequency with a non-unique delta
         # Different from pandas: we don't need to manage DST and business offsets in cftime
         elif not len(self.deltas) == 1:
             return None
 
         if _is_multiple(delta, _ONE_HOUR):
-            # Hours
             return _maybe_add_count("H", delta / _ONE_HOUR)
         elif _is_multiple(delta, _ONE_MINUTE):
-            # Minutes
             return _maybe_add_count("T", delta / _ONE_MINUTE)
         elif _is_multiple(delta, _ONE_SECOND):
-            # Seconds
             return _maybe_add_count("S", delta / _ONE_SECOND)
         elif _is_multiple(delta, _ONE_MILLI):
-            # Milliseconds
             return _maybe_add_count("L", delta / _ONE_MILLI)
         else:
-            # Microseconds (smallest CFTime division)
             return _maybe_add_count("U", delta / _ONE_MICRO)
 
     def _infer_daily_rule(self):

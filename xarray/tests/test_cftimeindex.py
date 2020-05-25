@@ -1050,8 +1050,39 @@ def test_asi8_distant_date():
 
 @requires_cftime_1_1_0
 @pytest.mark.parametrize(
+    "index",
+    [
+        xr.cftime_range("2000-01-01", periods=3, freq='D'),
+        pd.date_range("2000-01-01", periods=3, freq='D'),
+        pd.timedelta_range(start='1D', periods=3, freq='D')
+    ]
+)
+def test_infer_freq_valid_types(index):
+    assert xr.infer_freq(index) == 'D'
+    assert xr.infer_freq(xr.DataArray(index)) == 'D'
+
+
+@requires_cftime_1_1_0
+def test_infer_freq_invalid_inputs():
+    # Non-datetime DataArray
+    with pytest.raises(ValueError, match='must contain datetime-like objects'):
+        xr.infer_freq(xr.DataArray([0, 1, 2]))
+
+    indx = xr.cftime_range('1990-02-03', periods=3, freq='MS')
+    # 2D DataArray
+    with pytest.raises(ValueError, match='must be 1D'):
+        xr.infer_freq(xr.DataArray([indx, indx]))
+
+    # CFTimeIndex too short
+    with pytest.raises(ValueError, match='Need at least 3 dates to infer frequency'):
+        xr.infer_freq(indx[:2])
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize(
     "freq",
     [
+        "300AS-JAN",
         "A-DEC",
         "AS-JUL",
         "2AS-FEB",
