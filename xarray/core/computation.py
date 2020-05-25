@@ -1081,8 +1081,9 @@ def cov(da_a, da_b, dim=None, ddof=1):
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
-    ddof: int
-        If ddof=1, covariance is normalized by N-1, giving an unbiased estimate.
+    ddof: int, optional
+        If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
+        else normalization is by N.
 
     Returns
     -------
@@ -1211,7 +1212,6 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     Internal method for xr.cov() and xr.corr() so only have to
     sanitize the input arrays once and we don't repeat code.
     """
-
     # 1. Broadcast the two arrays
     da_a, da_b = align(da_a, da_b, join="inner", copy=False)
 
