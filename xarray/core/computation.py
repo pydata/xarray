@@ -1088,7 +1088,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     Returns
     -------
     covariance: DataArray
-    
+
     See also
     --------
     pandas.Series.cov: corresponding pandas function
