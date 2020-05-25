@@ -89,7 +89,7 @@ Bug fixes
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fix bug when converting multiindexed Pandas objects to sparse xarray objects. (:issue:`4019`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue`3977`)
+- ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue:`3977`)
   By `Huite Bootsma <https://github.com/huite>`_.
 - Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``. (:issue:`3951`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
