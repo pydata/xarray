@@ -1080,6 +1080,8 @@ def cov(da_a, da_b, dim=None, ddof=1):
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
+    ddof: int
+        If ddof=1, covariance is normalized by N-1, giving an unbiased estimate.
     Returns
     -------
     covariance: DataArray
@@ -1123,27 +1125,13 @@ def cov(da_a, da_b, dim=None, ddof=1):
     * space    (space) <U2 'IA' 'IL' 'IN'
     """
     from .dataarray import DataArray
+    if any(not isinstance(arr, (Variable, DataArray)) for arr in [da_a, da_b]):
+        raise TypeError(
+            "Only xr.DataArray and xr.Variable are supported."
+            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+        )
 
-    # 1. Broadcast the two arrays
-    da_a, da_b = broadcast(da_a, da_b)
-
-    # 2. Ignore the nans
-    valid_values = da_a.notnull() & da_b.notnull()
-    da_a = da_a.where(valid_values)
-    da_b = da_a.where(valid_values)
-    valid_count = valid_values.sum(dim) - ddof
-
-    # 3. Compute mean and standard deviation along the given dim
-    demeaned_da_a = da_a - da_a.mean(dim=dim)
-    demeaned_da_b = da_b - da_b.mean(dim=dim)
-
-    # 4. Compute covariance along the given dim
-    # N.B. `skipna=False` is required or there is a bug when computing
-    # auto-covariance. E.g. Try xr.cov(da,da) for
-    # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=False) / (valid_count)
-
-    return DataArray(cov)
+    return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
 
 
 def corr(da_a, da_b, dim=None, ddof=0):
@@ -1201,12 +1189,21 @@ def corr(da_a, da_b, dim=None, ddof=0):
     * space    (space) <U2 'IA' 'IL' 'IN'
     """
     from .dataarray import DataArray
-
     if any(not isinstance(arr, (Variable, DataArray)) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray and xr.Variable are supported."
             "Given {}.".format([type(arr) for arr in [da_a, da_b]])
         )
+
+    return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="corr")
+
+
+def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
+    """
+    Internal method for xr.cov() and xr.corr() so only have to
+    sanitize the input arrays once.
+    """
+    from .dataarray import DataArray
 
     # 1. Broadcast the two arrays
     da_a, da_b = broadcast(da_a, da_b)
@@ -1215,14 +1212,27 @@ def corr(da_a, da_b, dim=None, ddof=0):
     valid_values = da_a.notnull() & da_b.notnull()
     da_a = da_a.where(valid_values)
     da_b = da_b.where(valid_values)
+    valid_count = valid_values.sum(dim) - ddof
 
-    # 3. Compute correlation based on standard deviations and cov()
+    # 3. Compute mean and standard deviation along the given dim
+    demeaned_da_a = da_a - da_a.mean(dim=dim)
+    demeaned_da_b = da_b - da_b.mean(dim=dim)
     da_a_std = da_a.std(dim=dim)
     da_b_std = da_b.std(dim=dim)
 
-    corr = cov(da_a, da_b, dim=dim, ddof=ddof) / (da_a_std * da_b_std)
+    # 4. Compute covariance along the given dim
+    # N.B. `skipna=False` is required or there is a bug when computing
+    # auto-covariance. E.g. Try xr.cov(da,da) for
+    # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
+    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=False) / (valid_count)
 
-    return DataArray(corr)
+    if method == "cov":
+        return DataArray(cov)
+
+    else:
+        # compute corr
+        corr = cov / (da_a_std * da_b_std)
+        return DataArray(corr)
 
 
 def dot(*arrays, dims=None, **kwargs):
